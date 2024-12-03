@@ -9,15 +9,17 @@ import {
   Zap, Target, Edit3, TrendingUp,
   MessageSquare
 } from 'lucide-react'
-import { ChatHistory } from '@/types'
+import { ChatMessage, ChatHistory, InsightReference } from '@/types'
+import { actionableInsights } from '@/data/insights'
 
 const ChatScreen = () => {
-  const [messages, setMessages] = useState([])
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showAmbient, setShowAmbient] = useState(true)
   const [currentInsight, setCurrentInsight] = useState(0)
+  const [activeInsight, setActiveInsight] = useState<InsightReference | null>(null)
 
   // Sample chat history
   const chatHistory = [
@@ -92,31 +94,54 @@ const ChatScreen = () => {
     return () => clearInterval(timer)
   }, [])
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const insightId = params.get('context')
+    
+    if (insightId) {
+      // Simulate AI starting the conversation about the insight
+      setMessages([
+        {
+          id: 1,
+          type: 'ai',
+          content: `I noticed you're interested in discussing the insight about ${
+            actionableInsights.find((insight: AIActionableInsight) => insight.id === Number(insightId))?.opportunity.title
+          }. What would you like to know more about?`,
+          timestamp: new Date().toISOString(),
+          relatedInsights: [{
+            id: Number(insightId),
+            type: 'reference',
+            summary: actionableInsights.find((insight: AIActionableInsight) => insight.id === Number(insightId))?.opportunity.title || '',
+            timestamp: new Date().toISOString()
+          }]
+        }
+      ])
+    }
+  }, [])
+
   const handleSendMessage = () => {
     if (!inputValue.trim()) return
     
-    const newMessages = [
-      ...messages,
-      {
-        id: messages.length + 1,
-        type: 'user',
-        content: inputValue,
-        timestamp: new Date().toISOString()
-      }
-    ]
+    const newMessage: ChatMessage = {
+      id: messages.length + 1,
+      type: 'user',
+      content: inputValue,
+      timestamp: new Date().toISOString()
+    }
     
-    setMessages(newMessages)
+    setMessages(prev => [...prev, newMessage])
     setInputValue('')
-    setShowAmbient(false)
 
-    // Simulate AI response
+    // Simulate AI response with potential insight references
     setTimeout(() => {
-      setMessages(prev => [...prev, {
-        id: prev.length + 1,
+      const aiResponse: ChatMessage = {
+        id: messages.length + 2,
         type: 'ai',
-        content: "I'll help you with that. Let me analyze the data...",
-        timestamp: new Date().toISOString()
-      }])
+        content: "Here's what I found based on our analysis...",
+        timestamp: new Date().toISOString(),
+        relatedInsights: activeInsight ? [activeInsight] : undefined
+      }
+      setMessages(prev => [...prev, aiResponse])
     }, 1000)
   }
 
@@ -126,7 +151,7 @@ const ChatScreen = () => {
   }
 
   const loadConversation = (conversation: ChatHistory) => {
-    setMessages(conversation.messages)
+    setMessages(conversation.messages as ChatMessage[])
     setIsHistoryOpen(false)
     setShowAmbient(false)
   }
