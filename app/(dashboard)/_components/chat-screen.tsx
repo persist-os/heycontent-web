@@ -7,7 +7,8 @@ import {
   Clock, Star, Archive, History,
   ChevronRight, Filter, Calendar,
   Zap, Target, Edit3, TrendingUp,
-  MessageSquare, Brain, Settings
+  MessageSquare, Brain, Settings,
+  Users, DollarSign, Activity, Globe, Video
 } from 'lucide-react'
 import { ChatMessage, ChatHistory, InsightReference } from '@/types'
 import { actionableInsights } from '@/data/insights'
@@ -103,6 +104,48 @@ const ChatScreen = () => {
       description: 'Latest video outperforming by 2x',
       icon: Zap,
       action: "Analyze performance factors"
+    },
+    {
+      type: 'audience',
+      title: 'Audience Growth Opportunity',
+      description: 'Similar creators growing 3x faster with short-form content',
+      icon: Users,
+      action: "Explore growth strategy"
+    },
+    {
+      type: 'monetization',
+      title: 'Revenue Opportunity',
+      description: 'Premium course potential: $15K/month based on demand',
+      icon: DollarSign,
+      action: "View revenue analysis"
+    },
+    {
+      type: 'engagement',
+      title: 'Engagement Pattern',
+      description: 'Morning posts receiving 40% more interaction',
+      icon: Activity,
+      action: "Optimize posting schedule"
+    },
+    {
+      type: 'crossplatform',
+      title: 'Platform Expansion',
+      description: 'Your content style matches well with LinkedIn',
+      icon: Globe,
+      action: "See platform strategy"
+    },
+    {
+      type: 'content',
+      title: 'Content Series Potential',
+      description: 'High demand for beginner-friendly tutorials',
+      icon: Video,
+      action: "Plan content series"
+    },
+    {
+      type: 'community',
+      title: 'Community Insight',
+      description: 'Active discussions around your coding tips',
+      icon: MessageSquare,
+      action: "View community trends"
     }
   ]
 
@@ -308,12 +351,12 @@ const ChatScreen = () => {
             <div className="border-b">
               <div className="max-w-5xl mx-auto px-6 py-3">
                 <p className="text-xs text-gray-500 mb-2">Quick Actions:</p>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 hide-scrollbar">
                   {ambientInsights.map((insight, index) => (
                     <button
                       key={index}
                       onClick={() => handleInsightClick(insight.action)}
-                      className="px-3 py-1 text-sm bg-gray-50 hover:bg-gray-100 rounded-full transition-colors"
+                      className="whitespace-nowrap px-3 py-1 text-sm bg-gray-50 hover:bg-gray-100 rounded-full transition-colors"
                     >
                       {insight.action}
                     </button>
@@ -322,7 +365,7 @@ const ChatScreen = () => {
               </div>
             </div>
           )}
-
+          
           {/* Input Area */}
           <div className="p-4">
             <div className="max-w-5xl mx-auto flex items-center gap-2">

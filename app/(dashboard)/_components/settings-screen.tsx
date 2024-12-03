@@ -1,16 +1,25 @@
 'use client'
 
 import React, { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Switch } from "@/components/ui/switch"
 import { 
   Settings, Bell, Lock, Palette, Globe, Users, 
   Sliders, Mail, Briefcase, MessageSquare, Upload,
-  Download, Database, Instagram, Youtube, Twitter, Video
+  Download, Database, Instagram, Youtube, Twitter, Video,
+  LogOut
 } from 'lucide-react'
 
 const SettingsScreen = () => {
+  const router = useRouter()
+
+  const [isFirstTimeSetup] = useState(() => {
+    // Check if this is first time setup
+    return window.location.search.includes('newUser=true')
+  })
+
   const handleEmailIntegration = () => {
     alert(`Email integration coming soon! This will allow you to:
 - Sync email subscribers
@@ -19,13 +28,38 @@ const SettingsScreen = () => {
 - Analyze email performance`);
   };
 
+  const handleSignOut = () => {
+    // Add sign out logic here (clear tokens, etc)
+    router.push('/login')
+  }
+
   return (
     <div className="max-w-6xl mx-auto p-6">
+      {isFirstTimeSetup && (
+        <div className="mb-6 bg-blue-50 p-4 rounded-lg">
+          <h2 className="text-lg font-semibold mb-2">Welcome to AVA OwnIt! 🎉</h2>
+          <p className="text-gray-600 mb-4">Let's get your account set up:</p>
+          <ol className="list-decimal list-inside space-y-2 text-gray-600">
+            <li>Complete your profile information</li>
+            <li>Connect your social media accounts</li>
+            <li>Set up your notification preferences</li>
+            <li>Configure AI assistant settings</li>
+          </ol>
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-semibold">Settings</h1>
           <p className="text-gray-600">Manage your preferences and account settings</p>
         </div>
+        <button
+          onClick={handleSignOut}
+          className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+        >
+          <LogOut className="w-4 h-4" />
+          <span>Sign out</span>
+        </button>
       </div>
 
       <Tabs defaultValue="account" className="space-y-6">

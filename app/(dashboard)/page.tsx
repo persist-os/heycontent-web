@@ -1,11 +1,14 @@
 'use client'
 
-import ChatScreen from './_components/chat-screen'
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 
 export default function DashboardPage() {
-  return (
-    <main className="h-screen overflow-hidden bg-white">
-      <ChatScreen />
-    </main>
-  )
+  const router = useRouter()
+
+  useEffect(() => {
+    router.push('/chat')
+  }, [router])
+
+  return null
 } 

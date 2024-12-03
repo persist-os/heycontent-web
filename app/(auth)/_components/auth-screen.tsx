@@ -26,9 +26,9 @@ export function AuthScreen({ isLogin = true }: AuthScreenProps) {
     e.preventDefault()
     // Add authentication logic here
     if (isLogin) {
-      router.push('/dashboard')
+      router.push('/chat')
     } else {
-      router.push('/login')
+      router.push('/settings')
     }
   }
 
