@@ -9,12 +9,10 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-[#F8F0F9] flex">
+    <div className="h-screen flex bg-white overflow-hidden">
       <DashboardNav />
-      <main className="flex-1 p-8">
-        <div className="bg-white/70 backdrop-blur-md rounded-3xl min-h-[calc(100vh-4rem)] p-6 shadow-lg">
-          {children}
-        </div>
+      <main className="flex-1 overflow-hidden">
+        {children}
       </main>
     </div>
   )

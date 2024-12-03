@@ -61,7 +61,7 @@ export function DashboardNav() {
     <div 
       className={`${
         isExpanded ? 'w-64' : 'w-20'
-      } bg-white/80 backdrop-blur-md border-r border-gray-100 flex flex-col transition-all duration-300`}
+      } bg-white/80 backdrop-blur-md border-r border-gray-100 flex flex-col h-[calc(100vh-2rem)] justify-between transition-all duration-300`}
     >
       {/* Logo Area */}
       <div className="h-16 flex items-center justify-between px-4">

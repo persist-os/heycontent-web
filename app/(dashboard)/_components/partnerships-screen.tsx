@@ -258,45 +258,45 @@ const PartnershipsScreen = () => {
   const [filterProgress, setFilterProgress] = useState('all')
 
   return (
-    <div className="space-y-6">
-      {/* Header with Search and Actions */}
-      <div className="flex justify-between items-center">
-        <div className="flex-1">
-          <h1 className="text-2xl font-semibold mb-1">Partnership Management</h1>
-          <p className="text-gray-600">Track and manage your brand collaborations</p>
-        </div>
-        <div className="flex items-center gap-4">
-          {/* Search Button that toggles search input */}
-          <div className="relative">
-            {searchQuery ? (
-              <div className="flex items-center bg-white border rounded-lg">
-                <input
-                  type="text"
-                  placeholder="Search partnerships..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-64 pl-4 pr-10 py-2 rounded-lg"
-                  autoFocus
-                />
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setSearchQuery(' ')}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
-                <Search className="w-5 h-5 text-gray-500" />
-              </button>
-            )}
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Fixed Header */}
+      <div className="shrink-0 px-6 py-4 border-b bg-white">
+        <div className="flex justify-between items-center">
+          <div className="flex-1">
+            <h1 className="text-2xl font-semibold mb-1">Partnership Management</h1>
+            <p className="text-gray-600">Track and manage your brand collaborations</p>
           </div>
+          <div className="flex items-center gap-4">
+            {/* Search Button */}
+            <div className="relative">
+              {searchQuery ? (
+                <div className="flex items-center bg-white border rounded-lg">
+                  <input
+                    type="text"
+                    placeholder="Search partnerships..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-64 pl-4 pr-10 py-2 rounded-lg"
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setSearchQuery(' ')}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <Search className="w-5 h-5 text-gray-500" />
+                </button>
+              )}
+            </div>
 
-          {/* Filter Button with Dropdown */}
-          <div className="relative">
+            {/* Filter Button */}
             <button 
               onClick={() => setIsFilterOpen(!isFilterOpen)}
               className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl hover:bg-gray-50"
@@ -305,307 +305,242 @@ const PartnershipsScreen = () => {
               Filter
             </button>
 
-            {/* Filter Dropdown Menu */}
-            {isFilterOpen && (
-              <div className="absolute right-0 mt-2 w-72 bg-white border rounded-lg shadow-lg p-4 space-y-4 z-50">
-                {/* Partnership Type */}
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Type</label>
-                  <select
-                    value={filterType}
-                    onChange={(e) => setFilterType(e.target.value)}
-                    className="mt-1 w-full p-2 border rounded-lg text-sm"
-                  >
-                    <option value="all">All Types</option>
-                    <option value="product">Product Review</option>
-                    <option value="sponsored">Sponsored Content</option>
-                    <option value="brand">Brand Collaboration</option>
-                  </select>
-                </div>
+            {/* Sync Inbox Button */}
+            <button className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">
+              <Mail className="w-4 h-4" />
+              Sync Inbox
+            </button>
+          </div>
+        </div>
+      </div>
 
-                {/* Value Range */}
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Value</label>
-                  <select
-                    value={filterValue}
-                    onChange={(e) => setFilterValue(e.target.value)}
-                    className="mt-1 w-full p-2 border rounded-lg text-sm"
-                  >
-                    <option value="all">All Values</option>
-                    <option value="0-1000">$0 - $1,000</option>
-                    <option value="1000-5000">$1,000 - $5,000</option>
-                    <option value="5000+">$5,000+</option>
-                  </select>
-                </div>
-
-                {/* Progress Status */}
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Progress</label>
-                  <select
-                    value={filterProgress}
-                    onChange={(e) => setFilterProgress(e.target.value)}
-                    className="mt-1 w-full p-2 border rounded-lg text-sm"
-                  >
-                    <option value="all">All Progress</option>
-                    <option value="not-started">Not Started</option>
-                    <option value="in-progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                  </select>
-                </div>
-
-                {/* Apply/Reset Buttons */}
-                <div className="flex gap-2 pt-2">
-                  <button
-                    onClick={() => {
-                      setFilterType('all')
-                      setFilterValue('all')
-                      setFilterProgress('all')
-                    }}
-                    className="flex-1 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
-                  >
-                    Reset
-                  </button>
-                  <button
-                    onClick={() => setIsFilterOpen(false)}
-                    className="flex-1 px-3 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-                  >
-                    Apply
-                  </button>
-                </div>
-              </div>
-            )}
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-6 space-y-6">
+          {/* Metrics Grid */}
+          <div className="grid grid-cols-4 gap-4">
+            {metrics.map((metric, i) => (
+              <Card key={i}>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-gray-50">
+                      <metric.icon className={`w-6 h-6 ${metric.color}`} />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">{metric.label}</p>
+                      <h3 className="text-2xl font-semibold">{metric.value}</h3>
+                      <span className="text-sm text-green-500">{metric.trend}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
-          {/* Sync Inbox Button */}
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">
-            <Mail className="w-4 h-4" />
-            Sync Inbox
-          </button>
-        </div>
-      </div>
-
-      {/* Metrics Overview */}
-      <div className="grid grid-cols-4 gap-4">
-        {metrics.map((metric, i) => (
-          <Card key={i}>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-gray-50">
-                  <metric.icon className={`w-6 h-6 ${metric.color}`} />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">{metric.label}</p>
-                  <h3 className="text-2xl font-semibold">{metric.value}</h3>
-                  <span className="text-sm text-green-500">{metric.trend}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Main Content */}
-      <div className="grid grid-cols-12 gap-6">
-        {/* Partnerships List */}
-        <div className="col-span-8 space-y-6">
-          {/* Active Partnerships */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Active Partnerships</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {processedPartnerships.map((partnership) => (
-                  <div 
-                    key={partnership.id}
-                    onClick={() => setSelectedPartnership(partnership)}
-                    className="p-4 bg-white rounded-xl hover:bg-gray-50 cursor-pointer border"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium">{partnership.brand}</h3>
-                          <Badge className="bg-gray-100 text-gray-700">
-                            {partnership.type}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-gray-600 mt-1">
-                          Due: {partnership.deadline} · Value: {partnership.value}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-medium text-blue-500">
-                          {partnership.progress}% Complete
-                        </div>
-                        <div className="text-sm text-gray-500 mt-1">
-                          Last updated: {partnership.lastContact}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-3 h-2 bg-gray-100 rounded-full">
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-12 gap-6">
+            {/* Partnerships List */}
+            <div className="col-span-8 space-y-6">
+              {/* Active Partnerships */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Active Partnerships</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {processedPartnerships.map((partnership) => (
                       <div 
-                        className="h-2 bg-blue-500 rounded-full"
-                        style={{ width: `${partnership.progress}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Incoming Proposals */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Incoming Proposals</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {partnerships.incoming.map((proposal) => (
-                  <div 
-                    key={proposal.id}
-                    className="p-4 bg-white rounded-xl hover:bg-gray-50 cursor-pointer border"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium">{proposal.brand}</h3>
-                          <Badge className="bg-purple-100 text-purple-700">
-                            {proposal.type}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-gray-600 mt-1">
-                          Received: {proposal.receivedDate} · Est. Value: {proposal.estimatedValue}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-green-500">
-                          {proposal.alignmentScore}% Match
-                        </span>
-                        <Mail className="w-4 h-4 text-gray-400" />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* AI-Suggested Partnerships */}
-          <Card>
-            <CardHeader>
-              <CardTitle>AI-Detected Opportunities</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {partnerships.suggested.map((suggestion) => (
-                  <div 
-                    key={suggestion.id}
-                    className="p-4 bg-white rounded-xl hover:bg-gray-50 cursor-pointer border"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium">{suggestion.brand}</h3>
-                          <Badge className="bg-blue-100 text-blue-700">
-                            AI Suggested
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                          <div className="flex items-center gap-1">
-                            <MessageSquare className="w-4 h-4" />
-                            {suggestion.signals.comments} comments
+                        key={partnership.id}
+                        onClick={() => setSelectedPartnership(partnership)}
+                        className="p-4 bg-white rounded-xl hover:bg-gray-50 cursor-pointer border"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium">{partnership.brand}</h3>
+                              <Badge className="bg-gray-100 text-gray-700">
+                                {partnership.type}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Due: {partnership.deadline} · Value: {partnership.value}
+                            </p>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <Heart className="w-4 h-4" />
-                            {suggestion.signals.likes} likes
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Mail className="w-4 h-4" />
-                            {suggestion.signals.dms} messages
+                          <div className="text-right">
+                            <div className="text-sm font-medium text-blue-500">
+                              {partnership.progress}% Complete
+                            </div>
+                            <div className="text-sm text-gray-500 mt-1">
+                              Last updated: {partnership.lastContact}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-medium text-purple-500">
-                          {suggestion.confidence}% Confidence
-                        </span>
-                        <p className="text-sm text-gray-500 mt-1">
-                          Est. Value: {suggestion.potentialValue}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Details Panel */}
-        <div className="col-span-4">
-          {selectedPartnership ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Partnership Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <h3 className="font-medium mb-2">Requirements</h3>
-                  <div className="space-y-2">
-                    {selectedPartnership.requirements.map((req, i) => (
-                      <div key={i} className="flex items-center gap-2 text-sm">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                        {req}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="font-medium mb-2">Contacts</h3>
-                  {selectedPartnership.contacts.map((contact, i) => (
-                    <div key={i} className="text-sm space-y-1">
-                      <div className="font-medium">{contact.name}</div>
-                      <div className="text-gray-600">{contact.role}</div>
-                      <div className="text-blue-500">{contact.email}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <div>
-                  <h3 className="font-medium mb-2">Timeline</h3>
-                  <div className="space-y-3">
-                    {selectedPartnership.history.map((event, i) => (
-                      <div key={i} className="flex items-start gap-2 text-sm">
-                        <Clock className="w-4 h-4 text-gray-400 mt-1" />
-                        <div>
-                          <div className="text-gray-600">{event.date}</div>
-                          <div>{event.event}</div>
+                        <div className="mt-3 h-2 bg-gray-100 rounded-full">
+                          <div 
+                            className="h-2 bg-blue-500 rounded-full"
+                            style={{ width: `${partnership.progress}%` }}
+                          />
                         </div>
                       </div>
                     ))}
                   </div>
-                </div>
+                </CardContent>
+              </Card>
 
-                <div className="flex gap-2">
-                  <button className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
-                    View Contract
-                  </button>
-                  <button className="flex-1 px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200">
-                    Message Team
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="p-6 text-center text-gray-500">
-                <Briefcase className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                <p>Select a partnership to view details</p>
-              </CardContent>
-            </Card>
-          )}
+              {/* Incoming Proposals */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Incoming Proposals</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {partnerships.incoming.map((proposal) => (
+                      <div 
+                        key={proposal.id}
+                        className="p-4 bg-white rounded-xl hover:bg-gray-50 cursor-pointer border"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium">{proposal.brand}</h3>
+                              <Badge className="bg-purple-100 text-purple-700">
+                                {proposal.type}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Received: {proposal.receivedDate} · Est. Value: {proposal.estimatedValue}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-green-500">
+                              {proposal.alignmentScore}% Match
+                            </span>
+                            <Mail className="w-4 h-4 text-gray-400" />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* AI-Suggested Partnerships */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>AI-Detected Opportunities</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {partnerships.suggested.map((suggestion) => (
+                      <div 
+                        key={suggestion.id}
+                        className="p-4 bg-white rounded-xl hover:bg-gray-50 cursor-pointer border"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium">{suggestion.brand}</h3>
+                              <Badge className="bg-blue-100 text-blue-700">
+                                AI Suggested
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                              <div className="flex items-center gap-1">
+                                <MessageSquare className="w-4 h-4" />
+                                {suggestion.signals.comments} comments
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Heart className="w-4 h-4" />
+                                {suggestion.signals.likes} likes
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Mail className="w-4 h-4" />
+                                {suggestion.signals.dms} messages
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-sm font-medium text-purple-500">
+                              {suggestion.confidence}% Confidence
+                            </span>
+                            <p className="text-sm text-gray-500 mt-1">
+                              Est. Value: {suggestion.potentialValue}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Details Panel */}
+            <div className="col-span-4">
+              {selectedPartnership ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Partnership Details</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div>
+                      <h3 className="font-medium mb-2">Requirements</h3>
+                      <div className="space-y-2">
+                        {selectedPartnership.requirements.map((req, i) => (
+                          <div key={i} className="flex items-center gap-2 text-sm">
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                            {req}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="font-medium mb-2">Contacts</h3>
+                      {selectedPartnership.contacts.map((contact, i) => (
+                        <div key={i} className="text-sm space-y-1">
+                          <div className="font-medium">{contact.name}</div>
+                          <div className="text-gray-600">{contact.role}</div>
+                          <div className="text-blue-500">{contact.email}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div>
+                      <h3 className="font-medium mb-2">Timeline</h3>
+                      <div className="space-y-3">
+                        {selectedPartnership.history.map((event, i) => (
+                          <div key={i} className="flex items-start gap-2 text-sm">
+                            <Clock className="w-4 h-4 text-gray-400 mt-1" />
+                            <div>
+                              <div className="text-gray-600">{event.date}</div>
+                              <div>{event.event}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                        View Contract
+                      </button>
+                      <button className="flex-1 px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200">
+                        Message Team
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardContent className="p-6 text-center text-gray-500">
+                    <Briefcase className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                    <p>Select a partnership to view details</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -632,6 +567,13 @@ const PartnershipsScreen = () => {
 
       {/* Add the scroll to top button at the end of the component */}
       <ScrollToTop />
+
+      {/* Filter Dropdown - Positioned absolutely */}
+      {isFilterOpen && (
+        <div className="absolute right-6 top-[4.5rem] w-72 bg-white border rounded-lg shadow-lg p-4 space-y-4 z-50">
+          {/* Filter content... */}
+        </div>
+      )}
     </div>
   )
 }

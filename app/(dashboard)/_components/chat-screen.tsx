@@ -7,7 +7,7 @@ import {
   Clock, Star, Archive, History,
   ChevronRight, Filter, Calendar,
   Zap, Target, Edit3, TrendingUp,
-  MessageSquare
+  MessageSquare, Brain, Settings
 } from 'lucide-react'
 import { ChatMessage, ChatHistory, InsightReference } from '@/types'
 import { actionableInsights } from '@/data/insights'
@@ -157,15 +157,14 @@ const ChatScreen = () => {
   }
 
   return (
-    <div className="flex h-[calc(100vh-2rem)]">
+    <div className="h-full flex bg-white">
       {/* History Sidebar */}
-      <div 
-        className={`${
-          isHistoryOpen ? 'w-80' : 'w-0'
-        } bg-white border-r border-gray-200 transition-all duration-300 overflow-hidden`}
-      >
-        {isHistoryOpen && (
-          <div className="p-4 space-y-4 h-full">
+      <div className={`${
+        isHistoryOpen ? 'w-80' : 'w-0'
+      } border-r border-gray-200 transition-all duration-300 overflow-hidden`}>
+        <div className="h-full flex flex-col">
+          {/* Fixed Search */}
+          <div className="shrink-0 p-4 border-b">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
@@ -176,8 +175,10 @@ const ChatScreen = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-
-            <div className="space-y-2 overflow-y-auto">
+          </div>
+          {/* Scrollable History */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="space-y-2">
               {chatHistory.map((chat) => (
                 <div
                   key={chat.id}
@@ -197,15 +198,16 @@ const ChatScreen = () => {
               ))}
             </div>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Main Chat Interface */}
-      <Card className="flex-1 flex flex-col relative">
-        <CardHeader className="border-b">
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Fixed Header */}
+        <div className="shrink-0 border-b bg-white px-6 py-4">
           <div className="flex justify-between items-center">
             <div>
-              <CardTitle>AI Assistant</CardTitle>
+              <h2 className="font-semibold text-lg">AI Assistant</h2>
               {showAmbient && (
                 <div className="text-sm text-gray-500 mt-1 animate-pulse">
                   {liveInsights[currentInsight]}
@@ -219,13 +221,13 @@ const ChatScreen = () => {
               <History className="w-5 h-5 text-gray-500" />
             </button>
           </div>
-        </CardHeader>
-        
-        <CardContent className="flex-1 flex flex-col p-0 relative">
-          {/* Ambient Insights Layer */}
-          {showAmbient && messages.length === 0 && (
-            <div className="absolute inset-0 p-6">
-              <div className="grid grid-cols-2 gap-4">
+        </div>
+
+        {/* Scrollable Messages */}
+        <div className="flex-1 overflow-y-auto bg-gray-50">
+          {showAmbient && messages.length === 0 ? (
+            <div className="p-6">
+              <div className="grid grid-cols-2 gap-4 max-w-5xl mx-auto">
                 {ambientInsights.map((insight, index) => (
                   <div
                     key={index}
@@ -237,7 +239,7 @@ const ChatScreen = () => {
                       <div className="p-2 rounded-lg bg-blue-50">
                         <insight.icon className="w-5 h-5 text-blue-500" />
                       </div>
-                      <div>
+                      <div className="flex-1">
                         <h3 className="font-medium text-sm mb-1">{insight.title}</h3>
                         <p className="text-sm text-gray-600">{insight.description}</p>
                       </div>
@@ -246,52 +248,57 @@ const ChatScreen = () => {
                 ))}
               </div>
             </div>
-          )}
-
-          {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[80%] p-3 rounded-lg ${
-                    message.type === 'user'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}
-                >
-                  {message.content}
-                  <div className="text-xs mt-1 opacity-70">
-                    {new Date(message.timestamp).toLocaleTimeString()}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Quick Actions */}
-          {showAmbient && messages.length === 0 && (
-            <div className="px-4 py-2 border-t bg-gray-50">
-              <p className="text-xs text-gray-500 mb-2">Quick Actions:</p>
-              <div className="flex flex-wrap gap-2">
-                {ambientInsights.map((insight, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleInsightClick(insight.action)}
-                    className="px-3 py-1 text-sm bg-white hover:bg-gray-100 rounded-full transition-colors"
+          ) : (
+            <div className="p-6">
+              <div className="max-w-5xl mx-auto space-y-4">
+                {messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    {insight.action}
-                  </button>
+                    <div
+                      className={`max-w-[80%] p-3 rounded-lg ${
+                        message.type === 'user'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      {message.content}
+                      <div className="text-xs mt-1 opacity-70">
+                        {new Date(message.timestamp).toLocaleTimeString()}
+                      </div>
+                    </div>
+                  </div>
                 ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Fixed Bottom Section */}
+        <div className="shrink-0 border-t bg-white">
+          {showAmbient && messages.length === 0 && (
+            <div className="border-b">
+              <div className="max-w-5xl mx-auto px-6 py-3">
+                <p className="text-xs text-gray-500 mb-2">Quick Actions:</p>
+                <div className="flex flex-wrap gap-2">
+                  {ambientInsights.map((insight, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleInsightClick(insight.action)}
+                      className="px-3 py-1 text-sm bg-gray-50 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                      {insight.action}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
 
           {/* Input Area */}
-          <div className="border-t p-4">
-            <div className="flex items-center gap-2">
+          <div className="p-4">
+            <div className="max-w-5xl mx-auto flex items-center gap-2">
               <button className="p-2 hover:bg-gray-100 rounded-full">
                 <Plus className="h-5 w-5 text-gray-500" />
               </button>
@@ -317,8 +324,8 @@ const ChatScreen = () => {
               </button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }
