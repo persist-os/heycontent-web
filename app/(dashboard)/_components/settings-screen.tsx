@@ -7,10 +7,18 @@ import { Switch } from "@/components/ui/switch"
 import { 
   Settings, Bell, Lock, Palette, Globe, Users, 
   Sliders, Mail, Briefcase, MessageSquare, Upload,
-  Download, Database
+  Download, Database, Instagram, Youtube, Twitter, Video
 } from 'lucide-react'
 
 const SettingsScreen = () => {
+  const handleEmailIntegration = () => {
+    alert(`Email integration coming soon! This will allow you to:
+- Sync email subscribers
+- Import contact lists
+- Track email engagement
+- Analyze email performance`);
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
@@ -121,23 +129,36 @@ const SettingsScreen = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 {[
-                  { platform: 'Instagram', status: 'Connected', lastSync: '2 hours ago' },
-                  { platform: 'YouTube', status: 'Connected', lastSync: '1 hour ago' },
-                  { platform: 'Twitter', status: 'Not Connected', lastSync: null },
-                  { platform: 'TikTok', status: 'Not Connected', lastSync: null }
+                  { platform: 'Email', icon: Mail, status: 'Not Connected', lastSync: null },
+                  { platform: 'Instagram', icon: Instagram, status: 'Connected', lastSync: '2 hours ago' },
+                  { platform: 'YouTube', icon: Youtube, status: 'Connected', lastSync: '1 hour ago' },
+                  { platform: 'Twitter', icon: Twitter, status: 'Not Connected', lastSync: null },
+                  { platform: 'TikTok', icon: Video, status: 'Not Connected', lastSync: null }
                 ].map((platform, i) => (
                   <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <h3 className="font-medium">{platform.platform}</h3>
-                      <p className="text-sm text-gray-600">
-                        {platform.status === 'Connected' ? `Last sync: ${platform.lastSync}` : 'Not connected'}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-gray-100">
+                        <platform.icon className="w-5 h-5 text-gray-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium">{platform.platform}</h3>
+                        <p className="text-sm text-gray-600">
+                          {platform.status === 'Connected' ? `Last sync: ${platform.lastSync}` : 'Not connected'}
+                        </p>
+                      </div>
                     </div>
-                    <button className={`px-4 py-2 rounded-lg ${
-                      platform.status === 'Connected' 
-                        ? 'bg-gray-200 text-gray-700'
-                        : 'bg-blue-500 text-white'
-                    }`}>
+                    <button 
+                      className={`px-4 py-2 rounded-lg ${
+                        platform.status === 'Connected' 
+                          ? 'bg-gray-200 text-gray-700'
+                          : 'bg-blue-500 text-white'
+                      }`}
+                      onClick={() => {
+                        if (platform.platform === 'Email') {
+                          handleEmailIntegration();
+                        }
+                      }}
+                    >
                       {platform.status === 'Connected' ? 'Disconnect' : 'Connect'}
                     </button>
                   </div>

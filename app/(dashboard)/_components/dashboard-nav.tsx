@@ -14,6 +14,13 @@ import {
 
 const navItems = [
   { 
+    id: 'chat', 
+    label: 'AI Assistant',
+    icon: MessageSquare,
+    href: '/chat',
+    color: 'text-pink-500'
+  },
+  { 
     id: 'ai-insights', 
     label: 'AI Insights',
     icon: Brain,
@@ -33,13 +40,6 @@ const navItems = [
     icon: Briefcase,
     href: '/partnerships',
     color: 'text-orange-500'
-  },
-  { 
-    id: 'chat', 
-    label: 'AI Assistant',
-    icon: MessageSquare,
-    href: '/chat',
-    color: 'text-pink-500'
   }
 ]
 

@@ -12,6 +12,13 @@ import {
 import { ChatMessage, ChatHistory, InsightReference } from '@/types'
 import { actionableInsights } from '@/data/insights'
 
+interface AIActionableInsight {
+  id: number;
+  opportunity: {
+    title: string;
+  };
+}
+
 const ChatScreen = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState('')
@@ -22,15 +29,25 @@ const ChatScreen = () => {
   const [activeInsight, setActiveInsight] = useState<InsightReference | null>(null)
 
   // Sample chat history
-  const chatHistory = [
+  const chatHistory: ChatHistory[] = [
     {
       id: 1,
       topic: 'Content Strategy Analysis',
       preview: "Let's analyze your recent content performance...",
       date: '2024-12-01',
       messages: [
-        { id: 1, type: 'user', content: 'Can you analyze my content strategy?', timestamp: new Date().toISOString() },
-        { id: 2, type: 'ai', content: "Let's analyze your recent content performance...", timestamp: new Date().toISOString() }
+        { 
+          id: 1, 
+          type: 'user' as const, 
+          content: 'Can you analyze my content strategy?', 
+          timestamp: new Date().toISOString() 
+        },
+        { 
+          id: 2, 
+          type: 'ai' as const,  
+          content: "Let's analyze your recent content performance...", 
+          timestamp: new Date().toISOString() 
+        }
       ],
       starred: true
     },
@@ -40,8 +57,18 @@ const ChatScreen = () => {
       preview: "I've identified 3 potential partnership opportunities...",
       date: '2024-11-30',
       messages: [
-        { id: 1, type: 'user', content: 'What partnership opportunities do you see?', timestamp: new Date().toISOString() },
-        { id: 2, type: 'ai', content: "I've identified 3 potential partnerships...", timestamp: new Date().toISOString() }
+        { 
+          id: 1, 
+          type: 'user' as const, 
+          content: 'What partnership opportunities do you see?', 
+          timestamp: new Date().toISOString() 
+        },
+        { 
+          id: 2, 
+          type: 'ai' as const,  
+          content: "I've identified 3 potential partnerships...", 
+          timestamp: new Date().toISOString() 
+        }
       ],
       starred: false
     }
