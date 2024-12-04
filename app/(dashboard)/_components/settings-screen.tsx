@@ -50,7 +50,7 @@ const SettingsScreen = () => {
 
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-semibold">Settings</h1>
+          <h1 className="text-lg font-semibold">Settings</h1>
           <p className="text-gray-600">Manage your preferences and account settings</p>
         </div>
         <button

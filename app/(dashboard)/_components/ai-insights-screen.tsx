@@ -257,7 +257,7 @@ export function AIInsightsScreen() {
     <div className="h-full flex flex-col overflow-hidden">
       {/* Fixed Header */}
       <div className="shrink-0 px-6 py-4 border-b bg-white dark:bg-gray-900 dark:border-gray-800">
-        <h1 className="text-2xl font-semibold mb-1 dark:text-white">AI Insights</h1>
+        <h1 className="text-lg font-semibold mb-1 dark:text-white">AI Insights</h1>
         <p className="text-gray-600 dark:text-gray-400">Personalized recommendations for your content strategy</p>
       </div>
 

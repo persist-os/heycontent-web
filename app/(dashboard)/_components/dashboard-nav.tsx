@@ -65,7 +65,7 @@ export function DashboardNav() {
     >
       {/* Logo Area */}
       <div className="h-16 flex items-center justify-between px-4">
-        {isExpanded && <span className="font-semibold text-lg">AVA OwnIt</span>}
+        {isExpanded && <span className="font-semibold text-lg">AVA IRIS</span>}
         <button 
           onClick={() => setIsExpanded(!isExpanded)}
           className="p-2 rounded-lg hover:bg-gray-100 transition-colors"

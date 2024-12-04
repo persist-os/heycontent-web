@@ -95,7 +95,7 @@ export function AudienceScreen() {
       {/* Fixed Header */}
       <div className="shrink-0 px-6 py-4 border-b bg-white flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-semibold mb-1">Audience DNA</h1>
+          <h1 className="text-lg font-semibold mb-1">Audience DNA</h1>
           <p className="text-gray-600">Deep insights into your audience behavior and preferences</p>
         </div>
         <select

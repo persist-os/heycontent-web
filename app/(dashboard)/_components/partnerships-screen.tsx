@@ -263,7 +263,7 @@ const PartnershipsScreen = () => {
       <div className="shrink-0 px-6 py-4 border-b bg-white">
         <div className="flex justify-between items-center">
           <div className="flex-1">
-            <h1 className="text-2xl font-semibold mb-1">Partnership Management</h1>
+            <h1 className="text-lg font-semibold mb-1">Partnership Management</h1>
             <p className="text-gray-600">Track and manage your brand collaborations</p>
           </div>
           <div className="flex items-center gap-4">
