@@ -30,15 +30,15 @@ const SettingsScreen = () => {
 
   const handleSignOut = () => {
     // Add sign out logic here (clear tokens, etc)
-    router.push('/login')
+    router.push('/')
   }
 
   return (
     <div className="max-w-6xl mx-auto p-6">
       {isFirstTimeSetup && (
         <div className="mb-6 bg-blue-50 p-4 rounded-lg">
-          <h2 className="text-lg font-semibold mb-2">Welcome to AVA OwnIt! 🎉</h2>
-          <p className="text-gray-600 mb-4">Let's get your account set up:</p>
+          <h2 className="text-lg font-semibold mb-2">Welcome to AVA IRIS! 🎉</h2>
+          <p className="text-gray-600 mb-4">Intelligent Relationship and Insight System</p>
           <ol className="list-decimal list-inside space-y-2 text-gray-600">
             <li>Complete your profile information</li>
             <li>Connect your social media accounts</li>

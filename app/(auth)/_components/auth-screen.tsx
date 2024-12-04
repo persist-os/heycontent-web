@@ -37,7 +37,7 @@ export function AuthScreen({ isLogin = true }: AuthScreenProps) {
       <Card className="w-full max-w-md bg-white/80 backdrop-blur-sm shadow-xl">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-semibold">
-            {isLogin ? "Welcome back" : "Create account"}
+            {isLogin ? "Welcome back to AVA IRIS" : "Join AVA IRIS"}
           </CardTitle>
           <p className="text-gray-500 text-sm">
             {isLogin ? "Sign in to continue" : "Sign up to get started"}
