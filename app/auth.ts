@@ -18,7 +18,7 @@ export const authConfig: NextAuthConfig = {
           name: profile.name,
           email: profile.email,
           image: profile.picture,
-          emailVerified: new Date().toISOString(),
+          emailVerified: profile.email_verified ? new Date() : null
         }
       }
     }),

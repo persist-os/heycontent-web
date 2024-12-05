@@ -12,14 +12,19 @@ import {
   LogOut
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { toast } from "react-hot-toast"
 
 const SettingsScreen = () => {
   const router = useRouter()
-
+  const { data: session } = useSession()
   const [isFirstTimeSetup] = useState(() => {
     // Check if this is first time setup
     return window.location.search.includes('newUser=true')
   })
+  const [isResending, setIsResending] = useState(false)
 
   const handleEmailIntegration = () => {
     alert(`Email integration coming soon! This will allow you to:
@@ -37,6 +42,35 @@ const SettingsScreen = () => {
       })
     } catch (error) {
       console.error('Sign out error:', error)
+    }
+  }
+
+  const handleResendVerification = async () => {
+    setIsResending(true)
+    try {
+      const response = await fetch('/api/auth/verify-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          email: session?.user?.email 
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to resend verification email')
+      }
+
+      // Show success message
+      toast.success("Verification email sent. Please check your inbox.")
+    } catch (error) {
+      console.error('Resend verification error:', error)
+      // Show error message
+      toast.error(error instanceof Error ? error.message : "Failed to send verification email")
+    } finally {
+      setIsResending(false)
     }
   }
 
@@ -98,7 +132,24 @@ const SettingsScreen = () => {
           <div className="grid gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Profile Information</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Profile Information</CardTitle>
+                  {session?.user?.emailVerified ? (
+                    <Badge variant="success">Verified</Badge>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="destructive">Unverified</Badge>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={handleResendVerification}
+                        disabled={isResending}
+                      >
+                        {isResending ? 'Sending...' : 'Resend Verification'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
