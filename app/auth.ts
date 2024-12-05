@@ -1,11 +1,27 @@
 import NextAuth from 'next-auth'
 import type { NextAuthConfig } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
-import { compare } from 'bcrypt'
+import GoogleProvider from 'next-auth/providers/google'
+import { compare } from 'bcryptjs'
+import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from '@/lib/db'
 
 export const authConfig: NextAuthConfig = {
+  adapter: PrismaAdapter(prisma),
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      profile(profile) {
+        return {
+          id: profile.sub,
+          name: profile.name,
+          email: profile.email,
+          image: profile.picture,
+          emailVerified: new Date().toISOString(),
+        }
+      }
+    }),
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
@@ -28,7 +44,7 @@ export const authConfig: NextAuthConfig = {
         }
 
         const isPasswordValid = await compare(
-          credentials.password,
+          credentials.password.toString(),
           user.password
         )
 
@@ -46,24 +62,37 @@ export const authConfig: NextAuthConfig = {
   ],
   pages: {
     signIn: '/login',
-  },
-  session: {
-    strategy: 'jwt',
+    error: '/login',
   },
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id
-      }
-      return token
+    async signIn({ user, account }) {
+      return true
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string
+        session.user.image = token.picture as string
       }
       return session
+    },
+    async jwt({ token, user, account, profile }) {
+      if (user) {
+        token.id = user.id
+      }
+      if (account?.provider === "google") {
+        token.picture = profile?.picture
+      }
+      return token
+    },
+    async redirect({ url, baseUrl }) {
+      return `${baseUrl}/chat`
     }
-  }
+  },
+  session: {
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  debug: false
 }
 
 export const { handlers: { GET, POST }, auth } = NextAuth(authConfig) 

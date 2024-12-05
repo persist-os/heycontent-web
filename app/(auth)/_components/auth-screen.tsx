@@ -11,7 +11,8 @@ import {
   ArrowRight, 
   Chrome
 } from 'lucide-react'
-import { signIn } from 'next-auth/react'
+import { signIn, signOut } from 'next-auth/react'
+import Link from 'next/link'
 
 interface AuthScreenProps {
   isLogin?: boolean
@@ -33,17 +34,12 @@ export function AuthScreen({ isLogin = true }: AuthScreenProps) {
     
     try {
       if (isLogin) {
-        const result = await signIn('credentials', {
+        await signIn('credentials', {
           email,
           password,
-          redirect: false,
+          callbackUrl: '/chat',
+          redirect: true,
         })
-
-        if (result?.error) {
-          setError('Invalid credentials')
-        } else {
-          router.push('/dashboard')
-        }
       } else {
         // Handle registration
         const response = await fetch('/api/auth/register', {
@@ -64,22 +60,55 @@ export function AuthScreen({ isLogin = true }: AuthScreenProps) {
         }
 
         // Automatically sign in after successful registration
-        const result = await signIn('credentials', {
+        await signIn('credentials', {
           email,
           password,
-          redirect: false,
+          callbackUrl: '/chat',
+          redirect: true,
         })
-
-        if (result?.error) {
-          throw new Error('Auto login failed after registration')
-        }
-
-        router.push('/dashboard')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
-    } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsLoading(true)
+      await signIn('google', { 
+        callbackUrl: '/chat',
+        redirect: true,
+      })
+    } catch (err) {
+      setError('Failed to sign in with Google')
+      setIsLoading(false)
+    }
+  }
+
+  const getErrorMessage = (error: string) => {
+    switch (error) {
+      case 'OAuthSignin':
+        return 'Error starting Google sign in. Please try again.';
+      case 'OAuthCallback':
+        return 'Error completing Google sign in. Please try again.';
+      case 'UserExists':
+        return 'An account with this email already exists.';
+      case 'InvalidCredentials':
+        return 'Invalid email or password.';
+      default:
+        return 'An error occurred. Please try again.';
+    }
+  }
+
+  const handleSignOut = async () => {
+    try {
+      await signOut({ 
+        callbackUrl: '/',
+        redirect: true,
+      })
+    } catch (error) {
+      console.error('Sign out error:', error)
     }
   }
 
@@ -101,10 +130,18 @@ export function AuthScreen({ isLogin = true }: AuthScreenProps) {
           <form onSubmit={handleSubmit} className="space-y-4">
             <button 
               type="button"
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors"
+              onClick={handleGoogleSignIn}
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
-              <Chrome className="w-4 h-4" />
-              <span className="font-medium">Continue with Google</span>
+              {isLoading ? (
+                <span>Signing in...</span>
+              ) : (
+                <>
+                  <Chrome className="w-4 h-4" />
+                  <span className="font-medium">Continue with Google</span>
+                </>
+              )}
             </button>
 
             <div className="relative">
@@ -171,6 +208,11 @@ export function AuthScreen({ isLogin = true }: AuthScreenProps) {
                     <Eye className="w-4 h-4" />
                   )}
                 </button>
+              </div>
+              <div className="text-sm text-right">
+                <Link href="/forgot-password" className="text-blue-500 hover:underline">
+                  Forgot password?
+                </Link>
               </div>
             </div>
 

@@ -11,6 +11,7 @@ import {
   Download, Database, Instagram, Youtube, Twitter, Video,
   LogOut
 } from 'lucide-react'
+import { signOut } from 'next-auth/react'
 
 const SettingsScreen = () => {
   const router = useRouter()
@@ -28,9 +29,15 @@ const SettingsScreen = () => {
 - Analyze email performance`);
   };
 
-  const handleSignOut = () => {
-    // Add sign out logic here (clear tokens, etc)
-    router.push('/')
+  const handleSignOut = async () => {
+    try {
+      await signOut({ 
+        callbackUrl: '/',
+        redirect: true
+      })
+    } catch (error) {
+      console.error('Sign out error:', error)
+    }
   }
 
   return (

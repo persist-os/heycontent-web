@@ -23,6 +23,13 @@ const config: NextConfig = {
       },
     ]
   },
+  webpack: (config) => {
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      "bcrypt": require.resolve("bcryptjs"),
+    }
+    return config
+  },
 }
 
 export default config

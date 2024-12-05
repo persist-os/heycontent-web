@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { ChatMessage, ChatHistory, InsightReference } from '@/types'
 import { actionableInsights } from '@/data/insights'
+import { useSession } from 'next-auth/react'
 
 interface AIActionableInsight {
   id: number;
@@ -21,6 +22,17 @@ interface AIActionableInsight {
 }
 
 const ChatScreen = () => {
+  const { data: session, status } = useSession()
+
+  // Live rotating insights
+  const liveInsights = [
+    "Engagement up 23% in last hour",
+    "3 high-value comments need response",
+    "New audience segment emerging",
+    "Optimal posting window in 2 hours"
+  ]
+
+  // State declarations
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
@@ -28,6 +40,41 @@ const ChatScreen = () => {
   const [showAmbient, setShowAmbient] = useState(true)
   const [currentInsight, setCurrentInsight] = useState(0)
   const [activeInsight, setActiveInsight] = useState<InsightReference | null>(null)
+
+  // Effects - Move all useEffect hooks here, before any conditional returns
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentInsight((prev) => (prev + 1) % liveInsights.length)
+    }, 5000)
+    return () => clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const insightId = params.get('context')
+    
+    if (insightId) {
+      setMessages([
+        {
+          id: 1,
+          type: 'ai',
+          content: `I noticed you're interested in discussing the insight about ${
+            actionableInsights.find((insight: AIActionableInsight) => insight.id === Number(insightId))?.opportunity.title
+          }. What would you like to know more about?`,
+          timestamp: new Date().toISOString(),
+          relatedInsights: [{
+            id: Number(insightId),
+            type: 'reference',
+            summary: actionableInsights.find((insight: AIActionableInsight) => insight.id === Number(insightId))?.opportunity.title || '',
+            timestamp: new Date().toISOString()
+          }]
+        }
+      ])
+    }
+  }, [])
+
+  // Loading state
+  if (status === 'loading') return null
 
   // Sample chat history
   const chatHistory: ChatHistory[] = [
@@ -148,46 +195,6 @@ const ChatScreen = () => {
       action: "View community trends"
     }
   ]
-
-  // Live rotating insights
-  const liveInsights = [
-    "Engagement up 23% in last hour",
-    "3 high-value comments need response",
-    "New audience segment emerging",
-    "Optimal posting window in 2 hours"
-  ]
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentInsight((prev) => (prev + 1) % liveInsights.length)
-    }, 5000)
-    return () => clearInterval(timer)
-  }, [])
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const insightId = params.get('context')
-    
-    if (insightId) {
-      // Simulate AI starting the conversation about the insight
-      setMessages([
-        {
-          id: 1,
-          type: 'ai',
-          content: `I noticed you're interested in discussing the insight about ${
-            actionableInsights.find((insight: AIActionableInsight) => insight.id === Number(insightId))?.opportunity.title
-          }. What would you like to know more about?`,
-          timestamp: new Date().toISOString(),
-          relatedInsights: [{
-            id: Number(insightId),
-            type: 'reference',
-            summary: actionableInsights.find((insight: AIActionableInsight) => insight.id === Number(insightId))?.opportunity.title || '',
-            timestamp: new Date().toISOString()
-          }]
-        }
-      ])
-    }
-  }, [])
 
   const handleSendMessage = () => {
     if (!inputValue.trim()) return

@@ -1,17 +1,27 @@
-import { hash } from "bcrypt"
+import { hash } from "bcryptjs"
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
+import { z } from "zod"
+
+const registerSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  name: z.string().min(2, "Name must be at least 2 characters"),
+})
 
 export async function POST(req: Request) {
   try {
-    const { email, password, name } = await req.json()
+    const body = await req.json()
+    const result = registerSchema.safeParse(body)
 
-    if (!email || !password) {
+    if (!result.success) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: result.error.issues[0].message },
         { status: 400 }
       )
     }
+
+    const { email, password, name } = result.data
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
