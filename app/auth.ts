@@ -72,15 +72,28 @@ export const authConfig: NextAuthConfig = {
       if (session.user) {
         session.user.id = token.id as string
         session.user.image = token.picture as string
+        session.user.currentPersona = token.currentPersona as string | null
+        session.user.futureVision = token.futureVision as string | null
+        session.user.emailVerified = token.emailVerified as Date | null
+        session.user.name = token.name as string | null
       }
       return session
     },
-    async jwt({ token, user, account, profile }) {
+    async jwt({ token, user, account, profile, trigger, session }) {
       if (user) {
         token.id = user.id
+        token.currentPersona = user.currentPersona
+        token.futureVision = user.futureVision
+        token.emailVerified = user.emailVerified
+        token.name = user.name
       }
       if (account?.provider === "google") {
         token.picture = profile?.picture
+      }
+      if (trigger === 'update' && session?.user) {
+        token.name = session.user.name
+        token.currentPersona = session.user.currentPersona
+        token.futureVision = session.user.futureVision
       }
       return token
     },

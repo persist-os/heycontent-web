@@ -12,22 +12,56 @@ const transporter = nodemailer.createTransport({
 export async function sendVerificationEmail(email: string, token: string) {
   const verifyUrl = `${process.env.NEXTAUTH_URL}/verify-email?token=${token}`
 
-  console.log('Sending verification email to:', email)
-  console.log('Verification URL:', verifyUrl)
-
   try {
     const info = await transporter.sendMail({
       from: process.env.EMAIL_FROM,
       to: email,
-      subject: "Verify your email",
+      subject: "Verify your AVA IRIS Account",
       html: `
-        <h1>Welcome to AVA IRIS!</h1>
-        <p>Please verify your email address by clicking the link below:</p>
-        <a href="${verifyUrl}">Verify Email</a>
-        <p>If you didn't request this, you can safely ignore this email.</p>
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <style>
+              .container { 
+                padding: 20px;
+                max-width: 600px;
+                margin: 0 auto;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
+              }
+              .button {
+                background: #3b82f6;
+                color: white;
+                padding: 12px 24px;
+                border-radius: 6px;
+                text-decoration: none;
+                display: inline-block;
+                margin: 20px 0;
+              }
+              .footer {
+                color: #666;
+                font-size: 14px;
+                margin-top: 20px;
+                padding-top: 20px;
+                border-top: 1px solid #eee;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1 style="color: #1f2937">Welcome to AVA IRIS! 🎉</h1>
+              <p>Thanks for signing up. Please verify your email address to get started.</p>
+              <a href="${verifyUrl}" class="button">Verify Email Address</a>
+              <p>Or copy and paste this URL into your browser:</p>
+              <p style="color: #666">${verifyUrl}</p>
+              <div class="footer">
+                <p>If you didn't create an account with AVA IRIS, you can safely ignore this email.</p>
+                <p>© ${new Date().getFullYear()} AVA IRIS. All rights reserved.</p>
+              </div>
+            </div>
+          </body>
+        </html>
       `
     })
-    console.log('Email sent:', info)
     return info
   } catch (error) {
     console.error('Failed to send email:', error)
@@ -41,12 +75,50 @@ export async function sendResetEmail(email: string, token: string) {
   await transporter.sendMail({
     from: process.env.EMAIL_FROM,
     to: email,
-    subject: "Reset your password",
+    subject: "Reset your AVA IRIS Password",
     html: `
-      <h1>Password Reset Request</h1>
-      <p>You requested a password reset.</p>
-      <p>Click this <a href="${resetUrl}">link</a> to reset your password.</p>
-      <p>If you didn't request this, please ignore this email.</p>
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            .container { 
+              padding: 20px;
+              max-width: 600px;
+              margin: 0 auto;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
+            }
+            .button {
+              background: #3b82f6;
+              color: white;
+              padding: 12px 24px;
+              border-radius: 6px;
+              text-decoration: none;
+              display: inline-block;
+              margin: 20px 0;
+            }
+            .footer {
+              color: #666;
+              font-size: 14px;
+              margin-top: 20px;
+              padding-top: 20px;
+              border-top: 1px solid #eee;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1 style="color: #1f2937">Reset Your Password</h1>
+            <p>You requested to reset your password. Click the button below to continue:</p>
+            <a href="${resetUrl}" class="button">Reset Password</a>
+            <p>Or copy and paste this URL into your browser:</p>
+            <p style="color: #666">${resetUrl}</p>
+            <div class="footer">
+              <p>If you didn't request this password reset, you can safely ignore this email.</p>
+              <p>© ${new Date().getFullYear()} AVA IRIS. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
     `
   })
 } 

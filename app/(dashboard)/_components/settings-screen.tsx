@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -17,14 +17,35 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { toast } from "react-hot-toast"
 
+const MAX_PERSONA_LENGTH = 500  // Enough for detailed description but not too long
+const MAX_VISION_LENGTH = 500
+
 const SettingsScreen = () => {
   const router = useRouter()
-  const { data: session } = useSession()
+  const { data: session, update: updateSession } = useSession()
   const [isFirstTimeSetup] = useState(() => {
-    // Check if this is first time setup
     return window.location.search.includes('newUser=true')
   })
   const [isResending, setIsResending] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    currentPersona: '',
+    futureVision: ''
+  })
+  const [showPersonaFields, setShowPersonaFields] = useState(true)
+
+  useEffect(() => {
+    if (session?.user) {
+      setFormData({
+        name: session.user.name || '',
+        email: session.user.email || '',
+        currentPersona: session.user.currentPersona || '',
+        futureVision: session.user.futureVision || ''
+      })
+    }
+  }, [session])
 
   const handleEmailIntegration = () => {
     alert(`Email integration coming soon! This will allow you to:
@@ -74,8 +95,58 @@ const SettingsScreen = () => {
     }
   }
 
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsUpdating(true)
+
+    try {
+      const response = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          currentPersona: formData.currentPersona,
+          futureVision: formData.futureVision
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update profile')
+      }
+
+      // Update form data
+      setFormData(prev => ({
+        ...prev,
+        name: data.user.name,
+        currentPersona: data.user.currentPersona,
+        futureVision: data.user.futureVision
+      }))
+
+      // Update session
+      await updateSession({
+        user: {
+          ...session?.user,
+          name: data.user.name,
+          currentPersona: data.user.currentPersona,
+          futureVision: data.user.futureVision
+        }
+      })
+
+      toast.success('Profile updated successfully')
+    } catch (error) {
+      console.error('Profile update error:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to update profile')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
   return (
-    <div className="max-w-6xl mx-auto p-6">
+    <div className="max-w-6xl mx-auto p-6 h-[calc(100vh-4rem)] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
       {isFirstTimeSetup && (
         <div className="mb-6 bg-blue-50 p-4 rounded-lg">
           <h2 className="text-lg font-semibold mb-2">Welcome to AVA IRIS! 🎉</h2>
@@ -152,20 +223,94 @@ const SettingsScreen = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium">Name</label>
-                    <input type="text" className="w-full mt-1 p-2 border rounded-lg" placeholder="Your name" />
+                <form onSubmit={handleProfileUpdate}>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium">Name</label>
+                      <input
+                        type="text"
+                        className="w-full mt-1 p-2 border rounded-lg"
+                        placeholder="Your name"
+                        value={formData.name}
+                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Email</label>
+                      <input
+                        type="email"
+                        className="w-full mt-1 p-2 border rounded-lg"
+                        placeholder="your@email.com"
+                        value={formData.email}
+                        disabled
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium">Email</label>
-                    <input type="email" className="w-full mt-1 p-2 border rounded-lg" placeholder="your@email.com" />
+                  <div className="mt-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-medium">AI Persona Understanding</h3>
+                        <p className="text-sm text-gray-600">Help IRIS understand your journey and goals</p>
+                      </div>
+                      <Switch 
+                        checked={showPersonaFields}
+                        onCheckedChange={setShowPersonaFields}
+                      />
+                    </div>
+
+                    {showPersonaFields && (
+                      <>
+                        <div>
+                          <div className="flex justify-between items-center">
+                            <label className="text-sm font-medium">Current Persona</label>
+                            <span className="text-sm text-gray-500">
+                              {formData.currentPersona.length}/{MAX_PERSONA_LENGTH}
+                            </span>
+                          </div>
+                          <textarea
+                            className="w-full mt-1 p-2 border rounded-lg resize-y min-h-[100px]"
+                            placeholder="Describe who you are today (e.g., 'I'm a tech content creator with 50k subscribers, focusing on AI and automation tutorials...')"
+                            value={formData.currentPersona}
+                            onChange={(e) => {
+                              if (e.target.value.length <= MAX_PERSONA_LENGTH) {
+                                setFormData(prev => ({ ...prev, currentPersona: e.target.value }))
+                              }
+                            }}
+                            maxLength={MAX_PERSONA_LENGTH}
+                          />
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between items-center">
+                            <label className="text-sm font-medium">Future Vision</label>
+                            <span className="text-sm text-gray-500">
+                              {formData.futureVision.length}/{MAX_VISION_LENGTH}
+                            </span>
+                          </div>
+                          <textarea
+                            className="w-full mt-1 p-2 border rounded-lg resize-y min-h-[100px]"
+                            placeholder="Describe your goals and aspirations (e.g., 'I want to become a thought leader in AI education, build a community of 500k learners...')"
+                            value={formData.futureVision}
+                            onChange={(e) => {
+                              if (e.target.value.length <= MAX_VISION_LENGTH) {
+                                setFormData(prev => ({ ...prev, futureVision: e.target.value }))
+                              }
+                            }}
+                            maxLength={MAX_VISION_LENGTH}
+                          />
+                        </div>
+                      </>
+                    )}
                   </div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Bio</label>
-                  <textarea className="w-full mt-1 p-2 border rounded-lg" rows={3} placeholder="Tell us about yourself" />
-                </div>
+                  <div className="mt-4 flex justify-end">
+                    <Button
+                      type="submit"
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                  </div>
+                </form>
               </CardContent>
             </Card>
 

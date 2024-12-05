@@ -13,6 +13,8 @@ model User {
   email             String    @unique
   password          String?
   image             String?
+  currentPersona    String?   @db.Text
+  futureVision      String?   @db.Text
   accounts          Account[]
   emailVerified     DateTime?
   verifyToken       String?   @unique

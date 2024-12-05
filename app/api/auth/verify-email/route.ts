@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import crypto from "crypto"
 import { sendVerificationEmail } from "@/lib/email"
+import { redirect } from "next/navigation"
 
 export async function POST(req: Request) {
   try {
@@ -71,6 +72,8 @@ export async function PUT(req: Request) {
         verifyTokenExpiry: null
       }
     })
+
+    redirect('/verify-email/success')
 
     return NextResponse.json({ 
       message: "Email verified successfully" 

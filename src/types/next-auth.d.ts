@@ -5,6 +5,8 @@ declare module "next-auth" {
     user: {
       id: string
       emailVerified?: Date | null
+      currentPersona?: string | null
+      futureVision?: string | null
     } & DefaultSession["user"]
   }
 
@@ -13,5 +15,7 @@ declare module "next-auth" {
     email: string
     name?: string | null
     emailVerified?: Date | null
+    currentPersona?: string | null
+    futureVision?: string | null
   }
 } 
