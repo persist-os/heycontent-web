@@ -11,6 +11,7 @@ import {
   ArrowRight, 
   Chrome
 } from 'lucide-react'
+import { signIn } from 'next-auth/react'
 
 interface AuthScreenProps {
   isLogin?: boolean
@@ -20,15 +21,65 @@ export function AuthScreen({ isLogin = true }: AuthScreenProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [name, setName] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Add authentication logic here
-    if (isLogin) {
-      router.push('/chat')
-    } else {
-      router.push('/settings')
+    setError(null)
+    setIsLoading(true)
+    
+    try {
+      if (isLogin) {
+        const result = await signIn('credentials', {
+          email,
+          password,
+          redirect: false,
+        })
+
+        if (result?.error) {
+          setError('Invalid credentials')
+        } else {
+          router.push('/dashboard')
+        }
+      } else {
+        // Handle registration
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email,
+            password,
+            name,
+          }),
+        })
+
+        if (!response.ok) {
+          const data = await response.json()
+          throw new Error(data.error || 'Registration failed')
+        }
+
+        // Automatically sign in after successful registration
+        const result = await signIn('credentials', {
+          email,
+          password,
+          redirect: false,
+        })
+
+        if (result?.error) {
+          throw new Error('Auto login failed after registration')
+        }
+
+        router.push('/dashboard')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -42,6 +93,9 @@ export function AuthScreen({ isLogin = true }: AuthScreenProps) {
           <p className="text-gray-500 text-sm">
             {isLogin ? "Sign in to continue" : "Sign up to get started"}
           </p>
+          {error && (
+            <p className="text-red-500 text-sm">{error}</p>
+          )}
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -61,6 +115,23 @@ export function AuthScreen({ isLogin = true }: AuthScreenProps) {
                 <span className="bg-white px-2 text-gray-500">or</span>
               </div>
             </div>
+
+            {!isLogin && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Full Name</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter your full name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required={!isLogin}
+                  />
+                  <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Email</label>
@@ -105,9 +176,10 @@ export function AuthScreen({ isLogin = true }: AuthScreenProps) {
 
             <button
               type="submit"
-              className="w-full py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+              disabled={isLoading}
+              className="w-full py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLogin ? "Sign in" : "Sign up"}
+              {isLoading ? "Loading..." : isLogin ? "Sign in" : "Sign up"}
               <ArrowRight className="w-4 h-4" />
             </button>
 
