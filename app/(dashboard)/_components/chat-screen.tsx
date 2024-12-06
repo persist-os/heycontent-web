@@ -48,6 +48,11 @@ const ChatScreen = () => {
   const [activeInsight, setActiveInsight] = useState<InsightReference | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [initializing, setInitializing] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [referencedMessage, setReferencedMessage] = useState<Message | null>(null)
+
+  // Add this ref map to store references to message elements
+  const messageRefs = useRef<Map<number, HTMLDivElement>>(new Map())
 
   // All useCallbacks
   const scrollToBottom = useCallback(() => {
@@ -66,18 +71,30 @@ const ChatScreen = () => {
       id: Date.now(),
       content,
       role: 'user',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      referencedMessage: referencedMessage ? {
+        id: referencedMessage.id,
+        content: referencedMessage.content
+      } : undefined
     }
     
     try {
       setIsLoading(true)
+      setError(null)
       
-      // For initial insight message, we'll wait for both messages before setting
+      // Add insight context to the request
+      const requestBody = {
+        message: content,
+        referencedMessageId: referencedMessage?.id,
+        ...(insightId && { insightId }),
+        context: content.includes('Regarding:') ? content : undefined
+      }
+      
       if (insightId) {
         const response = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: content, insightId })
+          body: JSON.stringify(requestBody)
         })
 
         if (!response.ok) throw new Error('Failed to send message')
@@ -92,7 +109,7 @@ const ChatScreen = () => {
         const response = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: content })
+          body: JSON.stringify(requestBody)
         })
 
         if (!response.ok) throw new Error('Failed to send message')
@@ -100,19 +117,49 @@ const ChatScreen = () => {
         setMessages(prev => [...prev, aiResponse])
       }
       
+      // Clear the reference after sending
+      setReferencedMessage(null)
       scrollToBottom()
     } catch (error) {
       console.error('Failed to send message:', error)
+      setError((error as Error).message)
     } finally {
       setIsLoading(false)
     }
-  }, [scrollToBottom])
+  }, [scrollToBottom, referencedMessage])
 
   const toggleHistory = useCallback(() => {
     const newState = !isHistoryOpen
     setIsHistoryOpen(newState)
     SidebarStorage.set(newState, session?.user?.id)
   }, [isHistoryOpen, session?.user?.id])
+
+  const handleMessageReference = (message: Message) => {
+    setReferencedMessage(message)
+    if (inputRef.current) {
+      inputRef.current.focus()
+    }
+  }
+
+  const handleClearReference = () => {
+    setReferencedMessage(null)
+  }
+
+  // Add this function to handle reference clicks
+  const handleReferenceClick = useCallback((messageId: number) => {
+    const messageElement = messageRefs.current.get(messageId)
+    if (messageElement) {
+      messageElement.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'center'
+      })
+      // Add a brief highlight effect
+      messageElement.classList.add('highlight-message')
+      setTimeout(() => {
+        messageElement.classList.remove('highlight-message')
+      }, 2000)
+    }
+  }, [])
 
   // All useEffects
   useEffect(() => {
@@ -140,7 +187,7 @@ const ChatScreen = () => {
     const params = new URLSearchParams(window.location.search)
     const insightId = params.get('context')
     
-    if (insightId) {
+    if (insightId && !initializing) {
       const insight = actionableInsights.find(i => i.id === Number(insightId))
       if (insight) {
         setShowAmbient(false)
@@ -149,10 +196,11 @@ const ChatScreen = () => {
           `I'd like to discuss the "${insight.opportunity.title}" opportunity.`,
           Number(insightId)
         )
+        window.history.replaceState({}, '', window.location.pathname)
       }
     }
     setInitializing(false)
-  }, [handleSendMessage])
+  }, [handleSendMessage, initializing])
 
   // Loading state
   if (status === 'loading') return null
@@ -282,9 +330,10 @@ const ChatScreen = () => {
     }
   ]
 
-  const handleInsightClick = (action: string) => {
-    handleSendMessage(action)
+  const handleInsightClick = (action: string, insight: typeof ambientInsights[0]) => {
     setShowAmbient(false)
+    const message = `${action} - Regarding: ${insight.title} (${insight.description})`
+    handleSendMessage(message)
   }
 
   const loadConversation = (conversation: ChatHistory) => {
@@ -388,7 +437,7 @@ const ChatScreen = () => {
                 {ambientInsights.map((insight, index) => (
                   <div
                     key={index}
-                    onClick={() => handleInsightClick(insight.action)}
+                    onClick={() => handleInsightClick(insight.action, insight)}
                     className="bg-white border shadow-sm p-4 rounded-xl cursor-pointer 
                       hover:shadow-md transition-all duration-200 hover:scale-[1.02]"
                   >
@@ -409,12 +458,35 @@ const ChatScreen = () => {
             <div className="p-6">
               <div className="max-w-5xl mx-auto space-y-4">
                 {messages.map((message, index) => (
-                  <MessageBubble
+                  <div
                     key={message.id}
-                    message={message}
-                    isLastMessage={index === messages.length - 1}
-                  />
+                    ref={el => {
+                      if (el) {
+                        messageRefs.current.set(message.id, el)
+                      }
+                    }}
+                    className="transition-all duration-300" // For highlight effect
+                  >
+                    <MessageBubble
+                      message={message}
+                      isLastMessage={index === messages.length - 1}
+                      onReference={handleMessageReference}
+                      showReferenceButton={!referencedMessage}
+                      onReferenceClick={handleReferenceClick}
+                    />
+                  </div>
                 ))}
+                {error && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-4">
+                    <p className="text-red-600 text-sm">{error}</p>
+                    <button 
+                      onClick={() => setError(null)}
+                      className="text-xs text-red-500 hover:text-red-700 mt-1"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -430,7 +502,7 @@ const ChatScreen = () => {
                   {ambientInsights.map((insight, index) => (
                     <button
                       key={index}
-                      onClick={() => handleInsightClick(insight.action)}
+                      onClick={() => handleInsightClick(insight.action, insight)}
                       className="whitespace-nowrap px-3 py-1 text-sm bg-gray-50 hover:bg-gray-100 rounded-full transition-colors"
                     >
                       {insight.action}
@@ -449,11 +521,12 @@ const ChatScreen = () => {
             }}
             isLoading={isLoading}
             inputRef={inputRef}
+            referencedMessage={referencedMessage}
+            onClearReference={handleClearReference}
           />
         </div>
       </div>
     </div>
   )
 }
-
 export default ChatScreen

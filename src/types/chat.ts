@@ -4,6 +4,12 @@ export interface Message {
   role: 'user' | 'assistant'
   timestamp: string
   relatedInsights?: InsightReference[]
+  status?: 'sending' | 'sent' | 'failed'
+  referencedMessage?: {
+    id: number
+    content: string
+  }
+  isReferenced?: boolean
 }
 
 export interface ChatHistory {
@@ -20,4 +26,16 @@ export interface InsightReference {
   type: string
   summary: string
   timestamp: string
+}
+
+export interface ChatResponse {
+  message: string
+  timestamp: string
+  id: number
+  role: 'assistant'
+}
+
+export interface ChatError {
+  message: string
+  code: string
 }
