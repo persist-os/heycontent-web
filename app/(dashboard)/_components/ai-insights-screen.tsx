@@ -13,9 +13,11 @@ import { actionableInsights } from '@/data/insights'
 export function AIInsightsScreen() {
   const [selectedInsight, setSelectedInsight] = useState<number | null>(null)
   const [isFirstVisit, setIsFirstVisit] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
   function discussWithAI(insight: AIActionableInsight) {
+    setIsLoading(true)
     router.push(`/chat?context=${insight.id}`)
   }
 
@@ -138,13 +140,13 @@ export function AIInsightsScreen() {
                         <p className="text-sm text-green-600 dark:text-green-400">{insight.action.expectedOutcome}</p>
                       </div>
 
-                      {/* Discuss with AI */}
+                      {/* Discuss with IRIS */}
                       <button
                         onClick={() => discussWithAI(insight)}
                         className="flex items-center gap-2 text-sm text-purple-500 dark:text-purple-400"
                       >
                         <MessageSquare className="w-4 h-4" />
-                        Discuss with AI
+                        Discuss with IRIS
                       </button>
                     </div>
                   )}

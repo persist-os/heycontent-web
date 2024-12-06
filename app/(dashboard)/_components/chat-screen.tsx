@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { 
   Send, Plus, Paperclip, Search,
@@ -15,6 +15,7 @@ import { actionableInsights } from '@/data/insights'
 import { useSession } from 'next-auth/react'
 import { MessageBubble } from './chat/message-bubble'
 import { ChatInput } from './chat/chat-input'
+import { SidebarStorage } from '@/utils/storage'
 
 interface AIActionableInsight {
   id: number;
@@ -23,30 +24,97 @@ interface AIActionableInsight {
   };
 }
 
+const liveInsights = [
+  "Engagement up 23% in last hour",
+  "3 high-value comments need response",
+  "New audience segment emerging",
+  "Optimal posting window in 2 hours"
+]
+
 const ChatScreen = () => {
   const { data: session, status } = useSession()
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Live rotating insights
-  const liveInsights = [
-    "Engagement up 23% in last hour",
-    "3 high-value comments need response",
-    "New audience segment emerging",
-    "Optimal posting window in 2 hours"
-  ]
-
-  // State declarations
+  // All state declarations
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false)
+  const [isHistoryOpen, setIsHistoryOpen] = useState(() => 
+    SidebarStorage.get(session?.user?.id)
+  )
   const [searchQuery, setSearchQuery] = useState('')
   const [showAmbient, setShowAmbient] = useState(true)
   const [currentInsight, setCurrentInsight] = useState(0)
   const [activeInsight, setActiveInsight] = useState<InsightReference | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [initializing, setInitializing] = useState(true)
 
-  // Effects
+  // All useCallbacks
+  const scrollToBottom = useCallback(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      })
+    }
+  }, [])
+
+  const handleSendMessage = useCallback(async (content: string, insightId?: number) => {
+    if (!content.trim()) return
+    
+    const newMessage: Message = {
+      id: Date.now(),
+      content,
+      role: 'user',
+      timestamp: new Date().toISOString()
+    }
+    
+    try {
+      setIsLoading(true)
+      
+      // For initial insight message, we'll wait for both messages before setting
+      if (insightId) {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: content, insightId })
+        })
+
+        if (!response.ok) throw new Error('Failed to send message')
+        const aiResponse = await response.json()
+        
+        // Set both messages at once for initial insight
+        setMessages([newMessage, aiResponse])
+      } else {
+        // Normal message flow - unchanged
+        setMessages(prev => [...prev, newMessage])
+        
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: content })
+        })
+
+        if (!response.ok) throw new Error('Failed to send message')
+        const aiResponse = await response.json()
+        setMessages(prev => [...prev, aiResponse])
+      }
+      
+      scrollToBottom()
+    } catch (error) {
+      console.error('Failed to send message:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [scrollToBottom])
+
+  const toggleHistory = useCallback(() => {
+    const newState = !isHistoryOpen
+    setIsHistoryOpen(newState)
+    SidebarStorage.set(newState, session?.user?.id)
+  }, [isHistoryOpen, session?.user?.id])
+
+  // All useEffects
   useEffect(() => {
     if (showAmbient) {
       const timer = setInterval(() => {
@@ -75,6 +143,7 @@ const ChatScreen = () => {
     if (insightId) {
       const insight = actionableInsights.find(i => i.id === Number(insightId))
       if (insight) {
+        setShowAmbient(false)
         setMessages([])
         handleSendMessage(
           `I'd like to discuss the "${insight.opportunity.title}" opportunity.`,
@@ -82,7 +151,8 @@ const ChatScreen = () => {
         )
       }
     }
-  }, [])
+    setInitializing(false)
+  }, [handleSendMessage])
 
   // Loading state
   if (status === 'loading') return null
@@ -212,43 +282,6 @@ const ChatScreen = () => {
     }
   ]
 
-  const handleSendMessage = async (content: string, insightId?: number) => {
-    if (!content.trim()) return
-    
-    const newMessage: Message = {
-      id: Date.now(),
-      content,
-      role: 'user',
-      timestamp: new Date().toISOString()
-    }
-    
-    setMessages(prev => [...prev, newMessage])
-    scrollToBottom()
-
-    try {
-      setIsLoading(true)
-      
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          message: content,
-          insightId  // Include insightId if it exists
-        })
-      })
-
-      if (!response.ok) throw new Error('Failed to send message')
-
-      const aiResponse = await response.json()
-      setMessages(prev => [...prev, aiResponse])
-      scrollToBottom()
-    } catch (error) {
-      console.error('Failed to send message:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   const handleInsightClick = (action: string) => {
     handleSendMessage(action)
     setShowAmbient(false)
@@ -260,19 +293,12 @@ const ChatScreen = () => {
     setShowAmbient(false)
   }
 
-  const scrollToBottom = () => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTo({
-        top: chatContainerRef.current.scrollHeight,
-        behavior: 'smooth'
-      })
-    }
-  }
-
   const handleBackToInsights = () => {
     setShowAmbient(true)
     setMessages([])  // Clear messages when going back to insights
   }
+
+  if (initializing) return null
 
   return (
     <div className="h-full flex bg-white">
@@ -342,7 +368,7 @@ const ChatScreen = () => {
                 </button>
               )}
               <button
-                onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                onClick={toggleHistory}
                 className="p-2 hover:bg-gray-100 rounded-lg"
               >
                 <History className="w-5 h-5 text-gray-500" />

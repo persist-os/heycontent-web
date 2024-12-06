@@ -15,9 +15,9 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="h-screen flex bg-white overflow-hidden">
+    <div className="h-screen flex bg-white">
       <DashboardNav />
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1">
         {children}
       </main>
     </div>
