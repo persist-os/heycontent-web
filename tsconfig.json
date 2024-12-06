@@ -24,8 +24,15 @@
       "@/types/*": ["./src/types/*"],
       "@/data/*": ["./src/data/*"]
     },
-    "baseUrl": "."
+    "baseUrl": ".",
+    "experimentalDecorators": true
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "middleware.ts"
+  ],
   "exclude": ["node_modules"]
 }

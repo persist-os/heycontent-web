@@ -1,7 +1,15 @@
 import { auth } from './app/auth'
 import { NextResponse } from 'next/server'
 
+// Add this to exclude auth routes from middleware
+const excludedPaths = ['/api/auth', '/_next', '/static', '/favicon.ico']
+
 export default auth((req) => {
+  // Skip middleware for excluded paths
+  if (excludedPaths.some(path => req.nextUrl.pathname.startsWith(path))) {
+    return NextResponse.next()
+  }
+
   const isLoggedIn = !!req.auth
   const isAuthPage = req.nextUrl.pathname === '/login' || 
                     req.nextUrl.pathname === '/register' ||
@@ -15,17 +23,14 @@ export default auth((req) => {
     req.nextUrl.pathname.startsWith('/settings')
   const isSignOut = req.nextUrl.pathname.startsWith('/api/auth/signout')
 
-  // Allow sign out requests to pass through
   if (isSignOut) {
     return NextResponse.next()
   }
 
-  // If logged in and trying to access auth pages, redirect to chat
   if (isAuthPage && isLoggedIn) {
     return NextResponse.redirect(new URL('/chat', req.url))
   }
 
-  // If not logged in and trying to access protected routes, redirect to login
   if (isProtectedRoute && !isLoggedIn) {
     return NextResponse.redirect(new URL('/login', req.url))
   }
@@ -33,9 +38,10 @@ export default auth((req) => {
   return NextResponse.next()
 })
 
+// Keep your existing matcher config
 export const config = {
   matcher: [
-    '/',  // Add root path
+    '/',
     '/login',
     '/register',
     '/forgot-password',

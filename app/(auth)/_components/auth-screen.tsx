@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import React, { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { 
   Mail, 
@@ -13,12 +13,14 @@ import {
 } from 'lucide-react'
 import { signIn, signOut } from 'next-auth/react'
 import Link from 'next/link'
+import { toast } from 'react-hot-toast'
 
 interface AuthScreenProps {
   isLogin?: boolean
+  onSuccess?: (email: string) => void
 }
 
-export function AuthScreen({ isLogin = true }: AuthScreenProps) {
+export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -26,6 +28,15 @@ export function AuthScreen({ isLogin = true }: AuthScreenProps) {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const urlError = searchParams.get('error')
+  const [showResendVerification, setShowResendVerification] = useState(false)
+
+  useEffect(() => {
+    if (searchParams.get('error') === 'AccessDenied') {
+      setShowResendVerification(true)
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -34,14 +45,26 @@ export function AuthScreen({ isLogin = true }: AuthScreenProps) {
     
     try {
       if (isLogin) {
-        await signIn('credentials', {
+        const result = await signIn('credentials', {
           email,
           password,
-          callbackUrl: '/chat',
-          redirect: true,
+          redirect: false
         })
+
+        if (result?.error) {
+          setError(result.error)
+          if (result.error === 'UNVERIFIED_EMAIL') {
+            router.push(`/verify-email?email=${encodeURIComponent(email)}`)
+            return
+          }
+          if (result.error === 'CallbackRouteError' || result.error === 'AccessDenied') {
+            setShowResendVerification(true)
+          }
+        } else {
+          router.push('/chat')
+        }
       } else {
-        // Handle registration
+        console.log('📧 Registering new user...')
         const response = await fetch('/api/auth/register', {
           method: 'POST',
           headers: {
@@ -54,21 +77,21 @@ export function AuthScreen({ isLogin = true }: AuthScreenProps) {
           }),
         })
 
+        const data = await response.json()
+
         if (!response.ok) {
-          const data = await response.json()
-          throw new Error(data.error || 'Registration failed')
+          throw new Error(data.error)
         }
 
-        // Automatically sign in after successful registration
-        await signIn('credentials', {
-          email,
-          password,
-          callbackUrl: '/chat',
-          redirect: true,
-        })
+        console.log('✅ Registration successful!')
+        
+        if (onSuccess) {
+          onSuccess(email)
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
+    } finally {
       setIsLoading(false)
     }
   }
@@ -93,11 +116,16 @@ export function AuthScreen({ isLogin = true }: AuthScreenProps) {
       case 'OAuthCallback':
         return 'Error completing Google sign in. Please try again.';
       case 'UserExists':
-        return 'An account with this email already exists.';
-      case 'InvalidCredentials':
+        return 'An account with this email already exists. Please verify your email or sign in.';
+      case 'CredentialsSignin':
         return 'Invalid email or password.';
+      case 'UNVERIFIED_EMAIL':
+      case 'CallbackRouteError':
+      case 'AccessDenied':
+        setShowResendVerification(true)
+        return 'Please verify your email before signing in.';
       default:
-        return 'An error occurred. Please try again.';
+        return error || 'An error occurred. Please try again.';
     }
   }
 
@@ -122,8 +150,10 @@ export function AuthScreen({ isLogin = true }: AuthScreenProps) {
           <p className="text-gray-500 text-sm">
             {isLogin ? "Sign in to continue" : "Sign up to get started"}
           </p>
-          {error && (
-            <p className="text-red-500 text-sm">{error}</p>
+          {(error || urlError) && (
+            <p className="text-red-500 text-sm">
+              {getErrorMessage(error || urlError || '')}
+            </p>
           )}
         </CardHeader>
         <CardContent>
@@ -234,6 +264,30 @@ export function AuthScreen({ isLogin = true }: AuthScreenProps) {
                 {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
               </button>
             </div>
+
+            {showResendVerification && (
+              <button
+                type="button"
+                onClick={() => {
+                  fetch('/api/auth/verify-email', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email }),
+                  })
+                  .then(() => {
+                    toast.success('Verification email sent! Please check your inbox.')
+                  })
+                  .catch(() => {
+                    toast.error('Failed to send verification email.')
+                  })
+                }}
+                className="mt-2 text-sm text-blue-500 hover:underline"
+              >
+                Resend verification email
+              </button>
+            )}
           </form>
         </CardContent>
       </Card>

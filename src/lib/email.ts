@@ -10,7 +10,18 @@ const transporter = nodemailer.createTransport({
 })
 
 export async function sendVerificationEmail(email: string, token: string) {
-  const verifyUrl = `${process.env.NEXTAUTH_URL}/verify-email?token=${token}`
+  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+  const verificationUrl = `${baseUrl}/api/auth/verify/${token}`
+
+  // Log verification link in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log('\n🔑 Email Verification Link:')
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.log(verificationUrl)
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.log('👆 Click this link to verify your email\n')
+    return
+  }
 
   try {
     const info = await transporter.sendMail({
@@ -50,9 +61,9 @@ export async function sendVerificationEmail(email: string, token: string) {
             <div class="container">
               <h1 style="color: #1f2937">Welcome to AVA IRIS! 🎉</h1>
               <p>Thanks for signing up. Please verify your email address to get started.</p>
-              <a href="${verifyUrl}" class="button">Verify Email Address</a>
+              <a href="${verificationUrl}" class="button">Verify Email Address</a>
               <p>Or copy and paste this URL into your browser:</p>
-              <p style="color: #666">${verifyUrl}</p>
+              <p style="color: #666">${verificationUrl}</p>
               <div class="footer">
                 <p>If you didn't create an account with AVA IRIS, you can safely ignore this email.</p>
                 <p>© ${new Date().getFullYear()} AVA IRIS. All rights reserved.</p>

@@ -23,9 +23,7 @@ const MAX_VISION_LENGTH = 500
 const SettingsScreen = () => {
   const router = useRouter()
   const { data: session, update: updateSession } = useSession()
-  const [isFirstTimeSetup] = useState(() => {
-    return window.location.search.includes('newUser=true')
-  })
+  const [isFirstTimeSetup, setIsFirstTimeSetup] = useState(false)
   const [isResending, setIsResending] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [formData, setFormData] = useState({
@@ -35,6 +33,10 @@ const SettingsScreen = () => {
     futureVision: ''
   })
   const [showPersonaFields, setShowPersonaFields] = useState(true)
+
+  useEffect(() => {
+    setIsFirstTimeSetup(window.location.search.includes('newUser=true'))
+  }, [])
 
   useEffect(() => {
     if (session?.user) {
@@ -226,8 +228,10 @@ const SettingsScreen = () => {
                 <form onSubmit={handleProfileUpdate}>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium">Name</label>
+                      <label htmlFor="name" className="text-sm font-medium">Name</label>
                       <input
+                        id="name"
+                        name="name"
                         type="text"
                         className="w-full mt-1 p-2 border rounded-lg"
                         placeholder="Your name"
@@ -236,8 +240,10 @@ const SettingsScreen = () => {
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium">Email</label>
+                      <label htmlFor="email" className="text-sm font-medium">Email</label>
                       <input
+                        id="email"
+                        name="email"
                         type="email"
                         className="w-full mt-1 p-2 border rounded-lg"
                         placeholder="your@email.com"

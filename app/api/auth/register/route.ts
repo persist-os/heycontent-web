@@ -31,46 +31,45 @@ export async function POST(req: Request) {
     })
 
     if (existingUser) {
+      // Always return the same message for security
       return NextResponse.json(
-        { error: "User already exists" },
+        { error: "An account with this email already exists." },
         { status: 400 }
       )
     }
 
-    const hashedPassword = await hash(password, 10)
+    // Generate verification token first
     const verifyToken = crypto.randomBytes(32).toString('hex')
     const verifyTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+    const hashedPassword = await hash(password, 10)
 
+    // Create user with verification required
     const user = await prisma.user.create({
       data: {
         email,
         name,
         password: hashedPassword,
         verifyToken,
-        verifyTokenExpiry
+        verifyTokenExpiry,
+        emailVerified: null, // Explicitly set as unverified
       }
     })
 
-    // Send verification email
-    try {
-      await sendVerificationEmail(email, verifyToken)
-      console.log('Verification email sent successfully')
-    } catch (error) {
-      console.error('Failed to send verification email:', error)
-      // Don't return error to client for security
-    }
+    // Send verification email immediately
+    await sendVerificationEmail(email, verifyToken)
 
     return NextResponse.json({
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
-      }
+      },
+      message: "Registration successful. Please check your email to verify your account."
     })
   } catch (error) {
     console.error("Registration error:", error)
     return NextResponse.json(
-      { error: "Something went wrong" },
+      { error: "Failed to create account. Please try again." },
       { status: 500 }
     )
   }

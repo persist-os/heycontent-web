@@ -29,33 +29,42 @@ export const authConfig: NextAuthConfig = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null
-        }
+        try {
+          const { email, password } = credentials
 
-        const user = await prisma.user.findUnique({
-          where: { 
-            email: credentials.email.toString() 
+          if (!email || !password) {
+            return null
           }
-        })
 
-        if (!user || !user.password) {
+          const user = await prisma.user.findUnique({
+            where: { email: email.toString() }
+          })
+
+          if (!user || !user.password) {
+            return null
+          }
+
+          const isPasswordValid = await compare(password.toString(), user.password)
+
+          if (!isPasswordValid) {
+            return null
+          }
+
+          if (!user.emailVerified) {
+            return null
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            emailVerified: user.emailVerified
+          }
+        } catch (error) {
+          if (error instanceof Error && error.message === 'UNVERIFIED_EMAIL') {
+            throw error
+          }
           return null
-        }
-
-        const isPasswordValid = await compare(
-          credentials.password.toString(),
-          user.password
-        )
-
-        if (!isPasswordValid) {
-          return null
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
         }
       }
     })
@@ -66,6 +75,26 @@ export const authConfig: NextAuthConfig = {
   },
   callbacks: {
     async signIn({ user, account }) {
+      if (account?.provider === 'google') {
+        if (!user.email) return false
+        
+        await prisma.user.update({
+          where: { email: user.email },
+          data: {
+            emailVerified: new Date(),
+          }
+        })
+        return true
+      }
+
+      if (account?.provider === 'credentials') {
+        if (!user?.email) return false
+
+        if (!user.emailVerified) {
+          return `/verify-email?email=${encodeURIComponent(user.email)}`
+        }
+      }
+
       return true
     },
     async session({ session, token }) {
@@ -94,6 +123,7 @@ export const authConfig: NextAuthConfig = {
         token.name = session.user.name
         token.currentPersona = session.user.currentPersona
         token.futureVision = session.user.futureVision
+        token.emailVerified = session.user.emailVerified
       }
       return token
     },
