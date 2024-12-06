@@ -15,6 +15,7 @@ model User {
   image             String?
   currentPersona    String?   @db.Text
   futureVision      String?   @db.Text
+  insights          Insight[]
   accounts          Account[]
   emailVerified     DateTime?
   verifyToken       String?   @unique
@@ -42,4 +43,20 @@ model Account {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+}
+
+model Insight {
+  id          Int      @id @default(autoincrement())
+  type        String
+  title       String
+  description String
+  impact      String
+  timing      String
+  confidence  Int
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
 }

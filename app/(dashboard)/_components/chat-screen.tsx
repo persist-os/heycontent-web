@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { 
   Send, Plus, Paperclip, Search,
@@ -10,9 +10,11 @@ import {
   MessageSquare, Brain, Settings,
   Users, DollarSign, Activity, Globe, Video
 } from 'lucide-react'
-import { ChatMessage, ChatHistory, InsightReference } from '@/types'
+import { Message, ChatHistory, InsightReference } from '@/types/chat'
 import { actionableInsights } from '@/data/insights'
 import { useSession } from 'next-auth/react'
+import { MessageBubble } from './chat/message-bubble'
+import { ChatInput } from './chat/chat-input'
 
 interface AIActionableInsight {
   id: number;
@@ -23,6 +25,8 @@ interface AIActionableInsight {
 
 const ChatScreen = () => {
   const { data: session, status } = useSession()
+  const chatContainerRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   // Live rotating insights
   const liveInsights = [
@@ -33,43 +37,50 @@ const ChatScreen = () => {
   ]
 
   // State declarations
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showAmbient, setShowAmbient] = useState(true)
   const [currentInsight, setCurrentInsight] = useState(0)
   const [activeInsight, setActiveInsight] = useState<InsightReference | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
-  // Effects - Move all useEffect hooks here, before any conditional returns
+  // Effects
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentInsight((prev) => (prev + 1) % liveInsights.length)
-    }, 5000)
-    return () => clearInterval(timer)
-  }, [])
+    if (showAmbient) {
+      const timer = setInterval(() => {
+        setCurrentInsight((prev) => (prev + 1) % liveInsights.length)
+      }, 5000)
+      return () => clearInterval(timer)
+    }
+  }, [showAmbient, liveInsights.length])
+
+  useEffect(() => {
+    if (!showAmbient && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [showAmbient, messages.length])
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      scrollToBottom()
+    }
+  }, [messages])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const insightId = params.get('context')
     
     if (insightId) {
-      setMessages([
-        {
-          id: 1,
-          type: 'ai',
-          content: `I noticed you're interested in discussing the insight about ${
-            actionableInsights.find((insight: AIActionableInsight) => insight.id === Number(insightId))?.opportunity.title
-          }. What would you like to know more about?`,
-          timestamp: new Date().toISOString(),
-          relatedInsights: [{
-            id: Number(insightId),
-            type: 'reference',
-            summary: actionableInsights.find((insight: AIActionableInsight) => insight.id === Number(insightId))?.opportunity.title || '',
-            timestamp: new Date().toISOString()
-          }]
-        }
-      ])
+      const insight = actionableInsights.find(i => i.id === Number(insightId))
+      if (insight) {
+        setMessages([])
+        handleSendMessage(
+          `I'd like to discuss the "${insight.opportunity.title}" opportunity.`,
+          Number(insightId)
+        )
+      }
     }
   }, [])
 
@@ -86,14 +97,14 @@ const ChatScreen = () => {
       messages: [
         { 
           id: 1, 
-          type: 'user' as const, 
           content: 'Can you analyze my content strategy?', 
+          role: 'user', 
           timestamp: new Date().toISOString() 
         },
         { 
           id: 2, 
-          type: 'ai' as const,  
           content: "Let's analyze your recent content performance...", 
+          role: 'assistant',  
           timestamp: new Date().toISOString() 
         }
       ],
@@ -107,20 +118,25 @@ const ChatScreen = () => {
       messages: [
         { 
           id: 1, 
-          type: 'user' as const, 
           content: 'What partnership opportunities do you see?', 
+          role: 'user', 
           timestamp: new Date().toISOString() 
         },
         { 
           id: 2, 
-          type: 'ai' as const,  
           content: "I've identified 3 potential partnerships...", 
+          role: 'assistant',  
           timestamp: new Date().toISOString() 
         }
       ],
       starred: false
     }
   ]
+
+  const filteredHistory = chatHistory.filter(chat => 
+    chat.topic.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    chat.preview.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   // Ambient insights
   const ambientInsights = [
@@ -196,41 +212,66 @@ const ChatScreen = () => {
     }
   ]
 
-  const handleSendMessage = () => {
-    if (!inputValue.trim()) return
+  const handleSendMessage = async (content: string, insightId?: number) => {
+    if (!content.trim()) return
     
-    const newMessage: ChatMessage = {
-      id: messages.length + 1,
-      type: 'user',
-      content: inputValue,
+    const newMessage: Message = {
+      id: Date.now(),
+      content,
+      role: 'user',
       timestamp: new Date().toISOString()
     }
     
     setMessages(prev => [...prev, newMessage])
-    setInputValue('')
+    scrollToBottom()
 
-    // Simulate AI response with potential insight references
-    setTimeout(() => {
-      const aiResponse: ChatMessage = {
-        id: messages.length + 2,
-        type: 'ai',
-        content: "Here's what I found based on our analysis...",
-        timestamp: new Date().toISOString(),
-        relatedInsights: activeInsight ? [activeInsight] : undefined
-      }
+    try {
+      setIsLoading(true)
+      
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          message: content,
+          insightId  // Include insightId if it exists
+        })
+      })
+
+      if (!response.ok) throw new Error('Failed to send message')
+
+      const aiResponse = await response.json()
       setMessages(prev => [...prev, aiResponse])
-    }, 1000)
+      scrollToBottom()
+    } catch (error) {
+      console.error('Failed to send message:', error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleInsightClick = (action: string) => {
-    setInputValue(action)
+    handleSendMessage(action)
     setShowAmbient(false)
   }
 
   const loadConversation = (conversation: ChatHistory) => {
-    setMessages(conversation.messages as ChatMessage[])
+    setMessages(conversation.messages as Message[])
     setIsHistoryOpen(false)
     setShowAmbient(false)
+  }
+
+  const scrollToBottom = () => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      })
+    }
+  }
+
+  const handleBackToInsights = () => {
+    setShowAmbient(true)
+    setMessages([])  // Clear messages when going back to insights
   }
 
   return (
@@ -256,7 +297,7 @@ const ChatScreen = () => {
           {/* Scrollable History */}
           <div className="flex-1 overflow-y-auto p-4">
             <div className="space-y-2">
-              {chatHistory.map((chat) => (
+              {filteredHistory.map((chat) => (
                 <div
                   key={chat.id}
                   onClick={() => loadConversation(chat)}
@@ -291,17 +332,30 @@ const ChatScreen = () => {
                 </div>
               )}
             </div>
-            <button
-              onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-              className="p-2 hover:bg-gray-100 rounded-lg"
-            >
-              <History className="w-5 h-5 text-gray-500" />
-            </button>
+            <div className="flex gap-2">
+              {!showAmbient && (
+                <button
+                  onClick={handleBackToInsights}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <Brain className="w-5 h-5 text-gray-500" />
+                </button>
+              )}
+              <button
+                onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <History className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Scrollable Messages */}
-        <div className="flex-1 overflow-y-auto bg-gray-50">
+        <div 
+          ref={chatContainerRef}
+          className="flex-1 overflow-y-auto bg-gray-50"
+        >
           {showAmbient && messages.length === 0 ? (
             <div className="p-6">
               <div className="grid grid-cols-2 gap-4 max-w-5xl mx-auto">
@@ -328,24 +382,12 @@ const ChatScreen = () => {
           ) : (
             <div className="p-6">
               <div className="max-w-5xl mx-auto space-y-4">
-                {messages.map((message) => (
-                  <div
+                {messages.map((message, index) => (
+                  <MessageBubble
                     key={message.id}
-                    className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[80%] p-3 rounded-lg ${
-                        message.type === 'user'
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {message.content}
-                      <div className="text-xs mt-1 opacity-70">
-                        {new Date(message.timestamp).toLocaleTimeString()}
-                      </div>
-                    </div>
-                  </div>
+                    message={message}
+                    isLastMessage={index === messages.length - 1}
+                  />
                 ))}
               </div>
             </div>
@@ -374,33 +416,14 @@ const ChatScreen = () => {
           )}
           
           {/* Input Area */}
-          <div className="p-4">
-            <div className="max-w-5xl mx-auto flex items-center gap-2">
-              <button className="p-2 hover:bg-gray-100 rounded-full">
-                <Plus className="h-5 w-5 text-gray-500" />
-              </button>
-              <button className="p-2 hover:bg-gray-100 rounded-full">
-                <Paperclip className="h-5 w-5 text-gray-500" />
-              </button>
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => {
-                  setInputValue(e.target.value)
-                  setShowAmbient(e.target.value === '')
-                }}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                placeholder="Ask me anything about your content, analytics, or partnerships..."
-                className="flex-1 p-2 border rounded-lg"
-              />
-              <button
-                onClick={handleSendMessage}
-                className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600"
-              >
-                <Send className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
+          <ChatInput 
+            onSend={(content) => {
+              handleSendMessage(content)
+              setShowAmbient(content === '')
+            }}
+            isLoading={isLoading}
+            inputRef={inputRef}
+          />
         </div>
       </div>
     </div>

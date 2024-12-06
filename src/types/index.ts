@@ -1,18 +1,4 @@
-export interface Message {
-  id: number
-  type: 'user' | 'ai'
-  content: string
-  timestamp: string
-}
-
-export interface ChatHistory {
-  id: number
-  topic: string
-  preview: string
-  date: string
-  messages: Message[]
-  starred: boolean
-}
+export * from './chat'  // Re-export chat types
 
 export interface Partnership {
   id: number
@@ -134,19 +120,6 @@ export interface InsightCategory {
   insights: AIInsight[]
 }
 
-export interface ChatMessage {
-  id: number
-  type: 'user' | 'ai'
-  content: string
-  timestamp: string
-  relatedInsights?: InsightReference[]
-  actions?: {
-    type: 'view_insight' | 'implement' | 'learn_more'
-    label: string
-    data: any
-  }[]
-}
-
 export interface NavItem {
   id: string
   icon: any
@@ -241,13 +214,6 @@ export interface MarketPosition {
     currentlyCovered: number
     potential: string
   }[]
-}
-
-export interface InsightReference {
-  id: number
-  type: string
-  summary: string
-  timestamp: string
 }
 
 export interface AIActionableInsight {
