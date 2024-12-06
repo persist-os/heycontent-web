@@ -19,10 +19,13 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*", "./app/*"],
+      "@/*": ["./*"],
       "@/components/*": ["./src/components/*"],
+      "@/lib/*": ["./src/lib/*"],
       "@/types/*": ["./src/types/*"],
-      "@/data/*": ["./src/data/*"]
+      "@/data/*": ["./src/data/*"],
+      "@/utils/*": ["./src/utils/*"],
+      "@/auth/*": ["./app/auth/*"]
     },
     "baseUrl": ".",
     "experimentalDecorators": true

@@ -8,7 +8,11 @@ import {
   CheckCircle, XCircle, DollarSign, ArrowUpRight, Filter,
   Calendar, Briefcase, Target, Bell, UserCheck, BarChart2, Search, X, ChevronDown
 } from 'lucide-react'
-import { Partnership } from '@/types'
+import { 
+  Partnership, 
+  PartnershipContact, 
+  PartnershipEvent 
+} from '@/types/index'
 
 const PartnershipsScreen = () => {
   const [selectedPartnership, setSelectedPartnership] = useState<Partnership | null>(null)
@@ -486,7 +490,7 @@ const PartnershipsScreen = () => {
                     <div>
                       <h3 className="font-medium mb-2">Requirements</h3>
                       <div className="space-y-2">
-                        {selectedPartnership.requirements.map((req, i) => (
+                        {selectedPartnership.requirements.map((req: string, i: number) => (
                           <div key={i} className="flex items-center gap-2 text-sm">
                             <CheckCircle className="w-4 h-4 text-green-500" />
                             {req}
@@ -497,7 +501,7 @@ const PartnershipsScreen = () => {
 
                     <div>
                       <h3 className="font-medium mb-2">Contacts</h3>
-                      {selectedPartnership.contacts.map((contact, i) => (
+                      {selectedPartnership.contacts.map((contact: PartnershipContact, i: number) => (
                         <div key={i} className="text-sm space-y-1">
                           <div className="font-medium">{contact.name}</div>
                           <div className="text-gray-600">{contact.role}</div>
@@ -509,7 +513,7 @@ const PartnershipsScreen = () => {
                     <div>
                       <h3 className="font-medium mb-2">Timeline</h3>
                       <div className="space-y-3">
-                        {selectedPartnership.history.map((event, i) => (
+                        {selectedPartnership.history.map((event: PartnershipEvent, i: number) => (
                           <div key={i} className="flex items-start gap-2 text-sm">
                             <Clock className="w-4 h-4 text-gray-400 mt-1" />
                             <div>

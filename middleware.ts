@@ -21,8 +21,9 @@ export default auth((req) => {
     req.nextUrl.pathname.startsWith('/audience') ||
     req.nextUrl.pathname.startsWith('/partnerships') ||
     req.nextUrl.pathname.startsWith('/settings')
-  const isSignOut = req.nextUrl.pathname.startsWith('/api/auth/signout')
+  const isSignOut = req.nextUrl.pathname === '/api/auth/signout'
 
+  // Always allow signout
   if (isSignOut) {
     return NextResponse.next()
   }
@@ -50,6 +51,7 @@ export const config = {
     '/ai-insights/:path*',
     '/audience/:path*',
     '/partnerships/:path*',
-    '/settings/:path*'
+    '/settings/:path*',
+    '/api/auth/signout'
   ]
 } 

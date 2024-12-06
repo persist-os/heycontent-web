@@ -6,7 +6,7 @@ import {
   Brain, TrendingUp, Target, Share2, 
   ChevronRight, ArrowRight, Clock, MessageSquare
 } from 'lucide-react'
-import { AIActionableInsight } from '@/types'
+import { AIActionableInsight } from '@/types/index'
 import { useRouter } from 'next/navigation'
 import { actionableInsights } from '@/data/insights'
 

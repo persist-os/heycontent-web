@@ -6,6 +6,8 @@ import { compare } from 'bcryptjs'
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from '@/lib/db'
 
+export const preferredRegion = 'auto'
+
 export const authConfig: NextAuthConfig = {
   adapter: PrismaAdapter(prisma),
   providers: [
@@ -72,23 +74,63 @@ export const authConfig: NextAuthConfig = {
   pages: {
     signIn: '/login',
     error: '/login',
+    signOut: '/login'
   },
   callbacks: {
     async signIn({ user, account }) {
       if (account?.provider === 'google') {
         if (!user.email) return false
         
-        await prisma.user.update({
-          where: { email: user.email },
-          data: {
-            emailVerified: new Date(),
+        try {
+          const existingUser = await prisma.user.findUnique({
+            where: { email: user.email },
+            include: { accounts: true }
+          })
+
+          if (!existingUser) {
+            return true
           }
-        })
-        return true
+
+          if (existingUser.accounts.length === 0) {
+            await prisma.user.update({
+              where: { email: user.email },
+              data: { emailVerified: new Date() }
+            })
+            return true
+          }
+
+          const hasGoogleAccount = existingUser.accounts.some(
+            acc => acc.provider === 'google'
+          )
+
+          if (!hasGoogleAccount) {
+            return '/login?error=EmailExists'
+          }
+
+          if (!existingUser.emailVerified) {
+            await prisma.user.update({
+              where: { email: user.email },
+              data: { emailVerified: new Date() }
+            })
+          }
+
+          return true
+        } catch (error) {
+          console.error('SignIn error:', error)
+          return false
+        }
       }
 
       if (account?.provider === 'credentials') {
         if (!user?.email) return false
+
+        const existingUser = await prisma.user.findUnique({
+          where: { email: user.email }
+        })
+
+        if (existingUser && !existingUser.emailVerified) {
+          return `/verify-email?email=${encodeURIComponent(user.email)}&resend=true`
+        }
 
         if (!user.emailVerified) {
           return `/verify-email?email=${encodeURIComponent(user.email)}`
@@ -98,15 +140,20 @@ export const authConfig: NextAuthConfig = {
       return true
     },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string
-        session.user.image = token.picture as string
-        session.user.currentPersona = token.currentPersona as string | null
-        session.user.futureVision = token.futureVision as string | null
-        session.user.emailVerified = token.emailVerified as Date | null
-        session.user.name = token.name as string | null
+      try {
+        if (session.user) {
+          session.user.id = token.id as string
+          session.user.image = token.picture as string
+          session.user.currentPersona = token.currentPersona as string | null
+          session.user.futureVision = token.futureVision as string | null
+          session.user.emailVerified = token.emailVerified as Date | null
+          session.user.name = token.name as string | null
+        }
+        return session
+      } catch (error) {
+        console.error('Session error:', error)
+        return session
       }
-      return session
     },
     async jwt({ token, user, account, profile, trigger, session }) {
       if (user) {
@@ -135,7 +182,9 @@ export const authConfig: NextAuthConfig = {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  debug: false
+  debug: true
 }
 
-export const { handlers: { GET, POST }, auth } = NextAuth(authConfig) 
+const { auth, handlers: { GET, POST }, signIn, signOut } = NextAuth(authConfig)
+
+export { auth, GET, POST, signIn, signOut } 

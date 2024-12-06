@@ -3,8 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { 
-  Send, Plus, Paperclip, Search,
-  Clock, Star, Archive, History,
+  Send, Plus, Paperclip,
   ChevronRight, Filter, Calendar,
   Zap, Target, Edit3, TrendingUp,
   MessageSquare, Brain, Settings,
@@ -15,7 +14,6 @@ import { actionableInsights } from '@/data/insights'
 import { useSession } from 'next-auth/react'
 import { MessageBubble } from './chat/message-bubble'
 import { ChatInput } from './chat/chat-input'
-import { SidebarStorage } from '@/utils/storage'
 
 interface AIActionableInsight {
   id: number;
@@ -39,10 +37,6 @@ const ChatScreen = () => {
   // All state declarations
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
-  const [isHistoryOpen, setIsHistoryOpen] = useState(() => 
-    SidebarStorage.get(session?.user?.id)
-  )
-  const [searchQuery, setSearchQuery] = useState('')
   const [showAmbient, setShowAmbient] = useState(true)
   const [currentInsight, setCurrentInsight] = useState(0)
   const [activeInsight, setActiveInsight] = useState<InsightReference | null>(null)
@@ -128,12 +122,6 @@ const ChatScreen = () => {
     }
   }, [scrollToBottom, referencedMessage])
 
-  const toggleHistory = useCallback(() => {
-    const newState = !isHistoryOpen
-    setIsHistoryOpen(newState)
-    SidebarStorage.set(newState, session?.user?.id)
-  }, [isHistoryOpen, session?.user?.id])
-
   const handleMessageReference = (message: Message) => {
     setReferencedMessage(message)
     if (inputRef.current) {
@@ -163,13 +151,11 @@ const ChatScreen = () => {
 
   // All useEffects
   useEffect(() => {
-    if (showAmbient) {
-      const timer = setInterval(() => {
-        setCurrentInsight((prev) => (prev + 1) % liveInsights.length)
-      }, 5000)
-      return () => clearInterval(timer)
-    }
-  }, [showAmbient, liveInsights.length])
+    const timer = setInterval(() => {
+      setCurrentInsight((prev) => (prev + 1) % liveInsights.length)
+    }, 5000)
+    return () => clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     if (!showAmbient && inputRef.current) {
@@ -181,7 +167,7 @@ const ChatScreen = () => {
     if (messages.length > 0) {
       scrollToBottom()
     }
-  }, [messages])
+  }, [messages, scrollToBottom])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -202,59 +188,20 @@ const ChatScreen = () => {
     setInitializing(false)
   }, [handleSendMessage, initializing])
 
+  // Add error handling for session
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      console.error('Session not authenticated')
+      return
+    }
+    
+    if (status === 'authenticated' && session?.user?.id) {
+      // Your session-dependent code here
+    }
+  }, [status, session])
+
   // Loading state
   if (status === 'loading') return null
-
-  // Sample chat history
-  const chatHistory: ChatHistory[] = [
-    {
-      id: 1,
-      topic: 'Content Strategy Analysis',
-      preview: "Let's analyze your recent content performance...",
-      date: '2024-12-01',
-      messages: [
-        { 
-          id: 1, 
-          content: 'Can you analyze my content strategy?', 
-          role: 'user', 
-          timestamp: new Date().toISOString() 
-        },
-        { 
-          id: 2, 
-          content: "Let's analyze your recent content performance...", 
-          role: 'assistant',  
-          timestamp: new Date().toISOString() 
-        }
-      ],
-      starred: true
-    },
-    {
-      id: 2,
-      topic: 'Partnership Opportunities',
-      preview: "I've identified 3 potential partnership opportunities...",
-      date: '2024-11-30',
-      messages: [
-        { 
-          id: 1, 
-          content: 'What partnership opportunities do you see?', 
-          role: 'user', 
-          timestamp: new Date().toISOString() 
-        },
-        { 
-          id: 2, 
-          content: "I've identified 3 potential partnerships...", 
-          role: 'assistant',  
-          timestamp: new Date().toISOString() 
-        }
-      ],
-      starred: false
-    }
-  ]
-
-  const filteredHistory = chatHistory.filter(chat => 
-    chat.topic.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    chat.preview.toLowerCase().includes(searchQuery.toLowerCase())
-  )
 
   // Ambient insights
   const ambientInsights = [
@@ -338,62 +285,13 @@ const ChatScreen = () => {
 
   const loadConversation = (conversation: ChatHistory) => {
     setMessages(conversation.messages as Message[])
-    setIsHistoryOpen(false)
     setShowAmbient(false)
-  }
-
-  const handleBackToInsights = () => {
-    setShowAmbient(true)
-    setMessages([])  // Clear messages when going back to insights
   }
 
   if (initializing) return null
 
   return (
     <div className="h-full flex bg-white">
-      {/* History Sidebar */}
-      <div className={`${
-        isHistoryOpen ? 'w-80' : 'w-0'
-      } border-r border-gray-200 transition-all duration-300 overflow-hidden`}>
-        <div className="h-full flex flex-col">
-          {/* Fixed Search */}
-          <div className="shrink-0 p-4 border-b">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search history..."
-                className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
-          {/* Scrollable History */}
-          <div className="flex-1 overflow-y-auto p-4">
-            <div className="space-y-2">
-              {filteredHistory.map((chat) => (
-                <div
-                  key={chat.id}
-                  onClick={() => loadConversation(chat)}
-                  className="p-3 bg-white rounded-lg cursor-pointer hover:bg-gray-50 border"
-                >
-                  <div className="flex justify-between items-start mb-1">
-                    <h3 className="font-medium text-sm">{chat.topic}</h3>
-                    {chat.starred && <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />}
-                  </div>
-                  <p className="text-xs text-gray-600 mb-1 line-clamp-2">{chat.preview}</p>
-                  <div className="flex items-center text-xs text-gray-500">
-                    <Clock className="w-3 h-3 mr-1" />
-                    {chat.date}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {/* Fixed Header */}
@@ -401,26 +299,21 @@ const ChatScreen = () => {
           <div className="flex justify-between items-center">
             <div>
               <h2 className="font-semibold text-lg">AVA IRIS</h2>
-              {showAmbient && (
-                <div className="text-sm text-gray-500 mt-1 animate-pulse">
-                  {liveInsights[currentInsight]}
-                </div>
-              )}
+              <div className="text-sm text-gray-500 mt-1 animate-pulse">
+                {liveInsights[currentInsight]}
+              </div>
             </div>
             <div className="flex gap-2">
-              {!showAmbient && (
-                <button
-                  onClick={handleBackToInsights}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
-                >
-                  <Brain className="w-5 h-5 text-gray-500" />
-                </button>
-              )}
               <button
-                onClick={toggleHistory}
-                className="p-2 hover:bg-gray-100 rounded-lg"
+                onClick={() => {
+                  setShowAmbient(true)
+                  setMessages([])
+                  setReferencedMessage(null)
+                }}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg"
               >
-                <History className="w-5 h-5 text-gray-500" />
+                <Plus className="w-4 h-4" />
+                New Chat
               </button>
             </div>
           </div>
@@ -493,17 +386,17 @@ const ChatScreen = () => {
         </div>
 
         {/* Fixed Bottom Section */}
-        <div className="shrink-0 border-t bg-white">
+        <div className="shrink-0 bg-white">
           {showAmbient && messages.length === 0 && (
-            <div className="border-b">
-              <div className="max-w-5xl mx-auto px-6 py-3">
-                <p className="text-xs text-gray-500 mb-2">Quick Actions:</p>
-                <div className="flex items-center gap-2 overflow-x-auto pb-2 hide-scrollbar">
+            <div className="border-t border-gray-100">
+              <div className="max-w-5xl mx-auto px-6 py-2">
+                <div className="flex gap-2 overflow-x-auto scrollbar-none">
                   {ambientInsights.map((insight, index) => (
                     <button
                       key={index}
                       onClick={() => handleInsightClick(insight.action, insight)}
-                      className="whitespace-nowrap px-3 py-1 text-sm bg-gray-50 hover:bg-gray-100 rounded-full transition-colors"
+                      className="shrink-0 px-4 h-8 text-xs text-gray-600 bg-gray-50 hover:bg-gray-100 
+                        rounded-full flex items-center transition-colors"
                     >
                       {insight.action}
                     </button>

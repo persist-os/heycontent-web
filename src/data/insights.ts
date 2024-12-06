@@ -1,4 +1,4 @@
-import { AIActionableInsight } from '@/types'
+import { AIActionableInsight } from '@/types/index'
 
 export const actionableInsights: AIActionableInsight[] = [
   {

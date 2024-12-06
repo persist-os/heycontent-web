@@ -33,10 +33,13 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
   const [showResendVerification, setShowResendVerification] = useState(false)
 
   useEffect(() => {
-    if (searchParams.get('error') === 'AccessDenied') {
+    if (error === 'UNVERIFIED_EMAIL' || 
+        error === 'CallbackRouteError' || 
+        error === 'AccessDenied' || 
+        urlError === 'AccessDenied') {
       setShowResendVerification(true)
     }
-  }, [searchParams])
+  }, [error, urlError])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -122,7 +125,6 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
       case 'UNVERIFIED_EMAIL':
       case 'CallbackRouteError':
       case 'AccessDenied':
-        setShowResendVerification(true)
         return 'Please verify your email before signing in.';
       default:
         return error || 'An error occurred. Please try again.';

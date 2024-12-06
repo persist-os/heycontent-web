@@ -59,12 +59,15 @@ const SettingsScreen = () => {
 
   const handleSignOut = async () => {
     try {
-      await signOut({ 
-        callbackUrl: '/',
+      // Simple signout with redirect
+      await signOut({
+        callbackUrl: '/login',
         redirect: true
       })
     } catch (error) {
       console.error('Sign out error:', error)
+      // Fallback redirect
+      window.location.href = '/login'
     }
   }
 
