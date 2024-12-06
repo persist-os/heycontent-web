@@ -6,6 +6,7 @@ import { ArrowRight, Brain, Target, ChartBar, ChevronLeft, ChevronRight } from '
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { HeroSection } from './_components/hero-section'
+import { QuantumBackground } from './_components/quantum-background'
 
 const featureCards = [
   {
@@ -47,7 +48,10 @@ export default function LandingPage() {
 
   return (
     <div className="overflow-x-hidden">
-      <HeroSection />
+      <div className="relative">
+        <QuantumBackground />
+        <HeroSection />
+      </div>
       
       <section className="min-h-screen bg-gradient-to-r from-[#F8F0F9] to-blue-50">
         {/* Featured Influencers */}
