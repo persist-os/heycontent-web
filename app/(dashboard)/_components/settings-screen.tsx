@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch"
 import { 
   Settings, Bell, Lock, Palette, Globe, Users, 
   Sliders, Mail, Briefcase, MessageSquare, Upload,
-  Download, Database, Instagram, Youtube, Twitter, Video,
+  Download, Database, Instagram, Youtube, Video,
   LogOut
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
@@ -22,7 +22,7 @@ const MAX_VISION_LENGTH = 500
 
 const SettingsScreen = () => {
   const router = useRouter()
-  const { data: session, update: updateSession } = useSession()
+  const { data: session, status, update: updateSession } = useSession()
   const [isFirstTimeSetup, setIsFirstTimeSetup] = useState(false)
   const [isResending, setIsResending] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
@@ -150,9 +150,34 @@ const SettingsScreen = () => {
     }
   }
 
+  const handleConnect = async (platform: string) => {
+    try {
+      if (platform === 'instagram') {
+        const response = await fetch('/api/social/instagram/auth-url', {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to get authentication URL');
+        }
+
+        const data = await response.json();
+        if (data.authUrl) {
+          window.location.href = data.authUrl;
+        }
+      }
+    } catch (error) {
+      console.error('Connection error:', error);
+      toast.error('Failed to connect platform');
+    }
+  };
+
   return (
-    <div className="h-screen overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
-      <div className="max-w-6xl mx-auto p-6">
+    <div className="h-full min-h-screen bg-background">
+      <div className="container max-w-6xl mx-auto py-6 space-y-6">
         {isFirstTimeSetup && (
           <div className="mb-6 bg-blue-50 p-4 rounded-lg">
             <h2 className="text-lg font-semibold mb-2">Welcome to AVA IRIS! 🎉</h2>
@@ -166,18 +191,19 @@ const SettingsScreen = () => {
           </div>
         )}
 
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-lg font-semibold">Settings</h1>
-            <p className="text-gray-600">Manage your preferences and account settings</p>
+            <h1 className="text-2xl font-semibold">Settings</h1>
+            <p className="text-muted-foreground">Manage your preferences and account settings</p>
           </div>
-          <button
+          <Button
             onClick={handleSignOut}
-            className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+            variant="ghost"
+            className="flex items-center gap-2"
           >
             <LogOut className="w-4 h-4" />
             <span>Sign out</span>
-          </button>
+          </Button>
         </div>
 
         <Tabs defaultValue="account" className="space-y-6">
@@ -211,7 +237,9 @@ const SettingsScreen = () => {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Profile Information</CardTitle>
-                    {session?.user?.emailVerified ? (
+                    {status === 'loading' ? (
+                      <Badge variant="outline">Loading...</Badge>
+                    ) : session?.user?.emailVerified ? (
                       <Badge variant="success">Verified</Badge>
                     ) : (
                       <div className="flex items-center gap-2">
@@ -376,11 +404,11 @@ const SettingsScreen = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {[
-                    { platform: 'Email', icon: Mail, status: 'Not Connected', lastSync: null },
-                    { platform: 'Instagram', icon: Instagram, status: 'Connected', lastSync: '2 hours ago' },
-                    { platform: 'YouTube', icon: Youtube, status: 'Connected', lastSync: '1 hour ago' },
-                    { platform: 'Twitter', icon: Twitter, status: 'Not Connected', lastSync: null },
-                    { platform: 'TikTok', icon: Video, status: 'Not Connected', lastSync: null }
+                    { platform: 'Instagram', icon: Instagram, status: 'Not Connected', lastSync: null },
+                    { platform: 'YouTube', icon: Youtube, status: 'Not Connected', lastSync: null },
+                    { platform: 'TikTok', icon: Video, status: 'Not Connected', lastSync: null },
+                    { platform: 'Gmail', icon: Mail, status: 'Not Connected', lastSync: null },
+                    { platform: 'Outlook', icon: Mail, status: 'Not Connected', lastSync: null }
                   ].map((platform, i) => (
                     <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-3">
@@ -394,20 +422,23 @@ const SettingsScreen = () => {
                           </p>
                         </div>
                       </div>
-                      <button 
-                        className={`px-4 py-2 rounded-lg ${
+                      <Button 
+                        variant="default"
+                        onClick={() => {
+                          if (platform.platform.toLowerCase() === 'instagram') {
+                            handleConnect('instagram');
+                          } else if (platform.platform === 'Email') {
+                            handleEmailIntegration();
+                          }
+                        }}
+                        className={`${
                           platform.status === 'Connected' 
                             ? 'bg-gray-200 text-gray-700'
                             : 'bg-blue-500 text-white'
                         }`}
-                        onClick={() => {
-                          if (platform.platform === 'Email') {
-                            handleEmailIntegration();
-                          }
-                        }}
                       >
                         {platform.status === 'Connected' ? 'Disconnect' : 'Connect'}
-                      </button>
+                      </Button>
                     </div>
                   ))}
                 </CardContent>

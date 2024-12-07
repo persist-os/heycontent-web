@@ -25,6 +25,7 @@ model User {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   conversations     Conversation[]
+  socialUpdates     SocialUpdate[]
 }
 
 model Account {
@@ -87,4 +88,17 @@ model Message {
   referencedBy       Message[] @relation("MessageReference")
 
   @@index([conversationId])
+}
+
+model SocialUpdate {
+  id        String   @id @default(cuid())
+  userId    String
+  platform  String
+  type      String
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }

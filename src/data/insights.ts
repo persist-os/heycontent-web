@@ -179,11 +179,12 @@ export const actionableInsights: AIActionableInsight[] = [
     id: 8,
     type: 'platform',
     opportunity: {
-      title: "Twitter Thread Strategy",
-      description: "Build authority with technical insights",
-      impact: "50K+ impressions per thread",
-      timing: "Tech Twitter very active",
-      confidence: 88
+      title: "Content Strategy",
+      description: "Optimize your content strategy based on platform trends",
+      timing: "Platform engagement peaks",
+      impact: "85% increase in engagement",
+      confidence: 88,
+      priority: "High"
     },
     action: {
       steps: [
@@ -197,9 +198,10 @@ export const actionableInsights: AIActionableInsight[] = [
     },
     context: {
       why: [
-        "Tech Twitter engagement up 40%",
-        "Your thread style performing well",
-        "Perfect for building authority"
+        "Instagram engagement up 35%",
+        "YouTube watch time increased by 25%",
+        "TikTok followers growing rapidly",
+        "Email open rates above industry average"
       ],
       data: ["Platform metrics", "Engagement analysis", "Content testing"]
     }

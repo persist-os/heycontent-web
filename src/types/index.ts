@@ -225,6 +225,7 @@ export interface AIActionableInsight {
     impact: string
     timing: string
     confidence: number
+    priority?: 'High' | 'Medium' | 'Low'
   }
   action: {
     steps: string[]

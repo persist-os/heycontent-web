@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { HeroSection } from './_components/hero-section'
 import { QuantumBackground } from './_components/quantum-background'
+import Link from 'next/link'
 
 const featureCards = [
   {
@@ -246,7 +247,9 @@ export default function LandingPage() {
             <div>
               <h3 className="font-medium mb-4">Company</h3>
               <div className="flex flex-col gap-3 text-gray-600">
-                <button className="hover:text-gray-900 text-left">About us</button>
+                <Link href="/about" className="hover:text-gray-900 text-left">
+                  About us
+                </Link>
                 <button className="hover:text-gray-900 text-left">Careers</button>
                 <button className="hover:text-gray-900 text-left">Contact</button>
               </div>
@@ -262,9 +265,15 @@ export default function LandingPage() {
             <div>
               <h3 className="font-medium mb-4">Legal</h3>
               <div className="flex flex-col gap-3 text-gray-600">
-                <button className="hover:text-gray-900 text-left">Privacy</button>
-                <button className="hover:text-gray-900 text-left">Terms</button>
-                <button className="hover:text-gray-900 text-left">Security</button>
+                <Link href="/privacy" className="hover:text-gray-900 text-left">
+                  Privacy
+                </Link>
+                <Link href="/terms" className="hover:text-gray-900 text-left">
+                  Terms
+                </Link>
+                <Link href="/security" className="hover:text-gray-900 text-left">
+                  Security
+                </Link>
               </div>
             </div>
           </div>
