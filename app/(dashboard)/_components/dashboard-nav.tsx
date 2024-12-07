@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import { Logo } from '@/app/_components/logo'
 import { 
   Brain, Users, MessageSquare, Settings, 
   Briefcase, ChevronLeft, Clock, Star
@@ -107,11 +108,18 @@ export function DashboardNav() {
         <div className="relative h-full bg-white/80 backdrop-blur-md border-r border-gray-100">
           {/* Logo Area */}
           <div className="h-16 flex items-center px-6">
-            <span className="font-semibold text-lg transition-opacity duration-200 ease-in-out" 
-              style={{ opacity: isHovering ? 1 : 0 }}
+            <div 
+              className={`group flex items-center transition-all duration-300 ease-in-out transform
+                ${isHovering ? 'scale-100 opacity-100' : 'scale-90 opacity-50'}
+              `}
             >
-              AVA IRIS
-            </span>
+              <Logo 
+                className={`h-12 text-gray-900 animate-fade-in
+                  ${isHovering ? 'animate-float' : ''}
+                  group-hover:scale-105 group-hover:rotate-1 transition-all duration-300
+                `}
+              />
+            </div>
           </div>
 
           {/* Main Navigation */}

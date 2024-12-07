@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { Logo } from '@/app/_components/logo'
 
 const searchSuggestions = [
   "What's my brand deal potential?",
@@ -30,7 +31,11 @@ export function HeroSection() {
     <div className="bg-gradient-to-r from-[#F8F0F9] to-blue-50 min-h-[80vh] flex flex-col">
       {/* Header */}
       <nav className="sticky top-0 z-50 backdrop-blur-sm bg-white/50 flex justify-between items-center px-6 py-4">
-        <div className="text-2xl font-bold">AVA IRIS</div>
+        <div className="text-gray-900">
+          <div className="group">
+            <Logo className="h-12 text-gray-900 animate-fade-in group-hover:scale-105 transition-transform duration-300" />
+          </div>
+        </div>
         <div className="flex items-center gap-4">
           <button 
             onClick={() => document.getElementById('featured-scroll')?.scrollIntoView({ behavior: 'smooth' })}
