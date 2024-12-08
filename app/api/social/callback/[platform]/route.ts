@@ -22,11 +22,6 @@ const PLATFORM_CONFIGS: Record<SocialPlatform, {
     clientId: process.env.YOUTUBE_CLIENT_ID,
     clientSecret: process.env.YOUTUBE_CLIENT_SECRET,
   },
-  pinterest: {
-    tokenUrl: 'https://api.pinterest.com/v1/oauth/token',
-    clientId: process.env.PINTEREST_CLIENT_ID,
-    clientSecret: process.env.PINTEREST_CLIENT_SECRET,
-  },
   gmail: {
     tokenUrl: 'https://oauth2.googleapis.com/token',
     clientId: process.env.GOOGLE_CLIENT_ID,
@@ -43,7 +38,6 @@ const API_ENDPOINTS: Record<SocialPlatform, string> = {
   instagram: 'https://graph.instagram.com/me?fields=id,username,account_type',
   tiktok: 'https://open-api.tiktok.com/user/info/',
   youtube: 'https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true',
-  pinterest: 'https://api.pinterest.com/v1/user/me/',
   gmail: 'https://gmail.googleapis.com/gmail/v1/users/me/profile',
   outlook: 'https://graph.microsoft.com/v1.0/me'
 }

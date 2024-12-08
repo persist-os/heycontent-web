@@ -28,12 +28,6 @@ const PLATFORM_CONFIGS: Record<SocialPlatform, {
     redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/social/callback/youtube`,
     scope: ['https://www.googleapis.com/auth/youtube.readonly']
   },
-  pinterest: {
-    clientId: process.env.PINTEREST_CLIENT_ID,
-    clientSecret: process.env.PINTEREST_CLIENT_SECRET,
-    redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/social/callback/pinterest`,
-    scope: ['read_users', 'read_pins']
-  },
   gmail: {
     clientId: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -78,17 +72,26 @@ export async function POST(req: Request) {
       platform
     })).toString('base64')
 
-    const authUrl = platform === 'gmail'
-      ? `https://accounts.google.com/o/oauth2/v2/auth?client_id=${config.clientId}&redirect_uri=${config.redirectUri}&scope=${config.scope.join(' ')}&response_type=code&access_type=offline&prompt=consent&state=${state}`
-      : platform === 'outlook'
-      ? `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${config.clientId}&redirect_uri=${config.redirectUri}&scope=${config.scope.join(' ')}&response_type=code&state=${state}`
-      : platform === 'instagram'
-      ? `https://api.instagram.com/oauth/authorize?client_id=${config.clientId}&redirect_uri=${config.redirectUri}&scope=${config.scope.join(',')}&response_type=code&state=${state}`
-      : platform === 'tiktok'
-      ? `https://www.tiktok.com/auth/authorize?client_key=${config.clientId}&redirect_uri=${config.redirectUri}&scope=${config.scope.join(',')}&response_type=code&state=${state}`
-      : platform === 'youtube'
-      ? `https://accounts.google.com/o/oauth2/v2/auth?client_id=${config.clientId}&redirect_uri=${config.redirectUri}&scope=${config.scope.join(' ')}&response_type=code&access_type=offline&state=${state}`
-      : `https://api.pinterest.com/oauth/?client_id=${config.clientId}&redirect_uri=${config.redirectUri}&scope=${config.scope.join(',')}&response_type=code&state=${state}`
+    let authUrl: string
+    switch (platform) {
+      case 'gmail':
+        authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${config.clientId}&redirect_uri=${config.redirectUri}&scope=${config.scope.join(' ')}&response_type=code&access_type=offline&prompt=consent&state=${state}`
+        break
+      case 'outlook':
+        authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${config.clientId}&redirect_uri=${config.redirectUri}&scope=${config.scope.join(' ')}&response_type=code&state=${state}`
+        break
+      case 'instagram':
+        authUrl = `https://api.instagram.com/oauth/authorize?client_id=${config.clientId}&redirect_uri=${config.redirectUri}&scope=${config.scope.join(',')}&response_type=code&state=${state}`
+        break
+      case 'tiktok':
+        authUrl = `https://www.tiktok.com/auth/authorize?client_key=${config.clientId}&redirect_uri=${config.redirectUri}&scope=${config.scope.join(',')}&response_type=code&state=${state}`
+        break
+      case 'youtube':
+        authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${config.clientId}&redirect_uri=${config.redirectUri}&scope=${config.scope.join(' ')}&response_type=code&access_type=offline&state=${state}`
+        break
+      default:
+        return NextResponse.json({ error: 'Invalid platform' }, { status: 400 })
+    }
 
     return NextResponse.json({ authUrl })
 

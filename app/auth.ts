@@ -14,6 +14,19 @@ export const authConfig: NextAuthConfig = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          scope: [
+            'openid',
+            'email',
+            'profile',
+            'https://www.googleapis.com/auth/gmail.readonly',
+            'https://www.googleapis.com/auth/gmail.modify'
+          ].join(' '),
+          access_type: "offline",
+          prompt: "consent"
+        }
+      },
       profile(profile) {
         return {
           id: profile.sub,
@@ -187,4 +200,4 @@ export const authConfig: NextAuthConfig = {
 
 const { auth, handlers: { GET, POST }, signIn, signOut } = NextAuth(authConfig)
 
-export { auth, GET, POST, signIn, signOut } 
+export { auth, GET, POST, signIn, signOut }

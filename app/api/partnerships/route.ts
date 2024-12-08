@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/app/auth'
 import { prisma } from '@/lib/db'
-import { Prisma } from '@prisma/client'
-import type { Partnership as PrismaPartnership } from '@prisma/client'
+import type { Prisma } from '@prisma/client'
 
 export async function GET() {
   try {
@@ -20,25 +19,6 @@ export async function GET() {
             contacts: true,
             history: true,
             requirements: true
-          },
-          orderBy: {
-            lastUpdated: 'desc'
-          }
-        },
-        incomingProposals: {
-          where: {
-            status: 'pending'
-          },
-          orderBy: {
-            receivedDate: 'desc'
-          }
-        },
-        suggestedPartnerships: {
-          where: {
-            status: 'new'
-          },
-          orderBy: {
-            confidence: 'desc'
           }
         }
       }
@@ -49,12 +29,10 @@ export async function GET() {
     }
 
     return NextResponse.json({
-      active: user.partnerships.map((p: PrismaPartnership & { requirements: any[] }) => ({
+      active: user.partnerships.map((p) => ({
         ...p,
         progress: calculateProgress(p.requirements)
-      })),
-      incoming: user.incomingProposals,
-      suggested: user.suggestedPartnerships
+      }))
     })
 
   } catch (error) {

@@ -26,6 +26,10 @@ model User {
   updatedAt         DateTime  @updatedAt
   conversations     Conversation[]
   socialUpdates     SocialUpdate[]
+  socialAccounts    SocialAccount[]
+  partnerships      Partnership[]
+  incomingProposals Partnership[] @relation("IncomingProposals")
+  suggestedPartnerships Partnership[] @relation("SuggestedPartnerships")
 }
 
 model Account {
@@ -101,4 +105,74 @@ model SocialUpdate {
   user      User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
+}
+
+model SocialAccount {
+  id            String   @id @default(cuid())
+  userId        String
+  platform      String
+  accessToken   String   @db.Text
+  refreshToken  String?  @db.Text
+  expiresAt     DateTime?
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, platform])
+}
+
+model Partnership {
+  id          String    @id @default(cuid())
+  userId      String
+  name        String
+  status      String    @default("pending")
+  user        User      @relation(fields: [userId], references: [id])
+  requirements PartnershipRequirement[]
+  events      PartnershipEvent[]
+  contacts    Contact[]
+  history     PartnershipHistory[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  proposedToId String?
+  proposedTo   User?    @relation("IncomingProposals", fields: [proposedToId], references: [id])
+  suggestedToId String?
+  suggestedTo   User?   @relation("SuggestedPartnerships", fields: [suggestedToId], references: [id])
+
+  @@index([userId])
+  @@index([proposedToId])
+  @@index([suggestedToId])
+}
+
+model PartnershipRequirement {
+  id            String     @id @default(cuid())
+  partnershipId String
+  title         String
+  completed     Boolean    @default(false)
+  partnership   Partnership @relation(fields: [partnershipId], references: [id], onDelete: Cascade)
+}
+
+model PartnershipEvent {
+  id            String     @id @default(cuid())
+  partnershipId String
+  date          DateTime
+  type          String?
+  description   String?
+  partnership   Partnership @relation(fields: [partnershipId], references: [id], onDelete: Cascade)
+}
+
+model Contact {
+  id            String     @id @default(cuid())
+  partnershipId String
+  name          String
+  email         String?
+  phone         String?
+  role          String?
+  partnership   Partnership @relation(fields: [partnershipId], references: [id], onDelete: Cascade)
+}
+
+model PartnershipHistory {
+  id            String     @id @default(cuid())
+  partnershipId String
+  date          DateTime
+  action        String
+  details       String?
+  partnership   Partnership @relation(fields: [partnershipId], references: [id], onDelete: Cascade)
 }

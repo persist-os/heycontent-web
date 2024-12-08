@@ -9,28 +9,31 @@ interface EmailData {
   id: string
   subject: string
   from: string
-  date: Date
-  content: string
+  date: string
+  body: string
+  isRead: boolean
+  labels?: string[]
 }
 
+type GmailHeader = gmail_v1.Schema$MessagePartHeader
+type GmailPart = gmail_v1.Schema$MessagePart
+type GmailPayload = gmail_v1.Schema$MessagePart
+
 async function getGmailEmails(accessToken: string): Promise<EmailData[]> {
-  const oauth2Client = new google.auth.OAuth2()
-  oauth2Client.setCredentials({ access_token: accessToken })
-  
-  const gmail = google.gmail({ version: 'v1', auth: oauth2Client })
+  const auth = new google.auth.OAuth2()
+  auth.setCredentials({ access_token: accessToken })
+  const gmail = google.gmail({ version: 'v1', auth })
 
   const response = await gmail.users.messages.list({
     userId: 'me',
-    q: 'newer_than:30d',
-    maxResults: 100
+    maxResults: 10
   })
 
   const emails: EmailData[] = []
   for (const message of response.data.messages || []) {
     const email = await gmail.users.messages.get({
       userId: 'me',
-      id: message.id!,
-      format: 'full'
+      id: message.id!
     })
 
     const headers = email.data.payload?.headers || []
@@ -49,11 +52,13 @@ async function getGmailEmails(accessToken: string): Promise<EmailData[]> {
     }
 
     emails.push({
-      id: message.id || '',
+      id: message.id!,
       subject,
       from,
-      date: new Date(date),
-      content: body
+      date,
+      body,
+      isRead: !(email.data.labelIds || []).includes('UNREAD'),
+      labels: email.data.labelIds || []
     })
   }
 
@@ -61,7 +66,7 @@ async function getGmailEmails(accessToken: string): Promise<EmailData[]> {
 }
 
 async function getOutlookEmails(accessToken: string): Promise<EmailData[]> {
-  const authProvider: AuthProvider = (done) => {
+  const authProvider: AuthProvider = (done: (error: any, accessToken: string) => void) => {
     done(null, accessToken)
   }
 
@@ -71,78 +76,76 @@ async function getOutlookEmails(accessToken: string): Promise<EmailData[]> {
 
   const response = await client
     .api('/me/messages')
-    .select('id,subject,from,receivedDateTime,body')
-    .filter("receivedDateTime ge " + new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-    .top(100)
+    .top(10)
     .get()
 
   return response.value.map((email: any) => ({
     id: email.id,
     subject: email.subject,
     from: email.from.emailAddress.address,
-    date: new Date(email.receivedDateTime),
-    content: email.body.content
+    date: email.receivedDateTime,
+    body: email.bodyPreview,
+    isRead: email.isRead,
+    labels: []
   }))
 }
 
-export async function POST(req: Request) {
+export async function GET() {
   try {
     const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const emailAccounts = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: {
-        socialAccounts: {
-          where: {
-            platform: { in: ['gmail', 'outlook'] as const },
-            isConnected: true
-          }
+    // Get user's email accounts
+    const accounts = await prisma.account.findMany({
+      where: {
+        userId: session.user.id,
+        provider: {
+          in: ['gmail', 'outlook']
         }
       }
     })
 
-    const results = {
-      analyzed: 0,
-      partnerships: 0,
-      error: null as string | null
-    }
-
-    for (const account of emailAccounts?.socialAccounts || []) {
+    const emailPromises = accounts.map(async (account) => {
       try {
-        const emails = account.platform === 'gmail'
-          ? await getGmailEmails(account.accessToken!)
-          : await getOutlookEmails(account.accessToken!)
+        const emails = account.provider === 'gmail'
+          ? await getGmailEmails(account.access_token!)
+          : await getOutlookEmails(account.access_token!)
 
-        for (const email of emails) {
-          results.analyzed++
+        // Analyze each email for partnerships
+        const analyzedEmails = await Promise.all(
+          emails.map(async (email) => {
+            const analysis = await getCompletion([
+              { role: 'system', content: 'You are a helpful assistant that analyzes emails to determine if they are related to brand partnerships or collaborations.' },
+              { role: 'user', content: `Please analyze this email and determine if it's related to a brand partnership or collaboration. Respond with only "true" or "false".\n\nSubject: ${email.subject}\n\nBody: ${email.body}` }
+            ])
 
-          const response = await fetch('/api/email/analyze', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(email)
+            return {
+              ...email,
+              isPartnership: analysis.toLowerCase() === 'true'
+            }
           })
+        )
 
-          const analysis = await response.json()
-          if (analysis.isPartnership) {
-            results.partnerships++
-          }
+        return {
+          provider: account.provider,
+          emails: analyzedEmails
         }
       } catch (error) {
-        console.error(`Error processing ${account.platform} emails:`, error)
-        results.error = `Error processing ${account.platform} emails: ${error instanceof Error ? error.message : 'Unknown error'}`
+        console.error(`Error fetching ${account.provider} emails:`, error)
+        return {
+          provider: account.provider,
+          error: 'Failed to fetch emails'
+        }
       }
-    }
+    })
 
+    const results = await Promise.all(emailPromises)
     return NextResponse.json(results)
 
   } catch (error) {
     console.error('[EMAIL_SYNC_ERROR]', error)
-    return NextResponse.json({ 
-      error: 'Internal Server Error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 } 

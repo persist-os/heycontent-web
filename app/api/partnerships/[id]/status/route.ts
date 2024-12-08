@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/app/auth'
 import { prisma } from '@/lib/db'
-import { Prisma } from '@prisma/client'
-
-type ValidStatus = 'new' | 'in_progress' | 'completed' | 'cancelled'
 
 export async function PATCH(
-  req: Request,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -15,11 +12,9 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await req.json()
-    const { status } = body as { status: ValidStatus }
-
-    if (!status || !['new', 'in_progress', 'completed', 'cancelled'].includes(status)) {
-      return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
+    const { status } = await request.json()
+    if (!status) {
+      return NextResponse.json({ error: 'Status is required' }, { status: 400 })
     }
 
     // Verify partnership belongs to user and update in one transaction
@@ -27,7 +22,11 @@ export async function PATCH(
       const partnership = await tx.partnership.findFirst({
         where: {
           id: params.id,
-          userId: session.user.id
+          OR: [
+            { userId: session.user.id },
+            { proposedToId: session.user.id },
+            { suggestedToId: session.user.id }
+          ]
         }
       })
 
@@ -39,16 +38,16 @@ export async function PATCH(
         where: { id: params.id },
         data: { 
           status,
-          lastUpdated: new Date()
+          updatedAt: new Date()
         }
       })
 
       await tx.partnershipEvent.create({
         data: {
           partnershipId: params.id,
-          date: new Date().toISOString(),
-          event: `Status changed to ${status}`,
-          notes: `Updated by ${session.user.name || session.user.email}`
+          date: new Date(),
+          type: 'STATUS_CHANGE',
+          description: `Status changed to ${status}`
         }
       })
 
@@ -62,9 +61,6 @@ export async function PATCH(
     if (error instanceof Error && error.message === 'Partnership not found') {
       return NextResponse.json({ error: 'Partnership not found' }, { status: 404 })
     }
-    return NextResponse.json({ 
-      error: 'Internal Server Error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 } 
