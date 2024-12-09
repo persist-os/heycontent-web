@@ -1,52 +1,51 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
 model User {
-  id                String    @id @default(cuid())
-  name              String?
-  email             String    @unique
-  password          String?
-  image             String?
-  currentPersona    String?   @db.Text
-  futureVision      String?   @db.Text
-  insights          Insight[]
-  accounts          Account[]
-  emailVerified     DateTime?
-  verifyToken       String?   @unique
-  verifyTokenExpiry DateTime?
-  resetToken        String?   @unique
-  resetTokenExpiry  DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  conversations     Conversation[]
-  socialUpdates     SocialUpdate[]
-  socialAccounts    SocialAccount[]
-  partnerships      Partnership[]
-  incomingProposals Partnership[] @relation("IncomingProposals")
-  suggestedPartnerships Partnership[] @relation("SuggestedPartnerships")
+  id                    String          @id @default(cuid())
+  name                  String?
+  email                 String          @unique
+  password              String?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  currentPersona        String?
+  emailVerified         DateTime?
+  futureVision          String?
+  image                 String?
+  resetToken            String?         @unique
+  resetTokenExpiry      DateTime?
+  verifyToken           String?         @unique
+  verifyTokenExpiry     DateTime?
+  accounts              Account[]
+  conversations         Conversation[]
+  insights              Insight[]
+  incomingProposals     Partnership[]   @relation("IncomingProposals")
+  suggestedPartnerships Partnership[]   @relation("SuggestedPartnerships")
+  partnerships          Partnership[]
+  socialAccounts        SocialAccount[]
+  socialUpdates         SocialUpdate[]
 }
 
 model Account {
-  id                 String  @id @default(cuid())
-  userId             String
-  type               String
-  provider           String
-  providerAccountId  String
-  refresh_token      String?  @db.Text
-  access_token       String?  @db.Text
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String?  @db.Text
-  session_token      String?  @db.Text
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_token     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -60,81 +59,93 @@ model Insight {
   timing      String
   confidence  Int
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
 }
 
 model Conversation {
-  id          String    @id @default(cuid())
-  userId      String
-  title       String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  messages    Message[]
-  starred     Boolean   @default(false)
-  user        User      @relation(fields: [userId], references: [id])
+  id        String    @id @default(cuid())
+  userId    String
+  title     String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  starred   Boolean   @default(false)
+  user      User      @relation(fields: [userId], references: [id])
+  messages  Message[]
 
   @@index([userId])
 }
 
 model Message {
-  id              String       @id @default(cuid())
-  content         String       @db.Text
-  role            String      // 'user' or 'assistant'
-  timestamp       DateTime     @default(now())
-  conversationId  String
-  conversation    Conversation @relation(fields: [conversationId], references: [id])
+  id                  String       @id @default(cuid())
+  content             String
+  role                String
+  timestamp           DateTime     @default(now())
+  conversationId      String
   referencedMessageId String?
-  referencedMessage   Message?  @relation("MessageReference", fields: [referencedMessageId], references: [id])
-  referencedBy       Message[] @relation("MessageReference")
+  conversation        Conversation @relation(fields: [conversationId], references: [id])
+  referencedMessage   Message?     @relation("MessageReference", fields: [referencedMessageId], references: [id])
+  referencedBy        Message[]    @relation("MessageReference")
 
   @@index([conversationId])
 }
 
 model SocialUpdate {
   id        String   @id @default(cuid())
-  userId    String
+  createdAt DateTime @default(now())
   platform  String
   type      String
   data      Json
-  createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  userId    String
   user      User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
 }
 
 model SocialAccount {
-  id            String   @id @default(cuid())
-  userId        String
-  platform      String
-  accessToken   String   @db.Text
-  refreshToken  String?  @db.Text
-  expiresAt     DateTime?
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String    @id @default(cuid())
+  userId       String
+  platform     String
+  name         String?
+  username     String?
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime?
+  tokenType    String?
+  scope        String?
+  profileUrl   String?
+  avatarUrl    String?
+  metadata     Json?
+  isConnected  Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  metrics      Json?
+  partnerships Json?
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, platform])
 }
 
 model Partnership {
-  id          String    @id @default(cuid())
-  userId      String
-  name        String
-  status      String    @default("pending")
-  user        User      @relation(fields: [userId], references: [id])
-  requirements PartnershipRequirement[]
-  events      PartnershipEvent[]
-  contacts    Contact[]
-  history     PartnershipHistory[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  proposedToId String?
-  proposedTo   User?    @relation("IncomingProposals", fields: [proposedToId], references: [id])
+  id            String                   @id @default(cuid())
+  userId        String
+  name          String
+  status        String                   @default("pending")
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  proposedToId  String?
   suggestedToId String?
-  suggestedTo   User?   @relation("SuggestedPartnerships", fields: [suggestedToId], references: [id])
+  contacts      Contact[]
+  proposedTo    User?                    @relation("IncomingProposals", fields: [proposedToId], references: [id])
+  suggestedTo   User?                    @relation("SuggestedPartnerships", fields: [suggestedToId], references: [id])
+  user          User                     @relation(fields: [userId], references: [id])
+  events        PartnershipEvent[]
+  history       PartnershipHistory[]
+  requirements  PartnershipRequirement[]
 
   @@index([userId])
   @@index([proposedToId])
@@ -142,15 +153,15 @@ model Partnership {
 }
 
 model PartnershipRequirement {
-  id            String     @id @default(cuid())
+  id            String      @id @default(cuid())
   partnershipId String
   title         String
-  completed     Boolean    @default(false)
+  completed     Boolean     @default(false)
   partnership   Partnership @relation(fields: [partnershipId], references: [id], onDelete: Cascade)
 }
 
 model PartnershipEvent {
-  id            String     @id @default(cuid())
+  id            String      @id @default(cuid())
   partnershipId String
   date          DateTime
   type          String?
@@ -159,7 +170,7 @@ model PartnershipEvent {
 }
 
 model Contact {
-  id            String     @id @default(cuid())
+  id            String      @id @default(cuid())
   partnershipId String
   name          String
   email         String?
@@ -169,7 +180,7 @@ model Contact {
 }
 
 model PartnershipHistory {
-  id            String     @id @default(cuid())
+  id            String      @id @default(cuid())
   partnershipId String
   date          DateTime
   action        String

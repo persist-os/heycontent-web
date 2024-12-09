@@ -1,6 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Add other config options here if needed
+  logging: {
+    fetches: {
+      fullUrl: true,
+    },
+  },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '2mb'
+    }
+  }
 }
 
 export default nextConfig 

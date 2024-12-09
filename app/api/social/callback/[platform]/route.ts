@@ -26,11 +26,6 @@ const PLATFORM_CONFIGS: Record<SocialPlatform, {
     tokenUrl: 'https://oauth2.googleapis.com/token',
     clientId: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  },
-  outlook: {
-    tokenUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
-    clientId: process.env.OUTLOOK_CLIENT_ID,
-    clientSecret: process.env.OUTLOOK_CLIENT_SECRET,
   }
 }
 
@@ -38,8 +33,7 @@ const API_ENDPOINTS: Record<SocialPlatform, string> = {
   instagram: 'https://graph.instagram.com/me?fields=id,username,account_type',
   tiktok: 'https://open-api.tiktok.com/user/info/',
   youtube: 'https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true',
-  gmail: 'https://gmail.googleapis.com/gmail/v1/users/me/profile',
-  outlook: 'https://graph.microsoft.com/v1.0/me'
+  gmail: 'https://gmail.googleapis.com/gmail/v1/users/me/profile'
 }
 
 async function exchangeCodeForToken(platform: SocialPlatform, code: string, redirectUri: string) {
@@ -73,11 +67,11 @@ async function fetchUserProfile(platform: SocialPlatform, accessToken: string) {
 }
 
 export async function GET(
-  req: Request,
-  { params }: { params: { platform: SocialPlatform } }
+  request: Request,
+  { params }: { params: { platform: string } }
 ) {
   try {
-    const { searchParams } = new URL(req.url)
+    const { searchParams } = new URL(request.url)
     const code = searchParams.get('code')
     const state = searchParams.get('state')
 

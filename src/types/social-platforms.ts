@@ -1,4 +1,8 @@
-export type SocialPlatform = 'instagram' | 'tiktok' | 'youtube' | 'gmail' | 'outlook'
+export type SocialPlatform = 
+  | 'instagram' 
+  | 'youtube' 
+  | 'tiktok' 
+  | 'gmail'
 
 export interface SocialAccount {
   id: string
@@ -16,7 +20,7 @@ export interface PlatformMetrics {
   following?: number
   posts?: number
   views?: number
-  engagement?: number
+  engagementRate?: number
   subscribers?: number
   averageViews?: number
   emailList?: number
@@ -52,7 +56,21 @@ export interface YouTubeMetrics extends PlatformMetrics {
     views: number
     likes: number
     comments: number
+    publishedAt: string
+    thumbnailUrl: string
   }>
+  revenueData?: {
+    estimatedRevenue: number
+    adsRevenue: number
+    membershipsRevenue: number
+    superChatRevenue: number
+  }
+  engagement: {
+    likes: number
+    comments: number
+    shares: number
+    averageViewPercentage: number
+  }
 }
 
 export interface PinterestMetrics extends PlatformMetrics {
@@ -85,10 +103,10 @@ export interface SocialIntegrationConfig {
 }
 
 export interface EmailIntegrationConfig extends SocialIntegrationConfig {
-  platform: 'gmail' | 'outlook'
+  platform: 'gmail'
   scope: string[]
-  labels?: string[]  // Gmail labels or Outlook folders
-  searchQuery?: string  // For filtering specific emails
+  labels?: string[]  // Gmail labels
+  searchQuery?: string
 }
 
 export interface EmailMessage {

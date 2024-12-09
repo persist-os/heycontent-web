@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { SocialPlatform } from '@/types/social-platforms'
 import { Instagram, Mail, Youtube, Video } from 'lucide-react'
@@ -36,69 +35,59 @@ const PLATFORM_CONFIG = {
     color: 'bg-red-500',
     hoverColor: 'hover:bg-red-600',
     description: 'Connect Gmail to monitor partnerships and opportunities.'
-  },
-  outlook: {
-    name: 'Outlook',
-    icon: Mail,
-    color: 'bg-blue-500',
-    hoverColor: 'hover:bg-blue-600',
-    description: 'Connect Outlook to monitor partnerships and opportunities.'
   }
 } as const
 
 export function PlatformConnect() {
   const [connecting, setConnecting] = useState<SocialPlatform | null>(null)
 
+  useEffect(() => {
+    console.log('PlatformConnect component mounted');
+    console.log('PLATFORM_CONFIG:', PLATFORM_CONFIG);
+  }, []);
+
   const handleConnect = async (platform: SocialPlatform) => {
-    console.log('Button clicked for platform:', platform)
+    if (connecting) return
     
     try {
-      console.log('Setting connecting state for:', platform)
       setConnecting(platform)
-
+      console.log(`Starting ${platform} connection...`);
+      
+      let response: Response;
       if (platform === 'instagram') {
-        console.log('Starting Instagram connection flow')
+        response = await fetch('/api/social/instagram/auth-url')
+      } else {
+        console.log(`Making POST request for ${platform}...`);
+        const requestBody = { platform };
+        console.log('Request body:', requestBody);
         
-        const response = await fetch('/api/social/instagram/auth-url')
-        console.log('Auth URL response:', response)
+        response = await fetch('/api/social/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody)
+        })
         
+        console.log(`Response status:`, response.status);
         if (!response.ok) {
-          throw new Error('Failed to get authentication URL')
+          const errorText = await response.text();
+          console.error(`Error response:`, errorText);
+          throw new Error(`Server returned ${response.status}: ${errorText}`);
         }
-        
-        const data = await response.json()
-        console.log('Auth URL data:', data)
-
-        if (!data.authUrl) {
-          throw new Error('No authentication URL returned')
-        }
-
-        window.location.href = data.authUrl
-        return
-      }
-
-      // Handle other platforms...
-      const response = await fetch('/api/social/connect', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ platform })
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to connect platform')
       }
 
       const data = await response.json()
-      
-      if (data.authUrl) {
-        window.location.href = data.authUrl
+      console.log(`Got ${platform} response:`, data);
+
+      if (!data.authUrl) {
+        throw new Error(`No ${platform} authentication URL returned`)
       }
+
+      console.log(`Redirecting to ${platform} auth URL:`, data.authUrl);
+      window.location.href = data.authUrl
 
     } catch (error) {
       console.error('Connection error:', error)
-      toast.error(error instanceof Error ? error.message : 'Failed to connect platform')
+      alert(error instanceof Error ? error.message : 'Failed to connect platform')
     } finally {
       setConnecting(null)
     }
@@ -119,12 +108,17 @@ export function PlatformConnect() {
             {config.description}
           </p>
 
-          <Button
+          <button
             type="button"
-            onClick={() => handleConnect(platform as SocialPlatform)}
-            variant="default"
+            data-platform={platform}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Button clicked:', platform);
+              handleConnect(platform as SocialPlatform);
+            }}
             disabled={connecting === platform}
-            className={`w-full text-white ${config.hoverColor}`}
+            className={`w-full py-2 px-4 rounded-lg text-white cursor-pointer ${config.hoverColor}`}
             style={{
               background: platform === 'instagram' 
                 ? 'linear-gradient(to right, rgb(168, 85, 247), rgb(236, 72, 153))'
@@ -138,7 +132,7 @@ export function PlatformConnect() {
             }}
           >
             {connecting === platform ? 'Connecting...' : 'Connect'}
-          </Button>
+          </button>
         </Card>
       ))}
     </div>

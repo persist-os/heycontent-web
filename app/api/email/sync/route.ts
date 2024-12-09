@@ -121,9 +121,26 @@ export async function GET() {
               { role: 'user', content: `Please analyze this email and determine if it's related to a brand partnership or collaboration. Respond with only "true" or "false".\n\nSubject: ${email.subject}\n\nBody: ${email.body}` }
             ])
 
+            if (analysis) {
+              await prisma.partnership.create({
+                data: {
+                  userId: session.user.id,
+                  name: email.subject,
+                  status: 'pending',
+                  history: {
+                    create: {
+                      date: new Date(),
+                      action: 'Created from email',
+                      details: analysis
+                    }
+                  }
+                }
+              });
+            }
+
             return {
               ...email,
-              isPartnership: analysis.toLowerCase() === 'true'
+              isPartnership: analysis?.toLowerCase() === 'true' || false
             }
           })
         )
