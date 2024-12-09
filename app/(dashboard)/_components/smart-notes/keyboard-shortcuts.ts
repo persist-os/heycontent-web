@@ -7,92 +7,64 @@ export interface ShortcutCommand {
   callback: () => void;
 }
 
+export interface CommandHandler {
+  onSave?: () => void;
+  onQuickCapture?: () => void;
+  onCommandMenu?: () => void;
+  onMention?: () => void;
+  onTag?: () => void;
+}
+
 export class ShortcutManager {
   private shortcuts: Map<string, ShortcutCommand> = new Map();
   private commandMode: boolean = false;
   private currentInput: string = '';
+  private handlers: CommandHandler;
+
+  constructor(handlers: CommandHandler) {
+    this.handlers = handlers;
+  }
 
   registerShortcut(shortcut: ShortcutCommand) {
     this.shortcuts.set(shortcut.key, shortcut);
   }
 
   handleKeyDown(event: globalThis.KeyboardEvent) {
-    // Command mode shortcuts
-    if (event.key === '/' || event.key === '@' || event.key === '#') {
+    // Save shortcut (⌘/Ctrl + S)
+    if ((event.metaKey || event.ctrlKey) && event.key === 's') {
       event.preventDefault();
-      this.commandMode = true;
-      this.currentInput = event.key;
+      this.handlers.onSave?.();
       return true;
     }
 
-    // Handle command mode input
-    if (this.commandMode) {
-      if (event.key === 'Escape') {
-        this.commandMode = false;
-        this.currentInput = '';
-        return true;
-      }
-
-      if (event.key === 'Enter') {
-        this.executeCommand(this.currentInput);
-        this.commandMode = false;
-        this.currentInput = '';
-        return true;
-      }
-
-      this.currentInput += event.key;
+    // Quick capture shortcut (⌘/Ctrl + K)
+    if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+      event.preventDefault();
+      this.handlers.onQuickCapture?.();
       return true;
     }
 
-    // Global shortcuts
-    if (event.metaKey || event.ctrlKey) {
-      const shortcut = this.shortcuts.get(event.key);
-      if (shortcut) {
-        event.preventDefault();
-        shortcut.callback();
-        return true;
-      }
+    // Command menu (/)
+    if (event.key === '/' && !event.metaKey && !event.ctrlKey) {
+      event.preventDefault();
+      this.handlers.onCommandMenu?.();
+      return true;
+    }
+
+    // Mentions (@)
+    if (event.key === '@' && !event.metaKey && !event.ctrlKey) {
+      event.preventDefault();
+      this.handlers.onMention?.();
+      return true;
+    }
+
+    // Tags (#)
+    if (event.key === '#' && !event.metaKey && !event.ctrlKey) {
+      event.preventDefault();
+      this.handlers.onTag?.();
+      return true;
     }
 
     return false;
-  }
-
-  private executeCommand(input: string) {
-    const command = input.charAt(0);
-    const value = input.slice(1).trim();
-
-    switch (command) {
-      case '/':
-        this.handleSlashCommand(value);
-        break;
-      case '@':
-        this.handleMentionCommand(value);
-        break;
-      case '#':
-        this.handleTagCommand(value);
-        break;
-    }
-  }
-
-  private handleSlashCommand(value: string) {
-    switch (value) {
-      case 'capture':
-        // Capture current AI conversation
-        break;
-      case 'reference':
-        // Add reference to previous note
-        break;
-      case 'save':
-        // Save current note
-        break;
-    }
-  }
-
-  private handleMentionCommand(value: string) {
-    // Handle mentions (@) of notes, insights, or conversations
-  }
-
-  private handleTagCommand(value: string) {
-    // Handle hashtag categorization
   }
 } 

@@ -13,26 +13,16 @@ interface NoteAreaProps {
 export function NoteArea({ note, onUpdate, showCommands, setShowCommands }: NoteAreaProps) {
   const [content, setContent] = useState(note.content);
   const references = Array.isArray(note.references) ? note.references : [];
+  const [showMentions, setShowMentions] = useState(false);
+  const [showTags, setShowTags] = useState(false);
 
   useEffect(() => {
-    const shortcutManager = new ShortcutManager();
-
-    // Register shortcuts
-    shortcutManager.registerShortcut({
-      key: 's',
-      command: 'Save',
-      description: 'Save current note',
-      callback: () => {
+    const shortcutManager = new ShortcutManager({
+      onSave: () => {
         console.log('Saving note...');
-        onUpdate(note.id, { content })
-      }
-    });
-
-    shortcutManager.registerShortcut({
-      key: 'k',
-      command: 'Quick Capture',
-      description: 'Capture current AI conversation',
-      callback: () => {
+        onUpdate(note.id, { content });
+      },
+      onQuickCapture: () => {
         console.log('Quick capturing...');
         onUpdate(note.id, {
           references: [
@@ -43,43 +33,28 @@ export function NoteArea({ note, onUpdate, showCommands, setShowCommands }: Note
             }
           ]
         });
-      }
-    });
-
-    shortcutManager.registerShortcut({
-      key: 'f',
-      command: 'Search',
-      description: 'Search notes',
-      callback: () => {
-        // Implement search functionality
+      },
+      onCommandMenu: () => {
+        console.log('Opening command menu...');
+        setShowCommands(true);
+        setShowMentions(false);
+        setShowTags(false);
+      },
+      onMention: () => {
+        console.log('Opening mentions...');
+        setShowMentions(true);
+        setShowCommands(false);
+        setShowTags(false);
+      },
+      onTag: () => {
+        console.log('Opening tags...');
+        setShowTags(true);
+        setShowCommands(false);
+        setShowMentions(false);
       }
     });
 
     const handleKeyDown = (e: globalThis.KeyboardEvent) => {
-      // Handle slash command
-      if (e.key === '/' && !e.metaKey && !e.ctrlKey) {
-        console.log('Opening command menu...');
-        e.preventDefault();
-        setShowCommands(true);
-        return;
-      }
-
-      // Handle @ mentions
-      if (e.key === '@' && !e.metaKey && !e.ctrlKey) {
-        console.log('Opening mentions...');
-        e.preventDefault();
-        // Implement @ mentions
-        return;
-      }
-
-      // Handle # tags
-      if (e.key === '#' && !e.metaKey && !e.ctrlKey) {
-        console.log('Opening tags...');
-        e.preventDefault();
-        // Implement # tags
-        return;
-      }
-
       shortcutManager.handleKeyDown(e);
     };
 

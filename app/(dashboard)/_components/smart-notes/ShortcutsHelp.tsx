@@ -5,13 +5,13 @@ interface ShortcutHelpItem {
 }
 
 const SHORTCUTS: ShortcutHelpItem[] = [
-  { key: '/', description: 'Open command menu', example: '/capture, /save' },
+  { key: '⌘ + S', description: 'Save current note' },
+  { key: '⌘ + K', description: 'Quick capture AI conversation' },
+  { key: '/', description: 'Open command menu', example: '/heading, /capture' },
   { key: '@', description: 'Reference content', example: '@conversation, @insight' },
   { key: '#', description: 'Add tag', example: '#content, #idea' },
-  { key: '⌘ + S', description: 'Save note' },
-  { key: '⌘ + K', description: 'Quick capture' },
-  { key: '⌘ + F', description: 'Search' },
-  { key: 'Esc', description: 'Cancel current command' }
+  { key: 'Esc', description: 'Cancel current command' },
+  { key: '⌘ + /', description: 'Show/hide shortcuts help' }
 ];
 
 export function ShortcutsHelp() {
