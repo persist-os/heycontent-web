@@ -30,6 +30,7 @@ model User {
   partnerships          Partnership[]
   socialAccounts        SocialAccount[]
   socialUpdates         SocialUpdate[]
+  notes                 Note[]
 }
 
 model Account {
@@ -186,4 +187,19 @@ model PartnershipHistory {
   action        String
   details       String?
   partnership   Partnership @relation(fields: [partnershipId], references: [id], onDelete: Cascade)
+}
+
+model Note {
+  id            String      @id @default(cuid())
+  userId        String
+  title         String
+  content       String      @db.Text
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  important     Boolean     @default(false)
+  tags          String[]
+  references    Json[]      // Change this to Json[]
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

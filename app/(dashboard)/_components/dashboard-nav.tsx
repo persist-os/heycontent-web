@@ -7,7 +7,7 @@ import { useSession } from 'next-auth/react'
 import { Logo } from '@/app/_components/logo'
 import { 
   Brain, Users, MessageSquare, Settings, 
-  Briefcase, ChevronLeft, Clock, Star
+  Briefcase, ChevronLeft, Clock, Star, FileText
 } from 'lucide-react'
 
 // Add type for recent chats
@@ -46,6 +46,13 @@ const navItems = [
     icon: Briefcase,
     href: '/partnerships',
     color: 'text-orange-500'
+  },
+  { 
+    id: 'notes', 
+    label: 'Smart Notes',
+    icon: FileText,
+    href: '/notes',
+    color: 'text-blue-500'
   }
 ]
 

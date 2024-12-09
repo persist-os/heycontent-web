@@ -10,6 +10,19 @@ export const preferredRegion = 'auto'
 
 export const authConfig: NextAuthConfig = {
   adapter: PrismaAdapter(prisma),
+  secret: process.env.NEXTAUTH_SECRET,
+  useSecureCookies: process.env.NODE_ENV === 'production',
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === 'production' ? '__Secure-next-auth.session-token' : 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production'
+      }
+    }
+  },
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -49,6 +62,7 @@ export const authConfig: NextAuthConfig = {
           const { email, password } = credentials
 
           if (!email || !password) {
+            console.log('Missing email or password')
             return null
           }
 
@@ -57,19 +71,23 @@ export const authConfig: NextAuthConfig = {
           })
 
           if (!user || !user.password) {
+            console.log('User not found or no password set')
             return null
           }
 
           const isPasswordValid = await compare(password.toString(), user.password)
 
           if (!isPasswordValid) {
+            console.log('Invalid password')
             return null
           }
 
           if (!user.emailVerified) {
+            console.log('Email not verified')
             return null
           }
 
+          console.log('Login successful for:', email)
           return {
             id: user.id,
             email: user.email,
@@ -77,6 +95,7 @@ export const authConfig: NextAuthConfig = {
             emailVerified: user.emailVerified
           }
         } catch (error) {
+          console.error('Authorization error:', error)
           if (error instanceof Error && error.message === 'UNVERIFIED_EMAIL') {
             throw error
           }
