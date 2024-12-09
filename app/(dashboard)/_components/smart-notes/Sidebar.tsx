@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Star, Clock, Lightbulb } from 'lucide-react';
+import { FileText, Star, Clock, Lightbulb, Trash2 } from 'lucide-react';
 import type { Note } from './index';
 
 interface SidebarProps {
@@ -7,9 +7,10 @@ interface SidebarProps {
   activeNoteId: string | null;
   onNoteSelect: (id: string) => void;
   onCreateNote: () => void;
+  onDeleteNote: (noteId: string) => Promise<void>;
 }
 
-export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote }: SidebarProps) {
+export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDeleteNote }: SidebarProps) {
   return (
     <div className="w-64 border-r border-gray-100 p-4">
       <div className="mb-6">
@@ -42,18 +43,32 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote }: Sid
         {notes.map((note) => (
           <div
             key={note.id}
-            onClick={() => onNoteSelect(note.id)}
             className={`p-3 rounded-lg hover:bg-gray-50 cursor-pointer ${
               activeNoteId === note.id ? 'bg-gray-50' : ''
             }`}
           >
-            <h3 className="font-medium">{note.title}</h3>
-            <p className="text-sm text-gray-500">
-              Updated {new Date(note.updatedAt).toLocaleString()}
-            </p>
+            <div className="flex justify-between items-start">
+              <div onClick={() => onNoteSelect(note.id)}>
+                <h3 className="font-medium">{note.title}</h3>
+                <p className="text-sm text-gray-500">
+                  Updated {new Date(note.updatedAt).toLocaleString()}
+                </p>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (confirm('Are you sure you want to delete this note?')) {
+                    onDeleteNote(note.id);
+                  }
+                }}
+                className="p-1 hover:bg-gray-200 rounded"
+              >
+                <Trash2 className="w-4 h-4 text-gray-400" />
+              </button>
+            </div>
           </div>
         ))}
       </div>
     </div>
   );
-} 
+}

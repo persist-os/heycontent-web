@@ -16,7 +16,7 @@ export class ShortcutManager {
     this.shortcuts.set(shortcut.key, shortcut);
   }
 
-  handleKeyDown(event: KeyboardEvent) {
+  handleKeyDown(event: globalThis.KeyboardEvent) {
     // Command mode shortcuts
     if (event.key === '/' || event.key === '@' || event.key === '#') {
       event.preventDefault();

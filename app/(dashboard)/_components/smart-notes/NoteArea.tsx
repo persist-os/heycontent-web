@@ -22,7 +22,10 @@ export function NoteArea({ note, onUpdate, showCommands, setShowCommands }: Note
       key: 's',
       command: 'Save',
       description: 'Save current note',
-      callback: () => onUpdate(note.id, { content })
+      callback: () => {
+        console.log('Saving note...');
+        onUpdate(note.id, { content })
+      }
     });
 
     shortcutManager.registerShortcut({
@@ -30,17 +33,59 @@ export function NoteArea({ note, onUpdate, showCommands, setShowCommands }: Note
       command: 'Quick Capture',
       description: 'Capture current AI conversation',
       callback: () => {
-        // Handle quick capture
+        console.log('Quick capturing...');
+        onUpdate(note.id, {
+          references: [
+            ...references,
+            {
+              type: 'conversation',
+              content: 'Captured conversation'
+            }
+          ]
+        });
       }
     });
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      shortcutManager.handleKeyDown(e as any);
+    shortcutManager.registerShortcut({
+      key: 'f',
+      command: 'Search',
+      description: 'Search notes',
+      callback: () => {
+        // Implement search functionality
+      }
+    });
+
+    const handleKeyDown = (e: globalThis.KeyboardEvent) => {
+      // Handle slash command
+      if (e.key === '/' && !e.metaKey && !e.ctrlKey) {
+        console.log('Opening command menu...');
+        e.preventDefault();
+        setShowCommands(true);
+        return;
+      }
+
+      // Handle @ mentions
+      if (e.key === '@' && !e.metaKey && !e.ctrlKey) {
+        console.log('Opening mentions...');
+        e.preventDefault();
+        // Implement @ mentions
+        return;
+      }
+
+      // Handle # tags
+      if (e.key === '#' && !e.metaKey && !e.ctrlKey) {
+        console.log('Opening tags...');
+        e.preventDefault();
+        // Implement # tags
+        return;
+      }
+
+      shortcutManager.handleKeyDown(e);
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [note.id, content, onUpdate]);
+  }, [note.id, content, onUpdate, references, setShowCommands]);
 
   const handleContentChange = (newContent: string) => {
     setContent(newContent);
