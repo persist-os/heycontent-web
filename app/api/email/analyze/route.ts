@@ -25,36 +25,41 @@ const PARTNERSHIP_KEYWORDS = [
 ]
 
 async function analyzeEmailContent(subject: string, body: string) {
-  const prompt = `Analyze this email for potential partnership or collaboration opportunities:
-  Subject: ${subject}
-  Body: ${body}
-
-  Please analyze this email and provide:
-  1. Is this a partnership opportunity? (yes/no)
-  2. What type of partnership/opportunity is it?
-  3. Estimated value/potential (if applicable)
-  4. Key points or requirements
-  5. Recommended action
-  
-  Format the response as JSON.`
-
-  const analysis = await getCompletion([
-    {
-      role: 'system',
-      content: 'You are an AI assistant specialized in analyzing emails for content creators. Focus on identifying partnership opportunities, brand deals, and collaboration requests.'
-    },
-    {
-      role: 'user',
-      content: prompt
-    }
-  ])
-
-  if (!analysis) return null
-
   try {
-    return JSON.parse(analysis)
+    const prompt = `Analyze this email for potential partnership or collaboration opportunities:
+    Subject: ${subject}
+    Body: ${body}
+
+    Please analyze this email and provide:
+    1. Is this a partnership opportunity? (yes/no)
+    2. What type of partnership/opportunity is it?
+    3. Estimated value/potential (if applicable)
+    4. Key points or requirements
+    5. Recommended action
+    
+    Format the response as JSON.`
+
+    const analysis = await getCompletion([
+      {
+        role: 'system',
+        content: 'You are an AI assistant specialized in analyzing emails for content creators. Focus on identifying partnership opportunities, brand deals, and collaboration requests.'
+      },
+      {
+        role: 'user',
+        content: prompt
+      }
+    ])
+
+    if (!analysis) return null
+
+    try {
+      return JSON.parse(analysis)
+    } catch (error) {
+      console.error('[ANALYSIS_PARSE_ERROR]', error)
+      return null
+    }
   } catch (error) {
-    console.error('Failed to parse analysis:', error)
+    console.error('[OPENAI_API_ERROR]', error)
     return null
   }
 }
@@ -96,14 +101,27 @@ export async function POST(req: Request) {
 
     // Save the analysis if it's a partnership opportunity
     if (analysis.isPartnership) {
-      await prisma.user.update({
-        where: { id: session.user.id },
-        data: {
-          socialAccounts: {
-            updateMany: {
-              where: {
-                platform: { in: ['gmail', 'outlook'] as const }
-              },
+      try {
+        await prisma.$transaction(async (tx) => {
+          const user = await tx.user.findUnique({
+            where: { id: session.user.id },
+            include: {
+              socialAccounts: {
+                where: {
+                  platform: { in: ['gmail', 'outlook'] }
+                }
+              }
+            }
+          })
+
+          if (!user) {
+            throw new Error('User not found')
+          }
+
+          // Update each relevant social account
+          for (const account of user.socialAccounts) {
+            await tx.socialAccount.update({
+              where: { id: account.id },
               data: {
                 metrics: {
                   partnerships: {
@@ -118,10 +136,13 @@ export async function POST(req: Request) {
                   }
                 }
               }
-            }
+            })
           }
-        }
-      })
+        })
+      } catch (dbError) {
+        console.error('[PRISMA_ERROR]', dbError)
+        // Continue execution even if saving fails
+      }
     }
 
     return NextResponse.json(analysis)
@@ -131,5 +152,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ 
       error: 'Internal Server Error' 
     }, { status: 500 })
+  } finally {
+    // Ensure Prisma connection is properly closed
+    await prisma.$disconnect()
   }
 } 
