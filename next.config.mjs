@@ -35,10 +35,13 @@ const nextConfig = {
     ]
   },
   webpack: (config) => {
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      "bcrypt": require.resolve("bcryptjs"),
+    if (!config.resolve) {
+      config.resolve = {}
     }
+    if (!config.resolve.fallback) {
+      config.resolve.fallback = {}
+    }
+    config.resolve.fallback.bcrypt = false  // Disable bcrypt in webpack
     return config
   },
 }

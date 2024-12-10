@@ -25,7 +25,7 @@ const PLATFORM_CONFIGS: Record<SocialPlatform, {
   youtube: {
     clientId: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/social/callback/youtube`,
+    redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/social/callback/youtube/oauth`,
     scope: [
       'https://www.googleapis.com/auth/youtube.readonly',
       'https://www.googleapis.com/auth/youtube.force-ssl',
@@ -46,7 +46,10 @@ const PLATFORM_CONFIGS: Record<SocialPlatform, {
   }
 }
 
+console.log('Connect route loaded');
+
 export async function POST(req: Request) {
+  console.log('Connect POST request received');
   console.log('POST request received at /api/social/connect');
   
   try {

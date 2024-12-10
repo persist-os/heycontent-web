@@ -16,6 +16,7 @@ import { useSession } from 'next-auth/react'
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { toast } from "react-hot-toast"
+import { PlatformConnect } from './platform-connect'
 
 const MAX_PERSONA_LENGTH = 500  // Enough for detailed description but not too long
 const MAX_VISION_LENGTH = 500
@@ -149,31 +150,6 @@ const SettingsScreen = () => {
       setIsUpdating(false)
     }
   }
-
-  const handleConnect = async (platform: string) => {
-    try {
-      if (platform === 'instagram') {
-        const response = await fetch('/api/social/instagram/auth-url', {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to get authentication URL');
-        }
-
-        const data = await response.json();
-        if (data.authUrl) {
-          window.location.href = data.authUrl;
-        }
-      }
-    } catch (error) {
-      console.error('Connection error:', error);
-      toast.error('Failed to connect platform');
-    }
-  };
 
   return (
     <div className="h-full min-h-screen bg-background">
@@ -402,45 +378,8 @@ const SettingsScreen = () => {
                 <CardHeader>
                   <CardTitle>Connected Platforms</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  {[
-                    { platform: 'Instagram', icon: Instagram, status: 'Not Connected', lastSync: null },
-                    { platform: 'YouTube', icon: Youtube, status: 'Not Connected', lastSync: null },
-                    { platform: 'TikTok', icon: Video, status: 'Not Connected', lastSync: null },
-                    { platform: 'Gmail', icon: Mail, status: 'Not Connected', lastSync: null },
-                    { platform: 'Outlook', icon: Mail, status: 'Not Connected', lastSync: null }
-                  ].map((platform, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-gray-100">
-                          <platform.icon className="w-5 h-5 text-gray-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-medium">{platform.platform}</h3>
-                          <p className="text-sm text-gray-600">
-                            {platform.status === 'Connected' ? `Last sync: ${platform.lastSync}` : 'Not connected'}
-                          </p>
-                        </div>
-                      </div>
-                      <Button 
-                        variant="default"
-                        onClick={() => {
-                          if (platform.platform.toLowerCase() === 'instagram') {
-                            handleConnect('instagram');
-                          } else if (platform.platform === 'Email') {
-                            handleEmailIntegration();
-                          }
-                        }}
-                        className={`${
-                          platform.status === 'Connected' 
-                            ? 'bg-gray-200 text-gray-700'
-                            : 'bg-blue-500 text-white'
-                        }`}
-                      >
-                        {platform.status === 'Connected' ? 'Disconnect' : 'Connect'}
-                      </Button>
-                    </div>
-                  ))}
+                <CardContent>
+                  <PlatformConnect />
                 </CardContent>
               </Card>
             </div>
