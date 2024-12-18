@@ -1,7 +1,8 @@
 import { Card } from '@/components/ui/card'
-import { Instagram, Youtube, Video, Mail, CheckCircle2 } from 'lucide-react'
+import { Instagram, Youtube, Video, Mail, CheckCircle2, Loader2 } from 'lucide-react'
 import { SocialPlatform } from '@/types/social-platforms'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { toast } from 'react-hot-toast'
 
 const PLATFORMS = [
   {
@@ -40,7 +41,27 @@ const PLATFORMS = [
 
 export function PlatformConnect() {
   const [connecting, setConnecting] = useState<SocialPlatform | null>(null)
+  const [disconnecting, setDisconnecting] = useState<SocialPlatform | null>(null)
   const [connectedPlatforms, setConnectedPlatforms] = useState<SocialPlatform[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchConnectedPlatforms = async () => {
+    try {
+      const response = await fetch('/api/social/connected-platforms')
+      if (response.ok) {
+        const data = await response.json()
+        setConnectedPlatforms(data.platforms)
+      }
+    } catch (error) {
+      console.error('Failed to fetch connected platforms:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchConnectedPlatforms()
+  }, [])
 
   const handleConnect = async (platform: SocialPlatform) => {
     try {
@@ -67,13 +88,51 @@ export function PlatformConnect() {
       }
     } catch (error) {
       console.error('Connection error:', error);
-      alert(`Failed to connect to ${platform}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`Failed to connect to ${platform}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setConnecting(null);
     }
   }
 
+  const handleDisconnect = async (platform: SocialPlatform) => {
+    try {
+      setDisconnecting(platform);
+      
+      const response = await fetch('/api/social/disconnect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ platform })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      // Refresh the connected platforms list
+      await fetchConnectedPlatforms();
+      toast.success(`Successfully disconnected ${platform}`);
+    } catch (error) {
+      console.error('Disconnection error:', error);
+      toast.error(`Failed to disconnect ${platform}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setDisconnecting(null);
+    }
+  }
+
   const isConnected = (platform: string) => connectedPlatforms.includes(platform as SocialPlatform)
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold">Platform Integrations</h2>
+          <p className="text-muted-foreground">Loading connected platforms...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -93,45 +152,60 @@ export function PlatformConnect() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {PLATFORMS.map(platform => (
-          <Card key={platform.id} className="p-6 relative">
-            {isConnected(platform.id) && (
-              <div className="absolute top-4 right-4">
-                <CheckCircle2 className="w-5 h-5 text-green-500" />
+        {PLATFORMS.map(platform => {
+          const platformConnected = isConnected(platform.id);
+          const isLoading = connecting === platform.id || disconnecting === platform.id;
+
+          return (
+            <Card key={platform.id} className="p-6 relative">
+              {platformConnected && !isLoading && (
+                <div className="absolute top-4 right-4">
+                  <CheckCircle2 className="w-5 h-5 text-green-500" />
+                </div>
+              )}
+              {isLoading && (
+                <div className="absolute top-4 right-4">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                </div>
+              )}
+              <div className="flex items-center gap-3 mb-2">
+                <div className={`w-12 h-12 rounded-lg ${platform.color} flex items-center justify-center`}>
+                  <platform.icon className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">{platform.name}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {isLoading 
+                      ? (connecting ? 'Connecting...' : 'Disconnecting...') 
+                      : (platformConnected ? 'Connected' : 'Not connected')}
+                  </p>
+                </div>
               </div>
-            )}
-            <div className="flex items-center gap-3 mb-2">
-              <div className={`w-12 h-12 rounded-lg ${platform.color} flex items-center justify-center`}>
-                <platform.icon className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold">{platform.name}</h3>
-                <p className="text-sm text-muted-foreground">{isConnected(platform.id) ? 'Connected' : 'Not connected'}</p>
-              </div>
-            </div>
-            
-            <p className="text-sm text-muted-foreground mb-4">
-              {platform.description}
-            </p>
-            
-            <button
-              type="button"
-              onClick={() => handleConnect(platform.id as SocialPlatform)}
-              disabled={connecting === platform.id || isConnected(platform.id)}
-              className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50"
-              style={{ 
-                background: isConnected(platform.id) ? '#94A3B8' : platform.gradient
-              }}
-            >
-              {connecting === platform.id 
-                ? 'Connecting...' 
-                : isConnected(platform.id)
-                  ? 'Connected'
-                  : 'Connect'
-              }
-            </button>
-          </Card>
-        ))}
+              
+              <p className="text-sm text-muted-foreground mb-4">
+                {platform.description}
+              </p>
+              
+              <button
+                type="button"
+                onClick={() => platformConnected 
+                  ? handleDisconnect(platform.id as SocialPlatform)
+                  : handleConnect(platform.id as SocialPlatform)
+                }
+                disabled={isLoading}
+                className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50"
+                style={{ 
+                  background: platformConnected ? '#94A3B8' : platform.gradient
+                }}
+              >
+                {isLoading 
+                  ? (connecting ? 'Connecting...' : 'Disconnecting...') 
+                  : (platformConnected ? 'Disconnect' : 'Connect')
+                }
+              </button>
+            </Card>
+          );
+        })}
       </div>
     </div>
   )

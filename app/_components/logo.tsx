@@ -1,40 +1,16 @@
-import React from 'react';
+import Image from 'next/image'
+import Link from 'next/link'
 
 interface LogoProps {
-  className?: string;
+  className?: string
 }
 
-export function Logo({ className = "h-10" }: LogoProps) {
+export function Logo({ className = '' }: LogoProps) {
   return (
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      viewBox="0 0 400 100"
-      className={className}
-    >
-      <g transform="translate(40, 20)">
-        <path 
-          d="M0,60 L40,0 L60,0 L20,60 Z" 
-          className="fill-current"
-        />
-        <circle 
-          cx="50" 
-          cy="30" 
-          r="8" 
-          className="fill-current"
-        />
-      </g>
-      <text 
-        x="120" 
-        y="60" 
-        style={{ 
-          fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif",
-          fontSize: "42px",
-          fontWeight: 700
-        }}
-        className="fill-current"
-      >
-        AVA IRIS
-      </text>
-    </svg>
-  );
+    <Link href="/" className={`flex items-center gap-2 ${className}`}>
+      <span className="text-xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
+        Ava Iris
+      </span>
+    </Link>
+  )
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/app/auth'
-import { prisma } from '@/lib/db'
+import { auth } from '../../../../auth'
+import { prisma } from '../../../../lib/prisma'
+import type { PrismaClient, Prisma } from '@prisma/client'
 
 export async function PATCH(
   request: Request,
@@ -18,7 +19,7 @@ export async function PATCH(
     }
 
     // Verify partnership belongs to user and update in one transaction
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const partnership = await tx.partnership.findFirst({
         where: {
           id: params.id,

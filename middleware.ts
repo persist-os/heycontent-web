@@ -1,57 +1,33 @@
-import { auth } from './app/auth'
-import { NextResponse } from 'next/server'
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-// Add this to exclude auth routes from middleware
-const excludedPaths = ['/api/auth', '/_next', '/static', '/favicon.ico']
+export async function middleware(request: NextRequest) {
+  const token = await getToken({ 
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET 
+  });
+  
+  const isAuthPage = request.nextUrl.pathname.startsWith("/auth");
 
-export default auth((req) => {
-  // Skip middleware for excluded paths
-  if (excludedPaths.some(path => req.nextUrl.pathname.startsWith(path))) {
-    return NextResponse.next()
+  if (isAuthPage) {
+    if (token) {
+      return NextResponse.redirect(new URL("/chat", request.url));
+    }
+    return NextResponse.next();
   }
 
-  const isLoggedIn = !!req.auth
-  const isAuthPage = req.nextUrl.pathname === '/login' || 
-                    req.nextUrl.pathname === '/register' ||
-                    req.nextUrl.pathname === '/forgot-password' ||
-                    req.nextUrl.pathname === '/reset-password'
-  const isProtectedRoute = 
-    req.nextUrl.pathname.startsWith('/chat') ||
-    req.nextUrl.pathname.startsWith('/ai-insights') ||
-    req.nextUrl.pathname.startsWith('/audience') ||
-    req.nextUrl.pathname.startsWith('/partnerships') ||
-    req.nextUrl.pathname.startsWith('/settings')
-  const isSignOut = req.nextUrl.pathname === '/api/auth/signout'
-
-  // Always allow signout
-  if (isSignOut) {
-    return NextResponse.next()
+  if (!token) {
+    return NextResponse.redirect(new URL("/auth/signin", request.url));
   }
 
-  if (isAuthPage && isLoggedIn) {
-    return NextResponse.redirect(new URL('/chat', req.url))
-  }
+  return NextResponse.next();
+}
 
-  if (isProtectedRoute && !isLoggedIn) {
-    return NextResponse.redirect(new URL('/login', req.url))
-  }
-
-  return NextResponse.next()
-})
-
-// Keep your existing matcher config
 export const config = {
   matcher: [
-    '/',
-    '/login',
-    '/register',
-    '/forgot-password',
-    '/reset-password',
-    '/chat/:path*',
-    '/ai-insights/:path*',
-    '/audience/:path*',
-    '/partnerships/:path*',
-    '/settings/:path*',
-    '/api/auth/signout'
+    "/chat/:path*",
+    "/test-rag/:path*",
+    "/auth/:path*"
   ]
-} 
+}; 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import { prisma } from '@/lib/prisma'
 import { SocialPlatform } from '@/types/social-platforms'
+import { google } from 'googleapis'
 
 const PLATFORM_CONFIGS: Record<SocialPlatform, {
   tokenUrl: string;
@@ -19,8 +20,8 @@ const PLATFORM_CONFIGS: Record<SocialPlatform, {
   },
   youtube: {
     tokenUrl: 'https://oauth2.googleapis.com/token',
-    clientId: process.env.YOUTUBE_CLIENT_ID,
-    clientSecret: process.env.YOUTUBE_CLIENT_SECRET,
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   },
   gmail: {
     tokenUrl: 'https://oauth2.googleapis.com/token',
@@ -37,6 +38,16 @@ const API_ENDPOINTS: Record<SocialPlatform, string> = {
 }
 
 async function exchangeCodeForToken(platform: SocialPlatform, code: string, redirectUri: string) {
+  if (platform === 'gmail' || platform === 'youtube') {
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      redirectUri
+    )
+    const { tokens } = await oauth2Client.getToken(code)
+    return tokens
+  }
+
   const platformConfig = PLATFORM_CONFIGS[platform]
   
   const response = await fetch(platformConfig.tokenUrl, {
@@ -57,6 +68,29 @@ async function exchangeCodeForToken(platform: SocialPlatform, code: string, redi
 }
 
 async function fetchUserProfile(platform: SocialPlatform, accessToken: string) {
+  if (platform === 'gmail') {
+    const oauth2Client = new google.auth.OAuth2()
+    oauth2Client.setCredentials({ access_token: accessToken })
+    const gmail = google.gmail('v1')
+    const profile = await gmail.users.getProfile({
+      auth: oauth2Client,
+      userId: 'me'
+    })
+    return profile.data
+  }
+
+  if (platform === 'youtube') {
+    const oauth2Client = new google.auth.OAuth2()
+    oauth2Client.setCredentials({ access_token: accessToken })
+    const youtube = google.youtube('v3')
+    const response = await youtube.channels.list({
+      auth: oauth2Client,
+      part: ['snippet,statistics'],
+      mine: true
+    })
+    return response.data.items?.[0]
+  }
+
   const response = await fetch(API_ENDPOINTS[platform], {
     headers: {
       'Authorization': `Bearer ${accessToken}`
@@ -103,22 +137,48 @@ export async function GET(
       },
       create: {
         platform,
-        username: profile.username || profile.name || 'unknown',
+        username: platform === 'gmail' ? profile.emailAddress : profile.username || profile.name || 'unknown',
         accessToken: tokenData.access_token,
         refreshToken: tokenData.refresh_token,
         expiresAt: tokenData.expires_in 
           ? new Date(Date.now() + tokenData.expires_in * 1000)
           : null,
+        tokenType: tokenData.token_type,
+        scope: tokenData.scope,
+        metadata: platform === 'gmail' ? {
+          emailAddress: profile.emailAddress,
+          messagesTotal: profile.messagesTotal,
+          threadsTotal: profile.threadsTotal,
+          historyId: profile.historyId
+        } : platform === 'youtube' ? {
+          channelId: profile.id,
+          subscribers: profile.statistics?.subscriberCount,
+          videos: profile.statistics?.videoCount,
+          views: profile.statistics?.viewCount
+        } : profile,
         isConnected: true,
         userId
       },
       update: {
-        username: profile.username || profile.name || 'unknown',
+        username: platform === 'gmail' ? profile.emailAddress : profile.username || profile.name || 'unknown',
         accessToken: tokenData.access_token,
         refreshToken: tokenData.refresh_token,
         expiresAt: tokenData.expires_in 
           ? new Date(Date.now() + tokenData.expires_in * 1000)
           : null,
+        tokenType: tokenData.token_type,
+        scope: tokenData.scope,
+        metadata: platform === 'gmail' ? {
+          emailAddress: profile.emailAddress,
+          messagesTotal: profile.messagesTotal,
+          threadsTotal: profile.threadsTotal,
+          historyId: profile.historyId
+        } : platform === 'youtube' ? {
+          channelId: profile.id,
+          subscribers: profile.statistics?.subscriberCount,
+          videos: profile.statistics?.videoCount,
+          views: profile.statistics?.viewCount
+        } : profile,
         isConnected: true
       }
     })

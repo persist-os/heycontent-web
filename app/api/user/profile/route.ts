@@ -1,13 +1,7 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/db"
-import { auth } from "@/app/auth"
-import { z } from "zod"
-
-const profileSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  currentPersona: z.string().optional(),
-  futureVision: z.string().optional(),
-})
+import { auth } from "@/auth"
+import { prisma } from "@/lib/prisma"
+import { RAGSystem } from "@/lib/rag"
 
 export async function PUT(req: Request) {
   try {
@@ -20,46 +14,61 @@ export async function PUT(req: Request) {
       )
     }
 
-    const body = await req.json()
-    console.log('Received update:', body)
-
-    const result = profileSchema.safeParse(body)
-
-    if (!result.success) {
-      console.log('Validation error:', result.error)
-      return NextResponse.json(
-        { error: result.error.issues[0].message },
-        { status: 400 }
-      )
-    }
-
-    const { name, currentPersona, futureVision } = result.data
-
-    const updatedUser = await prisma.user.update({
-      where: { 
-        id: session.user.id 
-      },
+    const { name, currentPersona, futureVision } = await req.json()
+    
+    // Update user profile in database
+    const user = await prisma.user.update({
+      where: { id: session.user.id },
       data: {
         name,
         currentPersona,
-        futureVision,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        currentPersona: true,
-        futureVision: true,
+        futureVision
       }
     })
 
-    console.log('Updated user:', updatedUser)
+    // Update persona in RAG system if persona fields are provided
+    if (currentPersona || futureVision) {
+      console.log('Initializing RAG system with env vars:', {
+        hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasSupabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+        hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+        openAIKeyLength: process.env.OPENAI_API_KEY?.length
+      });
 
-    return NextResponse.json({ user: updatedUser })
+      const rag = new RAGSystem()
+      await rag.updateUserPersona(
+        session.user.id,
+        currentPersona || '',  // Pass empty string if not provided
+        futureVision          // Optional
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      user: {
+        name: user.name,
+        currentPersona: user.currentPersona,
+        futureVision: user.futureVision
+      }
+    })
   } catch (error) {
-    console.error("Profile update error:", error)
+    console.error('Profile update error:', error)
+    console.error('Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      env: {
+        hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasSupabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+        hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+        openAIKeyLength: process.env.OPENAI_API_KEY?.length
+      }
+    })
     return NextResponse.json(
-      { error: "Failed to update profile" },
+      { 
+        error: error instanceof Error ? error.message : 'Failed to update profile',
+        details: error instanceof Error ? error.stack : undefined
+      },
       { status: 500 }
     )
   }

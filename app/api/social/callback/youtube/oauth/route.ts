@@ -1,8 +1,8 @@
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-import { auth } from '@/app/auth'
-import { prisma } from '@/lib/db'
+import { auth } from '@/auth'
+import { prisma } from '@/lib/prisma'
 import { google } from 'googleapis'
 
 export async function GET(req: Request) {
@@ -97,4 +97,4 @@ export async function GET(req: Request) {
     console.error('[YOUTUBE_CALLBACK_ERROR]', error)
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=youtube_connection_failed`)
   }
-} 
+}

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/app/auth'
-import { prisma } from '@/lib/db'
+import { auth } from '@/auth'
+import { prisma } from '@/lib/prisma'
 import { SocialPlatform } from '@/types/social-platforms'
 
 // Platform-specific OAuth configurations
@@ -25,7 +25,7 @@ const PLATFORM_CONFIGS: Record<SocialPlatform, {
   youtube: {
     clientId: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/social/callback/youtube/oauth`,
+    redirectUri: process.env.YOUTUBE_REDIRECT_URI!,
     scope: [
       'https://www.googleapis.com/auth/youtube.readonly',
       'https://www.googleapis.com/auth/youtube.force-ssl',

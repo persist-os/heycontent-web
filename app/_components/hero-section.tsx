@@ -3,14 +3,13 @@
 import { useState, useEffect } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { Logo } from '@/app/_components/logo'
+import { Logo } from './logo'
 
 const searchSuggestions = [
   "What's my brand deal potential?",
-  "Show me partnership matches",
-  "Optimize my pricing strategy", 
-  "Analyze my audience demographics",
-  "Find collaboration opportunities"
+  "Analyze my latest YouTube video",
+  "Find partnership opportunities",
+  "Track my audience growth"
 ]
 
 export function HeroSection() {

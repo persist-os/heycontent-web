@@ -19,12 +19,13 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"],
+      "@/*": ["./app/*"],
       "@/components/*": ["./src/components/*"],
-      "@/lib/*": ["./src/lib/*"],
+      "@/lib/*": ["./app/lib/*"],
       "@/types/*": ["./src/types/*"],
       "@/data/*": ["./src/data/*"],
       "@/utils/*": ["./src/utils/*"],
+      "@/auth": ["./app/auth"],
       "@/auth/*": ["./app/auth/*"]
     },
     "baseUrl": ".",
