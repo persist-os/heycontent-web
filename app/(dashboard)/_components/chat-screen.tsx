@@ -76,6 +76,19 @@ const ChatScreen = () => {
       setIsLoading(true)
       setError(null)
       
+      // Add user message immediately
+      setMessages(prev => [...prev, newMessage])
+      
+      // Add typing indicator
+      const typingIndicator: Message = {
+        id: Date.now() + 1,
+        content: '...',
+        role: 'assistant',
+        timestamp: new Date().toISOString(),
+        status: 'typing'
+      }
+      setMessages(prev => [...prev, typingIndicator])
+      
       // Add insight context to the request
       const requestBody = {
         message: content,
@@ -84,38 +97,34 @@ const ChatScreen = () => {
         context: content.includes('Regarding:') ? content : undefined
       }
       
-      if (insightId) {
-        const response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody)
-        })
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      })
 
-        if (!response.ok) throw new Error('Failed to send message')
-        const aiResponse = await response.json()
-        
-        // Set both messages at once for initial insight
-        setMessages([newMessage, aiResponse])
-      } else {
-        // Normal message flow - unchanged
-        setMessages(prev => [...prev, newMessage])
-        
-        const response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody)
-        })
-
-        if (!response.ok) throw new Error('Failed to send message')
-        const aiResponse = await response.json()
-        setMessages(prev => [...prev, aiResponse])
-      }
+      if (!response.ok) throw new Error('Failed to send message')
+      const data = await response.json()
+      
+      // Remove typing indicator and add AI response
+      setMessages(prev => {
+        const withoutTyping = prev.filter(msg => msg.status !== 'typing')
+        return [...withoutTyping, {
+          id: data.id,
+          content: data.content,
+          role: 'assistant',
+          timestamp: data.timestamp,
+          relatedInsights: data.relatedInsights || []
+        }]
+      })
       
       // Clear the reference after sending
       setReferencedMessage(null)
       scrollToBottom()
     } catch (error) {
       console.error('Failed to send message:', error)
+      // Remove typing indicator and show error
+      setMessages(prev => prev.filter(msg => msg.status !== 'typing'))
       setError((error as Error).message)
     } finally {
       setIsLoading(false)
@@ -358,15 +367,32 @@ const ChatScreen = () => {
                         messageRefs.current.set(message.id, el)
                       }
                     }}
-                    className="transition-all duration-300" // For highlight effect
+                    className="transition-all duration-300"
                   >
                     <MessageBubble
                       message={message}
                       isLastMessage={index === messages.length - 1}
                       onReference={handleMessageReference}
-                      showReferenceButton={!referencedMessage}
+                      showReferenceButton={!referencedMessage && message.status !== 'typing'}
                       onReferenceClick={handleReferenceClick}
                     />
+                    {message.relatedInsights && message.relatedInsights.length > 0 && (
+                      <div className="ml-12 mt-2 space-y-2">
+                        {message.relatedInsights.map((insight, i) => (
+                          <div
+                            key={i}
+                            className="bg-blue-50 p-2 rounded-lg text-sm text-blue-800 cursor-pointer hover:bg-blue-100"
+                            onClick={() => handleInsightClick(
+                              `Tell me more about this ${insight.type}`,
+                              { type: insight.type, title: insight.summary, description: '' } as any
+                            )}
+                          >
+                            <div className="font-medium">{insight.type}</div>
+                            <div className="text-blue-600">{insight.summary}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
                 {error && (

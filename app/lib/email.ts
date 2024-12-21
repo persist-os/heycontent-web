@@ -7,7 +7,7 @@ export const sendVerificationEmail = async (email: string, token: string) => {
 
   try {
     await resend.emails.send({
-      from: 'AVA IRIS <noreply@avairis.ai>',
+      from: 'AVA IRIS <hello@avairis.co>',
       to: email,
       subject: 'Verify your email address',
       html: `
@@ -28,7 +28,7 @@ export const sendPasswordResetEmail = async (email: string, token: string) => {
 
   try {
     await resend.emails.send({
-      from: 'AVA IRIS <noreply@avairis.ai>',
+      from: 'AVA IRIS <hello@avairis.co>',
       to: email,
       subject: 'Reset your password',
       html: `

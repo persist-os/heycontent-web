@@ -8,7 +8,8 @@ export type AVADocumentType =
   | 'current_persona'
   | 'future_vision'
   | 'conversation_history'
-  | 'smart_note';
+  | 'smart_note'
+  | 'insight';
 
 export interface AVAMetadata {
   type: AVADocumentType;
@@ -21,8 +22,9 @@ export interface AVAMetadata {
 
 export class RAGSystem {
   private embeddings: OpenAIEmbeddings;
-  private vectorStore: SupabaseVectorStore;
+  private vectorStore!: SupabaseVectorStore;
   private supabaseClient;
+  private initialized: Promise<void>;
 
   constructor() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -46,13 +48,138 @@ export class RAGSystem {
     process.env.OPENAI_API_KEY = openAIKey;
     
     this.embeddings = new OpenAIEmbeddings();
-    this.supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+    
+    try {
+      console.log('Initializing Supabase client with URL:', supabaseUrl);
+      this.supabaseClient = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      });
 
-    this.vectorStore = new SupabaseVectorStore(this.embeddings, {
-      client: this.supabaseClient,
-      tableName: "rag_documents",
-      queryName: "match_documents",
-    });
+      // Initialize vector store with error handling
+      this.initialized = this.initVectorStore().catch(error => {
+        console.error('Error initializing vector store:', error);
+        throw new Error('Failed to initialize vector store');
+      });
+
+      console.log('Supabase client initialized successfully');
+    } catch (error) {
+      console.error('Error initializing Supabase client:', error);
+      throw new Error('Failed to initialize Supabase client');
+    }
+  }
+
+  private async initVectorStore() {
+    try {
+      // Create schema if it doesn't exist
+      const createSchemaQuery = `
+        CREATE SCHEMA IF NOT EXISTS public;
+        GRANT USAGE ON SCHEMA public TO authenticated;
+        GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;
+        GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+        GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO authenticated;
+      `;
+      
+      const { error: schemaError } = await this.supabaseClient.rpc('exec_sql', { sql: createSchemaQuery });
+      if (schemaError) {
+        console.warn('Schema creation error (may already exist):', schemaError);
+      }
+
+      // Create vector store table if it doesn't exist
+      const createTableQuery = `
+        CREATE TABLE IF NOT EXISTS public.rag_documents (
+          id bigserial PRIMARY KEY,
+          content text,
+          metadata jsonb,
+          embedding vector(1536)
+        );
+
+        ALTER TABLE public.rag_documents ENABLE ROW LEVEL SECURITY;
+
+        CREATE POLICY "Users can view all RAG documents"
+          ON public.rag_documents FOR SELECT
+          TO authenticated
+          USING (true);
+
+        CREATE POLICY "Users can insert RAG documents"
+          ON public.rag_documents FOR INSERT
+          TO authenticated
+          WITH CHECK (true);
+
+        CREATE POLICY "Users can update RAG documents"
+          ON public.rag_documents FOR UPDATE
+          TO authenticated
+          USING (true);
+
+        CREATE POLICY "Users can delete RAG documents"
+          ON public.rag_documents FOR DELETE
+          TO authenticated
+          USING (true);
+      `;
+      
+      const { error: tableError } = await this.supabaseClient.rpc('exec_sql', { sql: createTableQuery });
+      if (tableError) {
+        console.warn('Table creation error (may already exist):', tableError);
+      }
+
+      // Create the matching function if it doesn't exist
+      const createMatchFunctionQuery = `
+        CREATE OR REPLACE FUNCTION public.match_documents(
+          query_embedding vector(1536),
+          match_count int DEFAULT 5,
+          filter jsonb DEFAULT '{}'
+        )
+        RETURNS TABLE (
+          id bigint,
+          content text,
+          metadata jsonb,
+          similarity float
+        )
+        LANGUAGE plpgsql
+        SECURITY DEFINER
+        SET search_path = public
+        AS $$
+        BEGIN
+          RETURN QUERY
+          SELECT
+            id,
+            content,
+            metadata,
+            1 - (embedding <=> query_embedding) as similarity
+          FROM public.rag_documents
+          WHERE metadata @> filter
+          ORDER BY embedding <=> query_embedding
+          LIMIT match_count;
+        END;
+        $$;
+
+        GRANT EXECUTE ON FUNCTION public.match_documents TO authenticated;
+      `;
+
+      const { error: functionError } = await this.supabaseClient.rpc('exec_sql', { sql: createMatchFunctionQuery });
+      if (functionError) {
+        console.warn('Function creation error (may already exist):', functionError);
+      }
+
+      // Initialize vector store
+      this.vectorStore = new SupabaseVectorStore(this.embeddings, {
+        client: this.supabaseClient,
+        tableName: "rag_documents",
+        queryName: "match_documents"
+      });
+
+      console.log('Vector store initialized successfully');
+    } catch (error) {
+      console.error('Error initializing vector store:', error);
+      throw error;
+    }
+  }
+
+  // Helper method to ensure initialization is complete
+  private async ensureInitialized() {
+    await this.initialized;
   }
 
   async search(
@@ -61,21 +188,28 @@ export class RAGSystem {
     limit: number = 5
   ) {
     try {
+      await this.ensureInitialized();
+      console.log('Performing RAG search with query:', query);
+      console.log('Filter:', filter);
+      
       const results = await this.vectorStore.similaritySearch(
         query,
         limit,
         filter
       );
       
+      console.log(`Found ${results.length} results`);
       return results;
     } catch (error) {
       console.error('RAGSystem: Error searching:', error);
-      throw error;
+      // Return empty results instead of throwing
+      return [];
     }
   }
 
   async addDocument(content: string, metadata: AVAMetadata) {
     try {
+      await this.ensureInitialized();
       const splitter = new RecursiveCharacterTextSplitter({
         chunkSize: 1000,
         chunkOverlap: 200,

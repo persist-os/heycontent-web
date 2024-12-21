@@ -27,11 +27,12 @@ const PLATFORM_CONFIGS: Record<SocialPlatform, {
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     redirectUri: process.env.YOUTUBE_REDIRECT_URI!,
     scope: [
+      'https://www.googleapis.com/auth/youtube',  // Full access
       'https://www.googleapis.com/auth/youtube.readonly',
       'https://www.googleapis.com/auth/youtube.force-ssl',
-      'https://www.googleapis.com/auth/youtubepartner',
-      'https://www.googleapis.com/auth/youtube.channel-memberships.creator',
-      'https://www.googleapis.com/auth/youtube.upload'
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/userinfo.profile',
+      'openid'
     ]
   },
   gmail: {

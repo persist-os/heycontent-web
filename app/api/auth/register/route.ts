@@ -1,9 +1,9 @@
 import { hash } from "bcryptjs"
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/db"
+import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import crypto from "crypto"
-import { sendVerificationEmail } from "@/lib/email"
+import { sendVerificationEmail } from "../../../../src/lib/email"
 
 const registerSchema = z.object({
   email: z.string().email("Invalid email address"),

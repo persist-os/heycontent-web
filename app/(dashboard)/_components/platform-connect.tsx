@@ -1,8 +1,17 @@
 import { Card } from '@/components/ui/card'
-import { Instagram, Youtube, Video, Mail, CheckCircle2, Loader2 } from 'lucide-react'
+import { Instagram, Youtube, Video, Mail, CheckCircle2, Loader2, AlertCircle } from 'lucide-react'
 import { SocialPlatform } from '@/types/social-platforms'
 import { useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
+import { formatDistanceToNow } from 'date-fns'
+
+interface ConnectedAccount {
+  platform: SocialPlatform
+  username: string
+  metadata: any
+  lastUpdated: Date | string
+  isActive: boolean
+}
 
 const PLATFORMS = [
   {
@@ -42,7 +51,7 @@ const PLATFORMS = [
 export function PlatformConnect() {
   const [connecting, setConnecting] = useState<SocialPlatform | null>(null)
   const [disconnecting, setDisconnecting] = useState<SocialPlatform | null>(null)
-  const [connectedPlatforms, setConnectedPlatforms] = useState<SocialPlatform[]>([])
+  const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccount[]>([])
   const [loading, setLoading] = useState(true)
 
   const fetchConnectedPlatforms = async () => {
@@ -50,7 +59,7 @@ export function PlatformConnect() {
       const response = await fetch('/api/social/connected-platforms')
       if (response.ok) {
         const data = await response.json()
-        setConnectedPlatforms(data.platforms)
+        setConnectedAccounts(data.accounts)
       }
     } catch (error) {
       console.error('Failed to fetch connected platforms:', error)
@@ -121,7 +130,33 @@ export function PlatformConnect() {
     }
   }
 
-  const isConnected = (platform: string) => connectedPlatforms.includes(platform as SocialPlatform)
+  const getAccountDetails = (platform: string) => {
+    return connectedAccounts.find(account => account.platform === platform);
+  }
+
+  const renderMetrics = (platform: string, metadata: any) => {
+    if (!metadata) return null;
+
+    switch (platform) {
+      case 'youtube':
+        return (
+          <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
+            <div>Subscribers: {metadata.subscribers || 0}</div>
+            <div>Videos: {metadata.videos || 0}</div>
+            <div>Total Views: {metadata.views || 0}</div>
+          </div>
+        );
+      case 'gmail':
+        return (
+          <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
+            <div>Total Messages: {metadata.messagesTotal || 0}</div>
+            <div>Total Threads: {metadata.threadsTotal || 0}</div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  }
 
   if (loading) {
     return (
@@ -147,20 +182,24 @@ export function PlatformConnect() {
       <div className="bg-gray-50 p-4 rounded-lg">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <CheckCircle2 className="w-4 h-4 text-green-500" />
-          <span>{connectedPlatforms.length} of {PLATFORMS.length} platforms connected</span>
+          <span>{connectedAccounts.length} of {PLATFORMS.length} platforms connected</span>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {PLATFORMS.map(platform => {
-          const platformConnected = isConnected(platform.id);
+          const account = getAccountDetails(platform.id);
           const isLoading = connecting === platform.id || disconnecting === platform.id;
 
           return (
             <Card key={platform.id} className="p-6 relative">
-              {platformConnected && !isLoading && (
+              {account && !isLoading && (
                 <div className="absolute top-4 right-4">
-                  <CheckCircle2 className="w-5 h-5 text-green-500" />
+                  {account.isActive ? (
+                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-yellow-500" />
+                  )}
                 </div>
               )}
               {isLoading && (
@@ -177,30 +216,41 @@ export function PlatformConnect() {
                   <p className="text-sm text-muted-foreground">
                     {isLoading 
                       ? (connecting ? 'Connecting...' : 'Disconnecting...') 
-                      : (platformConnected ? 'Connected' : 'Not connected')}
+                      : account 
+                        ? `Connected as ${account.username}`
+                        : 'Not connected'}
                   </p>
                 </div>
               </div>
               
-              <p className="text-sm text-muted-foreground mb-4">
+              {account && (
+                <>
+                  {renderMetrics(platform.id, account.metadata)}
+                  <div className="mt-2 text-xs text-gray-500">
+                    Last updated: {formatDistanceToNow(new Date(account.lastUpdated), { addSuffix: true })}
+                  </div>
+                </>
+              )}
+              
+              <p className="text-sm text-muted-foreground my-4">
                 {platform.description}
               </p>
               
               <button
                 type="button"
-                onClick={() => platformConnected 
+                onClick={() => account 
                   ? handleDisconnect(platform.id as SocialPlatform)
                   : handleConnect(platform.id as SocialPlatform)
                 }
                 disabled={isLoading}
                 className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50"
                 style={{ 
-                  background: platformConnected ? '#94A3B8' : platform.gradient
+                  background: account ? '#94A3B8' : platform.gradient
                 }}
               >
                 {isLoading 
                   ? (connecting ? 'Connecting...' : 'Disconnecting...') 
-                  : (platformConnected ? 'Disconnect' : 'Connect')
+                  : (account ? 'Disconnect' : 'Connect')
                 }
               </button>
             </Card>

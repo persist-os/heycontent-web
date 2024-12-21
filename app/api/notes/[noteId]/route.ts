@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { auth } from '../../../auth';
-import { prisma } from '../../../lib/prisma';
+import { auth } from '@/auth';
+import { prisma } from '@/lib/prisma';
 
 export async function PUT(
   req: Request,
@@ -30,9 +30,16 @@ export async function PUT(
     });
 
     return NextResponse.json(note);
-  } catch (error) {
-    console.error('[NOTE_PUT]', error);
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+  } catch (error: any) {
+    console.error('[NOTE_PUT] Detailed error:', {
+      name: error?.name,
+      message: error?.message,
+      stack: error?.stack
+    });
+    return NextResponse.json(
+      { error: 'Internal error', details: error?.message || 'Unknown error' },
+      { status: 500 }
+    );
   }
 }
 
@@ -54,8 +61,15 @@ export async function DELETE(
     });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('[NOTE_DELETE]', error);
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+  } catch (error: any) {
+    console.error('[NOTE_DELETE] Detailed error:', {
+      name: error?.name,
+      message: error?.message,
+      stack: error?.stack
+    });
+    return NextResponse.json(
+      { error: 'Internal error', details: error?.message || 'Unknown error' },
+      { status: 500 }
+    );
   }
 } 

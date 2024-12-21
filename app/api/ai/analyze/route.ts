@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { PlatformAgent } from "@/lib/agent";
 import { RAGSystem } from "@/lib/rag";
-import { auth } from "@/app/auth";
+import { auth } from "../../../auth";
 
 export async function POST(req: Request) {
   try {
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     const enrichedContext = {
       ...context,
       userId: session.user.id,
-      type // can be 'partnership', 'content', 'audience', etc.
+      type
     };
 
     // Process the query with the agent
@@ -29,8 +29,9 @@ export async function POST(req: Request) {
     await rag.addDocument(
       JSON.stringify({ query, result }),
       {
-        type: 'interaction',
-        userId: session.user.id,
+        type: 'insight',
+        category: 'interaction',
+        user_id: session.user.id,
         timestamp: new Date().toISOString()
       }
     );

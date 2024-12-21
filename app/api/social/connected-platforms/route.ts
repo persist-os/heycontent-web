@@ -9,19 +9,30 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get connected platforms from database
+    // Get connected platforms from database with more details
     const connectedAccounts = await prisma.socialAccount.findMany({
       where: {
         userId: session.user.id,
         isConnected: true
       },
       select: {
-        platform: true
+        platform: true,
+        username: true,
+        metadata: true,
+        updatedAt: true,
+        accessToken: true,
+        expiresAt: true
       }
     })
 
     return NextResponse.json({
-      platforms: connectedAccounts.map(account => account.platform)
+      accounts: connectedAccounts.map(account => ({
+        platform: account.platform,
+        username: account.username,
+        metadata: account.metadata,
+        lastUpdated: account.updatedAt,
+        isActive: account.accessToken && (!account.expiresAt || new Date(account.expiresAt) > new Date())
+      }))
     })
 
   } catch (error) {

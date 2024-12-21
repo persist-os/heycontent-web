@@ -29,6 +29,33 @@ export async function GET(req: Request) {
     const { tokens } = await oauth2Client.getToken(code)
     oauth2Client.setCredentials(tokens)
 
+    // Get token info to verify scopes
+    const tokenInfo = await oauth2Client.getTokenInfo(tokens.access_token!)
+    console.log('Token Info:', {
+      scopes: tokenInfo.scopes,
+      email: tokenInfo.email,
+      expiryDate: tokenInfo.expiry_date
+    })
+
+    // Verify we have the required YouTube scopes
+    const requiredScopes = [
+      'https://www.googleapis.com/auth/youtube',  // Full access
+      'https://www.googleapis.com/auth/youtube.readonly',
+      'https://www.googleapis.com/auth/youtube.force-ssl'
+    ]
+
+    const hasRequiredScopes = requiredScopes.some(scope => 
+      tokenInfo.scopes?.includes(scope)
+    )
+
+    if (!hasRequiredScopes) {
+      console.error('Missing required YouTube scopes:', {
+        required: requiredScopes,
+        granted: tokenInfo.scopes
+      })
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=insufficient_youtube_permissions`)
+    }
+
     // Initialize YouTube API
     const youtube = google.youtube('v3')
 

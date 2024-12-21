@@ -1,25 +1,25 @@
+import { SocialMediaService } from "@/lib/services/social-media";
+import { RAGSystem } from "@/lib/rag";
 import { BaseTool } from "./base-tool";
 import { z } from "zod";
-import { auth } from "../../../auth";
-import { prisma } from "@/lib/prisma";
-import { google } from 'googleapis';
-import { InstagramAPI } from "@/lib/instagram";
-import { RAGSystem } from "@/lib/rag";
-import { SocialMediaService } from "@/lib/services/social-media";
-import type { Account } from "@prisma/client";
-import type { DocumentInterface } from "../../../lib/types/document";
+import type { 
+  YouTubeMetrics, 
+  InstagramMetrics, 
+  TikTokMetrics, 
+  EmailMetrics,
+  SocialPlatform
+} from "@/lib/types/social";
 
-const SocialMediaMetricsSchema = z.object({
-  platform: z.enum(["instagram", "youtube"]),
-  metric: z.enum(["engagement", "reach", "followers", "views"]),
-  timeframe: z.enum(["day", "week", "month"])
+const SocialMediaSchema = z.object({
+  platform: z.enum(['youtube', 'instagram', 'tiktok', 'gmail']).optional(),
+  timeframe: z.enum(['day', 'week', 'month', 'year']).optional()
 });
 
 export class SocialMediaTool extends BaseTool {
-  name = "social_media_analyzer";
-  description = "Analyzes social media metrics and content performance across connected platforms.";
-  protected _schema = SocialMediaMetricsSchema;
-
+  name = "social_media";
+  description = "Get social media metrics and insights";
+  protected _schema = SocialMediaSchema;
+  
   constructor(
     private socialService: SocialMediaService,
     private rag: RAGSystem
@@ -27,81 +27,104 @@ export class SocialMediaTool extends BaseTool {
     super();
   }
 
-  private async getYouTubeMetrics(accessToken: string, metric: string, timeframe: string) {
-    const youtube = google.youtube('v3');
-    const response = await youtube.channels.list({
-      auth: accessToken,
-      part: ['statistics'],
-      mine: true
-    });
-    return response.data;
+  async _call(args: z.infer<typeof SocialMediaSchema>) {
+    try {
+      const metrics = await this.socialService.getMetrics();
+      if (!metrics) return "No metrics available";
+
+      const { platform } = args;
+      if (platform) {
+        switch (platform.toLowerCase()) {
+          case 'youtube':
+            if (!metrics.youtube) return "YouTube metrics not available";
+            return this.formatYouTubeMetrics(metrics.youtube);
+          case 'instagram':
+            if (!metrics.instagram) return "Instagram metrics not available";
+            return this.formatInstagramMetrics(metrics.instagram);
+          case 'tiktok':
+            if (!metrics.tiktok) return "TikTok metrics not available";
+            return this.formatTikTokMetrics(metrics.tiktok);
+          case 'gmail':
+            if (!metrics.gmail) return "Email metrics not available";
+            return this.formatEmailMetrics(metrics.gmail);
+          default:
+            return "Platform not supported";
+        }
+      }
+
+      return this.formatAllMetrics(metrics);
+    } catch (error) {
+      console.error('Error in SocialMediaTool:', error);
+      return "Error fetching social media metrics";
+    }
   }
 
-  async _call(input: string) {
-    try {
-      const params = this.validateInput(input);
-      const session = await auth();
-      
-      if (!session?.user?.id) {
-        throw new Error("User not authenticated");
-      }
+  private formatYouTubeMetrics(metrics: YouTubeMetrics): string {
+    return `YouTube Metrics:
+- Total Views: ${metrics.totalViews}
+- Top Videos: ${metrics.topVideos.length} recent videos
+- Subscribers: ${metrics.subscribers}
+- Watch Time: ${metrics.watchTimeHours} hours
+- Average View Duration: ${metrics.averageViewDuration} minutes
+- Engagement:
+  * Likes: ${metrics.engagement.likes}
+  * Comments: ${metrics.engagement.comments}
+  * Shares: ${metrics.engagement.shares}`;
+  }
 
-      const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        include: {
-          accounts: true
-        }
-      });
+  private formatInstagramMetrics(metrics: InstagramMetrics): string {
+    return `Instagram Metrics:
+- Followers: ${metrics.followers}
+- Reels: ${metrics.reels}
+- Profile Visits: ${metrics.profileVisits}
+- Stories: ${metrics.stories}
+- Reach Rate: ${metrics.reachRate}%
+- Save Rate: ${metrics.saveRate}%
+- Comment Rate: ${metrics.commentRate}%`;
+  }
 
-      const platformAccount = user?.accounts.find(
-        (account: Account) => account.provider === params.platform && account.access_token !== null
-      );
+  private formatTikTokMetrics(metrics: TikTokMetrics): string {
+    return `TikTok Metrics:
+- Followers: ${metrics.followers}
+- Total Views: ${metrics.views}
+- Likes: ${metrics.likes}
+- Shares: ${metrics.shares}
+- Comments: ${metrics.comments}
+- Watch Time: ${metrics.watchTime} minutes
+- Completion Rate: ${metrics.completionRate}%`;
+  }
 
-      if (!platformAccount?.access_token) {
-        return `No connected ${params.platform} account found`;
-      }
+  private formatEmailMetrics(metrics: EmailMetrics): string {
+    return `Email Metrics:
+- Total Subscribers: ${metrics.totalSubscribers}
+- Active Subscribers: ${metrics.activeSubscribers}
+- Average Open Rate: ${metrics.averageOpenRate}%
+- Average Click Rate: ${metrics.averageClickRate}%
+- Bounce Rate: ${metrics.bounceRate}%
+- Unsubscribe Rate: ${metrics.unsubscribeRate}%`;
+  }
 
-      let metrics;
-      switch (params.platform) {
-        case "youtube":
-          metrics = await this.getYouTubeMetrics(
-            platformAccount.access_token,
-            params.metric,
-            params.timeframe
-          );
-          break;
-        case "instagram":
-          metrics = await this.socialService.getInstagramMetrics(
-            platformAccount.access_token,
-            params.timeframe
-          );
-          break;
-      }
+  private formatAllMetrics(metrics: {
+    youtube?: YouTubeMetrics;
+    instagram?: InstagramMetrics;
+    tiktok?: TikTokMetrics;
+    gmail?: EmailMetrics;
+  }): string {
+    const parts: string[] = [];
 
-      // Get relevant insights from RAG
-      const insights = await this.rag.search(
-        `${params.platform} ${params.metric} insights`,
-        {
-          type: 'smart_note',
-          userId: session.user.id,
-          tags: [params.platform, params.metric]
-        }
-      );
-
-      return JSON.stringify({
-        platform: params.platform,
-        metric: params.metric,
-        data: metrics,
-        insights: insights.map(doc => ({
-          content: doc.pageContent,
-          metadata: doc.metadata
-        }))
-      });
-    } catch (error) {
-      if (error instanceof Error) {
-        return `Error analyzing social media metrics: ${error.message}`;
-      }
-      return "An unknown error occurred";
+    if (metrics.youtube) {
+      parts.push(this.formatYouTubeMetrics(metrics.youtube));
     }
+    if (metrics.instagram) {
+      parts.push(this.formatInstagramMetrics(metrics.instagram));
+    }
+    if (metrics.tiktok) {
+      parts.push(this.formatTikTokMetrics(metrics.tiktok));
+    }
+    if (metrics.gmail) {
+      parts.push(this.formatEmailMetrics(metrics.gmail));
+    }
+
+    return parts.join('\n\n') || "No metrics available";
   }
 } 

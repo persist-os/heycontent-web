@@ -4,7 +4,7 @@ export interface Message {
   role: 'user' | 'assistant'
   timestamp: string
   relatedInsights?: InsightReference[]
-  status?: 'sending' | 'sent' | 'failed'
+  status?: 'sending' | 'sent' | 'failed' | 'typing'
   referencedMessage?: {
     id: number
     content: string

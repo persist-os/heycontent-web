@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/app/auth'
-import { prisma } from '@/lib/db'
+import { auth } from '@/auth'
+import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic';
 
@@ -62,6 +62,33 @@ export async function GET(request: Request) {
         expires_at: Math.floor(Date.now() / 1000) + longLivedTokenData.expires_in,
         scope: 'instagram_basic,instagram_content_publish,instagram_manage_comments,instagram_manage_insights',
         token_type: 'bearer'
+      }
+    })
+
+    // Also create/update social account record
+    await prisma.socialAccount.upsert({
+      where: {
+        userId_platform: {
+          userId: session.user.id,
+          platform: 'instagram'
+        }
+      },
+      create: {
+        platform: 'instagram',
+        userId: session.user.id,
+        username: tokenData.username || 'unknown',
+        accessToken: longLivedTokenData.access_token,
+        expiresAt: new Date(Date.now() + (longLivedTokenData.expires_in * 1000)),
+        scope: 'instagram_basic,instagram_content_publish,instagram_manage_comments,instagram_manage_insights',
+        isConnected: true,
+        metadata: {}
+      },
+      update: {
+        username: tokenData.username || 'unknown',
+        accessToken: longLivedTokenData.access_token,
+        expiresAt: new Date(Date.now() + (longLivedTokenData.expires_in * 1000)),
+        scope: 'instagram_basic,instagram_content_publish,instagram_manage_comments,instagram_manage_insights',
+        isConnected: true
       }
     })
 

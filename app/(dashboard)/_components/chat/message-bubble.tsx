@@ -22,6 +22,22 @@ export function MessageBubble({
   onReferenceClick
 }: MessageBubbleProps) {
   const isUser = message.role === 'user'
+  const isTyping = message.status === 'typing'
+  
+  // If it's a typing indicator, show the special bubble
+  if (isTyping) {
+    return (
+      <div className="flex justify-start mb-4">
+        <div className="bg-white border rounded-2xl px-4 py-3">
+          <div className="flex space-x-1">
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" />
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-100" />
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-200" />
+          </div>
+        </div>
+      </div>
+    )
+  }
   
   return (
     <div className="relative">
@@ -118,17 +134,6 @@ export function MessageBubble({
               </button>
             )}
           </div>
-
-          {/* Loading indicator for AI response */}
-          {isLastMessage && !isUser && (
-            <div className="absolute bottom-0 right-0 transform translate-x-6 translate-y-6">
-              <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" />
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-100" />
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-200" />
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

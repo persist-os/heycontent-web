@@ -49,13 +49,19 @@ export default function SmartNotes() {
     try {
       const newNote = await createNote({
         title: 'Untitled Note',
-        content: ''
+        content: '',
+        important: false,
+        tags: [],
+        references: []
       });
       
       setNotes(prev => [...prev, newNote]);
       setActiveNoteId(newNote.id);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to create note:', error);
+      if (error.message.includes('log in')) {
+        return;
+      }
     }
   };
 
@@ -86,18 +92,43 @@ export default function SmartNotes() {
 
   const fetchNotes = async () => {
     const response = await fetch('/api/notes');
-    if (!response.ok) throw new Error('Failed to fetch notes');
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.details || 'Failed to fetch notes');
+    }
     return response.json();
   };
 
   const createNote = async (note: Partial<Note>) => {
-    const response = await fetch('/api/notes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(note)
-    });
-    if (!response.ok) throw new Error('Failed to create note');
-    return response.json();
+    try {
+      const response = await fetch('/api/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(note)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Failed to create note:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        });
+
+        if (response.status === 401) {
+          window.location.href = '/login';
+          throw new Error('Please log in to create notes');
+        }
+
+        throw new Error(errorData.details || 'Failed to create note');
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Create note error:', error);
+      throw error;
+    }
   };
 
   const updateNote = async (noteId: string, updates: Partial<Note>) => {
@@ -113,33 +144,47 @@ export default function SmartNotes() {
   const handleCommand = (command: Command) => {
     setShowCommands(false);
     
+    if (!activeNote) return;
+
+    const insertText = (text: string) => {
+      const textarea = document.querySelector('textarea');
+      if (textarea) {
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const content = activeNote.content;
+        const newContent = content.substring(0, start) + text + content.substring(end);
+        handleUpdateNote(activeNote.id, { content: newContent });
+        // Set cursor position after inserted text
+        setTimeout(() => {
+          textarea.selectionStart = textarea.selectionEnd = start + text.length;
+          textarea.focus();
+        }, 0);
+      }
+    };
+    
     switch (command.label) {
       case 'Text':
-        // Add text block
-        handleUpdateNote(activeNote!.id, {
-          content: activeNote!.content + '\n\n'
-        });
+        insertText('\n\n');
         break;
       
       case 'Heading':
-        // Add heading
-        handleUpdateNote(activeNote!.id, {
-          content: activeNote!.content + '\n# '
-        });
+        insertText('\n# ');
         break;
       
       case 'Important':
-        // Toggle important flag
-        handleUpdateNote(activeNote!.id, {
-          important: !activeNote!.important
+        handleUpdateNote(activeNote.id, {
+          important: !activeNote.important
         });
         break;
       
+      case 'Date':
+        insertText(`\n${new Date().toLocaleDateString()}\n`);
+        break;
+      
       case 'Capture':
-        // Add AI conversation snippet
-        handleUpdateNote(activeNote!.id, {
+        handleUpdateNote(activeNote.id, {
           references: [
-            ...activeNote!.references,
+            ...activeNote.references,
             {
               type: 'conversation',
               content: 'Captured conversation snippet'
@@ -148,17 +193,24 @@ export default function SmartNotes() {
         });
         break;
       
+      case 'Link':
+        insertText('[](url)');
+        break;
+      
       case 'Idea':
-        // Add idea reference
-        handleUpdateNote(activeNote!.id, {
+        handleUpdateNote(activeNote.id, {
           references: [
-            ...activeNote!.references,
+            ...activeNote.references,
             {
               type: 'idea',
               content: 'New idea'
             }
           ]
         });
+        break;
+      
+      case 'Comment':
+        insertText('\n> ');
         break;
       
       default:
@@ -191,6 +243,8 @@ export default function SmartNotes() {
             onUpdate={handleUpdateNote}
             showCommands={showCommands}
             setShowCommands={setShowCommands}
+            onSave={() => handleUpdateNote(activeNote.id, { content: activeNote.content })}
+            onToggleShortcuts={() => setShowShortcuts(!showShortcuts)}
           />
           
           <button
@@ -202,7 +256,7 @@ export default function SmartNotes() {
 
           {showShortcuts && (
             <div className="absolute bottom-16 right-4">
-              <ShortcutsHelp />
+              <ShortcutsHelp onClose={() => setShowShortcuts(false)} />
             </div>
           )}
         </div>
@@ -215,6 +269,7 @@ export default function SmartNotes() {
       {showCommands && (
         <CommandMenu
           onSelect={handleCommand}
+          onClose={() => setShowCommands(false)}
         />
       )}
     </div>
