@@ -7,8 +7,31 @@ import type {
   InstagramMetrics, 
   TikTokMetrics, 
   EmailMetrics,
-  SocialPlatform
+  SocialPlatform,
+  BaseMetrics
 } from "@/lib/types/social";
+
+interface RawYouTubeMetrics {
+  views: number;
+  subscribers: number;
+  engagement: number;
+  lastVideo?: {
+    id: string;
+    title: string;
+    views: number;
+    likes: number;
+    comments: number;
+    publishedAt: string;
+    thumbnailUrl: string;
+  };
+}
+
+interface SocialMetricsResponse {
+  youtube?: RawYouTubeMetrics;
+  instagram?: InstagramMetrics;
+  tiktok?: TikTokMetrics;
+  gmail?: EmailMetrics;
+}
 
 const SocialMediaSchema = z.object({
   platform: z.enum(['youtube', 'instagram', 'tiktok', 'gmail']).optional(),
@@ -29,7 +52,7 @@ export class SocialMediaTool extends BaseTool {
 
   async _call(args: z.infer<typeof SocialMediaSchema>) {
     try {
-      const metrics = await this.socialService.getMetrics();
+      const metrics = await this.socialService.getMetrics() as SocialMetricsResponse;
       if (!metrics) return "No metrics available";
 
       const { platform } = args;
@@ -37,7 +60,8 @@ export class SocialMediaTool extends BaseTool {
         switch (platform.toLowerCase()) {
           case 'youtube':
             if (!metrics.youtube) return "YouTube metrics not available";
-            return this.formatYouTubeMetrics(metrics.youtube);
+            const youtubeMetrics = this.formatYouTubeMetrics(metrics.youtube);
+            return this.formatMetricsForDisplay(youtubeMetrics);
           case 'instagram':
             if (!metrics.instagram) return "Instagram metrics not available";
             return this.formatInstagramMetrics(metrics.instagram);
@@ -59,17 +83,50 @@ export class SocialMediaTool extends BaseTool {
     }
   }
 
-  private formatYouTubeMetrics(metrics: YouTubeMetrics): string {
+  private formatYouTubeMetrics(rawMetrics: RawYouTubeMetrics): YouTubeMetrics {
+    return {
+      views: rawMetrics.views,
+      subscribers: rawMetrics.subscribers,
+      watchTimeHours: 0,
+      averageViewDuration: 0,
+      totalViews: rawMetrics.views,
+      subscribersGained: 0,
+      subscribersLost: 0,
+      engagement: {
+        rate: rawMetrics.engagement,
+        total: rawMetrics.engagement,
+        likes: rawMetrics.lastVideo?.likes || 0,
+        comments: rawMetrics.lastVideo?.comments || 0,
+        shares: 0,
+        averageViewPercentage: 0,
+        details: {
+          likes: rawMetrics.lastVideo?.likes || 0,
+          comments: rawMetrics.lastVideo?.comments || 0,
+          shares: 0
+        }
+      },
+      reach: 0,
+      audience: {
+        total: rawMetrics.subscribers,
+        growth: 0,
+        demographics: {}
+      },
+      topVideos: rawMetrics.lastVideo ? [rawMetrics.lastVideo] : []
+    };
+  }
+
+  private formatMetricsForDisplay(metrics: YouTubeMetrics): string {
     return `YouTube Metrics:
-- Total Views: ${metrics.totalViews}
-- Top Videos: ${metrics.topVideos.length} recent videos
-- Subscribers: ${metrics.subscribers}
-- Watch Time: ${metrics.watchTimeHours} hours
-- Average View Duration: ${metrics.averageViewDuration} minutes
+- Total Views: ${metrics.views.toLocaleString()}
+- Subscribers: ${metrics.subscribers.toLocaleString()} (Gained: ${metrics.subscribersGained}, Lost: ${metrics.subscribersLost})
+- Watch Time: ${metrics.watchTimeHours.toFixed(1)} hours
+- Average View Duration: ${metrics.averageViewDuration.toFixed(1)} minutes
 - Engagement:
-  * Likes: ${metrics.engagement.likes}
-  * Comments: ${metrics.engagement.comments}
-  * Shares: ${metrics.engagement.shares}`;
+  * Rate: ${(metrics.engagement.rate * 100).toFixed(1)}%
+  * Likes: ${metrics.engagement.likes.toLocaleString()}
+  * Comments: ${metrics.engagement.comments.toLocaleString()}
+  * Shares: ${metrics.engagement.shares.toLocaleString()}
+  * Average View: ${(metrics.engagement.averageViewPercentage * 100).toFixed(1)}%`;
   }
 
   private formatInstagramMetrics(metrics: InstagramMetrics): string {
@@ -104,16 +161,12 @@ export class SocialMediaTool extends BaseTool {
 - Unsubscribe Rate: ${metrics.unsubscribeRate}%`;
   }
 
-  private formatAllMetrics(metrics: {
-    youtube?: YouTubeMetrics;
-    instagram?: InstagramMetrics;
-    tiktok?: TikTokMetrics;
-    gmail?: EmailMetrics;
-  }): string {
+  private formatAllMetrics(metrics: SocialMetricsResponse): string {
     const parts: string[] = [];
-
+    
     if (metrics.youtube) {
-      parts.push(this.formatYouTubeMetrics(metrics.youtube));
+      const youtubeMetrics = this.formatYouTubeMetrics(metrics.youtube);
+      parts.push(this.formatMetricsForDisplay(youtubeMetrics));
     }
     if (metrics.instagram) {
       parts.push(this.formatInstagramMetrics(metrics.instagram));
@@ -124,7 +177,7 @@ export class SocialMediaTool extends BaseTool {
     if (metrics.gmail) {
       parts.push(this.formatEmailMetrics(metrics.gmail));
     }
-
-    return parts.join('\n\n') || "No metrics available";
+    
+    return parts.join('\n\n');
   }
 } 

@@ -11,6 +11,7 @@ import { SocialMediaService } from "@/lib/services/social-media";
 import { GmailService } from "@/lib/services/gmail";
 import { RAGSystem } from "@/lib/rag";
 import { prisma } from "@/lib/prisma";
+import { EmailSearchTool } from "./tools/email-search";
 
 export interface InitializationContext {
   userId?: string;
@@ -39,40 +40,49 @@ interface ConversationCues {
   };
 }
 
-const SYSTEM_PROMPT = `You are AVA IRIS, an AI assistant focused on helping creators optimize their social media presence and content strategy.
+const SYSTEM_PROMPT = `You are AVA IRIS, an AI assistant focused on helping creators optimize their social media presence and content strategy. You should always speak directly to the user in the first person, and refer to them in the second person (you/your).
 
 Core Capabilities:
-1. Platform Integration
-   - Analyze metrics across connected platforms
-   - Provide insights based on available data
-   - Adapt recommendations to connected services
+1. Email Management
+   - Direct access to Gmail inbox
+   - Search and analyze email content efficiently:
+     * For specific emails (from person/date): Use direct search
+     * For partnership analysis: Use partnership search
+   - Track communication patterns
+   - Provide actionable insights
+   - Use email_search tool with precise queries
 
 2. Content Strategy
-   - Analyze content performance
-   - Suggest improvements
-   - Track engagement patterns
+   - Analyze your content performance
+   - Suggest improvements for your content
+   - Track your engagement patterns
 
 3. Audience Insights
-   - Analyze audience behavior
-   - Track demographic trends
-   - Identify growth opportunities
+   - Analyze your audience behavior
+   - Track your demographic trends
+   - Identify your growth opportunities
 
 4. Partnership Opportunities
-   - Analyze potential collaborations
-   - Track partnership performance
-   - Optimize outreach strategies
+   - Analyze your potential collaborations
+   - Track your partnership performance
+   - Optimize your outreach strategies
 
 5. Smart Notes
-   - Organize insights
-   - Track progress
-   - Maintain context
+   - Organize your insights
+   - Track your progress
+   - Maintain our conversation context
 
 Remember:
-- Always check platform availability before making suggestions
-- Provide value regardless of connected platforms
+- For email searches:
+  * Be specific in your search queries
+  * Use sender/date filters when available
+  * Only use partnership analysis for partnership-related queries
+- Speak directly to the user using "you" and "your"
+- Provide value from any available content
 - Focus on actionable insights
-- Maintain conversation context
-- Be proactive in suggesting relevant insights`;
+- Maintain natural conversation flow
+- Be proactive in suggesting relevant insights
+- Never refer to the user in the third person`;
 
 export interface ProcessContext {
   previousMessages?: any[];
@@ -106,9 +116,9 @@ export class PlatformAgent {
 
   constructor() {
     this.model = new ChatOpenAI({
-      modelName: "gpt-4-turbo-preview",
+      modelName: "gpt-3.5-turbo",
       temperature: 0.7,
-      maxTokens: 150,
+      maxTokens: 2000,
     });
     this.rag = new RAGSystem();
     this.socialService = new SocialMediaService();
@@ -139,18 +149,16 @@ export class PlatformAgent {
 
   private async initializeGmailService(userId: string) {
     try {
-      const account = await prisma.account.findFirst({
+      const socialAccount = await prisma.socialAccount.findFirst({
         where: {
           userId,
-          provider: 'google',
-          scope: {
-            contains: 'https://www.googleapis.com/auth/gmail'
-          }
+          platform: 'gmail',
+          isConnected: true
         }
       });
 
-      if (account?.id) {
-        this.gmailService = new GmailService(account.id);
+      if (socialAccount?.id) {
+        this.gmailService = new GmailService(socialAccount.id);
         return true;
       }
       return false;
@@ -177,15 +185,33 @@ export class PlatformAgent {
 
       // Initialize Gmail service if connected
       if (hasEmail) {
-        await this.initializeGmailService(context.userId);
+        const gmailInitialized = await this.initializeGmailService(context.userId);
+        if (gmailInitialized) {
+          this.availableFeatures.add('email');
+          
+          // Pre-fetch recent emails for context
+          if (this.gmailService) {
+            try {
+              const recentEmails = await this.gmailService.searchEmails('', 10);
+              await Promise.all(recentEmails.map(async email => {
+                if (this.gmailService && context.userId) {
+                  await this.gmailService.storeEmailInRAG(email, context.userId);
+                }
+              }));
+            } catch (error) {
+              console.error('Error pre-fetching emails:', error);
+            }
+          }
+        }
       }
     }
 
     // Initialize tools based on available features
     const tools: BaseTool[] = [
+      ...(this.availableFeatures.has('email') && this.userId ? [new EmailSearchTool(this.userId)] : []),
       new SocialMediaTool(this.socialService, this.rag),
       ...(this.availableFeatures.has('content') ? [new ContentAnalysisTool()] : []),
-      ...(this.availableFeatures.has('partnerships') && this.gmailService ? [new PartnershipTool()] : []),
+      ...(this.availableFeatures.has('partnerships') && this.gmailService ? [new PartnershipTool(this.rag)] : []),
       new SmartNotesTool(this.rag)
     ];
 

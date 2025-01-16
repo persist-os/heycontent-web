@@ -2,8 +2,8 @@ import { PartnershipAnalysis } from './social-platforms';
 
 export interface ContentInsight {
   type: 'partnership' | 'content' | 'engagement' | 'trend';
-  title: string;
-  description: string;
+  title?: string;
+  description?: string;
   source: 'youtube' | 'gmail' | 'combined';
   confidence: number;
   data: {
@@ -24,18 +24,41 @@ export interface ContentInsight {
 
 export interface InsightContext {
   partnerships?: Array<{
-    subject: string;
-    analysis: PartnershipAnalysis;
+    type: string;
+    status: string;
+    performance?: any;
   }>;
-  videoMetrics?: Array<{
-    id: string;
-    views: number;
-    likes: number;
-    comments: number;
+  audience?: Array<{
+    demographics: any;
+    interests: string[];
   }>;
-  channelMetrics?: {
-    subscribers: number;
-    totalViews: number;
-    engagementRate: number;
+  metrics?: {
+    engagement: any;
+    reach: any;
+    growth: any;
   };
+  insights?: ContentInsight[];
+}
+
+export interface EnhancedInsights {
+  partnership_history: Array<{
+    type: string;
+    status: string;
+    performance?: any;
+  }>;
+  audience_alignment: {
+    demographics: any;
+    interests: string[];
+  } | null;
+  performance_metrics: {
+    engagement: any;
+    reach: any;
+    growth: any;
+  } | null;
+  related_insights: Array<{
+    type: string;
+    title: string;
+    description: string;
+    confidence: number;
+  }>;
 } 

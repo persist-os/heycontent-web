@@ -23,14 +23,16 @@ model User {
   verifyToken           String?         @unique
   verifyTokenExpiry     DateTime?
   accounts              Account[]
+  Cache                 Cache[]
   conversations         Conversation[]
   insights              Insight[]
+  notes                 Note[]
   incomingProposals     Partnership[]   @relation("IncomingProposals")
   suggestedPartnerships Partnership[]   @relation("SuggestedPartnerships")
   partnerships          Partnership[]
   socialAccounts        SocialAccount[]
   socialUpdates         SocialUpdate[]
-  notes                 Note[]
+  sessions              Session[]
 }
 
 model Account {
@@ -132,21 +134,34 @@ model SocialAccount {
 }
 
 model Partnership {
-  id            String                   @id @default(cuid())
-  userId        String
-  name          String
-  status        String                   @default("pending")
-  createdAt     DateTime                 @default(now())
-  updatedAt     DateTime                 @updatedAt
-  proposedToId  String?
-  suggestedToId String?
-  contacts      Contact[]
-  proposedTo    User?                    @relation("IncomingProposals", fields: [proposedToId], references: [id])
-  suggestedTo   User?                    @relation("SuggestedPartnerships", fields: [suggestedToId], references: [id])
-  user          User                     @relation(fields: [userId], references: [id])
-  events        PartnershipEvent[]
-  history       PartnershipHistory[]
-  requirements  PartnershipRequirement[]
+  id             String                   @id @default(cuid())
+  userId         String
+  name           String
+  status         String                   @default("pending")
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  proposedToId   String?
+  suggestedToId  String?
+  brand          String                   @default("")
+  type           String                   @default("email")
+  alignmentScore Float                    @default(0)
+  confidence     Float?
+  deadline       DateTime?
+  estimatedValue Decimal?
+  lastContact    DateTime?
+  potentialValue Decimal?
+  progress       Float                    @default(0)
+  signals        Json?
+  value          Decimal?
+  receivedDate   DateTime?
+  description    String                   @default("")
+  contacts       Contact[]
+  proposedTo     User?                    @relation("IncomingProposals", fields: [proposedToId], references: [id])
+  suggestedTo    User?                    @relation("SuggestedPartnerships", fields: [suggestedToId], references: [id])
+  user           User                     @relation(fields: [userId], references: [id])
+  events         PartnershipEvent[]
+  history        PartnershipHistory[]
+  requirements   PartnershipRequirement[]
 
   @@index([userId])
   @@index([proposedToId])
@@ -184,22 +199,71 @@ model PartnershipHistory {
   id            String      @id @default(cuid())
   partnershipId String
   date          DateTime
-  action        String
   details       String?
+  event         String
   partnership   Partnership @relation(fields: [partnershipId], references: [id], onDelete: Cascade)
 }
 
 model Note {
-  id            String      @id @default(cuid())
-  userId        String
-  title         String
-  content       String      @db.Text
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  important     Boolean     @default(false)
-  tags          String[]
-  references    Json[]      // Change this to Json[]
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  userId     String
+  title      String
+  content    String
+  type       String?  @default("default")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  important  Boolean  @default(false)
+  tags       String[]
+  references Json[]
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model Cache {
+  id        String   @id
+  key       String
+  value     String
+  userId    String
+  createdAt DateTime @default(now())
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([key, createdAt])
+  @@index([userId])
+}
+
+model rag_documents {
+  id          String   @id @default(uuid())
+  content     String
+  content_hash String  @unique
+  metadata    Json
+  embedding   Json
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@index([content_hash])
+  @@index([metadata])
+}
+
+model rag_documents_input {
+  content_hash String
+  content      String
+  metadata     Json
+  embedding    Json
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }

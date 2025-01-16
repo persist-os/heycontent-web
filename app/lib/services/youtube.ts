@@ -1,6 +1,9 @@
 import { google, youtube_v3 } from 'googleapis';
 import { validateToken } from '@/lib/auth-helpers';
 import { getCompletion } from '../openai';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 interface CommentAnalysis {
   sentiment: 'positive' | 'negative' | 'neutral';
@@ -24,21 +27,54 @@ interface VideoAnalysis {
   };
 }
 
+// Add interface for video input
+interface VideoInput {
+  id: string;
+  snippet: {
+    title?: string;
+    description?: string;
+    publishedAt?: string;
+    tags?: string[];
+  };
+  statistics: {
+    viewCount?: string;
+    likeCount?: string;
+    commentCount?: string;
+    shareCount?: string;
+  };
+}
+
 export class YouTubeService {
   private youtube: youtube_v3.Youtube;
   private accountId: string;
 
-  constructor(accountId: string) {
-    this.accountId = accountId;
+  constructor(userId: string) {
+    this.accountId = userId;
     this.youtube = google.youtube('v3');
+  }
+
+  private async getGoogleAccountId(): Promise<string> {
+    const account = await prisma.account.findFirst({
+      where: {
+        userId: this.accountId,
+        provider: 'google'
+      }
+    });
+
+    if (!account) {
+      throw new Error('No Google account found');
+    }
+
+    return account.id;
   }
 
   private async getAuthorizedClient() {
     try {
       const accessToken = await validateToken(this.accountId, 'youtube');
       
-      // Log token for debugging
-      console.log('Using YouTube access token:', accessToken ? 'Present' : 'Missing');
+      if (!accessToken) {
+        throw new Error('Failed to get valid YouTube access token');
+      }
       
       const oauth2Client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
@@ -190,87 +226,90 @@ export class YouTubeService {
     }
   }
 
-  async analyzeVideoContent(videoId: string): Promise<VideoAnalysis> {
+  private async analyzeVideoContent(input: string | VideoInput): Promise<VideoAnalysis> {
     try {
-      const auth = await this.getAuthorizedClient();
+      let video: VideoInput;
+      if (typeof input === 'string') {
+        const auth = await this.getAuthorizedClient();
+        const videoResponse = await this.youtube.videos.list({
+          auth,
+          part: ['snippet', 'statistics'],
+          id: [input]
+        });
 
-      // Get video details
-      const videoResponse = await this.youtube.videos.list({
-        auth,
-        part: ['snippet', 'statistics'],
-        id: [videoId]
-      });
+        const videoData = videoResponse.data.items?.[0];
+        if (!videoData) throw new Error('Video not found');
 
-      const video = videoResponse.data.items?.[0];
-      if (!video) throw new Error('Video not found');
+        video = this.createVideoInput(
+          input,
+          videoData.snippet,
+          videoData.statistics
+        );
+      } else {
+        video = input;
+      }
 
-      // Get comments for content analysis
-      const comments = await this.getVideoComments(videoId, 50);
-      const commentTexts = comments.map(c => c?.text || '').join('\n');
-
-      // Analyze video content and comments using AI
-      const prompt = `Analyze this YouTube video content and its comments:
-
-Video Title: ${video.snippet?.title}
-Description: ${video.snippet?.description}
-Tags: ${video.snippet?.tags?.join(', ')}
-
-Top Comments:
-${commentTexts}
-
-Please provide in a structured format:
-1. Main topics discussed (as a JSON array)
-2. Suggested related topics (as a JSON array)
-3. Content type classification (as a single string)
-4. Performance score (as a number between 0-100)
-5. Engagement triggers (as a JSON array)
-6. Audience reaction (as JSON arrays):
-   - Positive aspects
-   - Negative aspects
-   - Questions asked
-   - Suggestions made
-
-Example format:
-["topic1", "topic2"]
-["suggested1", "suggested2"]
-"Educational"
-85
-["trigger1", "trigger2"]
-["positive1", "positive2"]
-["negative1", "negative2"]
-["question1", "question2"]
-["suggestion1", "suggestion2"]`;
+      const prompt = [
+        'Analyze this YouTube video content:\n',
+        `Title: ${video.snippet.title}`,
+        `Description: ${video.snippet.description}`,
+        'Statistics:',
+        `- Views: ${video.statistics.viewCount}`,
+        `- Likes: ${video.statistics.likeCount}`,
+        `- Comments: ${video.statistics.commentCount}\n`,
+        'Please provide:',
+        '1. Main topics covered (as a JSON array)',
+        '2. Suggested related topics (as a JSON array)',
+        '3. Content type (e.g., tutorial, vlog, review)',
+        '4. Performance score (0-100)',
+        '5. Engagement triggers (what aspects drive engagement)',
+        '6. Audience reaction analysis (positive aspects, negative aspects, questions, suggestions)\n',
+        'Format the response exactly as shown in the example:',
+        '{',
+        '  "mainTopics": ["topic1", "topic2"],',
+        '  "suggestedTopics": ["related1", "related2"],',
+        '  "contentType": "tutorial",',
+        '  "performanceScore": 85,',
+        '  "engagementTriggers": ["hook", "pacing"],',
+        '  "audienceReaction": {',
+        '    "positiveAspects": ["aspect1", "aspect2"],',
+        '    "negativeAspects": ["aspect1"],',
+        '    "questions": ["question1"],',
+        '    "suggestions": ["suggestion1"]',
+        '  }',
+        '}'
+      ].join('\n');
 
       const analysis = await getCompletion([
-        { role: 'system', content: 'You are an AI that analyzes YouTube video content and audience engagement. Always respond in the exact format specified, using valid JSON arrays where requested.' },
+        { 
+          role: 'system', 
+          content: 'You are an AI that analyzes YouTube video content and metrics to provide insights.' 
+        },
         { role: 'user', content: prompt }
-      ]);
+      ], {
+        model: 'gpt-4-1106-preview',
+        temperature: 0.1,
+        max_tokens: 1000,
+        response_format: { type: "json_object" }
+      });
 
-      // Parse the AI response
-      const lines = analysis.split('\n').filter(line => line.trim());
-      
       try {
+        const result = JSON.parse(analysis);
         return {
-          mainTopics: JSON.parse(lines[0] || '[]'),
-          suggestedTopics: JSON.parse(lines[1] || '[]'),
-          contentType: lines[2]?.replace(/^"|"$/g, '') || 'Unknown',
-          performanceScore: parseInt(lines[3] || '0') || 0,
-          engagementTriggers: JSON.parse(lines[4] || '[]'),
+          mainTopics: result.mainTopics || [],
+          suggestedTopics: result.suggestedTopics || [],
+          contentType: result.contentType || 'Unknown',
+          performanceScore: result.performanceScore || 0,
+          engagementTriggers: result.engagementTriggers || [],
           audienceReaction: {
-            positiveAspects: JSON.parse(lines[5] || '[]'),
-            negativeAspects: JSON.parse(lines[6] || '[]'),
-            questions: JSON.parse(lines[7] || '[]'),
-            suggestions: JSON.parse(lines[8] || '[]')
+            positiveAspects: result.audienceReaction?.positiveAspects || [],
+            negativeAspects: result.audienceReaction?.negativeAspects || [],
+            questions: result.audienceReaction?.questions || [],
+            suggestions: result.audienceReaction?.suggestions || []
           }
         };
       } catch (parseError) {
-        console.error('Error parsing AI response:', {
-          error: parseError,
-          lines,
-          rawResponse: analysis
-        });
-        
-        // Return a safe default if parsing fails
+        console.error('Error parsing video analysis:', parseError);
         return {
           mainTopics: [],
           suggestedTopics: [],
@@ -291,27 +330,36 @@ Example format:
     }
   }
 
-  private async analyzeComment(text: string): Promise<CommentAnalysis> {
+  private async analyzeComment(text: string): Promise<{
+    sentiment: 'positive' | 'negative' | 'neutral';
+    topics: string[];
+    isQuestion: boolean;
+    isEngaging: boolean;
+    suggestedAction?: string;
+  }> {
     try {
-      const prompt = `Analyze this YouTube comment:
-"${text}"
-
-Please provide in a structured format:
-1. Sentiment (exactly one of: positive, negative, neutral)
-2. Topics mentioned (as a JSON array)
-3. Is it a question? (true/false)
-4. Is it engaging? (true/false)
-5. Suggested action for creator
-
-Example format:
-positive
-["topic1", "topic2"]
-true
-false
-"Create more content about topic1"`;
+      const prompt = [
+        'Analyze this YouTube comment:',
+        `"${text}"\n`,
+        'Please provide in a structured format:',
+        '1. Sentiment (exactly one of: positive, negative, neutral)',
+        '2. Topics mentioned (as a JSON array)',
+        '3. Is it a question? (true/false)',
+        '4. Is it engaging? (true/false)',
+        '5. Suggested action for creator\n',
+        'Example format:',
+        'positive',
+        '["topic1", "topic2"]',
+        'true',
+        'false',
+        '"Create more content about topic1"'
+      ].join('\n');
 
       const analysis = await getCompletion([
-        { role: 'system', content: 'You are an AI that analyzes YouTube comments. Always respond in the exact format specified, using valid JSON arrays where requested.' },
+        { 
+          role: 'system', 
+          content: 'You are an AI that analyzes YouTube comments. Always respond in the exact format specified, using valid JSON arrays where requested.' 
+        },
         { role: 'user', content: prompt }
       ]);
 
@@ -356,49 +404,78 @@ false
   async getContentSuggestions(channelId: string): Promise<string[]> {
     try {
       const auth = await this.getAuthorizedClient();
-
-      // Get recent videos
-      const videosResponse = await this.youtube.search.list({
+      
+      // First get channel stats to know actual video count
+      const channelResponse = await this.youtube.channels.list({
         auth,
-        part: ['id'],
+        part: ['statistics'],
+        id: [channelId]
+      });
+      
+      const videoCount = parseInt(channelResponse.data.items?.[0]?.statistics?.videoCount || '0');
+      const maxResults = Math.min(videoCount, 10); // Limit to actual videos or 10, whichever is smaller
+      
+      const response = await this.youtube.search.list({
+        auth,
+        part: ['snippet', 'id'],
         channelId,
-        order: 'date',
         type: ['video'],
-        maxResults: 10
+        maxResults
       });
 
-      const videoIds = videosResponse.data.items
-        ?.map(item => item.id?.videoId)
-        .filter((id): id is string => !!id) || [];
+      if (!response.data.items?.length) return [];
 
-      // Analyze each video's content
+      // Get full video details
+      const videoIds = response.data.items.map(item => item.id?.videoId).filter(Boolean);
+      const videoDetails = await this.youtube.videos.list({
+        auth,
+        part: ['snippet', 'statistics'],
+        id: videoIds as string[]
+      });
+
       const analyses = await Promise.all(
-        videoIds.map(id => this.analyzeVideoContent(id))
+        videoDetails.data.items?.map(video => {
+          const videoInput = this.createVideoInput(
+            video.id!,
+            video.snippet,
+            video.statistics
+          );
+          return this.analyzeVideoContent(videoInput);
+        }) || []
       );
 
-      // Aggregate topics and engagement data
-      const allTopics = analyses.flatMap(a => [...a.mainTopics, ...a.suggestedTopics]);
+      // Aggregate topics and patterns
+      const allTopics = analyses.flatMap(a => a.mainTopics);
       const allEngagementTriggers = analyses.flatMap(a => a.engagementTriggers);
       const allSuggestions = analyses.flatMap(a => a.audienceReaction.suggestions);
 
-      // Generate content suggestions based on aggregated data
-      const prompt = `Based on this channel's content analysis:
-
-Popular Topics: ${allTopics.join(', ')}
-Engagement Triggers: ${allEngagementTriggers.join(', ')}
-Audience Suggestions: ${allSuggestions.join(', ')}
-
-Provide a list of 10 specific content suggestions that would resonate with this audience and maximize engagement.`;
+      const prompt = [
+        'Based on the channel\'s recent video performance:\n',
+        'Popular Topics:',
+        allTopics.join(', '),
+        '\nEngagement Triggers:',
+        allEngagementTriggers.join(', '),
+        '\nAudience Suggestions:',
+        allSuggestions.join(', '),
+        '\nProvide a list of specific content suggestions that would resonate with the audience and maximize engagement.',
+        'Format each suggestion as a complete, actionable content idea.'
+      ].join('\n');
 
       const suggestions = await getCompletion([
-        { role: 'system', content: 'You are an AI that provides strategic content suggestions for YouTube creators.' },
+        { 
+          role: 'system', 
+          content: 'You are an AI that provides strategic content suggestions based on YouTube channel performance data.' 
+        },
         { role: 'user', content: prompt }
       ]);
 
-      return suggestions.split('\n');
+      return suggestions.split('\n')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+
     } catch (error) {
-      console.error('Error generating content suggestions:', error);
-      return [];
+      console.error('Error getting content suggestions:', error);
+      throw error;
     }
   }
 
@@ -406,12 +483,22 @@ Provide a list of 10 specific content suggestions that would resonate with this 
     try {
       const auth = await this.getAuthorizedClient();
       
+      // Get channel stats to know actual video count
+      const channelResponse = await this.youtube.channels.list({
+        auth,
+        part: ['statistics'],
+        id: [channelId]
+      });
+      
+      const videoCount = parseInt(channelResponse.data.items?.[0]?.statistics?.videoCount || '0');
+      const maxResults = Math.min(videoCount, 10); // Limit to actual videos or 10, whichever is smaller
+      
       // Use search.list with minimal permissions
       const response = await this.youtube.search.list({
         auth,
         part: ['id'],
         channelId,
-        maxResults: 1,
+        maxResults,
         order: 'date',
         type: ['video'],
         fields: 'items(id/videoId)'
@@ -502,130 +589,123 @@ Provide a list of 10 specific content suggestions that would resonate with this 
     }
   }
 
-  async getMonthlyContentAnalysis(year: number, month: number): Promise<{
-    videos: Array<{
-      id: string;
-      title: string;
-      publishedAt: string;
-      metrics: {
-        views: number;
-        likes: number;
-        comments: number;
-      };
-      analysis: VideoAnalysis;
-    }>;
-    summary: {
-      totalViews: number;
-      totalLikes: number;
-      totalComments: number;
-      topPerformingVideo: string;
-      commonTopics: string[];
-      engagementPatterns: string[];
-      recommendedStrategies: string[];
-    };
-  }> {
+  async getMonthlyAnalysis(channelId: string, month: number, year: number) {
     try {
-      // Get videos for the specified month
-      const startDate = new Date(year, month - 1, 1);
-      const endDate = new Date(year, month, 0); // Last day of the month
-      const videos = await this.getVideosByDate(startDate, endDate);
+      const auth = await this.getAuthorizedClient();
+      const startDate = new Date(year, month - 1, 1).toISOString();
+      const endDate = new Date(year, month, 0).toISOString();
 
-      if (!videos.length) {
+      const response = await this.youtube.search.list({
+        auth,
+        part: ['snippet', 'id'],
+        channelId,
+        publishedAfter: startDate,
+        publishedBefore: endDate,
+        type: ['video'],
+        maxResults: 50
+      });
+
+      if (!response.data.items?.length) {
         return {
           videos: [],
           summary: {
+            totalVideos: 0,
             totalViews: 0,
-            totalLikes: 0,
-            totalComments: 0,
-            topPerformingVideo: '',
-            commonTopics: [],
-            engagementPatterns: [],
-            recommendedStrategies: ['No videos found for this month']
+            avgViews: 0,
+            avgEngagement: 0,
+            topVideo: null,
+            trends: {
+              views: 'stable',
+              engagement: 'stable'
+            }
           }
         };
       }
 
-      // Analyze each video
-      const analyzedVideos = await Promise.all(
-        videos.map(async (video) => {
-          const videoId = video.id?.videoId;
-          if (!videoId) return null;
+      const videoIds = response.data.items.map(item => item.id?.videoId).filter(Boolean);
+      const videoDetails = await this.youtube.videos.list({
+        auth,
+        part: ['snippet', 'statistics'],
+        id: videoIds as string[]
+      });
 
-          const metrics = await this.getVideoMetrics(videoId);
-          const analysis = await this.analyzeVideoContent(videoId);
+      const videos = await Promise.all(
+        videoDetails.data.items?.map(async video => {
+          const videoInput = this.createVideoInput(
+            video.id!,
+            video.snippet,
+            video.statistics
+          );
+          const analysis = await this.analyzeVideoContent(videoInput);
 
           return {
-            id: videoId,
+            id: video.id!,
             title: video.snippet?.title || '',
             publishedAt: video.snippet?.publishedAt || '',
             metrics: {
-              views: metrics.views,
-              likes: metrics.likes,
-              comments: metrics.comments
+              views: parseInt(video.statistics?.viewCount || '0'),
+              likes: parseInt(video.statistics?.likeCount || '0'),
+              comments: parseInt(video.statistics?.commentCount || '0')
             },
             analysis
           };
-        })
+        }) || []
       );
 
-      const validVideos = analyzedVideos.filter((v): v is NonNullable<typeof v> => v !== null);
+      // Calculate monthly summary
+      const totalViews = videos.reduce((sum, v) => sum + v.metrics.views, 0);
+      const totalLikes = videos.reduce((sum, v) => sum + v.metrics.likes, 0);
+      const totalComments = videos.reduce((sum, v) => sum + v.metrics.comments, 0);
 
-      if (!validVideos.length) {
-        return {
-          videos: [],
-          summary: {
-            totalViews: 0,
-            totalLikes: 0,
-            totalComments: 0,
-            topPerformingVideo: '',
-            commonTopics: [],
-            engagementPatterns: [],
-            recommendedStrategies: ['No valid videos found for this month']
-          }
-        };
-      }
-
-      // Aggregate data for summary
-      const totalViews = validVideos.reduce((sum, v) => sum + v.metrics.views, 0);
-      const totalLikes = validVideos.reduce((sum, v) => sum + v.metrics.likes, 0);
-      const totalComments = validVideos.reduce((sum, v) => sum + v.metrics.comments, 0);
-      
       // Find top performing video
-      const topVideo = validVideos.reduce((top, current) => 
-        (current.metrics.views > (top?.metrics.views || 0)) ? current : top
-      , validVideos[0]);
+      const topVideo = videos.reduce((top, current) => 
+        current.metrics.views > (top?.metrics.views || 0) ? current : top
+      , videos[0]);
 
-      // Aggregate topics and patterns
-      const allTopics = validVideos.flatMap(v => v.analysis.mainTopics);
-      const allPatterns = validVideos.flatMap(v => v.analysis.engagementTriggers);
+      // Extract common topics and patterns
+      const allTopics = videos.flatMap(v => v.analysis.mainTopics);
+      const allPatterns = videos.flatMap(v => v.analysis.engagementTriggers);
 
       // Generate strategic insights
       const monthName = new Date(year, month - 1).toLocaleString('default', { month: 'long' });
-      const prompt = `Based on the YouTube channel's performance in ${monthName} ${year}:
-
-Total Videos: ${validVideos.length}
-Total Views: ${totalViews}
-Total Engagement: ${totalLikes} likes, ${totalComments} comments
-Top Topics: ${allTopics.join(', ')}
-Engagement Patterns: ${allPatterns.join(', ')}
-
-Provide 5 specific strategic recommendations to improve content performance based on this data.`;
+      const prompt = [
+        `Based on the YouTube channel's performance in ${monthName} ${year}:\n`,
+        `Total Videos: ${videos.length}`,
+        `Total Views: ${totalViews}`,
+        `Total Engagement: ${totalLikes} likes, ${totalComments} comments`,
+        `Top Topics: ${[...new Set(allTopics)].join(', ')}`,
+        `Engagement Patterns: ${[...new Set(allPatterns)].join(', ')}\n`,
+        'Provide 5 specific strategic recommendations to improve content performance based on this data.',
+        'Format each recommendation as an actionable insight with clear implementation steps.'
+      ].join('\n');
 
       const recommendations = await getCompletion([
-        { role: 'system', content: 'You are an AI that provides strategic YouTube channel growth recommendations.' },
+        { 
+          role: 'system', 
+          content: 'You are an AI that provides strategic YouTube channel growth recommendations based on performance data.' 
+        },
         { role: 'user', content: prompt }
       ]);
 
       return {
-        videos: validVideos,
+        videos,
         summary: {
+          totalVideos: videos.length,
           totalViews,
-          totalLikes,
-          totalComments,
-          topPerformingVideo: topVideo.title,
-          commonTopics: [...new Set(allTopics)].slice(0, 10),
-          engagementPatterns: [...new Set(allPatterns)].slice(0, 5),
-          recommendedStrategies: recommendations.split('\n')
+          avgViews: Math.round(totalViews / videos.length),
+          avgEngagement: Math.round((totalLikes + totalComments) / videos.length),
+          topVideo: {
+            title: topVideo.title,
+            views: topVideo.metrics.views,
+            engagement: topVideo.metrics.likes + topVideo.metrics.comments
+          },
+          trends: {
+            views: this.calculateTrend(videos.map(v => v.metrics.views)),
+            engagement: this.calculateTrend(videos.map(v => v.metrics.likes + v.metrics.comments))
+          },
+          insights: recommendations.split('\n')
+            .map(r => r.trim())
+            .filter(r => r.length > 0)
         }
       };
     } catch (error) {
@@ -728,5 +808,415 @@ Provide 5 specific strategic recommendations to improve content performance base
       console.error('Error analyzing latest video:', error);
       throw error;
     }
+  }
+
+  async getMonthlyVideos(month: number, year: number) {
+    try {
+      const auth = await this.getAuthorizedClient();
+      const startDate = new Date(year, month-1, 1).toISOString();
+      const endDate = new Date(year, month, 0).toISOString();
+      
+      const response = await this.youtube.search.list({
+        auth,
+        part: ['snippet', 'id'],
+        channelId: await this.getChannelId(),
+        publishedAfter: startDate,
+        publishedBefore: endDate,
+        type: ['video'],
+        maxResults: 50
+      });
+
+      if (!response.data.items?.length) {
+        return {
+          videos: [],
+          summary: {
+            totalVideos: 0,
+            totalViews: 0,
+            avgViews: 0,
+            avgEngagement: 0
+          }
+        };
+      }
+
+      // Get detailed video stats
+      const videoIds = response.data.items.map(item => item.id?.videoId).filter(Boolean);
+      const videoDetails = await this.youtube.videos.list({
+        auth,
+        part: ['statistics', 'snippet'],
+        id: videoIds as string[]
+      });
+
+      const videos = await Promise.all(videoDetails.data.items?.map(async video => {
+        const stats = video.statistics || {};
+        const snippet = video.snippet || {};
+        
+        // Get video comments for sentiment analysis
+        const comments = await this.getVideoComments(video.id!, 100);
+        const commentAnalysis = await this.analyzeComments(comments);
+
+        return {
+          id: video.id!,
+          title: snippet.title || '',
+          description: snippet.description || '',
+          publishedAt: snippet.publishedAt || '',
+          metrics: {
+            views: parseInt(stats.viewCount || '0'),
+            likes: parseInt(stats.likeCount || '0'),
+            comments: parseInt(stats.commentCount || '0'),
+            engagement: this.calculateEngagementRate(stats)
+          },
+          analysis: await this.analyzeVideoContent({
+            id: video.id!,
+            snippet,
+            statistics: stats
+          } as VideoInput),
+          commentAnalysis
+        };
+      }) || []);
+
+      // Calculate monthly summary
+      const summary = this.calculateMonthlySummary(videos);
+
+      return {
+        videos,
+        summary
+      };
+    } catch (error) {
+      console.error('Error getting monthly videos:', error);
+      throw error;
+    }
+  }
+
+  private calculateEngagementRate(stats: any) {
+    const views = parseInt(stats.viewCount || '0');
+    if (!views) return 0;
+    
+    const likes = parseInt(stats.likeCount || '0');
+    const comments = parseInt(stats.commentCount || '0');
+    const shares = parseInt(stats.shareCount || '0');
+    
+    return ((likes + comments * 2 + shares * 3) / views) * 100;
+  }
+
+  private calculateMonthlySummary(videos: any[]) {
+    const totalVideos = videos.length;
+    const totalViews = videos.reduce((sum, v) => sum + v.metrics.views, 0);
+    const totalLikes = videos.reduce((sum, v) => sum + v.metrics.likes, 0);
+    const totalComments = videos.reduce((sum, v) => sum + v.metrics.comments, 0);
+    
+    // Find top performing video
+    const topVideo = videos.reduce((top, current) => 
+      current.metrics.views > (top?.metrics.views || 0) ? current : top
+    , null);
+
+    // Calculate engagement trends
+    const engagementTrend = videos
+      .sort((a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime())
+      .map(v => ({
+        date: v.publishedAt,
+        engagement: v.metrics.engagement
+      }));
+
+    // Extract common topics
+    const topics = videos.flatMap(v => v.analysis.mainTopics);
+    const topTopics = [...new Set(topics)]
+      .map(topic => ({
+        topic,
+        count: topics.filter(t => t === topic).length
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    return {
+      totalVideos,
+      totalViews,
+      avgViews: totalVideos ? Math.round(totalViews / totalVideos) : 0,
+      avgEngagement: totalVideos ? 
+        videos.reduce((sum, v) => sum + v.metrics.engagement, 0) / totalVideos : 0,
+      topVideo: topVideo ? {
+        title: topVideo.title,
+        views: topVideo.metrics.views,
+        engagement: topVideo.metrics.engagement
+      } : null,
+      engagementTrend,
+      topTopics,
+      performance: {
+        views: {
+          total: totalViews,
+          average: Math.round(totalViews / totalVideos),
+          trend: this.calculateTrend(videos.map(v => v.metrics.views))
+        },
+        engagement: {
+          likes: totalLikes,
+          comments: totalComments,
+          averageRate: videos.reduce((sum, v) => sum + v.metrics.engagement, 0) / totalVideos,
+          trend: this.calculateTrend(videos.map(v => v.metrics.engagement))
+        }
+      }
+    };
+  }
+
+  private calculateTrend(values: number[]): 'up' | 'down' | 'stable' {
+    if (values.length < 2) return 'stable';
+    
+    const firstHalf = values.slice(0, Math.floor(values.length / 2));
+    const secondHalf = values.slice(Math.floor(values.length / 2));
+    
+    const firstAvg = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
+    const secondAvg = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
+    
+    const percentChange = ((secondAvg - firstAvg) / firstAvg) * 100;
+    
+    if (percentChange > 10) return 'up';
+    if (percentChange < -10) return 'down';
+    return 'stable';
+  }
+
+  private async getChannelId(): Promise<string> {
+    const auth = await this.getAuthorizedClient();
+    const response = await this.youtube.channels.list({
+      auth,
+      part: ['id'],
+      mine: true
+    });
+
+    const channelId = response.data.items?.[0]?.id;
+    if (!channelId) {
+      throw new Error('No channel found for authenticated user');
+    }
+
+    return channelId;
+  }
+
+  private async analyzeComments(comments: any[]): Promise<{
+    sentiment: {
+      positive: number;
+      negative: number;
+      neutral: number;
+    };
+    topics: string[];
+    questions: number;
+    engagement: number;
+  }> {
+    const analyses = await Promise.all(
+      comments.map(comment => this.analyzeComment(comment.snippet.topLevelComment.snippet.textDisplay))
+    );
+
+    const sentiment = analyses.reduce(
+      (acc, curr) => {
+        acc[curr.sentiment]++;
+        return acc;
+      },
+      { positive: 0, negative: 0, neutral: 0 }
+    );
+
+    const topics = [...new Set(analyses.flatMap(a => a.topics))];
+    const questions = analyses.filter(a => a.isQuestion).length;
+    const engagement = analyses.filter(a => a.isEngaging).length;
+
+    return {
+      sentiment,
+      topics,
+      questions,
+      engagement
+    };
+  }
+
+  async getVideoAnalysis(videoId: string): Promise<VideoAnalysis> {
+    const auth = await this.getAuthorizedClient();
+    
+    // Get video details
+    const videoResponse = await this.youtube.videos.list({
+      auth,
+      part: ['snippet', 'statistics', 'contentDetails'],
+      id: [videoId]
+    });
+
+    const video = videoResponse.data.items?.[0];
+    if (!video) throw new Error('Video not found');
+
+    return this.analyzeVideoContent({
+      id: videoId,
+      snippet: video.snippet || {},
+      statistics: video.statistics || {}
+    } as VideoInput);
+  }
+
+  async getMonthlyContent(channelId: string, month: number, year: number) {
+    try {
+      const auth = await this.getAuthorizedClient();
+      const startDate = new Date(year, month - 1, 1).toISOString();
+      const endDate = new Date(year, month, 0).toISOString();
+
+      const response = await this.youtube.search.list({
+        auth,
+        part: ['snippet', 'id'],
+        channelId,
+        publishedAfter: startDate,
+        publishedBefore: endDate,
+        type: ['video'],
+        maxResults: 50
+      });
+
+      if (!response.data.items?.length) return [];
+
+      const videoIds = response.data.items.map(item => item.id?.videoId).filter(Boolean);
+      const videoDetails = await this.youtube.videos.list({
+        auth,
+        part: ['snippet', 'statistics'],
+        id: videoIds as string[]
+      });
+
+      return Promise.all(
+        videoDetails.data.items?.map(async video => {
+          const videoInput = this.createVideoInput(
+            video.id!,
+            video.snippet,
+            video.statistics
+          );
+          const analysis = await this.analyzeVideoContent(videoInput);
+
+          return {
+            video,
+            analysis
+          };
+        }) || []
+      );
+    } catch (error) {
+      console.error('Error analyzing monthly content:', error);
+      throw error;
+    }
+  }
+
+  async getVideoSuggestions(videoId: string): Promise<string[]> {
+    try {
+      const auth = await this.getAuthorizedClient();
+      const videoResponse = await this.youtube.videos.list({
+        auth,
+        part: ['snippet', 'statistics'],
+        id: [videoId]
+      });
+
+      const video = videoResponse.data.items?.[0];
+      if (!video) throw new Error('Video not found');
+
+      const videoInput = this.createVideoInput(
+        videoId,
+        video.snippet,
+        video.statistics
+      );
+
+      const analysis = await this.analyzeVideoContent(videoInput);
+
+      return [
+        ...analysis.suggestedTopics,
+        ...analysis.audienceReaction.suggestions
+      ];
+    } catch (error) {
+      console.error('Error getting video suggestions:', error);
+      throw error;
+    }
+  }
+
+  async getVideoPerformance(videoId: string): Promise<{
+    metrics: {
+      views: number;
+      likes: number;
+      comments: number;
+      engagement: number;
+    };
+    analysis: VideoAnalysis;
+  }> {
+    try {
+      const auth = await this.getAuthorizedClient();
+      const videoResponse = await this.youtube.videos.list({
+        auth,
+        part: ['snippet', 'statistics'],
+        id: [videoId]
+      });
+
+      const video = videoResponse.data.items?.[0];
+      if (!video) throw new Error('Video not found');
+
+      const stats = video.statistics || {};
+      const videoInput = this.createVideoInput(
+        videoId,
+        video.snippet,
+        stats
+      );
+
+      const analysis = await this.analyzeVideoContent(videoInput);
+
+      return {
+        metrics: {
+          views: parseInt(stats.viewCount || '0'),
+          likes: parseInt(stats.likeCount || '0'),
+          comments: parseInt(stats.commentCount || '0'),
+          engagement: this.calculateEngagementRate(stats)
+        },
+        analysis
+      };
+    } catch (error) {
+      console.error('Error getting video performance:', error);
+      throw error;
+    }
+  }
+
+  async analyzeVideo(videoId: string): Promise<VideoAnalysis> {
+    const auth = await this.getAuthorizedClient();
+    const videoResponse = await this.youtube.videos.list({
+      auth,
+      part: ['snippet', 'statistics'],
+      id: [videoId]
+    });
+
+    const video = videoResponse.data.items?.[0];
+    if (!video) throw new Error('Video not found');
+
+    const videoInput = this.createVideoInput(
+      videoId,
+      video.snippet,
+      video.statistics
+    );
+
+    return this.analyzeVideoContent(videoInput);
+  }
+
+  async getContentInsights(videoId: string): Promise<VideoAnalysis> {
+    const auth = await this.getAuthorizedClient();
+    const videoResponse = await this.youtube.videos.list({
+      auth,
+      part: ['snippet', 'statistics'],
+      id: [videoId]
+    });
+
+    const video = videoResponse.data.items?.[0];
+    if (!video) throw new Error('Video not found');
+
+    const videoInput = this.createVideoInput(
+      videoId,
+      video.snippet,
+      video.statistics
+    );
+
+    return this.analyzeVideoContent(videoInput);
+  }
+
+  private createVideoInput(videoId: string, snippet: any = {}, statistics: any = {}): VideoInput {
+    return {
+      id: videoId,
+      snippet: {
+        title: snippet.title || '',
+        description: snippet.description || '',
+        publishedAt: snippet.publishedAt || '',
+        tags: snippet.tags || []
+      },
+      statistics: {
+        viewCount: statistics.viewCount || '0',
+        likeCount: statistics.likeCount || '0',
+        commentCount: statistics.commentCount || '0',
+        shareCount: statistics.shareCount || '0'
+      }
+    };
   }
 } 

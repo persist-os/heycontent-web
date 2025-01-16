@@ -42,7 +42,8 @@ const PLATFORM_CONFIGS: Record<SocialPlatform, {
     scope: [
       'https://www.googleapis.com/auth/gmail.readonly',
       'https://www.googleapis.com/auth/gmail.labels',
-      'https://www.googleapis.com/auth/gmail.modify'  // For marking emails as read/important
+      'https://www.googleapis.com/auth/gmail.modify',
+      'https://mail.google.com/'  // Added for full message access
     ]
   }
 }

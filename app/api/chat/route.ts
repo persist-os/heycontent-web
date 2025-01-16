@@ -50,6 +50,18 @@ export async function POST(req: Request) {
     const body: ChatRequest = await req.json()
     const { message, insightId, context, referencedMessageId, previousMessages = [] } = body
 
+    // Quick check for greetings to avoid unnecessary initialization
+    const greetings = ['hi', 'hello', 'hey', 'greetings']
+    if (greetings.includes(message.toLowerCase().trim())) {
+      return NextResponse.json({
+        id: Date.now(),
+        content: "Hello! How can I help you today?",
+        role: 'assistant',
+        timestamp: new Date().toISOString(),
+        success: true
+      })
+    }
+
     // Initialize our systems first
     const rag = new RAGSystem()
     const agent = new PlatformAgent()
@@ -104,10 +116,7 @@ export async function POST(req: Request) {
           throw new Error("Agent executor not initialized");
         }
         const result = await executor.call({
-          input: `Process this insight request: ${message}
-                 Context: ${insight.opportunity.title}
-                 Additional Information: ${relevantDocs.map((doc: Document) => doc.pageContent).join('\n')}
-                 User Query: ${context || message}`,
+          input: `${insight.opportunity.title}\n${relevantDocs.map(doc => doc.pageContent || '').join('\n')}\nQuery: ${context || message}`,
           context: { 
             userId: session.user.id,
             previousMessages,
@@ -127,10 +136,46 @@ export async function POST(req: Request) {
     }
 
     // For regular messages, first get relevant context from RAG
-    const relevantContext = await rag.search(message)
-    
+    const relevantContext = await rag.search(message);
+
+    // Initialize fullContext with the message
+    let fullContext = message;
+
+    // Handle email queries directly without additional context
+    if (message.toLowerCase().includes('email') || message.toLowerCase().includes('from')) {
+      fullContext = message; // Use only the original message for email queries
+    } else {
+      // Get email context if partnerships feature is available
+      if (availableFeatures.includes('partnerships')) {
+        const emailResults = await rag.search(message, {
+          type: 'email',
+          user_id: session.user.id
+        });
+        
+        emailResults.forEach(doc => {
+          const metadata = doc.metadata?.emailMetadata;
+          if (!metadata || !doc.pageContent) return;
+          
+          fullContext += `\nEmail: ${metadata.subject}
+From: ${metadata.from}
+To: ${metadata.to.join(', ')}
+Date: ${metadata.date}
+Content: ${doc.pageContent}`;
+        });
+      }
+
+      // Get context strings from relevant documents
+      const relevantStrings: string[] = relevantContext
+        .map(doc => doc.pageContent)
+        .filter((content): content is string => typeof content === 'string');
+
+      // Add relevant context
+      if (relevantStrings.length > 0) {
+        fullContext += `\n\nContext: ${relevantStrings.join('\n')}`;
+      }
+    }
+
     // If there's a referenced message, include it in the context
-    let fullContext = message
     if (referencedMessageId) {
       const referencedMessage = previousMessages.find((msg: Message) => msg.id === referencedMessageId);
       if (referencedMessage) {
@@ -143,9 +188,9 @@ export async function POST(req: Request) {
     if (!executor) {
       throw new Error("Agent executor not initialized");
     }
+
     const result = await executor.call({
-      input: `Process this user message: ${fullContext}
-             Additional Context: ${relevantContext.map((doc: Document) => doc.pageContent).join('\n')}`,
+      input: fullContext,
       context: { 
         userId: session.user.id,
         previousMessages,

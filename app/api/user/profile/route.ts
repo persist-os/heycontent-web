@@ -26,21 +26,20 @@ export async function PUT(req: Request) {
       }
     })
 
-    // Update persona in RAG system if persona fields are provided
+    // Try to update RAG system, but don't block profile update if it fails
     if (currentPersona || futureVision) {
-      console.log('Initializing RAG system with env vars:', {
-        hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-        hasSupabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-        hasOpenAIKey: !!process.env.OPENAI_API_KEY,
-        openAIKeyLength: process.env.OPENAI_API_KEY?.length
-      });
-
-      const rag = new RAGSystem()
-      await rag.updateUserPersona(
-        session.user.id,
-        currentPersona || '',  // Pass empty string if not provided
-        futureVision          // Optional
-      )
+      try {
+        const rag = new RAGSystem()
+        await rag.updateUserPersona(
+          session.user.id,
+          currentPersona || '',
+          futureVision
+        )
+        console.log('Profile update: RAG update successful');
+      } catch (ragError) {
+        // Log the error but don't throw it
+        console.error('Profile update: RAG update failed (non-blocking):', ragError);
+      }
     }
 
     return NextResponse.json({
@@ -53,17 +52,6 @@ export async function PUT(req: Request) {
     })
   } catch (error) {
     console.error('Profile update error:', error)
-    console.error('Error details:', {
-      name: error instanceof Error ? error.name : 'Unknown',
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      env: {
-        hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-        hasSupabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-        hasOpenAIKey: !!process.env.OPENAI_API_KEY,
-        openAIKeyLength: process.env.OPENAI_API_KEY?.length
-      }
-    })
     return NextResponse.json(
       { 
         error: error instanceof Error ? error.message : 'Failed to update profile',

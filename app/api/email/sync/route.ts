@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/app/auth'
-import { prisma } from '@/lib/db'
+import { auth } from '@/auth'
+import { prisma } from '@/lib/prisma'
 import { google, gmail_v1 } from 'googleapis'
 import { Client, AuthProvider } from '@microsoft/microsoft-graph-client'
 import { getCompletion } from '@/lib/openai'
@@ -19,50 +19,78 @@ type GmailHeader = gmail_v1.Schema$MessagePartHeader
 type GmailPart = gmail_v1.Schema$MessagePart
 type GmailPayload = gmail_v1.Schema$MessagePart
 
-async function getGmailEmails(accessToken: string): Promise<EmailData[]> {
-  const auth = new google.auth.OAuth2()
-  auth.setCredentials({ access_token: accessToken })
-  const gmail = google.gmail({ version: 'v1', auth })
+async function getGmailEmails(accessToken: string, refreshToken: string | null): Promise<EmailData[]> {
+  try {
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.NEXTAUTH_URL
+    );
 
-  const response = await gmail.users.messages.list({
-    userId: 'me',
-    maxResults: 10
-  })
+    oauth2Client.setCredentials({
+      access_token: accessToken,
+      refresh_token: refreshToken
+    });
 
-  const emails: EmailData[] = []
-  for (const message of response.data.messages || []) {
-    const email = await gmail.users.messages.get({
-      userId: 'me',
-      id: message.id!
-    })
-
-    const headers = email.data.payload?.headers || []
-    const subject = headers.find(h => h.name === 'Subject')?.value || ''
-    const from = headers.find(h => h.name === 'From')?.value || ''
-    const date = headers.find(h => h.name === 'Date')?.value || new Date().toISOString()
-    
-    let body = ''
-    if (email.data.payload?.parts) {
-      body = email.data.payload.parts
-        .filter(part => part.mimeType === 'text/plain')
-        .map(part => Buffer.from(part.body?.data || '', 'base64').toString())
-        .join('\n')
-    } else if (email.data.payload?.body?.data) {
-      body = Buffer.from(email.data.payload.body.data, 'base64').toString()
+    // Force token refresh
+    if (refreshToken) {
+      console.log('Refreshing token...');
+      const { credentials } = await oauth2Client.refreshAccessToken();
+      console.log('Token refreshed successfully');
+      oauth2Client.setCredentials(credentials);
     }
 
-    emails.push({
-      id: message.id!,
-      subject,
-      from,
-      date,
-      body,
-      isRead: !(email.data.labelIds || []).includes('UNREAD'),
-      labels: email.data.labelIds || []
-    })
-  }
+    const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-  return emails
+    console.log('Fetching Gmail messages...');
+    const response = await gmail.users.messages.list({
+      userId: 'me',
+      maxResults: 10
+    });
+    
+    console.log('Found messages:', response.data.messages?.length || 0);
+    const emails: EmailData[] = []
+    for (const message of response.data.messages || []) {
+      try {
+        const email = await gmail.users.messages.get({
+          userId: 'me',
+          id: message.id!
+        });
+
+        const headers = email.data.payload?.headers || []
+        const subject = headers.find(h => h.name === 'Subject')?.value || ''
+        const from = headers.find(h => h.name === 'From')?.value || ''
+        const date = headers.find(h => h.name === 'Date')?.value || new Date().toISOString()
+        
+        let body = ''
+        if (email.data.payload?.parts) {
+          body = email.data.payload.parts
+            .filter(part => part.mimeType === 'text/plain')
+            .map(part => Buffer.from(part.body?.data || '', 'base64').toString())
+            .join('\n')
+        } else if (email.data.payload?.body?.data) {
+          body = Buffer.from(email.data.payload.body.data, 'base64').toString()
+        }
+
+        emails.push({
+          id: message.id!,
+          subject,
+          from,
+          date,
+          body,
+          isRead: !(email.data.labelIds || []).includes('UNREAD'),
+          labels: email.data.labelIds || []
+        })
+      } catch (error) {
+        console.error(`Error fetching Gmail email:`, error)
+      }
+    }
+
+    return emails
+  } catch (error) {
+    console.error(`Error fetching Gmail emails:`, error)
+    return []
+  }
 }
 
 async function getOutlookEmails(accessToken: string): Promise<EmailData[]> {
@@ -92,26 +120,44 @@ async function getOutlookEmails(accessToken: string): Promise<EmailData[]> {
 
 export async function GET() {
   try {
-    const session = await auth()
+    const session = await auth();
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      console.error('No session or user found');
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    // Get user's email accounts
+    console.log('Finding connected accounts...');
     const accounts = await prisma.account.findMany({
       where: {
         userId: session.user.id,
-        provider: {
-          in: ['gmail', 'outlook']
+        provider: 'google',
+        scope: {
+          contains: 'gmail.readonly'
         }
+      },
+      select: {
+        provider: true,
+        access_token: true,
+        refresh_token: true,
+        scope: true
       }
-    })
+    });
+
+    console.log('Found accounts:', accounts.length, accounts.map(a => ({ 
+      provider: a.provider, 
+      hasAccessToken: !!a.access_token,
+      hasRefreshToken: !!a.refresh_token,
+      scope: a.scope 
+    })));
+    if (accounts.length === 0) {
+      return NextResponse.json([]);
+    }
 
     const emailPromises = accounts.map(async (account) => {
       try {
-        const emails = account.provider === 'gmail'
-          ? await getGmailEmails(account.access_token!)
-          : await getOutlookEmails(account.access_token!)
+        console.log(`Fetching emails using token:`, account.access_token?.substring(0, 20) + '...');
+        const emails = await getGmailEmails(account.access_token!, account.refresh_token);
+        console.log(`Found ${emails.length} emails`);
 
         // Analyze each email for partnerships
         const analyzedEmails = await Promise.all(
@@ -126,12 +172,15 @@ export async function GET() {
                 data: {
                   userId: session.user.id,
                   name: email.subject,
+                  description: email.body.substring(0, 1000),
                   status: 'pending',
+                  brand: email.from.split('@')[1].split('.')[0],
+                  type: 'email',
+                  receivedDate: new Date(email.date),
                   history: {
                     create: {
                       date: new Date(),
-                      action: 'Created from email',
-                      details: analysis
+                      event: 'Created from email'
                     }
                   }
                 }

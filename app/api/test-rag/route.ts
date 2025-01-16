@@ -1,148 +1,235 @@
 import { NextResponse } from "next/server";
 import { RAGSystem } from "@/lib/rag";
-import { auth } from "@/auth";
+import { auth } from "../../auth";
 
-export async function POST(req: Request) {
+const rag = new RAGSystem();
+
+export async function POST(request: Request) {
   try {
-    const startTime = Date.now();
     const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { content, type = "test" } = await req.json();
-    console.log('Received content:', content);
+    const body = await request.json();
+    const { operation, content, metadata } = body;
 
-    if (!content) {
-      return NextResponse.json(
-        { error: 'Content is required' },
-        { status: 400 }
-      );
-    }
-
-    console.log('Initializing RAG system...');
-    const rag = new RAGSystem();
-    console.log('RAG system initialized successfully');
-
-    // Log environment variables (without sensitive values)
-    console.log('Environment check:', {
-      hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-      hasSupabaseAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      hasOpenAIKey: !!process.env.OPENAI_API_KEY,
-    });
-
-    // Test 1: Add a document
-    console.log('Test 1: Adding document...');
-    const addStartTime = Date.now();
-    await rag.addDocument(content, {
-      type: 'smart_note',
+    // Add user_id to metadata
+    const enrichedMetadata = {
+      ...metadata,
       user_id: session.user.id,
-      timestamp: new Date().toISOString(),
-      tags: ["test"]
-    });
-    const addEndTime = Date.now();
-    console.log('Document added successfully');
+      timestamp: new Date().toISOString()
+    };
 
-    // Test 2: Search for the added content
-    console.log('Test 2: Searching for added content...');
-    const searchStartTime = Date.now();
-    const searchResults = await rag.search(content, { 
-      type: 'smart_note',
-      user_id: session.user.id
-    }, 5);
-    const searchEndTime = Date.now();
-    console.log('Search results:', {
-      count: searchResults.length,
-      results: searchResults.map(doc => ({
-        content: doc.pageContent.substring(0, 100) + '...',
-        metadata: doc.metadata,
-        similarity: doc.metadata.similarity || 0
-      }))
+    console.log('RAG Test Request:', { 
+      operation, 
+      contentLength: content?.length, 
+      metadata: enrichedMetadata 
     });
 
-    // Test 3: Add and retrieve content with specific metadata
-    console.log('Test 3: Testing metadata filtering...');
-    const metadataStartTime = Date.now();
-    await rag.addDocument(content, {
-      type: 'smart_note',
-      user_id: session.user.id,
-      timestamp: new Date().toISOString(),
-      tags: ["test", "metadata"]
-    });
-    const metadataResults = await rag.search(content, { 
-      type: 'smart_note',
-      user_id: session.user.id,
-      tags: ["test", "metadata"]
-    }, 5);
-    const metadataEndTime = Date.now();
-    console.log('Metadata search results:', {
-      count: metadataResults.length,
-      results: metadataResults.map(doc => ({
-        content: doc.pageContent.substring(0, 100) + '...',
-        metadata: doc.metadata,
-        similarity: doc.metadata.similarity || 0
-      }))
-    });
-
-    const endTime = Date.now();
-
-    return NextResponse.json({
-      success: true,
-      tests: {
-        smartNoteTest: {
-          added: true,
-          timing: {
-            add: addEndTime - addStartTime,
-            search: searchEndTime - searchStartTime
-          },
-          searchResults: {
-            count: searchResults.length,
-            samples: searchResults.map(doc => ({
-              contentPreview: doc.pageContent.substring(0, 100) + '...',
-              metadata: doc.metadata,
-              similarity: doc.metadata.similarity || 0
-            })).slice(0, 3) // Return top 3 results
-          }
-        },
-        metadataTest: {
-          added: true,
-          timing: {
-            total: metadataEndTime - metadataStartTime
-          },
-          searchResults: {
-            count: metadataResults.length,
-            samples: metadataResults.map(doc => ({
-              contentPreview: doc.pageContent.substring(0, 100) + '...',
-              metadata: doc.metadata,
-              similarity: doc.metadata.similarity || 0
-            })).slice(0, 3) // Return top 3 results
-          }
+    switch (operation) {
+      case 'add': {
+        if (!content) {
+          return NextResponse.json(
+            { error: 'Content is required for add operation' }, 
+            { status: 400 }
+          );
         }
-      },
-      debug: {
-        totalTime: endTime - startTime,
-        contentLength: content.length,
-        vectorDimensions: 1536, // OpenAI embedding size
-        environment: {
-          hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-          hasSupabaseAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-          hasOpenAIKey: !!process.env.OPENAI_API_KEY,
-        },
-        timestamp: new Date().toISOString()
+
+        // Clean and validate content
+        const cleanContent = content.trim();
+        if (!cleanContent) {
+          return NextResponse.json(
+            { error: 'Content cannot be empty' }, 
+            { status: 400 }
+          );
+        }
+
+        // Determine if this is an email and extract metadata
+        const isEmail = cleanContent.includes('Subject:');
+        const type = isEmail ? 'email' : 'content';
+        const analysisType = cleanContent.toLowerCase().includes('partnership') ? 'partnership' : 'content';
+
+        // Enrich metadata
+        const documentMetadata = {
+          ...enrichedMetadata,
+          type,
+          analysis_type: analysisType,
+          emailMetadata: isEmail ? {
+            subject: cleanContent.split('Subject:')[1]?.split('\n')[0]?.trim() || 'No Subject',
+            from: cleanContent.includes('From:') ? cleanContent.split('From:')[1]?.split('\n')[0]?.trim() : undefined,
+            to: ['team@avasetail.com'],
+            date: new Date().toISOString(),
+            isRead: false,
+            labels: ['INBOX', analysisType === 'partnership' ? 'PARTNERSHIP' : 'GENERAL']
+          } : undefined
+        };
+        
+        await rag.addDocument(cleanContent, documentMetadata);
+        return NextResponse.json({ 
+          status: 'success',
+          message: 'Document added successfully',
+          timestamp: documentMetadata.timestamp,
+          type,
+          analysis_type: analysisType
+        });
       }
-    });
+
+      case 'search': {
+        if (!content) {
+          return NextResponse.json(
+            { error: 'Content is required for search operation' }, 
+            { status: 400 }
+          );
+        }
+        
+        // Determine search context
+        const searchContext = content.toLowerCase();
+        const searchMetadata = {
+          ...enrichedMetadata
+        };
+        
+        // Get both the email and best practices
+        const [emailResults, bestPracticesResults] = await Promise.all([
+          rag.search(content, { ...searchMetadata, type: 'email' }),
+          rag.search(content, { ...searchMetadata, type: 'content', analysis_type: 'partnership' })
+        ]);
+
+        // Get the most relevant email and best practices
+        const email = emailResults[0];
+        const bestPractices = bestPracticesResults[0];
+
+        // Analyze based on the query type
+        let analysis = '';
+        if (searchContext.includes('main goal')) {
+          analysis = analyzeGoal(email?.content || '');
+        } else if (searchContext.includes('typically respond')) {
+          analysis = analyzeResponse(bestPractices?.content || '');
+        } else if (searchContext.includes('written better')) {
+          analysis = analyzeImprovements(email?.content || '', bestPractices?.content || '');
+        }
+
+        return NextResponse.json({ 
+          status: 'success',
+          query: content,
+          context: {
+            type: searchMetadata.type,
+            analysis_type: searchContext.includes('partnership') ? 'partnership' : 'content'
+          },
+          analysis,
+          email: email ? {
+            content: email.content,
+            metadata: email.metadata
+          } : null,
+          bestPractices: bestPractices ? {
+            content: bestPractices.content,
+            metadata: bestPractices.metadata
+          } : null
+        });
+      }
+
+      default:
+        return NextResponse.json(
+          { error: 'Invalid operation' }, 
+          { status: 400 }
+        );
+    }
   } catch (error) {
-    console.error('RAG test error:', error);
+    console.error('Error in test-rag endpoint:', error);
     return NextResponse.json(
       { 
-        error: error instanceof Error ? error.message : 'Unknown error',
-        details: error instanceof Error ? error.stack : undefined,
-        debug: {
-          errorType: error instanceof Error ? error.constructor.name : typeof error,
-          timestamp: new Date().toISOString(),
-        }
-      },
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, 
       { status: 500 }
     );
   }
+}
+
+// Analysis helper functions
+function analyzeGoal(emailContent: string): string {
+  const goals = [];
+  const contentOpportunities = [];
+
+  // Analyze partnership goals
+  if (emailContent.toLowerCase().includes('ai analytics')) {
+    goals.push('AI Analytics Integration: Potential to enhance content performance tracking and optimization');
+  }
+  if (emailContent.toLowerCase().includes('content creation')) {
+    goals.push('Content Enhancement: Opportunity to improve content creation workflow with AI');
+  }
+  if (emailContent.toLowerCase().includes('management system')) {
+    goals.push('System Integration: Possibility to streamline content management with AI capabilities');
+  }
+
+  // Analyze content opportunities
+  if (emailContent.toLowerCase().includes('synergies')) {
+    contentOpportunities.push('- AI-powered content optimization and performance analysis');
+    contentOpportunities.push('- Automated content tagging and categorization');
+    contentOpportunities.push('- Enhanced content personalization capabilities');
+  }
+
+  let analysis = '';
+  if (goals.length > 0) {
+    analysis += 'Partnership Goals:\n' + goals.map(g => `- ${g}`).join('\n') + '\n\n';
+  }
+  if (contentOpportunities.length > 0) {
+    analysis += 'Content Creation Opportunities:\n' + contentOpportunities.join('\n');
+  }
+
+  return analysis || 'No specific content-related goals identified in the email.';
+}
+
+function analyzeResponse(bestPractices: string): string {
+  return `Content Partnership Response Strategy:
+
+1. Content Alignment
+   - Discuss current content creation workflow
+   - Identify specific AI integration points
+   - Explore content performance metrics
+
+2. Technical Evaluation
+   - Review API capabilities for content analysis
+   - Discuss data sharing and privacy requirements
+   - Evaluate integration complexity
+
+3. Pilot Proposal
+   - Suggest a trial with specific content types
+   - Define success metrics for content performance
+   - Outline timeline for initial integration
+
+4. Next Steps
+   - Schedule technical discovery call
+   - Request API documentation
+   - Share content workflow documentation`;
+}
+
+function analyzeImprovements(emailContent: string, bestPractices: string): string {
+  const improvements = [];
+  
+  // Content-specific improvements
+  if (!emailContent.toLowerCase().includes('analytics') || !emailContent.toLowerCase().includes('performance')) {
+    improvements.push('Could detail how AI analytics would improve content performance metrics');
+  }
+  if (!emailContent.toLowerCase().includes('workflow')) {
+    improvements.push('Could explain how the integration would enhance content creation workflow');
+  }
+  if (!emailContent.toLowerCase().includes('personalization')) {
+    improvements.push('Could highlight content personalization capabilities');
+  }
+  if (!emailContent.toLowerCase().includes('automation')) {
+    improvements.push('Could mention content automation possibilities');
+  }
+  
+  // AI partnership specifics
+  if (!emailContent.toLowerCase().includes('api') && !emailContent.toLowerCase().includes('integration')) {
+    improvements.push('Could provide technical integration details for content management');
+  }
+  if (!emailContent.toLowerCase().includes('data')) {
+    improvements.push('Could address data handling and content analysis capabilities');
+  }
+  
+  return improvements.length > 0 ?
+    'Content Partnership Improvements:\n' + improvements.map(i => `- ${i}`).join('\n') :
+    'The email covers most content-related partnership aspects.';
 } 

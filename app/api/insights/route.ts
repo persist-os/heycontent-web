@@ -10,6 +10,8 @@ import { SocialMediaService } from '@/lib/services/social-media'
 import { SocialAccount } from '@prisma/client'
 import { AIActionableInsight } from '@/types/index'
 import { ContentAnalysisService } from '@/lib/services/content-analysis'
+import { checkRateLimit, RATE_LIMIT, BURST_LIMIT } from '@/lib/rate-limit'
+import { actionableInsights } from '@/data/insights'
 
 interface PlatformMetrics {
   youtube?: {
@@ -20,16 +22,40 @@ interface PlatformMetrics {
   };
 }
 
+interface ServiceError {
+  service: string;
+  error: string;
+}
+
 export async function GET(req: Request) {
   try {
     console.log('Starting insights generation');
     const session = await auth()
     if (!session?.user?.id) {
-      console.log('No authenticated user found');
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
+    }
+
+    // Check rate limit
+    const rateLimitResult = await checkRateLimit(`insights_${session.user.id}`);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { 
+          error: 'Rate limit exceeded',
+          details: rateLimitResult.error || `Please try again in ${Math.ceil((rateLimitResult.reset - Date.now()) / 1000)} seconds`
+        },
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': RATE_LIMIT.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': rateLimitResult.reset.toString(),
+            'X-Concurrent-Requests': BURST_LIMIT.toString()
+          }
+        }
+      );
     }
 
     // Initialize our systems
@@ -37,6 +63,7 @@ export async function GET(req: Request) {
     const agent = new PlatformAgent()
     const socialMediaService = new SocialMediaService()
     const contentAnalysisService = new ContentAnalysisService(session.user.id)
+    const errors: ServiceError[] = [];
 
     try {
       // Get connected platforms and their access tokens
@@ -50,26 +77,107 @@ export async function GET(req: Request) {
         }
       });
 
+      console.log('User query result:', {
+        userId: user?.id,
+        socialAccountsCount: user?.socialAccounts?.length,
+        hasAccounts: !!user?.accounts,
+        accountsCount: user?.accounts?.length
+      });
+
       if (!user?.socialAccounts || user.socialAccounts.length === 0) {
-        console.log('No connected platforms found');
-        return NextResponse.json([])
+        console.log('No connected platforms found, using default insights');
+        return NextResponse.json({
+          insights: actionableInsights,
+          errors: [{ service: 'platforms', error: 'No connected platforms found - showing default insights' }]
+        })
       }
 
-      // Get comprehensive insights
-      const [partnershipInsights, contentRecommendations] = await Promise.all([
-        contentAnalysisService.getPartnershipInsights(),
-        contentAnalysisService.getContentRecommendations()
+      console.log('Found connected platforms:', user.socialAccounts.map(acc => ({
+        platform: acc.platform,
+        username: acc.username,
+        isConnected: acc.isConnected
+      })));
+
+      // Get insights with error handling
+      const [partnershipInsights, contentRecommendations] = await Promise.allSettled([
+        contentAnalysisService.getPartnershipInsights().catch(error => {
+          console.error('Error getting partnership insights:', {
+            error,
+            stack: error.stack,
+            message: error.message
+          });
+          errors.push({ 
+            service: 'partnerships', 
+            error: error.message.includes('quota') ? 
+              'Service temporarily unavailable due to quota limits' : 
+              'Failed to get partnership insights: ' + error.message
+          });
+          return [];
+        }),
+        contentAnalysisService.getContentRecommendations().catch(error => {
+          console.error('Error getting content recommendations:', {
+            error,
+            stack: error.stack,
+            message: error.message
+          });
+          errors.push({ 
+            service: 'content', 
+            error: error.message.includes('quota') ? 
+              'Service temporarily unavailable due to quota limits' : 
+              'Failed to get content recommendations: ' + error.message
+          });
+          return [];
+        })
       ]);
 
+      // Log results
+      console.log('Partnership insights result:', {
+        status: partnershipInsights.status,
+        value: partnershipInsights.status === 'fulfilled' ? 
+          `Got ${partnershipInsights.value.length} insights` : 
+          'Failed',
+        reason: partnershipInsights.status === 'rejected' ? 
+          partnershipInsights.reason : undefined
+      });
+
+      console.log('Content recommendations result:', {
+        status: contentRecommendations.status,
+        value: contentRecommendations.status === 'fulfilled' ? 
+          `Got ${contentRecommendations.value.length} recommendations` : 
+          'Failed',
+        reason: contentRecommendations.status === 'rejected' ? 
+          contentRecommendations.reason : undefined
+      });
+
       // Get user's persona for context
-      const userPersona = await rag.getUserPersona(session.user.id)
+      const userPersona = await rag.getUserPersona(session.user.id).catch(error => {
+        console.error('Error getting user persona:', error);
+        errors.push({ service: 'persona', error: 'Failed to get user persona' });
+        return { currentPersona: '', futureVision: '' };
+      });
+
+      // Safely extract results
+      const finalPartnershipInsights = partnershipInsights.status === 'fulfilled' ? partnershipInsights.value : [];
+      const finalContentRecommendations = contentRecommendations.status === 'fulfilled' ? contentRecommendations.value : [];
+
+      // Get metrics with error handling
+      const metrics = await socialMediaService.getMetrics().catch(error => {
+        console.error('Error getting metrics:', error);
+        errors.push({ 
+          service: 'metrics', 
+          error: error.message.includes('quota') ? 
+            'Service temporarily unavailable due to quota limits' : 
+            'Failed to get metrics'
+        });
+        return null;
+      });
 
       // Generate additional insights using the agent
       console.log('Generating additional insights with agent');
       const agentResponse = await agent.process(
         "Generate additional insights based on the user's metrics, persona, and existing insights. Focus on unique opportunities and gaps.",
         {
-          metrics: await socialMediaService.getMetrics(),
+          metrics,
           persona: {
             currentPersona: userPersona.currentPersona || '',
             futureVision: userPersona.futureVision || '',
@@ -77,9 +185,9 @@ export async function GET(req: Request) {
           },
           userId: session.user.id,
           connectedPlatforms: user.socialAccounts.map(p => p.platform),
-          existingInsights: [...partnershipInsights, ...contentRecommendations],
+          existingInsights: [...finalPartnershipInsights, ...finalContentRecommendations],
           insightContext: {
-            partnerships: partnershipInsights.map(insight => ({
+            partnerships: finalPartnershipInsights.map(insight => ({
               subject: insight.title,
               analysis: {
                 isPartnership: true,
@@ -89,7 +197,7 @@ export async function GET(req: Request) {
                 priority: insight.action?.priority || 'medium'
               }
             })),
-            videoMetrics: contentRecommendations.map(insight => ({
+            videoMetrics: finalContentRecommendations.map(insight => ({
               id: insight.data.videoId || '',
               views: insight.data.views || 0,
               likes: insight.data.likes || 0,
@@ -97,12 +205,16 @@ export async function GET(req: Request) {
             }))
           }
         } as ProcessContext
-      )
+      ).catch(error => {
+        console.error('Error generating additional insights:', error);
+        errors.push({ service: 'agent', error: 'Failed to generate additional insights' });
+        return { output: [] };
+      });
 
       // Combine all insights
       const allInsights = [
-        ...partnershipInsights,
-        ...contentRecommendations,
+        ...finalPartnershipInsights,
+        ...finalContentRecommendations,
         ...(Array.isArray(agentResponse.output) ? agentResponse.output : [])
       ];
 
@@ -119,24 +231,39 @@ export async function GET(req: Request) {
                 user_id: session.user.id,
                 timestamp: new Date().toISOString()
               }
-            )
+            ).catch(error => {
+              console.error('Error storing insight:', error);
+              errors.push({ service: 'storage', error: 'Failed to store some insights' });
+            })
           )
         )
       }
 
-      return NextResponse.json(allInsights)
+      // Return insights with any errors
+      return NextResponse.json({
+        insights: allInsights,
+        errors: errors.length > 0 ? errors : undefined
+      }, {
+        headers: {
+          'X-RateLimit-Limit': RATE_LIMIT.toString(),
+          'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+          'X-RateLimit-Reset': rateLimitResult.reset.toString(),
+          'X-Concurrent-Requests': BURST_LIMIT.toString()
+        }
+      })
     } catch (error) {
-      console.error('[INSIGHTS_PROCESSING_ERROR]', error)
-      return NextResponse.json(
-        { error: 'Failed to process insights', details: error instanceof Error ? error.message : 'Unknown error' },
-        { status: 500 }
-      )
+      console.error('Error processing insights:', error);
+      throw error;
     }
-  } catch (error) {
-    console.error('[INSIGHTS_AUTH_ERROR]', error)
+  } catch (error: any) {
+    console.error('Error in insights endpoint:', error);
     return NextResponse.json(
-      { error: 'Authentication failed', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 401 }
+      { 
+        error: 'Failed to process insights',
+        details: error.message,
+        errors: [{ service: 'general', error: error.message }]
+      },
+      { status: 500 }
     )
   }
 }

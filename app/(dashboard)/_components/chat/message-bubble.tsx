@@ -63,13 +63,15 @@ export function MessageBubble({
       <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
         <div 
           className={`
-            max-w-[70%] 
+            max-w-[90%]
             rounded-2xl 
             px-4 
             py-3 
             ${isUser ? 'bg-blue-500 text-white' : 'bg-white border'} 
             relative
             group
+            inline-flex
+            flex-col
           `}
         >
           <div className="flex items-start gap-2">
@@ -84,6 +86,7 @@ export function MessageBubble({
                   bg-gray-100
                   hover:bg-opacity-80
                   mt-0.5
+                  flex-shrink-0
                 `}
               >
                 <MessageSquare className="w-3 h-3 text-gray-500" />
@@ -91,8 +94,8 @@ export function MessageBubble({
             )}
             
             {/* Message Content */}
-            <div className="flex-1">
-              <p className="whitespace-pre-wrap break-words">
+            <div className="flex-1 min-w-0">
+              <p className="whitespace-pre-wrap break-words text-sm leading-relaxed overflow-hidden">
                 {message.content}
               </p>
               
@@ -104,17 +107,6 @@ export function MessageBubble({
                   Retry
                 </button>
               )}
-              
-              {/* Timestamp */}
-              <div 
-                className={`
-                  text-xs 
-                  mt-1 
-                  ${isUser ? 'text-blue-100' : 'text-gray-500'}
-                `}
-              >
-                {formatDistanceToNow(new Date(message.timestamp), { addSuffix: true })}
-              </div>
             </div>
 
             {/* Reference button for user messages */}

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/app/auth'
-import { prisma } from '@/lib/db'
+import { auth } from '@/auth'
+import { prisma } from '@/lib/prisma'
 import { getCompletion } from '@/lib/openai'
 
 // Keywords that might indicate partnership opportunities

@@ -13,7 +13,7 @@ export async function PUT(
     }
 
     const json = await req.json();
-    const { title, content, important, tags, references } = json;
+    const { title, content, important, type, tags, references } = json;
 
     const note = await prisma.note.update({
       where: {
@@ -24,8 +24,10 @@ export async function PUT(
         ...(title !== undefined && { title }),
         ...(content !== undefined && { content }),
         ...(important !== undefined && { important }),
+        ...(type !== undefined && { type }),
         ...(tags !== undefined && { tags }),
-        ...(references !== undefined && { references })
+        ...(references !== undefined && { references }),
+        updatedAt: new Date()
       }
     });
 

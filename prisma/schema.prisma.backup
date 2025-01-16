@@ -1,0 +1,306 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String          @id @default(cuid())
+  name                  String?
+  email                 String          @unique
+  password              String?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  currentPersona        String?
+  emailVerified         DateTime?
+  futureVision          String?
+  image                 String?
+  resetToken            String?         @unique
+  resetTokenExpiry      DateTime?
+  verifyToken           String?         @unique
+  verifyTokenExpiry     DateTime?
+  accounts              Account[]
+  Cache                 Cache[]
+  conversations         Conversation[]
+  insights              Insight[]
+  notes                 Note[]
+  incomingProposals     Partnership[]   @relation("IncomingProposals")
+  suggestedPartnerships Partnership[]   @relation("SuggestedPartnerships")
+  partnerships          Partnership[]
+  socialAccounts        SocialAccount[]
+  socialUpdates         SocialUpdate[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_token     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Insight {
+  id          Int      @id @default(autoincrement())
+  type        String
+  title       String
+  description String
+  impact      String
+  timing      String
+  confidence  Int
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  userId    String
+  title     String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  starred   Boolean   @default(false)
+  user      User      @relation(fields: [userId], references: [id])
+  messages  Message[]
+
+  @@index([userId])
+}
+
+model Message {
+  id                  String       @id @default(cuid())
+  content             String
+  role                String
+  timestamp           DateTime     @default(now())
+  conversationId      String
+  referencedMessageId String?
+  conversation        Conversation @relation(fields: [conversationId], references: [id])
+  referencedMessage   Message?     @relation("MessageReference", fields: [referencedMessageId], references: [id])
+  referencedBy        Message[]    @relation("MessageReference")
+
+  @@index([conversationId])
+}
+
+model SocialUpdate {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  platform  String
+  type      String
+  data      Json
+  updatedAt DateTime @updatedAt
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model SocialAccount {
+  id           String    @id @default(cuid())
+  userId       String
+  platform     String
+  name         String?
+  username     String?
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime?
+  tokenType    String?
+  scope        String?
+  profileUrl   String?
+  avatarUrl    String?
+  metadata     Json?
+  isConnected  Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  metrics      Json?
+  partnerships Json?
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, platform])
+}
+
+model Partnership {
+  id            String                   @id @default(cuid())
+  userId        String
+  name          String
+  type          String                   // e.g., "Product Review", "Sponsored Content"
+  brand         String
+  status        String                   @default("pending")
+  value         Decimal?                 // Deal value
+  estimatedValue Decimal?               // For incoming/suggested partnerships
+  deadline      DateTime?
+  alignmentScore Float                  @default(0)
+  progress      Float                   @default(0)
+  lastContact   DateTime?
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  proposedToId  String?
+  suggestedToId String?
+  
+  // Analytics and metrics
+  metrics       Json?                   // Store engagement metrics, performance data
+  signals       Json?                   // For suggested partnerships (comments, likes, DMs)
+  confidence    Float?                  // For suggested partnerships
+  
+  // Relations
+  contacts      Contact[]
+  proposedTo    User?                    @relation("IncomingProposals", fields: [proposedToId], references: [id])
+  suggestedTo   User?                    @relation("SuggestedPartnerships", fields: [suggestedToId], references: [id])
+  user          User                     @relation(fields: [userId], references: [id])
+  events        PartnershipEvent[]
+  history       PartnershipHistory[]
+  requirements  PartnershipRequirement[]
+  communications PartnershipCommunication[]
+  tasks         PartnershipTask[]
+
+  @@index([userId])
+  @@index([proposedToId])
+  @@index([suggestedToId])
+  @@index([status])
+  @@index([brand])
+}
+
+model PartnershipRequirement {
+  id            String      @id @default(cuid())
+  partnershipId String
+  title         String
+  description   String?
+  platform      String?     // e.g., "YouTube", "Instagram"
+  quantity      Int?        // e.g., number of posts required
+  completed     Boolean     @default(false)
+  completedAt   DateTime?
+  dueDate       DateTime?
+  notes         String?
+  partnership   Partnership @relation(fields: [partnershipId], references: [id], onDelete: Cascade)
+  
+  @@index([partnershipId])
+}
+
+model PartnershipEvent {
+  id            String      @id @default(cuid())
+  partnershipId String
+  date          DateTime
+  type          String      // e.g., "meeting", "deliverable", "payment"
+  description   String?
+  location      String?     // For meetings
+  duration      Int?        // In minutes
+  outcome       String?     // Event outcome or notes
+  partnership   Partnership @relation(fields: [partnershipId], references: [id], onDelete: Cascade)
+  
+  @@index([partnershipId])
+  @@index([date])
+}
+
+model Contact {
+  id            String      @id @default(cuid())
+  partnershipId String
+  name          String
+  email         String?
+  phone         String?
+  role          String?
+  platform      String?     // e.g., "LinkedIn", "Email"
+  isActive      Boolean     @default(true)
+  lastContact   DateTime?
+  notes         String?
+  partnership   Partnership @relation(fields: [partnershipId], references: [id], onDelete: Cascade)
+  communications PartnershipCommunication[]
+  
+  @@index([partnershipId])
+  @@index([email])
+}
+
+model PartnershipHistory {
+  id            String      @id @default(cuid())
+  partnershipId String
+  date          DateTime
+  action        String
+  details       String?
+  metadata      Json?       // Additional structured data
+  userId        String?     // Who performed the action
+  partnership   Partnership @relation(fields: [partnershipId], references: [id], onDelete: Cascade)
+  
+  @@index([partnershipId])
+  @@index([date])
+}
+
+model PartnershipCommunication {
+  id            String      @id @default(cuid())
+  partnershipId String
+  contactId     String?
+  type          String      // "email", "meeting", "call", etc.
+  subject       String?
+  content       String
+  direction     String      // "incoming" or "outgoing"
+  timestamp     DateTime    @default(now())
+  metadata      Json?       // For email headers, call duration, etc.
+  partnership   Partnership @relation(fields: [partnershipId], references: [id], onDelete: Cascade)
+  contact       Contact?    @relation(fields: [contactId], references: [id])
+  
+  @@index([partnershipId])
+  @@index([contactId])
+  @@index([timestamp])
+}
+
+model PartnershipTask {
+  id            String      @id @default(cuid())
+  partnershipId String
+  title         String
+  description   String?
+  status        String      @default("pending") // "pending", "in-progress", "completed"
+  priority      String      @default("medium")  // "low", "medium", "high"
+  dueDate       DateTime?
+  completedAt   DateTime?
+  assignedTo    String?     // User ID
+  partnership   Partnership @relation(fields: [partnershipId], references: [id], onDelete: Cascade)
+  
+  @@index([partnershipId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model Note {
+  id         String   @id @default(cuid())
+  userId     String
+  title      String
+  content    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  important  Boolean  @default(false)
+  tags       String[]
+  references Json[]
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Cache {
+  id        String   @id
+  key       String
+  value     String
+  userId    String
+  createdAt DateTime @default(now())
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([key, createdAt])
+  @@index([userId])
+}
+
+model rag_documents {
+  id        BigInt                 @id @default(autoincrement())
+  content   String?
+  metadata  Json?
+  embedding Unsupported("vector")?
+}

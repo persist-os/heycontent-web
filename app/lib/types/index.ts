@@ -39,4 +39,26 @@ export interface AudienceInsight {
   interests: string[];
   engagement_patterns: any;
   growth_trends: any;
+}
+
+export interface AIActionableInsight {
+  id: number;
+  type: 'content' | 'platform' | 'market';
+  opportunity: {
+    title: string;
+    description: string;
+    impact: string;
+    timing: string;
+    confidence: number;
+  };
+  action: {
+    steps: string[];
+    timeToImplement: string;
+    expectedOutcome: string;
+    requirements?: string[];
+  };
+  context: {
+    why: string[];
+    data: string[];
+  };
 } 

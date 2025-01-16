@@ -19,6 +19,7 @@ export interface CommandHandler {
   onIndent?: () => void;
   onUnindent?: () => void;
   onToggleShortcuts?: () => void;
+  onEscape?: () => void;
 }
 
 export class ShortcutManager {
@@ -26,99 +27,126 @@ export class ShortcutManager {
   private commandMode: boolean = false;
   private currentInput: string = '';
   private handlers: CommandHandler;
+  private isMac: boolean;
 
   constructor(handlers: CommandHandler) {
     this.handlers = handlers;
+    this.isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
   }
 
-  handleKeyDown(event: globalThis.KeyboardEvent) {
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const cmdKey = isMac ? event.metaKey : event.ctrlKey;
+  handleKeyDown(event: globalThis.KeyboardEvent): boolean {
+    const cmdKey = this.isMac ? event.metaKey : event.ctrlKey;
 
-    // Save shortcut (⌘/Ctrl + S)
-    if (cmdKey && event.key === 's') {
-      event.preventDefault();
-      this.handlers.onSave?.();
-      return true;
-    }
-
-    // Quick capture shortcut (⌘/Ctrl + K)
-    if (cmdKey && event.key === 'k') {
-      event.preventDefault();
-      this.handlers.onQuickCapture?.();
-      return true;
-    }
-
-    // Command menu (/)
-    if (event.key === '/' && !cmdKey) {
-      event.preventDefault();
-      this.handlers.onCommandMenu?.();
-      return true;
-    }
-
-    // Mentions (@)
-    if (event.key === '@' && !cmdKey) {
-      event.preventDefault();
-      this.handlers.onMention?.();
-      return true;
-    }
-
-    // Tags (#)
-    if (event.key === '#' && !cmdKey) {
-      event.preventDefault();
-      this.handlers.onTag?.();
-      return true;
-    }
-
-    // Bold (⌘/Ctrl + B)
-    if (cmdKey && event.key === 'b') {
-      event.preventDefault();
-      this.handlers.onBold?.();
-      return true;
-    }
-
-    // Italic (⌘/Ctrl + I)
-    if (cmdKey && event.key === 'i') {
-      event.preventDefault();
-      this.handlers.onItalic?.();
-      return true;
-    }
-
-    // Underline (⌘/Ctrl + U)
-    if (cmdKey && event.key === 'u') {
-      event.preventDefault();
-      this.handlers.onUnderline?.();
-      return true;
-    }
-
-    // Indent (Tab)
-    if (event.key === 'Tab' && !event.shiftKey) {
-      event.preventDefault();
-      this.handlers.onIndent?.();
-      return true;
-    }
-
-    // Unindent (Shift + Tab)
-    if (event.key === 'Tab' && event.shiftKey) {
-      event.preventDefault();
-      this.handlers.onUnindent?.();
-      return true;
-    }
-
-    // Toggle shortcuts help (⌘/Ctrl + /)
-    if (cmdKey && event.key === '/') {
-      event.preventDefault();
-      this.handlers.onToggleShortcuts?.();
-      return true;
-    }
-
-    // Escape to cancel current command
+    // Handle escape first
     if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      this.handlers.onEscape?.();
       this.commandMode = false;
       this.currentInput = '';
       return true;
     }
 
+    // Handle command mode
+    if (this.commandMode) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        event.stopPropagation();
+        this.commandMode = false;
+        return true;
+      }
+      this.currentInput += event.key;
+      return false;
+    }
+
+    // Handle shortcuts with command/ctrl key
+    if (cmdKey) {
+      switch (event.key.toLowerCase()) {
+        case 's': // Save
+          event.preventDefault();
+          event.stopPropagation();
+          this.handlers.onSave?.();
+          return true;
+
+        case 'k': // Quick capture
+          event.preventDefault();
+          event.stopPropagation();
+          this.handlers.onQuickCapture?.();
+          return true;
+
+        case 'b': // Bold
+          event.preventDefault();
+          event.stopPropagation();
+          this.handlers.onBold?.();
+          return true;
+
+        case 'i': // Italic
+          event.preventDefault();
+          event.stopPropagation();
+          this.handlers.onItalic?.();
+          return true;
+
+        case 'u': // Underline
+          event.preventDefault();
+          event.stopPropagation();
+          this.handlers.onUnderline?.();
+          return true;
+
+        case '/': // Toggle shortcuts help
+          event.preventDefault();
+          event.stopPropagation();
+          this.handlers.onToggleShortcuts?.();
+          return true;
+      }
+    }
+
+    // Handle special characters without modifier keys
+    if (!cmdKey && !event.altKey && !event.shiftKey) {
+      switch (event.key) {
+        case '/': // Command menu
+          // Let NoteArea handle this to check if we're at start of line
+          this.handlers.onCommandMenu?.();
+          return false;
+
+        case '@': // Mentions
+          event.preventDefault();
+          event.stopPropagation();
+          this.handlers.onMention?.();
+          return true;
+
+        case '#': // Tags
+          event.preventDefault();
+          event.stopPropagation();
+          this.handlers.onTag?.();
+          return true;
+      }
+    }
+
+    // Handle indentation
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.shiftKey) {
+        this.handlers.onUnindent?.();
+      } else {
+        this.handlers.onIndent?.();
+      }
+      return true;
+    }
+
     return false;
+  }
+
+  isCommandMode(): boolean {
+    return this.commandMode;
+  }
+
+  getCurrentInput(): string {
+    return this.currentInput;
+  }
+
+  clearCommandMode(): void {
+    this.commandMode = false;
+    this.currentInput = '';
   }
 } 

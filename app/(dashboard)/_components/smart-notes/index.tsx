@@ -6,7 +6,6 @@ import { FileText, Hash, AtSign, Star, Calendar,
   Image, LinkIcon, Lightbulb, MessageSquare, Clock, Keyboard } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { NoteArea } from './NoteArea';
-import { CommandMenu, type Command } from './CommandMenu';
 import { ShortcutsHelp } from './ShortcutsHelp';
 
 export interface Note {
@@ -16,6 +15,7 @@ export interface Note {
   createdAt: Date;
   updatedAt: Date;
   important: boolean;
+  type?: 'default' | 'idea';
   tags: string[];
   references: {
     type: 'ai_insight' | 'conversation' | 'idea';
@@ -26,7 +26,6 @@ export interface Note {
 export default function SmartNotes() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
-  const [showCommands, setShowCommands] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showShortcuts, setShowShortcuts] = useState(false);
   
@@ -65,12 +64,32 @@ export default function SmartNotes() {
     }
   };
 
-  const handleUpdateNote = async (noteId: string, updates: Partial<Note>) => {
+  const handleUpdateNote = async (noteId: string, updates: Partial<Note>, shouldSync: boolean = false) => {
     try {
-      const updatedNote = await updateNote(noteId, updates);
-      setNotes(prev => prev.map(note => 
-        note.id === noteId ? updatedNote : note
-      ));
+      // Update local state immediately
+      setNotes(prev => prev.map(note => {
+        if (note.id === noteId) {
+          // Handle metadata updates (important, type) specially
+          if ('important' in updates || 'type' in updates) {
+            return {
+              ...note,
+              ...updates,
+              updatedAt: new Date()
+            };
+          }
+          // Handle content updates
+          return { ...note, ...updates };
+        }
+        return note;
+      }));
+
+      // Always sync metadata changes with server
+      if (shouldSync || 'important' in updates || 'type' in updates) {
+        const updatedNote = await updateNote(noteId, updates);
+        setNotes(prev => prev.map(note => 
+          note.id === noteId ? updatedNote : note
+        ));
+      }
     } catch (error) {
       console.error('Failed to update note:', error);
     }
@@ -141,83 +160,6 @@ export default function SmartNotes() {
     return response.json();
   };
 
-  const handleCommand = (command: Command) => {
-    setShowCommands(false);
-    
-    if (!activeNote) return;
-
-    const insertText = (text: string) => {
-      const textarea = document.querySelector('textarea');
-      if (textarea) {
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const content = activeNote.content;
-        const newContent = content.substring(0, start) + text + content.substring(end);
-        handleUpdateNote(activeNote.id, { content: newContent });
-        // Set cursor position after inserted text
-        setTimeout(() => {
-          textarea.selectionStart = textarea.selectionEnd = start + text.length;
-          textarea.focus();
-        }, 0);
-      }
-    };
-    
-    switch (command.label) {
-      case 'Text':
-        insertText('\n\n');
-        break;
-      
-      case 'Heading':
-        insertText('\n# ');
-        break;
-      
-      case 'Important':
-        handleUpdateNote(activeNote.id, {
-          important: !activeNote.important
-        });
-        break;
-      
-      case 'Date':
-        insertText(`\n${new Date().toLocaleDateString()}\n`);
-        break;
-      
-      case 'Capture':
-        handleUpdateNote(activeNote.id, {
-          references: [
-            ...activeNote.references,
-            {
-              type: 'conversation',
-              content: 'Captured conversation snippet'
-            }
-          ]
-        });
-        break;
-      
-      case 'Link':
-        insertText('[](url)');
-        break;
-      
-      case 'Idea':
-        handleUpdateNote(activeNote.id, {
-          references: [
-            ...activeNote.references,
-            {
-              type: 'idea',
-              content: 'New idea'
-            }
-          ]
-        });
-        break;
-      
-      case 'Comment':
-        insertText('\n> ');
-        break;
-      
-      default:
-        console.log('Unhandled command:', command.label);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -240,37 +182,19 @@ export default function SmartNotes() {
         <div className="flex-1 relative">
           <NoteArea
             note={activeNote}
-            onUpdate={handleUpdateNote}
-            showCommands={showCommands}
-            setShowCommands={setShowCommands}
-            onSave={() => handleUpdateNote(activeNote.id, { content: activeNote.content })}
+            onUpdate={(noteId, updates) => handleUpdateNote(noteId, updates, false)}
+            onSave={() => activeNote && handleUpdateNote(activeNote.id, {}, true)}
             onToggleShortcuts={() => setShowShortcuts(!showShortcuts)}
           />
-          
-          <button
-            onClick={() => setShowShortcuts(!showShortcuts)}
-            className="absolute bottom-4 right-4 p-2 rounded-lg bg-gray-100 hover:bg-gray-200"
-          >
-            <Keyboard className="w-5 h-5 text-gray-600" />
-          </button>
-
-          {showShortcuts && (
-            <div className="absolute bottom-16 right-4">
-              <ShortcutsHelp onClose={() => setShowShortcuts(false)} />
-            </div>
-          )}
         </div>
       ) : (
         <div className="flex-1 flex items-center justify-center text-gray-500">
           Select a note or create a new one
         </div>
       )}
-      
-      {showCommands && (
-        <CommandMenu
-          onSelect={handleCommand}
-          onClose={() => setShowCommands(false)}
-        />
+
+      {showShortcuts && (
+        <ShortcutsHelp onClose={() => setShowShortcuts(false)} />
       )}
     </div>
   );

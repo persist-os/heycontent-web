@@ -63,91 +63,117 @@ export async function refreshAccessToken(accountId: string): Promise<string> {
   }
 }
 
-export async function validateToken(accountId: string, platform: string = 'youtube') {
+export async function validateToken(userId: string, platform: string = 'youtube'): Promise<string> {
   try {
-    const account = await prisma.socialAccount.findFirst({
+    // First, find the social account for this user and platform
+    const socialAccount = await prisma.socialAccount.findUnique({
       where: {
-        userId: accountId,
-        platform: platform,
-        isConnected: true
+        userId_platform: {
+          userId: userId,
+          platform: platform
+        }
       }
     });
 
-    if (!account) {
-      console.log(`No ${platform} account found for user ${accountId}`);
-      return null;
+    if (!socialAccount) {
+      throw new Error(`No ${platform} account found for user ${userId}`);
+    }
+
+    if (!socialAccount.isConnected) {
+      throw new Error(`${platform} account is not connected for user ${userId}`);
     }
 
     console.log('Token status:', {
-      hasToken: !!account.accessToken,
-      expiresAt: account.expiresAt,
-      isExpired: account.expiresAt ? account.expiresAt < new Date() : true
+      platform,
+      hasToken: !!socialAccount.accessToken,
+      expiresAt: socialAccount.expiresAt,
+      isExpired: socialAccount.expiresAt ? socialAccount.expiresAt < new Date() : true
     });
 
     // If token is expired and we have a refresh token, try to refresh
-    if (account.expiresAt && account.expiresAt < new Date() && account.refreshToken) {
+    if (socialAccount.expiresAt && socialAccount.expiresAt < new Date() && socialAccount.refreshToken) {
       console.log('Token expired, attempting refresh');
       const oauth2Client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET,
-        platform === 'youtube' ? process.env.YOUTUBE_REDIRECT_URI : process.env.GMAIL_REDIRECT_URI
+        platform === 'youtube' ? process.env.YOUTUBE_REDIRECT_URI : `${process.env.NEXT_PUBLIC_APP_URL}/api/social/callback/gmail`
       );
 
       oauth2Client.setCredentials({
-        refresh_token: account.refreshToken
+        refresh_token: socialAccount.refreshToken
       });
 
-      const { credentials } = await oauth2Client.refreshAccessToken();
-      
-      // Update token in database
-      await prisma.socialAccount.update({
-        where: {
-          userId_platform: {
-            userId: accountId,
-            platform: platform
+      try {
+        const { credentials } = await oauth2Client.refreshAccessToken();
+        
+        // Update token in database
+        await prisma.socialAccount.update({
+          where: {
+            userId_platform: {
+              userId: userId,
+              platform: platform
+            }
+          },
+          data: {
+            accessToken: credentials.access_token || '',
+            refreshToken: credentials.refresh_token || socialAccount.refreshToken || '',
+            expiresAt: credentials.expiry_date ? new Date(credentials.expiry_date) : null,
+            tokenType: credentials.token_type || socialAccount.tokenType || 'Bearer',
+            scope: credentials.scope || socialAccount.scope || ''
           }
-        },
-        data: {
-          accessToken: credentials.access_token,
-          refreshToken: credentials.refresh_token || account.refreshToken,
-          expiresAt: credentials.expiry_date ? new Date(credentials.expiry_date) : null,
-          tokenType: credentials.token_type || account.tokenType,
-          scope: credentials.scope || account.scope
-        }
-      });
+        });
 
-      return credentials.access_token;
+        if (!credentials.access_token) {
+          throw new Error('Refresh token response did not include access token');
+        }
+
+        return credentials.access_token;
+      } catch (refreshError: any) {
+        console.error('Error refreshing token:', refreshError);
+        throw new Error(`Failed to refresh ${platform} token: ${refreshError.message}`);
+      }
     }
 
-    return account.accessToken;
+    if (!socialAccount.accessToken) {
+      throw new Error(`No access token available for ${platform}`);
+    }
+
+    return socialAccount.accessToken;
   } catch (error) {
     console.error('Error validating token:', error);
     throw error;
   }
 }
 
-export async function getAccountStatus(accountId: string): Promise<{
+export async function getAccountStatus(userId: string, platform: string): Promise<{
   isValid: boolean;
   expiresIn?: number;
   error?: string;
 }> {
   try {
-    const account = await prisma.account.findUnique({
-      where: { id: accountId }
+    const socialAccount = await prisma.socialAccount.findUnique({
+      where: {
+        userId_platform: {
+          userId: userId,
+          platform: platform
+        }
+      }
     });
 
-    if (!account) {
+    if (!socialAccount) {
       return {
         isValid: false,
-        error: "Account not found"
+        error: `No ${platform} account found`
       };
     }
 
-    const now = Math.floor(Date.now() / 1000);
-    const expiresIn = account.expires_at ? account.expires_at - now : undefined;
+    const now = new Date();
+    const expiresIn = socialAccount.expiresAt ? 
+      Math.floor((socialAccount.expiresAt.getTime() - now.getTime()) / 1000) : 
+      undefined;
 
     return {
-      isValid: !!account.access_token && (!account.expires_at || account.expires_at > now),
+      isValid: !!socialAccount.accessToken && socialAccount.isConnected && (!socialAccount.expiresAt || socialAccount.expiresAt > now),
       expiresIn,
     };
   } catch (error) {

@@ -1,24 +1,21 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { auth } from "./app/auth";
 
 export async function middleware(request: NextRequest) {
-  const token = await getToken({ 
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET 
-  });
+  const session = await auth();
   
-  const isAuthPage = request.nextUrl.pathname.startsWith("/auth");
+  const isAuthPage = request.nextUrl.pathname.startsWith("/login");
 
   if (isAuthPage) {
-    if (token) {
+    if (session?.user) {
       return NextResponse.redirect(new URL("/chat", request.url));
     }
     return NextResponse.next();
   }
 
-  if (!token) {
-    return NextResponse.redirect(new URL("/auth/signin", request.url));
+  if (!session?.user) {
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
   return NextResponse.next();
@@ -26,8 +23,21 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/chat",
     "/chat/:path*",
+    "/settings",
+    "/settings/:path*",
+    "/notes",
+    "/notes/:path*",
+    "/partnerships",
+    "/partnerships/:path*",
+    "/audience",
+    "/audience/:path*",
+    "/ai-insights",
+    "/ai-insights/:path*",
+    "/test-rag",
     "/test-rag/:path*",
-    "/auth/:path*"
+    "/login",
+    "/login/:path*"
   ]
 }; 

@@ -182,13 +182,16 @@ export class SocialMediaService {
       }
 
       console.log('Channel statistics retrieved:', statistics);
+      
+      const videoCount = parseInt(statistics.videoCount || '0');
+      const maxResults = Math.min(videoCount, 10); // Limit to actual videos or 10, whichever is smaller
 
       const videosResponse = await this.youtube.search.list({
         channelId,
         part: ['id'],
         order: 'date',
         type: ['video'],
-        maxResults: 10,
+        maxResults,
         publishedAfter: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
       }).then(response => response.data);
 

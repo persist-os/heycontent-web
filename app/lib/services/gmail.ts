@@ -3,6 +3,10 @@ import { validateToken } from '@/lib/auth-helpers';
 import { EmailMessage, PartnershipEmail } from '../../types/social-platforms';
 import { prisma } from '../prisma';
 import { getCompletion } from '../openai';
+import { gmail_v1 } from 'googleapis';
+
+// Export PartnershipEmail as GmailMessage for content-analysis.ts
+export type GmailMessage = PartnershipEmail;
 
 interface PartnershipAnalysis {
   isPartnership: boolean;
@@ -12,22 +16,100 @@ interface PartnershipAnalysis {
   deadline?: string;
   priority: 'high' | 'medium' | 'low';
   topics: string[];
+  stage?: 'initial' | 'negotiation' | 'agreement' | 'active';
+  timeline?: string[];
+  valueHistory?: Array<{
+    date: string;
+    value: number;
+  }>;
+  context?: {
+    previousDeals?: Array<{value: number, date: string}>;
+    relatedContent?: Array<{videoId: string, title: string, views: number}>;
+    audienceMatch?: number;
+  };
+  metrics?: {
+    responseTime?: {exact: string, trend: string};
+    lastContact?: {date: string, type: string};
+    dealStages?: {current: string, history: string[]};
+  };
+}
+
+interface GmailHeader {
+  name: string;
+  value: string;
+}
+
+interface GmailThreadMessage {
+  id?: string | null;
+  payload?: {
+    headers?: GmailHeader[];
+    body?: {
+      data?: string;
+    };
+  };
+}
+
+type Schema$Message = gmail_v1.Schema$Message;
+type Schema$MessagePartHeader = gmail_v1.Schema$MessagePartHeader;
+
+interface ThreadMessage {
+  id: string;
+  from?: string;
+  date?: string;
+  body?: string;
+}
+
+interface EmailThread {
+  messages: ThreadMessage[];
 }
 
 export class GmailService {
-  private gmail;
+  private gmail: gmail_v1.Gmail;
   private accountId: string;
 
-  constructor(accountId: string) {
-    this.accountId = accountId;
+  constructor(userId: string) {
+    this.accountId = userId;
     this.gmail = google.gmail('v1');
   }
 
+  private async getGoogleAccountId(): Promise<string> {
+    const account = await prisma.account.findFirst({
+      where: {
+        userId: this.accountId,
+        provider: 'google'
+      }
+    });
+
+    if (!account) {
+      throw new Error('No Google account found');
+    }
+
+    return account.id;
+  }
+
   private async getAuthorizedClient() {
-    const accessToken = await validateToken(this.accountId);
-    const oauth2Client = new google.auth.OAuth2();
-    oauth2Client.setCredentials({ access_token: accessToken });
-    return oauth2Client;
+    try {
+      const accessToken = await validateToken(this.accountId, 'gmail');
+      
+      if (!accessToken) {
+        throw new Error('Failed to get valid Gmail access token');
+      }
+      
+      const oauth2Client = new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        process.env.GMAIL_REDIRECT_URI
+      );
+      
+      oauth2Client.setCredentials({ 
+        access_token: accessToken
+      });
+      
+      return oauth2Client;
+    } catch (error: any) {
+      console.error('Gmail authorization error:', error);
+      throw new Error(`Gmail authorization failed: ${error.message}`);
+    }
   }
 
   async getEmailMetrics() {
@@ -53,10 +135,11 @@ export class GmailService {
     maxResults?: number;
     labelIds?: string[];
     q?: string;
+    includeThreads?: boolean;
   } = {}): Promise<PartnershipEmail[]> {
     try {
       const auth = await this.getAuthorizedClient();
-      const { maxResults = 50, labelIds = [], q = '' } = options;
+      const { maxResults = 50, labelIds = [], q = '', includeThreads = true } = options;
 
       // Get messages list with partnership-related queries
       const messageList = await this.gmail.users.messages.list({
@@ -81,6 +164,16 @@ export class GmailService {
             format: 'full'
           });
 
+          let threadMessages: Schema$Message[] = [];
+          if (includeThreads && fullMessage.data.threadId) {
+            const thread = await this.gmail.users.threads.get({
+              auth,
+              userId: 'me',
+              id: fullMessage.data.threadId
+            });
+            threadMessages = thread.data.messages || [];
+          }
+
           const headers = fullMessage.data.payload?.headers;
           const subject = headers?.find(h => h.name === 'Subject')?.value || '';
           const from = headers?.find(h => h.name === 'From')?.value || '';
@@ -88,8 +181,8 @@ export class GmailService {
           const date = headers?.find(h => h.name === 'Date')?.value || '';
           const body = this.getMessageBody(fullMessage.data);
 
-          // Analyze partnership details using AI
-          const analysis = await this.analyzePartnership(subject, body);
+          // Analyze partnership details using AI with thread context
+          const analysis = await this.analyzePartnership(subject, body, threadMessages);
 
           return {
             id: message.id!,
@@ -102,7 +195,15 @@ export class GmailService {
             labels: fullMessage.data.labelIds || [],
             isRead: !fullMessage.data.labelIds?.includes('UNREAD'),
             isStarred: fullMessage.data.labelIds?.includes('STARRED'),
-            analysis
+            analysis,
+            thread: threadMessages.length > 0 ? {
+              messages: threadMessages.map(m => ({
+                id: m.id || '',
+                from: m.payload?.headers?.find(h => h.name === 'From')?.value,
+                date: m.payload?.headers?.find(h => h.name === 'Date')?.value,
+                body: this.getMessageBody(m)
+              }))
+            } : undefined
           };
         })
       );
@@ -128,37 +229,90 @@ export class GmailService {
     }
   }
 
-  private async analyzePartnership(subject: string, body: string): Promise<PartnershipAnalysis> {
+  private async analyzePartnership(subject: string, body: string, threadMessages: Schema$Message[] = []): Promise<PartnershipAnalysis> {
     try {
-      const prompt = `Analyze this email for partnership details. Extract the following information:
-1. Is this a partnership/sponsorship email? (true/false)
-2. Estimated deal value in USD (number only, 0 if not found)
-3. Deal type (e.g., sponsorship, affiliate, product placement)
-4. Requirements (list)
-5. Deadline if any (date)
-6. Priority (high/medium/low)
-7. Main topics/keywords (list)
+      const prompt = `Analyze this email and its thread for partnership details. Extract ONLY factual information that is explicitly stated. Do not make assumptions about values. If a specific value is not mentioned, leave it undefined.
+
+Provide the analysis in this JSON format:
+{
+  "isPartnership": boolean,
+  "dealValue": number | null,
+  "dealType": string | null,
+  "requirements": string[] | null,
+  "deadline": string | null,
+  "priority": "high" | "medium" | "low",
+  "topics": string[],
+  "stage": "initial" | "negotiation" | "agreement" | "active" | null,
+  "timeline": string[] | null,
+  "valueHistory": Array<{date: string, value: number}> | null,
+  "context": {
+    "previousDeals": Array<{value: number, date: string}> | null,
+    "relatedContent": Array<{videoId: string, title: string, views: number}> | null,
+    "audienceMatch": number | null
+  },
+  "metrics": {
+    "responseTime": {exact: string, trend: string} | null,
+    "lastContact": {date: string, type: string} | null,
+    "dealStages": {current: string, history: string[]} | null
+  }
+}
+
+Guidelines:
+- dealValue: Only include if an exact amount is mentioned
+- dealType: Only include if specifically stated
+- stage: Determine from conversation context
+- timeline: Extract key dates and events
+- valueHistory: Track any mentioned price changes
+- metrics: Calculate from thread if available
 
 Email:
 Subject: ${subject}
-Body: ${body}`;
+Body: ${body}
+
+${threadMessages.length > 0 ? `Thread History:
+${threadMessages.map(m => `
+From: ${m.payload?.headers?.find(h => h.name === 'From')?.value}
+Date: ${m.payload?.headers?.find(h => h.name === 'Date')?.value}
+Body: ${this.getMessageBody(m)}
+`).join('\n')}` : ''}`;
 
       const analysis = await getCompletion([
-        { role: 'system', content: 'You are an AI that analyzes partnership emails and extracts key information.' },
+        { 
+          role: 'system', 
+          content: 'You are an AI that analyzes partnership emails and their threads to extract key information and metrics. Be precise and only extract information that is explicitly stated.' 
+        },
         { role: 'user', content: prompt }
-      ]);
+      ], {
+        model: 'gpt-4-1106-preview',
+        temperature: 0.1,
+        max_tokens: 1000,
+        response_format: { type: "json_object" }
+      });
 
-      // Parse the AI response
-      const lines = analysis.split('\n');
-      return {
-        isPartnership: lines[0].includes('true'),
-        dealValue: parseFloat(lines[1]) || undefined,
-        dealType: lines[2] || undefined,
-        requirements: lines[3] ? JSON.parse(lines[3]) : undefined,
-        deadline: lines[4] || undefined,
-        priority: (lines[5] || 'low') as 'high' | 'medium' | 'low',
-        topics: lines[6] ? JSON.parse(lines[6]) : []
-      };
+      try {
+        const result = JSON.parse(analysis);
+        return {
+          isPartnership: result.isPartnership || false,
+          dealValue: result.dealValue || undefined,
+          dealType: result.dealType || undefined,
+          requirements: result.requirements || undefined,
+          deadline: result.deadline || undefined,
+          priority: result.priority || 'low',
+          topics: result.topics || [],
+          stage: result.stage || undefined,
+          timeline: result.timeline || undefined,
+          valueHistory: result.valueHistory || undefined,
+          context: result.context || undefined,
+          metrics: result.metrics || undefined
+        };
+      } catch (parseError) {
+        console.error('Error parsing partnership analysis:', parseError);
+        return {
+          isPartnership: false,
+          priority: 'low',
+          topics: []
+        };
+      }
     } catch (error) {
       console.error('Error analyzing partnership:', error);
       return {
@@ -170,19 +324,45 @@ Body: ${body}`;
   }
 
   private getMessageBody(message: any): string {
-    let body = '';
+    let plainText = '';
+    let htmlContent = '';
     
-    if (message.payload?.body?.data) {
-      body = Buffer.from(message.payload.body.data, 'base64').toString();
-    } else if (message.payload?.parts) {
-      message.payload.parts.forEach((part: any) => {
-        if (part.mimeType === 'text/plain' && part.body?.data) {
-          body += Buffer.from(part.body.data, 'base64').toString();
+    const getBodyFromPart = (part: any) => {
+      if (part.mimeType === 'text/plain' && part.body?.data) {
+        plainText += Buffer.from(part.body.data, 'base64').toString();
+      }
+      if (part.mimeType === 'text/html' && part.body?.data) {
+        const decoded = Buffer.from(part.body.data, 'base64').toString();
+        // Basic HTML to text conversion
+        htmlContent += decoded.replace(/<[^>]*>/g, ' ')
+                             .replace(/\s+/g, ' ')
+                             .trim();
+      }
+      if (part.parts) {
+        part.parts.forEach(getBodyFromPart);
+      }
+    };
+
+    // Handle both direct body and multipart messages
+    if (message.payload) {
+      if (message.payload.body?.data) {
+        // Direct body content
+        const decoded = Buffer.from(message.payload.body.data, 'base64').toString();
+        if (message.payload.mimeType === 'text/plain') {
+          plainText = decoded;
+        } else if (message.payload.mimeType === 'text/html') {
+          htmlContent = decoded.replace(/<[^>]*>/g, ' ')
+                             .replace(/\s+/g, ' ')
+                             .trim();
         }
-      });
+      }
+      // Handle multipart
+      if (message.payload.parts) {
+        getBodyFromPart(message.payload);
+      }
     }
 
-    return body;
+    return plainText || htmlContent || message.snippet || '';
   }
 
   private getAttachments(message: any) {
@@ -298,6 +478,56 @@ Body: ${body}`;
       });
     } catch (error) {
       console.error('Error removing label from message:', error);
+      throw error;
+    }
+  }
+
+  async searchEmails(query: string, maxResults: number = 20): Promise<EmailMessage[]> {
+    try {
+      const auth = await this.getAuthorizedClient();
+      const response = await this.gmail.users.messages.list({
+        auth,
+        userId: 'me',
+        q: query,
+        maxResults
+      });
+
+      const messages = response.data.messages || [];
+      const emails = await Promise.all(
+        messages.map(async (message) => {
+          const email = await this.gmail.users.messages.get({
+            auth,
+            userId: 'me',
+            id: message.id!,
+            format: 'full'
+          });
+
+          const headers = email.data.payload?.headers || [];
+          const subject = headers.find(h => h.name === 'Subject')?.value || '';
+          const from = headers.find(h => h.name === 'From')?.value || '';
+          const toStr = headers.find(h => h.name === 'To')?.value || '';
+          const to = toStr.split(',').map(addr => addr.trim());
+          const date = headers.find(h => h.name === 'Date')?.value || '';
+          const body = this.getMessageBody(email.data);
+
+          return {
+            id: email.data.id!,
+            threadId: email.data.threadId || '',
+            subject,
+            from,
+            to,
+            date: new Date(date),
+            body,
+            snippet: email.data.snippet || '',
+            labels: email.data.labelIds || [],
+            isRead: !email.data.labelIds?.includes('UNREAD')
+          };
+        })
+      );
+
+      return emails;
+    } catch (error) {
+      console.error('Error searching emails:', error);
       throw error;
     }
   }
