@@ -29,6 +29,29 @@ const liveInsights = [
   "Optimal posting window in 2 hours"
 ]
 
+interface SuggestedAction {
+  type: 'explore' | 'clarify' | 'action' | 'strategic';
+  description: string;
+  context?: string;
+  confidence: number;
+}
+
+const SuggestionChip = ({ suggestion, onClick }: { 
+  suggestion: SuggestedAction, 
+  onClick: () => void 
+}) => (
+  <button
+    onClick={onClick}
+    className="px-3 py-1.5 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full flex items-center gap-2 transition-colors"
+  >
+    {suggestion.type === 'explore' && <Brain className="w-4 h-4" />}
+    {suggestion.type === 'clarify' && <MessageSquare className="w-4 h-4" />}
+    {suggestion.type === 'action' && <Zap className="w-4 h-4" />}
+    {suggestion.type === 'strategic' && <Target className="w-4 h-4" />}
+    {suggestion.description}
+  </button>
+);
+
 const ChatScreen = () => {
   const { data: session, status } = useSession()
   const chatContainerRef = useRef<HTMLDivElement>(null)
@@ -297,6 +320,11 @@ const ChatScreen = () => {
     setShowAmbient(false)
   }
 
+  const handleSuggestionClick = (suggestion: SuggestedAction) => {
+    setInputValue(suggestion.description);
+    inputRef.current?.focus();
+  };
+
   if (initializing) return null
 
   return (
@@ -390,6 +418,17 @@ const ChatScreen = () => {
                             <div className="font-medium">{insight.type}</div>
                             <div className="text-blue-600">{insight.summary}</div>
                           </div>
+                        ))}
+                      </div>
+                    )}
+                    {message.role === 'assistant' && message.metadata?.suggestions && (
+                      <div className="mt-3 flex flex-wrap gap-2 pl-12">
+                        {message.metadata.suggestions.map((suggestion: SuggestedAction, index: number) => (
+                          <SuggestionChip
+                            key={index}
+                            suggestion={suggestion}
+                            onClick={() => handleSuggestionClick(suggestion)}
+                          />
                         ))}
                       </div>
                     )}

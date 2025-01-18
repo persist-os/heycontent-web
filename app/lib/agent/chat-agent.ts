@@ -125,6 +125,13 @@ interface EmailContext {
   searchQuery?: string;
 }
 
+interface SuggestedAction {
+  type: 'explore' | 'clarify' | 'action' | 'strategic';
+  description: string;
+  context?: string;
+  confidence: number;
+}
+
 export class ChatAgent extends BaseAgent {
   protected model: ChatOpenAI;
   protected platformStatus: PlatformStatus[];
@@ -378,8 +385,19 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
       }
 
       const emailSearchTool = new EmailSearchTool(this.userId);
+      
+      // Format the query properly for Gmail API
+      let formattedQuery = intent.query;
+      if (intent.sender) {
+        // If we have a specific sender, format it as a Gmail search query
+        formattedQuery = `from:${intent.sender}`;
+        if (intent.query.toLowerCase().includes('recent')) {
+          formattedQuery += ' newer_than:7d';
+        }
+      }
+
       const searchResponse = await emailSearchTool._call({
-        query: intent.query,
+        query: formattedQuery,
         sender: intent.sender,
         date: intent.date,
         maxResults: 10,
@@ -397,7 +415,7 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
         ...this.emailContext,
         searchResults: searchResponse.results,
         timestamp: Date.now(),
-        searchQuery: intent.query
+        searchQuery: formattedQuery
       };
       
       this.context.lastResponse = searchResponse.formattedString;
@@ -434,6 +452,7 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
     conversationState?: any;
     error?: Error;
     persona?: any;
+    suggestions?: SuggestedAction[];
   }> {
     try {
       // First analyze the message intent
@@ -546,12 +565,14 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
       
       messages.push(new HumanMessage(input));
       const response = await this.model.invoke(messages);
-      
+      const suggestions = this.generateFollowUpSuggestions();
+
       return {
         output: response.content as string,
         context: enhancedContext,
         conversationState: this.conversationState,
-        persona: userPersona
+        persona: userPersona,
+        suggestions
       };
 
     } catch (err: unknown) {
@@ -999,5 +1020,49 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
     
     // Default to not using tools unless specifically needed
     return false;
+  }
+
+  private generateFollowUpSuggestions(): SuggestedAction[] {
+    const suggestions: SuggestedAction[] = [];
+    const state = this.conversationState;
+
+    // Add exploration suggestions based on topic depth
+    if (state.topicDepth < 3 && state.userIntent.type !== 'greeting') {
+      suggestions.push({
+        type: 'explore',
+        description: `Would you like me to analyze ${state.currentTopic} in more detail?`,
+        confidence: 0.8
+      });
+    }
+
+    // Add clarification suggestions if context quality is low
+    if (this.calculateContextQuality() < 0.7) {
+      suggestions.push({
+        type: 'clarify',
+        description: 'Would you like me to explain any part of this in more detail?',
+        confidence: 0.7
+      });
+    }
+
+    // Add action suggestions based on pending actions
+    if (state.pendingActions.length > 0) {
+      suggestions.push({
+        type: 'action',
+        description: `Should we address ${state.pendingActions[0]} next?`,
+        context: state.pendingActions[0],
+        confidence: 0.9
+      });
+    }
+
+    // Add strategic suggestions based on user intent
+    if (state.userIntent.type === 'strategic' || state.userIntent.type === 'exploratory') {
+      suggestions.push({
+        type: 'strategic',
+        description: 'Would you like to explore potential long-term implications or alternative approaches?',
+        confidence: 0.85
+      });
+    }
+
+    return suggestions.sort((a, b) => b.confidence - a.confidence).slice(0, 3);
   }
 } 

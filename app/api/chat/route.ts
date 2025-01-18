@@ -204,7 +204,10 @@ Content: ${doc.pageContent}`;
       role: 'assistant',
       timestamp: new Date().toISOString(),
       success: true,
-      ambientInsight: ambientInsights[0]?.pageContent
+      metadata: {
+        suggestions: result.suggestions,
+        ambientInsight: ambientInsights[0]?.pageContent
+      }
     })
 
   } catch (error) {

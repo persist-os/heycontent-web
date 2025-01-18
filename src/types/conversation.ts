@@ -7,6 +7,12 @@ export interface Message {
   metadata?: {
     insights?: any[];
     context?: any;
+    suggestions?: Array<{
+      type: 'explore' | 'clarify' | 'action' | 'strategic';
+      description: string;
+      context?: string;
+      confidence: number;
+    }>;
     [key: string]: any;
   };
 }

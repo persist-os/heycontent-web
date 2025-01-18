@@ -56,10 +56,14 @@ export class EmailSearchTool extends BaseTool {
   }
 
   private buildSearchQuery(query: string, sender?: string, date?: string): string {
-    const parts = [];
+    // Initialize empty array for query parts
+    const parts: string[] = [];
+    
+    // Ensure query is a string and handle undefined/null cases
+    const safeQuery = (query || '').trim();
     
     // For recent emails search, use a date filter
-    if (query.toLowerCase().includes('recent')) {
+    if (safeQuery.toLowerCase().includes('recent')) {
       const lastWeek = new Date();
       lastWeek.setDate(lastWeek.getDate() - 7);
       parts.push(`after:${Math.floor(lastWeek.getTime() / 1000)}`);
@@ -67,32 +71,40 @@ export class EmailSearchTool extends BaseTool {
     }
 
     // Check for direct "from:" queries first
-    const fromMatch = query.match(/from:\s*([^\s]+)/i);
+    const fromMatch = safeQuery.match(/from:\s*([^\s]+)/i);
     if (fromMatch) {
-      parts.push(`from:${fromMatch[1]}`);
+      // If it's a direct from: query, use it as is
+      parts.push(safeQuery);
     } else if (sender) {
-      // If sender is provided, use it directly
+      // If sender is provided as a parameter, format it properly
       parts.push(`from:${sender}`);
     } else {
       // Try to extract sender from the query
-      const senderMatch = query.match(/(?:from|by|sent by)\s+([^.,\s]+(?:\s+[^.,\s]+)*)/i);
+      const senderMatch = safeQuery.match(/(?:from|by|sent by)\s+([^.,\s]+(?:\s+[^.,\s]+)*)/i);
       if (senderMatch) {
         const extractedSender = senderMatch[1].trim();
         if (extractedSender) {
           parts.push(`from:${extractedSender}`);
         }
-      } else if (!this.isCommonEmailTerms(query)) {
+      } else if (!this.isCommonEmailTerms(safeQuery)) {
         // If no sender found and query is not just common terms, use it as a general search
-        parts.push(query);
+        parts.push(safeQuery);
       }
     }
     
     // Add date filter if provided
     if (date) {
-      const timestamp = new Date(date).getTime() / 1000;
-      parts.push(`after:${timestamp}`);
+      try {
+        const timestamp = new Date(date).getTime() / 1000;
+        if (!isNaN(timestamp)) {
+          parts.push(`after:${timestamp}`);
+        }
+      } catch (error) {
+        console.warn('Invalid date provided:', date);
+      }
     }
     
+    // Return empty string if no valid parts (will be handled by calling method)
     return parts.join(' ');
   }
 
@@ -125,13 +137,30 @@ export class EmailSearchTool extends BaseTool {
     return body.length > 500 ? body.substring(0, 500) + '...' : body;
   }
 
-  async _call(args: z.infer<typeof this._schema>) {
+  async _call(args: z.infer<typeof this._schema> | { input: string } | string): Promise<any> {
     try {
-      const { query, sender, date, maxResults = 20, includeThreads = true, labelIds, skipCache = false } = args;
-      
+      // Handle different input types
+      let query: string;
+      let maxResults = 20;
+      let includeThreads = true;
+      let labelIds: string[] = [];
+      let skipCache = false;
+
+      if (typeof args === 'string') {
+        query = args;
+      } else if ('input' in args) {
+        query = args.input;
+      } else {
+        query = args.query;
+        maxResults = args.maxResults ?? 20;
+        includeThreads = args.includeThreads ?? true;
+        labelIds = args.labelIds ?? [];
+        skipCache = args.skipCache ?? false;
+      }
+
       // Check cache first unless explicitly skipped
       if (!skipCache) {
-        const cacheKey = this.getCacheKey(args);
+        const cacheKey = JSON.stringify({ query, maxResults, includeThreads, labelIds });
         const cachedResults = this.getCachedResults(cacheKey);
         if (cachedResults) {
           return {
@@ -143,66 +172,52 @@ export class EmailSearchTool extends BaseTool {
         }
       }
 
-      // Build search query
-      let searchQuery = this.buildSearchQuery(query, sender, date);
+      // Build search query - pass through valid Gmail queries
+      const searchQuery = query.trim();
       if (!searchQuery) {
         return {
           success: false,
-          error: "Invalid search query",
+          error: "Empty search query",
           results: [],
           resultCount: 0,
-          formattedString: "Could not build a valid search query from the provided terms."
+          formattedString: "Please provide a search query."
         };
       }
       
       try {
-        // First attempt: Direct search
-        let messages = await this.gmailService.searchEmails(searchQuery, maxResults);
-
-        // Second attempt: Try fuzzy search if no results
-        if (messages.length === 0 && (sender || query.toLowerCase().includes('from'))) {
-          const searchTerm = sender || query.match(/from\s+([a-zA-Z\s]+)(?:\s|$)/i)?.[1];
-          if (searchTerm) {
-            const fuzzyQuery = searchTerm.split(/[\s,]+/)
-              .filter(part => part.length > 2)
-              .map(part => `from:${part}`)
-              .join(' OR ');
-            if (fuzzyQuery) {
-              messages = await this.gmailService.searchEmails(fuzzyQuery, maxResults);
-            }
-          }
-        }
-
-        // If still no results and it's a recent emails search, try without other filters
-        if (messages.length === 0 && query.toLowerCase().includes('recent')) {
-          const lastWeek = new Date();
-          lastWeek.setDate(lastWeek.getDate() - 7);
-          const recentQuery = `after:${Math.floor(lastWeek.getTime() / 1000)} !in:spam !in:trash`;
-          messages = await this.gmailService.searchEmails(recentQuery, maxResults);
-        }
-
+        // Perform the search
+        const messages = await this.gmailService.searchEmails(searchQuery, maxResults);
         const results = this.formatSearchResults(messages);
 
-        // Cache results only if the search was successful
+        // Cache results if successful
         if (!skipCache && messages.length > 0) {
-          const cacheKey = this.getCacheKey(args);
+          const cacheKey = JSON.stringify({ query, maxResults, includeThreads, labelIds });
           searchCache.set(cacheKey, {
             timestamp: Date.now(),
             results
           });
         }
 
+        const formattedString = this.formatResultsAsString(results);
         return {
           success: true,
           results,
           resultCount: results.length,
-          formattedString: this.formatResultsAsString(results)
+          formattedString
         };
 
       } catch (err: unknown) {
         const error = err instanceof Error ? err : new Error('Unknown error occurred');
         if (error.message?.includes('Gmail authorization failed')) {
-          throw new Error('Gmail authorization required');
+          const response = {
+            success: false,
+            error: 'Gmail authorization required',
+            results: [],
+            resultCount: 0,
+            formattedString: "Please connect your Gmail account first to search emails."
+          };
+          console.error('Gmail auth error:', error);
+          return response;
         }
         console.error('Error in email search:', error);
         return {
@@ -210,13 +225,19 @@ export class EmailSearchTool extends BaseTool {
           error: error.message,
           results: [],
           resultCount: 0,
-          formattedString: "No emails found due to an error in the search."
+          formattedString: "I encountered an error while searching your emails. Please try again or rephrase your search."
         };
       }
     } catch (err: unknown) {
       console.error('Error in EmailSearchTool:', err);
       const error = err instanceof Error ? err : new Error('Unknown error occurred');
-      throw error;
+      return {
+        success: false,
+        error: error.message,
+        results: [],
+        resultCount: 0,
+        formattedString: "An unexpected error occurred while searching emails."
+      };
     }
   }
 
