@@ -1,0 +1,20 @@
+version: '3.8'
+services:
+  supabase:
+    image: supabase/supabase-dev
+    ports:
+      - "54321:54321"  # API
+      - "54322:54322"  # Database
+      - "54323:54323"  # Studio
+    environment:
+      POSTGRES_PASSWORD: postgres
+      JWT_SECRET: your-super-secret-jwt-token-with-at-least-32-characters
+      DASHBOARD_USERNAME: admin
+      DASHBOARD_PASSWORD: admin
+    volumes:
+      - ./supabase/migrations:/supabase/migrations
+      - ./supabase/config.toml:/supabase/config.toml
+      - supabase-data:/var/lib/postgresql/data
+
+volumes:
+  supabase-data: 
