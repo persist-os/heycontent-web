@@ -26,7 +26,29 @@
      docker compose --version
      ```
 
-2. **Configure Docker Resources**:
+2. **Supabase Local Development**:
+   - Our Docker setup includes a local Supabase instance
+   - No Supabase account required for local development
+   - Access Supabase Studio at http://localhost:54323
+   - Default credentials:
+     ```
+     Email: admin@admin.com
+     Password: admin
+     ```
+   - The following services are included:
+     * PostgreSQL Database (port 54322)
+     * Supabase API (port 54321)
+     * Supabase Studio (port 54323)
+   - Database credentials:
+     ```
+     Host: localhost
+     Port: 54322
+     Database: postgres
+     User: postgres
+     Password: postgres
+     ```
+
+3. **Configure Docker Resources**:
    - Open Docker Desktop
    - Go to Settings/Preferences
    - Recommended settings:
@@ -35,14 +57,14 @@
      * Swap: At least 1GB
      * Disk image size: At least 60GB
 
-3. **Port Requirements**:
+4. **Port Requirements**:
    Ensure these ports are available on your machine:
    - 3000: Next.js application
    - 54321: Supabase API
    - 54322: Supabase Database
    - 54323: Supabase Studio
 
-4. **Start Docker Services**:
+5. **Start Docker Services**:
    ```bash
    # Start all services
    docker compose up -d
@@ -54,7 +76,7 @@
    docker compose logs -f
    ```
 
-5. **Common Docker Commands**:
+6. **Common Docker Commands**:
    ```bash
    # Stop all services
    docker compose down
@@ -73,7 +95,7 @@
    docker compose logs supabase -f
    ```
 
-6. **Troubleshooting Docker**:
+7. **Troubleshooting Docker**:
    - If services won't start:
      ```bash
      # Remove all containers and volumes
@@ -181,11 +203,16 @@ Required environment variables for local development are listed in [.env.example
 
 1. **Database & Supabase** (automatically configured with Docker)
    ```env
+   # These are default local development values - no need to change
    DATABASE_URL="postgresql://postgres:postgres@localhost:54322/postgres"
    SUPABASE_URL="http://localhost:54321"
    SUPABASE_ANON_KEY="[auto-generated-by-docker]"
    SUPABASE_SERVICE_ROLE_KEY="[auto-generated-by-docker]"
    ```
+   - These values are automatically set up by Docker
+   - The keys will be available in Supabase Studio after starting Docker
+   - You can find them in Supabase Studio (http://localhost:54323) under Project Settings > API
+   - No Supabase account or project needed
 
 2. **Google OAuth** (from [Google Cloud Console](https://console.cloud.google.com))
    - Create a new project
