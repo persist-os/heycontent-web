@@ -44,6 +44,7 @@ interface ChatAgentContext {
   previousMessages?: Message[];
   lastResponse?: string;
   emailSearchResults?: (EmailMessage | PartnershipEmail)[];
+  platformStatus?: PlatformStatus[];
 }
 
 interface EmotionalState {
@@ -96,6 +97,20 @@ interface ConversationState {
   };
 }
 
+interface EmailContext {
+  recentEmails: EmailMessage[];
+  searchResults: EmailMessage[];
+  timestamp: number;
+  searchQuery?: string;
+}
+
+interface SuggestedAction {
+  type: 'explore' | 'clarify' | 'action' | 'strategic';
+  description: string;
+  context?: string;
+  confidence: number;
+}
+
 interface EnhancedContext {
   content: any[];
   audience: any[];
@@ -108,28 +123,33 @@ interface EnhancedContext {
     intentAlignment: number;
   };
   userPreferences: {
-    communicationStyle: 'direct' | 'collaborative' | 'exploratory';
+    communicationStyle: 'direct' | 'exploratory' | 'collaborative';
     detailLevel: 'high' | 'medium' | 'low';
     pacePreference: 'fast' | 'moderate' | 'thorough';
   };
-  emails?: {
-    recent: any[];
-    relevant: any[];
+}
+
+interface ConversationCues {
+  tone: 'neutral' | 'excited' | 'frustrated' | 'uncertain' | 'curious' | 'reflective' | 'stressed' | 'optimistic';
+  intent: 'direct_inquiry' | 'exploratory' | 'action_needed' | 'reflection' | 'greeting' | 'emotional' | 'strategic' | 'validation';
+  needsClarification: boolean;
+  isQuestion: boolean;
+  topicFocus: string[];
+  complexity: 'simple' | 'moderate' | 'complex';
+  emotionalState: {
+    valence: number;
+    intensity: number;
+    confidence: number;
+  };
+  contextualFactors: {
+    urgency: 'low' | 'medium' | 'high';
+    decisionStage: 'exploration' | 'evaluation' | 'decision' | 'implementation';
   };
 }
 
-interface EmailContext {
-  recentEmails: (EmailMessage | PartnershipEmail)[];
-  searchResults: (EmailMessage | PartnershipEmail)[];
-  timestamp: number;
-  searchQuery?: string;
-}
-
-interface SuggestedAction {
-  type: 'explore' | 'clarify' | 'action' | 'strategic';
-  description: string;
-  context?: string;
-  confidence: number;
+interface BatchProcessor {
+  rag: RAGSystem;
+  prisma: any;
 }
 
 export class ChatAgent extends BaseAgent {
@@ -742,8 +762,8 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
         subtypes: ['immediate', 'planning', 'problem_solving']
       },
       reflection: {
-        patterns: ['think about', 'consider', 'wonder if', 'feels like'],
-        subtypes: ['analysis', 'evaluation', 'introspection']
+        patterns: ['think about', 'reflect on', 'analyze', 'understand', 'realize', 'notice', 'observe'],
+        subtypes: ['insight_generation', 'pattern_recognition', 'self_awareness', 'learning']
       },
       validation: {
         patterns: ['right', 'correct', 'makes sense', 'good idea'],
@@ -894,7 +914,14 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
     const contextStackWeight = this.conversationState.contextStack.length * 0.1;
     const pendingActionsWeight = Math.max(0, 1 - this.conversationState.pendingActions.length * 0.2);
     
-    return Math.max(0, Math.min(1, (topicDepthWeight + contextStackWeight + pendingActionsWeight) / 3));
+    // Calculate weighted average of focus metrics
+    const focusScore = (
+      topicDepthWeight * 0.4 +
+      contextStackWeight * 0.3 +
+      pendingActionsWeight * 0.3
+    );
+    
+    return Math.max(0, Math.min(1, focusScore));
   }
 
   private updateResponseState(response: AIMessage) {
