@@ -5,12 +5,88 @@
 ### Prerequisites
 
 1. **Node.js** - Version 18 or higher
-2. **Docker Desktop** - Latest stable version
+2. **Docker Setup**:
+   - Install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+   - Create a free [Docker Hub](https://hub.docker.com/signup) account
+   - After installation, run `docker login` in your terminal
 3. **Git** - Latest stable version
 4. **Required API Keys/Credentials**:
    - Google OAuth credentials (for authentication and Gmail API)
    - OpenAI API key
    - Resend API key (for email services)
+
+### Docker Setup Guide
+
+1. **Install Docker Desktop**:
+   - Download and install from [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+   - Start Docker Desktop application
+   - Verify installation:
+     ```bash
+     docker --version
+     docker compose --version
+     ```
+
+2. **Configure Docker Resources**:
+   - Open Docker Desktop
+   - Go to Settings/Preferences
+   - Recommended settings:
+     * CPUs: At least 2
+     * Memory: At least 4GB
+     * Swap: At least 1GB
+     * Disk image size: At least 60GB
+
+3. **Port Requirements**:
+   Ensure these ports are available on your machine:
+   - 3000: Next.js application
+   - 54321: Supabase API
+   - 54322: Supabase Database
+   - 54323: Supabase Studio
+
+4. **Start Docker Services**:
+   ```bash
+   # Start all services
+   docker compose up -d
+
+   # Verify services are running
+   docker compose ps
+
+   # View logs if needed
+   docker compose logs -f
+   ```
+
+5. **Common Docker Commands**:
+   ```bash
+   # Stop all services
+   docker compose down
+
+   # Restart services
+   docker compose restart
+
+   # Reset everything (including data)
+   docker compose down -v
+   docker compose up -d
+
+   # View container status
+   docker compose ps
+
+   # View logs for specific service
+   docker compose logs supabase -f
+   ```
+
+6. **Troubleshooting Docker**:
+   - If services won't start:
+     ```bash
+     # Remove all containers and volumes
+     docker compose down -v
+     # Remove all images
+     docker compose down --rmi all
+     # Start fresh
+     docker compose up -d
+     ```
+   - If ports are in use:
+     * Stop any existing PostgreSQL services
+     * Check for other Docker containers using same ports
+     * Use `lsof -i :[port]` to find processes using ports
 
 ### Step-by-Step Setup
 
@@ -41,19 +117,13 @@
 
    View [.env.example](./.env.example) for all required variables with descriptions.
 
-4. **Start Docker Services**
-   ```bash
-   # Start Supabase and PostgreSQL
-   docker compose up -d
-   ```
-
-5. **Initialize Database**
+4. **Initialize Database**
    ```bash
    # Apply database migrations
    npx supabase db reset
    ```
 
-6. **Start Development Server**
+5. **Start Development Server**
    ```bash
    npm run dev
    # or
@@ -68,22 +138,24 @@
 
 ### Common Issues and Solutions
 
-1. **Can't Connect to Database**
-   - Ensure Docker is running
-   - Check if ports 54321 and 54322 are available
-   - Run `docker compose down && docker compose up -d` to restart services
+1. **Docker Issues**:
+   - "Port already in use":
+     * Check running services: `lsof -i :[port]`
+     * Stop conflicting services or change ports in docker-compose.yml
+   - "No space left on device":
+     * Clean up unused Docker resources: `docker system prune`
+     * Increase Docker disk image size in Docker Desktop settings
+   - "Connection refused":
+     * Ensure Docker Desktop is running
+     * Check service logs: `docker compose logs [service]`
+     * Restart services: `docker compose restart`
 
-2. **Prisma/Database Sync Issues**
+2. **Database Issues**:
    ```bash
-   npx prisma generate
-   npx prisma db push
-   ```
-
-3. **Docker Container Issues**
-   ```bash
-   # Reset all containers and volumes
+   # Reset database
    docker compose down -v
    docker compose up -d
+   npx prisma db push
    ```
 
 ### Development Workflow
