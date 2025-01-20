@@ -27,20 +27,21 @@
      ```
 
 2. **Supabase Local Development**:
-   - Our Docker setup includes a local Supabase instance
+   - Our Docker setup includes a local Supabase instance for development only
+   - This is separate from our production Supabase environment
    - No Supabase account required for local development
    - Everyone gets the same setup through Docker + Prisma migrations
-   - Access Supabase Studio at http://localhost:54323
-   - Default credentials:
+   - Access Supabase Studio at http://localhost:54323 (local development only)
+   - Default local credentials:
      ```
      Email: admin@admin.com
      Password: admin
      ```
-   - The following services are included:
+   - The following services are included in local setup:
      * PostgreSQL Database (port 54322)
      * Supabase API (port 54321)
      * Supabase Studio (port 54323)
-   - Database credentials:
+   - Local database credentials:
      ```
      Host: localhost
      Port: 54322
@@ -51,7 +52,7 @@
    - Database schema and structure are managed through Prisma:
      * All tables and relationships are defined in `prisma/schema.prisma`
      * Migrations are tracked in `prisma/migrations`
-     * Everyone gets the same database structure by running migrations
+     * Same schema applies to both local and production, just with different credentials
 
 3. **Configure Docker Resources**:
    - Open Docker Desktop
@@ -332,3 +333,38 @@ If you encounter any issues not covered here:
    # Check migration status
    npx prisma migrate status
    ```
+
+### Local vs Production Environment
+
+1. **Local Development** (Docker):
+   - Uses Docker for local Supabase instance
+   - All data is stored locally
+   - Credentials are preset and same for all developers
+   - Database resets don't affect production
+   - Perfect for development and testing
+
+2. **Production Environment** (Hosted Supabase):
+   - Uses Supabase's hosted platform (supabase.com)
+   - Production database is hosted and managed by Supabase
+   - Secure credentials managed by platform team
+   - Real user data and production settings
+   - Automated backups and monitoring
+   - Production environment variables are different from local
+
+3. **Environment Switching**:
+   ```env
+   # Local Development (.env)
+   DATABASE_URL="postgresql://postgres:postgres@localhost:54322/postgres"
+   SUPABASE_URL="http://localhost:54321"
+
+   # Production (.env.production)
+   DATABASE_URL="your-production-supabase-connection-string"
+   SUPABASE_URL="your-production-supabase-project-url"
+   ```
+
+4. **Important Notes**:
+   - Never use local Docker credentials in production
+   - Production credentials are managed by the platform team
+   - Local database can be reset freely without affecting production
+   - Production database changes require team coordination
+   - Database migrations are applied to both environments but with different credentials
