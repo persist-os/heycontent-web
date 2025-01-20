@@ -29,6 +29,7 @@
 2. **Supabase Local Development**:
    - Our Docker setup includes a local Supabase instance
    - No Supabase account required for local development
+   - Everyone gets the same setup through Docker + Prisma migrations
    - Access Supabase Studio at http://localhost:54323
    - Default credentials:
      ```
@@ -47,6 +48,10 @@
      User: postgres
      Password: postgres
      ```
+   - Database schema and structure are managed through Prisma:
+     * All tables and relationships are defined in `prisma/schema.prisma`
+     * Migrations are tracked in `prisma/migrations`
+     * Everyone gets the same database structure by running migrations
 
 3. **Configure Docker Resources**:
    - Open Docker Desktop
@@ -266,3 +271,64 @@ If you encounter any issues not covered here:
 1. Check the error logs in Docker Desktop
 2. Check the terminal output for the Next.js development server
 3. Contact the team lead for additional support
+
+### Database Setup & Synchronization
+
+1. **Initial Database Setup**:
+   ```bash
+   # Start Docker services first
+   docker compose up -d
+   
+   # Apply all migrations
+   npx prisma migrate deploy
+   
+   # Generate Prisma client
+   npx prisma generate
+   
+   # Push schema to database
+   npx prisma db push
+   ```
+
+2. **Database Reset** (if needed):
+   ```bash
+   # Remove all data and apply migrations fresh
+   npx prisma migrate reset --force
+   
+   # Or using Docker (complete reset)
+   docker compose down -v
+   docker compose up -d
+   npx prisma migrate deploy
+   ```
+
+3. **Verify Database Structure**:
+   - Open Supabase Studio at http://localhost:54323
+   - Go to Table Editor to verify tables
+   - Expected tables:
+     * users
+     * accounts
+     * sessions
+     * conversations
+     * messages
+     * (other project tables...)
+
+4. **Sync with Team Changes**:
+   ```bash
+   # When new migrations are added by team
+   git pull
+   npx prisma migrate deploy
+   
+   # If schema is updated without migrations
+   npx prisma db push
+   ```
+
+5. **Common Database Operations**:
+   ```bash
+   # View database tables
+   npx prisma studio
+   
+   # Reset single table
+   npx prisma db reset --preview-feature
+   
+   # Check migration status
+   npx prisma migrate status
+   ```
