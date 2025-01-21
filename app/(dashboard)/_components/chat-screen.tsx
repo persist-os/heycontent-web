@@ -213,18 +213,40 @@ const ChatScreen = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    const insightId = params.get('context')
+    const contextParam = params.get('context')
+    const type = params.get('type')
     
-    if (insightId && !initializing) {
-      const insight = actionableInsights.find(i => i.id === Number(insightId))
-      if (insight) {
+    if (contextParam && !initializing) {
+      try {
+        const contextData = JSON.parse(decodeURIComponent(contextParam))
         setShowAmbient(false)
         setMessages([])
-        handleSendMessage(
-          `I'd like to discuss the "${insight.opportunity.title}" opportunity.`,
-          Number(insightId)
-        )
+
+        if (type === 'insight') {
+          // Handle full insight discussion
+          handleSendMessage(
+            `I'd like to discuss this insight about "${contextData.title}". Here's what I know:\n` +
+            `- Description: ${contextData.description}\n` +
+            `- Impact: ${contextData.impact}\n` +
+            `- Timing: ${contextData.timing}\n` +
+            `- Confidence: ${contextData.confidence}%\n\n` +
+            `What specific recommendations do you have based on this information?`
+          )
+        } else if (type === 'action') {
+          // Handle specific action step discussion
+          const step = contextData.step
+          handleSendMessage(
+            `I want to work on this action step: "${step.content}"\n\n` +
+            `This is part of the insight: "${contextData.insight.title}"\n` +
+            `Context: ${contextData.insight.description}\n\n` +
+            `Can you help me implement this step effectively?`
+          )
+        }
+
+        // Clear URL parameters without refreshing
         window.history.replaceState({}, '', window.location.pathname)
+      } catch (error) {
+        console.error('Error parsing context:', error)
       }
     }
     setInitializing(false)

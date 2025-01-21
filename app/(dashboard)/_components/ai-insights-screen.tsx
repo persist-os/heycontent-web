@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
   Brain, TrendingUp, Target, Share2, 
   ChevronRight, ArrowRight, Clock, MessageSquare,
@@ -39,7 +40,7 @@ interface ExtendedInsightContext {
 }
 
 interface AIActionableInsight {
-  id: number | string;
+  id: string | number;
   type: 'partnership' | 'content' | 'platform';
   opportunity: {
     title: string;
@@ -161,6 +162,8 @@ export function AIInsightsScreen() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [retryAttempts, setRetryAttempts] = useState(0)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [activeTab, setActiveTab] = useState('content')
+  const [canRefresh, setCanRefresh] = useState(true)
   const router = useRouter()
   const { data: session } = useSession()
 
@@ -354,14 +357,32 @@ export function AIInsightsScreen() {
     }
   };
 
-  useEffect(() => {
-    const checkAndRefresh = async () => {
-      // Clear any existing timer
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
+  // Add manual refresh function
+  const handleRefresh = async () => {
+    const lastRefresh = localStorage.getItem('lastInsightsRefresh');
+    if (lastRefresh) {
+      const lastRefreshDate = new Date(lastRefresh);
+      if (!isNextDay(lastRefreshDate)) {
+        setError('Insights can only be refreshed once per day');
+        return;
       }
+    }
 
-      // Load cached insights first
+    setIsRefreshing(true);
+    try {
+      await backgroundFetch();
+      setCanRefresh(false);
+    } catch (error) {
+      console.error('Refresh error:', error);
+      setError('Failed to refresh insights');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Update useEffect to only load cache
+  useEffect(() => {
+    const loadCache = () => {
       const cachedData = getInsightsCache();
       if (cachedData) {
         console.log('Found cached insights:', cachedData);
@@ -369,39 +390,17 @@ export function AIInsightsScreen() {
         setLastUpdated(new Date(cachedData.metadata.timestamp));
       }
 
-      // Check quota cooldown
-      const quotaCooldown = localStorage.getItem('quotaCooldown');
-      const isInQuotaCooldown = quotaCooldown && 
-        (Date.now() - parseInt(quotaCooldown) < QUOTA_COOLDOWN);
-      
-      if (isInQuotaCooldown) {
-        const remainingCooldown = Math.ceil((QUOTA_COOLDOWN - (Date.now() - parseInt(quotaCooldown))) / 60000);
-        console.log(`In quota cooldown period... (${remainingCooldown} minutes remaining)`);
-        setError(`Service quota reached. Using cached insights. Try again in ${remainingCooldown} minutes.`);
-        return;
-      }
-
+      // Check if refresh is available
       const lastRefresh = localStorage.getItem('lastInsightsRefresh');
-      const shouldRefresh = !lastRefresh || isNextDay(new Date(lastRefresh));
-
-      if (shouldRefresh && !isRefreshing) {
-        // Debounce the fetch request
-        debounceTimer = setTimeout(() => {
-          backgroundFetch();
-        }, 1000); // 1 second delay
+      if (lastRefresh) {
+        const lastRefreshDate = new Date(lastRefresh);
+        setCanRefresh(isNextDay(lastRefreshDate));
       }
     };
 
     if (session?.user) {
-      checkAndRefresh();
+      loadCache();
     }
-
-    // Cleanup
-    return () => {
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
-    };
   }, [session]);
 
   // Helper to check if it's the next day
@@ -416,12 +415,77 @@ export function AIInsightsScreen() {
   };
 
   function discussWithAI(insight: AIActionableInsight) {
-    router.push(`/chat?context=${insight.id}`)
+    // Prepare complete context object
+    const contextData = {
+      insightType: insight.type,
+      title: insight.opportunity.title,
+      description: insight.opportunity.description,
+      impact: insight.opportunity.impact,
+      confidence: insight.opportunity.confidence,
+      timing: insight.opportunity.timing,
+      actionSteps: insight.action.steps,
+      expectedOutcome: insight.action.expectedOutcome,
+      requirements: insight.action.requirements,
+      priority: insight.action.priority,
+      context: {
+        ...insight.context,
+        // Ensure we pass complete email and video details
+        emails: insight.context.emails?.map(email => ({
+          ...email,
+          date: new Date(email.date).toISOString()
+        })),
+        videos: insight.context.videos,
+        sourceDetails: insight.context.sourceDetails,
+        why: insight.context.why,
+        data: insight.context.data
+      }
+    };
+
+    // Encode and pass complete context
+    const encodedContext = encodeURIComponent(JSON.stringify(contextData));
+    router.push(`/chat?context=${encodedContext}&type=insight&id=${insight.id}`);
   }
 
+  function handleActionStep(insight: AIActionableInsight, step: string, stepIndex: number) {
+    // Prepare action-specific context
+    const actionContext = {
+      step: {
+        content: step,
+        index: stepIndex
+      },
+      insight: {
+        type: insight.type,
+        title: insight.opportunity.title,
+        description: insight.opportunity.description,
+        impact: insight.opportunity.impact,
+        expectedOutcome: insight.action.expectedOutcome,
+        requirements: insight.action.requirements,
+        context: {
+          why: insight.context.why,
+          sourceDetails: insight.context.sourceDetails,
+          // Include relevant source data
+          emails: insight.context.emails?.map(email => ({
+            ...email,
+            date: new Date(email.date).toISOString()
+          })),
+          videos: insight.context.videos
+        }
+      }
+    };
+
+    // Encode and pass action-specific context
+    const encodedContext = encodeURIComponent(JSON.stringify(actionContext));
+    router.push(`/chat?context=${encodedContext}&type=action&id=${insight.id}&step=${stepIndex}`);
+  }
+
+  // Filter insights by type
+  const contentInsights = insights.filter(insight => insight.type === 'content')
+  const platformInsights = insights.filter(insight => insight.type === 'platform')
+  const partnershipInsights = insights.filter(insight => insight.type === 'partnership')
+
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      {/* Fixed Header - Simplified */}
+    <div className="relative">
+      {/* Fixed Header - Now with refresh button */}
       <div className="shrink-0 px-6 py-4 border-b bg-white dark:bg-gray-900 dark:border-gray-800">
         <div className="flex justify-between items-center">
           <div>
@@ -435,6 +499,18 @@ export function AIInsightsScreen() {
               )}
             </p>
           </div>
+          <button
+            onClick={handleRefresh}
+            disabled={!canRefresh || isRefreshing}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              canRefresh && !isRefreshing
+                ? 'bg-purple-100 text-purple-600 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500'
+            }`}
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh Insights'}
+          </button>
         </div>
       </div>
 
@@ -461,8 +537,33 @@ export function AIInsightsScreen() {
                 </p>
               </div>
             ) : (
-              <div className="grid gap-6">
-                {insights.map((insight) => (
+              <Tabs defaultValue="content" className="w-full" onValueChange={setActiveTab}>
+                <TabsList className="grid w-full grid-cols-3 mb-6">
+                  <TabsTrigger 
+                    value="content" 
+                    className="flex items-center gap-2"
+                  >
+                    <Brain className="w-4 h-4" />
+                    Content ({contentInsights.length})
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="platform" 
+                    className="flex items-center gap-2"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Platform ({platformInsights.length})
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="partnership" 
+                    className="flex items-center gap-2"
+                  >
+                    <Target className="w-4 h-4" />
+                    Partnership ({partnershipInsights.length})
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="content" className="grid gap-6">
+                  {contentInsights.map((insight) => (
                   <Card key={insight.id} className="overflow-hidden">
                     {/* Clickable Header */}
                     <div 
@@ -475,16 +576,8 @@ export function AIInsightsScreen() {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${
-                            insight.type === 'content' 
-                              ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400' 
-                              : insight.type === 'platform' 
-                              ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' 
-                              : 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
-                          }`}>
-                            {insight.type === 'content' ? <Brain className="w-4 h-4" /> :
-                             insight.type === 'platform' ? <Share2 className="w-4 h-4" /> :
-                             <Target className="w-4 h-4" />}
+                            <div className="p-2 rounded-lg bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+                              <Brain className="w-4 h-4" />
                           </div>
                           <div>
                             <h3 className="font-medium dark:text-white">{insight.opportunity.title}</h3>
@@ -533,10 +626,11 @@ export function AIInsightsScreen() {
                             {insight.action.steps.map((step: string, idx: number) => (
                               <button
                                 key={idx}
-                                className="w-full flex items-center justify-between p-3 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
+                                onClick={() => handleActionStep(insight, step, idx)}
+                                className="w-full flex items-center justify-between p-3 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left group"
                               >
-                                <span className="text-sm dark:text-gray-300">{step}</span>
-                                <ArrowRight className="w-4 h-4 text-gray-400" />
+                                <span className="text-sm dark:text-gray-300 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">{step}</span>
+                                <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors" />
                               </button>
                             ))}
                           </div>
@@ -592,7 +686,260 @@ export function AIInsightsScreen() {
                     )}
                   </Card>
                 ))}
-              </div>
+                </TabsContent>
+
+                <TabsContent value="platform" className="grid gap-6">
+                  {platformInsights.map((insight) => (
+                    <Card key={insight.id} className="overflow-hidden">
+                      {/* Clickable Header */}
+                      <div 
+                        onClick={() => setSelectedInsight(selectedInsight === insight.id ? null : insight.id)}
+                        className={`p-4 cursor-pointer transition-all ${
+                          selectedInsight === insight.id 
+                            ? 'bg-blue-50 dark:bg-blue-900/20' 
+                            : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                              <Share2 className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <h3 className="font-medium dark:text-white">{insight.opportunity.title}</h3>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                Impact: {insight.opportunity.impact}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <div className="text-sm font-medium text-green-600 dark:text-green-400">
+                                {typeof insight.opportunity.confidence === 'number' ? `${insight.opportunity.confidence}%` : 'High'} Confidence
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                <Clock className="w-3 h-3 inline mr-1" />
+                                {insight.action.timeToImplement}
+                              </div>
+                            </div>
+                            <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${
+                              selectedInsight === insight.id ? 'rotate-90' : ''
+                            }`} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Expanded Content - Only show when selected */}
+                      {selectedInsight === insight.id && (
+                        <div className="p-4 space-y-6">
+                          {/* Why Now Section */}
+                          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-3">
+                            <h4 className="font-medium dark:text-white">Why Now?</h4>
+                            <ul className="space-y-2">
+                              {insight.context.why?.map((reason: string, idx: number) => (
+                                <li key={`${insight.id}-why-${idx}`} className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2">
+                                  <span className="mt-1">•</span>
+                                  {reason}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          {/* Action Steps */}
+                          <div>
+                            <h4 className="font-medium dark:text-white mb-3">Action Steps</h4>
+                            <div className="space-y-2">
+                              {insight.action.steps.map((step: string, idx: number) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => handleActionStep(insight, step, idx)}
+                                  className="w-full flex items-center justify-between p-3 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left group"
+                                >
+                                  <span className="text-sm dark:text-gray-300 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">{step}</span>
+                                  <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors" />
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Expected Outcome */}
+                          <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                            <h4 className="font-medium text-green-700 dark:text-green-400 mb-2">Expected Outcome</h4>
+                            <p className="text-sm text-green-600 dark:text-green-400">{insight.action.expectedOutcome}</p>
+                          </div>
+
+                          {/* Source Details Section */}
+                          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                            <h4 className="font-medium dark:text-white mb-2">Source Details</h4>
+                            {insight.context.sourceDetails?.map((detail: string, idx: number) => (
+                              <p key={idx} className="text-sm text-gray-600 dark:text-gray-400 mb-1">{detail}</p>
+                            ))}
+                            {insight.context.emails && insight.context.emails.length > 0 && (
+                              <div className="mt-2">
+                                <h5 className="text-sm font-medium dark:text-white mb-1">Related Emails</h5>
+                                <div className="max-h-32 overflow-y-auto">
+                                  {insight.context.emails.map((email, idx) => (
+                                    <div key={idx} className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                      • {email.subject} ({new Date(email.date).toLocaleDateString()})
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {insight.context.videos && insight.context.videos.length > 0 && (
+                              <div className="mt-2">
+                                <h5 className="text-sm font-medium dark:text-white mb-1">Related Videos</h5>
+                                <div className="max-h-32 overflow-y-auto">
+                                  {insight.context.videos.map((video, idx) => (
+                                    <div key={idx} className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                      • {video.title} (Views: {video.views}, Engagement: {video.engagement})
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Discuss with IRIS */}
+                          <button
+                            onClick={() => discussWithAI(insight)}
+                            className="flex items-center gap-2 text-sm text-purple-500 dark:text-purple-400"
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                            Discuss with IRIS
+                          </button>
+                        </div>
+                      )}
+                    </Card>
+                  ))}
+                </TabsContent>
+
+                <TabsContent value="partnership" className="grid gap-6">
+                  {partnershipInsights.map((insight) => (
+                    <Card key={insight.id} className="overflow-hidden">
+                      {/* Clickable Header */}
+                      <div 
+                        onClick={() => setSelectedInsight(selectedInsight === insight.id ? null : insight.id)}
+                        className={`p-4 cursor-pointer transition-all ${
+                          selectedInsight === insight.id 
+                            ? 'bg-blue-50 dark:bg-blue-900/20' 
+                            : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400">
+                              <Target className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <h3 className="font-medium dark:text-white">{insight.opportunity.title}</h3>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                Impact: {insight.opportunity.impact}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <div className="text-sm font-medium text-green-600 dark:text-green-400">
+                                {typeof insight.opportunity.confidence === 'number' ? `${insight.opportunity.confidence}%` : 'High'} Confidence
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                <Clock className="w-3 h-3 inline mr-1" />
+                                {insight.action.timeToImplement}
+                              </div>
+                            </div>
+                            <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${
+                              selectedInsight === insight.id ? 'rotate-90' : ''
+                            }`} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Expanded Content - Only show when selected */}
+                      {selectedInsight === insight.id && (
+                        <div className="p-4 space-y-6">
+                          {/* Why Now Section */}
+                          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-3">
+                            <h4 className="font-medium dark:text-white">Why Now?</h4>
+                            <ul className="space-y-2">
+                              {insight.context.why?.map((reason: string, idx: number) => (
+                                <li key={`${insight.id}-why-${idx}`} className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2">
+                                  <span className="mt-1">•</span>
+                                  {reason}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          {/* Action Steps */}
+                          <div>
+                            <h4 className="font-medium dark:text-white mb-3">Action Steps</h4>
+                            <div className="space-y-2">
+                              {insight.action.steps.map((step: string, idx: number) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => handleActionStep(insight, step, idx)}
+                                  className="w-full flex items-center justify-between p-3 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left group"
+                                >
+                                  <span className="text-sm dark:text-gray-300 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">{step}</span>
+                                  <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors" />
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Expected Outcome */}
+                          <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                            <h4 className="font-medium text-green-700 dark:text-green-400 mb-2">Expected Outcome</h4>
+                            <p className="text-sm text-green-600 dark:text-green-400">{insight.action.expectedOutcome}</p>
+                          </div>
+
+                          {/* Source Details Section */}
+                          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                            <h4 className="font-medium dark:text-white mb-2">Source Details</h4>
+                            {insight.context.sourceDetails?.map((detail: string, idx: number) => (
+                              <p key={idx} className="text-sm text-gray-600 dark:text-gray-400 mb-1">{detail}</p>
+                            ))}
+                            {insight.context.emails && insight.context.emails.length > 0 && (
+                              <div className="mt-2">
+                                <h5 className="text-sm font-medium dark:text-white mb-1">Related Emails</h5>
+                                <div className="max-h-32 overflow-y-auto">
+                                  {insight.context.emails.map((email, idx) => (
+                                    <div key={idx} className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                      • {email.subject} ({new Date(email.date).toLocaleDateString()})
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {insight.context.videos && insight.context.videos.length > 0 && (
+                              <div className="mt-2">
+                                <h5 className="text-sm font-medium dark:text-white mb-1">Related Videos</h5>
+                                <div className="max-h-32 overflow-y-auto">
+                                  {insight.context.videos.map((video, idx) => (
+                                    <div key={idx} className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                      • {video.title} (Views: {video.views}, Engagement: {video.engagement})
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Discuss with IRIS */}
+                          <button
+                            onClick={() => discussWithAI(insight)}
+                            className="flex items-center gap-2 text-sm text-purple-500 dark:text-purple-400"
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                            Discuss with IRIS
+                          </button>
+                        </div>
+                      )}
+                    </Card>
+                  ))}
+                </TabsContent>
+              </Tabs>
             )}
           </div>
         </div>
