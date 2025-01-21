@@ -10,6 +10,16 @@ export interface Message {
     content: string
   }
   isReferenced?: boolean
+  metadata?: {
+    suggestions?: Array<{
+      type: 'explore' | 'clarify' | 'action' | 'strategic';
+      description: string;
+      context?: string;
+      confidence: number;
+    }>;
+    ambientInsight?: any;
+    [key: string]: any;
+  }
 }
 
 export interface ChatHistory {

@@ -117,7 +117,17 @@ const ChatScreen = () => {
         message: content,
         referencedMessageId: referencedMessage?.id,
         ...(insightId && { insightId }),
-        context: content.includes('Regarding:') ? content : undefined
+        context: content.includes('Regarding:') ? content : undefined,
+        previousMessages: messages.map(msg => ({
+          id: msg.id,
+          content: msg.content,
+          role: msg.role,
+          timestamp: msg.timestamp,
+          referencedMessage: msg.referencedMessage ? {
+            id: msg.referencedMessage.id,
+            content: msg.referencedMessage.content
+          } : undefined
+        }))
       }
       
       const response = await fetch('/api/chat', {
@@ -152,7 +162,7 @@ const ChatScreen = () => {
     } finally {
       setIsLoading(false)
     }
-  }, [scrollToBottom, referencedMessage])
+  }, [scrollToBottom, referencedMessage, messages])
 
   const handleMessageReference = (message: Message) => {
     setReferencedMessage(message)

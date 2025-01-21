@@ -4,6 +4,7 @@ import { EmailMessage, PartnershipEmail } from '../../types/social-platforms';
 import { prisma } from '../prisma';
 import { getCompletion } from '../openai';
 import { gmail_v1 } from 'googleapis';
+import { RAGSystem } from '@/lib/rag';
 
 // Export PartnershipEmail as GmailMessage for content-analysis.ts
 export type GmailMessage = PartnershipEmail;
@@ -66,10 +67,12 @@ interface EmailThread {
 export class GmailService {
   private gmail: gmail_v1.Gmail;
   private accountId: string;
+  private rag: RAGSystem;
 
   constructor(userId: string) {
     this.accountId = userId;
     this.gmail = google.gmail('v1');
+    this.rag = new RAGSystem();
   }
 
   private async getGoogleAccountId(): Promise<string> {
@@ -528,6 +531,40 @@ Body: ${this.getMessageBody(m)}
       return emails;
     } catch (error) {
       console.error('Error searching emails:', error);
+      throw error;
+    }
+  }
+
+  async storeEmailInRAG(email: EmailMessage, userId: string): Promise<void> {
+    try {
+      const emailContent = {
+        id: email.id,
+        threadId: email.threadId,
+        subject: email.subject,
+        from: email.from,
+        to: email.to,
+        date: email.date,
+        body: email.body,
+        labels: email.labels,
+        isRead: email.isRead
+      };
+
+      await this.rag.addDocument(
+        JSON.stringify(emailContent),
+        {
+          type: 'email',
+          category: 'message',
+          user_id: userId,
+          timestamp: new Date(email.date).toISOString(),
+          metadata: {
+            sender: email.from,
+            subject: email.subject,
+            threadId: email.threadId
+          }
+        }
+      );
+    } catch (error) {
+      console.error('Error storing email in RAG:', error);
       throw error;
     }
   }
