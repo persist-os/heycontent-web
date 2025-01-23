@@ -8,6 +8,7 @@ import { BaseMessageLike } from "@langchain/core/messages";
 import { selectModel } from "../openai";
 import { EmailSearchTool } from "./tools/email-search";
 import { SocialPlatform, EmailMessage, PartnershipEmail } from "../../types/social-platforms";
+import { InteractiveResponseHandler } from '../chat/interactive-response';
 
 interface PlatformStatus {
   platform: SocialPlatform;
@@ -45,6 +46,7 @@ interface ChatAgentContext {
   lastResponse?: string;
   emailSearchResults?: (EmailMessage | PartnershipEmail)[];
   platformStatus?: PlatformStatus[];
+  availableFeatures?: any;
 }
 
 interface EmotionalState {
@@ -473,6 +475,7 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
     error?: Error;
     persona?: any;
     suggestions?: SuggestedAction[];
+    interactiveResponse?: any;
   }> {
     try {
       // First analyze the message intent
@@ -480,13 +483,24 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
       
       // For greetings, respond immediately without any additional processing
       if (messageIntent.type === 'greeting') {
-        return {
+        const response = {
           output: "Hello! How can I help you today?",
           conversationState: {
             ...this.conversationState,
             userIntent: messageIntent,
             lastResponseType: 'answer'
           }
+        };
+
+        // Add interactive elements even for greetings
+        const enhancedResponse = InteractiveResponseHandler.generateInteractiveResponse(
+          response.output,
+          { availableFeatures: context.availableFeatures }
+        );
+
+        return {
+          ...response,
+          interactiveResponse: enhancedResponse
         };
       }
 
@@ -518,7 +532,7 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
             `I searched for emails from "${searchTerms.sender}" but couldn't find any. Would you like to try a different name or search term?` :
             `I couldn't find any emails matching your query. Could you provide more specific details like the sender's name?`;
             
-          return {
+          const response = {
             output: suggestion,
             context: {
               searchTerms,
@@ -529,6 +543,21 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
               userIntent: messageIntent,
               lastResponseType: 'answer'
             }
+          };
+
+          // Add interactive elements for email responses
+          const enhancedResponse = InteractiveResponseHandler.generateInteractiveResponse(
+            response.output,
+            { 
+              availableFeatures: context.availableFeatures,
+              searchTerms,
+              emailContext: this.emailContext
+            }
+          );
+
+          return {
+            ...response,
+            interactiveResponse: enhancedResponse
           };
         }
 
@@ -544,7 +573,7 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
           `emails from ${searchTerms.sender}` :
           'matching emails';
 
-        return {
+        const response = {
           output: `Here are the ${searchDescription} I found:\n\n${formattedResults.map((email) => 
             `From: ${email.from}\nSubject: ${email.subject}\nDate: ${email.date}\n${email.preview}\n---`
           ).join('\n\n')}`,
@@ -560,6 +589,22 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
             currentTopic: 'email_search',
             topicDepth: this.conversationState.topicDepth + 1
           }
+        };
+
+        // Add interactive elements for email responses
+        const enhancedResponse = InteractiveResponseHandler.generateInteractiveResponse(
+          response.output,
+          { 
+            availableFeatures: context.availableFeatures,
+            emails: results,
+            searchTerms,
+            emailContext: this.emailContext
+          }
+        );
+
+        return {
+          ...response,
+          interactiveResponse: enhancedResponse
         };
       }
 
@@ -587,12 +632,25 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
       const response = await this.model.invoke(messages);
       const suggestions = this.generateFollowUpSuggestions();
 
+      // Generate interactive response
+      const interactiveResponse = InteractiveResponseHandler.generateInteractiveResponse(
+        response.content as string,
+        {
+          availableFeatures: context.availableFeatures,
+          userPersona,
+          enhancedContext,
+          conversationState: this.conversationState,
+          suggestions
+        }
+      );
+
       return {
         output: response.content as string,
         context: enhancedContext,
         conversationState: this.conversationState,
         persona: userPersona,
-        suggestions
+        suggestions,
+        interactiveResponse
       };
 
     } catch (err: unknown) {
@@ -600,14 +658,37 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
       const error = err instanceof Error ? err : new Error('Unknown error occurred');
       
       if (error.message?.includes('Gmail authorization required')) {
-      return {
+        const response = {
           output: "I need access to your Gmail account to search your emails. Please connect your Gmail account in the settings.",
           error
         };
+
+        // Add interactive elements even for error responses
+        const enhancedResponse = InteractiveResponseHandler.generateInteractiveResponse(
+          response.output,
+          { error: true }
+        );
+
+        return {
+          ...response,
+          interactiveResponse: enhancedResponse
+        };
       }
-      return {
+
+      const response = {
         output: "I encountered an error processing your request. Could you please try again?",
         error
+      };
+
+      // Add interactive elements for error responses
+      const enhancedResponse = InteractiveResponseHandler.generateInteractiveResponse(
+        response.output,
+        { error: true }
+      );
+
+      return {
+        ...response,
+        interactiveResponse: enhancedResponse
       };
     }
   }

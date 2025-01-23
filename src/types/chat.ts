@@ -1,3 +1,18 @@
+export interface InteractiveOption {
+  text: string
+  type: 'action' | 'detail' | 'suggestion' | 'explore'
+  action?: string
+}
+
+export interface InteractiveResponse {
+  options?: InteractiveOption[]
+  followUp?: {
+    question: string
+    choices?: string[]
+  }
+  contextualSuggestions?: string[]
+}
+
 export interface Message {
   id: number
   content: string
@@ -10,15 +25,16 @@ export interface Message {
     content: string
   }
   isReferenced?: boolean
+  interactiveResponse?: InteractiveResponse
   metadata?: {
     suggestions?: Array<{
-      type: 'explore' | 'clarify' | 'action' | 'strategic';
-      description: string;
-      context?: string;
-      confidence: number;
-    }>;
-    ambientInsight?: any;
-    [key: string]: any;
+      type: 'explore' | 'clarify' | 'action' | 'strategic'
+      description: string
+      context?: string
+      confidence: number
+    }>
+    ambientInsight?: any
+    [key: string]: any
   }
 }
 

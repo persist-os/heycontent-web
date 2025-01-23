@@ -8,6 +8,7 @@ import { Message } from '@/types/chat'
 import { Document } from "@langchain/core/documents";
 import { InitializationContext } from '@/lib/agent';
 import { SocialMediaService } from '@/lib/services/social-media';
+import { InteractiveResponseHandler } from '@/lib/chat/interactive-response';
 
 // Function to clean up markdown formatting
 function cleanMarkdownFormatting(text: string): string {
@@ -53,13 +54,26 @@ export async function POST(req: Request) {
     // Quick check for greetings to avoid unnecessary initialization
     const greetings = ['hi', 'hello', 'hey', 'greetings']
     if (greetings.includes(message.toLowerCase().trim())) {
-      return NextResponse.json({
+      const greetingResponse = {
         id: Date.now(),
         content: "Hello! How can I help you today?",
         role: 'assistant',
         timestamp: new Date().toISOString(),
         success: true
-      })
+      };
+
+      // Add interactive elements for greeting
+      const interactiveResponse = InteractiveResponseHandler.generateInteractiveResponse(
+        greetingResponse.content,
+        { type: 'greeting' }
+      );
+
+      return NextResponse.json({
+        ...greetingResponse,
+        options: interactiveResponse.options,
+        followUp: interactiveResponse.followUp,
+        contextualSuggestions: interactiveResponse.contextualSuggestions
+      });
     }
 
     // Initialize our systems first
@@ -124,14 +138,29 @@ export async function POST(req: Request) {
           }
         });
 
+        const cleanedContent = cleanMarkdownFormatting(result?.output || "I understand. How can I help you with that?");
+        
+        // Generate interactive response for insight-based query
+        const interactiveResponse = InteractiveResponseHandler.generateInteractiveResponse(
+          cleanedContent,
+          { 
+            insight,
+            relevantDocs,
+            availableFeatures
+          }
+        );
+
         return NextResponse.json({
           id: Date.now(),
-          content: cleanMarkdownFormatting(result?.output || "I understand. How can I help you with that?"),
+          content: cleanedContent,
           role: 'assistant',
           timestamp: new Date().toISOString(),
           success: true,
-          ambientInsight: ambientInsights[0]?.pageContent
-        })
+          ambientInsight: ambientInsights[0]?.pageContent,
+          options: interactiveResponse.options,
+          followUp: interactiveResponse.followUp,
+          contextualSuggestions: interactiveResponse.contextualSuggestions
+        });
       }
     }
 
@@ -194,27 +223,54 @@ Content: ${doc.pageContent}`;
       context: { 
         userId: session.user.id,
         previousMessages,
-        ambientInsights: ambientInsights[0]?.pageContent
+        ambientInsights: ambientInsights[0]?.pageContent,
+        availableFeatures
       }
     });
 
+    const cleanedContent = cleanMarkdownFormatting(result?.output || "I understand. How can I help you with that?");
+
+    // Use the interactive response from the agent if available, or generate a new one
+    const interactiveResponse = result.interactiveResponse || InteractiveResponseHandler.generateInteractiveResponse(
+      cleanedContent,
+      {
+        availableFeatures,
+        ambientInsights: ambientInsights[0]?.pageContent,
+        suggestions: result.suggestions,
+        context: fullContext
+      }
+    );
+
     return NextResponse.json({
       id: Date.now(),
-      content: cleanMarkdownFormatting(result?.output || "I understand. How can I help you with that?"),
+      content: cleanedContent,
       role: 'assistant',
       timestamp: new Date().toISOString(),
       success: true,
       metadata: {
         suggestions: result.suggestions,
         ambientInsight: ambientInsights[0]?.pageContent
-      }
-    })
+      },
+      options: interactiveResponse.options,
+      followUp: interactiveResponse.followUp,
+      contextualSuggestions: interactiveResponse.contextualSuggestions
+    });
 
   } catch (error) {
     console.error('[CHAT_ERROR]', error)
+    
+    // Generate interactive response for error state
+    const errorResponse = InteractiveResponseHandler.generateInteractiveResponse(
+      'Internal Server Error',
+      { error: true }
+    );
+
     return NextResponse.json({ 
       error: 'Internal Server Error',
-      success: false 
-    }, { status: 500 })
+      success: false,
+      options: errorResponse.options,
+      followUp: errorResponse.followUp,
+      contextualSuggestions: errorResponse.contextualSuggestions
+    }, { status: 500 });
   }
 } 

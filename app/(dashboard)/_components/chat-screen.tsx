@@ -14,6 +14,7 @@ import { actionableInsights } from '@/data/insights'
 import { useSession } from 'next-auth/react'
 import { MessageBubble } from './chat/message-bubble'
 import { ChatInput } from './chat/chat-input'
+import type { InteractiveOption } from '@/lib/chat/interactive-response'
 
 interface AIActionableInsight {
   id: number;
@@ -147,7 +148,12 @@ const ChatScreen = () => {
           content: data.content,
           role: 'assistant',
           timestamp: data.timestamp,
-          relatedInsights: data.relatedInsights || []
+          relatedInsights: data.relatedInsights || [],
+          interactiveResponse: {
+            options: data.options,
+            followUp: data.followUp,
+            contextualSuggestions: data.contextualSuggestions
+          }
         }]
       })
       
@@ -190,6 +196,40 @@ const ChatScreen = () => {
       }, 2000)
     }
   }, [])
+
+  const handleOptionClick = useCallback((option: InteractiveOption) => {
+    if (option.action) {
+      // Handle specific actions
+      switch (option.action) {
+        case 'show_metrics':
+          handleSendMessage('Show me the detailed metrics');
+          break;
+        case 'view_partnerships':
+          handleSendMessage('Tell me about available partnership opportunities');
+          break;
+        case 'view_content_insights':
+          handleSendMessage('What insights do you have about the content?');
+          break;
+        case 'view_audience_insights':
+          handleSendMessage('What do you know about the audience?');
+          break;
+        case 'personalize':
+          handleSendMessage('Personalize the recommendations for me');
+          break;
+        case 'view_pending_actions':
+          handleSendMessage('What actions are pending?');
+          break;
+        default:
+          handleSendMessage(option.text);
+      }
+    } else {
+      handleSendMessage(option.text);
+    }
+  }, [handleSendMessage]);
+
+  const handleFollowUpClick = useCallback((choice: string) => {
+    handleSendMessage(choice);
+  }, [handleSendMessage]);
 
   // All useEffects
   useEffect(() => {
@@ -435,6 +475,8 @@ const ChatScreen = () => {
                       onReference={handleMessageReference}
                       showReferenceButton={!referencedMessage && message.status !== 'typing'}
                       onReferenceClick={handleReferenceClick}
+                      onOptionClick={handleOptionClick}
+                      onFollowUpClick={handleFollowUpClick}
                     />
                     {message.relatedInsights && message.relatedInsights.length > 0 && (
                       <div className="ml-12 mt-2 space-y-2">

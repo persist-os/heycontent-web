@@ -1,8 +1,8 @@
 'use client'
 
-import { Message } from '@/types/chat'
+import type { Message, InteractiveResponse, InteractiveOption } from '@/types/chat'
 import { formatDistanceToNow } from 'date-fns'
-import { MessageSquare } from 'lucide-react'
+import { MessageSquare, ChevronRight } from 'lucide-react'
 
 interface MessageBubbleProps {
   message: Message
@@ -11,6 +11,8 @@ interface MessageBubbleProps {
   onReference?: (message: Message) => void
   showReferenceButton?: boolean
   onReferenceClick?: (messageId: number) => void
+  onOptionClick?: (option: InteractiveOption) => void
+  onFollowUpClick?: (choice: string) => void
 }
 
 export function MessageBubble({ 
@@ -19,10 +21,13 @@ export function MessageBubble({
   onRetry,
   onReference,
   showReferenceButton = true,
-  onReferenceClick
+  onReferenceClick,
+  onOptionClick,
+  onFollowUpClick
 }: MessageBubbleProps) {
   const isUser = message.role === 'user'
   const isTyping = message.status === 'typing'
+  const interactiveResponse = message.interactiveResponse
   
   // If it's a typing indicator, show the special bubble
   if (isTyping) {
@@ -106,6 +111,69 @@ export function MessageBubble({
                 >
                   Retry
                 </button>
+              )}
+
+              {/* Interactive Elements */}
+              {interactiveResponse && !isUser && (
+                <div className="mt-4 space-y-4">
+                  {/* Interactive Options */}
+                  {(interactiveResponse.options ?? []).length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {(interactiveResponse.options ?? []).map((option: InteractiveOption, index: number) => (
+                        <button
+                          key={index}
+                          onClick={() => onOptionClick?.(option)}
+                          className={`
+                            px-3 py-1.5 rounded-full text-sm
+                            ${option.type === 'action' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' :
+                              option.type === 'detail' ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' :
+                              'bg-gray-100 text-gray-700 hover:bg-gray-200'}
+                            transition-colors
+                          `}
+                        >
+                          {option.text}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Follow-up Question */}
+                  {interactiveResponse.followUp && (
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-600">{interactiveResponse.followUp.question}</p>
+                      {(interactiveResponse.followUp.choices ?? []).length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {(interactiveResponse.followUp.choices ?? []).map((choice: string, index: number) => (
+                            <button
+                              key={index}
+                              onClick={() => onFollowUpClick?.(choice)}
+                              className="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-full text-sm flex items-center gap-1"
+                            >
+                              {choice}
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Contextual Suggestions */}
+                  {(interactiveResponse.contextualSuggestions ?? []).length > 0 && (
+                    <div className="text-sm text-gray-500 space-y-2">
+                      {(interactiveResponse.contextualSuggestions ?? []).map((suggestion: string, index: number) => (
+                        <button
+                          key={index}
+                          onClick={() => onOptionClick?.({ text: suggestion, type: 'suggestion' })}
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm text-gray-600 hover:bg-gray-100 transition-colors w-full text-left"
+                        >
+                          <span className="w-1 h-1 rounded-full bg-gray-400 flex-shrink-0" />
+                          <span>{suggestion}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
