@@ -2,6 +2,7 @@ import { BaseTool } from './base-tool';
 import { GmailService } from '@/lib/services/gmail';
 import { z } from 'zod';
 import type { EmailMessage, PartnershipEmail, EmailThread, ThreadMessage } from '../../../types/social-platforms';
+import { EmailContextManager } from '../email-context-manager';
 
 // Simple in-memory cache for email searches
 const searchCache = new Map<string, {
@@ -12,6 +13,8 @@ const searchCache = new Map<string, {
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export class EmailSearchTool extends BaseTool {
+  private emailContextManager: EmailContextManager;
+
   private gmailService: GmailService;
   name = 'email_search';
   description = 'Search through Gmail emails with optional filters for sender, date, and max results. Returns email content with thread context.';
@@ -26,9 +29,10 @@ export class EmailSearchTool extends BaseTool {
     skipCache: z.boolean().optional().describe('Whether to skip cache and force fresh search')
   });
 
-  constructor(userId: string) {
+  constructor(userId: string, emailContextManager: EmailContextManager) {
     super();
     this.gmailService = new GmailService(userId);
+    this.emailContextManager = emailContextManager;
   }
 
   private getCacheKey(args: z.infer<typeof this._schema>): string {
@@ -139,7 +143,7 @@ export class EmailSearchTool extends BaseTool {
 
   async _call(args: z.infer<typeof this._schema> | { input: string } | string): Promise<any> {
     try {
-      // Handle different input types
+      // Handle different input types (existing code)
       let query: string;
       let maxResults = 20;
       let includeThreads = true;
@@ -158,10 +162,26 @@ export class EmailSearchTool extends BaseTool {
         skipCache = args.skipCache ?? false;
       }
 
-      // Check cache first unless explicitly skipped
+      // First check EmailContextManager for relevant cached results
       if (!skipCache) {
-        const cacheKey = JSON.stringify({ query, maxResults, includeThreads, labelIds });
-        const cachedResults = this.getCachedResults(cacheKey);
+        const relevantEmails = this.emailContextManager.getRelevantEmails(query);
+        if (relevantEmails.length > 0) {
+          return {
+            success: true,
+            results: relevantEmails,
+            resultCount: relevantEmails.length,
+            fromCache: true,
+            formattedString: this.formatResultsAsString(relevantEmails as (EmailMessage | PartnershipEmail)[])
+          };
+        }
+      }
+
+      // Check existing cache (keeping original caching logic)
+      if (!skipCache) {
+        const cacheKey = this.getCacheKey(typeof args === 'object' ? 
+          'input' in args ? { query: args.input } : args : 
+          { query: args }
+        );        const cachedResults = this.getCachedResults(cacheKey);
         if (cachedResults) {
           return {
             success: true,
@@ -172,7 +192,7 @@ export class EmailSearchTool extends BaseTool {
         }
       }
 
-      // Build search query - pass through valid Gmail queries
+      // Existing search logic
       const searchQuery = query.trim();
       if (!searchQuery) {
         return {
@@ -189,13 +209,19 @@ export class EmailSearchTool extends BaseTool {
         const messages = await this.gmailService.searchEmails(searchQuery, maxResults);
         const results = this.formatSearchResults(messages);
 
-        // Cache results if successful
+        // Store in both caches if successful
         if (!skipCache && messages.length > 0) {
-          const cacheKey = JSON.stringify({ query, maxResults, includeThreads, labelIds });
-          searchCache.set(cacheKey, {
+          // Store in original cache
+          const cacheKey = this.getCacheKey(typeof args === 'object' ? 
+            'input' in args ? { query: args.input } : args : 
+            { query: args }
+          );          searchCache.set(cacheKey, {
             timestamp: Date.now(),
             results
           });
+
+          // Store in EmailContextManager
+          this.emailContextManager.addSearchResults(query, results);
         }
 
         const formattedString = this.formatResultsAsString(results);
@@ -206,7 +232,7 @@ export class EmailSearchTool extends BaseTool {
           formattedString
         };
 
-      } catch (err: unknown) {
+      } catch (err: unknown) {                    
         const error = err instanceof Error ? err : new Error('Unknown error occurred');
         if (error.message?.includes('Gmail authorization failed')) {
           const response = {

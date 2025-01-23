@@ -12,6 +12,55 @@ import { GmailService } from "@/lib/services/gmail";
 import { RAGSystem } from "@/lib/rag";
 import { prisma } from "@/lib/prisma";
 import { EmailSearchTool } from "./tools/email-search";
+import { EmailMessage } from "@/types/social-platforms";
+import { ChatAgent } from './chat-agent';
+import { EmailContextManager } from "./email-context-manager";
+
+interface EmailContext {
+  recentEmails: EmailMessage[];
+  searchResults: EmailMessage[];
+  timestamp: number;
+}
+
+interface ConversationState {
+  currentTopic: string;
+  lastTopic: string;
+  topicDepth: number;
+  contextStack: string[];
+  pendingActions: string[];
+  lastResponseType: 'answer' | 'question' | 'suggestion' | 'clarification';
+  emotionalState: {
+    primary: 'neutral' | 'excited' | 'confused' | 'frustrated' | 'curious' | 'reflective' | 'sad' | 'greeting' | 'confident' | 'uncertain';
+    intensity: number;
+    context: string;
+  };
+  userIntent: {
+    type: 'direct_inquiry' | 'exploratory' | 'action_needed' | 'reflection' | 'greeting' | 'emotional' | 'strategic' | 'validation' | 'problem_solving' | 'unknown';
+    confidence: number;
+  };
+  focusMetrics: {
+    topicChanges: number;
+    clarificationRequests: number;
+    followUpCount: number;
+    contextDepth: number;
+    emotionalShifts: number;
+    intentShifts: number;
+  };
+  conversationFlow: {
+    naturalBreaks: number;
+    topicTransitions: string[];
+    depthProgression: number[];
+    engagementSignals: string[];
+  };
+}
+
+interface AgentStep {
+  tool: string;
+  output: {
+    results?: any[];
+    [key: string]: any;
+  };
+}
 
 export interface InitializationContext {
   userId?: string;
@@ -111,8 +160,47 @@ export class PlatformAgent {
   private rag: RAGSystem;
   private socialService: SocialMediaService;
   private gmailService?: GmailService;
-  private availableFeatures: Set<string> = new Set(['smartNotes']); // Smart notes always available
+  private chatAgent?: ChatAgent;
+  private availableFeatures: Set<string> = new Set(['smartNotes']);
   private userId?: string;
+  private conversationState: ConversationState = {
+    currentTopic: '',
+    lastTopic: '',
+    topicDepth: 0,
+    contextStack: [],
+    pendingActions: [],
+    lastResponseType: 'answer',
+    emotionalState: {
+      primary: 'neutral',
+      intensity: 0,
+      context: ''
+    },
+    userIntent: {
+      type: 'direct_inquiry',
+      confidence: 0.5
+    },
+    focusMetrics: {
+      topicChanges: 0,
+      clarificationRequests: 0,
+      followUpCount: 0,
+      contextDepth: 0,
+      emotionalShifts: 0,
+      intentShifts: 0
+    },
+    conversationFlow: {
+      naturalBreaks: 0,
+      topicTransitions: [],
+      depthProgression: [],
+      engagementSignals: []
+    }
+  };
+  private emailContext: EmailContext = {
+    recentEmails: [],
+    searchResults: [],
+    timestamp: 0
+  };
+  private readonly EMAIL_CONTEXT_TTL = 5 * 60 * 1000; // 5 minutes
+  private emailContextManager: EmailContextManager;
 
   constructor() {
     this.model = new ChatOpenAI({
@@ -122,6 +210,8 @@ export class PlatformAgent {
     });
     this.rag = new RAGSystem();
     this.socialService = new SocialMediaService();
+    this.emailContextManager = new EmailContextManager();
+
   }
 
   getExecutor() {
@@ -183,6 +273,9 @@ export class PlatformAgent {
       // Update available features based on connections
       await this.updateAvailableFeatures(connectedPlatforms, hasEmail);
 
+      // Initialize ChatAgent
+      this.chatAgent = new ChatAgent(this.rag, context.userId, platformStatus);
+
       // Initialize Gmail service if connected
       if (hasEmail) {
         const gmailInitialized = await this.initializeGmailService(context.userId);
@@ -208,7 +301,7 @@ export class PlatformAgent {
 
     // Initialize tools based on available features
     const tools: BaseTool[] = [
-      ...(this.availableFeatures.has('email') && this.userId ? [new EmailSearchTool(this.userId)] : []),
+      ...(this.availableFeatures.has('email') && this.userId ? [new EmailSearchTool(this.userId, this.emailContextManager)] : []),
       new SocialMediaTool(this.socialService, this.rag),
       ...(this.availableFeatures.has('content') ? [new ContentAnalysisTool()] : []),
       ...(this.availableFeatures.has('partnerships') && this.gmailService ? [new PartnershipTool(this.rag)] : []),
@@ -343,20 +436,104 @@ export class PlatformAgent {
     return enhancedQuery;
   }
 
+  private updateConversationState(
+    query: string,
+    cues: ConversationCues,
+    response: any
+  ) {
+    // Update topic tracking
+    if (this.conversationState.currentTopic !== cues.topicFocus[0]) {
+      this.conversationState.lastTopic = this.conversationState.currentTopic;
+      this.conversationState.currentTopic = cues.topicFocus[0];
+      this.conversationState.focusMetrics.topicChanges++;
+    }
+
+    // Update emotional state
+    const newEmotionalState = {
+      primary: cues.tone,
+      intensity: cues.emotionalState.intensity,
+      context: query
+    };
+    if (newEmotionalState.primary !== this.conversationState.emotionalState.primary) {
+      this.conversationState.focusMetrics.emotionalShifts++;
+    }
+    this.conversationState.emotionalState = newEmotionalState;
+
+    // Update user intent
+    const newIntent = {
+      type: cues.intent,
+      confidence: cues.emotionalState.confidence
+    };
+    if (newIntent.type !== this.conversationState.userIntent.type) {
+      this.conversationState.focusMetrics.intentShifts++;
+    }
+    this.conversationState.userIntent = newIntent;
+
+    // Update conversation flow metrics
+    if (cues.needsClarification) {
+      this.conversationState.focusMetrics.clarificationRequests++;
+    }
+    this.conversationState.focusMetrics.contextDepth = this.conversationState.contextStack.length;
+
+    // Track conversation progression
+    this.conversationState.conversationFlow.depthProgression.push(this.conversationState.focusMetrics.contextDepth);
+    if (cues.complexity === 'complex') {
+      this.conversationState.conversationFlow.engagementSignals.push('deep_engagement');
+    }
+
+    return this.conversationState;
+  }
+
+  private async updateEmailContext(searchResults: any[]) {
+    const now = Date.now();
+    // Clear old results if TTL expired
+    if (now - this.emailContext.timestamp > this.EMAIL_CONTEXT_TTL) {
+      this.emailContext = {
+        recentEmails: [],
+        searchResults: [],
+        timestamp: now
+      };
+    }
+    
+    this.emailContext = {
+      ...this.emailContext,
+      searchResults: [...searchResults],
+      timestamp: now
+    };
+  }
+
   public async process(query: string, context?: ProcessContext) {
-    if (!this.executor) {
+    if (!this.executor || !this.userId) {
       await this.initialize(context);
     }
 
+    if (!this.executor) {
+      throw new Error("Agent executor not initialized");
+    }
+
+    if (!this.userId) {
+      throw new Error("User ID is required for processing messages");
+    }
+
+    // Build email context from previous messages
+    const emailContext = context?.previousMessages ? {
+      referencedEmails: this.emailContextManager.getRelevantEmails(query),
+      previousSearches: this.emailContextManager.getPreviousSearches()
+    } : {
+      referencedEmails: [],
+      previousSearches: []
+    };
+
+     // Update conversation state with email context
+     if (emailContext.referencedEmails.length > 0) {
+      this.conversationState.contextStack.push('email_discussion');
+      this.conversationState.focusMetrics.contextDepth++;
+    }
     // Get relevant context from integrations
     const [socialMetrics, contentPerformance, audienceInsights, ...otherData] = await Promise.all([
-      // Get social media insights
       this.socialService?.getMetrics().catch(() => null),
-      // Get content performance
       this.rag?.search(query, { type: 'insight', category: 'performance' }, 3).catch(() => []),
-      // Get audience insights
       this.rag?.search(query, { type: 'insight', category: 'audience' }, 2).catch(() => []),
-      // Get partnership insights if available
       ...(this.gmailService && this.userId ? [
         this.gmailService?.getPartnershipEmails({ maxResults: 5 }).catch(() => [])
       ] : [])
@@ -364,14 +541,27 @@ export class PlatformAgent {
 
     const partnershipEmails = otherData[0] || [];
 
-    const conversationCues = this.analyzeConversationCues(query);
+    // First, let ChatAgent process the query for enhanced conversation handling
+    const platformStatus = await this.socialService.getPlatformStatus();
+    const chatAgentResult = this.chatAgent ? await this.chatAgent.process(query, {
+      userId: this.userId,
+      previousMessages: context?.previousMessages,
+      platformStatus
+    }) : null;
+
+    // Use ChatAgent's conversation analysis
+    const conversationCues = chatAgentResult?.conversationState || this.analyzeConversationCues(query);
     const enhancedQuery = this.enhanceQuery(query, conversationCues, {
       socialMetrics,
       contentPerformance: contentPerformance || [],
       audienceInsights: audienceInsights || []
     });
 
+    // Update conversation state
+    this.updateConversationState(query, conversationCues, null);
+
     const enrichedContext = {
+      ...context,
       conversationCues,
       previousMessages: context?.previousMessages || [],
       insights: {
@@ -380,12 +570,37 @@ export class PlatformAgent {
         audience: audienceInsights || [],
         partnerships: partnershipEmails
       } as InsightsContext,
-      availableFeatures: Array.from(this.availableFeatures)
+      availableFeatures: Array.from(this.availableFeatures),
+      conversationState: chatAgentResult?.conversationState || this.conversationState,
+      emailContext
     };
 
-    return await this.executor!.call({ 
+    const result = await this.executor!.call({ 
       input: enhancedQuery,
       context: enrichedContext
     });
+
+    // Update email context if search was performed
+    if (result.output && result.intermediateSteps?.some((step: AgentStep) => step.tool === 'email_search')) {
+      const emailResults = result.intermediateSteps.find((step: AgentStep) => 
+        step.tool === 'email_search')?.output?.results || [];
+      const emailIds = this.extractEmailReferences(result.output);
+      emailIds.forEach(id => this.emailContextManager.markEmailReferenced(id));
+    }
+
+    // Combine results from both agents
+    return {
+      ...result,
+      conversationState: chatAgentResult?.conversationState || this.conversationState,
+      suggestions: chatAgentResult?.suggestions || [],
+      persona: chatAgentResult?.persona
+    };
+  }
+
+  // Add new helper methods at the end
+  private extractEmailReferences(content: string): string[] {
+    const emailIdPattern = /email_id:([a-zA-Z0-9]+)/g;
+    return Array.from(content.matchAll(emailIdPattern))
+      .map(match => match[1]);
   }
 } 
