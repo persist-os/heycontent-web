@@ -14,6 +14,7 @@ import { prisma } from "@/lib/prisma";
 import { EmailSearchTool } from "./tools/email-search";
 import { EmailMessage } from "@/types/social-platforms";
 import { ChatAgent } from './chat-agent';
+import { EmailContextManager } from "./email-context-manager";
 
 interface EmailContext {
   recentEmails: EmailMessage[];
@@ -199,6 +200,7 @@ export class PlatformAgent {
     timestamp: 0
   };
   private readonly EMAIL_CONTEXT_TTL = 5 * 60 * 1000; // 5 minutes
+  private emailContextManager: EmailContextManager;
 
   constructor() {
     this.model = new ChatOpenAI({
@@ -208,6 +210,8 @@ export class PlatformAgent {
     });
     this.rag = new RAGSystem();
     this.socialService = new SocialMediaService();
+    this.emailContextManager = new EmailContextManager();
+
   }
 
   getExecutor() {
@@ -297,7 +301,7 @@ export class PlatformAgent {
 
     // Initialize tools based on available features
     const tools: BaseTool[] = [
-      ...(this.availableFeatures.has('email') && this.userId ? [new EmailSearchTool(this.userId)] : []),
+      ...(this.availableFeatures.has('email') && this.userId ? [new EmailSearchTool(this.userId, this.emailContextManager)] : []),
       new SocialMediaTool(this.socialService, this.rag),
       ...(this.availableFeatures.has('content') ? [new ContentAnalysisTool()] : []),
       ...(this.availableFeatures.has('partnerships') && this.gmailService ? [new PartnershipTool(this.rag)] : []),
@@ -511,6 +515,20 @@ export class PlatformAgent {
       throw new Error("User ID is required for processing messages");
     }
 
+    // Build email context from previous messages
+    const emailContext = context?.previousMessages ? {
+      referencedEmails: this.emailContextManager.getRelevantEmails(query),
+      previousSearches: this.emailContextManager.getPreviousSearches()
+    } : {
+      referencedEmails: [],
+      previousSearches: []
+    };
+
+     // Update conversation state with email context
+     if (emailContext.referencedEmails.length > 0) {
+      this.conversationState.contextStack.push('email_discussion');
+      this.conversationState.focusMetrics.contextDepth++;
+    }
     // Get relevant context from integrations
     const [socialMetrics, contentPerformance, audienceInsights, ...otherData] = await Promise.all([
       this.socialService?.getMetrics().catch(() => null),
@@ -543,6 +561,7 @@ export class PlatformAgent {
     this.updateConversationState(query, conversationCues, null);
 
     const enrichedContext = {
+      ...context,
       conversationCues,
       previousMessages: context?.previousMessages || [],
       insights: {
@@ -553,7 +572,7 @@ export class PlatformAgent {
       } as InsightsContext,
       availableFeatures: Array.from(this.availableFeatures),
       conversationState: chatAgentResult?.conversationState || this.conversationState,
-      emailContext: chatAgentResult?.context?.emailContext || this.emailContext
+      emailContext
     };
 
     const result = await this.executor!.call({ 
@@ -563,8 +582,10 @@ export class PlatformAgent {
 
     // Update email context if search was performed
     if (result.output && result.intermediateSteps?.some((step: AgentStep) => step.tool === 'email_search')) {
-      const emailResults = result.intermediateSteps.find((step: AgentStep) => step.tool === 'email_search')?.output?.results || [];
-      await this.updateEmailContext(emailResults);
+      const emailResults = result.intermediateSteps.find((step: AgentStep) => 
+        step.tool === 'email_search')?.output?.results || [];
+      const emailIds = this.extractEmailReferences(result.output);
+      emailIds.forEach(id => this.emailContextManager.markEmailReferenced(id));
     }
 
     // Combine results from both agents
@@ -574,5 +595,12 @@ export class PlatformAgent {
       suggestions: chatAgentResult?.suggestions || [],
       persona: chatAgentResult?.persona
     };
+  }
+
+  // Add new helper methods at the end
+  private extractEmailReferences(content: string): string[] {
+    const emailIdPattern = /email_id:([a-zA-Z0-9]+)/g;
+    return Array.from(content.matchAll(emailIdPattern))
+      .map(match => match[1]);
   }
 } 
