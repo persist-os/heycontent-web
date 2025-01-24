@@ -88,12 +88,12 @@ export async function GET(req: Request) {
         }
 
         try {
-          const youtubeService = new YouTubeService(googleAccount.id);
+          const youtubeService = new YouTubeService(session.user.id);
           const channelId = youtubeAccount.metadata.channelId;
           
           console.log('Attempting to fetch YouTube data:', {
             channelId,
-            accountId: googleAccount.id,
+            userId: session.user.id,
             hasAccessToken: !!googleAccount.access_token,
             tokenExpiry: googleAccount.expires_at ? new Date(googleAccount.expires_at * 1000) : 'No expiry',
             metadata: youtubeAccount.metadata

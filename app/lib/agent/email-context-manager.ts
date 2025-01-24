@@ -1,5 +1,12 @@
 import { EmailMessage } from "@/types/social-platforms";
 
+interface EmailContext {
+  recentEmails: EmailMessage[];
+  searchResults: EmailMessage[];
+  timestamp: number;
+  searchQuery?: string;
+}
+
 interface EmailSearchContext {
   query: string;
   results: EmailMessage[];
@@ -8,9 +15,14 @@ interface EmailSearchContext {
 }
 
 export class EmailContextManager {
+  private userId: string;
   private searches: Map<string, EmailSearchContext> = new Map();
   private recentlyReferenced: EmailMessage[] = [];
   private readonly TTL = 5 * 60 * 1000; // 5 minutes
+
+  constructor(userId: string) {
+    this.userId = userId;
+  }
 
   addSearchResults(query: string, results: EmailMessage[]) {
     this.searches.set(query, {

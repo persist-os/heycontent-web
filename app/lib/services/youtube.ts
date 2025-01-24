@@ -46,17 +46,17 @@ interface VideoInput {
 
 export class YouTubeService {
   private youtube: youtube_v3.Youtube;
-  private accountId: string;
+  private userId: string;
 
   constructor(userId: string) {
-    this.accountId = userId;
+    this.userId = userId;
     this.youtube = google.youtube('v3');
   }
 
   private async getGoogleAccountId(): Promise<string> {
     const account = await prisma.account.findFirst({
       where: {
-        userId: this.accountId,
+        userId: this.userId,
         provider: 'google'
       }
     });
@@ -70,7 +70,7 @@ export class YouTubeService {
 
   private async getAuthorizedClient() {
     try {
-      const accessToken = await validateToken(this.accountId, 'youtube');
+      const accessToken = await validateToken(this.userId, 'youtube');
       
       if (!accessToken) {
         throw new Error('Failed to get valid YouTube access token');
@@ -365,9 +365,18 @@ export class YouTubeService {
 
       const lines = analysis.split('\n').filter(line => line.trim());
       try {
-        const sentiment = lines[0]?.toLowerCase();
-        if (sentiment !== 'positive' && sentiment !== 'negative' && sentiment !== 'neutral') {
-          throw new Error('Invalid sentiment value');
+        const sentiment = lines[0]?.toLowerCase().trim();
+        const validSentiments = ['positive', 'negative', 'neutral'];
+        
+        if (!validSentiments.includes(sentiment)) {
+          console.warn('Invalid sentiment value:', sentiment, 'defaulting to neutral');
+          return {
+            sentiment: 'neutral',
+            topics: JSON.parse(lines[1] || '[]'),
+            isQuestion: lines[2]?.toLowerCase().includes('true') ?? false,
+            isEngaging: lines[3]?.toLowerCase().includes('true') ?? false,
+            suggestedAction: lines[4]?.replace(/^"|"$/g, '')
+          };
         }
 
         return {
@@ -487,7 +496,7 @@ export class YouTubeService {
       const channelResponse = await this.youtube.channels.list({
         auth,
         part: ['statistics'],
-        id: [channelId]
+        mine: true
       });
       
       const videoCount = parseInt(channelResponse.data.items?.[0]?.statistics?.videoCount || '0');
@@ -714,7 +723,7 @@ export class YouTubeService {
     }
   }
 
-  async getLatestVideoAnalysis(channelId: string): Promise<{
+  async getLatestVideoAnalysis(): Promise<{
     video: {
       id: string;
       title: string;
@@ -743,11 +752,24 @@ export class YouTubeService {
     contentAnalysis: VideoAnalysis;
   }> {
     try {
+      const channelId = await this.getChannelId();
+      
       // Get the latest video
-      const videos = await this.getRecentVideoIds(channelId);
-      if (!videos.length) throw new Error('No videos found');
+      const auth = await this.getAuthorizedClient();
+      const response = await this.youtube.search.list({
+        auth,
+        part: ['id'],
+        channelId,
+        order: 'date',
+        type: ['video'],
+        maxResults: 1
+      });
 
-      const videoId = videos[0];
+      if (!response.data.items?.length) throw new Error('No videos found');
+
+      const videoId = response.data.items[0].id?.videoId;
+      if (!videoId) throw new Error('Video ID not found');
+
       const metrics = await this.getVideoMetrics(videoId);
       const comments = await this.getVideoComments(videoId);
       const contentAnalysis = await this.analyzeVideoContent(videoId);
@@ -1218,5 +1240,170 @@ export class YouTubeService {
         shareCount: statistics.shareCount || '0'
       }
     };
+  }
+
+  async searchVideosByTitle(query: string, options: {
+    includeMetrics?: boolean;
+    includeAnalysis?: boolean;
+    startDate?: Date;
+    endDate?: Date;
+    maxResults?: number;
+  } = {}) {
+    try {
+      const auth = await this.getAuthorizedClient();
+      const { includeMetrics = true, includeAnalysis = true, maxResults = 10 } = options;
+
+      // Search for videos
+      const searchResponse = await this.youtube.search.list({
+        auth,
+        part: ['snippet'],
+        type: ['video'],
+        q: query,
+        maxResults,
+        order: 'relevance',
+        ...(options.startDate && { publishedAfter: options.startDate.toISOString() }),
+        ...(options.endDate && { publishedBefore: options.endDate.toISOString() })
+      });
+
+      if (!searchResponse.data.items?.length) {
+        return [];
+      }
+
+      // Get video IDs
+      const videoIds = searchResponse.data.items.map(item => item.id?.videoId).filter(Boolean) as string[];
+
+      // Get detailed video information
+      const videosResponse = await this.youtube.videos.list({
+        auth,
+        part: ['snippet', 'statistics', 'contentDetails'],
+        id: videoIds
+      });
+
+      const videos = await Promise.all(
+        (videosResponse.data.items || []).map(async (video) => {
+          const result: any = {
+            id: video.id,
+            title: video.snippet?.title,
+            description: video.snippet?.description,
+            publishedAt: video.snippet?.publishedAt,
+            thumbnail: video.snippet?.thumbnails?.high?.url,
+            metrics: includeMetrics ? {
+              views: parseInt(video.statistics?.viewCount || '0'),
+              likes: parseInt(video.statistics?.likeCount || '0'),
+              comments: parseInt(video.statistics?.commentCount || '0')
+            } : undefined
+          };
+
+          if (includeAnalysis) {
+            try {
+              const analysis = await this.analyzeVideoContent(video.id!);
+              result.analysis = analysis;
+            } catch (error) {
+              console.error(`Error analyzing video ${video.id}:`, error);
+            }
+          }
+
+          return result;
+        })
+      );
+
+      return videos;
+    } catch (error) {
+      console.error('Error searching videos:', error);
+      throw error;
+    }
+  }
+
+  async getMonthlyContentAnalysis(month: number, year: number) {
+    try {
+      const auth = await this.getAuthorizedClient();
+      const channelId = await this.getChannelId();
+      
+      // Calculate start and end dates for the month
+      const startDate = new Date(year, month - 1, 1);
+      const endDate = new Date(year, month, 0);
+      
+      // Search for videos in the date range
+      const response = await this.youtube.search.list({
+        auth,
+        part: ['snippet', 'id'],
+        channelId,
+        type: ['video'],
+        maxResults: 50,
+        publishedAfter: startDate.toISOString(),
+        publishedBefore: endDate.toISOString(),
+        order: 'date'
+      });
+
+      if (!response.data.items?.length) {
+        return {
+          videos: [],
+          summary: {
+            totalVideos: 0,
+            totalViews: 0,
+            avgViews: 0,
+            avgEngagement: 0,
+            topVideo: null,
+            trends: {
+              views: 'stable',
+              engagement: 'stable'
+            }
+          }
+        };
+      }
+
+      // Get detailed video information
+      const videoIds = response.data.items.map(item => item.id?.videoId).filter(Boolean);
+      const videoDetails = await this.youtube.videos.list({
+        auth,
+        part: ['snippet', 'statistics'],
+        id: videoIds as string[]
+      });
+
+      const videos = await Promise.all(
+        videoDetails.data.items?.map(async (video) => {
+          const performance = await this.getVideoPerformance(video.id!);
+          const comments = await this.getVideoComments(video.id!);
+          
+          return {
+            id: video.id!,
+            title: video.snippet?.title || '',
+            publishedAt: video.snippet?.publishedAt || '',
+            metrics: performance.metrics,
+            analysis: performance.analysis,
+            comments: comments.slice(0, 5)
+          };
+        }) || []
+      );
+
+      const totalViews = videos.reduce((sum, v) => sum + v.metrics.views, 0);
+      const totalEngagement = videos.reduce((sum, v) => sum + v.metrics.engagement, 0);
+
+      const topVideo = videos.reduce((top, current) => 
+        current.metrics.views > (top?.metrics.views || 0) ? current : top
+      , videos[0]);
+
+      return {
+        videos,
+        summary: {
+          totalVideos: videos.length,
+          totalViews,
+          avgViews: Math.round(totalViews / videos.length),
+          avgEngagement: Math.round(totalEngagement / videos.length),
+          topVideo: topVideo ? {
+            title: topVideo.title,
+            views: topVideo.metrics.views,
+            engagement: topVideo.metrics.engagement
+          } : null,
+          trends: {
+            views: this.calculateTrend(videos.map(v => v.metrics.views)),
+            engagement: this.calculateTrend(videos.map(v => v.metrics.engagement))
+          }
+        }
+      };
+    } catch (error) {
+      console.error('Error analyzing monthly content:', error);
+      throw error;
+    }
   }
 } 

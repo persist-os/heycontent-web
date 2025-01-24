@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { year, month } = body;
+    const { month, year } = body;
 
     if (!year || !month) {
       return NextResponse.json(
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     }
 
     const youtubeService = new YouTubeService(session.user.id);
-    const analysis = await youtubeService.getMonthlyContentAnalysis(year, month);
+    const analysis = await youtubeService.getMonthlyContentAnalysis(month, year);
 
     if (!analysis.videos.length) {
       return NextResponse.json({

@@ -39,12 +39,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'YouTube account not connected' }, { status: 400 });
     }
 
-    if (!isYouTubeMetadata(youtubeAccount.metadata)) {
-      return NextResponse.json({ error: 'Invalid YouTube account metadata' }, { status: 400 });
-    }
-
     const youtubeService = new YouTubeService(session.user.id);
-    const analysis = await youtubeService.getLatestVideoAnalysis(youtubeAccount.metadata.channelId);
+    const analysis = await youtubeService.getLatestVideoAnalysis();
 
     return NextResponse.json(analysis);
   } catch (error: any) {

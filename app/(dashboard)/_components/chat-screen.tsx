@@ -68,11 +68,14 @@ const ChatScreen = () => {
   const [initializing, setInitializing] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [referencedMessage, setReferencedMessage] = useState<Message | null>(null)
+  const [analyzedVideos, setAnalyzedVideos] = useState<Set<string>>(new Set());
+  const [currentVideoContext, setCurrentVideoContext] = useState<string | null>(null);
+  const [lastAnalysisType, setLastAnalysisType] = useState<'video' | 'email' | null>(null);
 
   // Add this ref map to store references to message elements
   const messageRefs = useRef<Map<number, HTMLDivElement>>(new Map())
 
-  // All useCallbacks
+  // Utility functions
   const scrollToBottom = useCallback(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTo({
@@ -81,6 +84,99 @@ const ChatScreen = () => {
       })
     }
   }, [])
+
+  // Analysis request detection
+  const isAnalysisRequest = useCallback((content: string) => {
+    const youtubeKeywords = [
+      'video', 'channel', 'subscriber',
+      'view', 'comment', 'like',
+      'watch time', 'retention', 'audience',
+      'youtube', 'content', 'upload'
+    ];
+    
+    const emailKeywords = [
+      'email', 'mail', 'gmail',
+      'message', 'inbox', 'sent'
+    ];
+    
+    const analysisKeywords = [
+      'analyze', 'performance', 'engagement',
+      'growth', 'trend', 'metric',
+      'analytics', 'revenue', 'monetization',
+      'stats', 'statistics', 'data'
+    ];
+    
+    const questionPatterns = [
+      'how many', 'what is', 'what are',
+      'tell me about', 'show me', 'can you check',
+      'how is', 'how are', 'why is',
+      'when', 'which', 'this video'
+    ];
+    
+    content = content.toLowerCase();
+
+    // Check if this is an email-related query
+    const hasEmailContext = emailKeywords.some(keyword => 
+      content.includes(keyword)
+    );
+
+    // If it's an email query, clear video context
+    if (hasEmailContext) {
+      setCurrentVideoContext(null);
+      setLastAnalysisType('email');
+      return false; // Let it be handled by the chat endpoint
+    }
+    
+    // Check for quoted titles or content between backticks
+    const titleMatch = content.match(/"([^"]+)"/) || content.match(/`([^`]+)`/);
+    if (titleMatch) {
+      const newVideoTitle = titleMatch[1];
+      // Only set as current if it's different from the last one
+      if (newVideoTitle !== currentVideoContext) {
+        setCurrentVideoContext(newVideoTitle);
+        setAnalyzedVideos(prev => new Set([...prev, newVideoTitle]));
+      }
+      setLastAnalysisType('video');
+      return true;
+    }
+    
+    // If we have current video context, check if the question is still about videos
+    if (currentVideoContext && lastAnalysisType === 'video') {
+      const isStillAboutVideos = youtubeKeywords.some(keyword => 
+        content.includes(keyword)
+      ) || questionPatterns.some(pattern => 
+        content.includes(pattern)
+      );
+      
+      // If the question seems unrelated to videos, clear the context
+      if (!isStillAboutVideos) {
+        setCurrentVideoContext(null);
+        setLastAnalysisType(null);
+        return false;
+      }
+      return true;
+    }
+    
+    // Must have YouTube context
+    const hasYoutubeContext = youtubeKeywords.some(keyword => 
+      content.includes(keyword)
+    );
+    
+    // Must also have either analysis intent or be a question
+    const hasAnalysisIntent = analysisKeywords.some(keyword =>
+      content.includes(keyword)
+    );
+    
+    const hasQuestionPattern = questionPatterns.some(pattern => 
+      content.includes(pattern)
+    );
+    
+    const isYoutubeAnalysis = hasYoutubeContext && (hasAnalysisIntent || hasQuestionPattern);
+    if (isYoutubeAnalysis) {
+      setLastAnalysisType('video');
+    }
+    return isYoutubeAnalysis;
+  }, [currentVideoContext, lastAnalysisType, setCurrentVideoContext, setLastAnalysisType, setAnalyzedVideos]);
 
   const handleSendMessage = useCallback(async (content: string, insightId?: number) => {
     if (!content.trim()) return
@@ -104,38 +200,50 @@ const ChatScreen = () => {
       setMessages(prev => [...prev, newMessage])
       
       // Add typing indicator
-      const typingIndicator: Message = {
-        id: Date.now() + 1,
+      setMessages(prev => [...prev, {
+        id: Date.now(),
         content: '...',
         role: 'assistant',
         timestamp: new Date().toISOString(),
         status: 'typing'
+      }])
+
+      let response
+      if (isAnalysisRequest(content)) {
+        response = await fetch('/api/ai/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: content,
+            type: 'youtube',
+            context: {
+              currentVideo: currentVideoContext,
+              analyzedVideos: Array.from(analyzedVideos),
+              lastAnalysisType
+            }
+          })
+        });
+      } else {
+        response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: content,
+            insightId,
+            referencedMessageId: referencedMessage?.id,
+            previousMessages: messages.map(msg => ({
+              id: msg.id,
+              content: msg.content,
+              role: msg.role,
+              timestamp: msg.timestamp,
+              referencedMessage: msg.referencedMessage ? {
+                id: msg.referencedMessage.id,
+                content: msg.referencedMessage.content
+              } : undefined
+            }))
+          })
+        })
       }
-      setMessages(prev => [...prev, typingIndicator])
-      
-      // Add insight context to the request
-      const requestBody = {
-        message: content,
-        referencedMessageId: referencedMessage?.id,
-        ...(insightId && { insightId }),
-        context: content.includes('Regarding:') ? content : undefined,
-        previousMessages: messages.map(msg => ({
-          id: msg.id,
-          content: msg.content,
-          role: msg.role,
-          timestamp: msg.timestamp,
-          referencedMessage: msg.referencedMessage ? {
-            id: msg.referencedMessage.id,
-            content: msg.referencedMessage.content
-          } : undefined
-        }))
-      }
-      
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      })
 
       if (!response.ok) throw new Error('Failed to send message')
       const data = await response.json()
@@ -144,15 +252,15 @@ const ChatScreen = () => {
       setMessages(prev => {
         const withoutTyping = prev.filter(msg => msg.status !== 'typing')
         return [...withoutTyping, {
-          id: data.id,
-          content: data.content,
+          id: data.id || Date.now(),
+          content: isAnalysisRequest(content) ? data.result.output : data.content,
           role: 'assistant',
-          timestamp: data.timestamp,
+          timestamp: new Date().toISOString(),
           relatedInsights: data.relatedInsights || [],
           interactiveResponse: {
-            options: data.options,
-            followUp: data.followUp,
-            contextualSuggestions: data.contextualSuggestions
+            options: isAnalysisRequest(content) ? data.result.interactiveResponse?.options : data.options,
+            followUp: isAnalysisRequest(content) ? data.result.interactiveResponse?.followUp : data.followUp,
+            contextualSuggestions: isAnalysisRequest(content) ? data.result.interactiveResponse?.contextualSuggestions : data.contextualSuggestions
           }
         }]
       })
@@ -168,7 +276,7 @@ const ChatScreen = () => {
     } finally {
       setIsLoading(false)
     }
-  }, [scrollToBottom, referencedMessage, messages])
+  }, [messages, referencedMessage, scrollToBottom, analyzedVideos, currentVideoContext, lastAnalysisType])
 
   const handleMessageReference = (message: Message) => {
     setReferencedMessage(message)

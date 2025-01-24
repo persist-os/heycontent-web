@@ -72,7 +72,6 @@ interface CachedInsights {
 }
 
 const CACHE_VERSION = 1;
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 const QUOTA_COOLDOWN = 30 * 60 * 1000; // 30 minutes
 const REQUEST_LOCK_TIMEOUT = 10000; // 10 seconds
 
@@ -116,13 +115,8 @@ function getInsightsCache(): CachedInsights | null {
 
     const parsed = JSON.parse(cachedData);
     
-    // Validate cache version and TTL
+    // Only validate cache version, not TTL
     if (!parsed.metadata?.version || parsed.metadata.version !== CACHE_VERSION) {
-      return null;
-    }
-
-    const cacheAge = new Date().getTime() - new Date(parsed.metadata.timestamp).getTime();
-    if (cacheAge > CACHE_TTL) {
       return null;
     }
 
@@ -380,7 +374,7 @@ export function AIInsightsScreen() {
     }
   };
 
-  // Update useEffect to only load cache
+  // Update useEffect to only load cache and not auto-refresh
   useEffect(() => {
     const loadCache = () => {
       const cachedData = getInsightsCache();
@@ -388,6 +382,9 @@ export function AIInsightsScreen() {
         console.log('Found cached insights:', cachedData);
         setInsights(cachedData.insights);
         setLastUpdated(new Date(cachedData.metadata.timestamp));
+      } else {
+        // Only fetch if there's no cache at all
+        backgroundFetch();
       }
 
       // Check if refresh is available

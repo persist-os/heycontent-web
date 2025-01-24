@@ -9,6 +9,8 @@ import { selectModel } from "../openai";
 import { EmailSearchTool } from "./tools/email-search";
 import { SocialPlatform, EmailMessage, PartnershipEmail } from "../../types/social-platforms";
 import { InteractiveResponseHandler } from '../chat/interactive-response';
+import { EmailContextManager } from './email-context-manager';
+import { YouTubeService } from '@/lib/services/youtube';
 
 interface PlatformStatus {
   platform: SocialPlatform;
@@ -47,6 +49,20 @@ interface ChatAgentContext {
   emailSearchResults?: (EmailMessage | PartnershipEmail)[];
   platformStatus?: PlatformStatus[];
   availableFeatures?: any;
+  type?: string;
+  youtubeData?: {
+    latestVideo?: any;
+    monthlyAnalysis?: any;
+    recentVideos?: any[];
+    searchResults?: any[];
+    videoHistory?: {
+      [videoId: string]: {
+        title: string;
+        metrics: any;
+        analysis: any;
+      }
+    };
+  };
 }
 
 interface EmotionalState {
@@ -166,6 +182,7 @@ export class ChatAgent extends BaseAgent {
     timestamp: 0
   };
   private readonly EMAIL_CONTEXT_TTL = 5 * 60 * 1000; // 5 minutes
+  private emailContextManager: EmailContextManager;
 
   constructor(rag: RAGSystem, userId: string, platformStatus: PlatformStatus[]) {
     super(rag, 'chat');
@@ -213,6 +230,7 @@ export class ChatAgent extends BaseAgent {
         engagementSignals: []
       }
     };
+    this.emailContextManager = new EmailContextManager(userId);
   }
 
   protected systemPrompt = `You are AVA IRIS, an advanced AI assistant specializing in content strategy, business growth, and creator success. You combine user-specific context with broad market intelligence to provide actionable insights.
@@ -243,6 +261,41 @@ CAPABILITIES:
 - Content Strategy: Analyze performance metrics and suggest improvements
 - Partnership Opportunities: Identify and evaluate potential collaborations
 - Smart Notes: Organize and connect insights across conversations
+- Video Analysis: Access and analyze ALL available videos, including:
+  * Latest video metrics and performance
+  * Historical video data from videoHistory
+  * Monthly analysis and trends
+  * Search results across all videos
+  * Complete video metrics and engagement data
+  * Comparative analysis between videos
+  * Seasonal and temporal patterns
+  * Content evolution and strategy insights
+- Search across videos by title, content, and performance metrics
+- Compare videos and identify patterns in engagement and content strategy
+
+VIDEO DATA HANDLING:
+1. ALWAYS check ALL available video data sources:
+   - Latest video (latestVideo)
+   - Current month analysis (currentMonthAnalysis)
+   - Historical analysis (historicalAnalysis)
+   - Search results (searchResults)
+   - Complete video history (videoHistory)
+   
+2. When discussing videos:
+   - Reference ALL relevant videos, not just the latest
+   - Include specific metrics for each video mentioned
+   - Compare performance across videos
+   - Identify trends and patterns
+   - Consider seasonal factors
+   - Analyze content strategy evolution
+   - Use historical data to support recommendations
+
+3. For video queries:
+   - Check videoHistory first for comprehensive data
+   - Include metrics from all relevant time periods
+   - Provide context from multiple videos
+   - Compare similar videos when relevant
+   - Track performance trends over time
 
 CONVERSATION FLOW:
 1. Detect emotional state and intent
@@ -406,7 +459,7 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
         throw new Error('Gmail authorization required');
       }
 
-      const emailSearchTool = new EmailSearchTool(this.userId);
+      const emailSearchTool = new EmailSearchTool(this.userId, this.emailContextManager);
       
       // Format the query properly for Gmail API
       let formattedQuery = intent.query;
@@ -468,6 +521,102 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
     return commonWords.includes(word.toLowerCase());
   }
 
+  private async handleVideoQuery(input: string, context: ChatAgentContext): Promise<any> {
+    try {
+      const youtubeService = new YouTubeService(this.userId);
+      
+      // Extract time-related keywords
+      const timeMatch = input.match(/last (week|month|year)|this (week|month|year)|(\d+) (days?|weeks?|months?|years?) ago/i);
+      const startDate = timeMatch ? this.getDateFromTimeKeyword(timeMatch[0]) : undefined;
+      
+      // Search for videos based on the query
+      const searchResults = await youtubeService.searchVideosByTitle(input, {
+        includeMetrics: true,
+        includeAnalysis: true,
+        startDate,
+        maxResults: 5
+      });
+
+      // Update context with search results
+      if (!context.youtubeData) {
+        context.youtubeData = {};
+      }
+      context.youtubeData.searchResults = searchResults;
+
+      // Update video history
+      if (!context.youtubeData.videoHistory) {
+        context.youtubeData.videoHistory = {};
+      }
+      searchResults.forEach((video: {
+        id: string;
+        title: string;
+        metrics: any;
+        analysis: any;
+      }) => {
+        if (video.id && !context.youtubeData!.videoHistory![video.id]) {
+          context.youtubeData!.videoHistory![video.id] = {
+            title: video.title,
+            metrics: video.metrics,
+            analysis: video.analysis
+          };
+        }
+      });
+
+      return searchResults;
+    } catch (error) {
+      console.error('Error handling video query:', error);
+      throw error;
+    }
+  }
+
+  private getDateFromTimeKeyword(keyword: string): Date {
+    const now = new Date();
+    const match = keyword.match(/(last|this) (week|month|year)|(\d+) (days?|weeks?|months?|years?) ago/i);
+    
+    if (!match) return now;
+    
+    if (match[1]) { // "last" or "this"
+      const period = match[2];
+      const isLast = match[1].toLowerCase() === 'last';
+      
+      switch (period) {
+        case 'week':
+          now.setDate(now.getDate() - (isLast ? 7 : 0));
+          break;
+        case 'month':
+          now.setMonth(now.getMonth() - (isLast ? 1 : 0));
+          break;
+        case 'year':
+          now.setFullYear(now.getFullYear() - (isLast ? 1 : 0));
+          break;
+      }
+    } else { // "X days/weeks/months/years ago"
+      const amount = parseInt(match[3]);
+      const unit = match[4].toLowerCase();
+      
+      switch (unit) {
+        case 'day':
+        case 'days':
+          now.setDate(now.getDate() - amount);
+          break;
+        case 'week':
+        case 'weeks':
+          now.setDate(now.getDate() - (amount * 7));
+          break;
+        case 'month':
+        case 'months':
+          now.setMonth(now.getMonth() - amount);
+          break;
+        case 'year':
+        case 'years':
+          now.setFullYear(now.getFullYear() - amount);
+          break;
+      }
+    }
+    
+    return now;
+  }
+
   async process(input: string, context: ChatAgentContext): Promise<{
     output: string;
     context?: any;
@@ -478,16 +627,27 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
     interactiveResponse?: any;
   }> {
     try {
-      // First analyze the message intent
-      const messageIntent = await this.analyzeMessageIntent(input);
+      // Update context with the current input
+      this.context = { ...this.context, ...context };
       
+      // Analyze message intent
+      const intent = await this.analyzeMessageIntent(input);
+      
+      // Handle video-related queries
+      if (input.toLowerCase().includes('video') || 
+          input.toLowerCase().includes('content') ||
+          input.toLowerCase().includes('upload') ||
+          this.conversationState.currentTopic.includes('video')) {
+        await this.handleVideoQuery(input, this.context);
+      }
+
       // For greetings, respond immediately without any additional processing
-      if (messageIntent.type === 'greeting') {
+      if (intent.type === 'greeting') {
         const response = {
           output: "Hello! How can I help you today?",
           conversationState: {
             ...this.conversationState,
-            userIntent: messageIntent,
+            userIntent: intent,
             lastResponseType: 'answer'
           }
         };
@@ -505,14 +665,14 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
       }
 
       // For email queries, handle them directly
-      if (messageIntent.type === 'email_search') {
+      if (intent.type === 'email_search') {
         const searchTerms = this.extractEmailSearchTerms(input);
         if (!searchTerms) {
           return {
             output: "I couldn't understand your email search query. Could you please rephrase it?",
             conversationState: {
               ...this.conversationState,
-              userIntent: messageIntent,
+              userIntent: intent,
               lastResponseType: 'clarification'
             }
           };
@@ -540,7 +700,7 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
             },
             conversationState: {
               ...this.conversationState,
-              userIntent: messageIntent,
+              userIntent: intent,
               lastResponseType: 'answer'
             }
           };
@@ -584,7 +744,7 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
           },
           conversationState: {
             ...this.conversationState,
-            userIntent: messageIntent,
+            userIntent: intent,
             lastResponseType: 'answer',
             currentTopic: 'email_search',
             topicDepth: this.conversationState.topicDepth + 1
@@ -615,8 +775,24 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
       
       // Build messages array with emotional and intent awareness
       const messages: BaseMessage[] = [];
+
+      // Add YouTube data to system prompt if available
+      let systemPromptWithData = this.systemPrompt;
+      if (context.type === 'youtube' && context.youtubeData) {
+        const { latestVideo, monthlyAnalysis } = context.youtubeData;
+        systemPromptWithData += '\n\nYouTube Data:';
+        
+        if (latestVideo) {
+          systemPromptWithData += `\nLatest Video: ${JSON.stringify(latestVideo, null, 2)}`;
+        }
+        
+        if (monthlyAnalysis) {
+          systemPromptWithData += `\nMonthly Analysis: ${JSON.stringify(monthlyAnalysis, null, 2)}`;
+        }
+      }
+      
       messages.push(new SystemMessage(
-        `${this.systemPrompt}\n\nCurrent User State:\n` +
+        `${systemPromptWithData}\n\nCurrent User State:\n` +
         `Current Persona: ${userPersona?.currentPersona || ''}\n` +
         `Future Vision: ${userPersona?.futureVision || ''}\n` +
         `Emotional State: ${this.conversationState.emotionalState.primary} (${this.conversationState.emotionalState.intensity})\n` +
@@ -632,7 +808,7 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
       const response = await this.model.invoke(messages);
       const suggestions = this.generateFollowUpSuggestions();
 
-      // Generate interactive response
+      // Generate interactive response with YouTube data if available
       const interactiveResponse = InteractiveResponseHandler.generateInteractiveResponse(
         response.content as string,
         {
@@ -640,7 +816,8 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
           userPersona,
           enhancedContext,
           conversationState: this.conversationState,
-          suggestions
+          suggestions,
+          youtubeData: context.youtubeData
         }
       );
 
