@@ -74,20 +74,39 @@ export class EmailSearchTool extends BaseTool {
       parts.push('!in:spam !in:trash');
     }
 
+    // Extract sender name from context if available
+    let senderName = sender;
+    
+    // Check for pronouns and common references that might need context
+    const pronouns = ['her', 'his', 'their', 'them'];
+    const hasPronouns = pronouns.some(pronoun => 
+      safeQuery.toLowerCase().includes(pronoun) || 
+      (sender || '').toLowerCase() === pronoun
+    );
+
+    // If using pronouns, try to extract actual name from query context
+    if (hasPronouns && this.emailContextManager) {
+      const recentEmails = this.emailContextManager.getRelevantEmails(query);
+      if (recentEmails.length > 0) {
+        // Use the sender from most recent relevant email
+        senderName = recentEmails[0].from.split('<')[0].trim();
+      }
+    }
+
     // Check for direct "from:" queries first
     const fromMatch = safeQuery.match(/from:\s*([^\s]+)/i);
     if (fromMatch) {
       // If it's a direct from: query, use it as is
       parts.push(safeQuery);
-    } else if (sender) {
-      // If sender is provided as a parameter, format it properly
-      parts.push(`from:${sender}`);
+    } else if (senderName) {
+      // If we have a sender name (either from parameter or context), format it properly
+      parts.push(`from:${senderName}`);
     } else {
       // Try to extract sender from the query
       const senderMatch = safeQuery.match(/(?:from|by|sent by)\s+([^.,\s]+(?:\s+[^.,\s]+)*)/i);
       if (senderMatch) {
         const extractedSender = senderMatch[1].trim();
-        if (extractedSender) {
+        if (extractedSender && !pronouns.includes(extractedSender.toLowerCase())) {
           parts.push(`from:${extractedSender}`);
         }
       } else if (!this.isCommonEmailTerms(safeQuery)) {
@@ -160,6 +179,31 @@ export class EmailSearchTool extends BaseTool {
         includeThreads = args.includeThreads ?? true;
         labelIds = args.labelIds ?? [];
         skipCache = args.skipCache ?? false;
+      }
+
+      // First check conversation history in EmailContextManager
+      const conversationEmails = this.emailContextManager.getRelevantEmails(query);
+      if (conversationEmails.length > 0) {
+        // Check if any email matches our search criteria
+        const searchDate = query.match(/date:(\d{1,2}\/\d{1,2}\/\d{4})/)?.[1];
+        const matchingEmails = conversationEmails.filter(email => {
+          if (searchDate) {
+            const emailDate = new Date(email.date);
+            const queryDate = new Date(searchDate);
+            return emailDate.toLocaleDateString() === queryDate.toLocaleDateString();
+          }
+          return true;
+        }) as (EmailMessage | PartnershipEmail)[];  // Type assertion since we know these can be either type
+
+        if (matchingEmails.length > 0) {
+          return {
+            success: true,
+            results: matchingEmails,
+            resultCount: matchingEmails.length,
+            fromHistory: true,
+            formattedString: this.formatResultsAsString(matchingEmails)
+          };
+        }
       }
 
       // First check EmailContextManager for relevant cached results
@@ -275,10 +319,11 @@ export class EmailSearchTool extends BaseTool {
     const summary = `Found ${results.length} email(s):\n\n`;
     const formattedResults = results.map((email, index) => {
       const date = new Date(email.date).toLocaleString();
+      const isPartnership = this.isPartnershipEmail(email);
       return `Email ${index + 1}:
 From: ${email.from}
 Subject: ${email.subject}
-Date: ${date}
+Date: ${date}${isPartnership ? '\nType: Partnership' : ''}
 Body: ${email.body ? this.truncateBody(email.body) : 'No content available'}
 ---`;
     }).join('\n\n');
