@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
-import { prisma } from '@/lib/db'
+import prisma from '@/app/lib/prisma'
+import { auth } from '@/app/auth'
 
 // Handle GET requests (webhook verification)
 export async function GET(request: Request) {

@@ -2,7 +2,7 @@ import { RAGSystem, AVADocumentType, AVAMetadata } from "../rag";
 import { OpenAI } from "@langchain/openai";
 import { ChatOpenAI } from "@langchain/openai";
 import { BaseMessage, BaseMessageLike } from "@langchain/core/messages";
-import { Message } from "@/types/conversation";
+import { Message } from "../../types/conversation";
 import { selectModel } from "../openai";
 import { BatchProcessor } from "./batch-processor";
 import { PrismaClient } from "@prisma/client";
@@ -96,16 +96,160 @@ export interface MarketIntelligence {
   };
 }
 
+export interface PlatformMetrics {
+  youtube?: {
+    subscribers?: number;
+    engagement?: number | {
+      likes: number;
+      comments: number;
+      shares: number;
+      total?: number;
+    };
+    topVideos?: Array<{
+      tags?: string[];
+      categories?: string[];
+    }>;
+    demographics?: Demographics;
+    watchTime?: number;
+    retention?: number;
+  };
+  instagram?: {
+    followers?: number;
+    engagement?: number | {
+      likes: number;
+      comments: number;
+      shares: number;
+      saves: number;
+      total?: number;
+    };
+    topPosts?: Array<{
+      tags?: string[];
+      categories?: string[];
+    }>;
+    demographics?: Demographics;
+  };
+  tiktok?: {
+    followers?: number;
+    engagement?: number | {
+      likes: number;
+      comments: number;
+      shares: number;
+      total?: number;
+    };
+    topVideos?: Array<{
+      tags?: string[];
+      categories?: string[];
+    }>;
+    demographics?: Demographics;
+  };
+}
+
+export interface UserPersona {
+  currentPersona: string;
+  futureVision: string;
+  timestamp: string;
+  communicationStyle?: 'direct' | 'exploratory' | 'collaborative';
+  detailLevel?: 'high' | 'medium' | 'low';
+  pacePreference?: 'fast' | 'moderate' | 'thorough';
+}
+
+export interface Insight {
+  type: 'partnership' | 'content' | 'engagement' | 'trend' | 'monetization' | 'crossplatform' | 'community';
+  title: string;
+  description: string;
+  confidence?: number;
+  action?: string;
+  timestamp?: string;
+  source?: string;
+  data?: Record<string, unknown>;
+}
+
+export interface Partnership {
+  platform: string;
+  partnerId: string;
+  status: string;
+  type?: string;
+  performance?: {
+    engagement?: number;
+    reach?: number;
+    revenue?: number;
+    [key: string]: number | undefined;
+  };
+}
+
+export interface AudienceInsight {
+  segment: string;
+  size: number;
+  engagement: number;
+  demographics?: {
+    ageGroups: string[];
+    genders: string[];
+    locations: string[];
+  };
+  interests: string[];
+  platforms: string[];
+  behavior?: {
+    peakTimes?: string[];
+    contentPreferences?: string[];
+    interactionPatterns?: string[];
+  };
+}
+
+export interface ChatInteraction {
+  timestamp: string;
+  topic: string;
+  intent: string;
+  sentiment: string;
+  engagement: 'high' | 'medium' | 'low';
+  context?: string;
+  followUp?: string;
+}
+
+export interface DemographicMetric {
+  name: string;
+  value: number;
+}
+
+export interface Demographics {
+  ageGroups: string[] | DemographicMetric[];
+  genders: string[] | DemographicMetric[];
+  locations: string[] | DemographicMetric[];
+  languages: string[] | DemographicMetric[];
+}
+
+export interface AudienceBehavior {
+  contentPreferences: Array<{
+    type: string;
+    percentage: number;
+    growth: string;
+  }>;
+  behavioralTraits: Array<{
+    trait: string;
+    value: 'Very High' | 'High' | 'Medium' | 'Low' | 'Very Low';
+    percentage: number;
+  }>;
+  peakTimes: Array<{
+    day: string;
+    times: string[];
+    engagement: number;
+  }>;
+  interactionPatterns: Array<{
+    type: string;
+    value: number;
+    trend: string;
+  }>;
+}
+
 export interface AgentContext {
   userId: string;
-  metrics?: any;
-  persona?: any;
+  metrics?: PlatformMetrics;
+  persona?: UserPersona;
   previousMessages?: Message[];
   crossAgentContext?: {
-    insights?: any[];
-    partnerships?: any[];
-    audience?: any[];
-    chat?: any[];
+    insights?: Insight[];
+    partnerships?: Partnership[];
+    audience?: AudienceInsight[];
+    chat?: ChatInteraction[];
   };
   platformIntegrations?: PlatformIntegrationContext;
   crossPlatformAnalytics?: CrossPlatformAnalytics;
@@ -113,23 +257,50 @@ export interface AgentContext {
   connectedPlatforms?: string[];
   niche?: string;
   targetAudience?: {
-    demographics: any;
+    demographics: Demographics;
     interests: string[];
-    behavior: any;
+    behavior: AudienceBehavior;
   };
-  [key: string]: any;
+  additionalData?: {
+    [key: string]: string | number | boolean | object | null;
+  };
+}
+
+export interface SearchFilter {
+  type?: string;
+  platform?: string;
+  timeframe?: string;
+  category?: string;
+  user_id?: string;
+  isLatest?: boolean;
+  timestamp?: string;
+}
+
+export interface SearchResult {
+  content: string;
+  pageContent?: string;
+  metadata?: {
+    type?: string;
+    source?: string;
+    timestamp?: Date;
+    relevance?: number;
+  };
 }
 
 export abstract class BaseAgent {
+  protected userId: string;
   protected rag: RAGSystem;
   protected model: ChatOpenAI;
   protected systemPrompt: string = '';
   protected agentType: 'chat' | 'insights' | 'partnerships' | 'audience';
   protected batchProcessor: BatchProcessor;
+  protected conversationId: string;
 
-  constructor(rag: RAGSystem, agentType: 'chat' | 'insights' | 'partnerships' | 'audience') {
+  constructor(userId: string, rag: RAGSystem, agentType: 'chat' | 'insights' | 'partnerships' | 'audience') {
+    this.userId = userId;
     this.rag = rag;
     this.agentType = agentType;
+    this.conversationId = this.generateConversationId();
     
     // Select model based on agent type
     const modelName = this.getModelForAgentType(agentType);
@@ -157,10 +328,7 @@ export abstract class BaseAgent {
     }
   }
 
-  abstract process(input: string, context: AgentContext): Promise<{
-    output: any;
-    error?: Error;
-  }>;
+  abstract process(input: string): Promise<any>;
 
   protected convertToBaseMessage(message: Message): BaseMessageLike {
     return {
@@ -188,19 +356,21 @@ export abstract class BaseAgent {
 
   protected async getRelevantContext(
     query: string,
-    filter: any,
+    filter: string | SearchFilter,
     limit: number = 5
-  ): Promise<any[]> {
-    return this.rag.search(query, filter, limit);
+  ): Promise<SearchResult[]> {
+    // Extract type from filter and ignore limit as it's handled internally by RAGSystem
+    const type = typeof filter === 'string' ? filter : filter?.type || 'general';
+    return this.rag.search(type, query);
   }
 
   protected async getCrossAgentContext(input: string, context: AgentContext) {
     const results = await Promise.allSettled([
       // Get relevant insights from RAG system
-      this.rag.search(input, { type: 'insight', userId: context.userId }),
+      this.rag.search('insight', input),
       
       // Get broader context for the query
-      this.rag.search(input),
+      this.rag.search('general', input),
       
       // Get market intelligence data
       this.getMarketIntelligence(input),
@@ -516,5 +686,30 @@ export abstract class BaseAgent {
         timestamp: new Date().toISOString()
       }
     );
+  }
+
+  protected async search(
+    query: string,
+    filter: any,
+    limit: number = 5
+  ): Promise<any[]> {
+    // Extract type from filter and ignore limit as it's handled internally by RAGSystem
+    const type = typeof filter === 'string' ? filter : filter?.type || 'general';
+    return this.rag.search(type, query);
+  }
+
+  protected generateConversationId(): string {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 8);
+    return `${this.agentType}_${timestamp}_${random}`;
+  }
+
+  protected getConversationId(): string {
+    return this.conversationId;
+  }
+
+  protected regenerateConversationId(): string {
+    this.conversationId = this.generateConversationId();
+    return this.conversationId;
   }
 } 

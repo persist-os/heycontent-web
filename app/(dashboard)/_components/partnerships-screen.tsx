@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card'
+import { Badge } from "@/src/components/ui/badge"
 import { 
   Mail, MessageSquare, Heart, Star, Clock, AlertCircle,
   CheckCircle, XCircle, DollarSign, ArrowUpRight, Filter,
@@ -12,7 +12,7 @@ import {
   Partnership, 
   PartnershipContact, 
   PartnershipEvent 
-} from '@/types/index'
+} from '@/app/types/index'
 
 const PartnershipsScreen = () => {
   const [selectedPartnership, setSelectedPartnership] = useState<Partnership | null>(null)
@@ -216,11 +216,13 @@ const PartnershipsScreen = () => {
     return [...partnerships].sort((a, b) => {
       switch (sortBy) {
         case 'date':
-          return new Date(b.lastContact).getTime() - new Date(a.lastContact).getTime()
+          if (!a.lastContact) return 1;
+          if (!b.lastContact) return -1;
+          return new Date(b.lastContact).getTime() - new Date(a.lastContact).getTime();
         case 'value':
-          return parseInt(b.value.replace(/\D/g, '')) - parseInt(a.value.replace(/\D/g, ''))
+          return parseInt(b.value?.replace(/\D/g, '') || '0') - parseInt(a.value?.replace(/\D/g, '') || '0')
         case 'progress':
-          return b.progress - a.progress
+          return (b.progress || 0) - (a.progress || 0)
         default:
           return 0
       }
@@ -367,22 +369,23 @@ const PartnershipsScreen = () => {
                               </Badge>
                             </div>
                             <p className="text-sm text-gray-600 mt-1">
-                              Due: {partnership.deadline} · Value: {partnership.value}
+                              {partnership.deadline ? `Due: ${partnership.deadline}` : 'No deadline set'}
+                              {partnership.value ? ` · Value: ${partnership.value}` : ''}
                             </p>
                           </div>
                           <div className="text-right">
                             <div className="text-sm font-medium text-blue-500">
-                              {partnership.progress}% Complete
+                              {partnership.progress ?? 0}% Complete
                             </div>
                             <div className="text-sm text-gray-500 mt-1">
-                              Last updated: {partnership.lastContact}
+                              Last updated: {partnership.lastContact || 'Not available'}
                             </div>
                           </div>
                         </div>
                         <div className="mt-3 h-2 bg-gray-100 rounded-full">
                           <div 
                             className="h-2 bg-blue-500 rounded-full"
-                            style={{ width: `${partnership.progress}%` }}
+                            style={{ width: `${partnership.progress ?? 0}%` }}
                           />
                         </div>
                       </div>
@@ -412,12 +415,13 @@ const PartnershipsScreen = () => {
                               </Badge>
                             </div>
                             <p className="text-sm text-gray-600 mt-1">
-                              Received: {proposal.receivedDate} · Est. Value: {proposal.estimatedValue}
+                              Received: {proposal.receivedDate || 'Recently'} 
+                              {proposal.estimatedValue ? ` · Est. Value: ${proposal.estimatedValue}` : ''}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-green-500">
-                              {proposal.alignmentScore}% Match
+                              {proposal.alignmentScore ?? 0}% Match
                             </span>
                             <Mail className="w-4 h-4 text-gray-400" />
                           </div>
@@ -451,15 +455,15 @@ const PartnershipsScreen = () => {
                             <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
                               <div className="flex items-center gap-1">
                                 <MessageSquare className="w-4 h-4" />
-                                {suggestion.signals.comments} comments
+                                {suggestion.signals?.comments || 0} comments
                               </div>
                               <div className="flex items-center gap-1">
                                 <Heart className="w-4 h-4" />
-                                {suggestion.signals.likes} likes
+                                {suggestion.signals?.likes || 0} likes
                               </div>
                               <div className="flex items-center gap-1">
                                 <Mail className="w-4 h-4" />
-                                {suggestion.signals.dms} messages
+                                {suggestion.signals?.dms || 0} messages
                               </div>
                             </div>
                           </div>
@@ -490,12 +494,14 @@ const PartnershipsScreen = () => {
                     <div>
                       <h3 className="font-medium mb-2">Requirements</h3>
                       <div className="space-y-2">
-                        {selectedPartnership.requirements.map((req: string, i: number) => (
+                        {selectedPartnership.requirements?.map((req: string, i: number) => (
                           <div key={i} className="flex items-center gap-2 text-sm">
                             <CheckCircle className="w-4 h-4 text-green-500" />
                             {req}
                           </div>
-                        ))}
+                        )) || (
+                          <div className="text-sm text-gray-500">No requirements specified</div>
+                        )}
                       </div>
                     </div>
 

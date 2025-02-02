@@ -18,6 +18,8 @@ export function SessionCleanup() {
     
     // Force a hard reload to clear everything
     router.refresh()
+    // We intentionally only run this once on mount as it's a cleanup component
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return null

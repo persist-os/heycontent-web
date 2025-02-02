@@ -1,6 +1,6 @@
 import { Tool } from "@langchain/core/tools";
 import { z } from "zod";
-import { BaseTool } from "@/lib/agent/tools/base-tool";
+import { BaseTool } from "@/app/lib/agent/tools/base-tool";
 
 export class ContentAnalysisTool extends BaseTool {
   name = "content_analyzer";

@@ -1,10 +1,12 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  extensions = [vector]
 }
 
 model User {
@@ -32,6 +34,7 @@ model User {
   partnerships          Partnership[]
   socialAccounts        SocialAccount[]
   socialUpdates         SocialUpdate[]
+  sessions              Session[]
 }
 
 model Account {
@@ -133,75 +136,55 @@ model SocialAccount {
 }
 
 model Partnership {
-  id            String                   @id @default(cuid())
-  userId        String
-  name          String
-  type          String                   // e.g., "Product Review", "Sponsored Content"
-  brand         String
-  status        String                   @default("pending")
-  value         Decimal?                 // Deal value
-  estimatedValue Decimal?               // For incoming/suggested partnerships
-  deadline      DateTime?
-  alignmentScore Float                  @default(0)
-  progress      Float                   @default(0)
-  lastContact   DateTime?
-  createdAt     DateTime                 @default(now())
-  updatedAt     DateTime                 @updatedAt
-  proposedToId  String?
-  suggestedToId String?
-  
-  // Analytics and metrics
-  metrics       Json?                   // Store engagement metrics, performance data
-  signals       Json?                   // For suggested partnerships (comments, likes, DMs)
-  confidence    Float?                  // For suggested partnerships
-  
-  // Relations
-  contacts      Contact[]
-  proposedTo    User?                    @relation("IncomingProposals", fields: [proposedToId], references: [id])
-  suggestedTo   User?                    @relation("SuggestedPartnerships", fields: [suggestedToId], references: [id])
-  user          User                     @relation(fields: [userId], references: [id])
-  events        PartnershipEvent[]
-  history       PartnershipHistory[]
-  requirements  PartnershipRequirement[]
-  communications PartnershipCommunication[]
-  tasks         PartnershipTask[]
+  id             String                   @id @default(cuid())
+  userId         String
+  name           String
+  status         String                   @default("pending")
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  proposedToId   String?
+  suggestedToId  String?
+  brand          String                   @default("")
+  type           String                   @default("email")
+  alignmentScore Float                    @default(0)
+  confidence     Float?
+  deadline       DateTime?
+  estimatedValue Decimal?
+  lastContact    DateTime?
+  potentialValue Decimal?
+  progress       Float                    @default(0)
+  signals        Json?
+  value          Decimal?
+  receivedDate   DateTime?
+  description    String                   @default("")
+  contacts       Contact[]
+  proposedTo     User?                    @relation("IncomingProposals", fields: [proposedToId], references: [id])
+  suggestedTo    User?                    @relation("SuggestedPartnerships", fields: [suggestedToId], references: [id])
+  user           User                     @relation(fields: [userId], references: [id])
+  events         PartnershipEvent[]
+  history        PartnershipHistory[]
+  requirements   PartnershipRequirement[]
 
   @@index([userId])
   @@index([proposedToId])
   @@index([suggestedToId])
-  @@index([status])
-  @@index([brand])
 }
 
 model PartnershipRequirement {
   id            String      @id @default(cuid())
   partnershipId String
   title         String
-  description   String?
-  platform      String?     // e.g., "YouTube", "Instagram"
-  quantity      Int?        // e.g., number of posts required
   completed     Boolean     @default(false)
-  completedAt   DateTime?
-  dueDate       DateTime?
-  notes         String?
   partnership   Partnership @relation(fields: [partnershipId], references: [id], onDelete: Cascade)
-  
-  @@index([partnershipId])
 }
 
 model PartnershipEvent {
   id            String      @id @default(cuid())
   partnershipId String
   date          DateTime
-  type          String      // e.g., "meeting", "deliverable", "payment"
+  type          String?
   description   String?
-  location      String?     // For meetings
-  duration      Int?        // In minutes
-  outcome       String?     // Event outcome or notes
   partnership   Partnership @relation(fields: [partnershipId], references: [id], onDelete: Cascade)
-  
-  @@index([partnershipId])
-  @@index([date])
 }
 
 model Contact {
@@ -211,64 +194,16 @@ model Contact {
   email         String?
   phone         String?
   role          String?
-  platform      String?     // e.g., "LinkedIn", "Email"
-  isActive      Boolean     @default(true)
-  lastContact   DateTime?
-  notes         String?
   partnership   Partnership @relation(fields: [partnershipId], references: [id], onDelete: Cascade)
-  communications PartnershipCommunication[]
-  
-  @@index([partnershipId])
-  @@index([email])
 }
 
 model PartnershipHistory {
   id            String      @id @default(cuid())
   partnershipId String
   date          DateTime
-  action        String
   details       String?
-  metadata      Json?       // Additional structured data
-  userId        String?     // Who performed the action
+  event         String
   partnership   Partnership @relation(fields: [partnershipId], references: [id], onDelete: Cascade)
-  
-  @@index([partnershipId])
-  @@index([date])
-}
-
-model PartnershipCommunication {
-  id            String      @id @default(cuid())
-  partnershipId String
-  contactId     String?
-  type          String      // "email", "meeting", "call", etc.
-  subject       String?
-  content       String
-  direction     String      // "incoming" or "outgoing"
-  timestamp     DateTime    @default(now())
-  metadata      Json?       // For email headers, call duration, etc.
-  partnership   Partnership @relation(fields: [partnershipId], references: [id], onDelete: Cascade)
-  contact       Contact?    @relation(fields: [contactId], references: [id])
-  
-  @@index([partnershipId])
-  @@index([contactId])
-  @@index([timestamp])
-}
-
-model PartnershipTask {
-  id            String      @id @default(cuid())
-  partnershipId String
-  title         String
-  description   String?
-  status        String      @default("pending") // "pending", "in-progress", "completed"
-  priority      String      @default("medium")  // "low", "medium", "high"
-  dueDate       DateTime?
-  completedAt   DateTime?
-  assignedTo    String?     // User ID
-  partnership   Partnership @relation(fields: [partnershipId], references: [id], onDelete: Cascade)
-  
-  @@index([partnershipId])
-  @@index([status])
-  @@index([dueDate])
 }
 
 model Note {
@@ -276,6 +211,7 @@ model Note {
   userId     String
   title      String
   content    String
+  type       String?  @default("default")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   important  Boolean  @default(false)
@@ -299,8 +235,42 @@ model Cache {
 }
 
 model rag_documents {
-  id        BigInt                 @id @default(autoincrement())
-  content   String?
-  metadata  Json?
-  embedding Unsupported("vector")?
+  id          String   @id @default(uuid())
+  content     String
+  content_hash String  @unique
+  metadata    Json
+  embedding   Unsupported("vector(1536)")
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@index([content_hash])
+  @@index([metadata])
+}
+
+model rag_documents_input {
+  id           String   @id @default(uuid())
+  content_hash String
+  content      String
+  metadata     Json
+  embedding    Json
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  @@index([content_hash])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }

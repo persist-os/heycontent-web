@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import prisma from "@/app/lib/prisma"
 import crypto from "crypto"
-import { sendVerificationEmail } from "@/lib/email"
+import { sendVerificationEmail } from "@/app/lib/email"
 
 export async function POST(req: Request) {
   try {

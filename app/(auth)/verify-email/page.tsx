@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card'
 import { Mail } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import Link from 'next/link'

@@ -7,18 +7,23 @@ import { SocialMediaTool } from "./tools/social-media";
 import { ContentAnalysisTool } from "./tools/content-analysis";
 import { PartnershipTool } from "./tools/partnerships";
 import { SmartNotesTool } from "./tools/smart-notes";
-import { SocialMediaService } from "@/lib/services/social-media";
-import { GmailService } from "@/lib/services/gmail";
-import { RAGSystem } from "@/lib/rag";
-import { prisma } from "@/lib/prisma";
+import { SocialMediaService } from "@/app/lib/services/social-media";
+import { GmailService } from "@/app/lib/services/gmail";
+import { RAGSystem } from "@/app/lib/rag";
+import prisma from "@/app/lib/prisma";
 import { EmailSearchTool } from "./tools/email-search";
-import { EmailMessage } from "@/types/social-platforms";
-import { ChatAgent } from './chat-agent';
-import { EmailContextManager } from "./email-context-manager";
+import { EmailMessage } from "@/app/types/social-platforms";
+import { SmartChatAgent } from '../chat-agent/smart-chat-agent';
+import { EmailContextManager } from '@/app/lib/agent/email-context-manager';
+import { PlatformStatus, ProcessResult } from '../chat-agent/types';
+import { AdvancedMemorySystem } from "../memory/advanced-memory-system";
+import { SmartProcessingPipeline } from "../smart-processing-pipeline";
+import { MemoryAwareChatSystem } from "../memory-aware-chat-system";
 
 interface EmailContext {
   recentEmails: EmailMessage[];
   searchResults: EmailMessage[];
+  referencedEmails: string[];
   timestamp: number;
 }
 
@@ -89,50 +94,6 @@ interface ConversationCues {
   };
 }
 
-const SYSTEM_PROMPT = `You are AVA IRIS, an AI assistant focused on helping creators optimize their social media presence and content strategy. You should always speak directly to the user in the first person, and refer to them in the second person (you/your).
-
-Core Capabilities:
-1. Email Management
-   - Direct access to Gmail inbox
-   - Search and analyze email content efficiently:
-     * For specific emails (from person/date): Use direct search
-     * For partnership analysis: Use partnership search
-   - Track communication patterns
-   - Provide actionable insights
-   - Use email_search tool with precise queries
-
-2. Content Strategy
-   - Analyze your content performance
-   - Suggest improvements for your content
-   - Track your engagement patterns
-
-3. Audience Insights
-   - Analyze your audience behavior
-   - Track your demographic trends
-   - Identify your growth opportunities
-
-4. Partnership Opportunities
-   - Analyze your potential collaborations
-   - Track your partnership performance
-   - Optimize your outreach strategies
-
-5. Smart Notes
-   - Organize your insights
-   - Track your progress
-   - Maintain our conversation context
-
-Remember:
-- For email searches:
-  * Be specific in your search queries
-  * Use sender/date filters when available
-  * Only use partnership analysis for partnership-related queries
-- Speak directly to the user using "you" and "your"
-- Provide value from any available content
-- Focus on actionable insights
-- Maintain natural conversation flow
-- Be proactive in suggesting relevant insights
-- Never refer to the user in the third person`;
-
 export interface ProcessContext {
   previousMessages?: any[];
   userId?: string;
@@ -154,15 +115,21 @@ export interface InsightsContext {
   partnerships: any[];
 }
 
+export const SYSTEM_PROMPT = `You are an AI assistant focused on helping users manage their digital presence and content across multiple platforms. 
+Your role is to provide insights, suggestions, and help users optimize their content strategy.
+Be professional, clear, and always aim to provide actionable insights.`;
+
 export class PlatformAgent {
   private model: ChatOpenAI;
   private executor: AgentExecutor | null = null;
   private rag: RAGSystem;
   private socialService: SocialMediaService;
   private gmailService?: GmailService;
-  private chatAgent?: ChatAgent;
+  private chatAgent?: SmartChatAgent;
   private availableFeatures: Set<string> = new Set(['smartNotes']);
   private userId?: string;
+  private smartPipeline?: SmartProcessingPipeline;
+  private memoryAwareChat?: MemoryAwareChatSystem;
   private conversationState: ConversationState = {
     currentTopic: '',
     lastTopic: '',
@@ -197,10 +164,12 @@ export class PlatformAgent {
   private emailContext: EmailContext = {
     recentEmails: [],
     searchResults: [],
+    referencedEmails: [],
     timestamp: 0
   };
   private readonly EMAIL_CONTEXT_TTL = 5 * 60 * 1000; // 5 minutes
   private emailContextManager: EmailContextManager;
+  private memorySystem: AdvancedMemorySystem;
 
   constructor() {
     this.model = new ChatOpenAI({
@@ -210,8 +179,9 @@ export class PlatformAgent {
     });
     this.rag = new RAGSystem();
     this.socialService = new SocialMediaService();
-    this.emailContextManager = new EmailContextManager();
-
+    this.emailContextManager = new EmailContextManager('');
+    this.memorySystem = new AdvancedMemorySystem(this.rag);
+    this.memoryAwareChat = new MemoryAwareChatSystem(this.rag);
   }
 
   getExecutor() {
@@ -247,8 +217,8 @@ export class PlatformAgent {
         }
       });
 
-      if (socialAccount?.id) {
-        this.gmailService = new GmailService(socialAccount.id);
+      if (socialAccount?.userId) {
+        this.gmailService = new GmailService(socialAccount.userId);
         return true;
       }
       return false;
@@ -256,6 +226,14 @@ export class PlatformAgent {
       console.error('Error initializing Gmail service:', error);
       return false;
     }
+  }
+
+  private async searchEmails(query: string): Promise<EmailMessage[]> {
+    if (!this.gmailService) {
+      return [];
+    }
+    const searchResults = await this.gmailService.searchEmails(query, 10);
+    return searchResults;
   }
 
   async initialize(context?: InitializationContext) {
@@ -273,8 +251,26 @@ export class PlatformAgent {
       // Update available features based on connections
       await this.updateAvailableFeatures(connectedPlatforms, hasEmail);
 
-      // Initialize ChatAgent
-      this.chatAgent = new ChatAgent(this.rag, context.userId, platformStatus);
+      // Initialize SmartChatAgent with platform status
+      this.chatAgent = new SmartChatAgent(
+        this.rag,
+        context.userId,
+        platformStatus
+      );
+
+      // Initialize SmartProcessingPipeline
+      this.smartPipeline = new SmartProcessingPipeline(
+        {
+          userId: context.userId,
+          platformStatus,
+          emailMemoryManager: this.emailContextManager,
+          memorySystem: this.memorySystem
+        },
+        this.memorySystem
+      );
+
+      // Update EmailContextManager with actual userId
+      this.emailContextManager = new EmailContextManager(context.userId);
 
       // Initialize Gmail service if connected
       if (hasEmail) {
@@ -286,11 +282,13 @@ export class PlatformAgent {
           if (this.gmailService) {
             try {
               const recentEmails = await this.gmailService.searchEmails('', 10);
-              await Promise.all(recentEmails.map(async email => {
-                if (this.gmailService && context.userId) {
-                  await this.gmailService.storeEmailInRAG(email, context.userId);
-                }
-              }));
+              if (recentEmails) {
+                await Promise.all(recentEmails.map(async email => {
+                  if (this.gmailService && context.userId) {
+                    await this.gmailService.storeEmailInRAG(email, context.userId);
+                  }
+                }));
+              }
             } catch (error) {
               console.error('Error pre-fetching emails:', error);
             }
@@ -301,13 +299,20 @@ export class PlatformAgent {
 
     // Initialize tools based on available features
     const tools: BaseTool[] = [
-      ...(this.availableFeatures.has('email') && this.userId ? [new EmailSearchTool(this.userId, this.emailContextManager)] : []),
+      ...(this.availableFeatures.has('email') && this.userId ? [
+        new EmailSearchTool(
+          this.userId, 
+          this.emailContextManager,
+          this.memorySystem
+        )
+      ] : []),
       new SocialMediaTool(this.socialService, this.rag),
       ...(this.availableFeatures.has('content') ? [new ContentAnalysisTool()] : []),
       ...(this.availableFeatures.has('partnerships') && this.gmailService ? [new PartnershipTool(this.rag)] : []),
       new SmartNotesTool(this.rag)
     ];
 
+    // Keep the OpenAI Functions agent as fallback
     const prompt = ChatPromptTemplate.fromMessages([
       ["system", SYSTEM_PROMPT],
       ["human", "{input}"],
@@ -491,6 +496,7 @@ export class PlatformAgent {
       this.emailContext = {
         recentEmails: [],
         searchResults: [],
+        referencedEmails: [],
         timestamp: now
       };
     }
@@ -515,86 +521,114 @@ export class PlatformAgent {
       throw new Error("User ID is required for processing messages");
     }
 
-    // Build email context from previous messages
-    const emailContext = context?.previousMessages ? {
-      referencedEmails: this.emailContextManager.getRelevantEmails(query),
-      previousSearches: this.emailContextManager.getPreviousSearches()
-    } : {
-      referencedEmails: [],
-      previousSearches: []
-    };
+    try {
+      // First try processing with SmartProcessingPipeline
+      if (this.smartPipeline && this.chatAgent) {
+        const pipelineResult = await this.smartPipeline.process(query);
+        
+        if (pipelineResult.confidence > 0.7) {
+          // Use smart pipeline result if confidence is high
+          const chatResult = await this.chatAgent.process(query);
+          return {
+            output: pipelineResult.response,
+            conversationState: chatResult.conversationState,
+            suggestions: chatResult.suggestions || [],
+            persona: chatResult.persona,
+            metadata: pipelineResult.metadata
+          };
+        }
+      }
 
-     // Update conversation state with email context
-     if (emailContext.referencedEmails.length > 0) {
-      this.conversationState.contextStack.push('email_discussion');
-      this.conversationState.focusMetrics.contextDepth++;
+      // Fallback to OpenAI Functions agent if smart pipeline isn't available or has low confidence
+      // ... rest of existing process() method ...
+      const emailContext = this.emailContextManager ? await (async () => {
+        const [relevantEmails, previousSearches] = await Promise.all([
+          this.emailContextManager.getRelevantEmails(query),
+          this.emailContextManager.getPreviousSearches()
+        ]);
+        return {
+          referencedEmails: relevantEmails,
+          previousSearches
+        };
+      })() : {
+        referencedEmails: [],
+        previousSearches: []
+      };
+
+      // Update conversation state with email context
+      if (emailContext.referencedEmails.length > 0) {
+        this.conversationState.contextStack.push('email_discussion');
+        this.conversationState.focusMetrics.contextDepth++;
+      }
+
+      // Get relevant context from integrations
+      const [socialMetrics, contentPerformance, audienceInsights, ...otherData] = await Promise.all([
+        this.socialService?.getMetrics().catch(() => null),
+        this.rag?.search('performance', query).catch(() => []),
+        this.rag?.search('audience', query).catch(() => []),
+        ...(this.gmailService && this.userId ? [
+          this.gmailService?.getPartnershipEmails({ maxResults: 5 }).catch(() => [])
+        ] : [])
+      ]);
+
+      const partnershipEmails = otherData[0] || [];
+
+      // First, let ChatAgent process the query for enhanced conversation handling
+      const platformStatus = await this.socialService.getPlatformStatus();
+      const chatAgentResult = this.chatAgent ? await this.chatAgent.process(query) : null;
+
+      // Use ChatAgent's conversation analysis
+      const chatAgentState = chatAgentResult?.conversationState;
+      const conversationCues = chatAgentState ? this.transformToConversationCues(chatAgentState) : this.analyzeConversationCues(query);
+      const enhancedQuery = this.enhanceQuery(query, conversationCues, {
+        socialMetrics,
+        contentPerformance: contentPerformance || [],
+        audienceInsights: audienceInsights || []
+      });
+
+      // Update conversation state
+      this.updateConversationState(query, conversationCues, null);
+
+      const enrichedContext = {
+        ...context,
+        conversationCues,
+        previousMessages: context?.previousMessages || [],
+        insights: {
+          social: socialMetrics,
+          content: contentPerformance || [],
+          audience: audienceInsights || [],
+          partnerships: partnershipEmails
+        } as InsightsContext,
+        availableFeatures: Array.from(this.availableFeatures),
+        conversationState: chatAgentResult?.conversationState || this.conversationState,
+        emailContext
+      };
+
+      const result = await this.executor!.call({ 
+        input: enhancedQuery,
+        context: enrichedContext
+      });
+
+      // Update email context if search was performed
+      if (result.output && result.intermediateSteps?.some((step: AgentStep) => step.tool === 'email_search')) {
+        const emailResults = result.intermediateSteps.find((step: AgentStep) => 
+          step.tool === 'email_search')?.output?.results || [];
+        const emailIds = this.extractEmailReferences(result.output);
+        emailIds.forEach(id => this.emailContextManager.markEmailReferenced(id));
+      }
+
+      // Combine results from both agents
+      return {
+        ...result,
+        conversationState: chatAgentResult?.conversationState || this.conversationState,
+        suggestions: chatAgentResult?.suggestions || [],
+        persona: chatAgentResult?.persona
+      };
+
+    } catch (error) {
+      console.error('Error in process:', error);
+      throw error;
     }
-    // Get relevant context from integrations
-    const [socialMetrics, contentPerformance, audienceInsights, ...otherData] = await Promise.all([
-      this.socialService?.getMetrics().catch(() => null),
-      this.rag?.search(query, { type: 'insight', category: 'performance' }, 3).catch(() => []),
-      this.rag?.search(query, { type: 'insight', category: 'audience' }, 2).catch(() => []),
-      ...(this.gmailService && this.userId ? [
-        this.gmailService?.getPartnershipEmails({ maxResults: 5 }).catch(() => [])
-      ] : [])
-    ]);
-
-    const partnershipEmails = otherData[0] || [];
-
-    // First, let ChatAgent process the query for enhanced conversation handling
-    const platformStatus = await this.socialService.getPlatformStatus();
-    const chatAgentResult = this.chatAgent ? await this.chatAgent.process(query, {
-      userId: this.userId,
-      previousMessages: context?.previousMessages,
-      platformStatus
-    }) : null;
-
-    // Use ChatAgent's conversation analysis
-    const conversationCues = chatAgentResult?.conversationState || this.analyzeConversationCues(query);
-    const enhancedQuery = this.enhanceQuery(query, conversationCues, {
-      socialMetrics,
-      contentPerformance: contentPerformance || [],
-      audienceInsights: audienceInsights || []
-    });
-
-    // Update conversation state
-    this.updateConversationState(query, conversationCues, null);
-
-    const enrichedContext = {
-      ...context,
-      conversationCues,
-      previousMessages: context?.previousMessages || [],
-      insights: {
-        social: socialMetrics,
-        content: contentPerformance || [],
-        audience: audienceInsights || [],
-        partnerships: partnershipEmails
-      } as InsightsContext,
-      availableFeatures: Array.from(this.availableFeatures),
-      conversationState: chatAgentResult?.conversationState || this.conversationState,
-      emailContext
-    };
-
-    const result = await this.executor!.call({ 
-      input: enhancedQuery,
-      context: enrichedContext
-    });
-
-    // Update email context if search was performed
-    if (result.output && result.intermediateSteps?.some((step: AgentStep) => step.tool === 'email_search')) {
-      const emailResults = result.intermediateSteps.find((step: AgentStep) => 
-        step.tool === 'email_search')?.output?.results || [];
-      const emailIds = this.extractEmailReferences(result.output);
-      emailIds.forEach(id => this.emailContextManager.markEmailReferenced(id));
-    }
-
-    // Combine results from both agents
-    return {
-      ...result,
-      conversationState: chatAgentResult?.conversationState || this.conversationState,
-      suggestions: chatAgentResult?.suggestions || [],
-      persona: chatAgentResult?.persona
-    };
   }
 
   // Add new helper methods at the end
@@ -602,5 +636,208 @@ export class PlatformAgent {
     const emailIdPattern = /email_id:([a-zA-Z0-9]+)/g;
     return Array.from(content.matchAll(emailIdPattern))
       .map(match => match[1]);
+  }
+
+  async processMessage(message: string): Promise<ProcessResult> {
+    try {
+      if (!this.chatAgent) {
+        throw new Error('Chat agent not initialized');
+      }
+      
+      const result = await this.chatAgent.process(message);
+      
+      // Helper function to ensure timeReference is of the correct type
+      const validateTimeReference = (ref: string | null): 'past' | 'present' | 'future' | null => {
+        if (ref === 'past' || ref === 'present' || ref === 'future') {
+          return ref;
+        }
+        return null;
+      };
+
+      // Helper function to ensure decisionStage is of the correct type
+      const validateDecisionStage = (stage: string | null): 'awareness' | 'consideration' | 'decision' | null => {
+        if (stage === 'awareness' || stage === 'consideration' || stage === 'decision') {
+          return stage;
+        }
+        return null;
+      };
+      
+      return {
+        output: result.output,
+        error: result.error,
+        conversationState: {
+          currentIntent: result.conversationState.currentIntent,
+          mood: result.conversationState.mood || 'neutral',
+          contextualMemory: result.conversationState.contextualMemory,
+          tone: (result.conversationState.tone || 'neutral') as 'excited' | 'confused' | 'frustrated' | 'neutral' | 'curious' | 'reflective' | 'sad' | 'greeting' | 'confident' | 'uncertain',
+          intent: (result.conversationState.intent || 'direct_inquiry') as 'direct_inquiry' | 'exploratory' | 'action_needed' | 'reflection' | 'greeting' | 'emotional' | 'strategic' | 'validation' | 'problem_solving' | 'unknown',
+          needsClarification: result.conversationState.needsClarification || false,
+          isQuestion: result.conversationState.isQuestion || false,
+          topicFocus: result.conversationState.topicFocus || [],
+          complexity: (result.conversationState.complexity || 'moderate') as 'simple' | 'moderate' | 'complex',
+          emotionalState: result.conversationState.emotionalState || {
+            valence: 0,
+            intensity: 0.5,
+            confidence: 1.0
+          },
+          contextualFactors: result.conversationState.contextualFactors ? {
+            timeReference: validateTimeReference(result.conversationState.contextualFactors.timeReference),
+            urgency: (result.conversationState.contextualFactors.urgency || 'medium') as 'low' | 'medium' | 'high',
+            decisionStage: validateDecisionStage(result.conversationState.contextualFactors.decisionStage)
+          } : {
+            timeReference: null,
+            urgency: 'medium' as const,
+            decisionStage: null
+          }
+        },
+        suggestions: result.suggestions,
+        persona: result.persona
+      };
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  private async handleError(error: Error | unknown): Promise<ProcessResult> {
+    const errorState = {
+      currentIntent: 'error',
+      mood: 'neutral',
+      contextualMemory: [],
+      tone: 'neutral' as const,
+      intent: 'problem_solving' as const,
+      needsClarification: true,
+      isQuestion: false,
+      topicFocus: ['error_handling'],
+      complexity: 'simple' as const,
+      emotionalState: {
+        valence: 0,
+        intensity: 0.5,
+        confidence: 1.0
+      },
+      contextualFactors: {
+        timeReference: 'present' as 'past' | 'present' | 'future' | null,
+        urgency: 'high' as const,
+        decisionStage: 'awareness' as 'awareness' | 'consideration' | 'decision' | null
+      }
+    };
+
+    return {
+      output: 'An error occurred: ' + (error instanceof Error ? error.message : String(error)),
+      error: error instanceof Error ? error : new Error(String(error)),
+      conversationState: errorState,
+      suggestions: ['Try again later', 'Check system status'],
+      persona: {
+        tone: 'professional',
+        style: 'helpful'
+      }
+    };
+  }
+
+  private async handleEmailSearch(query: string): Promise<ProcessResult> {
+    try {
+      const searchResults = await this.searchEmails(query);
+      
+      if (!searchResults || searchResults.length === 0) {
+        return {
+          output: 'No emails found matching your search.',
+          conversationState: {
+            currentIntent: 'email_search',
+            mood: 'neutral',
+            contextualMemory: [],
+            tone: 'neutral' as const,
+            intent: 'direct_inquiry' as const,
+            needsClarification: true,
+            isQuestion: false,
+            topicFocus: ['email_search'],
+            complexity: 'simple' as const,
+            emotionalState: {
+              valence: 0,
+              intensity: 0.3,
+              confidence: 1.0
+            },
+            contextualFactors: {
+              timeReference: 'present' as const,
+              urgency: 'medium' as const,
+              decisionStage: 'consideration' as const
+            }
+          },
+          suggestions: ['Try a different search term', 'View recent emails'],
+          persona: {
+            tone: 'professional',
+            style: 'helpful'
+          }
+        };
+      }
+
+      // Process search results with chat agent
+      if (this.chatAgent) {
+        const result = await this.chatAgent.process(
+          `Found ${searchResults.length} emails matching your search. Here are the results: ${JSON.stringify(searchResults)}`
+        );
+
+        // Validate timeReference and decisionStage
+        const validateTimeRef = (ref: any): 'past' | 'present' | 'future' | null => {
+          if (ref === 'past' || ref === 'present' || ref === 'future') {
+            return ref;
+          }
+          return null;
+        };
+
+        const validateDecisionStage = (stage: any): 'awareness' | 'consideration' | 'decision' | null => {
+          if (stage === 'awareness' || stage === 'consideration' || stage === 'decision') {
+            return stage;
+          }
+          return null;
+        };
+
+        return {
+          ...result,
+          conversationState: {
+            ...result.conversationState,
+            contextualFactors: {
+              timeReference: validateTimeRef(result.conversationState.contextualFactors?.timeReference),
+              urgency: (result.conversationState.contextualFactors?.urgency || 'medium') as 'low' | 'medium' | 'high',
+              decisionStage: validateDecisionStage(result.conversationState.contextualFactors?.decisionStage)
+            }
+          }
+        };
+      }
+
+      return this.handleError(new Error('Chat agent not initialized'));
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  private transformToConversationCues(state: { 
+    currentIntent: string; 
+    emotionalState?: string | { valence: number; intensity: number; confidence: number; }; 
+    contextualMemory: any[];
+    mood?: string;
+    tone?: string;
+  }): ConversationCues {
+    // Extract emotional state from either format
+    const emotionalTone = typeof state.emotionalState === 'string' 
+      ? state.emotionalState 
+      : state.mood || state.tone || 'neutral';
+
+    return {
+      tone: emotionalTone as 'excited' | 'confused' | 'frustrated' | 'neutral' | 'curious' | 'reflective' | 'sad' | 'greeting' | 'confident' | 'uncertain',
+      intent: state.currentIntent as 'direct_inquiry' | 'exploratory' | 'action_needed' | 'reflection' | 'greeting' | 'emotional' | 'strategic' | 'validation' | 'problem_solving' | 'unknown',
+      needsClarification: false,
+      isQuestion: false,
+      topicFocus: state.contextualMemory.map(m => m.topic || '').filter(Boolean),
+      complexity: 'moderate' as const,
+      emotionalState: {
+        valence: typeof state.emotionalState === 'object' ? state.emotionalState.valence : 0,
+        intensity: typeof state.emotionalState === 'object' ? state.emotionalState.intensity : 0.5,
+        confidence: typeof state.emotionalState === 'object' ? state.emotionalState.confidence : 0.5
+      },
+      contextualFactors: {
+        timeReference: 'present' as 'past' | 'present' | 'future' | null,
+        urgency: 'medium' as const,
+        decisionStage: 'consideration' as 'awareness' | 'consideration' | 'decision' | null
+      }
+    };
   }
 } 

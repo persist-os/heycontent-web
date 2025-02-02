@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import React, { useState, useEffect, useRef } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/src/components/ui/tabs'
 import { 
   Brain, TrendingUp, Target, Share2, 
   ChevronRight, ArrowRight, Clock, MessageSquare,
@@ -69,6 +69,28 @@ interface CacheMetadata {
 interface CachedInsights {
   insights: AIActionableInsight[];
   metadata: CacheMetadata;
+}
+
+interface APIInsightResponse {
+  title: string;
+  type: 'partnership' | 'content' | 'platform';
+  description: string;
+  confidence: number;
+  source?: string;
+  action?: {
+    steps: string[];
+    timeToImplement: string;
+    requirements: string[];
+    type?: string;
+    priority?: 'high' | 'medium' | 'low';
+  };
+  data?: {
+    emails?: InsightEmail[];
+    videos?: InsightVideo[];
+    sourceDetails?: string[];
+    data?: string[];
+    engagementPotential?: string;
+  };
 }
 
 const CACHE_VERSION = 1;
@@ -144,10 +166,6 @@ function setInsightsCache(insights: AIActionableInsight[], partial: boolean = fa
   }
 }
 
-// Add these at the top level, outside the component
-let isRequestInProgress = false;
-let debounceTimer: NodeJS.Timeout | null = null;
-
 export function AIInsightsScreen() {
   const [insights, setInsights] = useState<AIActionableInsight[]>([])
   const [selectedInsight, setSelectedInsight] = useState<string | number | null>(null)
@@ -161,15 +179,19 @@ export function AIInsightsScreen() {
   const router = useRouter()
   const { data: session } = useSession()
 
+  // Add these inside the component
+  const isRequestInProgress = useRef(false);
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
   // Background fetch without loading state
   const backgroundFetch = async () => {
-    if (isRequestInProgress) {
+    if (isRequestInProgress.current) {
       console.log('Request already in progress, skipping...');
       return;
     }
 
     try {
-      isRequestInProgress = true;
+      isRequestInProgress.current = true;
       console.log('Starting background fetch...');
       const response = await fetch('/api/insights');
       const data = await response.json();
@@ -207,7 +229,7 @@ export function AIInsightsScreen() {
       setError(null);
 
       if (data.insights) {
-        const transformedInsights = data.insights.map((insight: any, index: number) => {
+        const transformedInsights = data.insights.map((insight: APIInsightResponse, index: number) => {
           // Extract partner name from title
           const partnerName = insight.type === 'partnership' 
             ? (insight.title.includes(' with ') 
@@ -225,7 +247,7 @@ export function AIInsightsScreen() {
             : '';
 
           // Analyze deal values and communication patterns
-          const dealValues = insight.data?.emails?.map((e: InsightEmail) => e.dealValue).filter(Boolean) || [];
+          const dealValues = (insight.data?.emails?.map((e: InsightEmail) => e.dealValue).filter(Boolean) || []) as number[];
           const hasConsistentValues = dealValues.length > 0 && new Set(dealValues).size <= 2;
           const communicationCount = insight.data?.emails?.length || 0;
           const recentCommunication = insight.data?.emails?.[0]?.date ? new Date(insight.data.emails[0].date) : null;
@@ -238,10 +260,12 @@ export function AIInsightsScreen() {
                 ? "Active communication - value to be discussed"
                 : "Initial contact - explore partnership value";
             }
+            const maxValue = Math.max(...dealValues);
+            const minValue = Math.min(...dealValues);
             if (hasConsistentValues) {
-              return `Consistent deal values around $${Math.max(...dealValues).toLocaleString()}`;
+              return `Consistent deal values around $${maxValue.toLocaleString()}`;
             }
-            return `Deal values ranging from $${Math.min(...dealValues).toLocaleString()} to $${Math.max(...dealValues).toLocaleString()}`;
+            return `Deal values ranging from $${minValue.toLocaleString()} to $${maxValue.toLocaleString()}`;
           };
 
           // Generate strategic action steps
@@ -305,7 +329,11 @@ export function AIInsightsScreen() {
                   ? `${communicationCount} recent communications show ${isRecentlyActive ? 'active' : 'sustained'} interest`
                   : insight.description,
                 dealValues.length > 0
-                  ? `Partnership history shows ${hasConsistentValues ? 'consistent' : 'varied'} deal values ${hasConsistentValues ? `around $${Math.max(...dealValues).toLocaleString()}` : `from $${Math.min(...dealValues).toLocaleString()} to $${Math.max(...dealValues).toLocaleString()}`}`
+                  ? `Partnership history shows ${hasConsistentValues ? 'consistent' : 'varied'} deal values ${
+                      hasConsistentValues 
+                        ? `around $${Math.max(...dealValues).toLocaleString()}` 
+                        : `from $${Math.min(...dealValues).toLocaleString()} to $${Math.max(...dealValues).toLocaleString()}`
+                    }`
                   : communicationCount > 0
                   ? `${communicationCount} communications indicate promising partnership potential`
                   : null,
@@ -320,14 +348,14 @@ export function AIInsightsScreen() {
               data: insight.data?.data || [],
               source: insight.source || 'combined',
               sourceDetails: insight.data?.sourceDetails || [],
-              emails: insight.data?.emails?.map((email: any) => ({
+              emails: insight.data?.emails?.map((email: InsightEmail) => ({
                 subject: email.subject,
                 from: email.from,
                 date: email.date,
                 dealValue: email.dealValue,
                 dealType: email.dealType
               })) || [],
-              videos: insight.data?.videos?.map((video: any) => ({
+              videos: insight.data?.videos?.map((video: InsightVideo) => ({
                 title: video.title,
                 views: video.views || 'No views yet',
                 engagement: video.engagement || 'No engagement data'
@@ -347,7 +375,7 @@ export function AIInsightsScreen() {
       console.error('Background fetch error:', error);
       setError('Failed to fetch insights. Please try again later.');
     } finally {
-      isRequestInProgress = false;
+      isRequestInProgress.current = false;
     }
   };
 

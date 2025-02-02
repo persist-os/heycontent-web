@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { auth } from '@/app/auth';
 import { google } from 'googleapis';
-import { validateToken } from '@/lib/auth-helpers';
-import { prisma } from '@/lib/prisma';
+import { validateToken } from '@/app/lib/auth-helpers';
+import prisma from '@/app/lib/prisma';
 import { gmail_v1 } from 'googleapis';
 import OpenAI from 'openai';
-import { selectModel } from '@/lib/openai';
+import { selectModel } from '@/app/lib/openai';
+import { RAGSystem } from '@/app/lib/rag';
+import { SocialMediaService } from '@/app/lib/services/social-media';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -24,6 +26,32 @@ interface PartnershipAnalysis {
     successfulPartnerships: number;
     pendingOpportunities: number;
   };
+  categories: {
+    [key: string]: {
+      count: number;
+      examples: string[];
+    };
+  };
+}
+
+interface EmailData {
+  id: string;
+  subject: string;
+  from: string;
+  to: string;
+  date: string;
+  body: string;
+  labels: string[];
+  threadId: string;
+}
+
+interface AnalysisResponse {
+  insights: {
+    summary: string;
+    opportunities: string[];
+    recommendations: string[];
+  };
+  contentIdeas: string[];
   categories: {
     [key: string]: {
       count: number;
@@ -104,7 +132,7 @@ export async function POST(req: Request) {
     );
 
     // Extract email content and metadata
-    const emailData = messageDetails.map(msg => {
+    const emailData: EmailData[] = messageDetails.map(msg => {
       const getHeader = (name: string) => 
         msg.payload?.headers?.find(h => h.name === name)?.value || '';
       
@@ -116,26 +144,31 @@ export async function POST(req: Request) {
         body = Buffer.from(msg.payload.body.data, 'base64').toString();
       }
 
-      return {
-        id: msg.id,
+      const emailData: EmailData = {
+        id: msg.id || '',
         subject: getHeader('Subject'),
         from: getHeader('From'),
         to: getHeader('To'),
         date: getHeader('Date'),
         body,
         labels: msg.labelIds || [],
-        threadId: msg.threadId
+        threadId: msg.threadId || ''
       };
+      
+      return emailData;
     });
 
     // Group emails by thread for conversation context
-    const emailThreads = emailData.reduce((acc, email) => {
-      if (!acc[email.threadId!]) {
-        acc[email.threadId!] = [];
+    const emailThreads = emailData.reduce<Record<string, EmailData[]>>((acc, email) => {
+      const threadId = email.threadId;
+      if (!threadId) return acc;
+      
+      if (!acc[threadId]) {
+        acc[threadId] = [];
       }
-      acc[email.threadId!].push(email);
+      acc[threadId].push(email);
       return acc;
-    }, {} as Record<string, typeof emailData>);
+    }, {});
 
     // Handle specific partnership analysis
     if (query && query.includes('partnership:')) {
@@ -202,10 +235,9 @@ export async function POST(req: Request) {
       try {
         const content = completion.choices[0].message.content;
         if (!content) {
-          throw new Error('No content in response');
+          throw new Error('No content in OpenAI response');
         }
-        const analysis = JSON.parse(content);
-        return NextResponse.json(analysis);
+        return NextResponse.json(JSON.parse(content));
       } catch (error) {
         console.error('Error parsing partnership analysis:', error);
         return NextResponse.json({
@@ -289,9 +321,22 @@ export async function POST(req: Request) {
       response_format: { type: "json_object" }
     });
 
-    let analysis;
+    let analysis: AnalysisResponse;
     try {
-      analysis = JSON.parse(completion.choices[0].message.content || '{}');
+      const content = completion.choices[0].message.content;
+      if (!content) {
+        throw new Error('No content in OpenAI response');
+      }
+      const parsedContent = JSON.parse(content) as AnalysisResponse;
+      analysis = {
+        insights: {
+          summary: parsedContent.insights?.summary || "Analysis completed",
+          opportunities: parsedContent.insights?.opportunities || [],
+          recommendations: parsedContent.insights?.recommendations || []
+        },
+        contentIdeas: parsedContent.contentIdeas || [],
+        categories: parsedContent.categories || {}
+      };
     } catch (error) {
       console.error('Error parsing OpenAI response:', error);
       console.log('Raw response:', completion.choices[0].message.content);
@@ -332,11 +377,12 @@ export async function POST(req: Request) {
     };
 
     return NextResponse.json(result);
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error analyzing partnerships:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to analyze partnerships';
     return NextResponse.json({
-      error: error.message || 'Failed to analyze partnerships',
-      details: error.response?.data
+      error: errorMessage,
+      details: (error as any).response?.data
     }, { status: 500 });
   }
 } 

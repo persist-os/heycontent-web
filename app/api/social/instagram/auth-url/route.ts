@@ -4,17 +4,17 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const clientId = process.env.INSTAGRAM_CLIENT_ID;
+    const clientId = process.env.FACEBOOK_APP_ID || process.env.INSTAGRAM_CLIENT_ID;
     const redirectUri = process.env.INSTAGRAM_REDIRECT_URI;
 
     if (!clientId || !redirectUri) {
-      throw new Error('Missing Instagram configuration');
+      throw new Error('Missing Facebook/Instagram configuration');
     }
 
-    // Using the basic scope for Instagram Basic Display API
-    const authUrl = `https://api.instagram.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=basic,instagram_basic,instagram_content_publish&response_type=code`;
+    // Using correct Facebook Login permissions for Instagram
+    const authUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=public_profile,pages_show_list,instagram_basic,instagram_manage_insights,pages_read_engagement&response_type=code`;
     
-    console.log('Generated auth URL:', authUrl);
+    console.log('Generated Facebook auth URL:', authUrl);
     return NextResponse.json({ authUrl });
   } catch (error) {
     console.error('Auth URL error:', error);

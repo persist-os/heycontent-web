@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { Logo } from '@/_components/logo'
+import { Logo } from '@/app/_components/logo'
 import { 
   Brain, Users, MessageSquare, Settings, 
   Briefcase, ChevronLeft, Clock, Star, FileText

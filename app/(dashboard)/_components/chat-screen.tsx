@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card'
 import { 
   Send, Plus, Paperclip,
   ChevronRight, Filter, Calendar,
@@ -9,12 +9,12 @@ import {
   MessageSquare, Brain, Settings,
   Users, DollarSign, Activity, Globe, Video
 } from 'lucide-react'
-import { Message, ChatHistory, InsightReference } from '@/types/chat'
-import { actionableInsights } from '@/data/insights'
+import { Message, ChatHistory, InsightReference } from '@/app/types/chat'
+import { actionableInsights } from '@/src/data/insights'
 import { useSession } from 'next-auth/react'
 import { MessageBubble } from './chat/message-bubble'
 import { ChatInput } from './chat/chat-input'
-import type { InteractiveOption } from '@/lib/chat/interactive-response'
+import type { InteractiveOption } from '@/app/lib/chat/interactive-response'
 
 interface AIActionableInsight {
   id: number;
@@ -253,7 +253,13 @@ const ChatScreen = () => {
         const withoutTyping = prev.filter(msg => msg.status !== 'typing')
         return [...withoutTyping, {
           id: data.id || Date.now(),
-          content: isAnalysisRequest(content) ? data.result.output : data.content,
+          content: isAnalysisRequest(content) 
+            ? (typeof data.result.output === 'object' 
+                ? data.result.output.response || 'No response available'
+                : data.result.output)
+            : (typeof data.content === 'object'
+                ? data.content.response || 'No response available'
+                : data.content),
           role: 'assistant',
           timestamp: new Date().toISOString(),
           relatedInsights: data.relatedInsights || [],
@@ -261,6 +267,11 @@ const ChatScreen = () => {
             options: isAnalysisRequest(content) ? data.result.interactiveResponse?.options : data.options,
             followUp: isAnalysisRequest(content) ? data.result.interactiveResponse?.followUp : data.followUp,
             contextualSuggestions: isAnalysisRequest(content) ? data.result.interactiveResponse?.contextualSuggestions : data.contextualSuggestions
+          },
+          metadata: {
+            suggestions: isAnalysisRequest(content) 
+              ? (data.result.suggestions || [])
+              : (data.metadata?.suggestions || [])
           }
         }]
       })
@@ -276,7 +287,7 @@ const ChatScreen = () => {
     } finally {
       setIsLoading(false)
     }
-  }, [messages, referencedMessage, scrollToBottom, analyzedVideos, currentVideoContext, lastAnalysisType])
+  }, [messages, referencedMessage, scrollToBottom, analyzedVideos, currentVideoContext, lastAnalysisType, isAnalysisRequest])
 
   const handleMessageReference = (message: Message) => {
     setReferencedMessage(message)
@@ -345,19 +356,19 @@ const ChatScreen = () => {
       setCurrentInsight((prev) => (prev + 1) % liveInsights.length)
     }, 5000)
     return () => clearInterval(timer)
-  }, [])
+  }, [liveInsights.length])
 
   useEffect(() => {
     if (!showAmbient && inputRef.current) {
       inputRef.current.focus()
     }
-  }, [showAmbient, messages.length])
+  }, [showAmbient])
 
   useEffect(() => {
     if (messages.length > 0) {
       scrollToBottom()
     }
-  }, [messages, scrollToBottom])
+  }, [messages.length, scrollToBottom])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -398,7 +409,7 @@ const ChatScreen = () => {
       }
     }
     setInitializing(false)
-  }, [handleSendMessage, initializing])
+  }, [handleSendMessage, initializing, setShowAmbient, setMessages])
 
   // Add error handling for session
   useEffect(() => {
@@ -410,7 +421,7 @@ const ChatScreen = () => {
     if (status === 'authenticated' && session?.user?.id) {
       // Your session-dependent code here
     }
-  }, [status, session])
+  }, [status, session?.user?.id])
 
   // Loading state
   if (status === 'loading') return null

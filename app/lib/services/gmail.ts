@@ -1,10 +1,12 @@
 import { google } from 'googleapis';
-import { validateToken } from '@/lib/auth-helpers';
+import { validateToken } from '../../lib/auth-helpers';
 import { EmailMessage, PartnershipEmail } from '../../types/social-platforms';
-import { prisma } from '../prisma';
+import prisma from '../prisma';
 import { getCompletion } from '../openai';
 import { gmail_v1 } from 'googleapis';
-import { RAGSystem } from '@/lib/rag';
+import { RAGSystem } from '../../lib/rag';
+import { serviceStateManager } from './service-state-manager';
+import { searchResultCache } from './search-result-cache';
 
 // Export PartnershipEmail as GmailMessage for content-analysis.ts
 export type GmailMessage = PartnershipEmail;
@@ -73,6 +75,67 @@ export class GmailService {
     this.accountId = userId;
     this.gmail = google.gmail('v1');
     this.rag = new RAGSystem();
+    this.initializeState();
+  }
+
+  private async initializeState() {
+    try {
+      const auth = await this.getAuthorizedClient();
+      if (auth) {
+        await serviceStateManager.updateState('gmail', {
+          isAuthenticated: true,
+          isConnected: true,
+          lastSync: new Date()
+        });
+      }
+    } catch (error) {
+      await serviceStateManager.updateState('gmail', {
+        isAuthenticated: false,
+        isConnected: false,
+        error: error instanceof Error ? error.message : 'Failed to initialize Gmail service'
+      });
+    }
+  }
+
+  private async ensureAuthenticated(): Promise<boolean> {
+    const state = await serviceStateManager.getState('gmail');
+    
+    if (!state.isAuthenticated) {
+      try {
+        const auth = await this.getAuthorizedClient();
+        if (auth) {
+          await serviceStateManager.setAuthenticated('gmail', true);
+          return true;
+        }
+        // If we need authentication, add a pending request
+        await serviceStateManager.requestAuthentication('gmail');
+        return false;
+      } catch (error) {
+        await serviceStateManager.setError('gmail', error instanceof Error ? error.message : 'Authentication failed');
+        return false;
+      }
+    }
+    
+    return true;
+  }
+
+  private async withErrorHandling<T>(operation: () => Promise<T>): Promise<T> {
+    try {
+      const isAuthenticated = await this.ensureAuthenticated();
+      if (!isAuthenticated) {
+        throw new Error('Gmail service requires authentication');
+      }
+      
+      const result = await operation();
+      
+      // Clear any existing errors on success
+      await serviceStateManager.clearError('gmail');
+      
+      return result;
+    } catch (error) {
+      await serviceStateManager.setError('gmail', error instanceof Error ? error.message : 'Operation failed');
+      throw error;
+    }
   }
 
   private async getGoogleAccountId(): Promise<string> {
@@ -187,7 +250,7 @@ export class GmailService {
           // Analyze partnership details using AI with thread context
           const analysis = await this.analyzePartnership(subject, body, threadMessages);
 
-          return {
+          const email: PartnershipEmail = {
             id: message.id!,
             threadId: fullMessage.data.threadId || '',
             subject,
@@ -200,14 +263,39 @@ export class GmailService {
             isStarred: fullMessage.data.labelIds?.includes('STARRED'),
             analysis,
             thread: threadMessages.length > 0 ? {
-              messages: threadMessages.map(m => ({
-                id: m.id || '',
-                from: m.payload?.headers?.find(h => h.name === 'From')?.value,
-                date: m.payload?.headers?.find(h => h.name === 'Date')?.value,
-                body: this.getMessageBody(m)
-              }))
+              id: fullMessage.data.threadId || '',
+              messages: threadMessages.map(m => {
+                const mHeaders = m.payload?.headers || [];
+                const mFrom = mHeaders.find(h => h.name === 'From')?.value || '';
+                const mTo = mHeaders.find(h => h.name === 'To')?.value?.split(',').map(addr => addr.trim()) || [];
+                const mSubject = mHeaders.find(h => h.name === 'Subject')?.value || subject;
+                const mDate = mHeaders.find(h => h.name === 'Date')?.value || date;
+                const threadMessage: EmailMessage = {
+                  id: m.id || '',
+                  threadId: fullMessage.data.threadId || '',
+                  subject: mSubject,
+                  from: mFrom,
+                  to: mTo,
+                  body: this.getMessageBody(m),
+                  date: new Date(mDate),
+                  labels: m.labelIds || [],
+                  isRead: !m.labelIds?.includes('UNREAD'),
+                  isStarred: m.labelIds?.includes('STARRED')
+                };
+                return threadMessage;
+              }),
+              participants: Array.from(new Set([
+                ...threadMessages.map(m => m.payload?.headers?.find(h => h.name === 'From')?.value || ''),
+                ...threadMessages.map(m => m.payload?.headers?.find(h => h.name === 'To')?.value || '').flatMap(to => to.split(',').map(addr => addr.trim()))
+              ])).filter(Boolean),
+              subject: subject,
+              lastMessageDate: new Date(threadMessages[threadMessages.length - 1]?.payload?.headers?.find(h => h.name === 'Date')?.value || date),
+              messageCount: threadMessages.length,
+              labels: fullMessage.data.labelIds || []
             } : undefined
           };
+
+          return email;
         })
       );
 
@@ -374,7 +462,8 @@ Body: ${this.getMessageBody(m)}
     const processPayload = (payload: any) => {
       if (payload.mimeType !== 'text/plain' && payload.body?.attachmentId) {
         attachments.push({
-          filename: payload.filename,
+          id: payload.body.attachmentId,
+          name: payload.filename || 'unnamed',
           contentType: payload.mimeType,
           size: payload.body.size || 0
         });
@@ -485,24 +574,86 @@ Body: ${this.getMessageBody(m)}
     }
   }
 
-  async searchEmails(query: string, maxResults: number = 20): Promise<EmailMessage[]> {
-    try {
+  async searchEmails(query: string, maxResults: number = 20, summarizeResults: boolean = true): Promise<EmailMessage[]> {
+    return this.withErrorHandling(async () => {
       const auth = await this.getAuthorizedClient();
+      
+      // Format and enhance the search query
+      let enhancedQuery = query.trim();
+      
+      // Check cache first
+      const cachedResults = searchResultCache.get(enhancedQuery, { maxResults, summarizeResults });
+      if (cachedResults) {
+        console.log('Returning cached results for query:', enhancedQuery);
+        return cachedResults as EmailMessage[];
+      }
+
+      // Check for similar cached results
+      const similarResults = searchResultCache.getSimilarResults(enhancedQuery);
+      if (similarResults) {
+        console.log('Found similar cached results for query:', enhancedQuery);
+        return similarResults as EmailMessage[];
+      }
+      
+      // If the query looks like a name (no special characters or email format)
+      if (!enhancedQuery.includes('@') && 
+          !enhancedQuery.includes('from:') && 
+          !enhancedQuery.includes('to:') && 
+          !enhancedQuery.includes('subject:') && 
+          !enhancedQuery.includes('in:')) {
+        
+        // Split query into terms and search each term across all fields
+        const terms = enhancedQuery.split(/\s+/).filter(Boolean);
+        if (terms.length > 0) {
+          // Make search case-insensitive by adding variations
+          enhancedQuery = terms.map(term => {
+            const variations = [
+              term.toLowerCase(),
+              term.toUpperCase(),
+              term.charAt(0).toUpperCase() + term.slice(1).toLowerCase()
+            ];
+            // Search in from, to, subject, and full text, including partial matches
+            return `(${variations.map(v => 
+              `from:*${v}* OR to:*${v}* OR subject:*${v}* OR ${v}`
+            ).join(' OR ')})`;
+          }).join(' ');
+        }
+      }
+
+      // Only add time restriction if specifically requested or for 'recent' searches
+      if (enhancedQuery.includes('before:') || 
+          enhancedQuery.includes('after:') || 
+          enhancedQuery.includes('older:') || 
+          enhancedQuery.includes('newer:')) {
+        // Keep existing time restriction
+      } else if (query.toLowerCase().includes('recent')) {
+        enhancedQuery = `${enhancedQuery} newer_than:14d`;
+      }
+
+      // If query is still empty after trimming, return empty results
+      if (!enhancedQuery) {
+        return [];
+      }
+
+      console.log('Enhanced Gmail search query:', enhancedQuery);
+      
       const response = await this.gmail.users.messages.list({
         auth,
         userId: 'me',
-        q: query,
-        maxResults
+        q: enhancedQuery,
+        maxResults: Math.min(maxResults, 50) // Cap at 50 to prevent too many results
       });
 
       const messages = response.data.messages || [];
       const emails = await Promise.all(
         messages.map(async (message) => {
+          // Always fetch full message data for storage
           const email = await this.gmail.users.messages.get({
             auth,
             userId: 'me',
             id: message.id!,
-            format: 'full'
+            format: summarizeResults ? 'metadata' : 'full',
+            metadataHeaders: ['Subject', 'From', 'To', 'Date']
           });
 
           const headers = email.data.payload?.headers || [];
@@ -511,28 +662,48 @@ Body: ${this.getMessageBody(m)}
           const toStr = headers.find(h => h.name === 'To')?.value || '';
           const to = toStr.split(',').map(addr => addr.trim());
           const date = headers.find(h => h.name === 'Date')?.value || '';
-          const body = this.getMessageBody(email.data);
 
-          return {
+          // Store the full message in RAG for future reference
+          if (!summarizeResults) {
+            const fullBody = this.getMessageBody(email.data);
+            await this.storeEmailInRAG({
+              id: email.data.id!,
+              threadId: email.data.threadId || '',
+              subject,
+              from,
+              to,
+              date: new Date(date),
+              body: fullBody,
+              snippet: email.data.snippet || '',
+              labels: email.data.labelIds || [],
+              isRead: !email.data.labelIds?.includes('UNREAD'),
+              isStarred: email.data.labelIds?.includes('STARRED')
+            }, this.accountId);
+          }
+
+          const result = {
             id: email.data.id!,
             threadId: email.data.threadId || '',
             subject,
             from,
             to,
             date: new Date(date),
-            body,
+            body: summarizeResults ? email.data.snippet || '' : this.getMessageBody(email.data),
             snippet: email.data.snippet || '',
             labels: email.data.labelIds || [],
-            isRead: !email.data.labelIds?.includes('UNREAD')
+            isRead: !email.data.labelIds?.includes('UNREAD'),
+            isStarred: email.data.labelIds?.includes('STARRED')
           };
+
+          return result;
         })
       );
 
+      // Cache the results
+      searchResultCache.set(enhancedQuery, emails, { maxResults, summarizeResults });
+
       return emails;
-    } catch (error) {
-      console.error('Error searching emails:', error);
-      throw error;
-    }
+    });
   }
 
   async storeEmailInRAG(email: EmailMessage, userId: string): Promise<void> {

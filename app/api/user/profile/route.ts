@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/auth"
-import { prisma } from "@/lib/prisma"
-import { RAGSystem } from "@/lib/rag"
+import { auth } from "@/app/auth"
+import prisma from "@/app/lib/prisma"
+import { RAGSystem } from "@/app/lib/rag"
 
 export async function PUT(req: Request) {
   try {

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { auth } from '@/app/auth';
 import { google } from 'googleapis';
-import { validateToken } from '@/lib/auth-helpers';
-import { prisma } from '@/lib/prisma';
+import { validateToken } from '@/app/lib/auth-helpers';
+import prisma from '@/app/lib/prisma';
 
 export async function POST() {
   try {

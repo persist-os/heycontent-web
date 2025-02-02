@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { YouTubeService } from '@/lib/services/youtube';
-import { auth } from '@/auth';
-import { prisma } from '@/lib/prisma';
+import { YouTubeService } from '@/app/lib/services/youtube';
+import { auth } from '@/app/auth';
+import prisma from '@/app/lib/prisma';
 
 interface YouTubeMetadata {
   channelId: string;

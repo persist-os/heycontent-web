@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
-import { prisma } from '@/lib/prisma'
-import { SocialPlatform } from '@/types/social-platforms'
+import { auth } from '@/app/auth'
+import prisma from '@/app/lib/prisma'
+import { SocialPlatform } from '@/app/types/social-platforms'
 
 // Platform-specific OAuth configurations
 const PLATFORM_CONFIGS: Record<SocialPlatform, {

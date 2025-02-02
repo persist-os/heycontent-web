@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/../src/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/../src/components/ui/tabs'
-import { Switch } from "@/../src/components/ui/switch"
+import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/src/components/ui/tabs'
+import { Switch } from "@/src/components/ui/switch"
 import { 
   Settings, Bell, Lock, Palette, Globe, Users, 
   Sliders, Mail, Briefcase, MessageSquare, Upload,
@@ -13,8 +13,8 @@ import {
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { useSession } from 'next-auth/react'
-import { Badge } from "@/../src/components/ui/badge"
-import { Button } from "@/../src/components/ui/button"
+import { Badge } from "@/src/components/ui/badge"
+import { Button } from "@/src/components/ui/button"
 import { toast } from "react-hot-toast"
 import { PlatformConnect } from './platform-connect'
 

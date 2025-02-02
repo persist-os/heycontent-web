@@ -1,6 +1,8 @@
 'use client'
 
-import type { Message, InteractiveResponse, InteractiveOption } from '@/types/chat'
+import type { Message } from '@/app/types'
+import type { InteractiveOption } from '@/app/lib/chat/interactive-response'
+import type { InteractiveResponse } from '@/app/types'
 import { formatDistanceToNow } from 'date-fns'
 import { MessageSquare, ChevronRight } from 'lucide-react'
 
@@ -28,6 +30,38 @@ export function MessageBubble({
   const isUser = message.role === 'user'
   const isTyping = message.status === 'typing'
   const interactiveResponse = message.interactiveResponse
+
+  // Helper function to safely render message content
+  const renderMessageContent = (content: any): string => {
+    if (typeof content === 'string') return content;
+    if (typeof content === 'object' && content !== null) {
+      // Handle the specific AI response structure
+      if (content.response && typeof content.response === 'string') {
+        return content.response;
+      }
+      if (content.output && typeof content.output === 'string') {
+        return content.output;
+      }
+      if (content.text && typeof content.text === 'string') {
+        return content.text;
+      }
+      // If we have an object with insights and suggestions, format them nicely
+      if (content.insights || content.suggestions) {
+        let formattedContent = '';
+        if (content.response) formattedContent += content.response + '\n\n';
+        if (content.insights?.length) {
+          formattedContent += 'Insights:\n' + content.insights.map((i: any) => `• ${i}`).join('\n') + '\n\n';
+        }
+        if (content.suggestions?.length) {
+          formattedContent += 'Suggestions:\n' + content.suggestions.map((s: any) => `• ${s}`).join('\n');
+        }
+        return formattedContent.trim() || 'No content available';
+      }
+      // Fallback to JSON stringify for other objects
+      return JSON.stringify(content, null, 2);
+    }
+    return 'No content available';
+  };
   
   // If it's a typing indicator, show the special bubble
   if (isTyping) {
@@ -101,7 +135,7 @@ export function MessageBubble({
             {/* Message Content */}
             <div className="flex-1 min-w-0">
               <p className="whitespace-pre-wrap break-words text-sm leading-relaxed overflow-hidden">
-                {message.content}
+                {renderMessageContent(message.content)}
               </p>
               
               {message.status === 'failed' && onRetry && (

@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
-import { YouTubeService } from '@/lib/services/youtube';
-import { GmailService } from '@/lib/services/gmail';
-import { prisma } from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
+import { auth } from '@/app/auth';
+import { YouTubeService } from '@/app/lib/services/youtube';
+import { GmailService } from '@/app/lib/services/gmail';
+import prisma from '@/app/lib/prisma';
+import type { Account, SocialAccount, Prisma } from '@prisma/client';
+import { google } from 'googleapis';
+import { Client } from '@microsoft/microsoft-graph-client';
 
 type YouTubeMetadata = {
   channelId: string;
@@ -15,6 +17,23 @@ function isYouTubeMetadata(metadata: Prisma.JsonValue | null): metadata is YouTu
   if (!metadata || typeof metadata !== 'object') return false;
   const m = metadata as Record<string, unknown>;
   return typeof m.channelId === 'string';
+}
+
+interface GoogleAccount {
+  id: string;
+  provider: string;
+  refresh_token: string | null;
+  access_token: string | null;
+  expires_at: number | null;
+}
+
+interface ConnectedSocialAccount {
+  id: string;
+  platform: string;
+  isConnected: boolean;
+  updatedAt: Date;
+  profileUrl: string | null;
+  metadata: Prisma.JsonValue;
 }
 
 export async function GET(req: Request) {
@@ -59,8 +78,8 @@ export async function GET(req: Request) {
     }
 
     // Log account status
-    const googleAccount = user.accounts.find(acc => acc.provider === 'google');
-    const youtubeAccount = user.socialAccounts.find(acc => acc.platform === 'youtube');
+    const googleAccount = user.accounts.find((acc: GoogleAccount) => acc.provider === 'google');
+    const youtubeAccount = user.socialAccounts.find((acc: ConnectedSocialAccount) => acc.platform === 'youtube');
     
     console.log('Account status:', {
       hasGoogleAccount: !!googleAccount,
@@ -127,7 +146,7 @@ export async function GET(req: Request) {
       }
 
       case 'partnership_emails': {
-        const gmailAccount = user.accounts.find(acc => acc.provider === 'google');
+        const gmailAccount = user.accounts.find((acc: GoogleAccount) => acc.provider === 'google');
         if (!gmailAccount) {
           return NextResponse.json({ error: 'Gmail account not connected' }, { status: 400 });
         }

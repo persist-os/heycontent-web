@@ -3,6 +3,8 @@ import { OpenAIEmbeddings } from "@langchain/openai";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { PrismaClient, Prisma } from "@prisma/client";
 import { createHash } from 'crypto';
+import { YouTubeService } from '../services/youtube';
+import crypto from 'crypto';
 
 // Cache interface
 interface EmbeddingCache {
@@ -23,7 +25,7 @@ interface RagDocument {
   content: string;
   content_hash: string;
   metadata: Record<string, unknown>;
-  embedding: number[];
+  embedding: number[] | string; // Can be array when creating, string when reading from DB
   created_at: Date;
   updated_at: Date;
 }
@@ -168,31 +170,40 @@ export class RAGSystem {
   private async init(): Promise<void> {
     try {
       console.log('Testing vector operations...');
-      try {
-        // Check database connection
-        await this.prisma.$executeRaw`SELECT version();`;
-        console.log('Database connected');
-        
-        // Check table structure
-        await this.prisma.$executeRaw`
-          SELECT column_name, data_type 
-          FROM information_schema.columns 
-          WHERE table_name = 'rag_documents' 
-          AND column_name = 'embedding';
-        `;
-        console.log('Table structure verified');
-      } catch (e) {
-        console.error('Detailed initialization error:', {
-          error: e,
-          message: e instanceof Error ? e.message : 'Unknown error',
-          name: e instanceof Error ? e.name : 'Unknown',
-          stack: e instanceof Error ? e.stack : undefined
-        });
-        throw e;
+      
+      // Check database connection
+      await this.prisma.$executeRaw`SELECT version();`;
+      console.log('Database connected');
+      
+      // Ensure vector extension is enabled
+      await this.prisma.$executeRaw`CREATE EXTENSION IF NOT EXISTS vector;`;
+      
+      // Check if the vector column exists and has the correct type
+      const columnCheck = await this.prisma.$queryRaw<any[]>`
+        SELECT column_name, data_type, udt_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'rag_documents' 
+        AND column_name = 'embedding';
+      `;
+      
+      if (columnCheck.length === 0) {
+        throw new Error('Vector column not found in rag_documents table');
       }
+      
+      // Test vector operations
+      await this.prisma.$executeRawUnsafe(`
+        SELECT '[1,2,3]'::vector(3);
+      `);
+      
+      console.log('Table structure verified');
       console.log('RAG system initialized successfully');
     } catch (error) {
-      console.error('Error initializing RAG system:', error);
+      console.error('Error initializing RAG system:', {
+        error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        name: error instanceof Error ? error.name : 'Unknown',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       throw new Error('Failed to initialize RAG system');
     }
   }
@@ -201,17 +212,81 @@ export class RAGSystem {
     await this.initialized;
   }
 
-  async search(query: string = '', filter?: Partial<AVAMetadata>, limit: number = 5): Promise<SearchResult[]> {
+  async search(
+    type: string,
+    query: string,
+    options?: {
+      userId?: string;
+      filters?: Record<string, any>;
+      limit?: number;
+    }
+  ): Promise<any[]> {
+    // Validate and convert type to AVADocumentType
+    const validTypes: AVADocumentType[] = [
+      'current_persona',
+      'future_vision',
+      'conversation_history',
+      'smart_note',
+      'insight',
+      'partnership',
+      'content',
+      'email'
+    ];
+    
+    const documentType = validTypes.find(t => t === type) as AVADocumentType;
+    if (!documentType) {
+      console.warn(`Invalid document type: ${type}. Defaulting to 'content'`);
+    }
+    
+    // Build the filter object
+    const filter: Partial<AVAMetadata> = {
+      type: documentType || 'content',
+      ...options?.filters
+    };
+
+    // Add user_id if provided
+    if (options?.userId) {
+      filter.user_id = options.userId;
+    }
+    
+    // Call internal search with complete filter
+    const results = await this.searchInternal(query, filter, options?.limit);
+    return results;
+  }
+
+  private async searchInternal(query?: string, filter?: Partial<AVAMetadata>, limit: number = 5): Promise<SearchResult[]> {
     try {
       await this.ensureInitialized();
+
+      if (!query) {
+        console.log('No query provided, returning empty results');
+        return [];
+      }
+
       console.log('Performing RAG search with query:', query);
       
-      // Check cache first
-      const queryEmbedding = await this.getOrCreateEmbedding(query);
+      // Split long queries into meaningful chunks
+      let queryEmbedding: number[];
+      if (query.length > 2000) {
+        const splitter = new RecursiveCharacterTextSplitter({
+          chunkSize: 2000,
+          chunkOverlap: 200,
+          separators: ["\n\n", "\n", " ", ""],
+          keepSeparator: true
+        });
+        const chunks = await splitter.createDocuments([query]);
+        // Use the most relevant chunk for search
+        const mainChunk = chunks[0].pageContent;
+        queryEmbedding = await this.getOrCreateEmbedding(mainChunk);
+      } else {
+        queryEmbedding = await this.getOrCreateEmbedding(query);
+      }
+      
+      const queryVector = `[${queryEmbedding.join(',')}]`;
 
       // Build the filter conditions
       const conditions: string[] = [];
-      const params: any[] = [JSON.stringify(queryEmbedding)];
+      const params: any[] = [queryVector];
       
       if (filter) {
         if (filter.type) {
@@ -243,109 +318,165 @@ export class RAGSystem {
 
       params.push(limit);
 
-      const searchQuery = `
-        SELECT
+      // Perform vector similarity search with metadata filtering
+      const results = await this.prisma.$queryRawUnsafe<SearchResult[]>(`
+        SELECT 
           id,
           content,
           metadata,
-          1 - (
-            (
-              SELECT SUM((a.value::float - b.value::float) * (a.value::float - b.value::float))
-              FROM jsonb_array_elements_text(embedding::jsonb) WITH ORDINALITY a(value, idx)
-              CROSS JOIN jsonb_array_elements_text($1::jsonb) WITH ORDINALITY b(value, idx)
-              WHERE a.idx = b.idx
-            ) / (
-              SELECT COUNT(*)
-              FROM jsonb_array_elements(embedding::jsonb)
-            )
-          ) as similarity
+          1 - (embedding <=> $1::vector) as similarity
         FROM rag_documents
         ${whereClause}
         ORDER BY similarity DESC
         LIMIT $${params.length}
-      `;
-      
-      const results = await this.prisma.$queryRawUnsafe<SearchResult[]>(searchQuery, ...params);
-      
+      `, ...params);
+
       // Add pageContent for compatibility and resolve references
-      for (let result of results) {
-        if (result.metadata?.reference_id) {
+      for (const item of results) {
+        if (item.metadata?.reference_id) {
           const referenced = await this.prisma.rag_documents.findUnique({
-            where: { id: result.metadata.reference_id }
+            where: { id: item.metadata.reference_id }
           });
           if (referenced && referenced.content) {
-            result.content = referenced.content;
+            item.content = referenced.content;
           }
         }
-        result.pageContent = result.content;
+        item.pageContent = item.content;
       }
 
       return results;
     } catch (error) {
-      console.error('RAGSystem: Error searching:', error);
+      console.error('Error in searchInternal:', error);
       throw error;
     }
   }
 
-  async addDocument(content: string, metadata: AVAMetadata): Promise<void> {
+  private extractEssentialContent(content: any): string {
+    // Helper to truncate long strings
+    const truncate = (str: string, maxLength: number = 1000) => {
+      if (!str || typeof str !== 'string') return '';
+      return str.length <= maxLength ? str : str.slice(0, maxLength) + '...';
+    };
+
+    try {
+      // If content is a string, try to parse it as JSON first
+      if (typeof content === 'string') {
+        try {
+          const parsed = JSON.parse(content);
+          // If it's our stored video format
+          if (parsed.title && (parsed.date || parsed.publishedAt)) {
+            return JSON.stringify({
+              type: 'video',
+              title: parsed.title,
+              date: parsed.date || parsed.publishedAt,
+              metrics: parsed.metrics || {},
+              description: parsed.description || '',
+              timestamp: parsed.timestamp || new Date().toISOString()
+            });
+          }
+          // Return the parsed content as is
+          return content;
+        } catch {
+          // If not valid JSON, return as plain string
+          return truncate(content);
+        }
+      }
+
+      // If it's a video metadata object
+      if (content?.title && (content?.publishedAt || content?.date)) {
+        return JSON.stringify({
+          type: 'video',
+          title: truncate(content.title, 200),
+          date: content.publishedAt || content.date,
+          metrics: content.metrics || {},
+          description: truncate(content.description || '', 500),
+          timestamp: new Date().toISOString()
+        });
+      }
+    
+      // If it's an AI response object
+      if (content.query && content.result) {
+        return JSON.stringify({
+          type: 'ai_response',
+          query: truncate(content.query, 200),
+          response: truncate(content.result.output || content.result, 800),
+          timestamp: new Date().toISOString()
+        });
+      }
+    
+      // If it's a raw response object
+      if (content.output) {
+        return JSON.stringify({
+          type: 'raw_response',
+          response: truncate(content.output, 1000),
+          timestamp: new Date().toISOString()
+        });
+      }
+    
+      // For other objects, stringify and truncate
+      return truncate(JSON.stringify(content));
+    } catch (error) {
+      console.error('Error in extractEssentialContent:', error);
+      return truncate(String(content));
+    }
+  }
+
+  async addDocument(content: string | Record<string, any>, metadata: AVAMetadata): Promise<void> {
     try {
       await this.ensureInitialized();
-      console.log('RAGSystem: Starting document add with metadata:', metadata);
       
-      // Check for duplicates
-      const contentHash = this.generateContentHash(content);
-      const existing = await this.prisma.$queryRaw<RagDocument[]>`
-        SELECT * FROM rag_documents 
-        WHERE content_hash = ${contentHash}
-        AND metadata->>'user_id' = ${metadata.user_id}
-        LIMIT 1
-      `;
-
-      if (existing && existing[0]?.metadata) {
-        // Update existing document instead of creating new one
-        await this.prisma.rag_documents.update({
-          where: { id: existing[0].id },
-          data: {
-            metadata: { ...existing[0].metadata as Record<string, unknown>, ...metadata }
+      // Extract essential content before processing
+      let processedContent = this.extractEssentialContent(content);
+      
+      // Generate content hash
+      const contentHash = this.generateContentHash(processedContent);
+      
+      // Check for duplicates with user context
+      const existing = await this.prisma.rag_documents.findFirst({
+        where: {
+          content_hash: contentHash,
+          metadata: {
+            path: ['user_id'],
+            equals: metadata.user_id
           }
+        }
+      });
+      
+      if (existing) {
+        // Update existing document
+        await this.prisma.rag_documents.update({
+          where: { id: existing.id },
+          data: { metadata }
         });
         return;
       }
 
-      // Check for similar content
-      const similarContent = await this.search(content, {
-        user_id: metadata.user_id,
-        type: metadata.type
-      }, 1);
+      // Generate embedding
+      const embedding = await this.getOrCreateEmbedding(processedContent);
+      
+      // Use parameterized query for safe vector operations
+      await this.prisma.$executeRaw`
+        INSERT INTO rag_documents (
+          id,
+          content,
+          content_hash,
+          metadata,
+          embedding,
+          created_at,
+          updated_at
+        )
+        VALUES (
+          ${crypto.randomUUID()},
+          ${processedContent},
+          ${contentHash},
+          ${metadata as any}::jsonb,
+          ${`[${embedding.join(',')}]`}::vector,
+          NOW(),
+          NOW()
+        )
+      `;
 
-      if (similarContent.length > 0 && similarContent[0].similarity > 0.95) {
-        // Store as reference to similar content
-        await this.prisma.$executeRaw`
-          INSERT INTO rag_documents (id, content, content_hash, metadata, embedding, created_at, updated_at)
-          VALUES (
-            gen_random_uuid(),
-            '',
-            ${contentHash},
-            ${JSON.stringify({
-              ...metadata,
-              reference_id: similarContent[0].id,
-              is_reference: true
-            })}::jsonb,
-            ${JSON.stringify(await this.getOrCreateEmbedding(content))}::jsonb,
-            CURRENT_TIMESTAMP,
-            CURRENT_TIMESTAMP
-          )
-        `;
-        return;
-      }
-
-      const splitter = new RecursiveCharacterTextSplitter({
-        chunkSize: 1000,
-        chunkOverlap: 200,
-      });
-
-      const docs = await splitter.createDocuments([content], [metadata]);
-      await this.addDocuments(docs);
+      console.log('Document added successfully');
     } catch (error) {
       console.error('RAGSystem: Error in addDocument:', error);
       throw error;
@@ -359,14 +490,31 @@ export class RAGSystem {
         const contentHash = this.generateContentHash(doc.pageContent);
         const embedding = await this.getOrCreateEmbedding(doc.pageContent);
         
-        await this.prisma.$executeRaw`
-          INSERT INTO rag_documents (id, content, content_hash, metadata, embedding, created_at, updated_at)
-          VALUES (gen_random_uuid(), ${doc.pageContent}, ${contentHash}, ${doc.metadata as Prisma.InputJsonValue}, ${JSON.stringify(embedding)}::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-          ON CONFLICT (content_hash) 
-          DO UPDATE SET 
-            metadata = EXCLUDED.metadata,
-            updated_at = CURRENT_TIMESTAMP
-        `;
+        // Convert embedding array to PostgreSQL vector format
+        const vectorStr = `[${embedding.join(',')}]`;
+        
+        // First try to insert using native Prisma (more efficient)
+        try {
+          await this.prisma.$executeRaw`
+            INSERT INTO rag_documents (id, content, content_hash, metadata, embedding, created_at, updated_at)
+            VALUES (
+              gen_random_uuid(),
+              ${doc.pageContent},
+              ${contentHash},
+              ${doc.metadata as Prisma.InputJsonValue}::jsonb,
+              ${vectorStr}::vector(1536),
+              CURRENT_TIMESTAMP,
+              CURRENT_TIMESTAMP
+            )
+            ON CONFLICT (content_hash)
+            DO UPDATE SET
+              metadata = EXCLUDED.metadata,
+              updated_at = CURRENT_TIMESTAMP
+          `;
+        } catch (e) {
+          console.error('Error in upsert attempt:', e);
+          // Fallback already uses raw SQL, no changes needed
+        }
       }
       console.log('RAGSystem: Documents added successfully');
     } catch (error) {
@@ -382,7 +530,7 @@ export class RAGSystem {
   ) {
     try {
       // Deactivate old personas
-      const oldPersonas = await this.search('', {
+      const oldPersonas = await this.searchInternal('', {
         user_id: userId,
         type: 'current_persona',
         isActive: true
@@ -408,7 +556,7 @@ export class RAGSystem {
 
       // Handle future vision if provided
       if (futureVision) {
-        const oldVisions = await this.search('', {
+        const oldVisions = await this.searchInternal('', {
           user_id: userId,
           type: 'future_vision',
           isActive: true
@@ -439,13 +587,13 @@ export class RAGSystem {
 
   async getUserPersona(userId: string) {
     try {
-      const currentPersona = await this.search('', {
+      const currentPersona = await this.searchInternal('', {
         user_id: userId,
         type: 'current_persona',
         isActive: true
       }, 1);
 
-      const futureVision = await this.search('', {
+      const futureVision = await this.searchInternal('', {
         user_id: userId,
         type: 'future_vision',
         isActive: true
@@ -472,10 +620,111 @@ export class RAGSystem {
       
       // Simple context enhancement
       const enhancedQuery = `${persona.currentPersona || ''}\n${persona.futureVision || ''}\n${query}`;
-      return this.search(enhancedQuery, filter);
+      return this.searchInternal(enhancedQuery, {
+        user_id: userId,
+        type: 'conversation_history'
+      });
     } catch (error) {
       console.error('RAGSystem: Error in persona-aware search:', error);
       throw error;
     }
+  }
+
+  async addYouTubeVideo(videoUrl: string, userId: string) {
+    try {
+      // Extract video ID from URL
+      const videoId = videoUrl.split('v=')[1]?.split('&')[0];
+      if (!videoId) throw new Error('Invalid YouTube URL');
+
+      const youtubeService = new YouTubeService(userId);
+      
+      // Get video details and analysis
+      const videoDetails = await youtubeService.getVideoMetrics(videoId);
+      const videoAnalysis = await youtubeService.analyzeVideo(videoId);
+
+      // Format video data
+      const videoData = {
+        type: 'video',
+        title: videoDetails.title,
+        date: videoDetails.publishedAt,
+        metrics: {
+          views: videoDetails.views,
+          likes: videoDetails.likes,
+          comments: videoDetails.comments
+        },
+        analysis: videoAnalysis,
+        url: videoUrl
+      };
+
+      // Add to RAG system
+      await this.addDocument(videoData, {
+        type: 'content',
+        user_id: userId,
+        timestamp: new Date().toISOString(),
+        contentType: 'youtube_video'
+      });
+
+      return videoData;
+    } catch (error) {
+      console.error('Error adding YouTube video:', error);
+      throw error;
+    }
+  }
+
+  async searchWithYouTube(query: string, userId: string, filter?: Partial<AVAMetadata>): Promise<SearchResult[]> {
+    try {
+      // First get RAG results
+      const ragResults = await this.searchInternal(query, {
+        user_id: userId,
+        type: 'conversation_history'
+      });
+      
+      // Then search YouTube directly
+      const youtubeService = new YouTubeService(userId);
+      const youtubeResults = await youtubeService.searchVideosByTitle(query, {
+        includeMetrics: true,
+        includeAnalysis: true,
+        maxResults: 5
+      });
+
+      // Convert YouTube results to SearchResult format
+      const formattedYoutubeResults: SearchResult[] = youtubeResults.map(video => ({
+        id: video.id,
+        content: JSON.stringify({
+          type: 'video',
+          title: video.title,
+          publishedAt: video.publishedAt,
+          metrics: video.metrics,
+          analysis: video.analysis
+        }),
+        metadata: {
+          type: 'content',
+          contentType: 'youtube_video',
+          source: 'youtube_api',
+          user_id: userId,
+          timestamp: new Date().toISOString()
+        },
+        similarity: 1, // Direct API results are considered highly relevant
+        pageContent: video.title
+      }));
+
+      // Combine and deduplicate results
+      const allResults = [...ragResults];
+      for (const ytResult of formattedYoutubeResults) {
+        if (!allResults.some(r => r.id === ytResult.id)) {
+          allResults.push(ytResult);
+        }
+      }
+
+      return allResults;
+    } catch (error) {
+      console.error('Error in searchWithYouTube:', error);
+      throw error;
+    }
+  }
+
+  async store(type: string, content: any): Promise<void> {
+    // Basic implementation - to be expanded
+    console.log(`Storing ${type} content:`, content);
   }
 } 

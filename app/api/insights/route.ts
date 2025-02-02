@@ -1,17 +1,17 @@
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
-import { prisma } from '@/lib/prisma'
-import { PlatformAgent } from '@/lib/agent'
-import { ProcessContext } from '@/lib/agent/types'
-import { RAGSystem } from '@/lib/rag'
-import { SocialMediaService } from '@/lib/services/social-media'
-import { SocialAccount } from '@prisma/client'
-import { AIActionableInsight } from '@/types/index'
-import { ContentAnalysisService } from '@/lib/services/content-analysis'
-import { checkRateLimit, RATE_LIMIT, BURST_LIMIT } from '@/lib/rate-limit'
-import { actionableInsights } from '@/data/insights'
+import { auth } from '@/app/auth'
+import { RAGSystem } from '@/app/lib/rag'
+import { SocialMediaService } from '@/app/lib/services/social-media'
+import prisma from '@/app/lib/prisma'
+import type { SocialAccount } from '@prisma/client'
+import { PlatformAgent } from '@/app/lib/agent'
+import { ProcessContext } from '@/app/lib/agent/types'
+import { AIActionableInsight } from '@/app/types/index'
+import { ContentAnalysisService } from '@/app/lib/services/content-analysis'
+import { checkRateLimit, RATE_LIMIT, BURST_LIMIT } from '@/app/lib/rate-limit'
+import { actionableInsights } from '@/src/data/insights'
 
 interface PlatformMetrics {
   youtube?: {
@@ -92,7 +92,7 @@ export async function GET(req: Request) {
         })
       }
 
-      console.log('Found connected platforms:', user.socialAccounts.map(acc => ({
+      console.log('Found connected platforms:', user.socialAccounts.map((acc: SocialAccount) => ({
         platform: acc.platform,
         username: acc.username,
         isConnected: acc.isConnected
@@ -174,7 +174,7 @@ export async function GET(req: Request) {
 
       // Generate additional insights using the agent
       console.log('Generating additional insights with agent');
-      const agentResponse = await agent.process(
+      const result = await agent.process(
         "Generate additional insights based on the user's metrics, persona, and existing insights. Focus on unique opportunities and gaps.",
         {
           metrics,
@@ -184,13 +184,23 @@ export async function GET(req: Request) {
             timestamp: new Date().toISOString()
           },
           userId: session.user.id,
-          connectedPlatforms: user.socialAccounts.map(p => p.platform),
+          connectedPlatforms: user.socialAccounts.map((p: SocialAccount) => p.platform),
           existingInsights: [...finalPartnershipInsights, ...finalContentRecommendations],
+          platformStatus: user.socialAccounts.map((account: SocialAccount) => {
+            const metadata = account.metadata as { features?: string[], errors?: string[] } | null;
+            return {
+              platform: account.platform,
+              isConnected: account.isConnected,
+              lastSync: account.updatedAt,
+              features: metadata?.features || [],
+              errors: metadata?.errors || []
+            };
+          }),
           insightContext: {
             partnerships: finalPartnershipInsights.map(insight => ({
-              subject: insight.title,
-              analysis: {
-                isPartnership: true,
+              type: insight.type || 'partnership',
+              status: insight.action?.priority || 'medium',
+              performance: {
                 dealValue: insight.data.avgDealValue,
                 dealType: insight.data.dealType || 'unknown',
                 topics: [],
@@ -208,14 +218,19 @@ export async function GET(req: Request) {
       ).catch(error => {
         console.error('Error generating additional insights:', error);
         errors.push({ service: 'agent', error: 'Failed to generate additional insights' });
-        return { output: [] };
+        return { 
+          conversationState: null,
+          suggestions: [],
+          persona: null
+        };
       });
 
       // Combine all insights
       const allInsights = [
         ...finalPartnershipInsights,
         ...finalContentRecommendations,
-        ...(Array.isArray(agentResponse.output) ? agentResponse.output : [])
+        ...(('output' in result && Array.isArray(result.output)) ? result.output : 
+           (Array.isArray(result.suggestions) ? result.suggestions : []))
       ];
 
       // Store insights in RAG system for future reference
@@ -305,7 +320,13 @@ function generateDefaultInsights(metrics: any): AIActionableInsight[] {
           `Your channel has ${subscribers} subscribers`,
           "There's potential for growth"
         ],
-        data: ["View counts", "Subscriber numbers", "Engagement metrics"]
+        data: ["View counts", "Subscriber numbers", "Engagement metrics"],
+        source: "YouTube Analytics",
+        sourceDetails: [
+          "Video performance data",
+          "Subscriber growth trends",
+          "Engagement metrics history"
+        ]
       }
     });
   }

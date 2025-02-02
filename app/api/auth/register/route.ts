@@ -1,6 +1,6 @@
 import { hash } from "bcryptjs"
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import prisma from "@/app/lib/prisma"
 import { z } from "zod"
 import crypto from "crypto"
 import { sendVerificationEmail } from "../../../../src/lib/email"

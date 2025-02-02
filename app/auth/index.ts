@@ -1,10 +1,10 @@
 import type { GetServerSidePropsContext, NextApiRequest, NextApiResponse } from "next";
 import type { Session } from "next-auth";
 import NextAuth from "next-auth";
-import { authOptions } from "@/api/auth/auth-options";
+import { authOptions } from "@/app/api/auth/auth-options";
 import { compare } from 'bcryptjs'
 import { PrismaAdapter } from "@auth/prisma-adapter"
-import { prisma } from '@/lib/prisma'
+import prisma from '@/app/lib/prisma'
 
 export const preferredRegion = 'auto'
 

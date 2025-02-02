@@ -19,27 +19,30 @@ export interface UserWithAccounts {
 }
 
 export interface BaseMetrics {
-  engagement: {
-    rate: number;
-    total: number;
-    details?: Record<string, number>;
-  };
+  timestamp: number;
+  platform: string;
+}
+
+export interface YouTubeMetrics extends BaseMetrics {
+  platform: 'youtube';
+  videoId: string;
+  views: number;
+  totalViews: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  averageViewDuration: number;
+  retentionRate: number;
+  subscribers: number;
+  watchTimeHours: number;
+  subscribersGained: number;
+  subscribersLost: number;
   reach: number;
   audience: {
     total: number;
     growth: number;
-    demographics?: any;
+    demographics: Record<string, any>;
   };
-}
-
-export interface YouTubeMetrics extends BaseMetrics {
-  views: number;
-  subscribers: number;
-  watchTimeHours: number;
-  averageViewDuration: number;
-  totalViews: number;
-  subscribersGained: number;
-  subscribersLost: number;
   topVideos: Array<{
     id: string;
     title: string;
@@ -50,6 +53,10 @@ export interface YouTubeMetrics extends BaseMetrics {
     thumbnailUrl: string;
   }>;
   engagement: {
+    clickThroughRate: number;
+    watchTime: number;
+    subscribersGained: number;
+    subscribersLost: number;
     rate: number;
     total: number;
     likes: number;
@@ -62,20 +69,38 @@ export interface YouTubeMetrics extends BaseMetrics {
       shares: number;
     };
   };
+  demographics?: {
+    ageRanges: { [key: string]: number };
+    genders: { [key: string]: number };
+    locations: { [key: string]: number };
+  };
 }
 
 export interface InstagramMetrics extends BaseMetrics {
-  followers: number;
+  platform: 'instagram';
+  postId: string;
+  type: 'post' | 'story' | 'reel';
   impressions: number;
-  profileVisits: number;
+  reach: number;
+  likes: number;
+  comments: number;
+  saves: number;
+  shares: number;
+  followers: number;
   reels: number;
-  stories: number;
+  profileVisits: number;
+  storyCount: number;
   reachRate: number;
   saveRate: number;
   commentRate: number;
   engagement: {
     rate: number;
     total: number;
+    actions: {
+      profile_visits: number;
+      follows: number;
+      link_clicks?: number;
+    };
     details: {
       likes: number;
       comments: number;
@@ -83,23 +108,54 @@ export interface InstagramMetrics extends BaseMetrics {
       shares: number;
     };
   };
+  storyMetrics?: {
+    exits: number;
+    replies: number;
+    taps_forward: number;
+    taps_back: number;
+  };
 }
 
 export interface TikTokMetrics extends BaseMetrics {
-  followers: number;
+  platform: 'tiktok';
+  videoId: string;
+  caption?: string;
+  soundId?: string;
+  soundName?: string;
+  challengeIds?: string[];
+  challengeNames?: string[];
+  url?: string;
+  publishedAt?: string;
   views: number;
-  shares: number;
   likes: number;
   comments: number;
+  shares: number;
   watchTime: number;
   completionRate: number;
+  followers: number;
+  followerStats: {
+    gained: number;
+    lost: number;
+  };
   engagement: {
     rate: number;
+    watchTime: number;
+    completionRate: number;
     total: number;
-    details: {
+    details?: {
       likes: number;
       comments: number;
       shares: number;
+    };
+  };
+  sound: {
+    uses: number;
+    shares: number;
+  };
+  hashtags?: {
+    [tag: string]: {
+      views: number;
+      engagement: number;
     };
   };
 }
@@ -115,6 +171,11 @@ export interface EmailMetrics extends BaseMetrics {
   averageClickRate: number;
   bounceRate: number;
   unsubscribeRate: number;
+  reach: number;
+  audience: {
+    total: number;
+    growth: number;
+  };
   engagement: {
     rate: number;
     total: number;

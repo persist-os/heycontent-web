@@ -111,11 +111,12 @@ export interface EmailIntegrationConfig extends SocialIntegrationConfig {
 
 export interface EmailMessage {
   id: string
-  threadId?: string
+  threadId: string
   subject: string
   from: string
   to: string[]
   cc?: string[]
+  bcc?: string[]
   date: Date
   body: string
   attachments?: Array<{

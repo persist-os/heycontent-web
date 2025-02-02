@@ -1,5 +1,5 @@
 import { BaseAgent, AgentContext, CrossPlatformAnalytics, MarketIntelligence } from "./base-agent";
-import { AIActionableInsight } from "@/types/index";
+import { AIActionableInsight } from "@/app/types/index";
 import { RAGSystem } from "../rag";
 import { HumanMessage, SystemMessage, AIMessage } from "@langchain/core/messages";
 
@@ -34,8 +34,8 @@ interface InsightsContext extends AgentContext {
 }
 
 export class InsightsAgent extends BaseAgent {
-  constructor(rag: RAGSystem) {
-    super(rag, 'insights');
+  constructor(userId: string, rag: RAGSystem) {
+    super(userId, rag, 'insights');
   }
 
   protected systemPrompt = `You are an expert social media analyst focused on providing real-time, actionable insights across multiple platforms.
@@ -59,8 +59,11 @@ Core Rules:
    - Identify growth opportunities
    - Assess market positioning`;
 
-  async process(input: string, context: AgentContext) {
+  async process(input: string, context?: AgentContext): Promise<any> {
     try {
+      // Ensure we have a context object
+      context = context || { userId: this.userId, metrics: {} };
+
       // Get cross-agent context
       const crossAgentContext = await this.getCrossAgentContext(input, context);
 

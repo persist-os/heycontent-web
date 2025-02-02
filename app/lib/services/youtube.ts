@@ -1,17 +1,15 @@
 import { google, youtube_v3 } from 'googleapis';
-import { validateToken } from '@/lib/auth-helpers';
+import { validateToken } from '../../lib/auth-helpers';
 import { getCompletion } from '../openai';
 import { PrismaClient } from '@prisma/client';
+import { 
+  CommentAnalysis, 
+  CommentAnalysisResponse, 
+  DEFAULT_COMMENT_ANALYSIS, 
+  ValidSentiment 
+} from '../types/youtube';
 
 const prisma = new PrismaClient();
-
-interface CommentAnalysis {
-  sentiment: 'positive' | 'negative' | 'neutral';
-  topics: string[];
-  isQuestion: boolean;
-  isEngaging: boolean;
-  suggestedAction?: string;
-}
 
 interface VideoAnalysis {
   mainTopics: string[];
@@ -107,34 +105,35 @@ export class YouTubeService {
         fields: 'items(id,snippet/title)'
       });
 
-      console.log('Public API Response:', {
+      // Log response without using pager
+      console.log('Public API Response:', JSON.stringify({
         status: 'success',
         data: publicResponse.data
-      });
+      }, null, 2));
 
       // Then try with auth to get private data
       const auth = await this.getAuthorizedClient();
       
       // Get the token info to check scopes
       const tokenInfo = await auth.getTokenInfo(auth.credentials.access_token!);
-      console.log('Token Info:', {
+      console.log('Token Info:', JSON.stringify({
         scopes: tokenInfo.scopes,
         expires_in: tokenInfo.expiry_date,
         email: tokenInfo.email
-      });
+      }, null, 2));
 
       // Try a minimal authenticated request
       const response = await this.youtube.channels.list({
         auth,
         part: ['snippet'],
-        mine: true, // This requires youtube.readonly scope
+        mine: true,
         maxResults: 1
       });
       
-      console.log('Authenticated API Response:', {
+      console.log('Authenticated API Response:', JSON.stringify({
         status: response.status,
         data: response.data
-      });
+      }, null, 2));
 
       return {
         success: true,
@@ -145,16 +144,15 @@ export class YouTubeService {
         grantedScopes: tokenInfo.scopes
       };
     } catch (error: any) {
-      // Log the full error details
-      console.error('YouTube API Error Details:', {
+      // Log the full error details without pager
+      console.error('YouTube API Error Details:', JSON.stringify({
         status: error.response?.status,
         headers: error.response?.headers,
         data: error.response?.data,
         message: error.message,
         stack: error.stack
-      });
+      }, null, 2));
 
-      // Get token info even if the request failed
       try {
         const auth = await this.getAuthorizedClient();
         const tokenInfo = await auth.getTokenInfo(auth.credentials.access_token!);
@@ -330,84 +328,70 @@ export class YouTubeService {
     }
   }
 
-  private async analyzeComment(text: string): Promise<{
-    sentiment: 'positive' | 'negative' | 'neutral';
-    topics: string[];
-    isQuestion: boolean;
-    isEngaging: boolean;
-    suggestedAction?: string;
-  }> {
+  private async analyzeComment(text: string): Promise<CommentAnalysis> {
     try {
-      const prompt = [
-        'Analyze this YouTube comment:',
-        `"${text}"\n`,
-        'Please provide in a structured format:',
-        '1. Sentiment (exactly one of: positive, negative, neutral)',
-        '2. Topics mentioned (as a JSON array)',
-        '3. Is it a question? (true/false)',
-        '4. Is it engaging? (true/false)',
-        '5. Suggested action for creator\n',
-        'Example format:',
-        'positive',
-        '["topic1", "topic2"]',
-        'true',
-        'false',
-        '"Create more content about topic1"'
-      ].join('\n');
-
-      const analysis = await getCompletion([
-        { 
-          role: 'system', 
-          content: 'You are an AI that analyzes YouTube comments. Always respond in the exact format specified, using valid JSON arrays where requested.' 
-        },
-        { role: 'user', content: prompt }
-      ]);
-
-      const lines = analysis.split('\n').filter(line => line.trim());
-      try {
-        const sentiment = lines[0]?.toLowerCase().trim();
-        const validSentiments = ['positive', 'negative', 'neutral'];
-        
-        if (!validSentiments.includes(sentiment)) {
-          console.warn('Invalid sentiment value:', sentiment, 'defaulting to neutral');
-          return {
-            sentiment: 'neutral',
-            topics: JSON.parse(lines[1] || '[]'),
-            isQuestion: lines[2]?.toLowerCase().includes('true') ?? false,
-            isEngaging: lines[3]?.toLowerCase().includes('true') ?? false,
-            suggestedAction: lines[4]?.replace(/^"|"$/g, '')
-          };
-        }
-
-        return {
-          sentiment: sentiment as 'positive' | 'negative' | 'neutral',
-          topics: JSON.parse(lines[1] || '[]'),
-          isQuestion: lines[2]?.toLowerCase().includes('true') ?? false,
-          isEngaging: lines[3]?.toLowerCase().includes('true') ?? false,
-          suggestedAction: lines[4]?.replace(/^"|"$/g, '')
-        };
-      } catch (parseError) {
-        console.error('Error parsing comment analysis:', {
-          error: parseError,
-          lines,
-          rawResponse: analysis
-        });
-        return {
-          sentiment: 'neutral',
-          topics: [],
-          isQuestion: false,
-          isEngaging: false
-        };
-      }
+      const prompt = this.buildCommentAnalysisPrompt(text);
+      const analysis = await this.getAICommentAnalysis(prompt);
+      return this.validateAndNormalizeAnalysis(analysis);
     } catch (error) {
-      console.error('Error analyzing comment:', error);
-      return {
-        sentiment: 'neutral',
-        topics: [],
-        isQuestion: false,
-        isEngaging: false
+      console.error('Error in comment analysis:', {
+        error,
+        comment: text.substring(0, 100)
+      });
+      return DEFAULT_COMMENT_ANALYSIS;
+    }
+  }
+
+  private buildCommentAnalysisPrompt(text: string): string {
+    return [
+      'Analyze this YouTube comment:',
+      `"${text}"\n`,
+      'Provide a detailed analysis in the following format:',
+      '{',
+      '  "sentiment": "positive" | "negative" | "neutral", // Overall sentiment of the comment',
+      '  "topics": string[],                              // Main topics or themes discussed',
+      '  "isQuestion": boolean,                           // Whether the comment asks a question',
+      '  "isEngaging": boolean,                           // Whether the comment invites discussion',
+      '  "suggestedAction": string                        // Suggested action for the creator',
+      '}'
+    ].join('\n');
+  }
+
+  private async getAICommentAnalysis(prompt: string): Promise<CommentAnalysisResponse> {
+    const completion = await getCompletion([
+      { 
+        role: 'system', 
+        content: 'You are an AI that analyzes YouTube comments. Respond with valid JSON that exactly matches the specified schema.' 
+      },
+      { role: 'user', content: prompt }
+    ], {
+      model: 'gpt-4-1106-preview',
+      response_format: { type: "json_object" },
+      temperature: 0.1
+    });
+
+    return JSON.parse(completion.trim());
+  }
+
+  private validateAndNormalizeAnalysis(result: CommentAnalysisResponse): CommentAnalysis {
+    const normalizedSentiment = result.sentiment?.toLowerCase();
+    const validSentiments: ValidSentiment[] = ['positive', 'negative', 'neutral'];
+
+    if (!validSentiments.includes(normalizedSentiment as ValidSentiment)) {
+      console.warn('Invalid sentiment value:', result.sentiment, 'defaulting to neutral');
+      return { 
+        ...DEFAULT_COMMENT_ANALYSIS, 
+        topics: Array.isArray(result.topics) ? result.topics : [] 
       };
     }
+
+    return {
+      sentiment: normalizedSentiment as ValidSentiment,
+      topics: Array.isArray(result.topics) ? result.topics : [],
+      isQuestion: Boolean(result.isQuestion),
+      isEngaging: Boolean(result.isEngaging),
+      suggestedAction: typeof result.suggestedAction === 'string' ? result.suggestedAction : undefined
+    };
   }
 
   async getContentSuggestions(channelId: string): Promise<string[]> {

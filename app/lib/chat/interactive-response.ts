@@ -1,4 +1,4 @@
-import { Message } from '@/types/chat';
+import { Message } from '@/app/types/chat';
 
 export interface InteractiveOption {
   text: string;

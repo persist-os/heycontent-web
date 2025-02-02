@@ -1,4 +1,4 @@
-import type { InteractiveOption } from '@/lib/chat/interactive-response'
+import type { InteractiveOption } from '@/app/lib/chat/interactive-response'
 
 export interface InteractiveResponse {
   options?: InteractiveOption[];
@@ -30,6 +30,17 @@ export interface Message {
       context?: string;
       confidence: number;
     }>;
+    emailMetadata?: {
+      messageId: string;
+      threadId: string;
+      subject: string;
+      from: string;
+      to: string[];
+      date: string;
+      labels: string[];
+      isRead: boolean;
+      isStarred: boolean;
+    };
   };
   interactiveResponse?: InteractiveResponse;
 }
@@ -40,6 +51,9 @@ export interface ChatHistory {
   createdAt: string;
   updatedAt: string;
   title?: string;
+  topic: string;
+  preview: string;
+  starred?: boolean;
 }
 
 export interface InsightReference {

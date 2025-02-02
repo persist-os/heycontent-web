@@ -1,6 +1,7 @@
-import { Card } from '@/components/ui/card'
+import { Card } from '@/src/components/ui/card'
+import { Button } from '@/src/components/ui/button'
 import { Instagram, Youtube, Video, Mail, CheckCircle2, Loader2, AlertCircle } from 'lucide-react'
-import { SocialPlatform } from '@/types/social-platforms'
+import { SocialPlatform } from '@/app/types/social-platforms'
 import { useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
@@ -20,7 +21,31 @@ const PLATFORMS = [
     icon: Instagram,
     color: 'bg-gradient-to-r from-purple-500 to-pink-500',
     gradient: 'linear-gradient(to right, rgb(168, 85, 247), rgb(236, 72, 153))',
-    description: 'Connect to analyze engagement and find opportunities, and more'
+    description: 'Connect to analyze engagement and find opportunities, and more',
+    connectionOptions: [
+      {
+        id: 'basic',
+        name: 'Basic Connection',
+        description: 'For professional accounts without Facebook Business',
+        features: ['View profile info', 'Read media content']
+      },
+      {
+        id: 'facebook',
+        name: 'Business Connection',
+        description: 'Access advanced Instagram features through Facebook Business (Facebook Page required for setup only)',
+        features: [
+          'Instagram account analytics',
+          'Instagram comments management',
+          'Instagram post insights',
+          'Instagram content publishing (Coming soon)'
+        ],
+        requirements: [
+          'Instagram Professional Account',
+          'Facebook Page (for verification only)',
+          'Facebook Business Account'
+        ]
+      }
+    ]
   },
   {
     id: 'youtube',
@@ -53,6 +78,7 @@ export function PlatformConnect() {
   const [disconnecting, setDisconnecting] = useState<SocialPlatform | null>(null)
   const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccount[]>([])
   const [loading, setLoading] = useState(true)
+  const [showInstagramOptions, setShowInstagramOptions] = useState(false)
 
   const fetchConnectedPlatforms = async () => {
     try {
@@ -72,40 +98,59 @@ export function PlatformConnect() {
     fetchConnectedPlatforms()
   }, [])
 
-  const handleConnect = async (platform: SocialPlatform) => {
+  useEffect(() => {
+    // Check for error in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
+    
+    if (error === 'no_pages_found') {
+      toast.error(
+        'Facebook Page required. Please create a Facebook Page and connect it to your Instagram Professional account first.',
+        { duration: 6000 }
+      );
+    }
+  }, []);
+
+  const handleConnect = async (platform: SocialPlatform, options?: { useFacebook?: boolean }) => {
     try {
-      setConnecting(platform);
+      setConnecting(platform)
       
-      const response = await fetch(`/api/social/auth-url?platform=${platform}`, {
+      let url = `/api/social/auth-url?platform=${platform}`
+      if (options?.useFacebook !== undefined) {
+        url += `&useFacebook=${options.useFacebook}`
+      }
+      
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
           'Cache-Control': 'no-cache'
         }
-      });
+      })
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
       
-      const data = await response.json();
+      const data = await response.json()
       
       if (data.authUrl) {
-        window.location.href = data.authUrl;
+        window.location.href = data.authUrl
       } else {
-        throw new Error('No auth URL in response');
+        throw new Error('No auth URL in response')
       }
     } catch (error) {
-      console.error('Connection error:', error);
-      toast.error(`Failed to connect to ${platform}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Connection error:', error)
+      toast.error(`Failed to connect to ${platform}: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
-      setConnecting(null);
+      setConnecting(null)
+      setShowInstagramOptions(false)
     }
   }
 
   const handleDisconnect = async (platform: SocialPlatform) => {
     try {
-      setDisconnecting(platform);
+      setDisconnecting(platform)
       
       const response = await fetch('/api/social/disconnect', {
         method: 'POST',
@@ -113,29 +158,29 @@ export function PlatformConnect() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ platform })
-      });
+      })
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
       
       // Refresh the connected platforms list
-      await fetchConnectedPlatforms();
-      toast.success(`Successfully disconnected ${platform}`);
+      await fetchConnectedPlatforms()
+      toast.success(`Successfully disconnected ${platform}`)
     } catch (error) {
-      console.error('Disconnection error:', error);
-      toast.error(`Failed to disconnect ${platform}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Disconnection error:', error)
+      toast.error(`Failed to disconnect ${platform}: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
-      setDisconnecting(null);
+      setDisconnecting(null)
     }
   }
 
   const getAccountDetails = (platform: string) => {
-    return connectedAccounts.find(account => account.platform === platform);
+    return connectedAccounts.find(account => account.platform === platform)
   }
 
   const renderMetrics = (platform: string, metadata: any) => {
-    if (!metadata) return null;
+    if (!metadata) return null
 
     switch (platform) {
       case 'youtube':
@@ -145,17 +190,103 @@ export function PlatformConnect() {
             <div>Videos: {metadata.videos || 0}</div>
             <div>Total Views: {metadata.views || 0}</div>
           </div>
-        );
+        )
       case 'gmail':
         return (
           <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
             <div>Total Messages: {metadata.messagesTotal || 0}</div>
             <div>Total Threads: {metadata.threadsTotal || 0}</div>
           </div>
-        );
+        )
       default:
-        return null;
+        return null
     }
+  }
+
+  const renderConnectionButton = (platform: typeof PLATFORMS[number]) => {
+    const account = getAccountDetails(platform.id)
+    const isLoading = connecting === platform.id || disconnecting === platform.id
+
+    if (account) {
+      return (
+        <button
+          type="button"
+          onClick={() => handleDisconnect(platform.id as SocialPlatform)}
+          disabled={isLoading}
+          className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50"
+          style={{ background: '#94A3B8' }}
+        >
+          {isLoading ? 'Disconnecting...' : 'Disconnect'}
+        </button>
+      )
+    }
+
+    if (platform.id === 'instagram' && !account) {
+      return (
+        <div className="space-y-2">
+          {showInstagramOptions ? (
+            <>
+              <div className="space-y-4 mb-4 p-4 bg-gray-50 rounded-lg">
+                {platform.connectionOptions?.map((option) => (
+                  <div key={option.id} className="space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-medium">{option.name}</h4>
+                        <p className="text-sm text-gray-600">{option.description}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleConnect(platform.id as SocialPlatform, { 
+                          useFacebook: option.id === 'facebook' 
+                        })}
+                        className="px-3 py-1 text-sm rounded-md text-white"
+                        style={{ background: platform.gradient }}
+                      >
+                        Select
+                      </button>
+                    </div>
+                    <ul className="text-sm text-gray-600 list-disc list-inside pl-2">
+                      {option.features.map((feature, i) => (
+                        <li key={i}>{feature}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setShowInstagramOptions(false)}
+                  className="w-full py-2 px-4 rounded-lg text-gray-600 bg-gray-200 hover:bg-gray-300 transition-all duration-200"
+                >
+                  Cancel
+                </button>
+              </div>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowInstagramOptions(true)}
+              disabled={isLoading}
+              className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50"
+              style={{ background: platform.gradient }}
+            >
+              {isLoading ? 'Connecting...' : 'Connect'}
+            </button>
+          )}
+        </div>
+      )
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={() => handleConnect(platform.id as SocialPlatform)}
+        disabled={isLoading}
+        className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50"
+        style={{ background: platform.gradient }}
+      >
+        {isLoading ? 'Connecting...' : 'Connect'}
+      </button>
+    )
   }
 
   if (loading) {
@@ -188,8 +319,8 @@ export function PlatformConnect() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {PLATFORMS.map(platform => {
-          const account = getAccountDetails(platform.id);
-          const isLoading = connecting === platform.id || disconnecting === platform.id;
+          const account = getAccountDetails(platform.id)
+          const isLoading = connecting === platform.id || disconnecting === platform.id
 
           return (
             <Card key={platform.id} className="p-6 relative">
@@ -236,25 +367,9 @@ export function PlatformConnect() {
                 {platform.description}
               </p>
               
-              <button
-                type="button"
-                onClick={() => account 
-                  ? handleDisconnect(platform.id as SocialPlatform)
-                  : handleConnect(platform.id as SocialPlatform)
-                }
-                disabled={isLoading}
-                className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50"
-                style={{ 
-                  background: account ? '#94A3B8' : platform.gradient
-                }}
-              >
-                {isLoading 
-                  ? (connecting ? 'Connecting...' : 'Disconnecting...') 
-                  : (account ? 'Disconnect' : 'Connect')
-                }
-              </button>
+              {renderConnectionButton(platform)}
             </Card>
-          );
+          )
         })}
       </div>
     </div>

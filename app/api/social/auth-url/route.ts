@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
-import { SocialPlatform } from '@/types/social-platforms';
+import { auth } from '@/app/auth';
+import { SocialPlatform } from '@/app/types/social-platforms';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,10 +12,15 @@ const PLATFORM_CONFIGS: Record<SocialPlatform, {
   scope: string[];
 }> = {
   instagram: {
-    clientId: process.env.INSTAGRAM_CLIENT_ID,
-    clientSecret: process.env.INSTAGRAM_CLIENT_SECRET,
-    redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/social/callback/instagram`,
-    scope: ['user_profile', 'user_media']
+    clientId: process.env.INSTAGRAM_BASIC_CLIENT_ID,
+    clientSecret: process.env.INSTAGRAM_BASIC_CLIENT_SECRET,
+    redirectUri: process.env.INSTAGRAM_BASIC_REDIRECT_URI!,
+    scope: [
+      'instagram_business_basic',
+      'instagram_business_content_publish',
+      'instagram_business_manage_messages',
+      'instagram_business_manage_comments'
+    ]
   },
   tiktok: {
     clientId: process.env.TIKTOK_CLIENT_ID,
@@ -53,9 +58,11 @@ export async function GET(request: Request) {
   
   const { searchParams } = new URL(request.url);
   const platform = searchParams.get('platform') as SocialPlatform;
+  const useFacebook = searchParams.get('useFacebook') === 'true';
   
   console.log('Request details:', {
     platform,
+    useFacebook,
     url: request.url
   });
 
@@ -76,7 +83,8 @@ export async function GET(request: Request) {
 
     const state = Buffer.from(JSON.stringify({
       userId: session.user.id,
-      platform
+      platform,
+      useFacebook
     })).toString('base64');
 
     let authUrl: string;
@@ -99,12 +107,23 @@ export async function GET(request: Request) {
         console.log('Generated auth URL:', authUrl);
         break;
       case 'instagram':
-        authUrl = `https://api.instagram.com/oauth/authorize?` +
-          `client_id=${config.clientId}&` +
-          `redirect_uri=${config.redirectUri}&` +
-          `scope=${config.scope.join(',')}&` +
-          `response_type=code&` +
-          `state=${state}`;
+        if (useFacebook) {
+          // Facebook Login path for full features
+          authUrl = `https://www.facebook.com/v18.0/dialog/oauth?` +
+            `client_id=${process.env.INSTAGRAM_GRAPH_CLIENT_ID}&` +
+            `redirect_uri=${config.redirectUri}&` +
+            `scope=public_profile,instagram_basic,instagram_content_publish,instagram_manage_insights,instagram_manage_comments,pages_show_list,pages_read_engagement&` +
+            `response_type=code&` +
+            `state=${state}`;
+        } else {
+          // Instagram Business Login path
+          authUrl = `https://www.instagram.com/oauth/authorize?` +
+            `client_id=${process.env.INSTAGRAM_BASIC_CLIENT_ID}&` +
+            `redirect_uri=${config.redirectUri}&` +
+            `response_type=code&` +
+            `scope=${encodeURIComponent(config.scope.join(','))}&` +
+            `state=${state}`;
+        }
         break;
       case 'tiktok':
         authUrl = `https://www.tiktok.com/auth/authorize?` +
@@ -131,4 +150,4 @@ export async function GET(request: Request) {
   } finally {
     console.groupEnd();
   }
-} 
+}

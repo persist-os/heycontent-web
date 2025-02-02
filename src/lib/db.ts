@@ -1,16 +1,22 @@
-import { PrismaClient } from '@prisma/client'
+/*
+ * This file is currently not in use as the main Prisma instance is managed in app/lib/prisma.ts
+ * Keeping this commented for reference in case it's needed later
+ * The main difference is this includes error logging configuration
+ */
 
-declare global {
-  // eslint-disable-next-line no-var
-  var prisma: PrismaClient | undefined
-}
+// import { PrismaClient } from '@prisma/client'
 
-const prismaGlobal = global as { prisma?: PrismaClient }
+// declare global {
+//   // eslint-disable-next-line no-var
+//   var prisma: PrismaClient | undefined
+// }
 
-export const prisma = prismaGlobal.prisma || new PrismaClient({
-  log: ['error'],
-})
+// const prismaGlobal = global as { prisma?: PrismaClient }
 
-if (process.env.NODE_ENV !== 'production') {
-  prismaGlobal.prisma = prisma
-} 
+// export const prisma = prismaGlobal.prisma || new PrismaClient({
+//   log: ['error'],
+// })
+
+// if (process.env.NODE_ENV !== 'production') {
+//   prismaGlobal.prisma = prisma
+// } 

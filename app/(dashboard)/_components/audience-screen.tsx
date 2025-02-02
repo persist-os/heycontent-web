@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card'
 import { 
   BarChart, LineChart, Line, Bar, XAxis, YAxis, CartesianGrid, 
   Tooltip, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis 

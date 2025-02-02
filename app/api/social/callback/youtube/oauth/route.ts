@@ -1,8 +1,8 @@
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
-import { prisma } from '@/lib/prisma'
+import { auth } from '@/app/auth'
+import prisma from '@/app/lib/prisma'
 import { google } from 'googleapis'
 
 export async function GET(req: Request) {
@@ -39,21 +39,21 @@ export async function GET(req: Request) {
 
     // Verify we have the required YouTube scopes
     const requiredScopes = [
-      'https://www.googleapis.com/auth/youtube',  // Full access
-      'https://www.googleapis.com/auth/youtube.readonly',
-      'https://www.googleapis.com/auth/youtube.force-ssl'
-    ]
+      'https://www.googleapis.com/auth/youtube.readonly',  // Basic read-only access
+      'https://www.googleapis.com/auth/youtube.force-ssl'  // Required for secure API access
+    ];
 
-    const hasRequiredScopes = requiredScopes.some(scope => 
+    const hasRequiredScopes = requiredScopes.every(scope => 
       tokenInfo.scopes?.includes(scope)
-    )
+    );
 
     if (!hasRequiredScopes) {
       console.error('Missing required YouTube scopes:', {
         required: requiredScopes,
-        granted: tokenInfo.scopes
-      })
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=insufficient_youtube_permissions`)
+        granted: tokenInfo.scopes,
+        missing: requiredScopes.filter(scope => !tokenInfo.scopes?.includes(scope))
+      });
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=insufficient_youtube_permissions`);
     }
 
     // Initialize YouTube API

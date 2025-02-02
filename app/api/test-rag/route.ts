@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { RAGSystem } from "@/lib/rag";
+import { RAGSystem } from "@/app/lib/rag";
 import { auth } from "../../auth";
 
 const rag = new RAGSystem();
@@ -11,14 +11,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { operation, content, metadata } = body;
+    const { operation, content, type = 'test' } = await request.json();
 
     // Add user_id to metadata
     const enrichedMetadata = {
-      ...metadata,
-      user_id: session.user.id,
-      timestamp: new Date().toISOString()
+      ...{
+        user_id: session.user.id,
+        timestamp: new Date().toISOString()
+      },
+      type
     };
 
     console.log('RAG Test Request:', { 
@@ -47,20 +48,21 @@ export async function POST(request: Request) {
 
         // Determine if this is an email and extract metadata
         const isEmail = cleanContent.includes('Subject:');
-        const type = isEmail ? 'email' : 'content';
         const analysisType = cleanContent.toLowerCase().includes('partnership') ? 'partnership' : 'content';
 
         // Enrich metadata
         const documentMetadata = {
           ...enrichedMetadata,
-          type,
           analysis_type: analysisType,
           emailMetadata: isEmail ? {
+            messageId: `test-${Date.now()}`,
+            threadId: `thread-${Date.now()}`,
             subject: cleanContent.split('Subject:')[1]?.split('\n')[0]?.trim() || 'No Subject',
-            from: cleanContent.includes('From:') ? cleanContent.split('From:')[1]?.split('\n')[0]?.trim() : undefined,
+            from: cleanContent.includes('From:') ? cleanContent.split('From:')[1]?.split('\n')[0]?.trim() : 'unknown@example.com',
             to: ['team@avasetail.com'],
             date: new Date().toISOString(),
             isRead: false,
+            isStarred: false,
             labels: ['INBOX', analysisType === 'partnership' ? 'PARTNERSHIP' : 'GENERAL']
           } : undefined
         };
@@ -91,8 +93,8 @@ export async function POST(request: Request) {
         
         // Get both the email and best practices
         const [emailResults, bestPracticesResults] = await Promise.all([
-          rag.search(content, { ...searchMetadata, type: 'email' }),
-          rag.search(content, { ...searchMetadata, type: 'content', analysis_type: 'partnership' })
+          rag.search('email', content, { filters: { ...searchMetadata } }),
+          rag.search('content', content, { filters: { ...searchMetadata, analysis_type: 'partnership' } })
         ]);
 
         // Get the most relevant email and best practices
@@ -130,17 +132,14 @@ export async function POST(request: Request) {
 
       default:
         return NextResponse.json(
-          { error: 'Invalid operation' }, 
+          { error: 'Invalid operation. Use "add" or "search".' },
           { status: 400 }
         );
     }
   } catch (error) {
-    console.error('Error in test-rag endpoint:', error);
+    console.error('Error in test-rag:', error);
     return NextResponse.json(
-      { 
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }, 
+      { error: 'Failed to process request' },
       { status: 500 }
     );
   }

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { SocialPlatform } from '@/types/social-platforms'
+import prisma from '@/app/lib/prisma'
+import { SocialPlatform } from '@/app/types/social-platforms'
 import { google } from 'googleapis'
 
 const PLATFORM_CONFIGS: Record<SocialPlatform, {

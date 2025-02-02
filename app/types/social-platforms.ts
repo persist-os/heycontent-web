@@ -11,17 +11,22 @@ export interface EmailMessage {
   from: string;
   to: string[];
   cc?: string[];
-  date: Date;
+  bcc?: string[];
   body: string;
   snippet?: string;
-  labels: string[];
-  isRead: boolean;
-  isStarred?: boolean;
+  date: Date;
+  labels?: string[];
   attachments?: Array<{
-    filename: string;
+    id: string;
+    name: string;
     contentType: string;
     size: number;
   }>;
+  isRead?: boolean;
+  isStarred?: boolean;
+  metadata?: {
+    [key: string]: any;
+  };
 }
 
 export interface PartnershipAnalysis {
@@ -58,7 +63,60 @@ export interface ThreadMessage {
 }
 
 export interface EmailThread {
-  messages: ThreadMessage[];
+  id: string;
+  messages: EmailMessage[];
+  participants: string[];
+  subject: string;
+  lastMessageDate: Date;
+  messageCount: number;
+  labels?: string[];
+  metadata?: {
+    [key: string]: any;
+  };
+}
+
+export interface EmailContext {
+  threadId: string;
+  subject: string;
+  participants: string[];
+  lastUpdate: Date;
+  messageCount: number;
+  summary?: string;
+  topics?: string[];
+  sentiment?: string;
+  importance?: number;
+}
+
+export interface PostContext {
+  postId: string;
+  platform: 'instagram' | 'facebook' | 'twitter';
+  type: 'post' | 'story' | 'reel';
+  createdAt: Date;
+  engagement: {
+    likes: number;
+    comments: number;
+    shares?: number;
+    views?: number;
+  };
+  topics?: string[];
+  sentiment?: string;
+}
+
+export interface VideoContext {
+  videoId: string;
+  platform: 'youtube' | 'tiktok';
+  title: string;
+  description?: string;
+  createdAt: Date;
+  duration: number;
+  engagement: {
+    views: number;
+    likes: number;
+    comments: number;
+    shares?: number;
+  };
+  topics?: string[];
+  sentiment?: string;
 }
 
 export interface PartnershipEmail extends EmailMessage {

@@ -1,6 +1,6 @@
 import { BaseTool } from "./base-tool";
 import { z } from "zod";
-import { RAGSystem, AVADocumentType } from "@/lib/rag";
+import { RAGSystem, AVADocumentType } from "@/app/lib/rag";
 
 const NotesAnalysisSchema = z.object({
   content: z.string(),
@@ -76,9 +76,9 @@ export class SmartNotesTool extends BaseTool {
   async analyzeNotes(content: string, analysisType: string, maxLength: number = 500) {
     try {
       // Get relevant notes from RAG system
-      const notes = await this.rag.search(content, { 
-        type: analysisType as AVADocumentType 
-      }, maxLength);
+      const notes = await this.rag.search(analysisType as AVADocumentType, content).then(results => 
+        maxLength ? results.slice(0, maxLength) : results
+      );
       
       if (!notes || notes.length === 0) {
         return {

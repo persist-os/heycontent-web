@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { RAGSystem } from "@/lib/rag";
-import { auth } from "@/auth";
+import { RAGSystem } from "@/app/lib/rag";
+import { auth } from "@/app/auth";
 
 export async function POST(req: Request) {
   try {
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
       test: {
         query: testQuery,
         results: searchResults.map(doc => ({
-          content: doc.pageContent.substring(0, 100) + '...',
+          content: doc.pageContent?.substring(0, 100) + '...' || 'No content available',
           metadata: doc.metadata
         })).slice(0, 3)
       },

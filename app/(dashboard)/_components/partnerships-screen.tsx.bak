@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card'
+import { Badge } from "@/src/components/ui/badge"
 import { 
   Mail, MessageSquare, Heart, Star, Clock, AlertCircle,
   CheckCircle, XCircle, DollarSign, ArrowUpRight, Filter,
@@ -17,7 +17,7 @@ import {
   IncomingProposal,
   SuggestedPartnership,
   PartnershipData
-} from '@/types/partnerships'
+} from '@/app/types/partnerships'
 import { 
   Select,
   SelectContent,
@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/src/components/ui/select"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/src/components/ui/button"
 
 const ITEMS_PER_PAGE = 5
 

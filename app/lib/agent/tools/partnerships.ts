@@ -1,8 +1,14 @@
 import { BaseTool } from "./base-tool";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
-import { RAGSystem } from "@/lib/rag";
+import prisma from "@/app/lib/prisma";
+import { RAGSystem } from "@/app/lib/rag";
 import { ContentInsight, InsightContext, EnhancedInsights } from "../../../types/insights";
+
+const MetricsSchema = z.object({
+  engagement: z.any(),
+  reach: z.any(),
+  growth: z.any()
+});
 
 const AnalysisSchema = z.object({
   content: z.string(),
@@ -13,16 +19,18 @@ const AnalysisSchema = z.object({
     niche: z.string(),
     budget_range: z.enum(["low", "medium", "high"])
   }).optional(),
-  type: z.enum(["email", "thread", "social"]).optional(),
+  type: z.enum(["email", "thread", "social", "general"]).optional(),
   analysis_type: z.enum(["partnership", "collaboration", "general"]).optional(),
   // Optional context from other features
   context: z.object({
     partnerships: z.array(z.any()).optional(),
     audience: z.array(z.any()).optional(),
-    metrics: z.record(z.any()).optional(),
+    metrics: MetricsSchema.optional(),
     insights: z.array(z.any()).optional()
   }).optional()
 });
+
+type AnalysisInput = z.infer<typeof AnalysisSchema>;
 
 export class PartnershipTool extends BaseTool {
   private rag: RAGSystem;
@@ -38,7 +46,20 @@ export class PartnershipTool extends BaseTool {
 
   async _call(input: string) {
     try {
-      const params = this.validateInput(input);
+      // Handle both string and object inputs
+      let params: AnalysisInput;
+      try {
+        // First try to parse as JSON
+        const parsed = JSON.parse(input);
+        params = this.validateInput(parsed) as AnalysisInput;
+      } catch (e) {
+        // If parsing fails, treat input as raw content string
+        params = {
+          content: input,
+          type: "general",
+          analysis_type: "partnership"
+        };
+      }
       
       // Basic content analysis
       const baseAnalysis = {
@@ -49,15 +70,21 @@ export class PartnershipTool extends BaseTool {
       };
 
       // Get relevant insights from RAG if available
-      const relevantInsights = await this.rag.search(params.content, {
-        type: 'insight',
-        category: 'partnership'
-      }, 3);
+      const relevantInsights = await this.rag.search('insight', params.content);
+      // Filter for partnership category
+      const partnershipInsights = relevantInsights.filter(insight => 
+        insight.metadata?.category === 'partnership'
+      ).slice(0, 3);
 
       // Combine with context if provided
       const context: InsightContext = {
-        insights: (relevantInsights as unknown as ContentInsight[]) || [],
-        ...(params.context || {})
+        insights: (partnershipInsights as unknown as ContentInsight[]) || [],
+        ...(params.context || {}),
+        metrics: params.context?.metrics ? {
+          engagement: params.context.metrics.engagement,
+          reach: params.context.metrics.reach,
+          growth: params.context.metrics.growth
+        } : undefined
       };
 
       // If we have additional context, enhance the analysis

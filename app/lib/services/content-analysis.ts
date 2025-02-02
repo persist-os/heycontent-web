@@ -1,7 +1,7 @@
 import { YouTubeService } from './youtube';
 import { GmailService, GmailMessage } from './gmail';
 import { getCompletion } from '../openai';
-import { prisma } from '../prisma';
+import prisma from '../prisma';
 
 interface ContentInsight {
   type: 'partnership' | 'content' | 'engagement' | 'trend';

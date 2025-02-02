@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import prisma from "../../lib/prisma";
 import { google, youtube_v3 } from 'googleapis';
 import { SocialAccount, Account, Prisma, User } from '@prisma/client';
 import type { 
@@ -8,7 +8,7 @@ import type {
   EmailMetrics,
   SocialPlatform,
   BaseMetrics
-} from "@/lib/types/social";
+} from "../../lib/types/social";
 import { YouTubeService } from './youtube';
 
 // Define as a type that matches JsonValue structure
@@ -31,10 +31,11 @@ interface SocialAccountWithMetadata extends Omit<SocialAccount, 'metadata'> {
 }
 
 interface PlatformStatus {
-  platform: SocialPlatform;
+  platform: string;
   isConnected: boolean;
-  lastSync: Date | null;
-  error?: string;
+  lastSync?: Date;
+  features: string[];
+  errors?: string[];
 }
 
 interface Platform {
@@ -125,6 +126,101 @@ export class SocialMediaService {
     }
   }
 
+  async isYouTubeConnected(): Promise<boolean> {
+    try {
+      // Check if YouTube client is initialized
+      if (!this.youtube) {
+        return false;
+      }
+
+      // Try to make a simple API call to verify connection
+      await this.youtube.channels.list({
+        part: ['id'],
+        maxResults: 1,
+        mine: true
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error checking YouTube connection:', error);
+      return false;
+    }
+  }
+
+  async getLastSyncDate(platform: string): Promise<Date | undefined> {
+    try {
+      // Get the last sync record from the database
+      const lastSync = await prisma.socialAccount.findFirst({
+        where: {
+          platform: platform,
+          isConnected: true
+        },
+        orderBy: {
+          updatedAt: 'desc'
+        },
+        select: {
+          updatedAt: true
+        }
+      });
+
+      return lastSync?.updatedAt;
+    } catch (error) {
+      console.error(`Error getting last sync date for ${platform}:`, error);
+      return undefined;
+    }
+  }
+
+  async isInstagramConnected(): Promise<boolean> {
+    try {
+      // Check if there's a connected Instagram account in the database
+      const instagramAccount = await prisma.socialAccount.findFirst({
+        where: {
+          platform: 'instagram',
+          isConnected: true
+        }
+      });
+
+      return !!instagramAccount;
+    } catch (error) {
+      console.error('Error checking Instagram connection:', error);
+      return false;
+    }
+  }
+
+  async isTikTokConnected(): Promise<boolean> {
+    try {
+      // Check if there's a connected TikTok account in the database
+      const tiktokAccount = await prisma.socialAccount.findFirst({
+        where: {
+          platform: 'tiktok',
+          isConnected: true
+        }
+      });
+
+      return !!tiktokAccount;
+    } catch (error) {
+      console.error('Error checking TikTok connection:', error);
+      return false;
+    }
+  }
+
+  async isGmailConnected(): Promise<boolean> {
+    try {
+      // Check if there's a connected Gmail account in the database
+      const gmailAccount = await prisma.socialAccount.findFirst({
+        where: {
+          platform: 'gmail',
+          isConnected: true
+        }
+      });
+
+      return !!gmailAccount;
+    } catch (error) {
+      console.error('Error checking Gmail connection:', error);
+      return false;
+    }
+  }
+
   async setupOAuth2Client(accessToken: string) {
     try {
       console.log('Setting up OAuth2 client with access token');
@@ -204,7 +300,7 @@ export class SocialMediaService {
       let totalViews = 0;
       let totalLikes = 0;
       let totalComments = 0;
-      let topVideos: YouTubeMetrics['topVideos'] = [];
+      const topVideos: YouTubeMetrics['topVideos'] = [];
 
       if (videoIds.length > 0) {
         const videosDetails = await this.youtube.videos.list({
@@ -236,28 +332,46 @@ export class SocialMediaService {
         console.log('Aggregated video metrics:', { totalViews, totalLikes, totalComments });
       }
 
+      const totalEngagement = totalLikes + totalComments;
+      const engagementRate = totalEngagement / totalViews;
+      const averageViewPercentage = engagementRate * 100;
+      const totalWatchHours = totalViews / 3600; // Convert views to hours
+      const subscribersGained = Number(statistics.subscriberCount) - (Number(statistics.subscriberCount) * 0.9);
+      const subscribersLost = Number(statistics.subscriberCount) * 0.1;
+
       const metrics: YouTubeMetrics = {
+        platform: 'youtube',
+        timestamp: Date.now(),
+        videoId: '', // Default empty string for channel-level metrics
         views: totalViews,
+        totalViews: totalViews,
+        likes: 0,
+        comments: 0,
+        shares: 0,
+        averageViewDuration: 0,
+        retentionRate: 0,
+        subscribers: Number(statistics.subscriberCount) || 0,
+        watchTimeHours: totalWatchHours,
+        subscribersGained: subscribersGained,
+        subscribersLost: subscribersLost,
         reach: totalViews * 0.8, // Estimated reach
         audience: {
           total: Number(statistics.subscriberCount) || 0,
-          growth: Number(statistics.subscriberCount) - (Number(statistics.subscriberCount) * 0.9), // Estimated growth
+          growth: subscribersGained - subscribersLost,
           demographics: {}
         },
-        totalViews,
-        watchTimeHours: 0,
-        averageViewDuration: 0,
-        subscribers: Number(statistics.subscriberCount) || 0,
-        subscribersGained: 0,
-        subscribersLost: 0,
-        topVideos,
+        topVideos: topVideos,
         engagement: {
-          rate: (totalLikes + totalComments) / totalViews,
-          total: totalLikes + totalComments,
+          rate: engagementRate,
+          total: totalEngagement,
           likes: totalLikes,
           comments: totalComments,
           shares: 0,
-          averageViewPercentage: 0,
+          averageViewPercentage: averageViewPercentage,
+          clickThroughRate: 0,
+          watchTime: totalWatchHours * 3600, // Convert hours to seconds
+          subscribersGained: subscribersGained,
+          subscribersLost: subscribersLost,
           details: {
             likes: totalLikes,
             comments: totalComments,
@@ -318,31 +432,42 @@ export class SocialMediaService {
       const engagementRate = userData.followers_count ? 
         (totalEngagements / (userData.followers_count * mediaData.data?.length || 1)) * 100 : 0;
 
-      return {
-        followers: userData.followers_count || 0,
+      const metrics: InstagramMetrics = {
+        platform: 'instagram',
+        timestamp: Date.now(),
+        postId: '',
+        type: 'post',
         impressions: totalImpressions,
-        profileVisits: 0, // Requires additional permissions
-        reels: 0, // Requires additional API call
-        stories: 0, // Requires additional API call
+        reach: totalReach,
+        likes: totalLikes,
+        comments: totalComments,
+        saves: totalSaves,
+        shares: 0,
+        followers: userData.followers_count || 0,
+        reels: 0,
+        profileVisits: 0,
+        storyCount: 0,
         reachRate: userData.followers_count ? (totalReach / userData.followers_count) * 100 : 0,
         saveRate: mediaData.data?.length ? (totalSaves / mediaData.data.length) : 0,
         commentRate: mediaData.data?.length ? (totalComments / mediaData.data.length) : 0,
-        reach: totalReach,
-        audience: {
-          total: userData.followers_count || 0,
-          growth: 0 // Requires historical data comparison
-        },
         engagement: {
           rate: engagementRate,
           total: totalEngagements,
+          actions: {
+            profile_visits: 0,
+            follows: 0,
+            link_clicks: 0
+          },
           details: {
             likes: totalLikes,
             comments: totalComments,
             saves: totalSaves,
-            shares: 0 // Not available in basic API
+            shares: 0
           }
         }
       };
+
+      return metrics;
     } catch (error) {
       console.error('Error fetching Instagram metrics:', error);
       return undefined;
@@ -352,26 +477,34 @@ export class SocialMediaService {
   async getTikTokMetrics(accessToken: string): Promise<TikTokMetrics | undefined> {
     // TikTok API implementation will come later
     return {
-      followers: 0,
+      platform: 'tiktok',
+      timestamp: Date.now(),
+      videoId: '',
       views: 0,
-      shares: 0,
       likes: 0,
       comments: 0,
+      shares: 0,
       watchTime: 0,
       completionRate: 0,
-      reach: 0,
-      audience: {
-        total: 0,
-        growth: 0
+      followers: 0,
+      followerStats: {
+        gained: 0,
+        lost: 0
       },
       engagement: {
         rate: 0,
+        watchTime: 0,
+        completionRate: 0,
         total: 0,
         details: {
           likes: 0,
           comments: 0,
           shares: 0
         }
+      },
+      sound: {
+        uses: 0,
+        shares: 0
       }
     };
   }
@@ -430,6 +563,8 @@ export class SocialMediaService {
       const replyRate = totalMessages > 0 ? (totalReplies / totalMessages) * 100 : 0;
 
       return {
+        platform: 'gmail',
+        timestamp: Date.now(),
         opens: totalOpens,
         clicks: 0, // Not available in Gmail API
         bounces: 0, // Would need to check for bounce notifications
@@ -462,57 +597,41 @@ export class SocialMediaService {
   }
 
   async getPlatformStatus(): Promise<PlatformStatus[]> {
-    try {
-      const user = await prisma.user.findFirst({
-        include: {
-          accounts: {
-            select: {
-              id: true,
-              provider: true,
-              access_token: true,
-              expires_at: true
-            }
-          },
-          socialAccounts: {
-            select: {
-              id: true,
-              platform: true,
-              isConnected: true,
-              updatedAt: true
-            }
-          }
-        }
-      }) as UserWithAccounts | null;
+    const status: PlatformStatus[] = [];
 
-      if (!user) return [];
+    // Add YouTube status
+    status.push({
+      platform: 'youtube',
+      isConnected: await this.isYouTubeConnected(),
+      lastSync: await this.getLastSyncDate('youtube'),
+      features: ['videos', 'analytics', 'livestreams', 'community']
+    });
 
-      const status: PlatformStatus[] = [];
+    // Add Instagram status
+    status.push({
+      platform: 'instagram',
+      isConnected: await this.isInstagramConnected(),
+      lastSync: await this.getLastSyncDate('instagram'),
+      features: ['reels', 'stories', 'posts', 'insights']
+    });
 
-      // Check Gmail status
-      const gmailAccount = user.accounts.find((acc: Account) => acc.provider === 'google');
-      status.push({
-        platform: 'gmail',
-        isConnected: !!gmailAccount?.access_token,
-        lastSync: gmailAccount?.expires_at ? new Date(gmailAccount.expires_at * 1000) : null
-      });
+    // Add TikTok status
+    status.push({
+      platform: 'tiktok',
+      isConnected: await this.isTikTokConnected(),
+      lastSync: await this.getLastSyncDate('tiktok'),
+      features: ['videos', 'analytics', 'trends']
+    });
 
-      // Check social platform status
-      const platforms: SocialPlatform[] = ['youtube', 'instagram', 'tiktok'];
-      for (const platform of platforms) {
-        const account = user.socialAccounts.find((acc: SocialAccount) => acc.platform === platform);
-        status.push({
-          platform,
-          isConnected: !!account?.isConnected,
-          lastSync: account?.updatedAt || null,
-          error: account?.error || undefined
-        });
-      }
+    // Add Gmail status
+    status.push({
+      platform: 'gmail',
+      isConnected: await this.isGmailConnected(),
+      lastSync: await this.getLastSyncDate('gmail'),
+      features: ['emails', 'threads', 'labels']
+    });
 
-      return status;
-    } catch (error) {
-      console.error('Error getting platform status:', error);
-      return [];
-    }
+    return status;
   }
 
   async getMetrics(): Promise<SocialMetrics | null> {
@@ -539,7 +658,7 @@ export class SocialMediaService {
           switch (socialAccount.platform as SocialPlatform) {
             case 'youtube':
               const googleAccount = socialAccount.user?.accounts.find(
-                acc => acc.provider === 'google'
+                (acc: Account) => acc.provider === 'google'
               );
               
               if (googleAccount) {

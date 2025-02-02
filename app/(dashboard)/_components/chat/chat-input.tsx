@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Send, Loader2, MessageSquare } from 'lucide-react'
-import { Message } from '@/types/chat'
+import { Message } from '@/app/types'
 
 interface ChatInputProps {
   onSend: (message: string) => void

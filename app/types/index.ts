@@ -1,3 +1,5 @@
+export * from './chat';
+
 export interface InsightContext {
   why: string[];
   data: string[];
@@ -36,4 +38,39 @@ export interface AIActionableInsight {
     priority?: 'high' | 'medium' | 'low';
   };
   context: InsightContext;
+}
+
+export interface PartnershipContact {
+  name: string;
+  role: string;
+  email: string;
+}
+
+export interface PartnershipEvent {
+  date: string;
+  event: string;
+}
+
+export interface Partnership {
+  id: number;
+  brand: string;
+  type: string;
+  status?: string;
+  value?: string;
+  deadline?: string;
+  alignmentScore?: number;
+  requirements?: string[];
+  progress?: number;
+  lastContact?: string;
+  contacts: PartnershipContact[];
+  history: PartnershipEvent[];
+  receivedDate?: string;
+  estimatedValue?: string;
+  signals?: {
+    comments: number;
+    likes: number;
+    dms: number;
+  };
+  confidence?: number;
+  potentialValue?: string;
 } 

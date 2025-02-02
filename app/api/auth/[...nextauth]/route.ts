@@ -1,4 +1,4 @@
-import { GET, POST } from "@/auth";
+import { GET, POST } from "@/app/auth";
 
 export { GET, POST };
 

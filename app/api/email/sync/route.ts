@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
-import { prisma } from '@/lib/prisma'
+import { auth } from '@/app/auth'
+import prisma from '@/app/lib/prisma'
 import { google, gmail_v1 } from 'googleapis'
 import { Client, AuthProvider } from '@microsoft/microsoft-graph-client'
-import { getCompletion } from '@/lib/openai'
+import { getCompletion } from '@/app/lib/openai'
+import type { Account } from '@prisma/client'
 
 interface EmailData {
   id: string
@@ -18,6 +19,13 @@ interface EmailData {
 type GmailHeader = gmail_v1.Schema$MessagePartHeader
 type GmailPart = gmail_v1.Schema$MessagePart
 type GmailPayload = gmail_v1.Schema$MessagePart
+
+interface EmailAccount {
+  provider: string
+  refresh_token: string | null
+  access_token: string | null
+  scope: string | null
+}
 
 async function getGmailEmails(accessToken: string, refreshToken: string | null): Promise<EmailData[]> {
   try {
@@ -143,17 +151,17 @@ export async function GET() {
       }
     });
 
-    console.log('Found accounts:', accounts.length, accounts.map(a => ({ 
-      provider: a.provider, 
+    console.log('Found accounts:', accounts.length, accounts.map((a: EmailAccount) => ({
+      provider: a.provider,
       hasAccessToken: !!a.access_token,
       hasRefreshToken: !!a.refresh_token,
-      scope: a.scope 
+      scope: a.scope
     })));
     if (accounts.length === 0) {
       return NextResponse.json([]);
     }
 
-    const emailPromises = accounts.map(async (account) => {
+    const emailPromises = accounts.map(async (account: EmailAccount) => {
       try {
         console.log(`Fetching emails using token:`, account.access_token?.substring(0, 20) + '...');
         const emails = await getGmailEmails(account.access_token!, account.refresh_token);

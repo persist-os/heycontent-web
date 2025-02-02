@@ -1,5 +1,7 @@
-import { prisma } from "@/lib/prisma";
+import prisma from "@/app/lib/prisma";
 import { google } from 'googleapis';
+import { YOUTUBE_CONFIG, TokenValidationResult } from './config/youtube';
+import { GMAIL_CONFIG } from './config/gmail';
 
 export function getValidAccessToken(token: string | null): string {
   if (!token) {
@@ -65,13 +67,9 @@ export async function refreshAccessToken(accountId: string): Promise<string> {
 
 export async function validateToken(userId: string, platform: string = 'youtube'): Promise<string> {
   try {
-    // First, find the social account for this user and platform
     const socialAccount = await prisma.socialAccount.findUnique({
       where: {
-        userId_platform: {
-          userId: userId,
-          platform: platform
-        }
+        userId_platform: { userId, platform }
       }
     });
 
@@ -83,65 +81,139 @@ export async function validateToken(userId: string, platform: string = 'youtube'
       throw new Error(`${platform} account is not connected for user ${userId}`);
     }
 
-    console.log('Token status:', {
-      platform,
-      hasToken: !!socialAccount.accessToken,
-      expiresAt: socialAccount.expiresAt,
-      isExpired: socialAccount.expiresAt ? socialAccount.expiresAt < new Date() : true
+    const validationResult = await validateTokenStatus(socialAccount);
+    
+    if (!validationResult.isValid) {
+      throw new Error(validationResult.error || `Invalid token for ${platform}`);
+    }
+
+    return validationResult.accessToken!;
+  } catch (error: any) {
+    console.error('Error validating token:', {
+      error,
+      message: error.message,
+      stack: error.stack,
+      userId,
+      platform
+    });
+    throw error;
+  }
+}
+
+async function validateTokenStatus(socialAccount: any): Promise<TokenValidationResult> {
+  const now = new Date();
+  const isExpired = socialAccount.expiresAt ? socialAccount.expiresAt < now : true;
+
+  // Log token status for debugging
+  console.log('Token status:', {
+    platform: socialAccount.platform,
+    hasToken: !!socialAccount.accessToken,
+    expiresAt: socialAccount.expiresAt,
+    isExpired,
+    hasRefreshToken: !!socialAccount.refreshToken
+  });
+
+  // If token is valid and not expired, return it
+  if (socialAccount.accessToken && !isExpired) {
+    return {
+      isValid: true,
+      accessToken: socialAccount.accessToken,
+      expiresAt: socialAccount.expiresAt
+    };
+  }
+
+  // If no refresh token available, token is invalid
+  if (!socialAccount.refreshToken) {
+    return {
+      isValid: false,
+      error: socialAccount.platform === 'youtube' 
+        ? YOUTUBE_CONFIG.ERROR_MESSAGES.MISSING_REFRESH_TOKEN
+        : GMAIL_CONFIG.ERROR_MESSAGES.MISSING_REFRESH_TOKEN
+    };
+  }
+
+  // Attempt to refresh the token
+  try {
+    const refreshResult = await refreshToken(socialAccount);
+    return refreshResult;
+  } catch (error: any) {
+    return {
+      isValid: false,
+      error: error.message
+    };
+  }
+}
+
+async function refreshToken(socialAccount: any): Promise<TokenValidationResult> {
+  const oauth2Client = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    socialAccount.platform === 'youtube' 
+      ? YOUTUBE_CONFIG.OAUTH_ENDPOINTS.YOUTUBE 
+      : YOUTUBE_CONFIG.OAUTH_ENDPOINTS.GMAIL
+  );
+
+  oauth2Client.setCredentials({
+    refresh_token: socialAccount.refreshToken
+  });
+
+  try {
+    const { credentials } = await oauth2Client.refreshAccessToken();
+    
+    if (!credentials.access_token) {
+      throw new Error(socialAccount.platform === 'youtube' 
+        ? YOUTUBE_CONFIG.ERROR_MESSAGES.TOKEN_REFRESH_FAILED
+        : GMAIL_CONFIG.ERROR_MESSAGES.TOKEN_REFRESH_FAILED
+      );
+    }
+
+    // Verify token info and scopes
+    const tokenInfo = await oauth2Client.getTokenInfo(credentials.access_token);
+    const requiredScopes = socialAccount.platform === 'youtube'
+      ? YOUTUBE_CONFIG.REQUIRED_SCOPES
+      : GMAIL_CONFIG.REQUIRED_SCOPES;
+    
+    const hasRequiredScopes = requiredScopes.every(scope => 
+      tokenInfo.scopes?.includes(scope)
+    );
+
+    if (!hasRequiredScopes) {
+      throw new Error(socialAccount.platform === 'youtube'
+        ? YOUTUBE_CONFIG.ERROR_MESSAGES.MISSING_REQUIRED_SCOPES
+        : GMAIL_CONFIG.ERROR_MESSAGES.MISSING_REQUIRED_SCOPES
+      );
+    }
+
+    // Update token in database
+    await prisma.socialAccount.update({
+      where: {
+        userId_platform: {
+          userId: socialAccount.userId,
+          platform: socialAccount.platform
+        }
+      },
+      data: {
+        accessToken: credentials.access_token,
+        refreshToken: credentials.refresh_token || socialAccount.refreshToken,
+        expiresAt: credentials.expiry_date ? new Date(credentials.expiry_date) : null,
+        tokenType: credentials.token_type || 'Bearer',
+        scope: credentials.scope || socialAccount.scope || ''
+      }
     });
 
-    // If token is expired and we have a refresh token, try to refresh
-    if (socialAccount.expiresAt && socialAccount.expiresAt < new Date() && socialAccount.refreshToken) {
-      console.log('Token expired, attempting refresh');
-      const oauth2Client = new google.auth.OAuth2(
-        process.env.GOOGLE_CLIENT_ID,
-        process.env.GOOGLE_CLIENT_SECRET,
-        platform === 'youtube' ? process.env.YOUTUBE_REDIRECT_URI : `${process.env.NEXT_PUBLIC_APP_URL}/api/social/callback/gmail`
-      );
-
-      oauth2Client.setCredentials({
-        refresh_token: socialAccount.refreshToken
-      });
-
-      try {
-        const { credentials } = await oauth2Client.refreshAccessToken();
-        
-        // Update token in database
-        await prisma.socialAccount.update({
-          where: {
-            userId_platform: {
-              userId: userId,
-              platform: platform
-            }
-          },
-          data: {
-            accessToken: credentials.access_token || '',
-            refreshToken: credentials.refresh_token || socialAccount.refreshToken || '',
-            expiresAt: credentials.expiry_date ? new Date(credentials.expiry_date) : null,
-            tokenType: credentials.token_type || socialAccount.tokenType || 'Bearer',
-            scope: credentials.scope || socialAccount.scope || ''
-          }
-        });
-
-        if (!credentials.access_token) {
-          throw new Error('Refresh token response did not include access token');
-        }
-
-        return credentials.access_token;
-      } catch (refreshError: any) {
-        console.error('Error refreshing token:', refreshError);
-        throw new Error(`Failed to refresh ${platform} token: ${refreshError.message}`);
-      }
-    }
-
-    if (!socialAccount.accessToken) {
-      throw new Error(`No access token available for ${platform}`);
-    }
-
-    return socialAccount.accessToken;
-  } catch (error) {
-    console.error('Error validating token:', error);
-    throw error;
+    return {
+      isValid: true,
+      accessToken: credentials.access_token,
+      expiresAt: credentials.expiry_date ? new Date(credentials.expiry_date) : undefined
+    };
+  } catch (error: any) {
+    console.error('Error refreshing token:', {
+      error,
+      message: error.message,
+      stack: error.stack,
+      platform: socialAccount.platform
+    });
+    throw new Error(`Failed to refresh token: ${error.message}`);
   }
 }
 
@@ -181,5 +253,29 @@ export async function getAccountStatus(userId: string, platform: string): Promis
       isValid: false,
       error: error instanceof Error ? error.message : "Unknown error checking account status"
     };
+  }
+}
+
+export async function fixMismatchedSocialAccounts(oldUserId: string, newUserId: string) {
+  try {
+    // Update all social accounts from old ID to new ID
+    await prisma.socialAccount.updateMany({
+      where: {
+        userId: oldUserId,
+      },
+      data: {
+        userId: newUserId,
+      },
+    });
+
+    console.log('Successfully updated social account user IDs', {
+      from: oldUserId,
+      to: newUserId,
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Error fixing mismatched social accounts:', error);
+    throw error;
   }
 } 

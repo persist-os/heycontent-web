@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
-import { prisma } from '@/lib/prisma'
-import { getCompletion } from '@/lib/openai'
+import { auth } from '@/app/auth'
+import prisma from '@/app/lib/prisma'
+import { getCompletion } from '@/app/lib/openai'
+import type { PrismaClient, Prisma, SocialAccount } from '@prisma/client'
 
 // Keywords that might indicate partnership opportunities
 const PARTNERSHIP_KEYWORDS = [
@@ -21,7 +22,26 @@ const PARTNERSHIP_KEYWORDS = [
   'feature',
   'work together',
   'compensation',
-  'agreement'
+  'agreement',
+  'sponsorship',
+  'monetization',
+  'brand ambassador',
+  'content creator',
+  'endorsement',
+  'commission',
+  'revenue share',
+  'joint venture',
+  'collab',
+  'paid partnership',
+  'business opportunity',
+  'marketing opportunity',
+  'promotional',
+  'sponsored content',
+  'brand collaboration',
+  'creator program',
+  'partnership program',
+  'affiliate program',
+  'business proposal'
 ]
 
 async function analyzeEmailContent(subject: string, body: string) {
@@ -102,7 +122,7 @@ export async function POST(req: Request) {
     // Save the analysis if it's a partnership opportunity
     if (analysis.isPartnership) {
       try {
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>) => {
           const user = await tx.user.findUnique({
             where: { id: session.user.id },
             include: {

@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
-import { prisma } from '@/lib/prisma'
+import { auth } from '@/app/auth'
+import prisma from '@/app/lib/prisma'
 import { google } from 'googleapis'
 import type { gmail_v1 } from 'googleapis'
-import { RAGSystem } from '@/lib/rag'
-import { GmailService } from '@/lib/services/gmail'
-import type { PartnershipEmail, PartnershipAnalysis } from '../../../types/social-platforms'
+import { RAGSystem } from '@/app/lib/rag'
+import { GmailService } from '@/app/lib/services/gmail'
+import type { PartnershipEmail, PartnershipAnalysis } from '@/app/types/social-platforms'
 
 function decodeBase64(data: string) {
   try {

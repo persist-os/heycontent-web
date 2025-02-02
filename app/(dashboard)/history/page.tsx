@@ -9,7 +9,7 @@ import {
   Trash2,
   Star
 } from 'lucide-react'
-import { ChatHistory } from '@/types/chat'
+import { ChatHistory } from '@/app/types/chat'
 
 export default function HistoryPage() {
   const router = useRouter()
@@ -38,7 +38,7 @@ export default function HistoryPage() {
     fetchChats()
   }, [session?.user?.id])
 
-  const handleDeleteChat = async (chatId: number) => {
+  const handleDeleteChat = async (chatId: string) => {
     try {
       await fetch(`/api/chat/${chatId}`, { method: 'DELETE' })
       setChats(chats.filter(chat => chat.id !== chatId))

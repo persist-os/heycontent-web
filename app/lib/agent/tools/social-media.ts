@@ -1,5 +1,5 @@
-import { SocialMediaService } from "@/lib/services/social-media";
-import { RAGSystem } from "@/lib/rag";
+import { SocialMediaService } from "@/app/lib/services/social-media";
+import { RAGSystem } from "@/app/lib/rag";
 import { BaseTool } from "./base-tool";
 import { z } from "zod";
 import type { 
@@ -9,7 +9,7 @@ import type {
   EmailMetrics,
   SocialPlatform,
   BaseMetrics
-} from "@/lib/types/social";
+} from "@/app/lib/types/social";
 
 interface RawYouTubeMetrics {
   views: number;
@@ -85,7 +85,14 @@ export class SocialMediaTool extends BaseTool {
 
   private formatYouTubeMetrics(rawMetrics: RawYouTubeMetrics): YouTubeMetrics {
     return {
+      timestamp: Date.now(),
+      platform: 'youtube',
+      videoId: rawMetrics.lastVideo?.id || '',
       views: rawMetrics.views,
+      likes: rawMetrics.lastVideo?.likes || 0,
+      comments: rawMetrics.lastVideo?.comments || 0,
+      shares: 0,
+      retentionRate: 0,
       subscribers: rawMetrics.subscribers,
       watchTimeHours: 0,
       averageViewDuration: 0,
@@ -99,6 +106,10 @@ export class SocialMediaTool extends BaseTool {
         comments: rawMetrics.lastVideo?.comments || 0,
         shares: 0,
         averageViewPercentage: 0,
+        clickThroughRate: 0,
+        watchTime: 0,
+        subscribersGained: 0,
+        subscribersLost: 0,
         details: {
           likes: rawMetrics.lastVideo?.likes || 0,
           comments: rawMetrics.lastVideo?.comments || 0,
@@ -134,7 +145,7 @@ export class SocialMediaTool extends BaseTool {
 - Followers: ${metrics.followers}
 - Reels: ${metrics.reels}
 - Profile Visits: ${metrics.profileVisits}
-- Stories: ${metrics.stories}
+- Stories: ${metrics.storyCount}
 - Reach Rate: ${metrics.reachRate}%
 - Save Rate: ${metrics.saveRate}%
 - Comment Rate: ${metrics.commentRate}%`;

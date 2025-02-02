@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card'
 import { 
   Mail, 
   Lock, 
@@ -107,8 +107,10 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
         redirect: true,
       })
     } catch (err) {
-      setError('Failed to sign in with Google')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to sign in with Google'
+      setError(errorMessage)
       setIsLoading(false)
+      console.error('Google sign-in error:', err)
     }
   }
 
@@ -128,17 +130,6 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
         return 'Please verify your email before signing in.';
       default:
         return error || 'An error occurred. Please try again.';
-    }
-  }
-
-  const handleSignOut = async () => {
-    try {
-      await signOut({ 
-        callbackUrl: '/',
-        redirect: true,
-      })
-    } catch (error) {
-      console.error('Sign out error:', error)
     }
   }
 

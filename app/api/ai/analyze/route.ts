@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { ChatAgent } from "@/lib/agent/chat-agent";
-import { RAGSystem } from "@/lib/rag";
+import { ChatAgent } from "@/app/lib/agent/chat-agent";
+import { RAGSystem } from "@/app/lib/rag";
 import { auth } from "../../../auth";
-import { SocialMediaService } from "@/lib/services/social-media";
-import { YouTubeService } from "@/lib/services/youtube";
-import { prisma } from "@/lib/prisma";
+import { SocialMediaService } from "@/app/lib/services/social-media";
+import { YouTubeService } from "@/app/lib/services/youtube";
+import prisma from "@/app/lib/prisma";
+import { SocialPlatform } from '@/app/lib/types/social';
 
 interface VideoResult {
   id: string;
@@ -37,6 +38,14 @@ interface VideoHistory {
   };
 }
 
+// Define the PlatformStatus type to match ChatAgent's expectation
+interface PlatformStatus {
+  platform: SocialPlatform;
+  isConnected: boolean;
+  lastSync: Date | null;
+  error?: string;
+}
+
 export async function POST(req: Request) {
   try {
     const session = await auth();
@@ -50,8 +59,35 @@ export async function POST(req: Request) {
     const socialService = new SocialMediaService();
     const youtubeService = new YouTubeService(session.user.id);
     
-    // Get platform status for initialization
-    const platformStatus = await socialService.getPlatformStatus();
+    // Get platform status for all supported platforms
+    const supportedPlatforms: SocialPlatform[] = ['youtube', 'instagram', 'tiktok', 'gmail'];
+    
+    const platformStatus: PlatformStatus[] = await Promise.all(
+      supportedPlatforms.map(async (platform) => {
+        let isConnected = false;
+        switch (platform) {
+          case 'youtube':
+            isConnected = await socialService.isYouTubeConnected();
+            break;
+          case 'instagram':
+            isConnected = await socialService.isInstagramConnected();
+            break;
+          case 'tiktok':
+            isConnected = await socialService.isTikTokConnected();
+            break;
+          case 'gmail':
+            isConnected = await socialService.isGmailConnected();
+            break;
+        }
+        const lastSync = await socialService.getLastSyncDate(platform);
+        return {
+          platform,
+          isConnected,
+          lastSync: lastSync || null,  // Convert undefined to null
+          error: isConnected ? undefined : 'Not connected'
+        };
+      })
+    );
     
     // Get YouTube data if query is about YouTube
     let youtubeData = {};
@@ -232,15 +268,18 @@ export async function POST(req: Request) {
     }
     
     // Initialize chat agent with proper context
-    const agent = new ChatAgent(rag, session.user.id, platformStatus);
-
-    // Process the query with the agent
-    const result = await agent.process(query, {
+    const agent = new ChatAgent(session.user.id, rag, platformStatus);
+    
+    // Set the context using the proper method
+    agent.setContext({
       userId: session.user.id,
       type,
       youtubeData,
       ...context
     });
+
+    // Process the query
+    const result = await agent.process(query);
 
     // Store the interaction for future context
     await rag.addDocument(

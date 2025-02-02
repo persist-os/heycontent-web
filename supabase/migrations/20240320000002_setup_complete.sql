@@ -6,10 +6,16 @@ create extension if not exists "vector";
 -- Create documents table for vector similarity search
 create table if not exists rag_documents (
     id uuid primary key default uuid_generate_v4(),
-    content text,
-    metadata jsonb,
-    embedding vector(1536)
+    content text not null,
+    content_hash text not null unique,
+    metadata jsonb not null,
+    embedding vector(1536) not null,
+    created_at timestamp with time zone default now(),
+    updated_at timestamp with time zone default now()
 );
+
+create index if not exists rag_documents_content_hash_idx on rag_documents(content_hash);
+create index if not exists rag_documents_metadata_idx on rag_documents using gin (metadata);
 
 -- Enable RLS and create policies for documents table
 alter table rag_documents enable row level security;
