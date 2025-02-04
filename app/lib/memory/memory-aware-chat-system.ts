@@ -1,6 +1,6 @@
 import { AdvancedMemorySystem } from './advanced-memory-system';
 import { Message } from '@/app/types/conversation';
-import { ChatAgentContext, EngagementLevel, ConversationFlow } from '../agent/chat-agent-context';
+import { ChatAgentContext, EngagementLevel, ConversationFlow, UserIntent } from '../agent/chat-agent-context';
 import { 
   MemoryNode, 
   PatternRecognitionResult, 
@@ -12,13 +12,17 @@ import {
   RelationshipType,
   BaseMemoryType,
   EmotionalStateValue,
-  EvolutionTrigger
+  EvolutionTrigger,
+  AdvancedMemorySystemInterface,
+  SearchNodeOptions,
+  MemoryContext
 } from './types';
 import { RAGSystem } from '../rag';
 import { OpenAI } from 'openai';
 import { PrismaClient, Prisma, ConversationState } from '@prisma/client';
 import { MEMORY_TYPES, PATTERN_TYPES } from './config';
 import { nanoid } from 'nanoid';
+import prisma from '../prisma'; // Import the singleton Prisma instance
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
@@ -87,18 +91,31 @@ declare module '@prisma/client' {
   }
 }
 
-interface EmotionalState {
-  primary: "neutral" | "excited" | "frustrated" | "uncertain" | "curious" | "reflective" | "stressed" | "optimistic";
-  intensity: number;
-  context: string;
-}
-
-interface UserIntent {
-  type: "direct_inquiry" | "exploratory" | "action_needed" | "reflection" | "validation" | "creative" | "strategic" | "emotional_support" | "greeting" | "email_search";
+// Helper type for JSON serialization
+type SerializedUserIntent = {
+  type: string;
   confidence: number;
   sender?: string;
   date?: string;
   subtype?: string;
+  query?: string;
+};
+
+type SerializedQueryContext = {
+  timestamp: number;
+  intent: SerializedUserIntent;
+  entities: {
+    names: string[];
+    dates: string[];
+    topics: string[];
+  };
+  topic: string;
+};
+
+interface EmotionalState {
+  primary: "neutral" | "excited" | "frustrated" | "uncertain" | "curious" | "reflective" | "stressed" | "optimistic";
+  intensity: number;
+  context: string;
 }
 
 interface FocusMetrics {
@@ -118,9 +135,15 @@ interface MentionedEntities {
 
 interface QueryContext {
   timestamp: number;
-  intent: { type: string; confidence: number; };
-  entities: { names: string[]; dates: string[]; topics: string[]; };
+  intent: UserIntent;
+  entities: { 
+    names: string[]; 
+    dates: string[]; 
+    topics: string[]; 
+  };
   topic: string;
+  searchResults?: SearchResult[];
+  displayedInfo?: Map<string, { content: any; timestamp: number; type: string }>;
 }
 
 interface ConversationStateData {
@@ -132,13 +155,7 @@ interface ConversationStateData {
   pendingActions: any[];
   lastResponseType: 'answer' | 'clarification' | 'followUp' | 'suggestion';
   emotionalState: EmotionalStateValue;
-  userIntent: {
-    type: string;
-    confidence: number;
-    sender?: string;
-    date?: string;
-    subtype?: string;
-  };
+  userIntent: UserIntent;
   focusMetrics: {
     topicChanges: number;
     clarificationRequests: number;
@@ -160,10 +177,7 @@ interface ConversationStateData {
   };
   queryContext?: Array<{
     timestamp: number;
-    intent: {
-      type: string;
-      confidence: number;
-    };
+    intent: UserIntent;
     entities: {
       names: string[];
       dates: string[];
@@ -171,6 +185,7 @@ interface ConversationStateData {
     };
     topic: string;
   }>;
+  displayedInfo?: Map<string, { content: any; timestamp: number; type: string }>;
 }
 
 type MemoryContent = SystemResponse | InteractionResult;
@@ -178,8 +193,16 @@ type MemoryContent = SystemResponse | InteractionResult;
 // Add type definition for memory node types
 type MemoryNodeType = BaseMemoryType | PlatformMemoryType;
 
+// Extend ChatAgentContext with new properties
+declare module '../agent/chat-agent-context' {
+  interface ChatAgentContext {
+    searchResults?: SearchResult[];
+    displayedInfo?: Map<string, { content: any; timestamp: number; type: string }>;
+  }
+}
+
 export class MemoryAwareChatSystem {
-  private advancedMemory: AdvancedMemorySystem;
+  private advancedMemory: AdvancedMemorySystemInterface;
   private systemPrompt: string;
   private prisma: PrismaClient;
   private readonly DEFAULT_CONTEXT_WINDOW_SIZE = 5;
@@ -189,7 +212,7 @@ export class MemoryAwareChatSystem {
   constructor(rag: RAGSystem, contextWindowSize?: number) {
     this.advancedMemory = new AdvancedMemorySystem(rag);
     this.systemPrompt = this.getBasePrompt();
-    this.prisma = new PrismaClient();
+    this.prisma = prisma; // Use the singleton instance
     this.contextWindowSize = this.validateContextWindowSize(contextWindowSize);
   }
 
@@ -226,11 +249,29 @@ export class MemoryAwareChatSystem {
       timestamp: Date.now(),
       intent: context.userIntent,
       entities: this.extractEntities(input),
-      topic: context.currentTopic || 'general'  // Provide default value for topic
+      topic: context.currentTopic || 'general',
+      searchResults: context.searchResults || [],
+      displayedInfo: context.displayedInfo || new Map()
     };
 
     // Get existing context and add new interaction
     let queryContext = [...(context.queryContext || []), newInteraction];
+
+    // Track displayed information from RAG results
+    const searchResults = context.searchResults || [];
+    if (searchResults.length > 0) {
+      const displayedInfo = context.displayedInfo || new Map();
+      searchResults.forEach(result => {
+        if (result && result.id) {
+          displayedInfo.set(result.id, {
+            content: result,
+            timestamp: Date.now(),
+            type: 'rag_result'
+          });
+        }
+      });
+      context.displayedInfo = displayedInfo;
+    }
 
     // If we're over the window size, filter based on importance
     if (queryContext.length > this.contextWindowSize) {
@@ -252,6 +293,30 @@ export class MemoryAwareChatSystem {
       }
     }
 
+    // Merge entities from current interaction with existing ones
+    const mergedEntities = this.mergeEntities(
+      context.mentionedEntities || { names: new Set(), dates: new Set(), topics: new Set() },
+      this.extractEntities(input)
+    );
+
+    // Track conversation flow
+    const conversationFlow = {
+      ...(context.conversationFlow || {}),
+      naturalBreaks: (context.conversationFlow?.naturalBreaks || 0) + (this.isNaturalBreak(input) ? 1 : 0),
+      topicTransitions: [
+        ...(context.conversationFlow?.topicTransitions || []),
+        ...(this.isTopicTransition(context.currentTopic, context.lastTopic) ? [context.currentTopic] : [])
+      ],
+      depthProgression: [
+        ...(context.conversationFlow?.depthProgression || []),
+        context.topicDepth || 0
+      ],
+      engagementSignals: [
+        ...(context.conversationFlow?.engagementSignals || []),
+        this.calculateEngagementLevel(input, response)
+      ]
+    };
+
     return {
       currentTopic: context.currentTopic || 'general',
       lastTopic: context.lastTopic || 'general',
@@ -262,10 +327,40 @@ export class MemoryAwareChatSystem {
       emotionalState: context.emotionalState || {},
       userIntent: context.userIntent || {},
       focusMetrics: context.focusMetrics || {},
-      conversationFlow: context.conversationFlow || {},
-      mentionedEntities: context.mentionedEntities,
-      queryContext
+      conversationFlow,
+      mentionedEntities: mergedEntities,
+      queryContext,
+      displayedInfo: context.displayedInfo
     };
+  }
+
+  private mergeEntities(
+    existing: { names: Set<string>; dates: Set<string>; topics: Set<string>; },
+    newEntities: { names: string[]; dates: string[]; topics: string[]; }
+  ): { names: Set<string>; dates: Set<string>; topics: Set<string>; } {
+    return {
+      names: new Set([...Array.from(existing.names), ...newEntities.names]),
+      dates: new Set([...Array.from(existing.dates), ...newEntities.dates]),
+      topics: new Set([...Array.from(existing.topics), ...newEntities.topics])
+    };
+  }
+
+  private isNaturalBreak(input: string): boolean {
+    return /^(ok|alright|thanks|thank you|great|got it|i see|understood)\b/i.test(input.trim());
+  }
+
+  private isTopicTransition(current?: string, last?: string): boolean {
+    return Boolean(current && last && current !== last);
+  }
+
+  private calculateEngagementLevel(input: string, response: any): string {
+    const inputLength = input.length;
+    const hasQuestion = /\?/.test(input);
+    const hasFollowUp = /\b(more|details|explain|elaborate)\b/i.test(input);
+    
+    if (inputLength > 100 && (hasQuestion || hasFollowUp)) return 'high';
+    if (inputLength > 50 || hasQuestion) return 'medium';
+    return 'low';
   }
 
   // Helper method to extract entities from input
@@ -279,7 +374,7 @@ export class MemoryAwareChatSystem {
   }
 
   // Add method to get the underlying memory system
-  getMemorySystem(): AdvancedMemorySystem {
+  getMemorySystem(): AdvancedMemorySystemInterface {
     return this.advancedMemory;
   }
 
@@ -452,18 +547,20 @@ export class MemoryAwareChatSystem {
         intensity: 0.5,
         confidence: 0.8
       },
-      userIntent: state.userIntent || {
-        type: 'direct_inquiry',
-        confidence: 0.8
-      },
+      userIntent: state.userIntent 
+        ? this.deserializeUserIntent(state.userIntent as SerializedUserIntent)
+        : {
+            type: 'direct_inquiry',
+            confidence: 0.8
+          },
       focusMetrics: state.focusMetrics || {
-        topicChanges: 0,
-        clarificationRequests: 0,
-        followUpCount: 0,
-        contextDepth: 0,
-        emotionalShifts: 0,
-        intentShifts: 0
-      },
+            topicChanges: 0,
+            clarificationRequests: 0,
+            followUpCount: 0,
+            contextDepth: 0,
+            emotionalShifts: 0,
+            intentShifts: 0
+          },
       conversationFlow: state.conversationFlow || {
         naturalBreaks: 0,
         topicTransitions: [],
@@ -475,7 +572,9 @@ export class MemoryAwareChatSystem {
         dates: new Set(state.mentionedEntities.dates || []),
         topics: new Set(state.mentionedEntities.topics || [])
       } : undefined,
-      queryContext: state.queryContext || []
+      queryContext: state.queryContext 
+        ? this.deserializeQueryContext(state.queryContext as SerializedQueryContext[])
+        : []
     };
   }
 
@@ -491,7 +590,7 @@ export class MemoryAwareChatSystem {
     try {
       // Get or generate conversation ID
       let conversationId = context.conversationId;
-      if (!conversationId) {
+    if (!conversationId) {
         console.warn('No conversation ID provided, generating new one');
         conversationId = `chat_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
         context.conversationId = conversationId;
@@ -506,7 +605,7 @@ export class MemoryAwareChatSystem {
         // Continue with empty state rather than failing
       }
 
-      if (persistedState) {
+    if (persistedState) {
         try {
           // Type-safe state restoration
           if (this.isValidConversationState(persistedState)) {
@@ -519,21 +618,36 @@ export class MemoryAwareChatSystem {
             
             // Use type-checked merge functions
             if (this.isEmotionalState(persistedState.emotionalState)) {
-              context.emotionalState = this.mergeEmotionalState(context.emotionalState, persistedState.emotionalState);
+      context.emotionalState = this.mergeEmotionalState(context.emotionalState, persistedState.emotionalState);
             }
             if (this.isUserIntent(persistedState.userIntent)) {
-              context.userIntent = this.mergeUserIntent(context.userIntent, persistedState.userIntent);
+      context.userIntent = this.mergeUserIntent(context.userIntent, persistedState.userIntent);
             }
             if (this.isFocusMetrics(persistedState.focusMetrics)) {
-              context.focusMetrics = this.mergeFocusMetrics(context.focusMetrics, persistedState.focusMetrics);
+      context.focusMetrics = this.mergeFocusMetrics(context.focusMetrics, persistedState.focusMetrics);
             }
             
-            context.conversationFlow = this.mergeConversationFlow(context.conversationFlow, persistedState.conversationFlow);
+      context.conversationFlow = this.mergeConversationFlow(context.conversationFlow, persistedState.conversationFlow);
             context.mentionedEntities = persistedState.mentionedEntities;
-            context.queryContext = persistedState.queryContext;
+            
+            // Safely type and assign queryContext
+            if (persistedState.queryContext) {
+              context.queryContext = persistedState.queryContext.map(query => ({
+                timestamp: query.timestamp,
+                intent: this.mergeUserIntent(null, query.intent),
+                entities: {
+                  names: query.entities.names,
+                  dates: query.entities.dates,
+                  topics: query.entities.topics
+                },
+                topic: query.topic
+              }));
+            } else {
+              context.queryContext = undefined;
+            }
 
-            // Restore memory system state
-            await this.restoreMemorySystemState(persistedState);
+      // Restore memory system state
+      await this.restoreMemorySystemState(persistedState);
           } else {
             console.warn('Invalid persisted state format, using default context');
           }
@@ -541,58 +655,58 @@ export class MemoryAwareChatSystem {
           console.error('Error restoring conversation state:', error);
           // Continue with current context rather than failing
         }
-      }
+    }
 
-      // Step 2: Process new information with context
+    // Step 2: Process new information with context
       const memoryNode = this.createMemoryNode(
         MEMORY_TYPES.WORKING,
         input,
         context.currentTopic ? `custom_${context.currentTopic}` : 'user_interaction',
         0.8
       );
-      await this.advancedMemory.addNode(memoryNode);
+    await this.advancedMemory.addNode(memoryNode);
 
-      // Step 3: Get insights with restored context
-      const insights = await this.getInsights({
-        currentInput: input,
-        context: {
-          ...context,
-          memoryNode
-        }
-      });
+    // Step 3: Get insights with restored context
+    const insights = await this.getInsights({
+      currentInput: input,
+      context: {
+        ...context,
+        memoryNode
+      }
+    });
 
-      // Step 4: Build enhanced prompt with memory context
-      const enhancedPrompt = await this.buildMemoryAwarePrompt(
-        input,
-        insights,
-        context
-      );
+    // Step 4: Build enhanced prompt with memory context
+    const enhancedPrompt = await this.buildMemoryAwarePrompt(
+      input,
+      insights,
+      context
+    );
 
-      // Step 5: Generate response with enhanced understanding
-      const response = await this.generateMemoryAwareResponse(
-        input,
-        enhancedPrompt,
-        insights,
-        context
-      );
+    // Step 5: Generate response with enhanced understanding
+    const response = await this.generateMemoryAwareResponse(
+      input,
+      enhancedPrompt,
+      insights,
+      context
+    );
 
-      // Step 6: Update memory with interaction results
-      await this.updateMemoryWithResponse(response, input, context);
+    // Step 6: Update memory with interaction results
+    await this.updateMemoryWithResponse(response, input, context);
 
       // Step 7: Update and persist conversation state with error handling
       try {
-        const updatedState = this.prepareStateUpdate(context, input, response);
-        await this.persistConversationState(conversationId, updatedState);
+    const updatedState = this.prepareStateUpdate(context, input, response);
+    await this.persistConversationState(conversationId, updatedState);
       } catch (error) {
         console.error('Error persisting conversation state:', error);
         // Continue rather than failing the whole interaction
       }
 
-      return {
-        response: response.content,
-        insights,
-        suggestions: response.suggestions
-      };
+    return {
+      response: response.content,
+      insights,
+      suggestions: response.suggestions
+    };
     } catch (error) {
       console.error('Error in processMessage:', error);
       throw error;
@@ -665,15 +779,53 @@ export class MemoryAwareChatSystem {
     };
   }
 
-  private mergeUserIntent(current: any, persisted: any): any {
+  private mergeUserIntent(current: any, persisted: any): UserIntent {
     if (!persisted) return current;
-    return {
-      type: persisted.type || current?.type || 'direct_inquiry',
-      confidence: persisted.confidence || current?.confidence || 0.5,
-      sender: persisted.sender || current?.sender,
-      date: persisted.date || current?.date,
-      subtype: persisted.subtype || current?.subtype
+    
+    // Define valid types exactly as in UserIntent interface
+    const validTypes = [
+      'direct_inquiry',
+      'email_search',
+      'follow_up',
+      'clarification',
+      'exploratory',
+      'action_needed',
+      'reflection',
+      'validation',
+      'creative',
+      'strategic',
+      'emotional_support',
+      'greeting'
+    ] as const;
+    
+    type ValidIntentType = typeof validTypes[number];
+    
+    // Validate and cast the type
+    const type = validTypes.includes(persisted.type as ValidIntentType)
+      ? (persisted.type as ValidIntentType)
+      : (current?.type as ValidIntentType || 'direct_inquiry');
+
+    // Construct a valid UserIntent object
+    const userIntent: UserIntent = {
+      type,
+      confidence: persisted.confidence || current?.confidence || 0.5
     };
+
+    // Add optional fields if they exist
+    if (persisted.sender || current?.sender) {
+      userIntent.sender = persisted.sender || current?.sender;
+    }
+    if (persisted.date || current?.date) {
+      userIntent.date = persisted.date || current?.date;
+    }
+    if (persisted.subtype || current?.subtype) {
+      userIntent.subtype = persisted.subtype || current?.subtype;
+    }
+    if (persisted.query || current?.query) {
+      userIntent.query = persisted.query || current?.query;
+    }
+
+    return userIntent;
   }
 
   private mergeFocusMetrics(current: any, persisted: any): any {
@@ -944,12 +1096,12 @@ export class MemoryAwareChatSystem {
 
     try {
       // Restore context stack
-      if (state.contextStack) {
+    if (state.contextStack) {
         const nodeMap = new Map<string, MemoryNode>();
         const validationErrors: string[] = [];
         
         // First pass: Create and validate nodes
-        for (const nodeData of state.contextStack) {
+      for (const nodeData of state.contextStack) {
           try {
             const node = await this.createMemoryNodeFromState(nodeData);
             if (node) {
@@ -958,7 +1110,7 @@ export class MemoryAwareChatSystem {
                 continue;
               }
               nodeMap.set(node.id, node);
-              await this.advancedMemory.addNode(node);
+        await this.advancedMemory.addNode(node);
             }
           } catch (error) {
             validationErrors.push(`Failed to create node: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -971,11 +1123,11 @@ export class MemoryAwareChatSystem {
       }
 
       // Restore mentioned entities
-      if (state.mentionedEntities) {
+    if (state.mentionedEntities) {
         const entityNodes: MemoryNode[] = [];
         const entityErrors: string[] = [];
 
-        for (const [type, entities] of Object.entries(state.mentionedEntities)) {
+      for (const [type, entities] of Object.entries(state.mentionedEntities)) {
           for (const entity of Array.from(entities)) {
             try {
               const existingNode = await this.findExistingEntityNode(type, entity);
@@ -986,8 +1138,8 @@ export class MemoryAwareChatSystem {
                 const node = await this.createMemoryNodeFromEntity(type, entity, state.currentTopic);
                 if (node) {
                   entityNodes.push(node);
-                  await this.advancedMemory.addNode(node);
-                }
+          await this.advancedMemory.addNode(node);
+        }
               }
             } catch (error) {
               entityErrors.push(`Failed to process entity ${type}:${entity}: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -1043,7 +1195,7 @@ export class MemoryAwareChatSystem {
 
   private logStateRestorationError(error: unknown, state: ConversationStateData): void {
     const errorDetails = {
-      timestamp: Date.now(),
+          timestamp: Date.now(),
       error: error instanceof Error ? {
         message: error.message,
         stack: error.stack
@@ -1134,10 +1286,10 @@ export class MemoryAwareChatSystem {
     confidence: number;
   } {
     if (!state || typeof state !== 'object') {
-      return {
-        primary: 'neutral',
-        intensity: 0.5,
-        confidence: 1.0
+    return {
+          primary: 'neutral',
+          intensity: 0.5,
+          confidence: 1.0
       };
     }
 
@@ -1488,21 +1640,27 @@ Key Interaction Guidelines:
     return response;
   }
 
-  // Update searchNodes to handle undefined context
-  private async searchNodes(params: {
-    type: string;
-    query: string;
-    context: ConversationFlow | string | undefined;
+  // Update searchNodes to handle undefined context while preserving type safety
+  private async searchNodes(options: SearchNodeOptions & { 
+    context?: string | ConversationFlow 
   }): Promise<MemoryNode[]> {
-    return this.advancedMemory.searchNodes({
-      ...params,
-      context: params.context ? (
-        typeof params.context === 'string' ? params.context : JSON.stringify(params.context)
-      ) : ''
-    });
+    const searchOptions: SearchNodeOptions = {
+      ...options,
+      context: options.context ? 
+        (typeof options.context === 'string' ? 
+          options.context : 
+          JSON.stringify({
+            type: 'conversation_flow',
+            naturalBreaks: (options.context as ConversationFlow).naturalBreaks,
+            topicTransitions: (options.context as ConversationFlow).topicTransitions,
+            depthProgression: (options.context as ConversationFlow).depthProgression,
+            engagementSignals: (options.context as ConversationFlow).engagementSignals
+          })) 
+        : undefined
+    };
+    return this.advancedMemory.searchNodes(searchOptions);
   }
 
-  // Update methods to handle undefined context
   async generateContextualSuggestions(
     input: string,
     context: ChatAgentContext
@@ -1537,7 +1695,9 @@ Key Interaction Guidelines:
     const recentPatterns = await this.searchNodes({
       type: 'pattern',
       query: context.currentTopic || '',
-      context: context.conversationFlow || ''
+      context: context.conversationFlow ? 
+        `flow:${JSON.stringify(context.conversationFlow)}` : 
+        undefined
     });
 
     const suggestions: string[] = [];
@@ -1566,7 +1726,7 @@ Key Interaction Guidelines:
     const relevantHistory = await this.searchNodes({
       type: 'context',
       query: currentInput,
-      context: state?.currentTopic || ''
+      context: state?.currentTopic || '',
     });
 
     const contextualPrompt = await this.buildContextualPrompt(
@@ -1590,7 +1750,9 @@ Key Interaction Guidelines:
       }
     });
 
-    return extracted.map(result => result.content);
+    return extracted.map(result => 
+      typeof result.content === 'string' ? result.content : JSON.stringify(result.content)
+    );
   }
 
   private async generateSuggestionFromPattern(pattern: MemoryNode): Promise<string | null> {
@@ -1823,80 +1985,59 @@ Key Interaction Guidelines:
   }
 
   // Add method to persist conversation state
-  private async persistConversationState(
-    conversationId: string,
-    state: ConversationStateData
-  ): Promise<void> {
+  private async persistConversationState(conversationId: string, state: ConversationStateData): Promise<void> {
     try {
-      // Properly serialize complex objects to plain objects for Prisma
-      const stateData = {
+      const serializedState = {
         currentTopic: state.currentTopic,
         lastTopic: state.lastTopic,
         topicDepth: state.topicDepth,
         contextStack: state.contextStack as Prisma.InputJsonValue,
         pendingActions: state.pendingActions as Prisma.InputJsonValue,
         lastResponseType: state.lastResponseType,
-        emotionalState: {
-          primary: state.emotionalState.primary,
-          intensity: state.emotionalState.intensity,
-          context: state.emotionalState.context
-        } as Prisma.InputJsonValue,
-        userIntent: {
-          type: state.userIntent.type,
-          confidence: state.userIntent.confidence,
-          sender: state.userIntent.sender,
-          date: state.userIntent.date,
-          subtype: state.userIntent.subtype
-        } as Prisma.InputJsonValue,
-        focusMetrics: {
-          topicChanges: state.focusMetrics.topicChanges,
-          clarificationRequests: state.focusMetrics.clarificationRequests,
-          followUpCount: state.focusMetrics.followUpCount,
-          contextDepth: state.focusMetrics.contextDepth,
-          emotionalShifts: state.focusMetrics.emotionalShifts,
-          intentShifts: state.focusMetrics.intentShifts
-        } as Prisma.InputJsonValue,
-        conversationFlow: {
-          naturalBreaks: state.conversationFlow.naturalBreaks,
-          topicTransitions: state.conversationFlow.topicTransitions,
-          depthProgression: state.conversationFlow.depthProgression,
-          engagementSignals: state.conversationFlow.engagementSignals
-        } as Prisma.InputJsonValue,
+        emotionalState: state.emotionalState as unknown as Prisma.InputJsonValue,
+        userIntent: this.serializeUserIntent(state.userIntent) as Prisma.InputJsonValue,
+        focusMetrics: state.focusMetrics as Prisma.InputJsonValue,
+        conversationFlow: state.conversationFlow as Prisma.InputJsonValue,
         mentionedEntities: state.mentionedEntities 
           ? {
               names: Array.from(state.mentionedEntities.names),
               dates: Array.from(state.mentionedEntities.dates),
               topics: Array.from(state.mentionedEntities.topics)
             } as Prisma.InputJsonValue
-          : Prisma.JsonNull,
+          : undefined,
         queryContext: state.queryContext 
-          ? state.queryContext.map(q => ({
-              timestamp: q.timestamp,
-              intent: q.intent,
-              entities: q.entities,
-              topic: q.topic
-            })) as Prisma.InputJsonValue
-          : Prisma.JsonNull,
+          ? this.serializeQueryContext(state.queryContext) as Prisma.InputJsonValue
+          : undefined
+      };
+
+      const createData = {
+        ...serializedState,
+        conversation: {
+          connect: {
+            id: conversationId
+          }
+        }
+      };
+
+      const updateData = {
+        ...serializedState,
         updatedAt: new Date()
       };
 
       await this.prisma.conversation.update({
-        where: {
-          id: conversationId
-        },
+        where: { id: conversationId },
         data: {
           state: {
             upsert: {
-              create: stateData,
-              update: stateData
+              create: createData,
+              update: updateData
             }
           }
         }
       });
-
     } catch (error) {
       console.error('Error persisting conversation state:', error);
-      throw new Error('Failed to persist conversation state');
+      throw error;
     }
   }
 
@@ -1958,8 +2099,8 @@ Key Interaction Guidelines:
     evidence: string[] = []
   ): Promise<void> {
     await this.advancedMemory.addRelationship(
-      sourceNode.id,
-      targetNode.id,
+      sourceNode,
+      targetNode,
       type,
       strength,
       evidence
@@ -2094,5 +2235,324 @@ Key Interaction Guidelines:
     ) / 10; // Normalize to 0-1 range
 
     return Math.min(1, Math.max(0, importance)); // Ensure between 0 and 1
+  }
+
+  // Helper functions for serialization
+  private serializeUserIntent(intent: UserIntent): SerializedUserIntent {
+    return {
+      type: intent.type,
+      confidence: intent.confidence,
+      ...(intent.sender && { sender: intent.sender }),
+      ...(intent.date && { date: intent.date }),
+      ...(intent.subtype && { subtype: intent.subtype }),
+      ...(intent.query && { query: intent.query })
+    };
+  }
+
+  private deserializeUserIntent(serialized: SerializedUserIntent): UserIntent {
+    return this.mergeUserIntent(null, serialized);
+  }
+
+  private serializeQueryContext(queryContext: Array<{
+    timestamp: number;
+    intent: UserIntent;
+    entities: {
+      names: string[];
+      dates: string[];
+      topics: string[];
+    };
+    topic: string;
+  }>): SerializedQueryContext[] {
+    return queryContext.map(query => ({
+      timestamp: query.timestamp,
+      intent: this.serializeUserIntent(query.intent),
+      entities: {
+        names: query.entities.names,
+        dates: query.entities.dates,
+        topics: query.entities.topics
+      },
+      topic: query.topic
+    }));
+  }
+
+  private deserializeQueryContext(serialized: SerializedQueryContext[]): Array<{
+    timestamp: number;
+    intent: UserIntent;
+    entities: {
+      names: string[];
+      dates: string[];
+      topics: string[];
+    };
+    topic: string;
+  }> {
+    return serialized.map(query => ({
+      timestamp: query.timestamp,
+      intent: this.deserializeUserIntent(query.intent),
+      entities: {
+        names: query.entities.names,
+        dates: query.entities.dates,
+        topics: query.entities.topics
+      },
+      topic: query.topic
+    }));
+  }
+
+  private async getMemoryContext(query: string): Promise<MemoryContext> {
+    try {
+      // Get direct relevant memories
+      const directMemories = await this.advancedMemory.searchNodes({
+        type: 'context',
+        query: query,
+        limit: 5
+      });
+
+      // Get semantically related memories
+      const semanticMemories = await this.findSemanticallySimilarMemories(query);
+
+      // Get temporally related memories
+      const temporalMemories = await this.findTemporallyRelatedMemories(query);
+
+      // Combine and deduplicate memories
+      const allMemories = this.combineAndDeduplicateMemories([
+        ...directMemories,
+        ...semanticMemories,
+        ...temporalMemories
+      ]);
+
+      // Calculate memory score based on multiple factors
+      const memoryScore = this.calculateEnhancedMemoryScore(allMemories, query);
+
+      return {
+        relevantMemories: allMemories.map(memory => 
+          typeof memory.content === 'string' ? memory.content : JSON.stringify(memory.content)
+        ),
+        memoryScore,
+        lastAccessTime: new Date()
+      };
+    } catch (error) {
+      console.error('Error getting memory context:', error);
+      return {
+        relevantMemories: [],
+        memoryScore: 0.2,
+        lastAccessTime: new Date()
+      };
+    }
+  }
+
+  private async findSemanticallySimilarMemories(query: string): Promise<MemoryNode[]> {
+    try {
+      // Get semantic embeddings for the query
+      const queryEmbedding = await this.advancedMemory.getOrCreateEmbedding(query);
+      
+      // Find memories with similar embeddings
+      const similarMemories = await this.advancedMemory.searchNodes({
+        type: 'context',
+        query: query,
+        filters: {
+          embedding_similarity: {
+            vector: queryEmbedding,
+            threshold: 0.7
+          }
+        },
+        limit: 5
+      });
+
+      return similarMemories;
+    } catch (error) {
+      console.error('Error finding semantically similar memories:', error);
+      return [];
+    }
+  }
+
+  private async findTemporallyRelatedMemories(query: string): Promise<MemoryNode[]> {
+    try {
+      // Extract temporal markers from query
+      const temporalMarkers = this.extractTemporalMarkers(query);
+      if (!temporalMarkers.length) return [];
+
+      // Find memories with matching temporal context
+      const temporalMemories = await Promise.all(
+        temporalMarkers.map(marker =>
+          this.advancedMemory.searchNodes({
+            type: 'context',
+            query: marker,
+            filters: {
+              temporal: true
+            },
+            limit: 3
+          })
+        )
+      );
+
+      return temporalMemories.flat();
+    } catch (error) {
+      console.error('Error finding temporally related memories:', error);
+      return [];
+    }
+  }
+
+  private extractTemporalMarkers(text: string): string[] {
+    const markers: string[] = [];
+    
+    // Regular expressions for different temporal patterns
+    const patterns = {
+      date: /\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\/\d{1,2}\/\d{4}\b/,
+      time: /\b\d{1,2}:\d{2}\b/,
+      relative: /\b(yesterday|today|tomorrow|last week|next week|last month|next month)\b/i,
+      duration: /\b(\d+\s+)?(second|minute|hour|day|week|month|year)s?\b/i,
+      periodic: /\b(daily|weekly|monthly|yearly|annually)\b/i
+    };
+
+    // Extract all temporal markers
+    Object.entries(patterns).forEach(([type, pattern]) => {
+      const matches = text.match(new RegExp(pattern, 'g'));
+      if (matches) {
+        markers.push(...matches);
+      }
+    });
+
+    return markers;
+  }
+
+  private combineAndDeduplicateMemories(memories: MemoryNode[]): MemoryNode[] {
+    // Create a Map to store unique memories by ID
+    const uniqueMemories = new Map<string, MemoryNode & { score?: number }>();
+
+    // Process each memory
+    memories.forEach(memory => {
+      if (uniqueMemories.has(memory.id)) {
+        // If memory already exists, update its score
+        const existing = uniqueMemories.get(memory.id)!;
+        existing.score = (existing.score || 0) + (memory.confidence || 0);
+      } else {
+        // Add new memory with initial score
+        uniqueMemories.set(memory.id, {
+          ...memory,
+          score: memory.confidence || 0
+        });
+      }
+    });
+
+    // Convert back to array and sort by score
+    return Array.from(uniqueMemories.values())
+      .sort((a, b) => (b.score || 0) - (a.score || 0))
+      .slice(0, 5); // Keep top 5 memories
+  }
+
+  private calculateEnhancedMemoryScore(memories: MemoryNode[], query: string): number {
+    if (!memories.length) return 0.2;
+
+    const factors = {
+      relevance: this.calculateRelevanceScore(memories, query),
+      recency: this.calculateRecencyScore(memories),
+      confidence: this.calculateConfidenceScore(memories),
+      contextMatch: this.calculateContextMatchScore(memories, query)
+    };
+
+    // Weighted average of all factors
+    return (
+      factors.relevance * 0.4 +
+      factors.recency * 0.2 +
+      factors.confidence * 0.2 +
+      factors.contextMatch * 0.2
+    );
+  }
+
+  private calculateRelevanceScore(memories: MemoryNode[], query: string): number {
+    const queryWords = new Set(query.toLowerCase().split(/\s+/));
+    
+    return memories.reduce((score, memory) => {
+      const content = typeof memory.content === 'string' 
+        ? memory.content 
+        : JSON.stringify(memory.content);
+      
+      const contentWords = new Set(content.toLowerCase().split(/\s+/));
+      const commonWords = Array.from(queryWords)
+        .filter(word => contentWords.has(word) && !this.isStopWord(word));
+      
+      return score + (commonWords.length / queryWords.size);
+    }, 0) / memories.length;
+  }
+
+  private calculateRecencyScore(memories: MemoryNode[]): number {
+    const now = Date.now();
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    
+    return memories.reduce((score, memory) => {
+      const age = now - memory.timestamp;
+      return score + Math.max(0, 1 - age / (7 * DAY_MS)); // Decay over 7 days
+    }, 0) / memories.length;
+  }
+
+  private calculateConfidenceScore(memories: MemoryNode[]): number {
+    return memories.reduce((score, memory) => 
+      score + (memory.confidence || 0.5)
+    , 0) / memories.length;
+  }
+
+  private calculateContextMatchScore(memories: MemoryNode[], query: string): number {
+    return memories.reduce((score, memory) => {
+      if (!memory.context) return score;
+
+      const contextRelevance = [
+        this.matchSituation(memory.context.situation, query),
+        this.matchEmotionalState(memory.context.emotional_state, query),
+        this.matchExternalFactors(memory.context.external_factors, query)
+      ];
+
+      return score + (contextRelevance.reduce((a, b) => a + b, 0) / contextRelevance.length);
+    }, 0) / memories.length;
+  }
+
+  private matchSituation(situation: string, query: string): number {
+    const situationWords = situation.toLowerCase().split(/[_\s]+/);
+    const queryWords = query.toLowerCase().split(/\s+/);
+    
+    const matches = queryWords.filter(word => 
+      situationWords.some(sw => sw.includes(word) || word.includes(sw))
+    );
+    
+    return matches.length / queryWords.length;
+  }
+
+  private matchEmotionalState(state: any, query: string): number {
+    if (!state || !state.primary) return 0;
+    
+    const emotionWords = [
+      state.primary.toLowerCase(),
+      ...(state.context ? state.context.toLowerCase().split(/\s+/) : [])
+    ];
+    
+    const queryWords = query.toLowerCase().split(/\s+/);
+    const matches = queryWords.filter(word => 
+      emotionWords.some(ew => ew.includes(word) || word.includes(ew))
+    );
+    
+    return matches.length / queryWords.length;
+  }
+
+  private matchExternalFactors(factors: string[], query: string): number {
+    if (!factors || !factors.length) return 0;
+    
+    const factorWords = factors.join(' ').toLowerCase().split(/\s+/);
+    const queryWords = query.toLowerCase().split(/\s+/);
+    
+    const matches = queryWords.filter(word => 
+      factorWords.some(fw => fw.includes(word) || word.includes(fw))
+    );
+    
+    return matches.length / queryWords.length;
+  }
+
+  private isStopWord(word: string): boolean {
+    const stopWords = new Set([
+      'the', 'be', 'to', 'of', 'and', 'a', 'in', 'that', 'have',
+      'i', 'it', 'for', 'not', 'on', 'with', 'he', 'as', 'you',
+      'do', 'at', 'this', 'but', 'his', 'by', 'from', 'they',
+      'we', 'say', 'her', 'she', 'or', 'an', 'will', 'my', 'one',
+      'all', 'would', 'there', 'their', 'what', 'so', 'up', 'out',
+      'if', 'about', 'who', 'get', 'which', 'go', 'me'
+    ]);
+    return stopWords.has(word.toLowerCase());
   }
 } 

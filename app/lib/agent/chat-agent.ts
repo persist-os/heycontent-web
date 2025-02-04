@@ -19,6 +19,8 @@ import { EmailMemoryNode, EmailMemorySearchResult } from '../memory/types';
 import { serviceStateManager, ServiceType } from '../services/service-state-manager';
 import { PrismaClient } from '@prisma/client';
 import { Demographics } from './base-agent';
+import prisma from '../prisma';  // Import the singleton instance
+import { SmartChatAgent } from './smart-chat-agent';
 
 interface PlatformStatus {
   platform: SocialPlatform;
@@ -28,12 +30,13 @@ interface PlatformStatus {
 }
 
 interface MessageIntent {
-  type: 'email_search' | 'greeting' | 'direct_inquiry' | 'exploratory' | 'action_needed' | 'reflection' | 'validation' | 'creative' | 'strategic' | 'emotional_support';
+  type: 'email_search' | 'greeting' | 'direct_inquiry' | 'exploratory' | 'action_needed' | 'reflection' | 'validation' | 'creative' | 'strategic' | 'emotional_support' | 'general_inquiry';
   confidence?: number;
   subtype?: string;
   query?: string;
   sender?: string;
   date?: string;
+  needsSmartProcessing?: boolean;
 }
 
 interface EmailSearchTerms {
@@ -364,7 +367,8 @@ export class ChatAgent extends BaseAgent {
   private memoryAwareChat: MemoryAwareChatSystem;
   private emailMemoryManager: EmailMemoryManagerImpl;
   private emailSearchTool: EmailSearchTool;
-  private prisma: PrismaClient;
+  private prisma: PrismaClient = prisma;
+  private smartChatAgent?: SmartChatAgent;
 
   constructor(userId: string, rag: RAGSystem, platformStatus: PlatformStatus[]) {
     super(userId, rag, 'chat');
@@ -455,7 +459,6 @@ export class ChatAgent extends BaseAgent {
       this.emailSearchTool,
       // ... other tools ...
     ];
-    this.prisma = new PrismaClient();
   }
 
   public setContext(newContext: Partial<ChatAgentContext>) {
@@ -578,14 +581,35 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
         };
     }
 
-    // Question detection with context awareness
-    if (/^(what|how|why|when|where|who|can|could|would|should|is|are|do|does|did|will|has|have)\b/i.test(message)) {
+    // Enhanced question detection with better context awareness
+    const questionMatch = /^(what|how|why|when|where|who|can|could|would|should|is|are|do|does|did|will|has|have)\b/i.test(message);
+    const fuzzyQuestionMatch = /\b(explain|tell|describe|elaborate|clarify|help|understand)\b/i.test(message);
+    
+    if (questionMatch || fuzzyQuestionMatch) {
         const context = this.determineQuestionContext(message);
+        
+        // Check if it's a structured query first
+        if (context !== 'general' && (
+            message.toLowerCase().includes('email') ||
+            message.toLowerCase().includes('name') ||
+            message.toLowerCase().includes('date') ||
+            message.toLowerCase().includes('topic')
+        )) {
+            return {
+                type: 'direct_inquiry',
+                subtype: context,
+                confidence: 0.8,
+                query: message
+            };
+        }
+        
+        // If not a structured query, mark as general inquiry
         return {
-            type: 'direct_inquiry',
+            type: 'general_inquiry',
             subtype: context,
-            confidence: 0.8,
-            query: message
+            confidence: 0.7,
+            query: message,
+            needsSmartProcessing: true
         };
     }
 
@@ -599,11 +623,13 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
         };
     }
 
-    // Default to exploratory for longer messages
+    // Enhanced default behavior
+    const isComplex = message.length > 50 || message.split(' ').length > 10;
     return {
-        type: message.length > 50 ? 'exploratory' : 'direct_inquiry',
+        type: isComplex ? 'general_inquiry' : 'direct_inquiry',
         confidence: 0.6,
-        query: message
+        query: message,
+        needsSmartProcessing: isComplex
     };
   }
 
@@ -1113,7 +1139,7 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
     }
   }
 
-  async processMessage(
+  private async processMessage(
     input: string,
     context: ChatAgentContext
   ): Promise<{
@@ -1124,6 +1150,15 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
     try {
       // Analyze message intent
       const intent = await this.analyzeMessageIntent(input);
+
+      // Initialize smart chat if needed
+      if (!this.smartChatAgent) {
+        this.smartChatAgent = new SmartChatAgent(
+          this.rag,
+          this.userId,
+          this.platformStatus
+        );
+      }
 
       // Check conversation context first
       const contextCheck = await this.checkConversationContext(input, context);
@@ -1179,72 +1214,33 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
           };
         }
 
-        // Ensure mentionedEntities exists and has proper structure
-        if (!context.conversationState.mentionedEntities) {
-          context.conversationState.mentionedEntities = {
-            names: new Set<string>(),
-            dates: new Set<string>(),
-            topics: new Set<string>()
+        // Update entities in conversation state
+        this.updateConversationEntities(context, contextCheck.entities);
+      }
+
+      // Handle based on intent type
+      if (intent.type === 'general_inquiry' || intent.needsSmartProcessing) {
+        // Use smart chat processing for general inquiries
+        const smartResponse = await this.smartChatAgent.process(input);
+        
+        // Combine with context if available
+        if (hasAnswer && contextCheck.answer) {
+          return {
+            response: `${contextCheck.answer}\n\nAdditionally: ${smartResponse.output.content}`,
+            insights: [...(smartResponse.output.insights || [])],
+            suggestions: smartResponse.output.suggestions || []
           };
         }
-
-        // Type guard to ensure mentionedEntities exists and has proper structure
-        const { mentionedEntities: currentEntities } = context.conversationState;
-        if (currentEntities && 
-            currentEntities.names instanceof Set && 
-            currentEntities.dates instanceof Set && 
-            currentEntities.topics instanceof Set) {
-          
-          // Validate and merge new entities
-          if (contextCheck.entities.names instanceof Set &&
-              contextCheck.entities.dates instanceof Set &&
-              contextCheck.entities.topics instanceof Set) {
-            
-            // Merge new entities with existing ones
-            contextCheck.entities.names.forEach(name => currentEntities.names.add(name));
-            contextCheck.entities.dates.forEach(date => currentEntities.dates.add(date));
-            contextCheck.entities.topics.forEach(topic => currentEntities.topics.add(topic));
-
-            // Update query context
-            if (!context.conversationState.queryContext) {
-              context.conversationState.queryContext = [];
-            }
-
-            // Ensure we have a valid userIntent
-            const defaultIntent: UserIntent = {
-              type: 'direct_inquiry',
-              confidence: 1
-            };
-
-            const userIntent = context.userIntent || defaultIntent;
-
-            context.conversationState.queryContext.push({
-              timestamp: Date.now(),
-              intent: {
-                type: userIntent.type,
-                confidence: userIntent.confidence,
-                sender: userIntent.sender,
-                date: userIntent.date,
-                subtype: userIntent.subtype
-              },
-              entities: {
-                names: Array.from(contextCheck.entities.names),
-                dates: Array.from(contextCheck.entities.dates),
-                topics: Array.from(contextCheck.entities.topics)
-              },
-              topic: context.currentTopic || ''
-            });
-
-            // Limit query context history
-            if (context.conversationState.queryContext.length > 10) {
-              context.conversationState.queryContext.shift();
-            }
-          }
-        }
+        
+        return {
+          response: smartResponse.output.content,
+          insights: smartResponse.output.insights || [],
+          suggestions: smartResponse.output.suggestions || []
+        };
       }
 
       if (hasAnswer) {
-        // Validate answer when hasAnswer is true
+        // Return context-based answer for structured queries
         if (typeof contextCheck.answer !== 'string' || !contextCheck.answer.trim()) {
           throw new Error('Context check indicates answer exists but no valid answer was provided');
         }
@@ -1260,71 +1256,21 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
         };
       }
 
-      // Check required services
-      const serviceCheck = await this.checkRequiredServices(intent);
-      
-      // Validate service check structure
-      if (!serviceCheck || typeof serviceCheck !== 'object') {
-        throw new Error('Invalid service check response');
+      // Handle email-related queries
+      if (this.isEmailRelatedQuery(input)) {
+        const emailResponse = await this.handleEmailQuery(input, context);
+        if (emailResponse) {
+          return emailResponse;
+        }
       }
 
-      // Ensure ready property exists and is boolean
-      const isReady = typeof serviceCheck.ready === 'boolean' ? serviceCheck.ready : false;
-      
-      // Ensure needsAuth is an array if it exists
-      const needsAuth = Array.isArray(serviceCheck.needsAuth) ? serviceCheck.needsAuth : [];
-      
-      if (!isReady) {
-        return {
-          response: this.formatServiceStateMessage({ 
-            ...serviceCheck,
-            ready: isReady,
-            needsAuth
-          }),
-          insights: null,
-          suggestions: [
-            {
-              type: 'auth_required',
-              services: needsAuth
-            }
-          ]
-        };
-      }
-      
-      // Process with memory-aware chat system
+      // Process with memory-aware chat system for other cases
       if (!context.conversationId) {
         context.conversationId = Date.now().toString();
       }
 
-      // Validate conversation ID
-      if (typeof context.conversationId !== 'string' || !context.conversationId.trim()) {
-        throw new Error('Invalid conversation ID');
-      }
-
       // Update memory system with current context
-      if (context.conversationState?.mentionedEntities) {
-        const { names, dates, topics } = context.conversationState.mentionedEntities;
-        
-        // Ensure all required Sets exist and are valid before updating memory
-        if (names instanceof Set && 
-            dates instanceof Set && 
-            topics instanceof Set) {
-          
-          // Convert Sets to arrays with type validation
-          const validatedEntities = {
-            names: Array.from(names).filter((name): name is string => typeof name === 'string'),
-            dates: Array.from(dates).filter((date): date is string => typeof date === 'string'),
-            topics: Array.from(topics).filter((topic): topic is string => typeof topic === 'string')
-          };
-
-          await this.memoryAwareChat.updateContextualMemory({
-            conversationId: context.conversationId,
-            entities: validatedEntities,
-            currentTopic: context.currentTopic || '',
-            timestamp: Date.now()
-          });
-        }
-      }
+      await this.updateMemorySystem(context);
 
       const memoryResult = await this.memoryAwareChat.processMessage(input, context);
       
@@ -1338,174 +1284,207 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
         throw new Error('Invalid memory result: response must be a string');
       }
 
-      // Check if this is an email-related query
-      if (this.isEmailRelatedQuery(input)) {
-        // Check email memory first
-        const emailMemoryResults = await this.emailMemoryManager.findRelevantEmails(
-          input,
-          JSON.stringify(context)
-        );
-
-        // Validate email memory results structure
-        if (emailMemoryResults && 
-            Array.isArray(emailMemoryResults.nodes) && 
-            emailMemoryResults.nodes.length > 0 && 
-            emailMemoryResults.needsRefresh !== undefined) {
-          
-          // Only process if we don't need a refresh
-          if (!emailMemoryResults.needsRefresh) {
-            // Validate and process each node
-            const validNodes = emailMemoryResults.nodes.filter(
-              node => node && node.content && typeof node.content.messageId === 'string'
-            );
-
-            const insights = await Promise.all(
-              validNodes.map(node => 
-                this.emailMemoryManager.getEmailInsights(node.content.messageId)
-              )
-            );
-
-            // Ensure insights array is valid
-            const validatedInsights = Array.isArray(insights) ? insights.flat() : [];
-
-            return {
-              response: this.formatEmailMemoryResponse(emailMemoryResults, input),
-              insights: validatedInsights,
-              suggestions: Array.isArray(memoryResult.suggestions) ? memoryResult.suggestions : []
-            };
-          }
-        }
-      }
-
-      // Execute tools based on intent
-      let toolResponse: string | null = null;
-      if (intent && typeof intent === 'object') {
-        // Validate intent type
-        const intentType = typeof intent.type === 'string' ? intent.type : '';
-        
-        if (intentType === 'email_search') {
-          // Validate and sanitize search parameters
-          const searchParams = {
-            query: typeof intent.query === 'string' && intent.query.trim() ? intent.query.trim() : '',
-            sender: typeof intent.sender === 'string' && intent.sender.trim() ? intent.sender.trim() : undefined,
-            date: typeof intent.date === 'string' && intent.date.trim() ? intent.date.trim() : undefined
-          };
-
-          // Only execute search if we have a valid query
-          if (searchParams.query) {
-            try {
-              const searchResult = await this.emailSearchTool.execute(searchParams);
-              
-              // Validate search result and ensure string response
-              if (searchResult && typeof searchResult === 'object') {
-                const formattedString = searchResult.formattedString;
-                toolResponse = typeof formattedString === 'string' ? formattedString.trim() : '';
-              }
-            } catch (error) {
-              console.error('Error executing email search tool:', error);
-              toolResponse = ''; // Ensure string type on error
-            }
-          }
-        }
-      }
-
-      // Ensure string type for tool response before combining
-      const finalToolResponse = toolResponse || '';
-
-      // Ensure insights and suggestions are arrays
-      const validatedInsights = Array.isArray(memoryResult.insights) ? memoryResult.insights : [];
-      const validatedSuggestions = Array.isArray(memoryResult.suggestions) ? memoryResult.suggestions : [];
-
-      // Validate and sanitize responses
-      const sanitizedMemoryResponse = typeof memoryResult.response === 'string' ? memoryResult.response.trim() : '';
-
-      // Combine responses safely
-      const response = [sanitizedMemoryResponse]
-        .concat(finalToolResponse ? ['Additionally:', finalToolResponse] : [])
-        .filter(Boolean)
-        .join('\n\n');
-
       // Return validated result
       return {
-        response,
-        insights: validatedInsights,
-        suggestions: validatedSuggestions
+        response: memoryResult.response,
+        insights: Array.isArray(memoryResult.insights) ? memoryResult.insights : [],
+        suggestions: Array.isArray(memoryResult.suggestions) ? memoryResult.suggestions : []
       };
       
     } catch (error) {
       console.error('Error processing message:', error);
+      return this.handleProcessingError(error);
+    }
+  }
 
-      // Ensure error is an Error instance
-      const err = error instanceof Error ? error : new Error('Unknown error occurred');
+  private async handleEmailQuery(
+    input: string,
+    context: ChatAgentContext
+  ): Promise<{
+    response: string;
+    insights: any[];
+    suggestions: any[];
+  } | null> {
+    try {
+      const emailMemoryResults = await this.emailMemoryManager.findRelevantEmails(
+        input,
+        JSON.stringify(context)
+      );
 
-      // Classify error types
-      const isServiceError = err.message.toLowerCase().includes('service');
-      const isAuthError = err.message.toLowerCase().includes('auth');
-      const isValidationError = err.message.toLowerCase().includes('invalid') || 
-                               err.message.toLowerCase().includes('missing');
+      if (emailMemoryResults && 
+          Array.isArray(emailMemoryResults.nodes) && 
+          emailMemoryResults.nodes.length > 0 && 
+          emailMemoryResults.needsRefresh !== undefined) {
+        
+        if (!emailMemoryResults.needsRefresh) {
+          const validNodes = emailMemoryResults.nodes.filter(
+            node => node && node.content && typeof node.content.messageId === 'string'
+          );
 
-      // Handle service-related errors
-      if (isServiceError) {
-        return {
-          response: `There was an issue with the required services. ${err.message}`,
-          insights: null,
-          suggestions: [
-            {
-              type: 'error',
-              errorType: 'service_error',
-              message: err.message,
-              timestamp: Date.now()
-            }
-          ]
-        };
+          const insights = await Promise.all(
+            validNodes.map(node => 
+              this.emailMemoryManager.getEmailInsights(node.content.messageId)
+            )
+          );
+
+          return {
+            response: this.formatEmailMemoryResponse(emailMemoryResults, input),
+            insights: Array.isArray(insights) ? insights.flat() : [],
+            suggestions: []
+          };
+        }
       }
+      return null;
+    } catch (error) {
+      console.error('Error handling email query:', error);
+      return null;
+    }
+  }
 
-      // Handle authentication errors
-      if (isAuthError) {
-        return {
-          response: `Authentication is required. ${err.message}`,
-          insights: null,
-          suggestions: [
-            {
-              type: 'error',
-              errorType: 'auth_error',
-              message: err.message,
-              timestamp: Date.now()
-            }
-          ]
-        };
+  private updateConversationEntities(
+    context: ChatAgentContext,
+    newEntities: any
+  ): void {
+    if (!context.conversationState?.mentionedEntities) {
+      return;
+    }
+
+    const { mentionedEntities: currentEntities } = context.conversationState;
+    
+    if (currentEntities && 
+        currentEntities.names instanceof Set && 
+        currentEntities.dates instanceof Set && 
+        currentEntities.topics instanceof Set) {
+      
+      // Validate and merge new entities
+      if (newEntities.names instanceof Set &&
+          newEntities.dates instanceof Set &&
+          newEntities.topics instanceof Set) {
+        
+        // Merge new entities with existing ones
+        newEntities.names.forEach((name: string) => currentEntities.names.add(name));
+        newEntities.dates.forEach((date: string) => currentEntities.dates.add(date));
+        newEntities.topics.forEach((topic: string) => currentEntities.topics.add(topic));
+
+        // Update query context
+        if (!context.conversationState.queryContext) {
+          context.conversationState.queryContext = [];
+        }
+
+        context.conversationState.queryContext.push({
+          timestamp: Date.now(),
+          intent: context.userIntent || {
+            type: 'direct_inquiry',
+            confidence: 1
+          },
+          entities: {
+            names: Array.from(newEntities.names),
+            dates: Array.from(newEntities.dates),
+            topics: Array.from(newEntities.topics)
+          },
+          topic: context.currentTopic || ''
+        });
+
+        // Limit query context history
+        if (context.conversationState.queryContext.length > 10) {
+          context.conversationState.queryContext.shift();
+        }
       }
+    }
+  }
 
-      // Handle validation errors
-      if (isValidationError) {
-        return {
-          response: `There was an issue with the request format. ${err.message}`,
-          insights: null,
-          suggestions: [
-            {
-              type: 'error',
-              errorType: 'validation_error',
-              message: err.message,
-              timestamp: Date.now()
-            }
-          ]
-        };
-      }
+  private async updateMemorySystem(context: ChatAgentContext): Promise<void> {
+    if (!context.conversationId || !context.conversationState?.mentionedEntities) {
+      return;
+    }
 
-      // Handle generic errors
+    const { names, dates, topics } = context.conversationState.mentionedEntities;
+    
+    if (names instanceof Set && 
+        dates instanceof Set && 
+        topics instanceof Set) {
+      
+      const validatedEntities = {
+        names: Array.from(names).filter((name): name is string => typeof name === 'string'),
+        dates: Array.from(dates).filter((date): date is string => typeof date === 'string'),
+        topics: Array.from(topics).filter((topic): topic is string => typeof topic === 'string')
+      };
+
+      await this.memoryAwareChat.updateContextualMemory({
+        conversationId: context.conversationId,
+        entities: validatedEntities,
+        currentTopic: context.currentTopic || '',
+        timestamp: Date.now()
+      });
+    }
+  }
+
+  private handleProcessingError(error: unknown): {
+    response: string;
+    insights: null;
+    suggestions: Array<{
+      type: string;
+      errorType: string;
+      message: string;
+      timestamp: number;
+    }>;
+  } {
+    const err = error instanceof Error ? error : new Error('Unknown error occurred');
+    
+    const isServiceError = err.message.toLowerCase().includes('service');
+    const isAuthError = err.message.toLowerCase().includes('auth');
+    const isValidationError = err.message.toLowerCase().includes('invalid') || 
+                             err.message.toLowerCase().includes('missing');
+
+    if (isServiceError) {
       return {
-        response: 'I encountered an error processing your request. Please try again.',
+        response: `There was an issue with the required services. ${err.message}`,
         insights: null,
-        suggestions: [
-          {
-            type: 'error',
-            errorType: 'unknown_error',
-            message: err.message,
-            timestamp: Date.now()
-          }
-        ]
+        suggestions: [{
+          type: 'error',
+          errorType: 'service_error',
+          message: err.message,
+          timestamp: Date.now()
+        }]
       };
     }
+
+    if (isAuthError) {
+      return {
+        response: `Authentication is required. ${err.message}`,
+        insights: null,
+        suggestions: [{
+          type: 'error',
+          errorType: 'auth_error',
+          message: err.message,
+          timestamp: Date.now()
+        }]
+      };
+    }
+
+    if (isValidationError) {
+      return {
+        response: `There was an issue with the request format. ${err.message}`,
+        insights: null,
+        suggestions: [{
+          type: 'error',
+          errorType: 'validation_error',
+          message: err.message,
+          timestamp: Date.now()
+        }]
+      };
+    }
+
+    return {
+      response: 'I encountered an error processing your request. Please try again.',
+      insights: null,
+      suggestions: [{
+        type: 'error',
+        errorType: 'unknown_error',
+        message: err.message,
+        timestamp: Date.now()
+      }]
+    };
   }
 
   private combineResponses(
@@ -2204,155 +2183,293 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
     hasAnswer: boolean;
     answer?: string;
     entities?: {
-      names: Set<string>;
-      emails: Set<string>;
-      dates: Set<string>;
-      topics: Set<string>;
+        names: Set<string>;
+        emails: Set<string>;
+        dates: Set<string>;
+        topics: Set<string>;
+        participants?: {
+            from: Set<string>;
+            to: Set<string>;
+            cc: Set<string>;
+            bcc: Set<string>;
+        };
+        threadParticipants?: Set<string>;
     };
   }> {
-    // If no previous messages, return early
-    if (!context.previousMessages || context.previousMessages.length === 0) {
-      return { hasAnswer: false };
-    }
-
-    // Extract entities from previous messages
-    const entities = {
-      names: new Set<string>(),
-      emails: new Set<string>(),
-      dates: new Set<string>(),
-      topics: new Set<string>()
-    };
-
-    // Process previous messages to extract information
-    for (const message of context.previousMessages) {
-      // Look for email-like patterns - enhanced to catch more variations
-      const emailPattern = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi;
-      const emails = message.content.match(emailPattern) || [];
-      emails.forEach(email => entities.emails.add(email));
-
-      // Enhanced name patterns to catch more variations
-      const namePatterns = [
-        /(?:From:|To:|Sender:|Recipient:)\s*([^<\n]+?)(?:\s*<|$)/gi,
-        /(?:^|\n)([^<>\n]+?)\s*<[^>]+>/gi,
-        /(?:name is|I am|I'm|this is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g
-      ];
-
-      for (const pattern of namePatterns) {
-        let match;
-        while ((match = pattern.exec(message.content)) !== null) {
-          const name = match[1].trim();
-          if (name.length > 1) { // Avoid single-letter matches
-            entities.names.add(name);
-          }
+    try {
+        // If no previous messages, return early
+        if (!context.previousMessages) {
+            context.previousMessages = [];
         }
-      }
 
-      // Enhanced date patterns to catch more formats
-      const datePatterns = [
-        /\b\d{1,2}\/\d{1,2}\/\d{4}\b/g,                    // MM/DD/YYYY or DD/MM/YYYY
-        /\b\d{4}-\d{2}-\d{2}\b/g,                          // YYYY-MM-DD
-        /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}\b/gi,  // Month DD, YYYY
-        /\b\d{1,2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{4}\b/gi,    // DD Month YYYY
-        /\b(?:yesterday|today|tomorrow)\b/gi,               // Relative dates
-        /\b(?:last|next|this) (?:week|month|year)\b/gi     // Relative periods
-      ];
-
-      for (const pattern of datePatterns) {
-        const dates = message.content.match(pattern) || [];
-        dates.forEach(date => entities.dates.add(date));
-      }
-
-      // Enhanced topic extraction
-      const topicPatterns = [
-        /Subject:\s*([^\n]+)/gi,
-        /Topic:\s*([^\n]+)/gi,
-        /Re:\s*([^\n]+)/gi,
-        /Regarding:\s*([^\n]+)/gi,
-        /(?:discussing|about|concerning)\s+([^,.!?]+)/gi
-      ];
-
-      for (const pattern of topicPatterns) {
-        let match;
-        while ((match = pattern.exec(message.content)) !== null) {
-          const topic = match[1].trim();
-          if (topic.length > 2) { // Avoid very short topics
-            entities.topics.add(topic);
-          }
+        // Extract entities from input
+        const extractedEntities = this.extractEntities(input);
+        
+        // Get conversation state
+        const state = context.conversationState;
+        if (!state?.mentionedEntities) {
+            return { hasAnswer: false };
         }
-      }
-    }
 
-    // Enhanced question analysis
-    const questionLower = input.toLowerCase();
-    
-    // Handle name-related questions with fuzzy matching
-    if (questionLower.includes('name') || questionLower.includes('who') || 
-        questionLower.match(/\b(?:called|named|known as)\b/)) {
-      for (const name of entities.names) {
-        const nameParts = name.toLowerCase().split(/\s+/);
-        // Check for partial matches in name parts
-        if (nameParts.some(part => 
-            questionLower.includes(part) || 
-            this.calculateLevenshteinDistance(part, questionLower) <= 2)) {
-          return {
-            hasAnswer: true,
-            answer: this.formatAnswer('name', name, context),
-            entities
-          };
-        }
-      }
-    }
-
-    // Handle email-related questions with enhanced matching
-    if (questionLower.includes('email') || questionLower.includes('address') || 
-        questionLower.includes('contact') || questionLower.match(/\b(?:reach|message|send to)\b/)) {
-      for (const email of entities.emails) {
-        const [username] = email.split('@');
-        if (questionLower.includes(username.toLowerCase()) || 
-            this.calculateLevenshteinDistance(username.toLowerCase(), questionLower) <= 3) {
-          return {
-            hasAnswer: true,
-            answer: this.formatAnswer('email', email, context),
-            entities
-          };
-        }
-      }
-    }
-
-    // Handle date-related questions with context
-    if (questionLower.includes('when') || questionLower.includes('date') || 
-        questionLower.match(/\b(?:time|scheduled|planned|happening)\b/)) {
-      for (const date of entities.dates) {
-        return {
-          hasAnswer: true,
-          answer: this.formatAnswer('date', date, context),
-          entities
+        // Initialize entities with existing patterns
+        const entities = {
+            names: new Set<string>(),
+            emails: new Set<string>(),
+            dates: new Set<string>(),
+            topics: new Set<string>()
         };
-      }
-    }
 
-    // Handle topic-related questions with fuzzy matching
-    if (questionLower.includes('subject') || questionLower.includes('about') || 
-        questionLower.match(/\b(?:topic|discussing|regarding|related to)\b/)) {
-      for (const topic of entities.topics) {
-        const topicWords = topic.toLowerCase().split(/\s+/);
-        // Check for partial matches in topic words
-        if (topicWords.some(word => 
-            questionLower.includes(word) || 
-            this.calculateLevenshteinDistance(word, questionLower) <= 2)) {
-          return {
-            hasAnswer: true,
-            answer: this.formatAnswer('topic', topic, context),
-            entities
-          };
+        // Process previous messages to extract information
+        for (const message of context.previousMessages) {
+            // Look for email-like patterns - enhanced to catch more variations
+            const emailPattern = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi;
+            const emails = message.content.match(emailPattern) || [];
+            emails.forEach(email => entities.emails.add(email));
+
+            // Enhanced name patterns to catch more variations
+            const namePatterns = [
+                /(?:From:|To:|Sender:|Recipient:)\s*([^<\n]+?)(?:\s*<|$)/gi,
+                /(?:^|\n)([^<>\n]+?)\s*<[^>]+>/gi,
+                /(?:name is|I am|I'm|this is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g
+            ];
+
+            for (const pattern of namePatterns) {
+                let match;
+                while ((match = pattern.exec(message.content)) !== null) {
+                    const name = match[1].trim();
+                    if (name.length > 1) { // Avoid single-letter matches
+                        entities.names.add(name);
+                    }
+                }
+            }
+
+            // Enhanced date patterns to catch more formats
+            const datePatterns = [
+                /\b\d{1,2}\/\d{1,2}\/\d{4}\b/g,
+                /\b\d{4}-\d{2}-\d{2}\b/g,
+                /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}\b/gi,
+                /\b\d{1,2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{4}\b/gi,
+                /\b(?:yesterday|today|tomorrow)\b/gi,
+                /\b(?:last|next|this) (?:week|month|year)\b/gi
+            ];
+
+            for (const pattern of datePatterns) {
+                const dates = message.content.match(pattern) || [];
+                dates.forEach(date => entities.dates.add(date));
+            }
+
+            // Enhanced topic extraction
+            const topicPatterns = [
+                /Subject:\s*([^\n]+)/gi,
+                /Topic:\s*([^\n]+)/gi,
+                /Re:\s*([^\n]+)/gi,
+                /Regarding:\s*([^\n]+)/gi,
+                /(?:discussing|about|concerning)\s+([^,.!?]+)/gi
+            ];
+
+            for (const pattern of topicPatterns) {
+                let match;
+                while ((match = pattern.exec(message.content)) !== null) {
+                    const topic = match[1].trim();
+                    if (topic.length > 2) { // Avoid very short topics
+                        entities.topics.add(topic);
+                    }
+                }
+            }
         }
-      }
-    }
 
-    return {
-      hasAnswer: false,
-      entities
-    };
+        // Check displayed information from previous RAG searches
+        const recentSearchResults = context.emailSearchResults || [];
+        const displayedInfo = new Map<string, any>();
+        
+        // Track email participants and thread context
+        const participants = {
+            from: new Set<string>(),
+            to: new Set<string>(),
+            cc: new Set<string>(),
+            bcc: new Set<string>()
+        };
+        const threadParticipants = new Set<string>();
+
+        // Process recent search results
+        for (const result of recentSearchResults) {
+            if ('from' in result) {
+                participants.from.add(result.from);
+                threadParticipants.add(result.from);
+                entities.names.add(result.from);
+            }
+            if ('to' in result && Array.isArray(result.to)) {
+                result.to.forEach(to => {
+                    participants.to.add(to);
+                    threadParticipants.add(to);
+                    entities.names.add(to);
+                });
+            }
+            if ('cc' in result && Array.isArray(result.cc)) {
+                result.cc.forEach(cc => {
+                    participants.cc.add(cc);
+                    threadParticipants.add(cc);
+                    entities.names.add(cc);
+                });
+            }
+            if ('bcc' in result && Array.isArray(result.bcc)) {
+                result.bcc.forEach(bcc => {
+                    participants.bcc.add(bcc);
+                    threadParticipants.add(bcc);
+                    entities.names.add(bcc);
+                });
+            }
+
+            // Store displayed information
+            displayedInfo.set(result.id, {
+                content: result,
+                timestamp: new Date().getTime()
+            });
+        }
+
+        // Enhanced question analysis
+        const questionLower = input.toLowerCase();
+
+        // Handle name-related questions with fuzzy matching
+        if (questionLower.includes('name') || questionLower.includes('who') || 
+            questionLower.match(/\b(?:called|named|known as)\b/)) {
+            
+            // Enhanced name question patterns to catch more variations
+            const namePatterns = [
+                /what(?:'s| is) (.*?)(?:'s| full| complete)? name\??$/i,  // Standard format
+                /(?:wh[aou]ts?|wht|what|who) (?:is )?([a-z]+?)(?:s|\s+)(?:full |complete |whole )?name/i,  // Common typos
+                /([a-z]+?)(?:s|\s+)(?:full |complete |whole )?name/i,  // Shorter versions
+                /name (?:of|for) ([a-z]+)/i  // Inverse format
+            ];
+
+            // Check each pattern
+            for (const pattern of namePatterns) {
+                const nameMatch = input.match(pattern);
+                if (nameMatch) {
+                    const searchName = nameMatch[1].toLowerCase().trim();
+                    
+                    // First check in displayed information
+                    for (const [_, info] of displayedInfo) {
+                        const content = info.content;
+                        if (content.from?.toLowerCase().includes(searchName)) {
+                            return {
+                                hasAnswer: true,
+                                answer: this.formatAnswer('name', content.from, context),
+                                entities: {
+                                    ...entities,
+                                    participants,
+                                    threadParticipants
+                                }
+                            };
+                        }
+                    }
+
+                    // Then check in extracted names with fuzzy matching
+                    for (const name of entities.names) {
+                        const nameParts = name.toLowerCase().split(/\s+/);
+                        if (nameParts.some(part => 
+                            searchName.includes(part) || 
+                            this.calculateLevenshteinDistance(part, searchName) <= 2)) {
+                            return {
+                                hasAnswer: true,
+                                answer: this.formatAnswer('name', name, context),
+                                entities: {
+                                    ...entities,
+                                    participants,
+                                    threadParticipants
+                                }
+                            };
+                        }
+                    }
+                }
+            }
+        }
+
+        // Check for participant-related questions
+        const participantMatch = input.match(/who (?:was|were|is|are) (?:in|part of) the (?:conversation|thread|email)/i);
+        if (participantMatch) {
+            const participantList = Array.from(threadParticipants).join(', ');
+            return {
+                hasAnswer: true,
+                answer: `The following people were part of the conversation: ${participantList}`,
+                entities: {
+                    ...entities,
+                    participants,
+                    threadParticipants
+                }
+            };
+        }
+
+        // Handle email-related questions with enhanced matching
+        if (questionLower.includes('email') || questionLower.includes('address') || 
+            questionLower.includes('contact') || questionLower.match(/\b(?:reach|message|send to)\b/)) {
+            for (const email of entities.emails) {
+                const [username] = email.split('@');
+                if (questionLower.includes(username.toLowerCase()) || 
+                    this.calculateLevenshteinDistance(username.toLowerCase(), questionLower) <= 3) {
+                    return {
+                        hasAnswer: true,
+                        answer: this.formatAnswer('email', email, context),
+                        entities: {
+                            ...entities,
+                            participants,
+                            threadParticipants
+                        }
+                    };
+                }
+            }
+        }
+
+        // Handle date-related questions with context
+        if (questionLower.includes('when') || questionLower.includes('date') || 
+            questionLower.match(/\b(?:time|scheduled|planned|happening)\b/)) {
+            for (const date of entities.dates) {
+                return {
+                    hasAnswer: true,
+                    answer: this.formatAnswer('date', date, context),
+                    entities: {
+                        ...entities,
+                        participants,
+                        threadParticipants
+                    }
+                };
+            }
+        }
+
+        // Handle topic-related questions with fuzzy matching
+        if (questionLower.includes('subject') || questionLower.includes('about') || 
+            questionLower.match(/\b(?:topic|discussing|regarding|related to)\b/)) {
+            for (const topic of entities.topics) {
+                const topicWords = topic.toLowerCase().split(/\s+/);
+                if (topicWords.some(word => 
+                    questionLower.includes(word) || 
+                    this.calculateLevenshteinDistance(word, questionLower) <= 2)) {
+                    return {
+                        hasAnswer: true,
+                        answer: this.formatAnswer('topic', topic, context),
+                        entities: {
+                            ...entities,
+                            participants,
+                            threadParticipants
+                        }
+                    };
+                }
+            }
+        }
+
+        return {
+            hasAnswer: false,
+            entities: {
+                ...entities,
+                participants,
+                threadParticipants
+            }
+        };
+
+    } catch (error) {
+        console.error('Error in checkConversationContext:', error);
+        return { hasAnswer: false };
+    }
   }
 
   private calculateLevenshteinDistance(a: string, b: string): number {
