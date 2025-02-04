@@ -97,6 +97,21 @@ export interface ChatAgentContext extends AgentContext {
       version: string;
     };
   };
+  mentionedEntities?: {
+    names: Set<string>;
+    dates: Set<string>;
+    topics: Set<string>;
+  };
+  queryContext?: Array<{
+    timestamp: number;
+    intent: UserIntent;
+    entities: {
+      names: string[];
+      dates: string[];
+      topics: string[];
+    };
+    topic: string;
+  }>;
 }
 
 export type MessageIntent = UserIntent; 

@@ -1,4 +1,5 @@
 import { PrismaClient, Prisma } from '@prisma/client';
+import prisma from '../prisma';  // Import the singleton instance
 
 interface SearchResult {
   id: string;
@@ -33,8 +34,8 @@ interface SearchResultWithAnalysis extends SearchResult {
 export class EmailRepository {
   private prisma: PrismaClient;
 
-  constructor(prisma: PrismaClient) {
-    this.prisma = prisma;
+  constructor(prismaInstance: PrismaClient = prisma) {
+    this.prisma = prismaInstance;
   }
 
   // Add validation function

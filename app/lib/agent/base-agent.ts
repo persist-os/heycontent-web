@@ -6,6 +6,7 @@ import { Message } from "../../types/conversation";
 import { selectModel } from "../openai";
 import { BatchProcessor } from "./batch-processor";
 import { PrismaClient } from "@prisma/client";
+import prisma from '../prisma';  // Import the singleton instance
 
 export interface PlatformIntegrationContext {
   instagram?: {
@@ -311,7 +312,7 @@ export abstract class BaseAgent {
     });
 
     // Initialize batch processor
-    this.batchProcessor = new BatchProcessor(rag, new PrismaClient());
+    this.batchProcessor = new BatchProcessor(rag, prisma);
   }
 
   private getModelForAgentType(type: 'chat' | 'insights' | 'partnerships' | 'audience'): string {

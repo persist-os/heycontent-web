@@ -5,6 +5,7 @@ import { PrismaClient, Prisma } from "@prisma/client";
 import { createHash } from 'crypto';
 import { YouTubeService } from '../services/youtube';
 import crypto from 'crypto';
+import prisma from '../prisma'; // Import the singleton Prisma instance
 
 // Cache interface
 interface EmbeddingCache {
@@ -128,7 +129,7 @@ export class RAGSystem {
       maxRetries: 3,
       maxConcurrency: 1
     });
-    this.prisma = new PrismaClient();
+    this.prisma = prisma; // Use the singleton instance instead of creating a new one
     this.initialized = this.init();
   }
 

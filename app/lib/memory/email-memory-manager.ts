@@ -26,6 +26,23 @@ interface ThreadAnalysis {
   sentiment: string;
   action_items: string[];
   summary: string;
+  entities: {
+    people: string[];
+    organizations: string[];
+    locations: string[];
+    dates: string[];
+    urls: string[];
+  };
+  intent: {
+    primary: 'request' | 'inform' | 'question' | 'response' | 'followup' | 'other';
+    confidence: number;
+    details: string;
+  };
+  context: {
+    previousReferences: string[];
+    relatedTopics: string[];
+    externalContext: string[];
+  };
 }
 
 interface EmailContext {
@@ -173,7 +190,40 @@ export class EmailMemoryManagerImpl implements EmailMemoryManager {
         lastReferencedAt: Date.now(),
         useCount: 1,
         fullContent: email.body,
-        analysis: threadAnalysis
+        analysis: threadAnalysis,
+        metadata: {
+          category: 'primary',
+          priority: 'medium',
+          status: 'unread',
+          flags: new Set(),
+          customLabels: new Set()
+        },
+        threadContext: {
+          depth: 0,
+          totalMessages: 1,
+          lastMessageTimestamp: email.date.getTime(),
+          participants: new Set([email.from, ...email.to]),
+          summary: threadAnalysis.summary,
+          topic: threadAnalysis.topics[0] || 'general',
+          status: 'active'
+        },
+        metrics: {
+          relevanceScore: 0,
+          importanceScore: this.calculateImportance(email, threadAnalysis),
+          urgencyScore: 0,
+          engagementScore: 0,
+          completenessScore: 1
+        },
+        relationships: {
+          inReplyTo: undefined,
+          references: [],
+          forwards: [],
+          mentions: {
+            people: [],
+            emails: [],
+            threads: []
+          }
+        }
       },
       confidence: 1,
       timestamp: email.date.getTime(),
@@ -242,7 +292,24 @@ export class EmailMemoryManagerImpl implements EmailMemoryManager {
       }],
       sentiment,
       action_items,
-      summary: this.generateSummary(email)
+      summary: this.generateSummary(email),
+      entities: {
+        people: [],
+        organizations: [],
+        locations: [],
+        dates: [],
+        urls: []
+      },
+      intent: {
+        primary: 'other',
+        confidence: 0.5,
+        details: ''
+      },
+      context: {
+        previousReferences: [],
+        relatedTopics: [],
+        externalContext: []
+      }
     };
   }
 
@@ -441,6 +508,99 @@ export class EmailMemoryManagerImpl implements EmailMemoryManager {
     }
   }
 
+  private async performDeepContentSearch(query: string, nodes: EmailMemoryNode[]): Promise<EmailMemoryNode[]> {
+    const searchTerms = query.toLowerCase().split(/\s+/);
+    
+    // Score each node based on deep content matching
+    const scoredNodes = await Promise.all(nodes.map(async node => {
+      let score = 0;
+      
+      // Search in full content with context
+      const contentFields = [
+        { text: node.content.fullContent, weight: 0.4 },
+        { text: node.content.subject, weight: 0.2 },
+        { text: node.content.summary, weight: 0.15 },
+        { text: node.content.key_points.join(' '), weight: 0.15 },
+        { text: node.content.analysis.action_items.join(' '), weight: 0.1 }
+      ];
+
+      // Calculate weighted score for each content field
+      for (const field of contentFields) {
+        const fieldContent = field.text.toLowerCase();
+        const fieldScore = searchTerms.reduce((termScore, term) => {
+          // Exact match
+          if (fieldContent.includes(term)) {
+            return termScore + 1.0;
+          }
+          // Partial word match
+          const words = fieldContent.split(/\s+/);
+          const partialMatches = words.filter(word => 
+            word.includes(term) || term.includes(word)
+          ).length;
+          return termScore + (partialMatches / words.length) * 0.5;
+        }, 0) / searchTerms.length;
+        
+        score += fieldScore * field.weight;
+      }
+
+      // Consider entity matches
+      const entityScore = this.calculateEntityMatchScore(searchTerms, node.content.analysis.entities);
+      score += entityScore * 0.2;  // 20% weight for entity matches
+
+      // Consider intent and context
+      if (node.content.analysis.intent.details.toLowerCase().includes(query.toLowerCase())) {
+        score += 0.1;  // Bonus for intent match
+      }
+
+      // Consider thread context
+      if (node.content.threadContext) {
+        const threadContextScore = searchTerms.reduce((s, term) => 
+          node.content.threadContext.topic.toLowerCase().includes(term) ? s + 0.1 : s, 0
+        );
+        score += threadContextScore;
+      }
+
+      return {
+        node,
+        score: Math.min(score, 1)  // Normalize to 0-1
+      };
+    }));
+
+    // Sort by score and return nodes
+    return scoredNodes
+      .sort((a, b) => b.score - a.score)
+      .map(scored => scored.node);
+  }
+
+  private calculateEntityMatchScore(searchTerms: string[], entities: {
+    people: string[];
+    organizations: string[];
+    locations: string[];
+    dates: string[];
+    urls: string[];
+  }): number {
+    let score = 0;
+    const allEntities = [
+      ...entities.people,
+      ...entities.organizations,
+      ...entities.locations,
+      ...entities.dates,
+      ...entities.urls
+    ].map(e => e.toLowerCase());
+
+    for (const term of searchTerms) {
+      const exactMatches = allEntities.filter(e => e.includes(term)).length;
+      score += (exactMatches / allEntities.length) * 0.5;  // 50% weight for exact matches
+      
+      const partialMatches = allEntities.filter(e => 
+        e.split(/\s+/).some(word => word.includes(term) || term.includes(word))
+      ).length;
+      score += (partialMatches / allEntities.length) * 0.3;  // 30% weight for partial matches
+    }
+
+    return Math.min(score, 1);
+  }
+
   async findRelevantEmails(query: string, context?: string): Promise<EmailMemorySearchResult> {
     const now = Date.now();
     
@@ -461,16 +621,13 @@ export class EmailMemoryManagerImpl implements EmailMemoryManager {
     // Search in memory system with specific criteria
     const relevantNodes = await this.memorySystem.searchNodes(searchCriteria);
 
-    const emailNodes = relevantNodes
+    // Filter and type-check nodes
+    let emailNodes = relevantNodes
       .filter((node: MemoryNode): node is EmailMemoryNode => 
-        node.type === 'email_context')
-      .sort((a: EmailMemoryNode, b: EmailMemoryNode) => {
-        // Sort by relevance score first, then by recency
-        if (a.confidence !== b.confidence) {
-          return b.confidence - a.confidence;
-        }
-        return b.content.timestamp - a.content.timestamp;
-      });
+        node.type === 'email_context');
+
+    // Perform deep content search
+    emailNodes = await this.performDeepContentSearch(query, emailNodes);
 
     // Update access counts and last referenced timestamps
     for (const node of emailNodes) {
@@ -585,33 +742,106 @@ export class EmailMemoryManagerImpl implements EmailMemoryManager {
     );
   }
 
+  // Add fuzzy matching helper
+  private calculateFuzzyScore(str1: string, str2: string): number {
+    const s1 = str1.toLowerCase();
+    const s2 = str2.toLowerCase();
+    
+    // If either string contains the other, high similarity
+    if (s1.includes(s2) || s2.includes(s1)) {
+      return 0.9;
+    }
+    
+    // Calculate word-level similarity
+    const words1 = new Set(s1.split(/\s+/));
+    const words2 = new Set(s2.split(/\s+/));
+    
+    const commonWords = new Set([...words1].filter(x => words2.has(x)));
+    const similarity = commonWords.size / Math.max(words1.size, words2.size);
+    
+    return similarity;
+  }
+
   private calculateConfidence(nodes: EmailMemoryNode[], query: string): number {
     if (nodes.length === 0) return 0;
     
-    let confidence = 0;
+    // Calculate individual scores for each node and take the max
+    const nodeScores = nodes.map(node => {
+      // Recency score (0-1): More recent = higher score
+      const recencyScore = Math.max(0, 1 - (Date.now() - node.content.lastReferencedAt) / (7 * 24 * 60 * 60 * 1000)); // 7 days max
+
+      // Usage score (0-1): More usage = higher score, capped at 10 uses
+      const usageScore = Math.min(node.content.useCount / 10, 1);
+
+      // Topic relevance (0-1): Percentage of topics that match query terms with fuzzy matching
+      const queryTerms = query.toLowerCase().split(/\s+/);
+      const topicRelevance = node.content.topics.reduce((score, topic) => {
+        const topicScore = queryTerms.reduce((termScore, term) => 
+          Math.max(termScore, this.calculateFuzzyScore(term, topic)), 0
+        );
+        return score + topicScore;
+      }, 0) / Math.max(1, node.content.topics.length);
+
+      // Content relevance (0-1): Check query terms against subject, key points, and summary with fuzzy matching
+      const contentParts = [
+        { text: node.content.subject, weight: 0.4 },
+        { text: node.content.key_points.join(' '), weight: 0.3 },
+        { text: node.content.summary, weight: 0.3 }
+      ];
+      
+      const contentRelevance = contentParts.reduce((score, part) => {
+        const partScore = queryTerms.reduce((termScore, term) => 
+          Math.max(termScore, this.calculateFuzzyScore(term, part.text)), 0
+        );
+        return score + (partScore * part.weight);
+      }, 0);
+
+      // Thread context relevance (0-1): Check if query matches thread context with fuzzy matching
+      const threadRelevance = node.content.thread_context ?
+        queryTerms.reduce((score, term) => 
+          Math.max(score, this.calculateFuzzyScore(term, node.content.thread_context)), 0
+        ) : 0;
+
+      // Importance score (0-1): Use the node's calculated importance
+      const importanceScore = node.content.importance;
+
+      // Weighted average of all factors
+      return {
+        total: (
+          recencyScore * 0.15 +      // 15% weight for recency
+          usageScore * 0.10 +        // 10% weight for usage
+          topicRelevance * 0.25 +    // 25% weight for topic relevance
+          contentRelevance * 0.25 +  // 25% weight for content relevance
+          threadRelevance * 0.15 +   // 15% weight for thread context
+          importanceScore * 0.10     // 10% weight for importance
+        ),
+        factors: {
+          recency: recencyScore,
+          usage: usageScore,
+          topicRelevance,
+          contentRelevance,
+          threadRelevance,
+          importance: importanceScore
+        }
+      };
+    });
+
+    // Get the highest scoring node's total
+    const maxScore = Math.max(...nodeScores.map(score => score.total));
     
-    // Recency factor
-    const mostRecent = Math.max(...nodes.map(n => n.content.lastReferencedAt));
-    const recencyScore = Math.min(
-      (Date.now() - mostRecent) / (24 * 60 * 60 * 1000), // Normalize to days
-      1
-    );
-    
-    // Relevance factor
-    const relevanceScore = nodes.reduce((acc, node) => {
-      const topicMatch = node.content.topics.some(topic => 
-        query.toLowerCase().includes(topic.toLowerCase())
-      );
-      return acc + (topicMatch ? 1 : 0);
-    }, 0) / nodes.length;
-    
-    // Usage factor
-    const usageScore = nodes.reduce((acc, node) => 
-      acc + Math.min(node.content.useCount / 10, 1), 0
-    ) / nodes.length;
-    
-    confidence = (recencyScore + relevanceScore + usageScore) / 3;
-    return Math.min(confidence, 1);
+    // Log detailed scoring for debugging if needed
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('Email confidence scores:', {
+        query,
+        scores: nodeScores.map((score, i) => ({
+          nodeId: nodes[i].id,
+          total: score.total,
+          factors: score.factors
+        }))
+      });
+    }
+
+    return Math.min(maxScore, 1);
   }
 
   private needsRefresh(nodes: EmailMemoryNode[]): boolean {
@@ -704,7 +934,24 @@ export class EmailMemoryManagerImpl implements EmailMemoryManager {
       timeline: emailContent.analysis.timeline || [],
       sentiment: emailContent.analysis.sentiment || 'neutral',
       action_items: emailContent.analysis.actionItems || [],
-      summary: emailContent.analysis.summary || ''
+      summary: emailContent.analysis.summary || '',
+      entities: emailContent.analysis.entities || {
+        people: [],
+        organizations: [],
+        locations: [],
+        dates: [],
+        urls: []
+      },
+      intent: emailContent.analysis.intent || {
+        primary: 'other',
+        confidence: 0.5,
+        details: ''
+      },
+      context: emailContent.analysis.context || {
+        previousReferences: [],
+        relatedTopics: [],
+        externalContext: []
+      }
     } : {
       key_points: [],
       topics: [],
@@ -712,7 +959,24 @@ export class EmailMemoryManagerImpl implements EmailMemoryManager {
       timeline: [],
       sentiment: 'neutral',
       action_items: [],
-      summary: ''
+      summary: '',
+      entities: {
+        people: [],
+        organizations: [],
+        locations: [],
+        dates: [],
+        urls: []
+      },
+      intent: {
+        primary: 'other',
+        confidence: 0.5,
+        details: ''
+      },
+      context: {
+        previousReferences: [],
+        relatedTopics: [],
+        externalContext: []
+      }
     };
 
     return {
@@ -740,7 +1004,40 @@ export class EmailMemoryManagerImpl implements EmailMemoryManager {
         lastReferencedAt: emailContent.analysis?.lastAccessed || Date.now(),
         useCount: emailContent.analysis?.useCount || 0,
         fullContent: emailContent.body,
-        analysis
+        analysis,
+        metadata: {
+          category: 'primary',
+          priority: 'medium',
+          status: emailContent.isRead ? 'read' : 'unread',
+          flags: new Set(emailContent.isStarred ? ['starred'] : []),
+          customLabels: new Set(emailContent.labels || [])
+        },
+        threadContext: {
+          depth: 0,
+          totalMessages: 1,
+          lastMessageTimestamp: emailContent.date.getTime(),
+          participants: new Set(emailContent.to || []),
+          summary: emailContent.analysis?.summary || '',
+          topic: emailContent.analysis?.topics?.[0] || 'general',
+          status: 'active'
+        },
+        metrics: {
+          relevanceScore: 0,
+          importanceScore: emailContent.analysis?.importance || 0,
+          urgencyScore: 0,
+          engagementScore: 0,
+          completenessScore: 1
+        },
+        relationships: {
+          inReplyTo: undefined,
+          references: [],
+          forwards: [],
+          mentions: {
+            people: [],
+            emails: [],
+            threads: []
+          }
+        }
       },
       confidence: 1,
       timestamp: emailContent.date.getTime(),

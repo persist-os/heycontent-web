@@ -448,6 +448,32 @@ export interface MemorySystemMetrics {
   };
 }
 
+export interface EmailMetadata {
+  category: 'primary' | 'social' | 'promotions' | 'updates' | 'forums' | 'custom';
+  priority: 'high' | 'medium' | 'low';
+  status: 'read' | 'unread' | 'archived' | 'deleted';
+  flags: Set<'important' | 'starred' | 'snoozed' | 'spam' | 'draft'>;
+  customLabels: Set<string>;
+}
+
+export interface EmailThreadContext {
+  depth: number;  // Position in thread
+  totalMessages: number;
+  lastMessageTimestamp: number;
+  participants: Set<string>;
+  summary: string;
+  topic: string;
+  status: 'active' | 'resolved' | 'pending' | 'archived';
+}
+
+export interface EmailAnalysisMetrics {
+  relevanceScore: number;
+  importanceScore: number;
+  urgencyScore: number;
+  engagementScore: number;
+  completenessScore: number;
+}
+
 export interface EmailMemoryNode extends MemoryNode {
   type: 'email_context';
   content: {
@@ -472,6 +498,10 @@ export interface EmailMemoryNode extends MemoryNode {
     useCount: number;
     fullContent: string;
     summary: string;
+    
+    metadata: EmailMetadata;
+    threadContext: EmailThreadContext;
+    metrics: EmailAnalysisMetrics;
     analysis: {
       key_points: string[];
       topics: string[];
@@ -480,6 +510,34 @@ export interface EmailMemoryNode extends MemoryNode {
       sentiment: string;
       action_items: string[];
       summary: string;
+      entities: {
+        people: string[];
+        organizations: string[];
+        locations: string[];
+        dates: string[];
+        urls: string[];
+      };
+      intent: {
+        primary: 'request' | 'inform' | 'question' | 'response' | 'followup' | 'other';
+        confidence: number;
+        details: string;
+      };
+      context: {
+        previousReferences: string[];
+        relatedTopics: string[];
+        externalContext: string[];
+      };
+    };
+    
+    relationships: {
+      inReplyTo?: string;
+      references: string[];
+      forwards: string[];
+      mentions: {
+        people: string[];
+        emails: string[];
+        threads: string[];
+      };
     };
   };
 }
@@ -687,4 +745,52 @@ export interface SearchResult {
   confidence?: number;
   timestamp?: number;
   type?: string;
+}
+
+export interface BaseSearchParams {
+  type?: string;
+  query: string;
+  context?: string;
+}
+
+export interface SearchNodeOptions extends BaseSearchParams {
+  filters?: {
+    embedding_similarity?: {
+      vector: number[];
+      threshold: number;
+    };
+    temporal?: boolean;
+    [key: string]: any;
+  };
+  limit?: number;
+}
+
+export interface MemoryContext {
+  relevantMemories: string[];
+  memoryScore: number;
+  lastAccessTime: Date;
+}
+
+export interface AdvancedMemorySystemInterface {
+  searchNodes(params: SearchNodeOptions | BaseSearchParams): Promise<MemoryNode[]>;
+  getOrCreateEmbedding(content: string): Promise<number[]>;
+  addNode(node: MemoryNode): Promise<void>;
+  processNewInformation(input: { content: string; type: string; context: any }): Promise<void>;
+  updateNode(node: MemoryNode): Promise<void>;
+  searchMemory(type: string, query: string, options?: { limit?: number; filters?: any }): Promise<SearchResult[]>;
+  retrieveMemory(type: string, query: string): Promise<any[]>;
+  addRelationship(
+    sourceNode: MemoryNode,
+    targetNode: MemoryNode,
+    type: string,
+    strength: number,
+    evidence: string[]
+  ): Promise<void>;
+}
+
+export interface ConversationFlow {
+  naturalBreaks: number;
+  topicTransitions: string[];
+  depthProgression: number[];
+  engagementSignals: string[];
 } 

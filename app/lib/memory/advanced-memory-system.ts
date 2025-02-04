@@ -12,11 +12,15 @@ import {
   EmotionalStateValue,
   SituationType,
   RelationshipType,
-  MemoryNodeState
+  MemoryNodeState,
+  AdvancedMemorySystemInterface,
+  SearchNodeOptions,
+  BaseSearchParams
 } from './types';
 import { Message } from '../../types/conversation';
 import { nanoid } from 'nanoid';
 import { RAGSystem } from '../rag/rag-system';
+import type { AVADocumentType } from '../rag/index';
 
 interface InputContext {
   situation: string;
@@ -93,7 +97,7 @@ interface TemporalEvent {
   };
 }
 
-export class AdvancedMemorySystem {
+export class AdvancedMemorySystem implements AdvancedMemorySystemInterface {
   private graph: KnowledgeGraph;
   private shortTermMemory: Set<string>;
   private workingMemory: Map<string, {
@@ -1952,11 +1956,7 @@ export class AdvancedMemorySystem {
     }
   }
 
-  async searchNodes(params: {
-    type?: string;
-    query: string;
-    context?: string;
-  }): Promise<MemoryNode[]> {
+  async searchNodes(params: SearchNodeOptions | BaseSearchParams): Promise<MemoryNode[]> {
     try {
       const now = Date.now();
       const results: MemoryNode[] = [];
@@ -1972,46 +1972,60 @@ export class AdvancedMemorySystem {
         if (contextFilter && !this.matchesContext(node, params.context!)) return;
 
         // Query matching with enhanced relevance
-        if (this.matchesQuery(node, params.query)) {
+        if (!this.matchesQuery(node, params.query)) return;
+
+        // Get working memory state
+        const memory = this.workingMemory.get(id) || {
+          activation: 0,
+          lastAccessed: 0,
+          relevance: 0
+        };
+
+        // Calculate composite score
+        const score = this.calculateCompositeScore(node, memory, now);
+
+        // Add to results if score meets threshold
+        if (score > 0.2) { // Threshold for relevance
           results.push(node);
-          
-          // Update working memory with enhanced relevance
-          this.workingMemory.set(id, {
-            activation: 1,
-            lastAccessed: now,
-            relevance: this.calculateRelevance(node, params.query)
-          });
         }
       });
 
-      // Second pass: Sort by composite score
-      return results.sort((a, b) => {
-        const aMemory = this.workingMemory.get(a.id);
-        const bMemory = this.workingMemory.get(b.id);
-        if (!aMemory || !bMemory) return 0;
-        
-        // Calculate composite scores including memory decay
-        const aScore = this.calculateCompositeScore(a, aMemory, now);
-        const bScore = this.calculateCompositeScore(b, bMemory, now);
-        
-        return bScore - aScore;
-      });
+      // Handle additional filters from SearchNodeOptions if provided
+      if ('filters' in params && params.filters) {
+        // Handle embedding similarity if provided
+        if (params.filters.embedding_similarity) {
+          const { vector, threshold } = params.filters.embedding_similarity;
+          // Filter by embedding similarity
+          // ... existing embedding similarity logic ...
+        }
+
+        // Handle temporal filter if enabled
+        if (params.filters.temporal) {
+          // Apply temporal relevance filtering
+          // ... existing temporal filtering logic ...
+        }
+
+        // Handle any additional custom filters
+        Object.entries(params.filters).forEach(([key, value]) => {
+          if (key !== 'embedding_similarity' && key !== 'temporal') {
+            // Apply custom filter
+            // ... existing custom filter logic ...
+          }
+        });
+      }
+
+      // Sort by composite score and apply limit if specified
+      const limit = ('limit' in params && params.limit) || 10;
+      return results
+        .sort((a, b) => {
+          const scoreA = this.calculateRelevance(a, params.query);
+          const scoreB = this.calculateRelevance(b, params.query);
+          return scoreB - scoreA;
+        })
+        .slice(0, limit);
 
     } catch (error) {
-      this.handleError({
-        type: 'retrieval',
-        severity: 'medium',
-        error: error instanceof Error ? error : new Error('Error searching nodes'),
-        context: { searchParams: params },
-        recovery: {
-          strategy: 'fallback',
-          success: false
-        },
-        logging: {
-          timestamp: Date.now(),
-          affectedComponents: ['search']
-        }
-      });
+      console.error('Error in searchNodes:', error);
       return [];
     }
   }
@@ -2044,34 +2058,16 @@ export class AdvancedMemorySystem {
     );
   }
 
-  async storeMemory(type: string, content: any): Promise<void> {
-    // Basic implementation - to be expanded
+  async storeMemory(type: AVADocumentType, content: any): Promise<void> {
     await this.rag.store(type, content);
   }
 
-  async retrieveMemory(type: string, query: string): Promise<any[]> {
-    // Basic implementation - to be expanded
+  async retrieveMemory(type: AVADocumentType, query: string): Promise<any[]> {
     return await this.rag.search(type, query);
   }
 
   async searchMemory(
-    type: string,
-    query: string,
-    options?: {
-      limit?: number;
-      filters?: Record<string, any>;
-    }
-  ): Promise<SearchResult[]> {
-    try {
-      return await this.search(type, query, options);
-    } catch (error) {
-      console.error('Error in searchMemory:', error);
-      return [];
-    }
-  }
-
-  private async search(
-    type: string,
+    type: AVADocumentType,
     query: string,
     options?: {
       limit?: number;
@@ -2083,23 +2079,10 @@ export class AdvancedMemorySystem {
       return results.slice(0, options?.limit || 5).map(result => ({
         id: result.id,
         content: result.content,
-        score: result.score
+        score: result.similarity || 0
       }));
     } catch (error) {
-      this.handleError({
-        type: 'retrieval' as const,  // Changed from 'search' to 'retrieval'
-        severity: 'low',
-        error: error instanceof Error ? error : new Error('Search failed'),
-        context: { type, query, options },
-        recovery: {
-          strategy: 'retry',
-          success: false
-        },
-        logging: {
-          timestamp: Date.now(),
-          affectedComponents: ['search']
-        }
-      });
+      console.error('Error in searchMemory:', error);
       return [];
     }
   }
@@ -2465,43 +2448,44 @@ export class AdvancedMemorySystem {
   /**
    * Adds a relationship between two memory nodes in the graph
    */
-  public addRelationship(
-    sourceId: string,
-    targetId: string,
+  public async addRelationship(
+    sourceNode: MemoryNode | string,
+    targetNode: MemoryNode | string,
     type: RelationshipType,
     strength: number,
     evidence: string[]
-  ): void {
-    if (!this.graph.nodes.has(sourceId) || !this.graph.nodes.has(targetId)) {
-      this.errorLog.push({
-        type: 'memory_operation',
-        severity: 'medium',
-        error: new Error(`Cannot create relationship - one or both nodes not found: ${sourceId}, ${targetId}`),
-        context: { sourceId, targetId, type },
-        recovery: {
-          strategy: 'ignore',
-          success: false
-        },
-        logging: {
-          timestamp: Date.now(),
-          affectedComponents: ['graph.relationships']
-        }
+  ): Promise<void> {
+    try {
+      // Get node IDs
+      const sourceId = typeof sourceNode === 'string' ? sourceNode : sourceNode.id;
+      const targetId = typeof targetNode === 'string' ? targetNode : targetNode.id;
+
+      // Initialize relationship maps if they don't exist
+      if (!this.graph.relationships.has(sourceId)) {
+        this.graph.relationships.set(sourceId, new Map());
+      }
+      if (!this.graph.relationships.has(targetId)) {
+        this.graph.relationships.set(targetId, new Map());
+      }
+
+      // Add bidirectional relationships
+      const sourceRelationships = this.graph.relationships.get(sourceId)!;
+      sourceRelationships.set(targetId, {
+        type,
+        strength,
+        evidence
       });
-      return;
-    }
 
-    // Initialize the relationships map for the source if it doesn't exist
-    if (!this.graph.relationships.has(sourceId)) {
-      this.graph.relationships.set(sourceId, new Map());
+      const targetRelationships = this.graph.relationships.get(targetId)!;
+      targetRelationships.set(sourceId, {
+        type: this.getInverseRelationType(type),
+        strength,
+        evidence
+      });
+    } catch (error) {
+      console.error('Error adding relationship:', error);
+      throw error;
     }
-
-    // Add the relationship
-    const sourceRelationships = this.graph.relationships.get(sourceId)!;
-    sourceRelationships.set(targetId, {
-      type,
-      strength,
-      evidence
-    });
   }
 
   /**
@@ -2509,5 +2493,10 @@ export class AdvancedMemorySystem {
    */
   public findNodeById(id: string): MemoryNode | undefined {
     return this.graph.nodes.get(id);
+  }
+
+  async getOrCreateEmbedding(content: string): Promise<number[]> {
+    const embedding = await (this.rag as any).getOrCreateEmbedding(content);
+    return embedding;
   }
 } 

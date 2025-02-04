@@ -16,7 +16,7 @@ export class MemoryAwareChatSystem {
   }
 
   private async getMemoryContext(query: string): Promise<MemoryContext> {
-    const relevantMemories = await this.rag.search('memory', query);
+    const relevantMemories = await this.rag.search('conversation_history', query);
     return {
       relevantMemories,
       memoryScore: relevantMemories.length > 0 ? 0.8 : 0.2,

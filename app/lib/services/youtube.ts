@@ -2,6 +2,7 @@ import { google, youtube_v3 } from 'googleapis';
 import { validateToken } from '../../lib/auth-helpers';
 import { getCompletion } from '../openai';
 import { PrismaClient } from '@prisma/client';
+import prisma from '../../lib/prisma';  // Import the singleton instance
 import { 
   CommentAnalysis, 
   CommentAnalysisResponse, 
@@ -9,7 +10,8 @@ import {
   ValidSentiment 
 } from '../types/youtube';
 
-const prisma = new PrismaClient();
+// Remove direct instantiation and use imported singleton
+// const prisma = new PrismaClient();
 
 interface VideoAnalysis {
   mainTopics: string[];

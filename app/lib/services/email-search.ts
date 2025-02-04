@@ -3,6 +3,7 @@ import prisma from '../prisma';
 import { EmailMemoryNode } from '../memory/types';
 import { createEmbedding } from '../utils/embeddings';
 import { detectLanguage } from '../utils/language';
+import { nanoid } from 'nanoid';
 
 interface SearchOptions {
   userId: string;
@@ -495,58 +496,103 @@ export class EmailSearchService {
   }
 
   private mapToEmailMemoryNode(email: any): EmailMemoryNode {
-    // Reuse existing mapping logic from EmailMemoryManager
-    const analysis = email.analysis ? {
-      key_points: email.analysis.keyPoints || [],
-      topics: email.analysis.topics || [],
-      participants: email.analysis.participants || [],
-      timeline: email.analysis.timeline || [],
-      sentiment: email.analysis.sentiment || 'neutral',
-      action_items: email.analysis.actionItems || [],
-      summary: email.analysis.summary || ''
-    } : {
-      key_points: [],
-      topics: [],
-      participants: [],
-      timeline: [],
-      sentiment: 'neutral',
-      action_items: [],
-      summary: ''
+    const analysis = {
+      key_points: email.analysis?.key_points || [],
+      topics: email.analysis?.topics || [],
+      participants: email.analysis?.participants || [],
+      timeline: email.analysis?.timeline || [],
+      sentiment: email.analysis?.sentiment || 'neutral',
+      action_items: email.analysis?.action_items || [],
+      summary: email.analysis?.summary || '',
+      entities: {
+        people: email.analysis?.entities?.people || [],
+        organizations: email.analysis?.entities?.organizations || [],
+        locations: email.analysis?.entities?.locations || [],
+        dates: email.analysis?.entities?.dates || [],
+        urls: email.analysis?.entities?.urls || []
+      },
+      intent: {
+        primary: email.analysis?.intent?.primary || 'inform',
+        confidence: email.analysis?.intent?.confidence || 0.5,
+        details: email.analysis?.intent?.details || ''
+      },
+      context: {
+        previousReferences: email.analysis?.context?.previousReferences || [],
+        relatedTopics: email.analysis?.context?.relatedTopics || [],
+        externalContext: email.analysis?.context?.externalContext || []
+      }
     };
 
     return {
-      id: email.id,
+      id: email.id || nanoid(),
       type: 'email_context',
       content: {
-        messageId: email.messageId,
-        threadId: email.threadId,
-        subject: email.subject,
-        participants: email.to,
-        cc: email.cc,
-        bcc: email.bcc,
-        key_points: email.analysis?.keyPoints || [],
+        messageId: email.messageId || '',
+        threadId: email.threadId || '',
+        subject: email.subject || '',
+        participants: Array.isArray(email.participants) ? email.participants : [],
+        cc: Array.isArray(email.cc) ? email.cc : [],
+        bcc: Array.isArray(email.bcc) ? email.bcc : [],
         topics: email.analysis?.topics || [],
-        summary: email.analysis?.summary || '',
+        key_points: email.analysis?.key_points || [],
         sentiment: email.analysis?.sentiment || 'neutral',
         importance: email.analysis?.importance || 0,
-        thread_context: email.analysis?.threadContext || '',
-        timestamp: email.date.getTime(),
-        snippet: email.snippet,
-        isRead: email.isRead,
-        isStarred: email.isStarred,
-        labels: email.labels,
-        hasAttachments: email.hasAttachments,
-        lastReferencedAt: email.analysis?.lastAccessed || Date.now(),
+        thread_context: email.thread_context || '',
+        timestamp: email.date?.getTime() || Date.now(),
+        snippet: email.snippet || '',
+        isRead: Boolean(email.isRead),
+        isStarred: Boolean(email.isStarred),
+        labels: Array.isArray(email.labels) ? email.labels : [],
+        hasAttachments: Boolean(email.hasAttachments),
+        lastReferencedAt: email.lastReferencedAt || Date.now(),
         useCount: email.analysis?.useCount || 0,
-        fullContent: email.body,
-        analysis
+        fullContent: email.body || '',
+        summary: email.analysis?.summary || '',
+        metadata: {
+          category: email.category || 'primary',
+          priority: email.priority || 'medium',
+          status: email.status || 'read',
+          flags: new Set(email.flags || []),
+          customLabels: new Set(email.customLabels || [])
+        },
+        threadContext: {
+          depth: email.threadContext?.depth || 0,
+          totalMessages: email.threadContext?.totalMessages || 1,
+          lastMessageTimestamp: email.threadContext?.lastMessageTimestamp || Date.now(),
+          participants: new Set(email.threadContext?.participants || []),
+          summary: email.threadContext?.summary || '',
+          topic: email.threadContext?.topic || '',
+          status: email.threadContext?.status || 'active'
+        },
+        metrics: {
+          relevanceScore: email.metrics?.relevanceScore || 0,
+          importanceScore: email.metrics?.importanceScore || 0,
+          urgencyScore: email.metrics?.urgencyScore || 0,
+          engagementScore: email.metrics?.engagementScore || 0,
+          completenessScore: email.metrics?.completenessScore || 0
+        },
+        analysis,
+        relationships: {
+          inReplyTo: email.relationships?.inReplyTo,
+          references: email.relationships?.references || [],
+          forwards: email.relationships?.forwards || [],
+          mentions: {
+            people: email.relationships?.mentions?.people || [],
+            emails: email.relationships?.mentions?.emails || [],
+            threads: email.relationships?.mentions?.threads || []
+          }
+        }
       },
       confidence: 1,
-      timestamp: email.date.getTime(),
+      timestamp: email.date?.getTime() || Date.now(),
       relationships: new Map(),
       context: {
-        situation: `custom_email_received`,
-        emotional_state: email.analysis?.sentiment || 'neutral',
+        situation: 'user_interaction',
+        emotional_state: {
+          primary: 'neutral',
+          intensity: 0.5,
+          confidence: 0.8
+        },
         external_factors: []
       },
       evolution: {
@@ -554,11 +600,11 @@ export class EmailSearchService {
           state: {
             content: {
               status: 'created',
-              emailId: email.id
+              emailId: email.id || nanoid()
             },
-            timestamp: email.date.getTime()
+            timestamp: email.date?.getTime() || Date.now()
           },
-          timestamp: email.date.getTime(),
+          timestamp: email.date?.getTime() || Date.now(),
           trigger: 'email_received'
         }],
         trend: 'stable',
