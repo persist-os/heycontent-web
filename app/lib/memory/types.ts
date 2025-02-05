@@ -68,7 +68,12 @@ export type RelationshipType =
   | 'influences'
   | 'depends_on'
   | 'related_topic'
-  | `custom_${string}`;
+  | 'inherits_rag'
+  | `custom_${string}`
+  | 'temporal_correlation'
+  | 'causal_correlation'
+  | 'semantic_relation'
+  | 'contextual_link';
 
 export interface EmotionalStateValue {
   primary: 
@@ -108,7 +113,45 @@ export type EvolutionTrigger =
   | 'processing'
   | 'email_received'
   | 'user_input'
+  | 'context_inheritance'
   | `custom_${string}`;  // Allow custom triggers
+
+export interface RAGResult {
+  content: string;
+  confidence?: number;
+  timestamp: number;
+  inherited_from?: string;
+  inheritance_timestamp?: number;
+}
+
+export interface DisplayedInfo {
+  content: string;
+  timestamp: number;
+  type: string;
+  inherited_from?: string;
+  inheritance_timestamp?: number;
+  original_timestamp?: number;
+}
+
+export interface NodeMetadata {
+  inherited_context?: Array<{
+    source_id: string;
+    timestamp: number;
+    type: string;
+  }>;
+  rag_inheritance?: Array<{
+    source_id: string;
+    timestamp: number;
+    confidence: number;
+  }>;
+  rag_inherited_by?: Array<{
+    target_id: string;
+    timestamp: number;
+    confidence: number;
+  }>;
+  rag_results?: RAGResult[];
+  displayed_info?: DisplayedInfo[];
+}
 
 export interface MemoryNode {
   id: string;
@@ -116,6 +159,7 @@ export interface MemoryNode {
   content: string | Record<string, unknown>;
   confidence: number;
   timestamp: number;
+  metadata?: NodeMetadata;  // Update metadata type
   relationships: Map<string, {
     type: RelationshipType;
     strength: number;
@@ -333,53 +377,42 @@ export interface TemporalObservation {
 }
 
 export type TemporalPatternType = 
-  | 'recurring' 
-  | 'seasonal' 
-  | 'periodic' 
-  | 'cyclic' 
-  | 'trend' 
-  | 'spike' 
-  | 'decay'
-  | 'daily'
-  | 'weekly'
-  | 'monthly'
-  | 'sequence'
-  | `custom_${string}`;  // Allow custom temporal pattern types
+  typeof PATTERN_TYPES[
+    | 'RECURRING'
+    | 'SEASONAL'
+    | 'PERIODIC'
+    | 'CYCLIC'
+    | 'TREND'
+    | 'SPIKE'
+    | 'DECAY'
+    | 'DAILY'
+    | 'WEEKLY'
+    | 'MONTHLY'
+    | 'SEQUENCE'
+    | 'TOPIC_PROGRESSION'
+    | 'ENGAGEMENT'
+    | 'REGULAR_TIMING'
+    | 'TIME_OF_DAY'
+  ];
 
-export interface TemporalPattern {
-  type: TemporalPatternType;
-  cycle: number;
+export type PatternType = typeof PATTERN_TYPES[keyof typeof PATTERN_TYPES];
+
+export interface BasePattern {
+  type: PatternType;
   confidence: number;
-  observations: Array<{  // Make observations more structured
-    timestamp: number;
-    value: string | number | Record<string, unknown>;
-    context: {
-      type: string;
-      description: string;
-      confidence: number;
-      metadata?: Record<string, unknown>;
-    };
-    confidence?: number;
-    significance?: number;
-  }>;
-  trends: Array<{
-    direction: 'improving' | 'declining' | 'stable' | `custom_${string}`;  // Allow custom trend directions
-    strength: number;
-    period: {
-      start: number;
-      end: number;
-    };
-    confidence?: number;
-    factors?: string[];  // What might be influencing this trend
-    metadata?: Record<string, unknown>;
-  }>;
-  temporalAspects: TemporalAspects & {  // Extend TemporalAspects
-    intensity?: number;  // How strong the temporal pattern is
-    regularity?: number;  // How regular/predictable the pattern is
-    adaptability?: number;  // How much the pattern changes over time
-    metadata?: Record<string, unknown>;
+}
+
+export interface TemporalPattern extends BasePattern {
+  type: TemporalPatternType;
+  cycle?: number;
+  data?: {
+    transitions?: Array<[string, string]>;
+    commonSequences?: string[];
+    averageInterval?: number;
+    standardDeviation?: number;
+    preferredHours?: number[];
+    distribution?: Record<string, number>;
   };
-  metadata?: Record<string, unknown>;  // Allow any additional pattern data
 }
 
 export interface TemporalAnalysis {
@@ -736,7 +769,6 @@ export interface TikTokMemoryManager {
 }
 
 export type MemoryType = keyof typeof MEMORY_TYPES;
-export type PatternType = keyof typeof PATTERN_TYPES;
 
 export interface SearchResult {
   id: string;
@@ -745,6 +777,15 @@ export interface SearchResult {
   confidence?: number;
   timestamp?: number;
   type?: string;
+  displayed?: boolean;
+  displayTimestamp?: number;
+  source?: 'rag' | 'memory' | 'direct';
+  relevance?: number;
+  context?: {
+    query: string;
+    conversationId?: string;
+    messageId?: string;
+  };
 }
 
 export interface BaseSearchParams {
@@ -793,4 +834,29 @@ export interface ConversationFlow {
   topicTransitions: string[];
   depthProgression: number[];
   engagementSignals: string[];
+}
+
+export interface TemporalAnalysis {
+  timeframe: {
+    start: number;
+    end: number;
+    duration: number;
+  };
+  patterns: TemporalPattern[];
+  anomalies: Array<{
+    timestamp: number;
+    expected: string;
+    actual: string;
+    significance: number;
+    context: string;
+  }>;
+}
+
+export interface RAGStats {
+  totalQueries: number;
+  totalResults: number;
+  lastQueryTimestamp?: number;
+  averageConfidence?: number;
+  successRate: number;
+  queryTypes: Record<string, number>;
 } 

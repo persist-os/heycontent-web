@@ -30,12 +30,36 @@ export const ERROR_MESSAGES = {
 export const MEMORY_TYPES = {
   SHORT_TERM: 'short_term',
   WORKING: 'working',
-  LONG_TERM: 'long_term'
+  LONG_TERM: 'long_term',
+  CONTEXT: 'context'
 } as const;
 
 export const PATTERN_TYPES = {
+  // Base patterns
   BEHAVIORAL: 'behavioral',
   TEMPORAL: 'temporal',
   CAUSAL: 'causal',
-  PREFERENCE: 'preference'
+  PREFERENCE: 'preference',
+  // Extended patterns
+  TOPIC_PROGRESSION: 'topic_progression',
+  REGULAR_TIMING: 'regular_timing',
+  TIME_OF_DAY: 'time_of_day',
+  ENGAGEMENT: 'engagement',
+  // Temporal patterns
+  RECURRING: 'recurring',
+  PERIODIC: 'periodic',
+  TREND: 'trend',
+  SPIKE: 'spike',
+  CYCLIC: 'cyclic',
+  DAILY: 'daily',
+  WEEKLY: 'weekly',
+  MONTHLY: 'monthly',
+  SEQUENCE: 'sequence',
+  SEASONAL: 'seasonal',
+  DECAY: 'decay',
+  // Relationship patterns
+  TEMPORAL_CORRELATION: 'temporal_correlation',
+  CAUSAL_CORRELATION: 'causal_correlation',
+  SEMANTIC_RELATION: 'semantic_relation',
+  CONTEXTUAL_LINK: 'contextual_link'
 } as const; 

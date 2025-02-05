@@ -15,12 +15,17 @@ import {
   MemoryNodeState,
   AdvancedMemorySystemInterface,
   SearchNodeOptions,
-  BaseSearchParams
+  BaseSearchParams,
+  ExternalFactor,
+  RAGResult,
+  DisplayedInfo,
+  EvolutionTrigger
 } from './types';
 import { Message } from '../../types/conversation';
 import { nanoid } from 'nanoid';
 import { RAGSystem } from '../rag/rag-system';
 import type { AVADocumentType } from '../rag/index';
+import { PATTERN_TYPES } from './config';
 
 interface InputContext {
   situation: string;
@@ -385,13 +390,13 @@ export class AdvancedMemorySystem implements AdvancedMemorySystemInterface {
       }
     }
 
-    // Enrich temporal markers with historical patterns
-    extracted.temporalMarkers = await Promise.all(
+    // Enrich temporal markers with pattern confidence
+    await Promise.all(
       extracted.temporalMarkers.map(async marker => {
         // Convert marker type to TemporalPatternType
-        const markerPatternType = marker.type === 'point' ? 'spike' :
-                                 marker.type === 'duration' ? 'periodic' :
-                                 marker.type === 'frequency' ? 'recurring' : 'trend';
+        const markerPatternType = marker.type === 'point' ? PATTERN_TYPES.SPIKE :
+                                 marker.type === 'duration' ? PATTERN_TYPES.PERIODIC :
+                                 marker.type === 'frequency' ? PATTERN_TYPES.RECURRING : PATTERN_TYPES.TREND;
 
         const similarMarkers = Array.from(this.temporalPatterns.values())
           .filter(pattern => pattern.type === markerPatternType);
@@ -953,6 +958,50 @@ export class AdvancedMemorySystem implements AdvancedMemorySystemInterface {
     // Determine relationship type based on predicate
     const relationType = this.mapPredicateToRelationType(rel.predicate);
 
+    // Special handling for RAG inheritance
+    if (relationType === 'inherits_rag') {
+      // Store the RAG relationship in the subject node's metadata
+      if (!subjectNode.metadata) {
+        subjectNode.metadata = {};
+      }
+      if (!subjectNode.metadata.rag_inheritance) {
+        subjectNode.metadata.rag_inheritance = [];
+      }
+      subjectNode.metadata.rag_inheritance.push({
+        source_id: rel.object,
+        timestamp: Date.now(),
+        confidence: strength
+      });
+
+      // Update the object node's metadata to track what has inherited from it
+      if (!objectNode.metadata) {
+        objectNode.metadata = {};
+      }
+      if (!objectNode.metadata.rag_inherited_by) {
+        objectNode.metadata.rag_inherited_by = [];
+      }
+      objectNode.metadata.rag_inherited_by.push({
+        target_id: rel.subject,
+        timestamp: Date.now(),
+        confidence: strength
+      });
+
+      // If this is a RAG node, store it in the RAG system for future retrieval
+      if (objectNode.type.includes('rag_')) {
+        await this.rag.store(
+          objectNode.type as AVADocumentType,
+          objectNode.content,
+          {
+            metadata: {
+              inherited_by: rel.subject,
+              confidence: strength,
+              timestamp: Date.now()
+            }
+          }
+        );
+      }
+    }
+
     // Gather evidence for the relationship
     const evidence = this.gatherRelationshipEvidence(
       subjectNode,
@@ -993,7 +1042,12 @@ export class AdvancedMemorySystem implements AdvancedMemorySystemInterface {
           targetId: rel.object,
           relationType,
           strength,
-          evidence
+          evidence,
+          rag_inheritance: relationType === 'inherits_rag' ? {
+            source_id: rel.object,
+            timestamp: Date.now(),
+            confidence: strength
+          } : undefined
         }
       },
       timestamp,
@@ -1012,7 +1066,12 @@ export class AdvancedMemorySystem implements AdvancedMemorySystemInterface {
           targetId: rel.subject,
           relationType: this.getInverseRelationType(relationType),
           strength,
-          evidence
+          evidence,
+          rag_inheritance: relationType === 'inherits_rag' ? {
+            target_id: rel.subject,
+            timestamp: Date.now(),
+            confidence: strength
+          } : undefined
         }
       },
       timestamp,
@@ -1062,7 +1121,16 @@ export class AdvancedMemorySystem implements AdvancedMemorySystemInterface {
       references: 'references',
       contradicts: 'contradicts',
       influences: 'influences',
-      related_topic: 'related_topic'
+      related_topic: 'related_topic',
+      temporal_correlation: 'temporal_correlation',
+      causal_correlation: 'causal_correlation',
+      semantic_relation: 'semantic_relation',
+      contextual_link: 'contextual_link',
+      'custom_contains': 'part_of',
+      'custom_followed_by': 'follows_up',
+      'custom_referenced_by': 'references',
+      'custom_influenced_by': 'influences',
+      'custom_inherited_by_rag': 'inherits_rag'
     };
     return mapping[predicate] || 'related_to';
   }
@@ -1079,14 +1147,20 @@ export class AdvancedMemorySystem implements AdvancedMemorySystemInterface {
       supports: 'depends_on',
       depends_on: 'supports',
       influences: 'custom_influenced_by',
+      inherits_rag: 'custom_inherited_by_rag',
       related_to: 'related_to',
       related_topic: 'related_topic',
+      temporal_correlation: 'temporal_correlation',
+      causal_correlation: 'causal_correlation',
+      semantic_relation: 'semantic_relation',
+      contextual_link: 'contextual_link',
       'custom_contains': 'part_of',
       'custom_followed_by': 'follows_up',
       'custom_referenced_by': 'references',
-      'custom_influenced_by': 'influences'
+      'custom_influenced_by': 'influences',
+      'custom_inherited_by_rag': 'inherits_rag'
     };
-    return inverseMap[type] || type;
+    return inverseMap[type] || 'related_to';
   }
 
   private gatherRelationshipEvidence(
@@ -1278,35 +1352,23 @@ export class AdvancedMemorySystem implements AdvancedMemorySystemInterface {
       const stability = this.calculateTemporalStability(history);
       
       const newPattern: TemporalPattern = {
-        type: cycle ? 'cyclic' : 'daily',
-        cycle: cycle?.period || 24 * 60 * 60 * 1000, // Default to daily cycle
+        type: cycle ? PATTERN_TYPES.CYCLIC : PATTERN_TYPES.DAILY,
         confidence: cycle?.confidence || 0.5,
-        observations: history.map(h => ({
-          timestamp: h.timestamp,
-          value: h.value,
-          context: {
-            type: 'observation',
-            description: String(h.value),
-            confidence: h.metadata?.confidence || 0.5
-          }
-        })),
-        trends: [{
-          direction: cycle ? 'stable' : 'improving',
-          strength: cycle ? cycle.confidence : stability,
-          period: {
-            start: Math.min(...history.map(h => h.timestamp)),
-            end: Math.max(...history.map(h => h.timestamp))
-          }
-        }],
-        temporalAspects: {
-          periodicity: cycle?.period,
-          seasonality: cycle?.pattern,
-          timeOfDay: new Date(Math.min(...history.map(h => h.timestamp))).toLocaleTimeString(),
-          dayOfWeek: new Date(Math.min(...history.map(h => h.timestamp))).toLocaleDateString('en-US', { weekday: 'long' }),
-          monthlyPattern: new Date(Math.min(...history.map(h => h.timestamp))).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }),
-          intensity: cycle ? cycle.confidence : 0.5,
-          regularity: stability,
-          adaptability: 0.5 // Default value, can be calculated based on pattern changes
+        cycle: cycle?.period || 24 * 60 * 60 * 1000, // Default to daily cycle
+        data: {
+          transitions: history.map((h, i) => {
+            if (i === 0) return ['start', String(h.value)];
+            return [String(history[i-1].value), String(h.value)];
+          }),
+          commonSequences: [history.map(h => String(h.value)).join(',')],
+          averageInterval: cycle?.period || 24 * 60 * 60 * 1000,
+          standardDeviation: cycle ? this.calculateVariance(history.map(h => h.timestamp)) : undefined,
+          preferredHours: history.map(h => new Date(h.timestamp).getHours()),
+          distribution: history.reduce((acc, h) => {
+            const key = String(h.value);
+            acc[key] = (acc[key] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>)
         }
       };
 
@@ -1593,39 +1655,43 @@ export class AdvancedMemorySystem implements AdvancedMemorySystemInterface {
   }
 
   private calculateTemporalStrength(pattern: TemporalPattern): number {
-    if (!pattern.observations || pattern.observations.length < 2) return 0;
+    if (!pattern.data?.transitions || pattern.data.transitions.length < 2) return 0;
     
     const intervals = [];
-    for (let i = 1; i < pattern.observations.length; i++) {
-      intervals.push(pattern.observations[i].timestamp - pattern.observations[i-1].timestamp);
+    if (pattern.data.averageInterval) {
+      intervals.push(pattern.data.averageInterval);
     }
     
-    const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-    const expectedCycle = pattern.cycle;
+    const avgInterval = intervals.length > 0 ? 
+      intervals.reduce((a, b) => a + b, 0) / intervals.length :
+      pattern.cycle || 0;
+    
+    const expectedCycle = pattern.cycle || avgInterval;
     
     // Calculate how well the actual intervals match the expected cycle
-    const cyclePrecision = 1 - Math.abs(avgInterval - expectedCycle) / expectedCycle;
+    const cyclePrecision = expectedCycle ? 1 - Math.abs(avgInterval - expectedCycle) / expectedCycle : 0;
     
-    // Calculate consistency of intervals
-    const intervalVariance = intervals.reduce((a, b) => a + Math.pow(b - avgInterval, 2), 0) / intervals.length;
-    const consistency = 1 / (1 + Math.sqrt(intervalVariance) / avgInterval);
+    // Calculate consistency of intervals using standard deviation if available
+    const consistency = pattern.data.standardDeviation ? 
+      1 / (1 + pattern.data.standardDeviation / avgInterval) : 
+      0.5; // Default consistency if no standard deviation available
     
     return (cyclePrecision * 0.6 + consistency * 0.4);
   }
 
   private detectAnomalies(nodes: MemoryNode[], patterns: TemporalPattern[]): Array<{
       timestamp: number;
-    type: 'timing' | 'frequency' | 'sequence';
-    description: string;
-    confidence: number;
-    context: any;
-  }> {
-    const anomalies: Array<{
-        timestamp: number;
       type: 'timing' | 'frequency' | 'sequence';
       description: string;
       confidence: number;
       context: any;
+  }> {
+    const anomalies: Array<{
+        timestamp: number;
+        type: 'timing' | 'frequency' | 'sequence';
+        description: string;
+        confidence: number;
+        context: any;
     }> = [];
 
     // Detect timing anomalies
@@ -1662,13 +1728,17 @@ export class AdvancedMemorySystem implements AdvancedMemorySystemInterface {
 
     // Detect frequency anomalies
     patterns.forEach(pattern => {
-      if (pattern.type === 'daily' || pattern.type === 'weekly') {
-        const expectedFrequency = pattern.observations.length / 
-          ((pattern.trends[0].period.end - pattern.trends[0].period.start) / 
-           (pattern.type === 'daily' ? 86400000 : 604800000));
+      if (pattern.type === PATTERN_TYPES.DAILY || pattern.type === PATTERN_TYPES.WEEKLY) {
+        const cycleLength = pattern.type === PATTERN_TYPES.DAILY ? 86400000 : 604800000;
+        const expectedFrequency = pattern.data?.distribution ? 
+          Object.values(pattern.data.distribution).reduce((a, b) => a + b, 0) / 
+          (cycleLength / (pattern.cycle || cycleLength)) : 
+          0;
 
-        const recentPeriodStart = Date.now() - (pattern.type === 'daily' ? 86400000 : 604800000);
-        const recentCount = pattern.observations.filter(o => o.timestamp > recentPeriodStart).length;
+        const recentPeriodStart = Date.now() - cycleLength;
+        const recentCount = pattern.data?.transitions?.filter(t => 
+          nodes.some(n => n.timestamp > recentPeriodStart && String(n.content) === t[1])
+        ).length || 0;
 
         const frequencyDiff = Math.abs(recentCount - expectedFrequency);
         if (frequencyDiff > expectedFrequency * 0.5) {
@@ -1682,7 +1752,7 @@ export class AdvancedMemorySystem implements AdvancedMemorySystemInterface {
               pattern: pattern.type,
               expectedFrequency,
               actualFrequency: recentCount,
-          period: {
+              period: {
                 start: recentPeriodStart,
                 end: Date.now()
               }
@@ -1693,38 +1763,31 @@ export class AdvancedMemorySystem implements AdvancedMemorySystemInterface {
     });
 
     // Detect sequence anomalies
-    if (patterns.some(p => p.type === 'sequence')) {
+    if (patterns.some(p => p.type === PATTERN_TYPES.SEQUENCE)) {
       const recentNodes = nodes.slice(-5);
-      const sequencePatterns = patterns.filter(p => p.type === 'sequence');
+      const sequencePatterns = patterns.filter(p => p.type === PATTERN_TYPES.SEQUENCE);
 
       sequencePatterns.forEach(pattern => {
-        const expectedSequence = pattern.observations
-          .map(o => JSON.stringify(o.value))
-          .join(',');
-        
-        const actualSequence = recentNodes
-          .map(n => JSON.stringify(n.content))
-          .join(',');
+        const expectedSequence = (pattern.data?.commonSequences?.[0] || '').split(',');
+        const actualSequence = recentNodes.map(n => String(n.content));
 
-        if (expectedSequence !== actualSequence) {
-          const similarity = this.calculateSequenceSimilarity(
-            expectedSequence.split(','),
-            actualSequence.split(',')
-          );
+        const similarity = this.calculateSequenceSimilarity(
+          expectedSequence,
+          actualSequence
+        );
 
-          if (similarity < 0.7) {
-            anomalies.push({
-              timestamp: recentNodes[recentNodes.length - 1].timestamp,
-              type: 'sequence',
-              description: 'Unusual sequence of events',
-              confidence: 1 - similarity,
-              context: {
-                expectedSequence,
-                actualSequence,
-                similarity
-              }
-            });
-          }
+        if (similarity < 0.7) {
+          anomalies.push({
+            timestamp: recentNodes[recentNodes.length - 1].timestamp,
+            type: 'sequence',
+            description: 'Unusual sequence of events',
+            confidence: 1 - similarity,
+            context: {
+              expectedSequence,
+              actualSequence,
+              similarity
+            }
+          });
         }
       });
     }
@@ -2079,7 +2142,7 @@ export class AdvancedMemorySystem implements AdvancedMemorySystemInterface {
       return results.slice(0, options?.limit || 5).map(result => ({
         id: result.id,
         content: result.content,
-        score: result.similarity || 0
+        score: result.confidence || 0
       }));
     } catch (error) {
       console.error('Error in searchMemory:', error);
@@ -2498,5 +2561,556 @@ export class AdvancedMemorySystem implements AdvancedMemorySystemInterface {
   async getOrCreateEmbedding(content: string): Promise<number[]> {
     const embedding = await (this.rag as any).getOrCreateEmbedding(content);
     return embedding;
+  }
+
+  private async inheritContext(currentNode: MemoryNode, previousNode: MemoryNode): Promise<void> {
+    try {
+      // Basic validation
+      if (!currentNode || !previousNode) {
+        console.warn('Missing nodes for context inheritance');
+        return;
+      }
+
+      // Initialize metadata if not exists
+      if (!currentNode.metadata) {
+        currentNode.metadata = {};
+      }
+      if (!currentNode.metadata.inherited_context) {
+        currentNode.metadata.inherited_context = [];
+      }
+
+      // Track inheritance history
+      currentNode.metadata.inherited_context.push({
+        source_id: previousNode.id,
+        timestamp: Date.now(),
+        type: 'context_inheritance'
+      });
+
+      // Inherit basic context
+      currentNode.context = {
+        ...currentNode.context,
+        external_factors: [
+          ...new Set([
+            ...(currentNode.context.external_factors || []),
+            ...(previousNode.context.external_factors || [])
+          ])
+        ]
+      };
+
+      // Inherit relationships with proper strength decay
+      previousNode.relationships.forEach((relationship, targetId) => {
+        const existingRelationship = currentNode.relationships.get(targetId);
+        if (existingRelationship) {
+          // If relationship exists, strengthen it but respect max strength
+          existingRelationship.strength = Math.min(
+            1,
+            existingRelationship.strength + (relationship.strength * 0.5)
+          );
+          // Combine evidence
+          existingRelationship.evidence = [
+            ...new Set([...existingRelationship.evidence, ...relationship.evidence])
+          ];
+        } else {
+          // If new relationship, inherit with reduced strength
+          currentNode.relationships.set(targetId, {
+            type: relationship.type,
+            strength: relationship.strength * 0.7, // Decay factor for inherited relationships
+            evidence: [...relationship.evidence]
+          });
+        }
+      });
+
+      // Inherit emotional state with proper merging
+      if (previousNode.context.emotional_state) {
+        currentNode.context.emotional_state = this.mergeEmotionalStates(
+          currentNode.context.emotional_state,
+          previousNode.context.emotional_state
+        );
+      }
+
+      // Enhanced RAG inheritance
+      if (previousNode.metadata?.rag_results) {
+        if (!currentNode.metadata.rag_results) {
+          currentNode.metadata.rag_results = [];
+        }
+        
+        // Inherit RAG results with confidence decay
+        const inheritedResults = previousNode.metadata.rag_results.map(result => ({
+          ...result,
+          confidence: result.confidence ? result.confidence * 0.8 : 0.8, // 20% confidence decay
+          inherited_from: previousNode.id,
+          inheritance_timestamp: Date.now()
+        }));
+
+        currentNode.metadata.rag_results.push(...inheritedResults);
+
+        // Add RAG inheritance relationship
+        currentNode.relationships.set(`rag_${previousNode.id}`, {
+          type: 'inherits_rag',
+          strength: 0.8,
+          evidence: [`Inherited RAG results from node ${previousNode.id}`]
+        });
+      }
+
+      // Enhanced displayed information inheritance
+      if (previousNode.metadata?.displayed_info) {
+        if (!currentNode.metadata.displayed_info) {
+          currentNode.metadata.displayed_info = [];
+        }
+
+        // Inherit displayed information with timestamp tracking
+        const inheritedInfo = previousNode.metadata.displayed_info.map(info => ({
+          ...info,
+          inherited_from: previousNode.id,
+          inheritance_timestamp: Date.now(),
+          original_timestamp: info.timestamp
+        }));
+
+        currentNode.metadata.displayed_info.push(...inheritedInfo);
+      }
+
+      // Update evolution to track inheritance
+      currentNode.evolution.history.push({
+        state: {
+          content: {
+            type: 'inherited_context',
+            source: previousNode.id,
+            inherited_types: [
+              'basic_context',
+              'relationships',
+              'emotional_state',
+              previousNode.metadata?.rag_results ? 'rag_results' : null,
+              previousNode.metadata?.displayed_info ? 'displayed_info' : null
+            ].filter(Boolean)
+          },
+          metadata: {
+            inherited_from: previousNode.id,
+            inheritance_type: 'full_context',
+            inheritance_timestamp: Date.now()
+          },
+          timestamp: Date.now()
+        },
+        timestamp: Date.now(),
+        trigger: 'context_inheritance'
+      });
+
+      // Calculate and update confidence based on inheritance
+      currentNode.confidence = this.calculateInheritedConfidence(
+        currentNode.confidence,
+        previousNode.confidence
+      );
+
+    } catch (error) {
+      console.error('Error in inheritContext:', error);
+      throw error;
+    }
+  }
+
+  // Add before inheritContext method
+  private calculateInheritedConfidence(
+    currentConfidence: number,
+    previousConfidence: number
+  ): number {
+    // Weight current confidence more heavily (70%) and previous confidence less (30%)
+    const currentWeight = 0.7;
+    const previousWeight = 0.3;
+
+    // Calculate weighted average with a slight decay factor
+    const inheritedConfidence = (currentConfidence * currentWeight) + 
+                              (previousConfidence * previousWeight * 0.9); // 10% decay on inherited confidence
+
+    // Ensure confidence stays within valid range
+    return Math.max(0.1, Math.min(1, inheritedConfidence));
+  }
+
+  private mergeEmotionalStates(
+    current: EmotionalStateValue,
+    previous: EmotionalStateValue
+  ): EmotionalStateValue {
+    // If intensities are significantly different, prefer the stronger emotion
+    if (Math.abs(current.intensity - previous.intensity) > 0.3) {
+      return current.intensity > previous.intensity ? current : previous;
+    }
+
+    // If same primary emotion, merge with averaged intensity
+    if (current.primary === previous.primary) {
+      return {
+        primary: current.primary,
+        intensity: (current.intensity + previous.intensity) / 2,
+        secondary: current.secondary || previous.secondary,
+        context: `${current.context || ''} + ${previous.context || ''}`.trim(),
+        confidence: Math.min(1, (current.confidence + previous.confidence) / 2)
+      };
+    }
+
+    // For different emotions, use the more recent one but consider previous as secondary
+    return {
+      primary: current.primary,
+      intensity: current.intensity,
+      secondary: previous.primary,
+      context: `${current.context || ''} (previously: ${previous.context || ''})`.trim(),
+      confidence: Math.min(1, (current.confidence + previous.confidence * 0.5) / 1.5)
+    };
+  }
+
+  // Add before inheritContext method
+  private validateContext(node: MemoryNode): {
+    isValid: boolean;
+    errors: string[];
+  } {
+    const errors: string[] = [];
+
+    // Validate situation type
+    if (!this.validateSituationType(node.context.situation)) {
+      errors.push(`Invalid situation type: ${node.context.situation}`);
+    }
+
+    // Validate external factors
+    const externalFactorErrors = this.validateExternalFactors(node.context.external_factors);
+    errors.push(...externalFactorErrors);
+
+    // Validate temporal consistency
+    const temporalErrors = this.validateTemporalConsistency(node);
+    errors.push(...temporalErrors);
+
+    // Validate emotional state
+    const emotionalStateErrors = this.validateEmotionalState(node.context.emotional_state);
+    errors.push(...emotionalStateErrors);
+
+    // Validate relationships
+    const relationshipErrors = this.validateRelationships(node);
+    errors.push(...relationshipErrors);
+
+    // Validate evolution history
+    const evolutionErrors = this.validateEvolutionHistory(node.evolution);
+    errors.push(...evolutionErrors);
+
+    // Validate RAG results if present
+    if (node.metadata?.rag_results) {
+      const ragErrors = this.validateRAGResults(node.metadata.rag_results);
+      errors.push(...ragErrors);
+    }
+
+    // Validate displayed information if present
+    if (node.metadata?.displayed_info) {
+      const displayErrors = this.validateDisplayedInfo(node.metadata.displayed_info);
+      errors.push(...displayErrors);
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+
+  private validateSituationType(situation: SituationType | `custom_${string}`): boolean {
+    // Check if it's a standard situation type
+    const standardTypes = [
+      'content_creation',
+      'content_analysis',
+      'user_interaction',
+      'partnership_discussion',
+      'performance_review',
+      'trend_analysis',
+      'audience_engagement',
+      'strategy_planning',
+      'feedback_processing',
+      'system_learning'
+    ];
+
+    if (standardTypes.includes(situation as SituationType)) {
+      return true;
+    }
+
+    // Check if it's a valid custom type
+    return typeof situation === 'string' && 
+           situation.startsWith('custom_') && 
+           situation.length > 7;
+  }
+
+  private validateExternalFactors(factors: (ExternalFactor | `custom_${string}`)[]): string[] {
+    const errors: string[] = [];
+    const standardFactors = [
+      'market_trend',
+      'platform_update',
+      'algorithm_change',
+      'competitor_action',
+      'audience_shift',
+      'seasonal_event',
+      'technical_issue',
+      'content_viral',
+      'partnership_opportunity',
+      'industry_news'
+    ];
+
+    factors.forEach(factor => {
+      if (!standardFactors.includes(factor as ExternalFactor) && 
+          !(typeof factor === 'string' && factor.startsWith('custom_'))) {
+        errors.push(`Invalid external factor: ${factor}`);
+      }
+    });
+
+    return errors;
+  }
+
+  private validateTemporalConsistency(node: MemoryNode): string[] {
+    const errors: string[] = [];
+    const now = Date.now();
+
+    // Check node timestamp
+    if (node.timestamp > now) {
+      errors.push('Node timestamp is in the future');
+    }
+
+    // Check evolution history timestamps
+    let lastTimestamp = 0;
+    node.evolution.history.forEach(entry => {
+      if (entry.timestamp > now) {
+        errors.push(`Evolution history entry has future timestamp: ${entry.timestamp}`);
+      }
+      if (entry.timestamp < lastTimestamp) {
+        errors.push(`Evolution history timestamps are not sequential at: ${entry.timestamp}`);
+      }
+      lastTimestamp = entry.timestamp;
+    });
+
+    // Check RAG results timestamps if present
+    if (node.metadata?.rag_results) {
+      node.metadata.rag_results.forEach(result => {
+        if (result.timestamp > now) {
+          errors.push(`RAG result has future timestamp: ${result.timestamp}`);
+        }
+        if (result.inheritance_timestamp && result.inheritance_timestamp > now) {
+          errors.push(`RAG inheritance timestamp is in the future: ${result.inheritance_timestamp}`);
+        }
+      });
+    }
+
+    // Check displayed info timestamps if present
+    if (node.metadata?.displayed_info) {
+      node.metadata.displayed_info.forEach(info => {
+        if (info.timestamp > now) {
+          errors.push(`Displayed info has future timestamp: ${info.timestamp}`);
+        }
+        if (info.inheritance_timestamp && info.inheritance_timestamp > now) {
+          errors.push(`Displayed info inheritance timestamp is in the future: ${info.inheritance_timestamp}`);
+        }
+        if (info.original_timestamp && info.original_timestamp > now) {
+          errors.push(`Displayed info original timestamp is in the future: ${info.original_timestamp}`);
+        }
+      });
+    }
+
+    return errors;
+  }
+
+  private validateRAGResults(results: RAGResult[]): string[] {
+    const errors: string[] = [];
+
+    results.forEach((result, index) => {
+      // Check required fields
+      if (!result.content) {
+        errors.push(`RAG result at index ${index} missing content`);
+      }
+      if (!result.timestamp) {
+        errors.push(`RAG result at index ${index} missing timestamp`);
+      }
+
+      // Validate confidence if present
+      if (result.confidence !== undefined && 
+          (result.confidence < 0 || result.confidence > 1)) {
+        errors.push(`Invalid confidence value at index ${index}: ${result.confidence}`);
+      }
+
+      // Validate inheritance fields if present
+      if (result.inherited_from && !result.inheritance_timestamp) {
+        errors.push(`RAG result at index ${index} has inheritance source but no timestamp`);
+      }
+    });
+
+    return errors;
+  }
+
+  private validateDisplayedInfo(info: DisplayedInfo[]): string[] {
+    const errors: string[] = [];
+
+    info.forEach((item, index) => {
+      // Check required fields
+      if (!item.content) {
+        errors.push(`Displayed info at index ${index} missing content`);
+      }
+      if (!item.timestamp) {
+        errors.push(`Displayed info at index ${index} missing timestamp`);
+      }
+      if (!item.type) {
+        errors.push(`Displayed info at index ${index} missing type`);
+      }
+
+      // Validate inheritance fields if present
+      if (item.inherited_from && !item.inheritance_timestamp) {
+        errors.push(`Displayed info at index ${index} has inheritance source but no timestamp`);
+      }
+      if (item.inheritance_timestamp && !item.inherited_from) {
+        errors.push(`Displayed info at index ${index} has inheritance timestamp but no source`);
+      }
+
+      // Validate timestamp sequence if all timestamps are present
+      if (item.original_timestamp && item.inheritance_timestamp) {
+        if (item.original_timestamp > item.inheritance_timestamp) {
+          errors.push(`Invalid timestamp sequence at index ${index}: original after inheritance`);
+        }
+        if (item.inheritance_timestamp > item.timestamp) {
+          errors.push(`Invalid timestamp sequence at index ${index}: inheritance after current`);
+        }
+      }
+    });
+
+    return errors;
+  }
+
+  private validateEmotionalState(state: EmotionalStateValue): string[] {
+    const errors: string[] = [];
+
+    // Validate primary emotion
+    const validPrimaryEmotions = [
+      'neutral', 'positive', 'negative', 'excited', 'frustrated',
+      'curious', 'confused', 'satisfied', 'uncertain', 'engaged', 'disengaged'
+    ];
+
+    if (!validPrimaryEmotions.includes(state.primary) && 
+        !state.primary.startsWith('custom_')) {
+      errors.push(`Invalid primary emotion: ${state.primary}`);
+    }
+
+    // Validate intensity
+    if (typeof state.intensity !== 'number' || 
+        state.intensity < 0 || 
+        state.intensity > 1) {
+      errors.push(`Invalid emotional intensity: ${state.intensity}`);
+    }
+
+    // Validate confidence
+    if (typeof state.confidence !== 'number' || 
+        state.confidence < 0 || 
+        state.confidence > 1) {
+      errors.push(`Invalid emotional confidence: ${state.confidence}`);
+    }
+
+    // Validate context if present
+    if (state.context && typeof state.context !== 'string') {
+      errors.push('Emotional state context must be a string');
+    }
+
+    return errors;
+  }
+
+  private validateRelationships(node: MemoryNode): string[] {
+    const errors: string[] = [];
+
+    // Check each relationship
+    node.relationships.forEach((relationship, targetId) => {
+      // Validate relationship type
+      if (!this.isValidRelationshipType(relationship.type)) {
+        errors.push(`Invalid relationship type for target ${targetId}: ${relationship.type}`);
+      }
+
+      // Validate strength
+      if (typeof relationship.strength !== 'number' || 
+          relationship.strength < 0 || 
+          relationship.strength > 1) {
+        errors.push(`Invalid relationship strength for target ${targetId}: ${relationship.strength}`);
+      }
+
+      // Validate evidence
+      if (!Array.isArray(relationship.evidence)) {
+        errors.push(`Invalid evidence format for target ${targetId}`);
+      } else {
+        relationship.evidence.forEach((evidence, index) => {
+          if (typeof evidence !== 'string') {
+            errors.push(`Invalid evidence item at index ${index} for target ${targetId}`);
+          }
+        });
+      }
+
+      // Validate target exists
+      if (!this.graph.nodes.has(targetId)) {
+        errors.push(`Relationship target does not exist: ${targetId}`);
+      }
+    });
+
+    return errors;
+  }
+
+  private validateEvolutionHistory(evolution: MemoryNode['evolution']): string[] {
+    const errors: string[] = [];
+
+    // Validate history array
+    if (!Array.isArray(evolution.history)) {
+      errors.push('Evolution history must be an array');
+      return errors;
+    }
+
+    // Check history entries
+    let lastTimestamp = 0;
+    evolution.history.forEach((entry, index) => {
+      // Validate state
+      if (!entry.state || typeof entry.state !== 'object') {
+        errors.push(`Invalid state at history index ${index}`);
+      }
+
+      // Validate timestamp
+      if (typeof entry.timestamp !== 'number' || entry.timestamp < 0) {
+        errors.push(`Invalid timestamp at history index ${index}`);
+      }
+
+      // Check timestamp sequence
+      if (entry.timestamp < lastTimestamp) {
+        errors.push(`Non-sequential timestamp at history index ${index}`);
+      }
+      lastTimestamp = entry.timestamp;
+
+      // Validate trigger
+      if (!this.isValidEvolutionTrigger(entry.trigger)) {
+        errors.push(`Invalid evolution trigger at index ${index}: ${entry.trigger}`);
+      }
+    });
+
+    // Validate trend
+    const validTrends = ['improving', 'declining', 'stable'];
+    if (!validTrends.includes(evolution.trend) && typeof evolution.trend !== 'string') {
+      errors.push(`Invalid evolution trend: ${evolution.trend}`);
+    }
+
+    // Validate stability
+    if (typeof evolution.stability !== 'number' || 
+        evolution.stability < 0 || 
+        evolution.stability > 1) {
+      errors.push(`Invalid evolution stability: ${evolution.stability}`);
+    }
+
+    return errors;
+  }
+
+  private isValidRelationshipType(type: RelationshipType): boolean {
+    const standardTypes = [
+      'related_to', 'part_of', 'follows', 'follows_up', 'precedes',
+      'similar_to', 'references', 'contradicts', 'supports', 'influences',
+      'depends_on', 'related_topic', 'inherits_rag', 'temporal_correlation',
+      'causal_correlation', 'semantic_relation', 'contextual_link'
+    ];
+
+    return standardTypes.includes(type as string) || type.startsWith('custom_');
+  }
+
+  private isValidEvolutionTrigger(trigger: EvolutionTrigger): boolean {
+    const standardTriggers = [
+      'user_interaction', 'system_update', 'pattern_detected',
+      'confidence_change', 'context_update', 'relationship_change',
+      'external_event', 'consolidation', 'validation', 'correction',
+      'initial_creation', 'new_information', 'processing', 'email_received',
+      'user_input', 'context_inheritance'
+    ];
+
+    return standardTriggers.includes(trigger as string) || trigger.startsWith('custom_');
   }
 } 

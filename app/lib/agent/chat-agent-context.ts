@@ -1,6 +1,45 @@
 import { AgentContext } from './base-agent';
+import { SearchResult, RAGStats } from '../memory/types';
 
 export type EngagementLevel = 'high' | 'medium' | 'low';
+
+export type DisplayedContentType = 
+  | 'rag_result'
+  | 'memory_recall'
+  | 'direct_response'
+  | 'system_message'
+  | 'error_message'
+  | 'suggestion'
+  | 'clarification';
+
+export interface DisplayedContent {
+  id: string;
+  content: any;
+  timestamp: number;
+  type: DisplayedContentType;
+  source: 'rag' | 'memory' | 'direct';
+  context?: string;
+  metadata?: {
+    confidence?: number;
+    relevance?: number;
+    query?: string;
+    messageId?: string;
+  };
+  displayStatus: {
+    shown: boolean;
+    shownAt?: number;
+    acknowledged?: boolean;
+    acknowledgedAt?: number;
+  };
+}
+
+export interface DisplayTrackingStats {
+  totalDisplayed: number;
+  byType: Record<DisplayedContentType, number>;
+  bySource: Record<'rag' | 'memory' | 'direct', number>;
+  lastDisplayTimestamp?: number;
+  averageConfidence?: number;
+}
 
 export interface ConversationFlow {
   naturalBreaks: number;
@@ -112,6 +151,22 @@ export interface ChatAgentContext extends AgentContext {
     };
     topic: string;
   }>;
+  // Enhanced RAG tracking
+  ragResults?: {
+    current: SearchResult[];
+    history: Array<{
+      results: SearchResult[];
+      query: string;
+      timestamp: number;
+      displayed: boolean;
+    }>;
+    stats: RAGStats;
+  };
+  // Enhanced displayed information tracking
+  displayedInfo?: Map<string, DisplayedContent>;
+  displayStats?: DisplayTrackingStats;
+  // Flag to prevent recursion in displayed context processing
+  isProcessingDisplayedContext?: boolean;
 }
 
 export type MessageIntent = UserIntent; 
