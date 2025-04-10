@@ -1,4 +1,4 @@
-const SIDEBAR_KEY = 'ava-iris-sidebar-state'
+const SIDEBAR_KEY = 'heycontent-sidebar-state'
 
 export const SidebarStorage = {
   get: (userId?: string): boolean => {

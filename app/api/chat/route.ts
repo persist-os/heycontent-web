@@ -101,7 +101,7 @@ export async function POST(req: Request) {
     // Initialize our systems first
     const rag = new RAGSystem()
     const agent = new PlatformAgent()
-    const socialService = new SocialMediaService()
+    const socialService = new SocialMediaService(rag)
 
     // Get platform status and available features
     const platformStatus = await socialService.getPlatformStatus()

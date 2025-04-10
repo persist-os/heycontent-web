@@ -61,8 +61,8 @@ export async function GET(req: Request) {
     // Initialize our systems
     const rag = new RAGSystem()
     const agent = new PlatformAgent()
-    const socialMediaService = new SocialMediaService()
-    const contentAnalysisService = new ContentAnalysisService(session.user.id)
+    const socialMediaService = new SocialMediaService(rag)
+    const contentAnalysisService = new ContentAnalysisService(session.user.id, rag)
     const errors: ServiceError[] = [];
 
     try {

@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/app/auth';
-import prisma from '@/app/lib/prisma';
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "@/convex/_generated/api";
+
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function GET() {
   try {
@@ -9,34 +12,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user exists, if not create them
-    let user = await prisma.user.findUnique({
-      where: { id: session.user.id }
-    });
-
-    if (!user && session.user.email) {
-      user = await prisma.user.create({
-        data: {
-          id: session.user.id,
-          email: session.user.email,
-          name: session.user.name || null
-        }
-      });
-    }
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 401 });
-    }
-
-    const notes = await prisma.note.findMany({
-      where: {
-        userId: session.user.id
-      },
-      orderBy: {
-        updatedAt: 'desc'
-      }
-    });
-
+    const notes = await convex.query(api.notes.getNotes, { userId: session.user.id });
     return NextResponse.json(notes);
   } catch (error: any) {
     console.error('[NOTES_GET]', error);
@@ -54,40 +30,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user exists, if not create them
-    let user = await prisma.user.findUnique({
-      where: { id: session.user.id }
-    });
-
-    if (!user && session.user.email) {
-      user = await prisma.user.create({
-        data: {
-          id: session.user.id,
-          email: session.user.email,
-          name: session.user.name || null
-        }
-      });
-    }
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 401 });
-    }
-
     const json = await req.json();
     const { title, content, important, tags, references } = json;
 
-    const note = await prisma.note.create({
-      data: {
-        userId: session.user.id,
-        title: title || 'Untitled Note',
-        content: content || '',
-        important: important || false,
-        tags: tags || [],
-        references: references || []
-      }
+    const noteId = await convex.mutation(api.notes.createNote, {
+      userId: session.user.id,
+      title: title || 'Untitled Note',
+      content: content || '',
+      important: important || false,
+      tags: tags || [],
+      references: references || []
     });
 
-    return NextResponse.json(note);
+    return NextResponse.json({ id: noteId });
   } catch (error: any) {
     console.error('[NOTES_POST]', error);
     return NextResponse.json(

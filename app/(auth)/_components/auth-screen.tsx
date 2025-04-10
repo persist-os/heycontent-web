@@ -102,10 +102,25 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
   const handleGoogleSignIn = async () => {
     try {
       setIsLoading(true)
-      await signIn('google', { 
+      const result = await signIn('google', { 
         callbackUrl: '/chat',
-        redirect: true,
+        redirect: false,
       })
+
+      if (result?.ok) {
+        // Sync the session with Convex
+        await fetch('/api/auth/sync', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        // Now redirect
+        router.push('/chat')
+      } else {
+        throw new Error(result?.error || 'Failed to sign in')
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to sign in with Google'
       setError(errorMessage)
@@ -138,7 +153,7 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
       <Card className="w-full max-w-md bg-white/80 backdrop-blur-sm shadow-xl">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-semibold">
-            {isLogin ? "Welcome back to AVA IRIS" : "Join AVA IRIS"}
+            {isLogin ? "Welcome back to HeyContent" : "Join HeyContent"}
           </CardTitle>
           <p className="text-gray-500 text-sm">
             {isLogin ? "Sign in to continue" : "Sign up to get started"}

@@ -18,6 +18,11 @@ type ExtendedEmailMessage = EmailMessage & {
   hasAttachments?: boolean;
 };
 
+// Add Prisma types
+type EmailContentWithAnalysis = Prisma.EmailContentGetPayload<{
+  include: { analysis: true }
+}>;
+
 interface ThreadAnalysis {
   key_points: string[];
   topics: string[];
@@ -69,10 +74,12 @@ export class EmailMemoryManagerImpl implements EmailMemoryManager {
   private memorySystem: AdvancedMemorySystem;
   private threadContextCache: Map<string, EmailContext>;
   private readonly CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+  private prisma: any; // Type as any to allow operations
 
   constructor(memorySystem: AdvancedMemorySystem) {
     this.memorySystem = memorySystem;
     this.threadContextCache = new Map();
+    this.prisma = prisma;
   }
 
   getMemorySystem(): AdvancedMemorySystem {
@@ -81,28 +88,29 @@ export class EmailMemoryManagerImpl implements EmailMemoryManager {
 
   async storeEmail(email: EmailMessage, context: string): Promise<void> {
     try {
-      // Cast email to ExtendedEmailMessage to ensure type safety
       const extendedEmail = email as ExtendedEmailMessage;
       
-      // Store email content
-      const emailContent = await prisma.emailContent.upsert({
-        where: { messageId: extendedEmail.id },
-        update: {
+      // Store thread
+      await this.prisma.emailThread.upsert({
+        where: { threadId: extendedEmail.threadId },
+        create: {
+          threadId: extendedEmail.threadId,
+          userId: extendedEmail.userId,
           subject: extendedEmail.subject,
-          from: extendedEmail.from,
-          to: extendedEmail.to,
-          cc: extendedEmail.cc || [],
-          bcc: extendedEmail.bcc || [],
-          body: extendedEmail.body,
-          snippet: extendedEmail.snippet || '',
-          date: extendedEmail.date,
+          participants: [extendedEmail.from, ...extendedEmail.to],
+          lastMessageDate: extendedEmail.date,
           labels: extendedEmail.labels || [],
-          isRead: extendedEmail.isRead,
-          isStarred: extendedEmail.isStarred || false,
-          hasAttachments: Boolean(extendedEmail.attachments?.length),
-          attachments: extendedEmail.attachments || Prisma.JsonNull,
-          updatedAt: new Date(),
+          status: 'active'
         },
+        update: {
+          lastMessageDate: extendedEmail.date,
+          messageCount: { increment: 1 }
+        }
+      });
+
+      // Store email content
+      const emailContent = await this.prisma.emailContent.upsert({
+        where: { messageId: extendedEmail.id },
         create: {
           messageId: extendedEmail.id,
           threadId: extendedEmail.threadId,
@@ -120,26 +128,35 @@ export class EmailMemoryManagerImpl implements EmailMemoryManager {
           isStarred: extendedEmail.isStarred || false,
           hasAttachments: Boolean(extendedEmail.attachments?.length),
           attachments: extendedEmail.attachments || Prisma.JsonNull,
+          thread: {
+            connect: { threadId: extendedEmail.threadId }
+          }
         },
+        update: {
+          subject: extendedEmail.subject,
+          from: extendedEmail.from,
+          to: extendedEmail.to,
+          cc: extendedEmail.cc || [],
+          bcc: extendedEmail.bcc || [],
+          body: extendedEmail.body,
+          snippet: extendedEmail.snippet || '',
+          date: extendedEmail.date,
+          labels: extendedEmail.labels || [],
+          isRead: extendedEmail.isRead,
+          isStarred: extendedEmail.isStarred || false,
+          hasAttachments: Boolean(extendedEmail.attachments?.length),
+          attachments: extendedEmail.attachments || Prisma.JsonNull,
+          updatedAt: new Date(),
+          thread: {
+            connect: { threadId: extendedEmail.threadId }
+          }
+        }
       });
 
-      // Analyze and store email analysis
+      // Store analysis
       const analysis = await this.analyzeEmail(extendedEmail);
-      await prisma.emailAnalysis.upsert({
+      await this.prisma.emailAnalysis.upsert({
         where: { emailId: emailContent.id },
-        update: {
-          keyPoints: analysis.keyPoints,
-          topics: analysis.topics,
-          participants: analysis.participants,
-          timeline: analysis.timeline,
-          sentiment: analysis.sentiment,
-          actionItems: analysis.actionItems,
-          summary: analysis.summary,
-          importance: analysis.importance,
-          useCount: { increment: 1 },
-          lastAccessed: new Date(),
-          threadContext: analysis.threadContext,
-        },
         create: {
           emailId: emailContent.id,
           keyPoints: analysis.keyPoints,
@@ -152,6 +169,19 @@ export class EmailMemoryManagerImpl implements EmailMemoryManager {
           importance: analysis.importance,
           threadContext: analysis.threadContext,
         },
+        update: {
+          keyPoints: analysis.keyPoints,
+          topics: analysis.topics,
+          participants: analysis.participants,
+          timeline: analysis.timeline,
+          sentiment: analysis.sentiment,
+          actionItems: analysis.actionItems,
+          summary: analysis.summary,
+          importance: analysis.importance,
+          useCount: { increment: 1 },
+          lastAccessed: new Date(),
+          threadContext: analysis.threadContext,
+        }
       });
     } catch (error) {
       console.error('Error storing email:', error);
@@ -317,10 +347,27 @@ export class EmailMemoryManagerImpl implements EmailMemoryManager {
     const lines = content.split('\n');
     const keyPoints: string[] = [];
     
+    // Clean up the content
+    const cleanContent = content.replace(/<[^>]*>/g, '') // Remove HTML tags
+                               .replace(/\s+/g, ' ')      // Normalize whitespace
+                               .trim();
+    
+    // Look for structured points
     for (const line of lines) {
+      const cleanLine = line.trim();
       // Look for bullet points, numbered lists, or important markers
-      if (line.match(/^[-•*]|\d+\.|!important|key:/i)) {
-        keyPoints.push(line.trim());
+      if (cleanLine.match(/^[-•*]|\d+\.|!important|key:|main point:/i)) {
+        keyPoints.push(cleanLine.replace(/^[-•*]\s*|\d+\.\s*|!important|key:|main point:/i, '').trim());
+      }
+    }
+
+    // If no structured points found, try to extract sentences that look like key points
+    if (keyPoints.length === 0) {
+      const sentences = cleanContent.match(/[^.!?]+[.!?]+/g) || [];
+      for (const sentence of sentences) {
+        if (sentence.match(/\b(importantly|key|main|critical|essential|primary|must|should|need)\b/i)) {
+          keyPoints.push(sentence.trim());
+        }
       }
     }
     
@@ -331,18 +378,24 @@ export class EmailMemoryManagerImpl implements EmailMemoryManager {
     const content = `${subject} ${body}`.toLowerCase();
     const topics = new Set<string>();
     
-    // Common business topics
-    const topicPatterns = [
-      /partnership/g, /collaboration/g, /proposal/g,
-      /agreement/g, /contract/g, /deal/g,
-      /project/g, /timeline/g, /deadline/g,
-      /budget/g, /payment/g, /terms/g
-    ];
+    // Common business topics and their related terms
+    const topicPatterns = {
+      'partnership': /partnership|collaboration|alliance|joint venture/g,
+      'contract': /contract|agreement|terms|legal|document/g,
+      'project': /project|initiative|program|development/g,
+      'timeline': /timeline|schedule|deadline|due date|timeframe/g,
+      'budget': /budget|payment|cost|pricing|financial/g,
+      'marketing': /marketing|promotion|campaign|advertising|brand/g,
+      'technical': /technical|software|system|platform|integration/g,
+      'feedback': /feedback|review|suggestion|input|opinion/g,
+      'meeting': /meeting|call|discussion|conference|sync/g,
+      'update': /update|status|progress|development|change/g
+    };
     
-    for (const pattern of topicPatterns) {
-      const matches = content.match(pattern);
-      if (matches) {
-        topics.add(pattern.source);
+    // Check for each topic pattern
+    for (const [topic, pattern] of Object.entries(topicPatterns)) {
+      if (pattern.test(content)) {
+        topics.add(topic);
       }
     }
     
@@ -350,23 +403,55 @@ export class EmailMemoryManagerImpl implements EmailMemoryManager {
   }
 
   private analyzeSentiment(content: string): string {
-    // Simple sentiment analysis
-    const positiveWords = ['thank', 'great', 'good', 'excellent', 'appreciate'];
-    const negativeWords = ['sorry', 'issue', 'problem', 'concern', 'delay'];
+    const cleanContent = content.toLowerCase();
+    
+    // More comprehensive word lists
+    const sentimentPatterns = {
+      positive: {
+        words: ['thank', 'great', 'good', 'excellent', 'appreciate', 'pleased', 'happy', 
+                'wonderful', 'fantastic', 'excited', 'looking forward', 'successful', 'agree',
+                'opportunity', 'beneficial', 'impressive', 'perfect', 'outstanding'],
+        weight: 1
+      },
+      negative: {
+        words: ['sorry', 'issue', 'problem', 'concern', 'delay', 'unfortunately', 'regret',
+                'disappoint', 'difficult', 'fail', 'mistake', 'error', 'wrong', 'bad',
+                'urgent', 'serious', 'trouble', 'worried'],
+        weight: -1
+      },
+      intensifiers: {
+        words: ['very', 'really', 'extremely', 'absolutely', 'definitely', 'highly'],
+        weight: 0.5
+      }
+    };
     
     let score = 0;
-    const lowercaseContent = content.toLowerCase();
+    let hasIntensifier = false;
     
-    positiveWords.forEach(word => {
-      if (lowercaseContent.includes(word)) score++;
-    });
+    // Check for sentiment words
+    for (const [sentiment, { words, weight }] of Object.entries(sentimentPatterns)) {
+      for (const word of words) {
+        const regex = new RegExp(`\\b${word}\\b`, 'gi');
+        const matches = cleanContent.match(regex);
+        if (matches) {
+          if (sentiment === 'intensifiers') {
+            hasIntensifier = true;
+          } else {
+            score += matches.length * weight * (hasIntensifier ? 1.5 : 1);
+          }
+        }
+      }
+    }
     
-    negativeWords.forEach(word => {
-      if (lowercaseContent.includes(word)) score--;
-    });
+    // Consider exclamation marks
+    const exclamationCount = (content.match(/!/g) || []).length;
+    score += exclamationCount * 0.5;
     
-    if (score > 0) return 'positive';
-    if (score < 0) return 'negative';
+    // Determine final sentiment
+    if (score >= 2) return 'positive';
+    if (score <= -2) return 'negative';
+    if (score > 0) return 'slightly positive';
+    if (score < 0) return 'slightly negative';
     return 'neutral';
   }
 
@@ -374,17 +459,56 @@ export class EmailMemoryManagerImpl implements EmailMemoryManager {
     const lines = content.split('\n');
     const actionItems: string[] = [];
     
+    // More comprehensive patterns for action items
     const actionPatterns = [
-      /please|kindly/i,
-      /need to|should|must/i,
-      /action required|action needed/i,
-      /follow up|follow-up/i,
-      /todo|to-do/i
+      {
+        pattern: /(?:please|kindly)\s+([^.!?]+[.!?])/i,
+        type: 'request'
+      },
+      {
+        pattern: /(?:need|should|must|have to)\s+([^.!?]+[.!?])/i,
+        type: 'requirement'
+      },
+      {
+        pattern: /(?:action (?:required|needed|item)):\s*([^.!?]+[.!?])/i,
+        type: 'explicit'
+      },
+      {
+        pattern: /(?:follow[- ]?up|todo|to-do):\s*([^.!?]+[.!?])/i,
+        type: 'followup'
+      },
+      {
+        pattern: /(?:can you|could you)\s+([^.!?]+[.!?])/i,
+        type: 'request'
+      },
+      {
+        pattern: /(?:will|going to|shall)\s+([^.!?]+[.!?])/i,
+        type: 'commitment'
+      }
     ];
     
+    // Process each line
     for (const line of lines) {
-      if (actionPatterns.some(pattern => pattern.test(line))) {
-        actionItems.push(line.trim());
+      const cleanLine = line.trim();
+      
+      // Check for structured action items
+      for (const { pattern, type } of actionPatterns) {
+        const match = cleanLine.match(pattern);
+        if (match && match[1]) {
+          const actionText = match[1].trim();
+          // Avoid duplicates and ensure it's an actual action
+          if (!actionItems.includes(actionText) && actionText.length > 10) {
+            actionItems.push(actionText);
+          }
+        }
+      }
+      
+      // Check for bullet points that look like actions
+      if (cleanLine.match(/^[-•*]\s*\w+.*(?:please|need|should|must|will|going to)/i)) {
+        const actionText = cleanLine.replace(/^[-•*]\s*/, '').trim();
+        if (!actionItems.includes(actionText) && actionText.length > 10) {
+          actionItems.push(actionText);
+        }
       }
     }
     
@@ -392,8 +516,34 @@ export class EmailMemoryManagerImpl implements EmailMemoryManager {
   }
 
   private generateSummary(email: EmailMessage): string {
-    return `Email from ${email.from} about "${email.subject}" on ${email.date.toLocaleDateString()}. ` +
-           `Key points: ${this.extractKeyPoints(email.body).slice(0, 3).join('; ')}`;
+    // Extract key information
+    const keyPoints = this.extractKeyPoints(email.body);
+    const topics = this.extractTopics(email.subject, email.body);
+    const actionItems = this.extractActionItems(email.body);
+    const sentiment = this.analyzeSentiment(email.body);
+
+    // Build a comprehensive summary
+    const parts: string[] = [];
+
+    // Add main context
+    parts.push(`${sentiment === 'positive' ? 'Positive' : sentiment === 'negative' ? 'Negative' : 'Neutral'} communication regarding "${email.subject}"`);
+
+    // Add key points if available
+    if (keyPoints.length > 0) {
+      parts.push(`Main points: ${keyPoints.slice(0, 2).join('; ')}`);
+    }
+
+    // Add action items if available
+    if (actionItems.length > 0) {
+      parts.push(`Action items: ${actionItems.slice(0, 2).join('; ')}`);
+    }
+
+    // Add topics if available and different from subject
+    if (topics.length > 0 && !topics.every(topic => email.subject.toLowerCase().includes(topic.toLowerCase()))) {
+      parts.push(`Related topics: ${topics.slice(0, 2).join(', ')}`);
+    }
+
+    return parts.join('. ');
   }
 
   private async updateThreadContext(email: EmailMessage): Promise<void> {
@@ -884,7 +1034,7 @@ export class EmailMemoryManagerImpl implements EmailMemoryManager {
 
   async getEmailById(messageId: string): Promise<EmailMemoryNode | null> {
     try {
-      const emailContent = await prisma.emailContent.findUnique({
+      const emailContent = await this.prisma.emailContent.findUnique({
         where: { messageId },
         include: { analysis: true },
       });
@@ -893,7 +1043,7 @@ export class EmailMemoryManagerImpl implements EmailMemoryManager {
 
       // Update access metrics
       if (emailContent.analysis) {
-        await prisma.emailAnalysis.update({
+        await this.prisma.emailAnalysis.update({
           where: { emailId: emailContent.id },
           data: {
             useCount: { increment: 1 },

@@ -653,10 +653,10 @@ export function NoteArea({
             <div 
               key={index}
               className={`p-3 ${
-                ref.type === 'ai_insight' ? 'bg-blue-50' : 'border-l-4 border-purple-500 pl-3'
+                ref.type === 'ai_insight' ? 'bg-purple-50' : 'border-l-4 border-purple-500 pl-3'
               } rounded-lg`}
             >
-              <div className="flex items-center gap-2 text-blue-600 text-sm font-medium mb-2">
+              <div className="flex items-center gap-2 text-purple-600 text-sm font-medium mb-2">
                 {ref.type === 'ai_insight' ? (
                   <AtSign className="w-4 h-4" />
                 ) : (
@@ -675,7 +675,7 @@ export function NoteArea({
               onChange={(e) => handleContentChange(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Type / for commands, @ to reference content, # to add tags"
-              className="w-full p-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-base leading-relaxed absolute inset-0 text-transparent"
+              className="w-full p-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-base leading-relaxed absolute inset-0 text-transparent"
               style={{ 
                 minHeight: 'calc(100vh - 200px)',
                 height: 'auto',

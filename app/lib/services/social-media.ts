@@ -10,6 +10,7 @@ import type {
   BaseMetrics
 } from "../../lib/types/social";
 import { YouTubeService } from './youtube';
+import { RAGSystem } from '../rag/rag-system';
 
 // Define as a type that matches JsonValue structure
 type YouTubeMetadata = {
@@ -96,8 +97,10 @@ interface SocialMetrics {
 
 export class SocialMediaService {
   private youtube: youtube_v3.Youtube | null = null;
+  private rag: RAGSystem;
 
-  constructor() {
+  constructor(rag: RAGSystem) {
+    this.rag = rag;
     this.initializeYouTube();
   }
 
@@ -662,7 +665,7 @@ export class SocialMediaService {
               );
               
               if (googleAccount) {
-                const youtubeService = new YouTubeService(googleAccount.id);
+                const youtubeService = new YouTubeService(googleAccount.id, this.rag);
                 const channelId = socialAccount.profileUrl?.split('/').pop();
                 
                 if (channelId) {

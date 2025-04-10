@@ -16,8 +16,8 @@ export default function Terms() {
         
         <div className="mb-12">
           <p className="mb-8">
-            Thank you for choosing AVA IRIS. These Terms of Service ("Terms") constitute a legally binding agreement between 
-            you and AVA IRIS, Inc. ("AVA IRIS," "we," "our," or "us") governing your use of our AI-powered analytics platform, 
+            Thank you for choosing HeyContent. These Terms of Service ("Terms") constitute a legally binding agreement between 
+            you and HeyContent, Inc. ("HeyContent," "we," "our," or "us") governing your use of our AI-powered analytics platform, 
             including all associated websites, services, and applications (collectively, the "Services").
           </p>
         </div>
@@ -26,7 +26,7 @@ export default function Terms() {
         <section className="mb-12">
           <h2 className="text-2xl font-semibold mb-4">1. Understanding Our Services</h2>
           <p>
-            AVA IRIS provides an artificial intelligence-powered platform designed to help content creators and influencers 
+            HeyContent provides an artificial intelligence-powered platform designed to help content creators and influencers 
             optimize their online presence. Our Services analyze data from your connected platforms to provide insights, 
             recommendations, and growth strategies.
           </p>
@@ -122,8 +122,8 @@ export default function Terms() {
             <div>
               <h3 className="text-xl font-medium mb-3">Our Property</h3>
               <p>
-                The AVA IRIS platform, including all software, algorithms, designs, analytics systems, and related 
-                technologies, are owned by AVA IRIS. Nothing in these Terms transfers ownership of our intellectual 
+                The HeyContent platform, including all software, algorithms, designs, analytics systems, and related 
+                technologies, are owned by HeyContent. Nothing in these Terms transfers ownership of our intellectual 
                 property to you.
               </p>
             </div>
@@ -198,7 +198,7 @@ export default function Terms() {
             </div>
 
             <div>
-              <h3 className="text-xl font-medium mb-3">Termination by AVA IRIS</h3>
+              <h3 className="text-xl font-medium mb-3">Termination by HeyContent</h3>
               <p className="mb-4">We reserve the right to suspend or terminate your access if:</p>
               <ul className="list-disc pl-6 space-y-3">
                 <li>You violate these Terms or our platform policies</li>
@@ -218,7 +218,7 @@ export default function Terms() {
             <div>
               <h3 className="text-xl font-medium mb-3">Initial Resolution</h3>
               <p>
-                If you have any concerns or disputes, please contact us first at legal@avairis.com. We will work 
+                If you have any concerns or disputes, please contact us first at legal@heycontent.com. We will work 
                 in good faith to resolve any issues directly with you.
               </p>
             </div>
@@ -259,8 +259,8 @@ export default function Terms() {
         <footer className="mt-16 pt-8 border-t border-gray-200">
           <p className="text-gray-600 text-sm">
             For questions about these Terms of Service, please contact us at{' '}
-            <a href="mailto:iris@avasetail.com" className="text-blue-600 hover:text-blue-800">
-              iris@avasetail.com
+            <a href="mailto:hello@divertissement.ai" className="text-blue-600 hover:text-blue-800">
+              hello@divertissement.ai
             </a>
           </p>
         </footer>

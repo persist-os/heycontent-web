@@ -60,7 +60,7 @@ export function HeroSection() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col items-center justify-center max-w-4xl mx-auto px-4">
         <h1 className="text-4xl font-bold text-gray-900 mb-12">
-          What's Next? Ask IRIS.
+          What's Next? Ask Content.
         </h1>
 
         <div onClick={() => router.push('/login')} 

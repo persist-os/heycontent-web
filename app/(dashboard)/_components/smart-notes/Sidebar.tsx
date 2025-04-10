@@ -40,7 +40,7 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
         <h2 className="text-lg font-semibold mb-2">Smart Notes</h2>
         <button 
           onClick={onCreateNote}
-          className="w-full bg-blue-500 text-white rounded-xl py-2 px-4 flex items-center gap-2"
+          className="w-full bg-purple-500 text-white rounded-xl py-2 px-4 flex items-center gap-2"
         >
           <FileText className="w-4 h-4" />
           New Note
@@ -60,10 +60,10 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
         <button 
           onClick={() => setSelectedSection('recent')}
           className={`w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 ${
-            selectedSection === 'recent' ? 'bg-blue-50' : 'hover:bg-gray-50'
+            selectedSection === 'recent' ? 'bg-purple-50' : 'hover:bg-gray-50'
           }`}
         >
-          <Clock className="w-4 h-4 text-blue-500" />
+          <Clock className="w-4 h-4 text-purple-500" />
           Recent
         </button>
         <button 

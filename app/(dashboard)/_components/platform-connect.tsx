@@ -82,13 +82,26 @@ export function PlatformConnect() {
 
   const fetchConnectedPlatforms = async () => {
     try {
+      console.log('Starting to fetch connected platforms...')
+      setLoading(true)
       const response = await fetch('/api/social/connected-platforms')
-      if (response.ok) {
-        const data = await response.json()
-        setConnectedAccounts(data.accounts)
+      
+      console.log('Response status:', response.status)
+      const responseText = await response.text()
+      console.log('Raw response:', responseText)
+      
+      if (!response.ok) {
+        console.error('Failed to fetch platforms:', responseText)
+        return
       }
+      
+      const data = JSON.parse(responseText)
+      console.log('Parsed platform data:', data)
+      console.log('Connected accounts:', data.accounts)
+      
+      setConnectedAccounts(data.accounts || [])
     } catch (error) {
-      console.error('Failed to fetch connected platforms:', error)
+      console.error('Error fetching connected platforms:', error)
     } finally {
       setLoading(false)
     }
@@ -306,7 +319,7 @@ export function PlatformConnect() {
         <h2 className="text-xl font-semibold">Platform Integrations</h2>
         <p className="text-muted-foreground">
           Connect your social media accounts to unlock powerful analytics and insights. 
-          IRIS will help you track engagement, monitor growth, and identify opportunities across all your platforms.
+          Content will help you track engagement, monitor growth, and identify opportunities across all your platforms.
         </p>
       </div>
 

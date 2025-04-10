@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/app/auth'
-import prisma from '@/app/lib/prisma'
 import { SocialPlatform } from '@/app/types/social-platforms'
+import { api } from '@/convex/_generated/api'
+import { fetchMutation } from 'convex/nextjs'
 
 export async function POST(req: Request) {
   try {
@@ -17,20 +18,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Platform is required' }, { status: 400 })
     }
 
-    // Update the social account to be disconnected
-    await prisma.socialAccount.update({
-      where: {
-        userId_platform: {
-          userId: session.user.id,
-          platform
-        }
-      },
-      data: {
-        isConnected: false,
-        accessToken: '',  // Clear tokens for security
-        refreshToken: '',
-        expiresAt: { set: null }
-      }
+    // Update the social account to be disconnected using Convex
+    await fetchMutation(api.social.disconnect, {
+      userId: session.user.id,
+      platform
     })
 
     return NextResponse.json({ success: true })

@@ -11,11 +11,11 @@ export default function About() {
       </nav>
 
       <article className="prose prose-gray max-w-none">
-        <h1 className="text-4xl font-bold mb-6">About AVA IRIS</h1>
+        <h1 className="text-4xl font-bold mb-6">About HeyContent</h1>
         <h2 className="text-2xl font-semibold text-gray-700 mb-4">Redefining Digital Strategy Through AI</h2>
         
         <p className="mb-8">
-          AVA IRIS (Intelligent Relationship and Insight System) stands at the intersection of artificial intelligence, 
+          HeyContent (Intelligent Relationship and Insight System) stands at the intersection of artificial intelligence, 
           brand strategy, and content creation. We're transforming how creators and brands navigate the digital landscape 
           by providing AI-powered insights, strategic consulting, and growth optimization through our innovative platform.
         </p>
@@ -34,7 +34,7 @@ export default function About() {
         <section className="mb-12">
           <h2 className="text-2xl font-semibold mb-4">Strategic AI Partnership</h2>
           <p>
-            AVA IRIS serves as your strategic consultant, delivering insights typically reserved for high-end marketing 
+            HeyContent serves as your strategic consultant, delivering insights typically reserved for high-end marketing 
             agencies and brand consultants. Our sophisticated AI system continuously analyzes patterns across platforms, 
             developing comprehensive strategies for brand positioning and growth. By processing vast amounts of data in 
             real-time, we provide nuanced recommendations that adapt to changing market conditions and audience preferences.
@@ -65,7 +65,7 @@ export default function About() {
           <section>
             <h2 className="text-2xl font-semibold mb-4">Brand Growth</h2>
             <p>
-              For brands seeking deeper connections with their digital audience, AVA IRIS provides unparalleled insights and 
+              For brands seeking deeper connections with their digital audience, HeyContent provides unparalleled insights and 
               strategic guidance. We help identify ideal creator partnerships, forecast content performance, and track audience 
               sentiment to ensure your message resonates authentically. Our strategic recommendations help you build lasting 
               relationships with your target audience while maintaining brand integrity.
@@ -76,7 +76,7 @@ export default function About() {
         <section className="mb-12">
           <h2 className="text-2xl font-semibold mb-4">Partnership Innovation</h2>
           <p>
-            At the heart of AVA IRIS is our ability to create meaningful connections between creators and brands. Our AI 
+            At the heart of HeyContent is our ability to create meaningful connections between creators and brands. Our AI 
             analyzes numerous variables to identify partnerships with the highest potential for success, providing insights 
             that help both parties reach mutually beneficial agreements. We continue monitoring and optimizing these 
             relationships, ensuring long-term success for everyone involved.
@@ -106,7 +106,7 @@ export default function About() {
         <section className="bg-gray-50 p-8 rounded-lg">
           <h2 className="text-2xl font-semibold mb-4">Join Our Ecosystem</h2>
           <p>
-            AVA IRIS is building a new kind of digital ecosystem where creators, brands, and audiences thrive together. 
+            HeyContent is building a new kind of digital ecosystem where creators, brands, and audiences thrive together. 
             Whether you're a creator looking to build your brand or a business seeking to optimize your digital strategy, 
             our AI-powered platform provides the insights and guidance you need to succeed.
           </p>

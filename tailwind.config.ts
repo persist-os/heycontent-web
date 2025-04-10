@@ -50,6 +50,20 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Brand colors from mobile app
+        heycontent: {
+          yellow: "#FFDF39",
+          purple: "#9046FF",
+          green: "#45E290",
+          "light-yellow": "hsl(var(--light-yellow))",
+          "light-purple": "hsl(var(--light-purple))",
+          "light-green": "hsl(var(--light-green))",
+        },
+        // Text colors
+        text: {
+          gray: "hsl(var(--gray-text))",
+          dark: "hsl(var(--dark-text))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

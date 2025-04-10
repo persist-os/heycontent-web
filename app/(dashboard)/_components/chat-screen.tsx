@@ -43,7 +43,7 @@ const SuggestionChip = ({ suggestion, onClick }: {
 }) => (
   <button
     onClick={onClick}
-    className="px-3 py-1.5 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full flex items-center gap-2 transition-colors"
+    className="px-3 py-1.5 text-sm bg-heycontent-light-yellow hover:bg-heycontent-yellow/20 text-black rounded-full flex items-center gap-2 transition-colors"
   >
     {suggestion.type === 'explore' && <Brain className="w-4 h-4" />}
     {suggestion.type === 'clarify' && <MessageSquare className="w-4 h-4" />}
@@ -52,6 +52,145 @@ const SuggestionChip = ({ suggestion, onClick }: {
     {suggestion.description}
   </button>
 );
+
+interface InteractiveResponse {
+  options: Array<{
+    text: string;
+    action?: string;
+  }>;
+  followUp: Array<{
+    question: string;
+    choices?: string[];
+  }>;
+  contextualSuggestions: Array<{
+    text: string;
+    type: string;
+  }>;
+}
+
+interface AnalysisResponse {
+  result: {
+    output: {
+      content: string;
+      insights?: any[];
+      suggestions?: any[];
+      response?: string;
+    };
+    suggestions?: any[];
+    interactiveResponse?: InteractiveResponse;
+  };
+}
+
+interface ChatResponse {
+  id: number;
+  content: string;
+  metadata?: {
+    suggestions?: any[];
+    ambientInsight?: any;
+  };
+  options?: InteractiveResponse['options'];
+  followUp?: InteractiveResponse['followUp'];
+  contextualSuggestions?: InteractiveResponse['contextualSuggestions'];
+}
+
+function isAnalysisResponse(response: AnalysisResponse | ChatResponse): response is AnalysisResponse {
+  return 'result' in response;
+}
+
+// Helper functions for generating interactive content
+const generateContextualSuggestions = (content: string, type: 'video' | 'email' | null): string[] => {
+  const suggestions: string[] = [];
+  
+  if (type === 'video') {
+    if (content.includes('views') || content.includes('performance')) {
+      suggestions.push('Compare with previous videos performance');
+      suggestions.push('Show engagement trends over time');
+      suggestions.push('Analyze audience retention patterns');
+    }
+    if (content.includes('comment') || content.includes('engagement')) {
+      suggestions.push('Show most engaging video segments');
+      suggestions.push('Analyze comment sentiment trends');
+      suggestions.push('Identify top fan interactions');
+    }
+    if (content.includes('subscriber') || content.includes('growth')) {
+      suggestions.push('Show subscriber growth patterns');
+      suggestions.push('Analyze subscriber demographics');
+      suggestions.push('Compare with channel benchmarks');
+    }
+  } else if (type === 'email') {
+    if (content.includes('partnership') || content.includes('collaboration')) {
+      suggestions.push('Review partnership history');
+      suggestions.push('Analyze communication patterns');
+      suggestions.push('Check similar partnerships');
+    }
+    if (content.includes('timeline') || content.includes('delay')) {
+      suggestions.push('Analyze timeline impact');
+      suggestions.push('Review similar delays');
+      suggestions.push('Check alternative timelines');
+    }
+    if (content.includes('response') || content.includes('draft')) {
+      suggestions.push('Review response templates');
+      suggestions.push('Check communication best practices');
+      suggestions.push('Analyze tone and style');
+    }
+  }
+  
+  // Add general suggestions if none were added
+  if (suggestions.length === 0) {
+    suggestions.push('Get more details');
+    suggestions.push('See related insights');
+    suggestions.push('Explore next steps');
+  }
+  
+  return suggestions;
+};
+
+const generateFollowUpChoices = (content: string, type: 'video' | 'email' | null): string[] => {
+  const choices: string[] = [];
+  
+  if (type === 'video') {
+    if (content.includes('views') || content.includes('performance')) {
+      choices.push('What caused these performance changes?');
+      choices.push('How can we improve these metrics?');
+      choices.push('What are the trends over time?');
+    }
+    if (content.includes('comment') || content.includes('engagement')) {
+      choices.push('What drives the most engagement?');
+      choices.push('How can we increase engagement?');
+      choices.push('What are viewers saying?');
+    }
+    if (content.includes('subscriber') || content.includes('growth')) {
+      choices.push('What is driving subscriber growth?');
+      choices.push('How can we accelerate growth?');
+      choices.push('Who are our most engaged subscribers?');
+    }
+  } else if (type === 'email') {
+    if (content.includes('partnership') || content.includes('collaboration')) {
+      choices.push('What are the next steps for this partnership?');
+      choices.push('How can we optimize this collaboration?');
+      choices.push('What are potential risks to consider?');
+    }
+    if (content.includes('timeline') || content.includes('delay')) {
+      choices.push('How should we adjust our timeline?');
+      choices.push('What are the implications of the delay?');
+      choices.push('Should we explore alternatives?');
+    }
+    if (content.includes('response') || content.includes('draft')) {
+      choices.push('What key points should we address?');
+      choices.push('How can we improve the response?');
+      choices.push('What tone should we use?');
+    }
+  }
+  
+  // Add general choices if none were added
+  if (choices.length === 0) {
+    choices.push('Can you provide more details?');
+    choices.push('What are the key takeaways?');
+    choices.push('What actions should we take?');
+  }
+  
+  return choices;
+};
 
 const ChatScreen = () => {
   const { data: session, status } = useSession()
@@ -179,7 +318,13 @@ const ChatScreen = () => {
   }, [currentVideoContext, lastAnalysisType, setCurrentVideoContext, setLastAnalysisType, setAnalyzedVideos]);
 
   const handleSendMessage = useCallback(async (content: string, insightId?: number) => {
-    if (!content.trim()) return
+    // Guard against undefined content
+    if (!content || typeof content !== 'string') {
+      console.warn('Attempted to send undefined or invalid message content');
+      return;
+    }
+
+    if (!content.trim()) return;
     
     const newMessage: Message = {
       id: Date.now(),
@@ -208,8 +353,18 @@ const ChatScreen = () => {
         status: 'typing'
       }])
 
-      let response
+      let response;
+      let responseData: AnalysisResponse | ChatResponse;
+
       if (isAnalysisRequest(content)) {
+        console.log('Sending analysis request with context:', {
+          query: content,
+          type: 'youtube',
+          context: {
+            currentVideo: currentVideoContext
+          }
+        });
+        
         response = await fetch('/api/ai/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -217,45 +372,70 @@ const ChatScreen = () => {
             query: content,
             type: 'youtube',
             context: {
-              currentVideo: currentVideoContext,
-              analyzedVideos: Array.from(analyzedVideos),
-              lastAnalysisType
+              currentVideo: currentVideoContext
             }
           })
         });
       } else {
+        console.log('Sending chat request with context:', {
+          message: content,
+          context: {
+            currentVideo: currentVideoContext,
+            previousMessages: messages
+          }
+        });
+        
         response = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message: content,
-            insightId,
-            referencedMessageId: referencedMessage?.id,
-            previousMessages: messages.map(msg => ({
-              id: msg.id,
-              content: msg.content,
-              role: msg.role,
-              timestamp: msg.timestamp,
-              referencedMessage: msg.referencedMessage ? {
-                id: msg.referencedMessage.id,
-                content: msg.referencedMessage.content
-              } : undefined
-            }))
+            context: {
+              currentVideo: currentVideoContext,
+              previousMessages: messages
+            }
           })
-        })
+        });
       }
 
-      if (!response.ok) throw new Error('Failed to send message')
-      const data = await response.json()
+      if (!response.ok) {
+        console.error('API response error:', {
+          status: response.status,
+          statusText: response.statusText
+        });
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error details:', errorData);
+        throw new Error('Failed to send message');
+      }
+
+      const data = await response.json();
+      console.log('API response data:', {
+        hasResult: !!data.result,
+        resultType: data.result ? typeof data.result : 'none',
+        hasOutput: data.result?.output ? 'yes' : 'no',
+        hasInteractiveResponse: data.result?.interactiveResponse ? 'yes' : 'no',
+        emailContext: data.result?.emailContext ? 'yes' : 'no'
+      });
       
       // Remove typing indicator and add AI response
       setMessages(prev => {
         const withoutTyping = prev.filter(msg => msg.status !== 'typing')
+        
+        // Get the first followUp question if available
+        const followUp = isAnalysisRequest(content) 
+          ? data.result.interactiveResponse?.followUp?.[0]
+          : data.followUp?.[0];
+        
+        // Extract contextual suggestions
+        const contextualSuggestions = isAnalysisRequest(content)
+          ? data.result.interactiveResponse?.contextualSuggestions
+          : data.contextualSuggestions;
+
         return [...withoutTyping, {
           id: data.id || Date.now(),
           content: isAnalysisRequest(content) 
             ? (typeof data.result.output === 'object' 
-                ? data.result.output.response || 'No response available'
+                ? data.result.output.response || data.result.output.content || 'No response available'
                 : data.result.output)
             : (typeof data.content === 'object'
                 ? data.content.response || 'No response available'
@@ -263,15 +443,36 @@ const ChatScreen = () => {
           role: 'assistant',
           timestamp: new Date().toISOString(),
           relatedInsights: data.relatedInsights || [],
-          interactiveResponse: {
-            options: isAnalysisRequest(content) ? data.result.interactiveResponse?.options : data.options,
-            followUp: isAnalysisRequest(content) ? data.result.interactiveResponse?.followUp : data.followUp,
-            contextualSuggestions: isAnalysisRequest(content) ? data.result.interactiveResponse?.contextualSuggestions : data.contextualSuggestions
-          },
           metadata: {
             suggestions: isAnalysisRequest(content) 
               ? (data.result.suggestions || [])
-              : (data.metadata?.suggestions || [])
+              : (data.metadata?.suggestions || []),
+            insights: isAnalysisRequest(content)
+              ? data.result.output.insights
+              : data.metadata?.insights
+          },
+          interactiveResponse: {
+            options: (isAnalysisRequest(content) 
+              ? data.result.interactiveResponse?.options 
+              : data.options)?.map((opt: InteractiveOption) => ({
+              ...opt,
+              type: opt.action ? 'action' : 'suggestion'
+            })) || [],
+            followUp: followUp ? {
+              question: followUp.question,
+              choices: followUp.choices || generateFollowUpChoices(
+                isAnalysisRequest(content) 
+                  ? data.result.output.content || data.result.output.response
+                  : data.content,
+                lastAnalysisType
+              )
+            } : undefined,
+            contextualSuggestions: contextualSuggestions || generateContextualSuggestions(
+              isAnalysisRequest(content)
+                ? data.result.output.content || data.result.output.response
+                : data.content,
+              lastAnalysisType
+            )
           }
         }]
       })
@@ -317,26 +518,28 @@ const ChatScreen = () => {
   }, [])
 
   const handleOptionClick = useCallback((option: InteractiveOption) => {
+    if (!option?.text) return; // Guard against undefined options
+    
     if (option.action) {
-      // Handle specific actions
+      // Handle specific actions with more contextual responses
       switch (option.action) {
         case 'show_metrics':
-          handleSendMessage('Show me the detailed metrics');
+          handleSendMessage('Can you analyze the performance metrics for these partnership discussions?');
           break;
         case 'view_partnerships':
-          handleSendMessage('Tell me about available partnership opportunities');
+          handleSendMessage('What are the key points from this partnership discussion with AVA Setail?');
           break;
         case 'view_content_insights':
-          handleSendMessage('What insights do you have about the content?');
+          handleSendMessage('What insights can you provide about the communication timeline and delays in this partnership discussion?');
           break;
         case 'view_audience_insights':
-          handleSendMessage('What do you know about the audience?');
+          handleSendMessage('How should we handle this partnership given the pregnancy situation?');
           break;
         case 'personalize':
-          handleSendMessage('Personalize the recommendations for me');
+          handleSendMessage('Can you help draft a response considering the current situation?');
           break;
         case 'view_pending_actions':
-          handleSendMessage('What actions are pending?');
+          handleSendMessage('What are the next steps needed for this partnership discussion?');
           break;
         default:
           handleSendMessage(option.text);
@@ -526,8 +729,8 @@ const ChatScreen = () => {
         <div className="shrink-0 border-b bg-white px-6 py-4">
           <div className="flex justify-between items-center">
             <div>
-              <h2 className="font-semibold text-lg">AVA IRIS</h2>
-              <div className="text-sm text-gray-500 mt-1 animate-pulse">
+              <h2 className="font-semibold text-lg">HeyContent</h2>
+              <div className="text-sm text-text-gray mt-1 animate-pulse">
                 {liveInsights[currentInsight]}
               </div>
             </div>
@@ -538,7 +741,7 @@ const ChatScreen = () => {
                   setMessages([])
                   setReferencedMessage(null)
                 }}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg"
+                className="flex items-center gap-2 px-3 py-2 text-sm text-text-gray hover:bg-gray-50 rounded-lg"
               >
                 <Plus className="w-4 h-4" />
                 New Chat
@@ -563,12 +766,12 @@ const ChatScreen = () => {
                       hover:shadow-md transition-all duration-200 hover:scale-[1.02]"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="p-2 rounded-lg bg-blue-50">
-                        <insight.icon className="w-5 h-5 text-blue-500" />
+                      <div className="p-2 rounded-lg bg-heycontent-light-yellow">
+                        <insight.icon className="w-5 h-5 text-black" />
                       </div>
                       <div className="flex-1">
                         <h3 className="font-medium text-sm mb-1">{insight.title}</h3>
-                        <p className="text-sm text-gray-600">{insight.description}</p>
+                        <p className="text-sm text-text-gray">{insight.description}</p>
                       </div>
                     </div>
                   </div>
@@ -602,14 +805,14 @@ const ChatScreen = () => {
                         {message.relatedInsights.map((insight, i) => (
                           <div
                             key={i}
-                            className="bg-blue-50 p-2 rounded-lg text-sm text-blue-800 cursor-pointer hover:bg-blue-100"
+                            className="bg-heycontent-light-yellow p-2 rounded-lg text-sm text-text-dark cursor-pointer hover:bg-heycontent-yellow/20"
                             onClick={() => handleInsightClick(
                               `Tell me more about this ${insight.type}`,
                               { type: insight.type, title: insight.summary, description: '' } as any
                             )}
                           >
                             <div className="font-medium">{insight.type}</div>
-                            <div className="text-blue-600">{insight.summary}</div>
+                            <div className="text-text-dark">{insight.summary}</div>
                           </div>
                         ))}
                       </div>
@@ -653,7 +856,7 @@ const ChatScreen = () => {
                     <button
                       key={index}
                       onClick={() => handleInsightClick(insight.action, insight)}
-                      className="shrink-0 px-4 h-8 text-xs text-gray-600 bg-gray-50 hover:bg-gray-100 
+                      className="shrink-0 px-4 h-8 text-xs text-text-gray bg-gray-50 hover:bg-gray-100 
                         rounded-full flex items-center transition-colors"
                     >
                       {insight.action}

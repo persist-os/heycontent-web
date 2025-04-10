@@ -6,6 +6,7 @@ import prisma from '@/app/lib/prisma';
 import type { Account, SocialAccount, Prisma } from '@prisma/client';
 import { google } from 'googleapis';
 import { Client } from '@microsoft/microsoft-graph-client';
+import { RAGSystem } from '@/app/lib/rag';
 
 type YouTubeMetadata = {
   channelId: string;
@@ -107,7 +108,8 @@ export async function GET(req: Request) {
         }
 
         try {
-          const youtubeService = new YouTubeService(session.user.id);
+          const rag = new RAGSystem();
+          const youtubeService = new YouTubeService(session.user.id, rag);
           const channelId = youtubeAccount.metadata.channelId;
           
           console.log('Attempting to fetch YouTube data:', {

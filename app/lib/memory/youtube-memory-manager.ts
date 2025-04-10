@@ -6,6 +6,7 @@ import {
 } from './types';
 import { YouTubeMetrics } from '../../lib/types/social';
 import { AdvancedMemorySystem } from './advanced-memory-system';
+import { RAGSystem } from '../rag/rag-system';
 import { nanoid } from 'nanoid';
 
 interface VideoContext {
@@ -29,6 +30,10 @@ export class YouTubeMemoryManagerImpl implements YouTubeMemoryManager {
   constructor(memorySystem: AdvancedMemorySystem) {
     this.memorySystem = memorySystem;
     this.videoContextCache = new Map();
+  }
+
+  public getRag(): RAGSystem {
+    return this.memorySystem.getRag();
   }
 
   async storeVideo(videoId: string, metrics: YouTubeMetrics, context: string): Promise<void> {

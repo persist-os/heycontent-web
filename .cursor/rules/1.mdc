@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+we don't want to use supabase and docker anymore
+
+also make sure our migration is not too complicated do not create new files or folders for no reasons, check the codebase before making any changes and double check everytime
+
+we will want to use google for oauth and convex for database

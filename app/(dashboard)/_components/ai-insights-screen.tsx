@@ -439,7 +439,7 @@ export function AIInsightsScreen() {
     );
   };
 
-  function discussWithAI(insight: AIActionableInsight) {
+  function discussWithContent(insight: AIActionableInsight) {
     // Prepare complete context object
     const contextData = {
       insightType: insight.type,
@@ -515,7 +515,7 @@ export function AIInsightsScreen() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-lg font-semibold mb-1 dark:text-white">AI Insights</h1>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-text-gray dark:text-gray-400">
               Personalized recommendations for your content strategy
               {lastUpdated && (
                 <span className="ml-2 text-sm">
@@ -529,7 +529,7 @@ export function AIInsightsScreen() {
             disabled={!canRefresh || isRefreshing}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
               canRefresh && !isRefreshing
-                ? 'bg-purple-100 text-purple-600 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50'
+                ? 'bg-heycontent-light-yellow text-black hover:bg-heycontent-yellow/20 dark:bg-heycontent-yellow/30 dark:text-heycontent-yellow dark:hover:bg-heycontent-yellow/50'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500'
             }`}
           >
@@ -553,11 +553,11 @@ export function AIInsightsScreen() {
 
             {insights.length === 0 ? (
               <div className="text-center py-12">
-                <Brain className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                <Brain className="w-12 h-12 text-text-gray mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-text-dark dark:text-white mb-2">
                   {error ? 'Unable to load insights' : 'Loading insights...'}
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-text-gray dark:text-gray-400">
                   {error || "We're analyzing your content and partnerships."}
                 </p>
               </div>
@@ -595,33 +595,33 @@ export function AIInsightsScreen() {
                       onClick={() => setSelectedInsight(selectedInsight === insight.id ? null : insight.id)}
                       className={`p-4 cursor-pointer transition-all ${
                         selectedInsight === insight.id 
-                          ? 'bg-blue-50 dark:bg-blue-900/20' 
+                          ? 'bg-heycontent-light-yellow dark:bg-heycontent-yellow/20' 
                           : 'hover:bg-gray-50 dark:hover:bg-gray-800'
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+                            <div className="p-2 rounded-lg bg-heycontent-light-purple text-heycontent-purple dark:bg-heycontent-purple/30 dark:text-heycontent-purple">
                               <Brain className="w-4 h-4" />
                           </div>
                           <div>
                             <h3 className="font-medium dark:text-white">{insight.opportunity.title}</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <p className="text-sm text-text-gray dark:text-gray-400">
                               Impact: {insight.opportunity.impact}
                             </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
                           <div className="text-right">
-                            <div className="text-sm font-medium text-green-600 dark:text-green-400">
+                            <div className="text-sm font-medium text-heycontent-green dark:text-heycontent-green">
                               {typeof insight.opportunity.confidence === 'number' ? `${insight.opportunity.confidence}%` : 'High'} Confidence
                             </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                            <div className="text-xs text-text-gray dark:text-gray-400">
                               <Clock className="w-3 h-3 inline mr-1" />
                               {insight.action.timeToImplement}
                             </div>
                           </div>
-                          <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform duration-200
+                          <ChevronRight className={`w-5 h-5 text-text-gray transition-transform duration-200
                             ${selectedInsight === insight.id ? 'rotate-90' : ''}`} 
                           />
                         </div>
@@ -636,7 +636,7 @@ export function AIInsightsScreen() {
                           <h4 className="font-medium dark:text-white">Why Now?</h4>
                           <ul className="space-y-2">
                             {insight.context.why?.map((reason: string, idx: number) => (
-                              <li key={`${insight.id}-why-${idx}`} className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2">
+                              <li key={`${insight.id}-why-${idx}`} className="text-sm text-text-gray dark:text-gray-400 flex items-start gap-2">
                                 <span className="mt-1">•</span>
                                 {reason}
                               </li>
@@ -654,31 +654,31 @@ export function AIInsightsScreen() {
                                 onClick={() => handleActionStep(insight, step, idx)}
                                 className="w-full flex items-center justify-between p-3 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left group"
                               >
-                                <span className="text-sm dark:text-gray-300 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">{step}</span>
-                                <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors" />
+                                <span className="text-sm dark:text-gray-300 group-hover:text-heycontent-purple dark:group-hover:text-heycontent-purple transition-colors">{step}</span>
+                                <ArrowRight className="w-4 h-4 text-text-gray group-hover:text-heycontent-purple dark:group-hover:text-heycontent-purple transition-colors" />
                               </button>
                             ))}
                           </div>
                         </div>
 
                         {/* Expected Outcome */}
-                        <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                          <h4 className="font-medium text-green-700 dark:text-green-400 mb-2">Expected Outcome</h4>
-                          <p className="text-sm text-green-600 dark:text-green-400">{insight.action.expectedOutcome}</p>
+                        <div className="bg-heycontent-light-green dark:bg-heycontent-green/20 p-4 rounded-lg">
+                          <h4 className="font-medium text-text-dark dark:text-heycontent-green mb-2">Expected Outcome</h4>
+                          <p className="text-sm text-text-dark dark:text-heycontent-green">{insight.action.expectedOutcome}</p>
                         </div>
 
                         {/* Source Details Section */}
                         <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                           <h4 className="font-medium dark:text-white mb-2">Source Details</h4>
                           {insight.context.sourceDetails?.map((detail: string, idx: number) => (
-                            <p key={idx} className="text-sm text-gray-600 dark:text-gray-400 mb-1">{detail}</p>
+                            <p key={idx} className="text-sm text-text-gray dark:text-gray-400 mb-1">{detail}</p>
                           ))}
                           {insight.context.emails && insight.context.emails.length > 0 && (
                             <div className="mt-2">
                               <h5 className="text-sm font-medium dark:text-white mb-1">Related Emails</h5>
                               <div className="max-h-32 overflow-y-auto">
                                 {insight.context.emails.map((email, idx) => (
-                                  <div key={idx} className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                  <div key={idx} className="text-xs text-text-gray dark:text-gray-400 mb-1">
                                     • {email.subject} ({new Date(email.date).toLocaleDateString()})
                                   </div>
                                 ))}
@@ -690,7 +690,7 @@ export function AIInsightsScreen() {
                               <h5 className="text-sm font-medium dark:text-white mb-1">Related Videos</h5>
                               <div className="max-h-32 overflow-y-auto">
                                 {insight.context.videos.map((video, idx) => (
-                                  <div key={idx} className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                  <div key={idx} className="text-xs text-text-gray dark:text-gray-400 mb-1">
                                     • {video.title} (Views: {video.views}, Engagement: {video.engagement})
                                   </div>
                                 ))}
@@ -699,13 +699,13 @@ export function AIInsightsScreen() {
                           )}
                         </div>
 
-                        {/* Discuss with IRIS */}
+                        {/* Discuss with Content */}
                         <button
-                          onClick={() => discussWithAI(insight)}
-                          className="flex items-center gap-2 text-sm text-purple-500 dark:text-purple-400"
+                          onClick={() => discussWithContent(insight)}
+                          className="flex items-center gap-2 text-sm text-heycontent-purple dark:text-heycontent-purple"
                         >
                           <MessageSquare className="w-4 h-4" />
-                          Discuss with IRIS
+                          Discuss with Content
                         </button>
                       </div>
                     )}
@@ -721,33 +721,33 @@ export function AIInsightsScreen() {
                         onClick={() => setSelectedInsight(selectedInsight === insight.id ? null : insight.id)}
                         className={`p-4 cursor-pointer transition-all ${
                           selectedInsight === insight.id 
-                            ? 'bg-blue-50 dark:bg-blue-900/20' 
+                            ? 'bg-heycontent-light-yellow dark:bg-heycontent-yellow/20' 
                             : 'hover:bg-gray-50 dark:hover:bg-gray-800'
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                            <div className="p-2 rounded-lg bg-heycontent-light-yellow text-black dark:bg-heycontent-yellow/30 dark:text-heycontent-yellow">
                               <Share2 className="w-4 h-4" />
                             </div>
                             <div>
                               <h3 className="font-medium dark:text-white">{insight.opportunity.title}</h3>
-                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                              <p className="text-sm text-text-gray dark:text-gray-400">
                                 Impact: {insight.opportunity.impact}
                               </p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
                             <div className="text-right">
-                              <div className="text-sm font-medium text-green-600 dark:text-green-400">
+                              <div className="text-sm font-medium text-heycontent-green dark:text-heycontent-green">
                                 {typeof insight.opportunity.confidence === 'number' ? `${insight.opportunity.confidence}%` : 'High'} Confidence
                               </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                              <div className="text-xs text-text-gray dark:text-gray-400">
                                 <Clock className="w-3 h-3 inline mr-1" />
                                 {insight.action.timeToImplement}
                               </div>
                             </div>
-                            <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${
+                            <ChevronRight className={`w-5 h-5 text-text-gray transition-transform ${
                               selectedInsight === insight.id ? 'rotate-90' : ''
                             }`} />
                           </div>
@@ -762,7 +762,7 @@ export function AIInsightsScreen() {
                             <h4 className="font-medium dark:text-white">Why Now?</h4>
                             <ul className="space-y-2">
                               {insight.context.why?.map((reason: string, idx: number) => (
-                                <li key={`${insight.id}-why-${idx}`} className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2">
+                                <li key={`${insight.id}-why-${idx}`} className="text-sm text-text-gray dark:text-gray-400 flex items-start gap-2">
                                   <span className="mt-1">•</span>
                                   {reason}
                                 </li>
@@ -780,31 +780,31 @@ export function AIInsightsScreen() {
                                   onClick={() => handleActionStep(insight, step, idx)}
                                   className="w-full flex items-center justify-between p-3 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left group"
                                 >
-                                  <span className="text-sm dark:text-gray-300 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">{step}</span>
-                                  <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors" />
+                                  <span className="text-sm dark:text-gray-300 group-hover:text-heycontent-purple dark:group-hover:text-heycontent-purple transition-colors">{step}</span>
+                                  <ArrowRight className="w-4 h-4 text-text-gray group-hover:text-heycontent-purple dark:group-hover:text-heycontent-purple transition-colors" />
                                 </button>
                               ))}
                             </div>
                           </div>
 
                           {/* Expected Outcome */}
-                          <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                            <h4 className="font-medium text-green-700 dark:text-green-400 mb-2">Expected Outcome</h4>
-                            <p className="text-sm text-green-600 dark:text-green-400">{insight.action.expectedOutcome}</p>
+                          <div className="bg-heycontent-light-green dark:bg-heycontent-green/20 p-4 rounded-lg">
+                            <h4 className="font-medium text-text-dark dark:text-heycontent-green mb-2">Expected Outcome</h4>
+                            <p className="text-sm text-text-dark dark:text-heycontent-green">{insight.action.expectedOutcome}</p>
                           </div>
 
                           {/* Source Details Section */}
                           <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                             <h4 className="font-medium dark:text-white mb-2">Source Details</h4>
                             {insight.context.sourceDetails?.map((detail: string, idx: number) => (
-                              <p key={idx} className="text-sm text-gray-600 dark:text-gray-400 mb-1">{detail}</p>
+                              <p key={idx} className="text-sm text-text-gray dark:text-gray-400 mb-1">{detail}</p>
                             ))}
                             {insight.context.emails && insight.context.emails.length > 0 && (
                               <div className="mt-2">
                                 <h5 className="text-sm font-medium dark:text-white mb-1">Related Emails</h5>
                                 <div className="max-h-32 overflow-y-auto">
                                   {insight.context.emails.map((email, idx) => (
-                                    <div key={idx} className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                    <div key={idx} className="text-xs text-text-gray dark:text-gray-400 mb-1">
                                       • {email.subject} ({new Date(email.date).toLocaleDateString()})
                                     </div>
                                   ))}
@@ -816,7 +816,7 @@ export function AIInsightsScreen() {
                                 <h5 className="text-sm font-medium dark:text-white mb-1">Related Videos</h5>
                                 <div className="max-h-32 overflow-y-auto">
                                   {insight.context.videos.map((video, idx) => (
-                                    <div key={idx} className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                    <div key={idx} className="text-xs text-text-gray dark:text-gray-400 mb-1">
                                       • {video.title} (Views: {video.views}, Engagement: {video.engagement})
                                     </div>
                                   ))}
@@ -825,13 +825,13 @@ export function AIInsightsScreen() {
                             )}
                           </div>
 
-                          {/* Discuss with IRIS */}
+                          {/* Discuss with Content */}
                           <button
-                            onClick={() => discussWithAI(insight)}
-                            className="flex items-center gap-2 text-sm text-purple-500 dark:text-purple-400"
+                            onClick={() => discussWithContent(insight)}
+                            className="flex items-center gap-2 text-sm text-heycontent-purple dark:text-heycontent-purple"
                           >
                             <MessageSquare className="w-4 h-4" />
-                            Discuss with IRIS
+                            Discuss with Content
                           </button>
                         </div>
                       )}
@@ -847,33 +847,33 @@ export function AIInsightsScreen() {
                         onClick={() => setSelectedInsight(selectedInsight === insight.id ? null : insight.id)}
                         className={`p-4 cursor-pointer transition-all ${
                           selectedInsight === insight.id 
-                            ? 'bg-blue-50 dark:bg-blue-900/20' 
+                            ? 'bg-heycontent-light-yellow dark:bg-heycontent-yellow/20'
                             : 'hover:bg-gray-50 dark:hover:bg-gray-800'
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400">
+                            <div className="p-2 rounded-lg bg-heycontent-light-green text-black dark:bg-heycontent-green/30 dark:text-heycontent-green">
                               <Target className="w-4 h-4" />
                             </div>
                             <div>
                               <h3 className="font-medium dark:text-white">{insight.opportunity.title}</h3>
-                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                              <p className="text-sm text-text-gray dark:text-gray-400">
                                 Impact: {insight.opportunity.impact}
                               </p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
                             <div className="text-right">
-                              <div className="text-sm font-medium text-green-600 dark:text-green-400">
+                              <div className="text-sm font-medium text-heycontent-green dark:text-heycontent-green">
                                 {typeof insight.opportunity.confidence === 'number' ? `${insight.opportunity.confidence}%` : 'High'} Confidence
                               </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                              <div className="text-xs text-text-gray dark:text-gray-400">
                                 <Clock className="w-3 h-3 inline mr-1" />
                                 {insight.action.timeToImplement}
                               </div>
                             </div>
-                            <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${
+                            <ChevronRight className={`w-5 h-5 text-text-gray transition-transform ${
                               selectedInsight === insight.id ? 'rotate-90' : ''
                             }`} />
                           </div>
@@ -888,7 +888,7 @@ export function AIInsightsScreen() {
                             <h4 className="font-medium dark:text-white">Why Now?</h4>
                             <ul className="space-y-2">
                               {insight.context.why?.map((reason: string, idx: number) => (
-                                <li key={`${insight.id}-why-${idx}`} className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2">
+                                <li key={`${insight.id}-why-${idx}`} className="text-sm text-text-gray dark:text-gray-400 flex items-start gap-2">
                                   <span className="mt-1">•</span>
                                   {reason}
                                 </li>
@@ -906,31 +906,31 @@ export function AIInsightsScreen() {
                                   onClick={() => handleActionStep(insight, step, idx)}
                                   className="w-full flex items-center justify-between p-3 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left group"
                                 >
-                                  <span className="text-sm dark:text-gray-300 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">{step}</span>
-                                  <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors" />
+                                  <span className="text-sm dark:text-gray-300 group-hover:text-heycontent-purple dark:group-hover:text-heycontent-purple transition-colors">{step}</span>
+                                  <ArrowRight className="w-4 h-4 text-text-gray group-hover:text-heycontent-purple dark:group-hover:text-heycontent-purple transition-colors" />
                                 </button>
                               ))}
                             </div>
                           </div>
 
                           {/* Expected Outcome */}
-                          <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                            <h4 className="font-medium text-green-700 dark:text-green-400 mb-2">Expected Outcome</h4>
-                            <p className="text-sm text-green-600 dark:text-green-400">{insight.action.expectedOutcome}</p>
+                          <div className="bg-heycontent-light-green dark:bg-heycontent-green/20 p-4 rounded-lg">
+                            <h4 className="font-medium text-text-dark dark:text-heycontent-green mb-2">Expected Outcome</h4>
+                            <p className="text-sm text-text-dark dark:text-heycontent-green">{insight.action.expectedOutcome}</p>
                           </div>
 
                           {/* Source Details Section */}
                           <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                             <h4 className="font-medium dark:text-white mb-2">Source Details</h4>
                             {insight.context.sourceDetails?.map((detail: string, idx: number) => (
-                              <p key={idx} className="text-sm text-gray-600 dark:text-gray-400 mb-1">{detail}</p>
+                              <p key={idx} className="text-sm text-text-gray dark:text-gray-400 mb-1">{detail}</p>
                             ))}
                             {insight.context.emails && insight.context.emails.length > 0 && (
                               <div className="mt-2">
                                 <h5 className="text-sm font-medium dark:text-white mb-1">Related Emails</h5>
                                 <div className="max-h-32 overflow-y-auto">
                                   {insight.context.emails.map((email, idx) => (
-                                    <div key={idx} className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                    <div key={idx} className="text-xs text-text-gray dark:text-gray-400 mb-1">
                                       • {email.subject} ({new Date(email.date).toLocaleDateString()})
                                     </div>
                                   ))}
@@ -942,7 +942,7 @@ export function AIInsightsScreen() {
                                 <h5 className="text-sm font-medium dark:text-white mb-1">Related Videos</h5>
                                 <div className="max-h-32 overflow-y-auto">
                                   {insight.context.videos.map((video, idx) => (
-                                    <div key={idx} className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                    <div key={idx} className="text-xs text-text-gray dark:text-gray-400 mb-1">
                                       • {video.title} (Views: {video.views}, Engagement: {video.engagement})
                                     </div>
                                   ))}
@@ -951,13 +951,13 @@ export function AIInsightsScreen() {
                             )}
                           </div>
 
-                          {/* Discuss with IRIS */}
+                          {/* Discuss with Content */}
                           <button
-                            onClick={() => discussWithAI(insight)}
-                            className="flex items-center gap-2 text-sm text-purple-500 dark:text-purple-400"
+                            onClick={() => discussWithContent(insight)}
+                            className="flex items-center gap-2 text-sm text-heycontent-purple dark:text-heycontent-purple"
                           >
                             <MessageSquare className="w-4 h-4" />
-                            Discuss with IRIS
+                            Discuss with Content
                           </button>
                         </div>
                       )}

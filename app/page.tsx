@@ -6,7 +6,6 @@ import { ArrowRight, Brain, Target, ChartBar, ChevronLeft, ChevronRight } from '
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { HeroSection } from './_components/hero-section'
-import { QuantumBackground } from './_components/quantum-background'
 import Link from 'next/link'
 
 const featureCards = [
@@ -50,7 +49,6 @@ export default function LandingPage() {
   return (
     <div className="overflow-x-hidden">
       <div className="relative">
-        <QuantumBackground />
         <HeroSection />
       </div>
       
@@ -226,7 +224,7 @@ export default function LandingPage() {
                 onClick={() => router.push('/register')}
                 className="mt-8 bg-blue-500 text-white px-6 py-3 rounded-xl hover:bg-blue-600 transition-colors inline-flex items-center gap-2"
               >
-                Try AVA IRIS
+                Try HeyContent
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>

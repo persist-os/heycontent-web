@@ -14,7 +14,7 @@ export class VideoProcessor implements IntentProcessor {
     youtubeMemoryManager: YouTubeMemoryManagerImpl
   ) {
     this.youtubeMemoryManager = youtubeMemoryManager;
-    this.youtubeService = new YouTubeService(userId);
+    this.youtubeService = new YouTubeService(userId, youtubeMemoryManager.getRag());
   }
 
   subProcessors = {

@@ -7,11 +7,11 @@ export const sendVerificationEmail = async (email: string, token: string) => {
 
   try {
     await resend.emails.send({
-      from: 'AVA IRIS <hello@avairis.co>',
+      from: 'HeyContent <hello@heycontent.co>',
       to: email,
       subject: 'Verify your email address',
       html: `
-        <h1>Welcome to AVA IRIS!</h1>
+        <h1>Welcome to HeyContent!</h1>
         <p>Click the link below to verify your email address:</p>
         <a href="${confirmLink}">Verify Email</a>
         <p>If you didn't request this email, you can safely ignore it.</p>
@@ -28,7 +28,7 @@ export const sendPasswordResetEmail = async (email: string, token: string) => {
 
   try {
     await resend.emails.send({
-      from: 'AVA IRIS <hello@avairis.co>',
+      from: 'HeyContent <hello@heycontent.co>',
       to: email,
       subject: 'Reset your password',
       html: `

@@ -196,7 +196,7 @@ const PartnershipsScreen = () => {
     return (
       <button
         onClick={scrollToTop}
-        className={`fixed bottom-8 right-8 p-3 rounded-full bg-blue-500 text-white shadow-lg 
+        className={`fixed bottom-8 right-8 p-3 rounded-full bg-purple-500 text-white shadow-lg 
           transition-opacity duration-200 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       >
         <ArrowUpRight className="w-6 h-6" />
@@ -312,7 +312,7 @@ const PartnershipsScreen = () => {
             </button>
 
             {/* Sync Inbox Button */}
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">
+            <button className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-xl hover:bg-purple-600">
               <Mail className="w-4 h-4" />
               Sync Inbox
             </button>
@@ -374,7 +374,7 @@ const PartnershipsScreen = () => {
                             </p>
                           </div>
                           <div className="text-right">
-                            <div className="text-sm font-medium text-blue-500">
+                            <div className="text-sm font-medium text-purple-500">
                               {partnership.progress ?? 0}% Complete
                             </div>
                             <div className="text-sm text-gray-500 mt-1">
@@ -384,7 +384,7 @@ const PartnershipsScreen = () => {
                         </div>
                         <div className="mt-3 h-2 bg-gray-100 rounded-full">
                           <div 
-                            className="h-2 bg-blue-500 rounded-full"
+                            className="h-2 bg-purple-500 rounded-full"
                             style={{ width: `${partnership.progress ?? 0}%` }}
                           />
                         </div>
@@ -448,7 +448,7 @@ const PartnershipsScreen = () => {
                           <div>
                             <div className="flex items-center gap-2">
                               <h3 className="font-medium">{suggestion.brand}</h3>
-                              <Badge className="bg-blue-100 text-blue-700">
+                              <Badge className="bg-purple-100 text-purple-700">
                                 AI Suggested
                               </Badge>
                             </div>
@@ -511,7 +511,7 @@ const PartnershipsScreen = () => {
                         <div key={i} className="text-sm space-y-1">
                           <div className="font-medium">{contact.name}</div>
                           <div className="text-gray-600">{contact.role}</div>
-                          <div className="text-blue-500">{contact.email}</div>
+                          <div className="text-purple-500">{contact.email}</div>
                         </div>
                       ))}
                     </div>
@@ -532,7 +532,7 @@ const PartnershipsScreen = () => {
                     </div>
 
                     <div className="flex gap-2">
-                      <button className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                      <button className="flex-1 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600">
                         View Contract
                       </button>
                       <button className="flex-1 px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200">

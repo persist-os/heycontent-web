@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/app/auth';
 import { YouTubeService } from '@/app/lib/services/youtube';
 import prisma from '@/app/lib/prisma';
+import { RAGSystem } from '@/app/lib/rag';
 
 type YouTubeMetadata = {
   channelId: string;
@@ -68,7 +69,8 @@ export async function GET() {
       ]
     });
 
-    const youtubeService = new YouTubeService(session.user.id);
+    const rag = new RAGSystem();
+    const youtubeService = new YouTubeService(session.user.id, rag);
     const connectionTest = await youtubeService.testConnection(socialAccount.metadata.channelId);
 
     if (!connectionTest.success) {

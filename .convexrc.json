@@ -1,0 +1,26 @@
+{
+  "bundler": {
+    "platform": "node",
+    "external": [
+      "@sentry/node",
+      "@auth0/auth0-react",
+      "@modelcontextprotocol/sdk/server/index.js",
+      "@modelcontextprotocol/sdk/server/stdio.js",
+      "@modelcontextprotocol/sdk/types.js",
+      "path",
+      "fs",
+      "crypto",
+      "child_process",
+      "os",
+      "url",
+      "http",
+      "https",
+      "stream",
+      "util",
+      "buffer",
+      "querystring",
+      "zlib",
+      "events"
+    ]
+  }
+} 

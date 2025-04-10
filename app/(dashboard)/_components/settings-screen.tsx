@@ -39,14 +39,31 @@ const SettingsScreen = () => {
     setIsFirstTimeSetup(window.location.search.includes('newUser=true'))
   }, [])
 
+  const fetchPersonaData = async () => {
+    try {
+      const response = await fetch('/api/user/profile')
+      const data = await response.json()
+      
+      if (response.ok && data.persona) {
+        setFormData(prev => ({
+          ...prev,
+          currentPersona: data.persona.currentState?.description || '',
+          futureVision: data.persona.aspirations?.description || ''
+        }))
+      }
+    } catch (error) {
+      console.error('Error fetching persona:', error)
+    }
+  }
+
   useEffect(() => {
     if (session?.user) {
-      setFormData({
+      setFormData(prev => ({
+        ...prev,
         name: session.user.name || '',
-        email: session.user.email || '',
-        currentPersona: session.user.currentPersona || '',
-        futureVision: session.user.futureVision || ''
-      })
+        email: session.user.email || ''
+      }))
+      fetchPersonaData()
     }
   }, [session])
 
@@ -124,12 +141,12 @@ const SettingsScreen = () => {
         throw new Error(data.error || 'Failed to update profile')
       }
 
-      // Update form data
+      // Update form data with the response
       setFormData(prev => ({
         ...prev,
-        name: data.user.name,
-        currentPersona: data.user.currentPersona,
-        futureVision: data.user.futureVision
+        name: data.user.name || '',
+        currentPersona: data.persona?.currentState?.description || '',
+        futureVision: data.persona?.aspirations?.description || ''
       }))
 
       // Update session
@@ -137,8 +154,8 @@ const SettingsScreen = () => {
         user: {
           ...session?.user,
           name: data.user.name,
-          currentPersona: data.user.currentPersona,
-          futureVision: data.user.futureVision
+          currentPersona: data.persona?.currentState?.description || '',
+          futureVision: data.persona?.aspirations?.description || ''
         }
       })
 
@@ -155,8 +172,8 @@ const SettingsScreen = () => {
     <div className="h-full min-h-screen bg-background">
       <div className="container max-w-6xl mx-auto py-6 space-y-6">
         {isFirstTimeSetup && (
-          <div className="mb-6 bg-blue-50 p-4 rounded-lg">
-            <h2 className="text-lg font-semibold mb-2">Welcome to AVA IRIS! 🎉</h2>
+          <div className="mb-6 bg-purple-50 p-4 rounded-lg">
+            <h2 className="text-lg font-semibold mb-2">Welcome to HeyContent! 🎉</h2>
             <p className="text-gray-600 mb-4">Intelligent Relationship and Insight System</p>
             <ol className="list-decimal list-inside space-y-2 text-gray-600">
               <li>Complete your profile information</li>
@@ -264,7 +281,7 @@ const SettingsScreen = () => {
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="text-sm font-medium">AI Persona Understanding</h3>
-                          <p className="text-sm text-gray-600">Help IRIS understand your journey and goals</p>
+                          <p className="text-sm text-gray-600">Help Content understand your journey and goals</p>
                         </div>
                         <Switch 
                           checked={showPersonaFields}
@@ -340,7 +357,7 @@ const SettingsScreen = () => {
                     </div>
                     <Switch />
                   </div>
-                  <button className="text-blue-500 text-sm">Change Password</button>
+                  <button className="text-purple-500 text-sm">Change Password</button>
                 </CardContent>
               </Card>
             </div>
@@ -423,7 +440,7 @@ const SettingsScreen = () => {
                       <h3 className="font-medium">Export All Data</h3>
                       <p className="text-sm text-gray-600">Download all your data in JSON format</p>
                     </div>
-                    <button className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center gap-2">
+                    <button className="px-4 py-2 bg-purple-500 text-white rounded-lg flex items-center gap-2">
                       <Download className="w-4 h-4" /> Export
                     </button>
                   </div>
@@ -447,7 +464,7 @@ const SettingsScreen = () => {
                       <h3 className="font-medium">Data Collection</h3>
                       <p className="text-sm text-gray-600">Manage what data is collected and analyzed</p>
                     </div>
-                    <button className="text-blue-500">Configure</button>
+                    <button className="text-purple-500">Configure</button>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>

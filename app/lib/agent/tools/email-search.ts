@@ -124,21 +124,58 @@ export class EmailSearchTool extends BaseTool {
         topics: this.extractKeyTopics(text),
         requirements: this.extractRequirements(text),
         type: this.detectEmailType(text),
-        metrics: this.extractMetrics(text)
+        metrics: this.extractMetrics(text),
+        sentiment: this.extractSentiment(text),
+        actions: this.extractActions(text)
       };
     });
 
+    // Group by type for better analysis
+    const groupedByType = emailTopics.reduce((acc, email) => {
+      if (!acc[email.type]) {
+        acc[email.type] = [];
+      }
+      acc[email.type].push(email);
+      return acc;
+    }, {} as Record<string, typeof emailTopics[0][]>);
+
     // Format the analysis
-    const analysis = emailTopics.map((email, index) => `
+    const typeAnalysis = Object.entries(groupedByType).map(([type, emails]) => `
+${type} Emails (${emails.length}):
+${emails.map((email, index) => `
 Email ${index + 1} (${email.date.toLocaleDateString()}):
-Type: ${email.type}
-Key Topics: ${email.topics.join(', ')}
+Topics: ${email.topics.join(', ') || 'None specified'}
 Requirements: ${email.requirements.join(', ') || 'None specified'}
 Metrics: ${Object.entries(email.metrics).map(([k, v]) => `${k}: ${v}`).join(', ') || 'None specified'}
+Sentiment: ${email.sentiment || 'Neutral'}
+Actions: ${email.actions.join(', ') || 'None specified'}
+`).join('\n')}
 `).join('\n');
 
+    // Calculate overall statistics
+    const stats = {
+      totalEmails: emails.length,
+      averageMetrics: this.calculateAverageMetrics(emailTopics),
+      commonTopics: this.findCommonElements(emailTopics.map(e => e.topics)),
+      commonRequirements: this.findCommonElements(emailTopics.map(e => e.requirements)),
+      sentimentBreakdown: this.calculateSentimentBreakdown(emailTopics)
+    };
+
     return `Here's my analysis of the email content:
-${analysis}
+
+OVERVIEW:
+Total Emails: ${stats.totalEmails}
+Common Topics: ${stats.commonTopics.join(', ')}
+Overall Sentiment: ${this.determineOverallSentiment(stats.sentimentBreakdown)}
+
+DETAILED ANALYSIS BY TYPE:
+${typeAnalysis}
+
+METRICS SUMMARY:
+${Object.entries(stats.averageMetrics).map(([k, v]) => `Average ${k}: ${v}`).join('\n')}
+
+SENTIMENT BREAKDOWN:
+${Object.entries(stats.sentimentBreakdown).map(([k, v]) => `${k}: ${v}%`).join('\n')}
 
 To fully compare this with your content, I would need access to:
 1. Your content analytics
@@ -270,8 +307,6 @@ This would allow me to provide a detailed alignment analysis between the email r
 
       // Check for cross-platform analysis questions
       const isCrossPlatformQuery = /align|compare|match|fit|work with|similar to|difference|between/i.test(normalizedQuery);
-      const isTemporalQuery = normalizedQuery.includes('/') || /yesterday|today|tomorrow|\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2}/i.test(normalizedQuery);
-      
       if (isCrossPlatformQuery && this.activeEmailContext) {
         return {
           success: true,
@@ -282,6 +317,8 @@ This would allow me to provide a detailed alignment analysis between the email r
         };
       }
 
+      // Check for temporal queries
+      const isTemporalQuery = normalizedQuery.includes('/') || /yesterday|today|tomorrow|\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2}/i.test(normalizedQuery);
       if (isTemporalQuery) {
         const dateMatch = normalizedQuery.match(/(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/);
         if (dateMatch) {
@@ -307,49 +344,6 @@ This would allow me to provide a detailed alignment analysis between the email r
             formattedString: this.formatPersonSearchResults(this.activeEmailContext.emails, normalizedQuery, true),
             source: 'context'
           };
-        }
-      }
-
-      // Check previous searches first
-      const previousSearches = await this.emailContextManager.getPreviousSearches();
-      const relevantPreviousSearch = previousSearches.find(search => {
-        // Check if this is a search for the same person/email
-        const currentName = normalizedQuery.match(/(?:emails? (?:with|from|to)\s+)(\w+)/i)?.[1]?.toLowerCase();
-        const previousName = search.query.match(/(?:emails? (?:with|from|to)\s+)(\w+)/i)?.[1]?.toLowerCase();
-        
-        // If we have a name match and the previous search was successful
-        return currentName && 
-               previousName && 
-               currentName === previousName && 
-               search.results.length > 0;
-      });
-
-      // If we found a relevant previous search, use its results first
-      if (relevantPreviousSearch) {
-        // Extract the email address from the previous successful search
-        const emailAddress = relevantPreviousSearch.results[0].from.match(/<(.+?)>/)?.[1] || 
-                           relevantPreviousSearch.results[0].from;
-        
-        // Use the exact email address for the new search
-        const exactSearchQuery = `from:${emailAddress}`;
-        
-        try {
-          const apiResults = await this.gmailService.searchEmails(
-            exactSearchQuery.trim(),
-            args.maxResults
-          );
-
-          if (apiResults.length > 0) {
-            return {
-              success: true,
-              results: apiResults,
-              resultCount: apiResults.length,
-              formattedString: this.formatPersonSearchResults(apiResults, normalizedQuery, true),
-              source: 'api'
-            };
-          }
-        } catch (error) {
-          console.error('Exact email search failed, falling back to normal search:', error);
         }
       }
 
@@ -388,17 +382,33 @@ This would allow me to provide a detailed alignment analysis between the email r
       const nameMatch = normalizedQuery.match(/(?:emails? (?:with|from|to)\s+)(\w+(?:\s+\w+)*)/i);
       const personName = nameMatch ? nameMatch[1].trim() : null;
       
-      // Build search query string
+      // Build search query string - Simplified and more precise
       let finalSearchQuery = '';
       
       if (personName) {
-        // Get all possible variations of the name
-        const nameVariations = this.generateNameVariations(personName);
+        // For person searches, focus on exact matches in from/to fields
+        const exactName = personName.toLowerCase();
+        finalSearchQuery = `(from:${exactName} OR to:${exactName})`;
         
-        // Create a search query that looks for the name variations in from/to fields
-        finalSearchQuery = `(${nameVariations.map(name => 
-          `from:*${name}* OR to:*${name}*`
-        ).join(' OR ')})`;
+        // If we have a full name, also try email pattern matching
+        if (exactName.includes(' ')) {
+          const [firstName, lastName] = exactName.split(' ');
+          finalSearchQuery += ` OR from:${firstName}.${lastName}* OR from:${firstName}${lastName}*`;
+        }
+
+        // Check previous searches for exact email matches
+        const previousSearches = await this.emailContextManager.getPreviousSearches();
+        const relevantPreviousSearch = previousSearches.find(search => {
+          const currentName = normalizedQuery.match(/(?:emails? (?:with|from|to)\s+)(\w+)/i)?.[1]?.toLowerCase();
+          const previousName = search.query.match(/(?:emails? (?:with|from|to)\s+)(\w+)/i)?.[1]?.toLowerCase();
+          return currentName && previousName && currentName === previousName && search.results.length > 0;
+        });
+
+        if (relevantPreviousSearch) {
+          const emailAddress = relevantPreviousSearch.results[0].from.match(/<(.+?)>/)?.[1] || 
+                             relevantPreviousSearch.results[0].from;
+          finalSearchQuery += ` OR from:${emailAddress}`;
+        }
       }
       
       if (args.date) {
@@ -416,12 +426,30 @@ This would allow me to provide a detailed alignment analysis between the email r
         finalSearchQuery += ` ${remainingTerms}`;
       }
 
-      // Use the new executeSearchStrategy method
-      return await this.executeSearchStrategy(
+      // Use the executeSearchStrategy method with the simplified query
+      const result = await this.executeSearchStrategy(
         personName ? 'person_search' : 'general_search',
         finalSearchQuery || normalizedQuery,
         args
       );
+
+      // Update active context with new results
+      if (result.success && result.results.length > 0) {
+        this.activeEmailContext = {
+          emails: result.results,
+          lastQuery: normalizedQuery,
+          timestamp: Date.now()
+        };
+
+        // Cache the results
+        searchResultCache.set(normalizedQuery, result.results, {
+          sender: args.sender,
+          date: args.date,
+          maxResults: args.maxResults
+        });
+      }
+
+      return result;
     } catch (error) {
       const classifiedError = this.classifyError(error);
       console.error('Email search failed:', classifiedError);
@@ -462,20 +490,37 @@ This would allow me to provide a detailed alignment analysis between the email r
       return this.formatAdviceResponse(results, query);
     }
 
-    // Default format for general searches
-    const summary = isPersonSearch
-      ? `Found ${results.length} email${results.length === 1 ? '' : 's'} matching your search:`
-      : `Here are the ${results.length} most relevant email${results.length === 1 ? '' : 's'}:`;
+    // For person searches, provide a focused summary
+    if (isPersonSearch) {
+      const summary = `Found ${results.length} relevant email${results.length === 1 ? '' : 's'}:`;
+      
+      const formattedEmails = results
+        .sort((a, b) => b.date.getTime() - a.date.getTime()) // Most recent first
+        .map((email, index) => {
+          const date = email.date instanceof Date 
+            ? email.date.toLocaleDateString()
+            : new Date(email.date).toLocaleDateString();
+
+          return `${index + 1}. [${date}] ${email.subject}
+   From: ${email.from.split('<')[0].trim()}`;
+        })
+        .join('\n\n');
+
+      return `${summary}\n\n${formattedEmails}`;
+    }
+
+    // For general searches, keep the existing format
+    const summary = `Here are the ${results.length} most relevant email${results.length === 1 ? '' : 's'}:`;
 
     const formattedEmails = results.map((email, index) => {
       const date = email.date instanceof Date 
         ? email.date.toLocaleDateString()
         : new Date(email.date).toLocaleDateString();
 
-      return `${index + 1}. Subject: ${email.subject}
-• From: ${email.from}
-• Date: ${date}
-• Snippet: ${email.snippet || (email as any).body?.substring(0, 100) || 'No preview available'}`;
+      return `${index + 1}. **Subject:** ${email.subject}
+   - **Date:** ${date}
+   - **From:** ${email.from}
+   - **Summary:** ${(email as any).analysis?.summary || email.body?.substring(0, 200) || 'No summary available'}`;
     }).join('\n\n');
 
     return `${summary}\n\n${formattedEmails}`;
@@ -498,9 +543,10 @@ This would allow me to provide a detailed alignment analysis between the email r
 
   private formatContentResponse(results: (EmailMessage | PartnershipEmail)[]): string {
     return results.map((email, index) => {
-      return `Email ${index + 1}:
-Subject: ${email.subject}
-Content: ${email.snippet || (email as any).body?.substring(0, 200) || 'No preview available'}`;
+      return `${index + 1}. **Subject:** ${email.subject}
+   - **From:** ${email.from}
+   - **Summary:** ${(email as any).analysis?.summary || email.body?.substring(0, 200) || 'No summary available'}
+   - **Key Points:** ${(email as any).analysis?.key_points?.join(', ') || 'No key points available'}`;
     }).join('\n\n');
   }
 
@@ -592,7 +638,7 @@ Let me analyze this for you...
     // Build the summary sections
     const summary: string[] = [];
 
-    // 1. Person-based Overview (Original Functionality)
+    // 1. Person-based Overview
     summary.push('COMMUNICATION OVERVIEW BY PERSON');
     emailsByPerson.forEach((data, person) => {
       const displayName = person.split('@')[0];
@@ -606,11 +652,10 @@ Let me analyze this for you...
       );
     });
 
-    // 2. Thread-based Analysis (Enhanced Functionality)
+    // 2. Thread-based Analysis
     const mainThread = Array.from(threadMap.entries())
       .sort((a, b) => b[1].length - a[1].length)[0];
 
-    // Get date range
     const allDates = emails.map(e => e.date.getTime());
     const dateRange = {
       earliest: new Date(Math.min(...allDates)),
@@ -621,6 +666,7 @@ Let me analyze this for you...
       'THREAD ANALYSIS',
       `Time Range: ${dateRange.earliest.toLocaleDateString()} - ${dateRange.latest.toLocaleDateString()}`,
       `Total Threads: ${threadMap.size}`,
+      `Most Active Thread: ${mainThread ? this.extractEmailTopic(mainThread[1][0].subject) : 'N/A'} (${mainThread ? mainThread[1].length : 0} messages)`,
       ''
     );
 
@@ -743,11 +789,14 @@ Let me analyze this for you...
   }
 
   private extractEmailTopic(subject: string): string {
+    if (!subject) return 'No Subject';
     return subject
-      .replace(/^Re:\s*/, '')
-      .split('-')
-      .pop()!
-      .trim();
+      .replace(/^Re:\s*/, '')  // Remove 'Re:' prefix
+      .replace(/^Fwd:\s*/, '') // Remove 'Fwd:' prefix
+      .replace(/\[.*?\]/g, '') // Remove square bracket content
+      .split('-')              // Split by dash
+      .pop()!                  // Get last part (most specific)
+      .trim();                 // Clean up whitespace
   }
 
   private determineEmailStatus(text: string): string {
@@ -755,6 +804,7 @@ Let me analyze this for you...
     if (text.match(/in progress|working|ongoing/i)) return 'In Progress';
     if (text.match(/pending|awaiting|waiting/i)) return 'Pending';
     if (text.match(/approved|accepted|confirmed/i)) return 'Approved';
+    if (text.match(/rejected|declined|denied/i)) return 'Rejected';
     if (text.match(/delayed|postponed|rescheduled/i)) return 'Delayed';
     return 'Active';
   }
@@ -769,12 +819,15 @@ Let me analyze this for you...
       .forEach(email => {
         const text = email.snippet || email.body;
         
-        // Look for action items
+        // Look for action items with improved patterns
         const actionPatterns = [
-          /(?:need|should|must) to ([^.,]+)/i,
-          /please ([^.,]+)/i,
-          /pending:? ([^.,]+)/i,
-          /todo:? ([^.,]+)/i
+          /(?:need|should|must) to ([^.!?]+)/i,
+          /please ([^.!?]+)/i,
+          /pending:? ([^.!?]+)/i,
+          /todo:? ([^.!?]+)/i,
+          /(?:will|going to) ([^.!?]+)/i,
+          /action required:? ([^.!?]+)/i,
+          /follow[- ]?up:? ([^.!?]+)/i
         ];
 
         actionPatterns.forEach(pattern => {
@@ -809,6 +862,8 @@ Let me analyze this for you...
   }
 
   private createBriefSummary(text: string): string {
+    if (!text) return 'No content available';
+    
     // Remove any HTML tags and normalize whitespace
     const cleanText = text.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
     
@@ -869,6 +924,7 @@ Let me analyze this for you...
       .replace(/^(please|kindly)\s*/i, '')
       .replace(/^hope (this|you|everything).*?,\s*/i, '')
       .replace(/best regards.*$/i, '')
+      .substring(0, 200)  // Limit length
       .trim();
   }
 
@@ -882,12 +938,12 @@ Let me analyze this for you...
   private extractActions(text: string): string[] {
     const actions: string[] = [];
     const patterns = [
-      { regex: /(?:need|should|must) to ([^.,]+)/i, prefix: 'Needs to' },
-      { regex: /please ([^.,]+)/i, prefix: 'Requested to' },
-      { regex: /(?:will|going to) ([^.,]+)/i, prefix: 'Will' },
-      { regex: /(?:can you|could you) ([^.,]+)/i, prefix: 'Requested to' },
-      { regex: /(?:have|has) (?:sent|shared|provided) ([^.,]+)/i, prefix: 'Shared' },
-      { regex: /(?:reviewing|looking at|checking) ([^.,]+)/i, prefix: 'Reviewing' }
+      { regex: /(?:need|should|must) to ([^.!?]+)/i, prefix: 'Needs to' },
+      { regex: /please ([^.!?]+)/i, prefix: 'Requested to' },
+      { regex: /(?:will|going to) ([^.!?]+)/i, prefix: 'Will' },
+      { regex: /(?:can you|could you) ([^.!?]+)/i, prefix: 'Requested to' },
+      { regex: /(?:have|has) (?:sent|shared|provided) ([^.!?]+)/i, prefix: 'Shared' },
+      { regex: /(?:reviewing|looking at|checking) ([^.!?]+)/i, prefix: 'Reviewing' }
     ];
 
     patterns.forEach(({ regex, prefix }) => {
@@ -927,7 +983,10 @@ Let me analyze this for you...
       { regex: /pending|awaiting|waiting/i, status: 'Pending' },
       { regex: /approved|accepted|confirmed/i, status: 'Approved' },
       { regex: /rejected|declined|denied/i, status: 'Rejected' },
-      { regex: /delayed|postponed|rescheduled/i, status: 'Delayed' }
+      { regex: /delayed|postponed|rescheduled/i, status: 'Delayed' },
+      { regex: /cancelled|canceled|abandoned/i, status: 'Cancelled' },
+      { regex: /blocked|stuck|impeded/i, status: 'Blocked' },
+      { regex: /reviewing|under review|in review/i, status: 'Under Review' }
     ];
 
     for (const pattern of statusPatterns) {
@@ -936,7 +995,7 @@ Let me analyze this for you...
       }
     }
 
-    return '';
+    return 'Active';
   }
 
   private generateDetailedView(emails: (EmailMessage | PartnershipEmail)[]): string {
@@ -1170,5 +1229,60 @@ Snippet: ${email.snippet}
 
       throw classifiedError;
     }
+  }
+
+  private calculateAverageMetrics(emails: any[]): Record<string, number> {
+    const metrics = {} as Record<string, number[]>;
+    
+    emails.forEach(email => {
+      Object.entries(email.metrics).forEach(([key, value]) => {
+        if (!metrics[key]) metrics[key] = [];
+        metrics[key].push(parseFloat(value as string) || 0);
+      });
+    });
+
+    return Object.entries(metrics).reduce((acc, [key, values]) => {
+      acc[key] = values.reduce((sum, val) => sum + val, 0) / values.length;
+      return acc;
+    }, {} as Record<string, number>);
+  }
+
+  private findCommonElements<T>(arrays: T[][]): T[] {
+    if (arrays.length === 0) return [];
+    const counts = new Map<T, number>();
+    
+    arrays.forEach(arr => {
+      new Set(arr).forEach(item => {
+        counts.set(item, (counts.get(item) || 0) + 1);
+      });
+    });
+
+    return Array.from(counts.entries())
+      .filter(([_, count]) => count > arrays.length / 2)
+      .map(([item]) => item)
+      .sort((a, b) => counts.get(b)! - counts.get(a)!);
+  }
+
+  private calculateSentimentBreakdown(emails: any[]): Record<string, number> {
+    const total = emails.length;
+    const counts = emails.reduce((acc, email) => {
+      const sentiment = email.sentiment || 'neutral';
+      acc[sentiment] = (acc[sentiment] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(counts).reduce((acc, [sentiment, count]) => {
+      acc[sentiment] = Math.round((count as number / total) * 100);
+      return acc;
+    }, {} as Record<string, number>);
+  }
+
+  private determineOverallSentiment(breakdown: Record<string, number>): string {
+    const entries = Object.entries(breakdown);
+    const max = entries.reduce((acc, [sentiment, percentage]) => 
+      percentage > acc.percentage ? { sentiment, percentage } : acc,
+      { sentiment: 'neutral', percentage: 0 }
+    );
+    return max.sentiment;
   }
 } 

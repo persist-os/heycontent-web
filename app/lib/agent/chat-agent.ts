@@ -53,10 +53,16 @@ interface EmailSearchIntent {
   date?: string;
 }
 
-export interface ChatAgentContext extends AgentContext {
+// Base context interface
+interface BaseContext {
   userId: string;
   conversationId: string;
-  currentTopic?: string;
+}
+
+// Chat agent specific context
+export interface ChatAgentContext extends BaseContext, AgentContext {
+  conversationState?: ConversationState;
+  currentTopic: string;
   lastTopic?: string;
   topicDepth?: number;
   contextStack: string[];
@@ -68,7 +74,7 @@ export interface ChatAgentContext extends AgentContext {
     context: string;
   };
   userIntent: {
-    type: 'direct_inquiry' | 'exploratory' | 'action_needed' | 'reflection' | 'validation' | 'creative' | 'strategic' | 'emotional_support' | 'greeting' | 'email_search';
+    type: 'clarification' | 'direct_inquiry' | 'email_search' | 'follow_up' | 'exploratory' | 'action_needed' | 'reflection' | 'validation' | 'creative' | 'strategic' | 'emotional_support' | 'greeting';
     confidence: number;
     sender?: string;
     date?: string;
@@ -88,7 +94,6 @@ export interface ChatAgentContext extends AgentContext {
     depthProgression: number[];
     engagementSignals: ('high' | 'medium' | 'low')[];
   };
-  conversationState?: ConversationState;
   previousMessages?: Message[];
   lastResponse?: string;
   emailSearchResults?: (EmailMessage | PartnershipEmail)[];
@@ -108,6 +113,10 @@ export interface ChatAgentContext extends AgentContext {
       }
     };
   };
+  memoryResults?: any[];
+  messageContext?: MessageContext;
+  enhancedIntent?: MessageIntent;
+  intent?: MessageIntent;
 }
 
 interface EmotionalState {
@@ -160,15 +169,27 @@ interface IntentPatterns {
   email_search: IntentPattern;
 }
 
+type EngagementLevel = 'high' | 'medium' | 'low';
+
 interface ConversationState {
   currentTopic: string;
   lastTopic: string;
   topicDepth: number;
-  contextStack: string[];
-  pendingActions: string[];
+  contextStack: any[];
+  pendingActions: any[];
   lastResponseType: 'answer' | 'clarification' | 'followUp' | 'suggestion';
-  emotionalState: EmotionalState;
-  userIntent: UserIntent;
+  emotionalState: {
+    primary: 'neutral' | 'excited' | 'frustrated' | 'uncertain' | 'curious' | 'reflective' | 'stressed' | 'optimistic';
+    intensity: number;
+    context: string;
+  };
+  userIntent: {
+    type: IntentType;
+    confidence: number;
+    sender?: string;
+    date?: string;
+    subtype?: string;
+  };
   focusMetrics: {
     topicChanges: number;
     clarificationRequests: number;
@@ -181,19 +202,14 @@ interface ConversationState {
     naturalBreaks: number;
     topicTransitions: string[];
     depthProgression: number[];
-    engagementSignals: ('high' | 'medium' | 'low')[];
+    engagementSignals: EngagementLevel[];
   };
-  mentionedEntities?: {
+  mentionedEntities: {
     names: Set<string>;
     dates: Set<string>;
     topics: Set<string>;
   };
-  queryContext?: {
-    timestamp: number;
-    intent: UserIntent;
-    entities: { names: string[]; dates: string[]; topics: string[] };
-    topic: string;
-  }[];
+  queryContext: any[];
 }
 
 interface EmailContext {
@@ -349,6 +365,48 @@ interface ChatAnalysis {
   }>;
 }
 
+interface AgentResult {
+  output?: {
+    content?: string;
+    insights?: any[];
+    suggestions?: any[];
+  };
+  conversationState?: ConversationState;
+  suggestions?: any[];
+  persona?: any;
+}
+
+interface MessageContext {
+  sentiment?: string;
+  topics?: string[];
+  entities?: any;
+  confidence?: number;
+}
+
+interface ProcessMessageParams extends ChatAgentContext {
+  messageContext?: MessageContext;
+  intent?: MessageIntent;
+}
+
+interface ContextCheckResult {
+  hasAnswer: boolean;
+  answer?: string;
+  entities?: {
+    names: Set<string>;
+    emails: Set<string>;
+    dates: Set<string>;
+    topics: Set<string>;
+    participants?: {
+      from: Set<string>;
+      to: Set<string>;
+      cc: Set<string>;
+      bcc: Set<string>;
+    };
+    threadParticipants?: Set<string>;
+  };
+  confidence?: number;
+}
+
 export class ChatAgent extends BaseAgent {
   protected model: ChatOpenAI;
   protected platformStatus: PlatformStatus[];
@@ -377,6 +435,7 @@ export class ChatAgent extends BaseAgent {
     this.context = { 
       userId,
       conversationId: this.getConversationId(),
+      currentTopic: '',
       contextStack: [],
       pendingActions: [],
       lastResponseType: 'answer',
@@ -443,7 +502,13 @@ export class ChatAgent extends BaseAgent {
         topicTransitions: [],
         depthProgression: [],
         engagementSignals: []
-      }
+      },
+      mentionedEntities: {
+        names: new Set<string>(),
+        dates: new Set<string>(),
+        topics: new Set<string>()
+      },
+      queryContext: []
     };
     this.emailContextManager = new EmailContextManager(userId);
     this.memorySystem = new AdvancedMemorySystem(rag);
@@ -465,7 +530,7 @@ export class ChatAgent extends BaseAgent {
     this.context = { ...this.context, ...newContext };
   }
 
-  protected systemPrompt = `You are AVA IRIS, an advanced AI assistant specializing in content strategy, business growth, and creator success. You combine user-specific context with broad market intelligence to provide actionable insights.
+  protected systemPrompt = `You are HeyContent, an advanced AI assistant specializing in content strategy, business growth, and creator success. You combine user-specific context with broad market intelligence to provide actionable insights.
 
 Your communication style adapts based on the user's emotional state and intent:
 
@@ -997,7 +1062,7 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
 
   private async handleVideoQuery(input: string, context: ChatAgentContext): Promise<any> {
     try {
-      const youtubeService = new YouTubeService(this.userId);
+      const youtubeService = new YouTubeService(this.userId, this.memorySystem.getRag());
       
       // Extract time-related keywords
       const timeMatch = input.match(/last (week|month|year)|this (week|month|year)|(\d+) (days?|weeks?|months?|years?) ago/i);
@@ -1091,51 +1156,97 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
     return now;
   }
 
-  async process(
-    input: string,
-    context?: {
-      latestVideo?: VideoAnalysis;
-      monthlyAnalysis?: MonthlyAnalysis;
-      recentVideos?: VideoAnalysis[];
-      searchResults?: Array<{
-        id: string;
-        title: string;
-        description: string;
-        relevance: number;
-      }>;
-      metrics: ChatMetrics;
-      analysis: ChatAnalysis;
-    } & Partial<AgentContext>
-  ): Promise<{
-    output: {
-      content: string;
-      insights?: Array<{
-        type: string;
-        title: string;
-        description: string;
-      }>;
-      suggestions?: string[];
-    };
-    error?: Error;
-  }> {
+  public async process(query: string): Promise<AgentResult> {
     try {
-      // Use the class's context property instead of parameter
-      const result = await this.processMessage(input, this.context);
-      const { response, insights, suggestions } = result;
-      return {
+      // Initialize smart chat if needed
+      if (!this.smartChatAgent) {
+        this.smartChatAgent = new SmartChatAgent(
+          this.rag,
+          this.userId,
+          this.platformStatus
+        );
+      }
+
+      // Check if we have YouTube data in context
+      if (this.context.type === 'youtube' && this.context.youtubeData) {
+        const youtubeData = this.context.youtubeData;
+        
+        // Format response based on available data
+        let content = '';
+        let insights: string[] = [];
+        let suggestions: string[] = [];
+
+        if (youtubeData.latestVideo) {
+          const { video, commentAnalysis, contentAnalysis } = youtubeData.latestVideo;
+          
+          content = `Here's the analysis for your latest video "${video.title}":\n\n`;
+          
+          // Add metrics
+          if (video.metrics) {
+            content += `Engagement Metrics:\n`;
+            content += `- Views: ${video.metrics.views}\n`;
+            content += `- Likes: ${video.metrics.likes}\n`;
+            content += `- Comments: ${video.metrics.comments}\n`;
+            content += `- Engagement Rate: ${((video.metrics.likes + video.metrics.comments) / video.metrics.views * 100).toFixed(2)}%\n\n`;
+          }
+
+          // Add main topics
+          if (contentAnalysis?.mainTopics?.length > 0) {
+            content += `Main Topics:\n`;
+            contentAnalysis.mainTopics.forEach((topic: string) => {
+              content += `- ${topic}\n`;
+            });
+            content += '\n';
+          }
+
+          // Add insights from comment analysis
+          if (commentAnalysis) {
+            if (commentAnalysis.sentiment) {
+              insights.push(`Comment Sentiment: ${Object.entries(commentAnalysis.sentiment)
+                .map(([type, count]) => `${type}: ${count}`)
+                .join(', ')}`);
+            }
+            
+            if (commentAnalysis.suggestions?.length > 0) {
+              suggestions = commentAnalysis.suggestions;
+            }
+          }
+
+          // Add content analysis insights
+          if (contentAnalysis) {
+            if (contentAnalysis.suggestedTopics?.length > 0) {
+              insights.push('Suggested topics for future content: ' + 
+                contentAnalysis.suggestedTopics.join(', '));
+            }
+            
+            if (contentAnalysis.engagementTriggers?.length > 0) {
+              insights.push('Key engagement triggers: ' + 
+                contentAnalysis.engagementTriggers.join(', '));
+            }
+          }
+        }
+
+        return {
+          output: {
+            content,
+            insights,
+            suggestions
+          }
+        };
+      }
+
+      // If no YouTube data or different type, proceed with normal processing
+      const result = await this.smartChatAgent.process(query);
+      return { 
         output: {
-          content: response,
-          insights,
-          suggestions
+          content: result.output.content,
+          insights: result.output.insights || [],
+          suggestions: result.output.suggestions || []
         }
       };
     } catch (error) {
-      return {
-        output: {
-          content: "An error occurred",
-        },
-        error: error instanceof Error ? error : new Error("Unknown error")
-      };
+      console.error('Error processing query:', error);
+      throw error;
     }
   }
 
@@ -1148,10 +1259,22 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
     suggestions: any[];
   }> {
     try {
-      // Analyze message intent
+      // 1. Enhanced intent analysis with confidence scoring
       const intent = await this.analyzeMessageIntent(input);
+      const messageContext = await this.analyzeConversationCues(input);
 
-      // Initialize smart chat if needed
+      // 2. Get comprehensive memory context
+      const memoryResults = await this.memorySystem.searchNodes({
+        type: intent.type,
+        query: input,
+        context: JSON.stringify({
+          ...context,
+          messageContext,
+          intent
+        })
+      });
+
+      // 3. Initialize or get smart processing
       if (!this.smartChatAgent) {
         this.smartChatAgent = new SmartChatAgent(
           this.rag,
@@ -1160,141 +1283,246 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
         );
       }
 
-      // Check conversation context first
-      const contextCheck = await this.checkConversationContext(input, context);
-      
-      // Validate contextCheck structure
-      if (!contextCheck || typeof contextCheck !== 'object') {
-        throw new Error('Invalid context check response');
+      // 4. Get enhanced conversation context
+      const contextCheck = await this.checkConversationContext(input, {
+        ...context,
+        memoryResults,
+        messageContext
+      });
+
+      // 5. Update conversation state with rich context
+      if (contextCheck.entities) {
+        await this.updateConversationWithRichContext(context, {
+          entities: contextCheck.entities,
+          intent,
+          messageContext,
+          memoryResults
+        });
       }
 
-      // Validate hasAnswer property
-      const hasAnswer = typeof contextCheck.hasAnswer === 'boolean' ? contextCheck.hasAnswer : false;
-
-      // Update conversation state with extracted entities
-      if (contextCheck.entities && typeof contextCheck.entities === 'object') {
-        // Ensure conversation state exists
-        if (!context.conversationState) {
-          context.conversationState = {
-            currentTopic: '',
-            lastTopic: '',
-            topicDepth: 0,
-            contextStack: [],
-            pendingActions: [],
-            lastResponseType: 'answer',
-            emotionalState: {
-              primary: 'neutral',
-              intensity: 0,
-              context: ''
-            },
-            userIntent: {
-              type: 'direct_inquiry',
-              confidence: 1
-            },
-            focusMetrics: {
-              topicChanges: 0,
-              clarificationRequests: 0,
-              followUpCount: 0,
-              contextDepth: 0,
-              emotionalShifts: 0,
-              intentShifts: 0
-            },
-            conversationFlow: {
-              naturalBreaks: 0,
-              topicTransitions: [],
-              depthProgression: [],
-              engagementSignals: []
-            },
-            mentionedEntities: {
-              names: new Set<string>(),
-              dates: new Set<string>(),
-              topics: new Set<string>()
-            },
-            queryContext: []
-          };
-        }
-
-        // Update entities in conversation state
-        this.updateConversationEntities(context, contextCheck.entities);
-      }
-
-      // Handle based on intent type
+      // 6. Process based on enhanced understanding
+      let response;
       if (intent.type === 'general_inquiry' || intent.needsSmartProcessing) {
-        // Use smart chat processing for general inquiries
-        const smartResponse = await this.smartChatAgent.process(input);
-        
+        // Use smart processing with enhanced context
+        const smartResponse = await this.smartChatAgent.process(input, {
+          ...context,
+          memoryResults,
+          messageContext,
+          enhancedIntent: intent
+        });
+
         // Combine with context if available
-        if (hasAnswer && contextCheck.answer) {
-          return {
-            response: `${contextCheck.answer}\n\nAdditionally: ${smartResponse.output.content}`,
-            insights: [...(smartResponse.output.insights || [])],
+        if (contextCheck.hasAnswer && contextCheck.answer) {
+          response = {
+            response: await this.combineResponses(contextCheck.answer, smartResponse.output.content),
+            insights: [
+              ...(smartResponse.output.insights || []),
+              {
+                type: 'context_enhancement',
+                content: contextCheck.answer,
+                confidence: contextCheck.confidence || 1
+              }
+            ],
+            suggestions: smartResponse.output.suggestions || []
+          };
+        } else {
+          response = {
+            response: smartResponse.output.content,
+            insights: smartResponse.output.insights || [],
             suggestions: smartResponse.output.suggestions || []
           };
         }
-        
-        return {
-          response: smartResponse.output.content,
-          insights: smartResponse.output.insights || [],
-          suggestions: smartResponse.output.suggestions || []
-        };
-      }
-
-      if (hasAnswer) {
-        // Return context-based answer for structured queries
-        if (typeof contextCheck.answer !== 'string' || !contextCheck.answer.trim()) {
-          throw new Error('Context check indicates answer exists but no valid answer was provided');
-        }
-        
-        return {
+      } else if (contextCheck.hasAnswer) {
+        // Return enhanced context-based answer
+        response = {
           response: contextCheck.answer,
-          insights: {
+          insights: [{
             source: 'conversation_context',
             entities: contextCheck.entities || {},
-            conversationState: context.conversationState || {}
-          },
-          suggestions: []
+            conversationState: context.conversationState || {},
+            confidence: contextCheck.confidence || 1
+          }],
+          suggestions: await this.generateContextualSuggestions(contextCheck)
         };
-      }
-
-      // Handle email-related queries
-      if (this.isEmailRelatedQuery(input)) {
-        const emailResponse = await this.handleEmailQuery(input, context);
+      } else if (this.isEmailRelatedQuery(input)) {
+        // Handle email queries with enhanced context
+        const emailResponse = await this.handleEmailQuery(input, {
+          ...context,
+          memoryResults,
+          messageContext
+        });
         if (emailResponse) {
-          return emailResponse;
+          response = emailResponse;
         }
       }
 
-      // Process with memory-aware chat system for other cases
-      if (!context.conversationId) {
-        context.conversationId = Date.now().toString();
+      // 7. If no specific handling, use memory-aware processing
+      if (!response) {
+        if (!context.conversationId) {
+          context.conversationId = Date.now().toString();
+        }
+
+        // Update memory system with enhanced context
+        await this.updateMemorySystem({
+          ...context,
+          messageContext,
+          intent
+        } as ProcessMessageParams);
+
+        const memoryResult = await this.memoryAwareChat.processMessage(input, {
+          ...context,
+          messageContext,
+          intent
+        } as ProcessMessageParams);
+
+        response = {
+          response: memoryResult.response,
+          insights: Array.isArray(memoryResult.insights) ? memoryResult.insights : [],
+          suggestions: Array.isArray(memoryResult.suggestions) ? memoryResult.suggestions : []
+        };
       }
 
-      // Update memory system with current context
-      await this.updateMemorySystem(context);
+      // 8. Final enhancement and validation
+      return await this.enhanceAndValidateResponse(response, {
+        input,
+        context,
+        intent,
+        messageContext,
+        memoryResults
+      });
 
-      const memoryResult = await this.memoryAwareChat.processMessage(input, context);
-      
-      // Validate memory result
-      if (!memoryResult || typeof memoryResult !== 'object') {
-        throw new Error('Invalid memory result: missing or malformed response');
-      }
-
-      // Validate response is a string
-      if (typeof memoryResult.response !== 'string') {
-        throw new Error('Invalid memory result: response must be a string');
-      }
-
-      // Return validated result
-      return {
-        response: memoryResult.response,
-        insights: Array.isArray(memoryResult.insights) ? memoryResult.insights : [],
-        suggestions: Array.isArray(memoryResult.suggestions) ? memoryResult.suggestions : []
-      };
-      
     } catch (error) {
       console.error('Error processing message:', error);
       return this.handleProcessingError(error);
     }
+  }
+
+  // Helper method to combine responses intelligently
+  private async combineResponses(response1: string, response2: string): Promise<string> {
+    // Validate inputs
+    const validResponse1 = typeof response1 === 'string' ? response1.trim() : '';
+    const validResponse2 = typeof response2 === 'string' ? response2.trim() : '';
+
+    // If one response is empty, return the other
+    if (!validResponse1) return validResponse2;
+    if (!validResponse2) return validResponse1;
+    
+    // Check for similarity to avoid redundancy
+    const similarityScore = await this.calculateResponseSimilarity(validResponse1, validResponse2);
+    if (similarityScore > 0.7) {
+      return validResponse2; // Return the second response if very similar
+    }
+    
+    // Combine responses with proper formatting
+    return [validResponse1, 'Additionally:', validResponse2]
+      .filter(Boolean)
+      .join('\n\n');
+  }
+
+  // Helper method for final response enhancement
+  private async enhanceAndValidateResponse(
+    response: {
+      response: string;
+      insights: any[];
+      suggestions: any[];
+    },
+    context: {
+      input: string;
+      context: ChatAgentContext;
+      intent: MessageIntent;
+      messageContext: any;
+      memoryResults: any[];
+    }
+  ): Promise<{
+    response: string;
+    insights: any[];
+    suggestions: any[];
+  }> {
+    // Validate response structure
+    if (!response || typeof response.response !== 'string') {
+      throw new Error('Invalid response structure');
+    }
+
+    // Enhance with additional context if needed
+    const enhancedResponse = await this.enhanceResponseWithContext(response, context);
+
+    // Ensure insights and suggestions are arrays
+    return {
+      response: enhancedResponse.response,
+      insights: Array.isArray(enhancedResponse.insights) ? enhancedResponse.insights : [],
+      suggestions: Array.isArray(enhancedResponse.suggestions) ? enhancedResponse.suggestions : []
+    };
+  }
+
+  // Helper method to update conversation with rich context
+  private async updateConversationWithRichContext(
+    context: ChatAgentContext,
+    enhancedContext: {
+      entities: any;
+      intent: MessageIntent;
+      messageContext: any;
+      memoryResults: any[];
+    }
+  ): Promise<void> {
+    if (!context.conversationState) {
+      context.conversationState = this.initializeConversationState();
+    }
+
+    const { mentionedEntities } = context.conversationState;
+
+    // Update entities with validation
+    if (enhancedContext.entities) {
+      // Type guard to ensure we're working with valid entity types
+      const isValidEntityKey = (key: string): key is keyof typeof mentionedEntities => {
+        return ['names', 'dates', 'topics'].includes(key);
+      };
+
+      Object.entries(enhancedContext.entities).forEach(([key, value]) => {
+        if (isValidEntityKey(key) && value instanceof Set) {
+          value.forEach((item: string) => {
+            if (mentionedEntities[key] instanceof Set) {
+              mentionedEntities[key].add(item);
+            }
+          });
+        }
+      });
+    }
+
+    // Update query context with enhanced information
+    if (!context.conversationState.queryContext) {
+      context.conversationState.queryContext = [];
+    }
+
+    context.conversationState.queryContext.push({
+      timestamp: Date.now(),
+      intent: enhancedContext.intent,
+      messageContext: enhancedContext.messageContext,
+      entities: {
+        names: Array.from(enhancedContext.entities.names || []),
+        dates: Array.from(enhancedContext.entities.dates || []),
+        topics: Array.from(enhancedContext.entities.topics || [])
+      },
+      topic: context.currentTopic || '',
+      memoryInsights: this.extractMemoryInsights(enhancedContext.memoryResults)
+    });
+
+    // Maintain context history limit
+    if (context.conversationState.queryContext.length > 10) {
+      context.conversationState.queryContext.shift();
+    }
+  }
+
+  // Helper method to extract insights from memory results
+  private extractMemoryInsights(memoryResults: any[]): any[] {
+    if (!Array.isArray(memoryResults)) return [];
+    
+    return memoryResults.map(result => ({
+      type: result.type,
+      confidence: result.confidence,
+      timestamp: result.timestamp,
+      relevance: result.relevance,
+      key_points: result.content?.key_points || []
+    }));
   }
 
   private async handleEmailQuery(
@@ -1431,8 +1659,12 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
   } {
     const err = error instanceof Error ? error : new Error('Unknown error occurred');
     
-    const isServiceError = err.message.toLowerCase().includes('service');
-    const isAuthError = err.message.toLowerCase().includes('auth');
+    const isServiceError = err.message.toLowerCase().includes('service') || 
+                          err.message.toLowerCase().includes('connection');
+    
+    const isAuthError = err.message.toLowerCase().includes('auth') || 
+                       err.message.toLowerCase().includes('permission');
+    
     const isValidationError = err.message.toLowerCase().includes('invalid') || 
                              err.message.toLowerCase().includes('missing');
 
@@ -1485,30 +1717,6 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
         timestamp: Date.now()
       }]
     };
-  }
-
-  private combineResponses(
-    memoryResponse: string,
-    toolResponse: string
-  ): string {
-    // Validate inputs
-    const validMemoryResponse = typeof memoryResponse === 'string' ? memoryResponse.trim() : '';
-    const validToolResponse = typeof toolResponse === 'string' ? toolResponse.trim() : '';
-
-    // If no valid tool response, return memory response
-    if (!validToolResponse) {
-      return validMemoryResponse;
-    }
-
-    // If no valid memory response but have tool response
-    if (!validMemoryResponse && validToolResponse) {
-      return validToolResponse;
-    }
-    
-    // Combine valid responses with proper spacing
-    return [validMemoryResponse, 'Additionally:', validToolResponse]
-      .filter(Boolean)
-      .join('\n\n');
   }
 
   private async checkRequiredServices(intent: MessageIntent): Promise<{
@@ -2179,23 +2387,7 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
   private async checkConversationContext(
     input: string,
     context: ChatAgentContext
-  ): Promise<{
-    hasAnswer: boolean;
-    answer?: string;
-    entities?: {
-        names: Set<string>;
-        emails: Set<string>;
-        dates: Set<string>;
-        topics: Set<string>;
-        participants?: {
-            from: Set<string>;
-            to: Set<string>;
-            cc: Set<string>;
-            bcc: Set<string>;
-        };
-        threadParticipants?: Set<string>;
-    };
-  }> {
+  ): Promise<ContextCheckResult> {
     try {
         // If no previous messages, return early
         if (!context.previousMessages) {
@@ -2526,5 +2718,217 @@ Your goal is to be a supportive, knowledgeable partner in the user's journey whi
       default:
         return value;
     }
+  }
+
+  private async handleYouTubeQuestion(query: string, youtubeData: any): Promise<string> {
+    if (!youtubeData) {
+      return "I don't have access to the YouTube data at the moment.";
+    }
+
+    // Extract video data
+    const latestVideo = youtubeData.latestVideo;
+    const historicalData = youtubeData.historicalData;
+    const currentVideo = youtubeData.currentVideo;
+
+    // Format video data for the AI to understand
+    const videoContext = {
+      latest: latestVideo ? {
+        title: latestVideo.title,
+        metrics: latestVideo.metrics,
+        analysis: latestVideo.analysis
+      } : null,
+      historical: historicalData?.videos || [],
+      current: currentVideo ? {
+        title: currentVideo.title,
+        metrics: currentVideo.metrics,
+        analysis: currentVideo.analysis
+      } : null
+    };
+
+    // Generate a natural language response based on the query and data
+    let response = '';
+
+    // Handle different types of questions
+    if (query.toLowerCase().includes('latest video') || query.toLowerCase().includes('recent video')) {
+      if (latestVideo) {
+        response = `Here's the analysis for your latest video "${latestVideo.title}":\n\n`;
+        if (latestVideo.metrics) {
+          response += `Performance Metrics:\n`;
+          response += `- Views: ${latestVideo.metrics.views}\n`;
+          response += `- Likes: ${latestVideo.metrics.likes}\n`;
+          response += `- Comments: ${latestVideo.metrics.comments}\n`;
+          response += `- Engagement Rate: ${latestVideo.metrics.engagement}%\n\n`;
+        }
+        if (latestVideo.analysis) {
+          response += `Content Analysis:\n`;
+          response += `- Main Topics: ${latestVideo.analysis.mainTopics.join(', ')}\n`;
+          response += `- Content Type: ${latestVideo.analysis.contentType}\n`;
+          response += `- Performance Score: ${latestVideo.analysis.performanceScore}\n\n`;
+          response += `Audience Reaction:\n`;
+          response += `- Positive Aspects: ${latestVideo.analysis.audienceReaction.positiveAspects.join(', ')}\n`;
+          response += `- Areas for Improvement: ${latestVideo.analysis.audienceReaction.negativeAspects.join(', ')}\n`;
+          response += `- Suggested Improvements: ${latestVideo.analysis.audienceReaction.suggestions.join(', ')}`;
+        }
+      } else {
+        response = "I couldn't find data for your latest video.";
+      }
+    } else if (query.toLowerCase().includes('performance') || query.toLowerCase().includes('metrics')) {
+      if (historicalData && historicalData.videos.length > 0) {
+        const totalViews = historicalData.videos.reduce((sum: number, video: any) => sum + (video.metrics?.views || 0), 0);
+        const totalLikes = historicalData.videos.reduce((sum: number, video: any) => sum + (video.metrics?.likes || 0), 0);
+        const totalComments = historicalData.videos.reduce((sum: number, video: any) => sum + (video.metrics?.comments || 0), 0);
+        
+        response = `Here's your channel's performance analysis:\n\n`;
+        response += `Overall Metrics:\n`;
+        response += `- Total Views: ${totalViews}\n`;
+        response += `- Total Likes: ${totalLikes}\n`;
+        response += `- Total Comments: ${totalComments}\n\n`;
+        
+        response += `Video Performance:\n`;
+        historicalData.videos.forEach((video: any) => {
+          response += `\n"${video.title}":\n`;
+          response += `- Views: ${video.metrics?.views || 0}\n`;
+          response += `- Likes: ${video.metrics?.likes || 0}\n`;
+          response += `- Comments: ${video.metrics?.comments || 0}\n`;
+          response += `- Engagement Rate: ${video.metrics?.engagement || 0}%\n`;
+        });
+      } else {
+        response = "I don't have enough historical data to analyze performance.";
+      }
+    } else {
+      // For other types of questions, use the available data to provide a relevant response
+      response = `Based on your YouTube channel data:\n\n`;
+      if (historicalData) {
+        response += `You have ${historicalData.videoCount} videos analyzed.\n`;
+        if (historicalData.videos.length > 0) {
+          const recentVideo = historicalData.videos[0];
+          response += `Your most recent video "${recentVideo.title}" has:\n`;
+          response += `- ${recentVideo.metrics?.views || 0} views\n`;
+          response += `- ${recentVideo.metrics?.likes || 0} likes\n`;
+          response += `- ${recentVideo.metrics?.comments || 0} comments\n`;
+        }
+      }
+    }
+
+    return response;
+  }
+
+  private async analyzeConversationCues(input: string): Promise<MessageContext> {
+    // Implement conversation cues analysis
+    return {
+      sentiment: 'neutral',
+      topics: [],
+      entities: {},
+      confidence: 1
+    };
+  }
+
+  private async generateContextualSuggestions(contextCheck: any): Promise<any[]> {
+    // Generate contextual suggestions based on the context check
+    return [];
+  }
+
+  private async calculateResponseSimilarity(response1: string, response2: string): Promise<number> {
+    // Implement response similarity calculation
+    // For now return a simple comparison
+    return response1 === response2 ? 1 : 0;
+  }
+
+  private async enhanceResponseWithContext(
+    response: {
+      response: string;
+      insights: any[];
+      suggestions: any[];
+    },
+    context: {
+      input: string;
+      context: ChatAgentContext;
+      intent: MessageIntent;
+      messageContext: any;
+      memoryResults: any[];
+    }
+  ): Promise<{
+    response: string;
+    insights: any[];
+    suggestions: any[];
+  }> {
+    // Implement response enhancement with context
+    return response;
+  }
+
+  private initializeConversationState(): ConversationState {
+    return {
+      currentTopic: '',
+      lastTopic: '',
+      topicDepth: 0,
+      contextStack: [],
+      pendingActions: [],
+      lastResponseType: 'answer' as const,
+      emotionalState: {
+        primary: 'neutral' as const,
+        intensity: 0,
+        context: ''
+      },
+      userIntent: {
+        type: 'direct_inquiry' as const,
+        confidence: 1
+      },
+      focusMetrics: {
+        topicChanges: 0,
+        clarificationRequests: 0,
+        followUpCount: 0,
+        contextDepth: 0,
+        emotionalShifts: 0,
+        intentShifts: 0
+      },
+      conversationFlow: {
+        naturalBreaks: 0,
+        topicTransitions: [],
+        depthProgression: [],
+        engagementSignals: []
+      },
+      mentionedEntities: {
+        names: new Set<string>(),
+        dates: new Set<string>(),
+        topics: new Set<string>()
+      },
+      queryContext: []
+    };
+  }
+
+  private initializeContext(userId: string): ChatAgentContext {
+    const initialState = this.initializeConversationState();
+    return {
+      userId,
+      conversationId: Date.now().toString(),
+      currentTopic: initialState.currentTopic,
+      conversationState: initialState,
+      contextStack: [],
+      pendingActions: [],
+      lastResponseType: 'answer' as const,
+      emotionalState: {
+        primary: 'neutral' as const,
+        intensity: 0,
+        context: ''
+      },
+      userIntent: {
+        type: 'direct_inquiry' as const,
+        confidence: 0.5
+      },
+      focusMetrics: {
+        topicChanges: 0,
+        clarificationRequests: 0,
+        followUpCount: 0,
+        contextDepth: 0,
+        emotionalShifts: 0,
+        intentShifts: 0
+      },
+      conversationFlow: {
+        naturalBreaks: 0,
+        topicTransitions: [],
+        depthProgression: [],
+        engagementSignals: []
+      }
+    };
   }
 }

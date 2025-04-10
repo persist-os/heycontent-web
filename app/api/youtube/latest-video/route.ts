@@ -3,6 +3,7 @@ import { YouTubeService } from '@/app/lib/services/youtube';
 import { auth } from '@/app/auth';
 import { google } from 'googleapis';
 import prisma from '@/app/lib/prisma';
+import { RAGSystem } from '@/app/lib/rag';
 
 interface YouTubeMetadata {
   channelId: string;
@@ -40,7 +41,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'YouTube account not connected' }, { status: 400 });
     }
 
-    const youtubeService = new YouTubeService(session.user.id);
+    const rag = new RAGSystem();
+    const youtubeService = new YouTubeService(session.user.id, rag);
     const analysis = await youtubeService.getLatestVideoAnalysis();
 
     return NextResponse.json(analysis);

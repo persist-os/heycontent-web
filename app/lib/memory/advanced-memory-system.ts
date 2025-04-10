@@ -142,6 +142,10 @@ export class AdvancedMemorySystem implements AdvancedMemorySystemInterface {
     this.rag = rag;
   }
 
+  public getRag(): RAGSystem {
+    return this.rag;
+  }
+
   async processNewInformation(input: {
     content: string;
     type: string;

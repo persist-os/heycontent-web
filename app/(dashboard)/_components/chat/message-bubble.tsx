@@ -69,9 +69,9 @@ export function MessageBubble({
       <div className="flex justify-start mb-4">
         <div className="bg-white border rounded-2xl px-4 py-3">
           <div className="flex space-x-1">
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" />
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-100" />
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-200" />
+            <div className="w-2 h-2 bg-heycontent-yellow rounded-full animate-bounce" />
+            <div className="w-2 h-2 bg-heycontent-yellow rounded-full animate-bounce delay-100" />
+            <div className="w-2 h-2 bg-heycontent-yellow rounded-full animate-bounce delay-200" />
           </div>
         </div>
       </div>
@@ -85,9 +85,9 @@ export function MessageBubble({
         <div 
           onClick={() => onReferenceClick?.(message.referencedMessage!.id)}
           className={`
-            text-xs text-gray-500 mb-2 
+            text-xs text-text-gray mb-2 
             ${isUser ? 'text-right' : 'text-left'}
-            cursor-pointer hover:text-blue-500 transition-colors
+            cursor-pointer hover:text-heycontent-yellow transition-colors
             flex items-center gap-1
             ${isUser ? 'justify-end' : 'justify-start'}
           `}
@@ -106,7 +106,7 @@ export function MessageBubble({
             rounded-2xl 
             px-4 
             py-3 
-            ${isUser ? 'bg-blue-500 text-white' : 'bg-white border'} 
+            ${isUser ? 'bg-heycontent-yellow text-black' : 'bg-white border'} 
             relative
             group
             inline-flex
@@ -128,7 +128,7 @@ export function MessageBubble({
                   flex-shrink-0
                 `}
               >
-                <MessageSquare className="w-3 h-3 text-gray-500" />
+                <MessageSquare className="w-3 h-3 text-text-gray" />
               </button>
             )}
             
@@ -159,9 +159,9 @@ export function MessageBubble({
                           onClick={() => onOptionClick?.(option)}
                           className={`
                             px-3 py-1.5 rounded-full text-sm
-                            ${option.type === 'action' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' :
-                              option.type === 'detail' ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' :
-                              'bg-gray-100 text-gray-700 hover:bg-gray-200'}
+                            ${option.type === 'action' ? 'bg-heycontent-light-yellow text-black hover:bg-heycontent-yellow/20' :
+                              option.type === 'detail' ? 'bg-heycontent-light-purple text-heycontent-purple hover:bg-heycontent-purple/20' :
+                              'bg-gray-100 text-text-gray hover:bg-gray-200'}
                             transition-colors
                           `}
                         >
@@ -174,14 +174,14 @@ export function MessageBubble({
                   {/* Follow-up Question */}
                   {interactiveResponse.followUp && (
                     <div className="space-y-2">
-                      <p className="text-sm text-gray-600">{interactiveResponse.followUp.question}</p>
+                      <p className="text-sm text-text-gray">{interactiveResponse.followUp.question}</p>
                       {(interactiveResponse.followUp.choices ?? []).length > 0 && (
                         <div className="flex flex-wrap gap-2">
                           {(interactiveResponse.followUp.choices ?? []).map((choice: string, index: number) => (
                             <button
                               key={index}
                               onClick={() => onFollowUpClick?.(choice)}
-                              className="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-full text-sm flex items-center gap-1"
+                              className="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-text-gray rounded-full text-sm flex items-center gap-1"
                             >
                               {choice}
                               <ChevronRight className="w-4 h-4" />
@@ -194,12 +194,12 @@ export function MessageBubble({
 
                   {/* Contextual Suggestions */}
                   {(interactiveResponse.contextualSuggestions ?? []).length > 0 && (
-                    <div className="text-sm text-gray-500 space-y-2">
+                    <div className="text-sm text-text-gray space-y-2">
                       {(interactiveResponse.contextualSuggestions ?? []).map((suggestion: string, index: number) => (
                         <button
                           key={index}
                           onClick={() => onOptionClick?.({ text: suggestion, type: 'suggestion' })}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm text-gray-600 hover:bg-gray-100 transition-colors w-full text-left"
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm text-text-gray hover:bg-gray-100 transition-colors w-full text-left"
                         >
                           <span className="w-1 h-1 rounded-full bg-gray-400 flex-shrink-0" />
                           <span>{suggestion}</span>
@@ -219,12 +219,12 @@ export function MessageBubble({
                   opacity-0 group-hover:opacity-100
                   transition-opacity duration-200
                   p-1 rounded-full
-                  bg-blue-400
+                  bg-heycontent-yellow/80
                   hover:bg-opacity-80
                   mt-0.5
                 `}
               >
-                <MessageSquare className="w-3 h-3 text-white" />
+                <MessageSquare className="w-3 h-3 text-black" />
               </button>
             )}
           </div>

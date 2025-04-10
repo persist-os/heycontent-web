@@ -96,7 +96,7 @@ export function AudienceScreen() {
       <div className="shrink-0 px-6 py-4 border-b bg-white flex justify-between items-center">
         <div>
           <h1 className="text-lg font-semibold mb-1">Audience DNA</h1>
-          <p className="text-gray-600">Deep insights into your audience behavior and preferences</p>
+          <p className="text-text-gray">Deep insights into your audience behavior and preferences</p>
         </div>
         <select
           value={timeRange}
@@ -124,13 +124,13 @@ export function AudienceScreen() {
                 <Card key={i}>
                   <CardContent className="pt-6">
                     <div className="flex items-start gap-4">
-                      <div className="p-2 rounded-xl bg-blue-50">
-                        <metric.icon className="w-6 h-6 text-blue-500" />
+                      <div className="p-2 rounded-xl bg-heycontent-light-yellow">
+                        <metric.icon className="w-6 h-6 text-black" />
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600">{metric.label}</p>
+                        <p className="text-sm text-text-gray">{metric.label}</p>
                         <h3 className="text-2xl font-semibold">{metric.value}</h3>
-                        <span className="text-sm text-green-500">{metric.trend}</span>
+                        <span className="text-sm text-heycontent-green">{metric.trend}</span>
                       </div>
                     </div>
                   </CardContent>
@@ -152,23 +152,23 @@ export function AudienceScreen() {
                         key={interest.category}
                         className={`p-4 rounded-xl cursor-pointer transition-all ${
                           selectedCategory?.category === interest.category
-                            ? 'bg-blue-50'
+                            ? 'bg-heycontent-light-yellow'
                             : 'bg-white/50 hover:bg-white/80'
                         }`}
                         onClick={() => setSelectedCategory(interest)}
                       >
                         <div className="flex justify-between items-center mb-2">
                           <h3 className="font-medium">{interest.category}</h3>
-                          <span className="text-green-500 text-sm">{interest.trend}</span>
+                          <span className="text-heycontent-green text-sm">{interest.trend}</span>
                         </div>
                         <div className="relative pt-1">
-                          <div className="overflow-hidden h-2 mb-2 text-xs flex rounded bg-blue-100">
+                          <div className="overflow-hidden h-2 mb-2 text-xs flex rounded bg-heycontent-light-yellow">
                             <div
                               style={{ width: `${interest.value}%` }}
-                              className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500"
+                              className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-heycontent-yellow"
                             />
                           </div>
-                          <div className="flex justify-between text-sm text-gray-600">
+                          <div className="flex justify-between text-sm text-text-gray">
                             <span>{interest.value}% Affinity</span>
                             <span>Growth: {interest.trend}</span>
                           </div>
@@ -189,16 +189,16 @@ export function AudienceScreen() {
                     {/* Summary Stats Above Chart */}
                     <div className="grid grid-cols-3 gap-4 mb-6">
                       <div className="text-center">
-                        <div className="text-2xl font-semibold text-blue-500">85%</div>
-                        <div className="text-sm text-gray-600">Average Engagement</div>
+                        <div className="text-2xl font-semibold text-heycontent-yellow">85%</div>
+                        <div className="text-sm text-text-gray">Average Engagement</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-semibold text-green-500">+12%</div>
-                        <div className="text-sm text-gray-600">Monthly Growth</div>
+                        <div className="text-2xl font-semibold text-heycontent-green">+12%</div>
+                        <div className="text-sm text-text-gray">Monthly Growth</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-semibold text-purple-500">90%</div>
-                        <div className="text-sm text-gray-600">Interaction Rate</div>
+                        <div className="text-2xl font-semibold text-heycontent-purple">90%</div>
+                        <div className="text-sm text-text-gray">Interaction Rate</div>
                       </div>
                     </div>
 
@@ -232,8 +232,8 @@ export function AudienceScreen() {
                           <Radar
                             name="Engagement"
                             dataKey="value"
-                            stroke="#3B82F6"
-                            fill="#3B82F6"
+                            stroke="#FFDF39"
+                            fill="#FFDF39"
                             fillOpacity={0.3}
                           />
                           <Tooltip
@@ -243,8 +243,8 @@ export function AudienceScreen() {
                               return (
                                 <div className="bg-white p-2 shadow-lg rounded-lg border">
                                   <p className="font-medium">{data.type}</p>
-                                  <p className="text-sm text-gray-500">{data.value}%</p>
-                                  <p className="text-sm text-green-500">{data.trend}</p>
+                                  <p className="text-sm text-text-gray">{data.value}%</p>
+                                  <p className="text-sm text-heycontent-green">{data.trend}</p>
                                 </div>
                               );
                             }}
@@ -256,12 +256,12 @@ export function AudienceScreen() {
                     {/* Legend Below Chart */}
                     <div className="mt-6 flex justify-center gap-6 text-sm">
                       <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-blue-500 opacity-30"></div>
-                        <span className="text-gray-600">Current Period</span>
+                        <div className="w-3 h-3 rounded-full bg-heycontent-yellow opacity-30"></div>
+                        <span className="text-text-gray">Current Period</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full border-2 border-blue-500"></div>
-                        <span className="text-gray-600">Previous Period</span>
+                        <div className="w-3 h-3 rounded-full border-2 border-heycontent-yellow"></div>
+                        <span className="text-text-gray">Previous Period</span>
                       </div>
                     </div>
                   </div>
@@ -275,7 +275,7 @@ export function AudienceScreen() {
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     {selectedCategory.category} Insights
-                    <span className="text-sm text-blue-500 bg-blue-50 px-3 py-1 rounded-full">
+                    <span className="text-sm text-text-dark bg-heycontent-light-yellow px-3 py-1 rounded-full">
                       {selectedCategory.value}% Affinity
                     </span>
                   </CardTitle>
@@ -289,11 +289,11 @@ export function AudienceScreen() {
                         <div key={i} className="bg-gray-50 p-3 rounded-lg">
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-sm font-medium">{sub}</span>
-                            <span className="text-xs text-green-500">+{Math.floor(Math.random() * 20)}%</span>
+                            <span className="text-xs text-heycontent-green">+{Math.floor(Math.random() * 20)}%</span>
                           </div>
                           <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
                             <div 
-                              className="h-full bg-blue-500 rounded-full"
+                              className="h-full bg-heycontent-yellow rounded-full"
                               style={{ width: `${Math.floor(Math.random() * 40 + 60)}%` }}
                             />
                           </div>
@@ -307,10 +307,10 @@ export function AudienceScreen() {
                     <h4 className="text-sm font-medium mb-3">Brand Affinity & Performance</h4>
                     <div className="grid grid-cols-3 gap-4">
                       {selectedCategory.brandAffinity.map((brand, i) => (
-                        <div key={i} className="bg-green-50 p-3 rounded-lg text-center">
-                          <div className="font-medium text-green-700 mb-1">{brand}</div>
-                          <div className="text-xs text-gray-600">Engagement Rate</div>
-                          <div className="text-sm font-semibold text-green-600">
+                        <div key={i} className="bg-heycontent-light-green p-3 rounded-lg text-center">
+                          <div className="font-medium text-text-dark mb-1">{brand}</div>
+                          <div className="text-xs text-text-gray">Engagement Rate</div>
+                          <div className="text-sm font-semibold text-heycontent-green">
                             {Math.floor(Math.random() * 20 + 80)}%
                           </div>
                         </div>
@@ -322,37 +322,37 @@ export function AudienceScreen() {
                   <div>
                     <h4 className="text-sm font-medium mb-3">Content Performance</h4>
                     <div className="grid grid-cols-3 gap-4">
-                      <div className="p-3 bg-blue-50 rounded-lg">
-                        <div className="text-sm text-gray-600 mb-1">Avg. Watch Time</div>
-                        <div className="text-lg font-semibold text-blue-600">4.2m</div>
-                        <div className="text-xs text-green-500">+12% vs avg</div>
+                      <div className="p-3 bg-heycontent-light-yellow rounded-lg">
+                        <div className="text-sm text-text-gray mb-1">Avg. Watch Time</div>
+                        <div className="text-lg font-semibold text-text-dark">4.2m</div>
+                        <div className="text-xs text-heycontent-green">+12% vs avg</div>
                       </div>
-                      <div className="p-3 bg-purple-50 rounded-lg">
-                        <div className="text-sm text-gray-600 mb-1">Completion Rate</div>
-                        <div className="text-lg font-semibold text-purple-600">78%</div>
-                        <div className="text-xs text-green-500">+8% vs avg</div>
+                      <div className="p-3 bg-heycontent-light-purple rounded-lg">
+                        <div className="text-sm text-text-gray mb-1">Completion Rate</div>
+                        <div className="text-lg font-semibold text-heycontent-purple">78%</div>
+                        <div className="text-xs text-heycontent-green">+8% vs avg</div>
                       </div>
-                      <div className="p-3 bg-green-50 rounded-lg">
-                        <div className="text-sm text-gray-600 mb-1">Engagement</div>
-                        <div className="text-lg font-semibold text-green-600">92%</div>
-                        <div className="text-xs text-green-500">+15% vs avg</div>
+                      <div className="p-3 bg-heycontent-light-green rounded-lg">
+                        <div className="text-sm text-text-gray mb-1">Engagement</div>
+                        <div className="text-lg font-semibold text-heycontent-green">92%</div>
+                        <div className="text-xs text-heycontent-green">+15% vs avg</div>
                       </div>
                     </div>
                   </div>
 
                   {/* Recommendations */}
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h4 className="text-sm font-medium mb-2 text-blue-700">AI Recommendations</h4>
+                  <div className="bg-heycontent-light-yellow p-4 rounded-lg">
+                    <h4 className="text-sm font-medium mb-2 text-text-dark">AI Recommendations</h4>
                     <ul className="space-y-2">
-                      <li className="flex items-start gap-2 text-sm text-blue-600">
+                      <li className="flex items-start gap-2 text-sm text-text-dark">
                         <span className="mt-1">•</span>
                         Consider creating more {selectedCategory.subCategories[0]} content based on high engagement rates
                       </li>
-                      <li className="flex items-start gap-2 text-sm text-blue-600">
+                      <li className="flex items-start gap-2 text-sm text-text-dark">
                         <span className="mt-1">•</span>
                         Potential collaboration opportunity with {selectedCategory.brandAffinity[0]}
                       </li>
-                      <li className="flex items-start gap-2 text-sm text-blue-600">
+                      <li className="flex items-start gap-2 text-sm text-text-dark">
                         <span className="mt-1">•</span>
                         Optimize content length around 4-5 minutes for maximum retention
                       </li>
@@ -376,8 +376,8 @@ export function AudienceScreen() {
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium">{pref.type}</span>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500">{pref.percentage}%</span>
-                            <span className="text-xs text-green-500 font-medium">{pref.growth}</span>
+                            <span className="text-xs text-text-gray">{pref.percentage}%</span>
+                            <span className="text-xs text-heycontent-green font-medium">{pref.growth}</span>
                           </div>
                         </div>
                       </div>
@@ -393,17 +393,24 @@ export function AudienceScreen() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {psychographicData.behavioralTraits.map((trait, index) => (
-                      <div key={index} className="flex justify-between items-center">
-                        <div>
-                          <span className="text-sm font-medium">{trait.trait}</span>
-                          <div className="text-xs text-gray-500">{trait.percentage}% of audience</div>
+                    {psychographicData.behavioralTraits.map((trait, index) => {
+                      let colorClass = "text-heycontent-green";
+                      if (trait.value === "Medium") colorClass = "text-heycontent-yellow";
+                      if (trait.value === "Low") colorClass = "text-red-500";
+                      if (trait.value === "Very High") colorClass = "text-heycontent-green";
+                      
+                      return (
+                        <div key={index} className="flex justify-between items-center">
+                          <div>
+                            <span className="text-sm font-medium">{trait.trait}</span>
+                            <div className="text-xs text-text-gray">{trait.percentage}% of audience</div>
+                          </div>
+                          <span className={`text-sm font-medium ${colorClass}`}>
+                            {trait.value}
+                          </span>
                         </div>
-                        <span className={`text-sm font-medium ${trait.color}`}>
-                          {trait.value}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>

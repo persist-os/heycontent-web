@@ -253,11 +253,11 @@ export function CommandMenu({ onSelect, onClose, searchTerm = '', position }: Co
             onClick={() => handleSelect(command)}
             onMouseEnter={() => setSelectedIndex(index)}
             className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left text-sm group transition-colors ${
-              index === selectedIndex ? 'bg-blue-50' : 'hover:bg-gray-50'
+              index === selectedIndex ? 'bg-purple-50' : 'hover:bg-gray-50'
             }`}
           >
             <command.icon className={`w-4 h-4 ${
-              index === selectedIndex ? 'text-blue-500' : 'text-gray-500 group-hover:text-gray-700'
+              index === selectedIndex ? 'text-purple-500' : 'text-gray-500 group-hover:text-gray-700'
             }`} />
             <div className="flex-1">
               <div className="font-medium flex items-center justify-between">
@@ -275,4 +275,4 @@ export function CommandMenu({ onSelect, onClose, searchTerm = '', position }: Co
       </div>
     </div>
   );
-} 
+}

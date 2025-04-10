@@ -29,6 +29,7 @@ export class SmartChatAgent extends BaseAgent {
     this.context = {
       userId,
       conversationId: this.getConversationId(),
+      currentTopic: 'general',
       contextStack: [],
       pendingActions: [],
       lastResponseType: 'answer',

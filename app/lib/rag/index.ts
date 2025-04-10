@@ -6,6 +6,8 @@ import { createHash } from 'crypto';
 import { YouTubeService } from '../services/youtube';
 import crypto from 'crypto';
 import prisma from '../prisma'; // Import the singleton Prisma instance
+import { ConvexHttpClient } from "convex/browser"
+import { api } from "@/convex/_generated/api"
 
 // Cache interface
 interface EmbeddingCache {
@@ -101,6 +103,8 @@ class RateLimiter {
     this.processing = false;
   }
 }
+
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
 
 export class RAGSystem {
   private embeddings: OpenAIEmbeddings;
@@ -530,56 +534,11 @@ export class RAGSystem {
     futureVision?: string
   ) {
     try {
-      // Deactivate old personas
-      const oldPersonas = await this.searchInternal('', {
-        user_id: userId,
-        type: 'current_persona',
-        isActive: true
+      await convex.mutation(api.personas.updatePersona, {
+        userId,
+        currentPersona,
+        futureVision: futureVision || '',
       });
-      
-      for (const doc of oldPersonas) {
-        await this.addDocument(doc.content, {
-          ...doc.metadata,
-          type: 'current_persona',
-          user_id: userId,
-          isActive: false,
-          timestamp: new Date().toISOString()
-        });
-      }
-
-      // Add new current persona
-      await this.addDocument(currentPersona, {
-        type: 'current_persona',
-        user_id: userId,
-        isActive: true,
-        timestamp: new Date().toISOString()
-      });
-
-      // Handle future vision if provided
-      if (futureVision) {
-        const oldVisions = await this.searchInternal('', {
-          user_id: userId,
-          type: 'future_vision',
-          isActive: true
-        });
-        
-        for (const doc of oldVisions) {
-          await this.addDocument(doc.content, {
-            ...doc.metadata,
-            type: 'future_vision',
-            user_id: userId,
-            isActive: false,
-            timestamp: new Date().toISOString()
-          });
-        }
-
-        await this.addDocument(futureVision, {
-          type: 'future_vision',
-          user_id: userId,
-          isActive: true,
-          timestamp: new Date().toISOString()
-        });
-      }
     } catch (error) {
       console.error('RAGSystem: Error updating user persona:', error);
       throw error;
@@ -588,22 +547,14 @@ export class RAGSystem {
 
   async getUserPersona(userId: string) {
     try {
-      const currentPersona = await this.searchInternal('', {
-        user_id: userId,
-        type: 'current_persona',
-        isActive: true
-      }, 1);
-
-      const futureVision = await this.searchInternal('', {
-        user_id: userId,
-        type: 'future_vision',
-        isActive: true
-      }, 1);
+      const persona = await convex.query(api.personas.getPersona, {
+        userId,
+      });
 
       return {
-        currentPersona: currentPersona[0]?.content || '',
-        futureVision: futureVision[0]?.content || '',
-        timestamp: currentPersona[0]?.metadata?.timestamp || null
+        currentPersona: persona?.currentPersona || '',
+        futureVision: persona?.futureVision || '',
+        timestamp: persona?.updatedAt ? new Date(persona.updatedAt).toISOString() : null
       };
     } catch (error) {
       console.error('RAGSystem: Error getting user persona:', error);
@@ -637,7 +588,7 @@ export class RAGSystem {
       const videoId = videoUrl.split('v=')[1]?.split('&')[0];
       if (!videoId) throw new Error('Invalid YouTube URL');
 
-      const youtubeService = new YouTubeService(userId);
+      const youtubeService = new YouTubeService(userId, this);
       
       // Get video details and analysis
       const videoDetails = await youtubeService.getVideoMetrics(videoId);
@@ -681,7 +632,7 @@ export class RAGSystem {
       });
       
       // Then search YouTube directly
-      const youtubeService = new YouTubeService(userId);
+      const youtubeService = new YouTubeService(userId, this);
       const youtubeResults = await youtubeService.searchVideosByTitle(query, {
         includeMetrics: true,
         includeAnalysis: true,

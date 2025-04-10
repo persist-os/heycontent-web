@@ -2,8 +2,11 @@ export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { auth } from '@/app/auth'
-import prisma from '@/app/lib/prisma'
 import { google } from 'googleapis'
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "@/convex/_generated/api";
+
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function GET(req: Request) {
   try {
@@ -71,51 +74,29 @@ export async function GET(req: Request) {
       throw new Error('No YouTube channel found')
     }
 
-    // Save or update social account in database
-    await prisma.socialAccount.upsert({
-      where: {
-        userId_platform: {
-          userId,
-          platform: 'youtube'
-        }
-      },
-      create: {
-        platform: 'youtube',
-        username: channel.snippet?.title || 'unknown',
-        accessToken: tokens.access_token!,
-        refreshToken: tokens.refresh_token,
-        expiresAt: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
-        tokenType: tokens.token_type,
-        scope: tokens.scope,
+    // Store YouTube data in Convex
+    await convex.mutation(api.youtube.storeYouTubeData, {
+      userId,
+      channelData: {
+        id: channel.id,
+        snippet: channel.snippet,
+        statistics: channel.statistics,
         profileUrl: `https://youtube.com/channel/${channel.id}`,
         avatarUrl: channel.snippet?.thumbnails?.default?.url,
-        metadata: {
-          channelId: channel.id,
-          subscribers: channel.statistics?.subscriberCount,
-          videos: channel.statistics?.videoCount,
-          views: channel.statistics?.viewCount
-        },
-        isConnected: true,
-        userId
       },
-      update: {
-        username: channel.snippet?.title || 'unknown',
-        accessToken: tokens.access_token!,
-        refreshToken: tokens.refresh_token,
-        expiresAt: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
-        tokenType: tokens.token_type,
-        scope: tokens.scope,
-        profileUrl: `https://youtube.com/channel/${channel.id}`,
-        avatarUrl: channel.snippet?.thumbnails?.default?.url,
-        metadata: {
-          channelId: channel.id,
-          subscribers: channel.statistics?.subscriberCount,
-          videos: channel.statistics?.videoCount,
-          views: channel.statistics?.viewCount
-        },
-        isConnected: true
-      }
-    })
+      accessToken: tokens.access_token!,
+      refreshToken: tokens.refresh_token,
+      expiresAt: tokens.expiry_date ? Math.floor(tokens.expiry_date / 1000) : undefined,
+      tokenType: tokens.token_type!,
+      scope: tokens.scope!,
+    });
+
+    // Update connection status
+    await convex.mutation(api.social.updateConnectionStatus, {
+      userId,
+      platform: 'youtube',
+      isConnected: true,
+    });
 
     // Redirect back to settings page with success message
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?success=youtube_connected`)

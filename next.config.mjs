@@ -26,7 +26,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' blob: data:",
               "font-src 'self'",
-              "connect-src 'self'",
+              "connect-src 'self' https://*.convex.cloud",
               "frame-ancestors 'self'"
             ].join('; ')
           }
@@ -41,7 +41,17 @@ const nextConfig = {
     if (!config.resolve.fallback) {
       config.resolve.fallback = {}
     }
+
+    // Handle Node.js built-in modules
+    config.resolve.fallback.fs = false
+    config.resolve.fallback.path = false
+    config.resolve.fallback.crypto = false
+    config.resolve.fallback.stream = false
+    config.resolve.fallback.util = false
+    config.resolve.fallback.dns = false
+    config.resolve.fallback.tty = false
     config.resolve.fallback.bcrypt = false  // Disable bcrypt in webpack
+    
     return config
   },
 }

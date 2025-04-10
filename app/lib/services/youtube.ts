@@ -1,8 +1,10 @@
 import { google, youtube_v3 } from 'googleapis';
+import { OAuth2Client } from 'google-auth-library';
 import { validateToken } from '../../lib/auth-helpers';
 import { getCompletion } from '../openai';
-import { PrismaClient } from '@prisma/client';
-import prisma from '../../lib/prisma';  // Import the singleton instance
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "@/convex/_generated/api";
+import { RAGSystem } from '../rag';
 import { 
   CommentAnalysis, 
   CommentAnalysisResponse, 
@@ -10,8 +12,7 @@ import {
   ValidSentiment 
 } from '../types/youtube';
 
-// Remove direct instantiation and use imported singleton
-// const prisma = new PrismaClient();
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 interface VideoAnalysis {
   mainTopics: string[];
@@ -47,49 +48,53 @@ interface VideoInput {
 export class YouTubeService {
   private youtube: youtube_v3.Youtube;
   private userId: string;
+  private rag: RAGSystem;
 
-  constructor(userId: string) {
+  constructor(userId: string, rag: RAGSystem) {
     this.userId = userId;
     this.youtube = google.youtube('v3');
+    this.rag = rag;
   }
 
-  private async getGoogleAccountId(): Promise<string> {
-    const account = await prisma.account.findFirst({
-      where: {
-        userId: this.userId,
-        provider: 'google'
-      }
-    });
-
-    if (!account) {
-      throw new Error('No Google account found');
-    }
-
-    return account.id;
-  }
-
-  private async getAuthorizedClient() {
+  private async getAuthorizedClient(): Promise<OAuth2Client> {
     try {
-      const accessToken = await validateToken(this.userId, 'youtube');
-      
-      if (!accessToken) {
-        throw new Error('Failed to get valid YouTube access token');
-      }
-      
       const oauth2Client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET,
         process.env.YOUTUBE_REDIRECT_URI
       );
       
-      oauth2Client.setCredentials({ 
-        access_token: accessToken
-      });
+      // Get stored YouTube data from Convex
+      const youtubeData = await convex.query(api.youtube.getYouTubeData, { userId: this.userId });
       
+      if (youtubeData?.data?.accessToken) {
+        oauth2Client.setCredentials({
+          access_token: youtubeData.data.accessToken,
+          refresh_token: youtubeData.data.refreshToken,
+          expiry_date: youtubeData.data.expiresAt ? youtubeData.data.expiresAt * 1000 : undefined,
+        });
+        return oauth2Client;
+      }
+      
+      // If no stored token, initialize with API key
+      oauth2Client.apiKey = process.env.YOUTUBE_API_KEY;
       return oauth2Client;
-    } catch (error: any) {
-      console.error('YouTube authorization error:', error);
-      throw new Error(`YouTube authorization failed: ${error.message}`);
+    } catch (error) {
+      console.error('Error getting authorized client:', error);
+      // Create new client with just API key
+      const client = new google.auth.OAuth2();
+      client.apiKey = process.env.YOUTUBE_API_KEY;
+      return client;
+    }
+  }
+
+  async isYouTubeConnected(): Promise<boolean> {
+    try {
+      const status = await convex.query(api.youtube.getYouTubeConnectionStatus, { userId: this.userId });
+      return status;
+    } catch (error) {
+      console.error('Error checking YouTube connection:', error);
+      return false;
     }
   }
 
@@ -231,23 +236,29 @@ export class YouTubeService {
       let video: VideoInput;
       if (typeof input === 'string') {
         const auth = await this.getAuthorizedClient();
-        const videoResponse = await this.youtube.videos.list({
+        const youtube = google.youtube('v3');
+        
+        const videoResponse = await youtube.videos.list({
           auth,
           part: ['snippet', 'statistics'],
           id: [input]
         });
 
-        const videoData = videoResponse.data.items?.[0];
-        if (!videoData) throw new Error('Video not found');
+        if (!videoResponse.data.items?.[0]) {
+          throw new Error('Video not found');
+        }
 
         video = this.createVideoInput(
           input,
-          videoData.snippet,
-          videoData.statistics
+          videoResponse.data.items[0].snippet!,
+          videoResponse.data.items[0].statistics!
         );
       } else {
         video = input;
       }
+
+      // Add video data to RAG system
+      await this.addVideoToRAG(video);
 
       const prompt = [
         'Analyze this YouTube video content:\n',
@@ -533,7 +544,7 @@ export class YouTubeService {
 
       const channel = analyticsResponse.data.items?.[0];
 
-      return {
+      const metrics = {
         views: parseInt(video.statistics?.viewCount || '0'),
         likes: parseInt(video.statistics?.likeCount || '0'),
         comments: parseInt(video.statistics?.commentCount || '0'),
@@ -545,6 +556,15 @@ export class YouTubeService {
           videoCount: parseInt(channel.statistics?.videoCount || '0')
         } : undefined
       };
+
+      // Store video data in Convex
+      await convex.mutation(api.youtube.storeVideoData, {
+        userId: this.userId,
+        videoId,
+        videoData: metrics
+      });
+
+      return metrics;
     } catch (error) {
       console.error('Error fetching video metrics:', error);
       throw error;
@@ -689,11 +709,11 @@ export class YouTubeService {
           totalViews,
           avgViews: Math.round(totalViews / videos.length),
           avgEngagement: Math.round((totalLikes + totalComments) / videos.length),
-          topVideo: {
+          topVideo: topVideo ? {
             title: topVideo.title,
             views: topVideo.metrics.views,
             engagement: topVideo.metrics.likes + topVideo.metrics.comments
-          },
+          } : null,
           trends: {
             views: this.calculateTrend(videos.map(v => v.metrics.views)),
             engagement: this.calculateTrend(videos.map(v => v.metrics.likes + v.metrics.comments))
@@ -1239,6 +1259,9 @@ export class YouTubeService {
       const auth = await this.getAuthorizedClient();
       const { includeMetrics = true, includeAnalysis = true, maxResults = 10 } = options;
 
+      // Get the user's channel ID
+      const channelId = await this.getChannelId();
+
       // Search for videos
       const searchResponse = await this.youtube.search.list({
         auth,
@@ -1247,6 +1270,7 @@ export class YouTubeService {
         q: query,
         maxResults,
         order: 'relevance',
+        channelId, // Add channel ID to filter
         ...(options.startDate && { publishedAfter: options.startDate.toISOString() }),
         ...(options.endDate && { publishedBefore: options.endDate.toISOString() })
       });
@@ -1390,6 +1414,40 @@ export class YouTubeService {
     } catch (error) {
       console.error('Error analyzing monthly content:', error);
       throw error;
+    }
+  }
+
+  private async addVideoToRAG(video: VideoInput) {
+    try {
+      const videoData = {
+        id: video.id,
+        title: video.snippet.title,
+        description: video.snippet.description,
+        publishedAt: video.snippet.publishedAt,
+        metrics: {
+          views: parseInt(video.statistics.viewCount ?? '0'),
+          likes: parseInt(video.statistics.likeCount ?? '0'),
+          comments: parseInt(video.statistics.commentCount ?? '0')
+        }
+      };
+
+      if (!this.rag) {
+        console.warn('RAG system not initialized');
+        return;
+      }
+
+      await this.rag.addDocument(
+        JSON.stringify(videoData),
+        {
+          type: 'content',
+          video_id: video.id,
+          user_id: this.userId,
+          timestamp: new Date().toISOString(),
+          content_type: 'youtube_video'
+        }
+      );
+    } catch (error) {
+      console.error('Error adding video to RAG:', error);
     }
   }
 } 

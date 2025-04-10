@@ -16,7 +16,7 @@ export default function Privacy() {
         
         <div className="mb-12">
           <p className="mb-8">
-            At AVA IRIS, Inc. ("AVA IRIS," "we," "our," or "us"), we understand the importance of your privacy and the 
+            At HeyContent, Inc. ("HeyContent," "we," "our," or "us"), we understand the importance of your privacy and the 
             trust you place in us when sharing your information. This Privacy Policy explains how we collect, use, protect, 
             and handle your personal information when you use our AI-powered analytics platform and related services 
             (collectively, the "Services").
@@ -184,7 +184,7 @@ export default function Privacy() {
             <div>
               <h3 className="text-xl font-medium mb-3">Data Processing Locations</h3>
               <p>
-                AVA IRIS processes and stores data in secure facilities located in the United States. When you use our 
+                HeyContent processes and stores data in secure facilities located in the United States. When you use our 
                 Services from outside the United States, your information may be transferred to, stored, and processed 
                 in the United States or other countries where our service providers maintain facilities.
               </p>
@@ -279,8 +279,8 @@ export default function Privacy() {
         <footer className="mt-16 pt-8 border-t border-gray-200">
           <p className="text-gray-600 text-sm">
             For questions about this Privacy Policy, please contact us at{' '}
-            <a href="mailto:iris@avasetail.com" className="text-blue-600 hover:text-blue-800">
-              iris@avasetail.com
+            <a href="mailto:hello@divertissement.ai" className="text-blue-600 hover:text-blue-800">
+              hello@divertissement.ai
             </a>
           </p>
         </footer>

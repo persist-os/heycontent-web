@@ -178,7 +178,7 @@ export class PlatformAgent {
       maxTokens: 2000,
     });
     this.rag = new RAGSystem();
-    this.socialService = new SocialMediaService();
+    this.socialService = new SocialMediaService(this.rag);
     this.emailContextManager = new EmailContextManager('');
     this.memorySystem = new AdvancedMemorySystem(this.rag);
     this.memoryAwareChat = new MemoryAwareChatSystem(this.rag);

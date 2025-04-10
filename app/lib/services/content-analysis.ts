@@ -2,6 +2,7 @@ import { YouTubeService } from './youtube';
 import { GmailService, GmailMessage } from './gmail';
 import { getCompletion } from '../openai';
 import prisma from '../prisma';
+import { RAGSystem } from '../rag/rag-system';
 
 interface ContentInsight {
   type: 'partnership' | 'content' | 'engagement' | 'trend';
@@ -54,9 +55,9 @@ export class ContentAnalysisService {
   private gmailService: GmailService;
   private userId: string;
 
-  constructor(userId: string) {
+  constructor(userId: string, rag: RAGSystem) {
     this.userId = userId;
-    this.youtubeService = new YouTubeService(userId);
+    this.youtubeService = new YouTubeService(userId, rag);
     this.gmailService = new GmailService(userId);
   }
 

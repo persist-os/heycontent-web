@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { YouTubeService } from '@/app/lib/services/youtube';
 import { auth } from '@/app/auth';
 import prisma from '@/app/lib/prisma';
+import { RAGSystem } from '@/app/lib/rag';
 
 export async function GET(request: Request) {
   try {
@@ -17,7 +18,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Search query is required' }, { status: 400 });
     }
 
-    const youtubeService = new YouTubeService(session.user.id);
+    const rag = new RAGSystem();
+    const youtubeService = new YouTubeService(session.user.id, rag);
     const videos = await youtubeService.searchVideosByTitle(query);
 
     return NextResponse.json({ videos });

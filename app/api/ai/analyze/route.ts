@@ -46,23 +46,44 @@ interface PlatformStatus {
   error?: string;
 }
 
+interface YouTubeData {
+  latestVideo: any;
+  currentMonthAnalysis: any;
+  historicalAnalysis: any;
+  searchResults: any[];
+  specificVideo: any | null;
+  videoHistory: VideoHistory;
+  currentVideoAnalysis: any | null;
+}
+
+interface AgentResult {
+  output?: {
+    content?: string;
+    insights?: any[];
+    suggestions?: any[];
+  };
+}
+
 export async function POST(req: Request) {
+  console.log('Starting AI analysis request');
   try {
     const session = await auth();
     if (!session?.user) {
+      console.log('Unauthorized request - no session user');
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { query, context, type } = await req.json();
+    const { query, context, type, options } = await req.json();
+    console.log('Request parameters:', { type, query, hasContext: !!context, options });
     
     const rag = new RAGSystem();
-    const socialService = new SocialMediaService();
-    const youtubeService = new YouTubeService(session.user.id);
+    const socialService = new SocialMediaService(rag);
+    const youtubeService = new YouTubeService(session.user.id, rag);
     
     // Get platform status for all supported platforms
     const supportedPlatforms: SocialPlatform[] = ['youtube', 'instagram', 'tiktok', 'gmail'];
     
-    const platformStatus: PlatformStatus[] = await Promise.all(
+    const platformStatus = await Promise.all(
       supportedPlatforms.map(async (platform) => {
         let isConnected = false;
         switch (platform) {
@@ -80,17 +101,18 @@ export async function POST(req: Request) {
             break;
         }
         const lastSync = await socialService.getLastSyncDate(platform);
+        console.log(`Platform status - ${platform}:`, { isConnected, lastSync });
         return {
           platform,
           isConnected,
-          lastSync: lastSync || null,  // Convert undefined to null
+          lastSync: lastSync || null,
           error: isConnected ? undefined : 'Not connected'
         };
       })
     );
     
     // Get YouTube data if query is about YouTube
-    let youtubeData = {};
+    let youtubeData: YouTubeData | Record<string, never> = {};
     if (type === 'youtube') {
       try {
         console.log('Processing YouTube query:', query);
@@ -116,22 +138,38 @@ export async function POST(req: Request) {
 
         const youtubeAccount = user?.socialAccounts[0];
         if (!youtubeAccount) {
-          console.error('YouTube account not found or not connected');
+          console.error('YouTube account not connected');
           throw new Error('YouTube account not connected');
         }
 
         console.log('Fetching YouTube data...');
         
+        // Extract video title from query if present
+        const titleMatch = query.match(/video\s+"([^"]+)"/i) || query.match(/video\s+(.+?)(?:\s+and|\s*$)/i);
+        const videoTitle = titleMatch ? titleMatch[1] : null;
+        console.log('Extracted video title:', videoTitle);
+
         try {
-          // Get comprehensive video data including historical data
-          const [latestVideo, currentMonthAnalysis, historicalAnalysis, searchResults, currentVideoAnalysis] = await Promise.all([
-            youtubeService.getLatestVideoAnalysis().catch(e => {
+          console.log('Fetching latest video analysis...');
+          const latestVideo = await youtubeService.getLatestVideoAnalysis()
+            .catch(e => {
               console.error('Error fetching latest video:', e);
               return null;
-            }),
+            });
+
+          console.log('Latest video data:', {
+            hasData: !!latestVideo,
+            title: latestVideo?.video?.title,
+            metrics: latestVideo?.video?.metrics
+          });
+
+          const currentDate = new Date();
+          console.log('Fetching additional YouTube data...');
+          
+          const [currentMonthAnalysis, historicalAnalysis, searchResults, currentVideoAnalysis] = await Promise.all([
             youtubeService.getMonthlyContentAnalysis(
-              new Date().getMonth() + 1,
-              new Date().getFullYear()
+              currentDate.getMonth() + 1,
+              currentDate.getFullYear()
             ).catch(e => {
               console.error('Error fetching current month analysis:', e);
               return null;
@@ -140,14 +178,14 @@ export async function POST(req: Request) {
               console.error('Error fetching historical analysis:', e);
               return null;
             }),
-            youtubeService.searchVideosByTitle(query, {
+            videoTitle ? youtubeService.searchVideosByTitle(videoTitle, {
               includeMetrics: true,
               includeAnalysis: true,
-              maxResults: 5
+              maxResults: 1
             }).catch(e => {
               console.error('Error searching videos:', e);
               return [];
-            }),
+            }) : Promise.resolve([]),
             context?.currentVideo ? youtubeService.searchVideosByTitle(context.currentVideo, {
               includeMetrics: true,
               includeAnalysis: true,
@@ -158,47 +196,13 @@ export async function POST(req: Request) {
             }) : Promise.resolve(null)
           ]);
 
-          // Log raw historical analysis data
-          console.log('Raw historical analysis:', {
-            hasData: !!historicalAnalysis,
-            videoCount: historicalAnalysis?.videos?.length,
-            videos: historicalAnalysis?.videos?.map(v => ({
-              id: v.id,
-              title: v.title,
-              metrics: v.metrics
-            }))
-          });
-
-          console.log('YouTube data fetch results:', {
-            latestVideoError: !latestVideo ? 'Failed to fetch' : null,
-            currentMonthError: !currentMonthAnalysis ? 'Failed to fetch' : null,
-            historicalError: !historicalAnalysis ? 'Failed to fetch' : null,
-            searchResultsError: !searchResults?.length ? 'No results found' : null,
-            currentVideoError: context?.currentVideo && !currentVideoAnalysis ? 'Failed to fetch' : null,
-            latestVideoData: latestVideo ? {
-              title: latestVideo.video?.title,
-              hasMetrics: !!latestVideo.video?.metrics,
-              hasAnalysis: !!latestVideo.contentAnalysis
-            } : null,
-            historicalData: historicalAnalysis ? {
-              videoCount: historicalAnalysis.videos.length,
-              hasMetrics: historicalAnalysis.videos.some(v => v.metrics),
-              videos: historicalAnalysis.videos.map(v => v.title)  // Add video titles to log
-            } : null
-          });
-
-          // Build comprehensive video history from both current and historical data
+          // Build comprehensive video history
           const videoHistory: VideoHistory = {};
           
-          // Add historical videos with complete data
+          // Add historical videos
           if (historicalAnalysis?.videos) {
-            console.log('Historical videos found:', historicalAnalysis.videos.map(v => ({
-              title: v.title,
-              metrics: v.metrics
-            })));
-            
             historicalAnalysis.videos.forEach(video => {
-              if (!videoHistory[video.id]) {  // Prevent duplicates
+              if (!videoHistory[video.id]) {
                 videoHistory[video.id] = {
                   title: video.title,
                   metrics: video.metrics,
@@ -208,15 +212,10 @@ export async function POST(req: Request) {
             });
           }
 
-          // Add current month videos with complete data
+          // Add current month videos
           if (currentMonthAnalysis?.videos) {
-            console.log('Current month videos found:', currentMonthAnalysis.videos.map(v => ({
-              title: v.title,
-              metrics: v.metrics
-            })));
-            
             currentMonthAnalysis.videos.forEach(video => {
-              if (!videoHistory[video.id]) {  // Prevent duplicates
+              if (!videoHistory[video.id]) {
                 videoHistory[video.id] = {
                   title: video.title,
                   metrics: video.metrics,
@@ -225,52 +224,68 @@ export async function POST(req: Request) {
               }
             });
           }
-
-          // Log complete video history for debugging
-          console.log('Complete video history:', Object.entries(videoHistory).map(([id, data]) => ({
-            id,
-            title: data.title,
-            metrics: data.metrics
-          })));
-
-          // Log final data structure being sent to AI
-          console.log('Data structure being sent to AI:', {
-            hasLatestVideo: !!latestVideo,
-            hasCurrentMonth: !!currentMonthAnalysis,
-            hasHistorical: !!historicalAnalysis,
-            searchResultsCount: searchResults?.length,
-            videoHistoryCount: Object.keys(videoHistory).length,
-            historicalVideos: historicalAnalysis?.videos?.map(v => v.title),
-            allVideoTitles: Object.values(videoHistory).map(v => v.title)
-          });
 
           youtubeData = {
-            latestVideo,
+            latestVideo: latestVideo ? {
+              video: latestVideo.video,
+              commentAnalysis: latestVideo.commentAnalysis,
+              contentAnalysis: latestVideo.contentAnalysis
+            } : null,
             currentMonthAnalysis,
             historicalAnalysis,
             searchResults,
+            specificVideo: searchResults[0] || null,
             videoHistory,
-            recentVideos: searchResults,
             currentVideoAnalysis
           };
 
           console.log('Final YouTube data prepared:', {
-            hasCurrentVideo: !!latestVideo,
-            videoHistoryCount: Object.keys(videoHistory).length,
-            totalDataPoints: Object.keys(youtubeData).length
+            hasLatestVideo: !!youtubeData.latestVideo,
+            hasSpecificVideo: !!youtubeData.specificVideo,
+            videoHistoryCount: Object.keys(youtubeData.videoHistory).length,
+            totalDataPoints: Object.keys(youtubeData).length,
+            latestVideoTitle: youtubeData.latestVideo?.video?.title
           });
+
+          // Store the video data in memory for context
+          if (youtubeData.latestVideo) {
+            await rag.addDocument(
+              JSON.stringify({
+                type: 'insight',
+                content: youtubeData.latestVideo
+              }),
+              {
+                type: 'insight',
+                category: 'youtube_analysis',
+                user_id: session.user.id,
+                timestamp: new Date().toISOString()
+              }
+            );
+          }
+
         } catch (error) {
           console.error('Error fetching YouTube data:', error);
+          throw error;
         }
       } catch (error) {
-        console.error('Error fetching YouTube data:', error);
+        console.error('Error in YouTube data processing:', error);
+        return NextResponse.json({ 
+          error: 'Failed to process YouTube data',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
       }
     }
     
-    // Initialize chat agent with proper context
+    console.log('Initializing chat agent');
     const agent = new ChatAgent(session.user.id, rag, platformStatus);
     
-    // Set the context using the proper method
+    console.log('Setting agent context with data:', {
+      userId: session.user.id,
+      type,
+      hasYoutubeData: Object.keys(youtubeData).length > 0,
+      contextProvided: !!context
+    });
+
     agent.setContext({
       userId: session.user.id,
       type,
@@ -278,8 +293,15 @@ export async function POST(req: Request) {
       ...context
     });
 
-    // Process the query
-    const result = await agent.process(query);
+    console.log('Processing query through agent');
+    const result = await agent.process(query) as AgentResult;
+
+    console.log('Query processing complete:', {
+      hasResponse: !!result?.output,
+      hasInsights: result?.output?.insights?.length ?? 0 > 0,
+      hasSuggestions: result?.output?.suggestions?.length ?? 0 > 0,
+      content: result?.output?.content
+    });
 
     // Store the interaction for future context
     await rag.addDocument(
@@ -295,9 +317,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ result });
   } catch (error) {
     console.error('AI Analysis error:', error);
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-    return NextResponse.json({ error: "An unknown error occurred" }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+    console.error('Error details:', {
+      message: errorMessage,
+      stack: error instanceof Error ? error.stack : 'No stack trace'
+    });
+    return NextResponse.json({ 
+      error: errorMessage,
+      timestamp: new Date().toISOString()
+    }, { status: 500 });
   }
 } 
