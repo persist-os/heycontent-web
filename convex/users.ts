@@ -44,7 +44,7 @@ export const update = mutation({
   handler: async ({ db }, args) => {
     const existingUser = await db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .first();
 
     if (!existingUser) {
@@ -53,8 +53,8 @@ export const update = mutation({
 
     return await db.patch(existingUser._id, {
       name: args.name,
+      email: args.email,
       image: args.image,
-      userId: args.userId,
     });
   },
 });

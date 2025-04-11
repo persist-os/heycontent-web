@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AtSign, Lightbulb, Hash, Star, Calendar, Image, LinkIcon, MessageSquare } from 'lucide-react';
+import { AtSign, Lightbulb, Hash, Star, Calendar, Image, LinkIcon, MessageSquare, Brain, Save, ChevronUp, ChevronDown, Zap, Target } from 'lucide-react';
 import type { Note } from './index';
 import { ShortcutManager } from './keyboard-shortcuts';
 import { CommandMenu, type Command } from './CommandMenu';
@@ -17,13 +17,15 @@ interface NoteAreaProps {
   onUpdate: (noteId: string, updates: Partial<Note>, shouldSync?: boolean) => void;
   onSave?: () => void;
   onToggleShortcuts?: () => void;
+  onRequestAIInsights?: (noteId: string) => void;
 }
 
 export function NoteArea({ 
   note, 
   onUpdate, 
   onSave,
-  onToggleShortcuts
+  onToggleShortcuts,
+  onRequestAIInsights
 }: NoteAreaProps) {
   const [content, setContent] = useState(note.content);
   const [cursorPosition, setCursorPosition] = useState<number | null>(null);
@@ -33,10 +35,30 @@ export function NoteArea({
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFormat, setSelectedFormat] = useState<Set<string>>(new Set());
+  const [isExpanded, setIsExpanded] = useState(false);
   
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const shortcutManager = useRef<ShortcutManager>();
   const references = Array.isArray(note.references) ? note.references : [];
+
+  // Extract tags from content
+  useEffect(() => {
+    if (content) {
+      // Extract tags from the content (words starting with #)
+      const tagRegex = /#(\w+)/g;
+      const tags: string[] = [];
+      let match;
+      
+      while ((match = tagRegex.exec(content)) !== null) {
+        tags.push(match[1]);
+      }
+      
+      // Only update if the tags are different
+      if (JSON.stringify(tags) !== JSON.stringify(note.tags)) {
+        onUpdate(note.id, { tags: [...new Set(tags)] }); // Remove duplicates
+      }
+    }
+  }, [content, note.id, note.tags]);
 
   // Load from local storage on mount
   useEffect(() => {
@@ -45,8 +67,10 @@ export function NoteArea({
     if (saved) {
       const localNote = JSON.parse(saved);
       setContent(localNote.content || note.content);
+    } else {
+      setContent(note.content);
     }
-  }, [note.id]);
+  }, [note.id, note.content]);
 
   const insertText = (text: string) => {
     if (!textAreaRef.current) return;
@@ -124,10 +148,7 @@ export function NoteArea({
 
   // Initialize shortcut manager once
   useEffect(() => {
-    console.log('Initializing shortcut manager');
-    
     const handleBold = () => {
-      console.log('Bold shortcut triggered');
       if (!textAreaRef.current) return;
       const start = textAreaRef.current.selectionStart;
       const end = textAreaRef.current.selectionEnd;
@@ -145,7 +166,6 @@ export function NoteArea({
     };
 
     const handleItalic = () => {
-      console.log('Italic shortcut triggered');
       if (!textAreaRef.current) return;
       const start = textAreaRef.current.selectionStart;
       const end = textAreaRef.current.selectionEnd;
@@ -163,7 +183,6 @@ export function NoteArea({
     };
 
     const handleUnderline = () => {
-      console.log('Underline shortcut triggered');
       if (!textAreaRef.current) return;
       const start = textAreaRef.current.selectionStart;
       const end = textAreaRef.current.selectionEnd;
@@ -182,35 +201,28 @@ export function NoteArea({
 
     shortcutManager.current = new ShortcutManager({
       onSave: () => {
-        console.log('Save shortcut triggered');
         onSave?.();
       },
       onQuickCapture: () => {
-        console.log('Quick capture shortcut triggered');
         insertText('/capture');
         setShowCommands(true);
       },
       onCommandMenu: () => {
-        console.log('Command menu shortcut triggered');
         insertText('/');
       },
       onMention: () => {
-        console.log('Mention shortcut triggered');
         insertText('@');
       },
       onTag: () => {
-        console.log('Tag shortcut triggered');
         insertText('#');
       },
       onBold: handleBold,
       onItalic: handleItalic,
       onUnderline: handleUnderline,
       onIndent: () => {
-        console.log('Indent shortcut triggered');
         insertText('  ');
       },
       onUnindent: () => {
-        console.log('Unindent shortcut triggered');
         if (!textAreaRef.current) return;
         const start = textAreaRef.current.selectionStart;
         const lineStart = content.lastIndexOf('\n', start - 1) + 1;
@@ -224,7 +236,6 @@ export function NoteArea({
         }
       },
       onToggleShortcuts: () => {
-        console.log('Toggle shortcuts help triggered');
         onToggleShortcuts?.();
       }
     });
@@ -380,25 +391,36 @@ export function NoteArea({
           </div>
         );
       }
+      
+      // Handle bullet list
+      if (line.startsWith('- ')) {
+        const content = line.slice(2).trim();
+        return (
+          <div key={lineIndex} className="flex mb-1 text-gray-800">
+            <span className="mr-2">•</span>
+            <span>{content}</span>
+          </div>
+        );
+      }
 
       // Handle other formatting within the line
       return (
         <div key={lineIndex} className="mb-1 text-gray-800">
           {line.split(/(\*\*.*?\*\*|_.*?_|<u>.*?<\/u>)/).map((part, partIndex) => {
-        if (part.startsWith('**') && part.endsWith('**')) {
+            if (part.startsWith('**') && part.endsWith('**')) {
               return <strong key={partIndex}>{part.slice(2, -2)}</strong>;
-        }
-        if (part.startsWith('_') && part.endsWith('_')) {
+            }
+            if (part.startsWith('_') && part.endsWith('_')) {
               return <em key={partIndex}>{part.slice(1, -1)}</em>;
-        }
-        if (part.startsWith('<u>') && part.endsWith('</u>')) {
+            }
+            if (part.startsWith('<u>') && part.endsWith('</u>')) {
               return <u key={partIndex}>{part.slice(3, -4)}</u>;
-        }
-        return part;
+            }
+            return part;
           })}
         </div>
       );
-      });
+    });
   };
 
   // Update the mentions UI
@@ -627,13 +649,28 @@ export function NoteArea({
       setShowCommands(false);
       return;
     } else if (command.template) {
-      // ... existing template handling code ...
+      // Handle templates
+      handleCommand(command);
     }
   };
 
+  // Sample data for options and suggestions (replace with your actual data)
+  const interactiveOptions = [
+    { text: 'Save to notes', type: 'action', action: 'save_to_notes' },
+    { text: 'Review calendar', type: 'action', action: 'review_calendar' },
+    { text: 'Create content plan', type: 'action' },
+    { text: 'See audience breakdown', type: 'detail' }
+  ];
+
+  const suggestions = [
+    { type: 'action', description: 'Create a content calendar' },
+    { type: 'strategic', description: 'Adjust posting schedule' },
+    { type: 'explore', description: 'Analyze competitor content' }
+  ];
+
   return (
     <div className="flex-1 flex flex-col h-full">
-      <div className="border-b border-gray-100 px-6 py-4">
+      <div className="border-b border-gray-100 px-6 py-4 flex justify-between items-center">
         <input 
           type="text"
           value={note.title}
@@ -645,30 +682,67 @@ export function NoteArea({
           className="text-2xl font-semibold bg-transparent border-none focus:outline-none w-full"
           placeholder="Untitled Note"
         />
+        <div className="flex gap-2">
+          <button 
+            className={`w-8 h-8 rounded-full flex items-center justify-center ${note.type === 'idea' ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            onClick={() => onUpdate(note.id, { type: note.type === 'idea' ? 'default' : 'idea' }, true)}
+            title={note.type === 'idea' ? 'Remove idea status' : 'Mark as idea'}
+          >
+            <Lightbulb size={16} />
+          </button>
+          <button 
+            className={`w-8 h-8 rounded-full flex items-center justify-center ${note.important ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            onClick={() => onUpdate(note.id, { important: !note.important }, true)}
+            title={note.important ? 'Remove importance' : 'Mark as important'}
+          >
+            <Star size={16} />
+          </button>
+          <button 
+            className="w-8 h-8 rounded-full flex items-center justify-center bg-purple-100 text-purple-600 hover:bg-purple-200"
+            onClick={() => onRequestAIInsights?.(note.id)}
+            title="Get AI insights"
+          >
+            <Brain size={16} />
+          </button>
+          <button 
+            className="w-8 h-8 rounded-full flex items-center justify-center bg-purple-600 text-white hover:bg-purple-700"
+            onClick={onSave}
+            title="Save note"
+          >
+            <Save size={16} />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 p-6 overflow-y-auto relative">
         <div className="max-w-4xl mx-auto space-y-4">
-          {references.map((ref, index) => (
-            <div 
-              key={index}
-              className={`p-3 ${
-                ref.type === 'ai_insight' ? 'bg-purple-50' : 'border-l-4 border-purple-500 pl-3'
-              } rounded-lg`}
-            >
-              <div className="flex items-center gap-2 text-purple-600 text-sm font-medium mb-2">
-                {ref.type === 'ai_insight' ? (
-                  <AtSign className="w-4 h-4" />
-                ) : (
-                  <Lightbulb className="w-4 h-4" />
-                )}
-                {ref.type === 'ai_insight' ? 'AI Insight Reference' : 'New Idea'}
-              </div>
-              <p className="text-gray-600">{ref.content}</p>
+          {references.length > 0 && (
+            <div className="rounded-lg bg-purple-50 p-4 space-y-4 mb-6">
+              <h3 className="font-medium text-purple-800">Insights & References</h3>
+              {references.map((ref, index) => (
+                <div 
+                  key={index}
+                  className={`p-3 rounded-lg ${
+                    ref.type === 'ai_insight' ? 'bg-purple-100' : 
+                    ref.type === 'conversation' ? 'bg-blue-50 border-l-4 border-blue-500' :
+                    ref.type === 'idea' ? 'bg-yellow-50 border-l-4 border-yellow-500' : 'bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 text-sm font-medium mb-1 text-gray-700">
+                    {ref.type === 'ai_insight' && <Brain className="w-4 h-4 text-purple-600" />}
+                    {ref.type === 'conversation' && <MessageSquare className="w-4 h-4 text-blue-600" />}
+                    {ref.type === 'idea' && <Lightbulb className="w-4 h-4 text-yellow-600" />}
+                    {ref.type === 'ai_insight' ? 'AI Insight' : 
+                      ref.type === 'conversation' ? 'Conversation' : 
+                      ref.type === 'idea' ? 'Idea' : 'Reference'}
+                  </div>
+                  <p className="text-gray-700">{ref.content}</p>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
 
-          <div className="relative min-h-[calc(100vh-200px)]">
+          <div className="relative min-h-[calc(100vh-300px)]">
             <textarea
               ref={textAreaRef}
               value={content}
@@ -677,7 +751,7 @@ export function NoteArea({
               placeholder="Type / for commands, @ to reference content, # to add tags"
               className="w-full p-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-base leading-relaxed absolute inset-0 text-transparent"
               style={{ 
-                minHeight: 'calc(100vh - 200px)',
+                minHeight: 'calc(100vh - 300px)',
                 height: 'auto',
                 caretColor: '#4B5563', // Gray-600 for better cursor visibility
                 background: 'transparent'
@@ -691,12 +765,12 @@ export function NoteArea({
 
             {/* Command menus */}
             {showCommands && (
-                <CommandMenu
+              <CommandMenu
                 onSelect={handleCommandSelect}
-                  onClose={() => setShowCommands(false)}
+                onClose={() => setShowCommands(false)}
                 searchTerm={searchTerm}
                 position={menuPosition}
-                />
+              />
             )}
 
             {showMentions && (

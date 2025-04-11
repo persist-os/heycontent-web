@@ -5,6 +5,7 @@ import type { InteractiveOption } from '@/app/lib/chat/interactive-response'
 import type { InteractiveResponse } from '@/app/types'
 import { formatDistanceToNow } from 'date-fns'
 import { MessageSquare, ChevronRight } from 'lucide-react'
+import { ExpandableInsights } from './expandable-insights'
 
 interface MessageBubbleProps {
   message: Message
@@ -150,27 +151,6 @@ export function MessageBubble({
               {/* Interactive Elements */}
               {interactiveResponse && !isUser && (
                 <div className="mt-4 space-y-4">
-                  {/* Interactive Options */}
-                  {(interactiveResponse.options ?? []).length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {(interactiveResponse.options ?? []).map((option: InteractiveOption, index: number) => (
-                        <button
-                          key={index}
-                          onClick={() => onOptionClick?.(option)}
-                          className={`
-                            px-3 py-1.5 rounded-full text-sm
-                            ${option.type === 'action' ? 'bg-heycontent-light-yellow text-black hover:bg-heycontent-yellow/20' :
-                              option.type === 'detail' ? 'bg-heycontent-light-purple text-heycontent-purple hover:bg-heycontent-purple/20' :
-                              'bg-gray-100 text-text-gray hover:bg-gray-200'}
-                            transition-colors
-                          `}
-                        >
-                          {option.text}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
                   {/* Follow-up Question */}
                   {interactiveResponse.followUp && (
                     <div className="space-y-2">
@@ -230,6 +210,23 @@ export function MessageBubble({
           </div>
         </div>
       </div>
+      
+      {/* Add the ExpandableInsights component below the bubble for AI messages */}
+      {!isUser && (
+        <div className="pl-6 pr-6 -mt-2 mb-4">
+          <ExpandableInsights 
+            message={message}
+            onReferenceClick={onReferenceClick}
+            onOptionPress={(option) => onOptionClick?.(option)}
+            onSuggestionPress={(suggestion) => 
+              onOptionClick?.({ 
+                text: suggestion.description, 
+                type: 'suggestion' 
+              })
+            }
+          />
+        </div>
+      )}
     </div>
   )
 } 

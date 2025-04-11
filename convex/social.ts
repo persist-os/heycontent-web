@@ -35,7 +35,12 @@ export const getConnectionStatus = query({
 export const disconnect = mutation({
   args: {
     userId: v.string(),
-    platform: v.string(),
+    platform: v.union(
+      v.literal("gmail"),
+      v.literal("youtube"),
+      v.literal("instagram"),
+      v.literal("tiktok")
+    ),
   },
   handler: async (ctx, args) => {
     const account = await ctx.db
@@ -64,23 +69,31 @@ export const disconnect = mutation({
       .first();
 
     if (status) {
-      // Normalize platform name to match the schema
-      const normalizedPlatform = args.platform.toLowerCase();
+      // Create a new connections object with only valid platforms
+      const updatedConnections = {
+        gmail: status.connections.gmail,
+        youtube: status.connections.youtube,
+        instagram: status.connections.instagram || false,
+        tiktok: status.connections.tiktok || false,
+        [args.platform]: false
+      };
+
       await ctx.db.patch(status._id, {
-        connections: {
-          ...status.connections,
-          [normalizedPlatform]: false,
-        },
+        connections: updatedConnections,
         lastChecked: Date.now(),
       });
     } else {
-      // Create new status if it doesn't exist
+      // Initialize with all platforms set to false
+      const initialConnections = {
+        gmail: false,
+        youtube: false,
+        instagram: false,
+        tiktok: false
+      };
+
       await ctx.db.insert("socialConnectionStatus", {
         userId: args.userId,
-        connections: {
-          gmail: false,
-          youtube: false,
-        },
+        connections: initialConnections,
         lastChecked: Date.now(),
       });
     }
@@ -91,7 +104,12 @@ export const disconnect = mutation({
 export const updateConnectionStatus = mutation({
   args: {
     userId: v.string(),
-    platform: v.string(),
+    platform: v.union(
+      v.literal("gmail"),
+      v.literal("youtube"),
+      v.literal("instagram"),
+      v.literal("tiktok")
+    ),
     isConnected: v.boolean(),
   },
   handler: async (ctx, args) => {
@@ -100,23 +118,28 @@ export const updateConnectionStatus = mutation({
       .filter((q) => q.eq(q.field("userId"), args.userId))
       .first();
 
-    const normalizedPlatform = args.platform.toLowerCase();
-    
     if (status) {
       await ctx.db.patch(status._id, {
         connections: {
           ...status.connections,
-          [normalizedPlatform]: args.isConnected,
+          [args.platform]: args.isConnected,
         },
         lastChecked: Date.now(),
       });
     } else {
+      // Initialize with all platforms set to false
+      const initialConnections = {
+        gmail: false,
+        youtube: false,
+        instagram: false,
+        tiktok: false
+      };
+
       await ctx.db.insert("socialConnectionStatus", {
         userId: args.userId,
         connections: {
-          gmail: false,
-          youtube: false,
-          [normalizedPlatform]: args.isConnected,
+          ...initialConnections,
+          [args.platform]: args.isConnected,
         },
         lastChecked: Date.now(),
       });

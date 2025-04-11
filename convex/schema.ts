@@ -109,6 +109,9 @@ export default defineSchema({
     connections: v.object({
       gmail: v.boolean(),
       youtube: v.boolean(),
+      instagram: v.optional(v.boolean()),
+      tiktok: v.optional(v.boolean()),
+      facebook: v.optional(v.boolean())
     }),
     lastChecked: v.number(),
   })
@@ -153,11 +156,19 @@ export default defineSchema({
     title: v.string(),
     content: v.string(),
     important: v.boolean(),
+    type: v.optional(v.union(
+      v.literal("ai_insight"),
+      v.literal("conversation"),
+      v.literal("idea"),
+      v.literal("url"),
+      v.literal("date")
+    )),
     tags: v.array(v.string()),
     references: v.array(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
   .index("by_user", ["userId"])
-  .index("by_creation", ["createdAt"]),
+  .index("by_creation", ["createdAt"])
+  .index("by_type", ["type"]),
 }); 

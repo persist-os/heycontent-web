@@ -729,7 +729,7 @@ const ChatScreen = () => {
         <div className="shrink-0 border-b bg-white px-6 py-4">
           <div className="flex justify-between items-center">
             <div>
-              <h2 className="font-semibold text-lg">HeyContent</h2>
+              <h2 className="font-semibold text-lg">Chat With Content</h2>
               <div className="text-sm text-text-gray mt-1 animate-pulse">
                 {liveInsights[currentInsight]}
               </div>

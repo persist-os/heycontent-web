@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/app/auth';
-import prisma from '@/app/lib/prisma';
+import { api } from '@/convex/_generated/api';
+import { fetchMutation } from 'convex/nextjs';
 
 export async function PUT(
   req: Request,
@@ -15,19 +16,18 @@ export async function PUT(
     const json = await req.json();
     const { title, content, important, type, tags, references } = json;
 
-    const note = await prisma.note.update({
-      where: {
-        id: params.noteId,
-        userId: session.user.id
-      },
-      data: {
+    // Update the note using Convex mutation
+    const note = await fetchMutation(api.notes.updateNote, {
+      noteId: params.noteId,
+      userId: session.user.id,
+      updates: {
         ...(title !== undefined && { title }),
         ...(content !== undefined && { content }),
         ...(important !== undefined && { important }),
         ...(type !== undefined && { type }),
         ...(tags !== undefined && { tags }),
         ...(references !== undefined && { references }),
-        updatedAt: new Date()
+        updatedAt: Date.now()
       }
     });
 
@@ -55,11 +55,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await prisma.note.delete({
-      where: {
-        id: params.noteId,
-        userId: session.user.id
-      }
+    // Delete the note using Convex mutation
+    await fetchMutation(api.notes.deleteNote, {
+      noteId: params.noteId,
+      userId: session.user.id
     });
 
     return NextResponse.json({ success: true });
