@@ -109,8 +109,31 @@ ${shortTermRecs}`;
     return `${contentStrategy}\n\n${platformStrategy}\n\n${productionPlan}\n\n${growthStrategy}\n\n${recommendations}`;
   } catch (error) {
     console.error('Error formatting analysis:', error);
+
+    // Provide more detailed error information
+    let errorMessage = 'Unknown error';
+    if (error instanceof Error) {
+      errorMessage = `${error.name}: ${error.message}`;
+      if (error.stack) {
+        console.error('Stack trace:', error.stack);
+      }
+    }
+
     // Fallback to raw JSON if rendering fails
-    return `## Analysis Results (Raw Data)
+    try {
+      return `## Analysis Results (Raw Data)
+
+### Error
+${errorMessage}
+
+### Data
 \`\`\`json\n${JSON.stringify(analysis, null, 2)}\n\`\`\``;
+    } catch (jsonError) {
+      return `## Analysis Results
+
+Error formatting analysis: ${errorMessage}
+
+Additional error: Could not stringify analysis data: ${jsonError instanceof Error ? jsonError.message : 'Unknown JSON error'}`;
+    }
   }
 }

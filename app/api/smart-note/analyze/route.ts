@@ -49,8 +49,17 @@ export async function POST(request: Request) {
       has_token: !!token
     });
 
-    // Extract user_id from token (first part before the first dot)
-    const user_id = token.split('.')[0];
+    // Log the token format for debugging (first 10 chars only for security)
+    console.info(`[${requestId}] Using token format:`, {
+      tokenPrefix: token.substring(0, 10) + '...',
+      tokenLength: token.length
+    });
+
+    // Log the request to the backend
+    console.info(`[${requestId}] Sending request to backend API`, {
+      url: `${BACKEND_URL}/api/v1/smart-note/analyze`,
+      contentLength: content_note?.length || 0
+    });
 
     const response = await fetch(`${BACKEND_URL}/api/v1/smart-note/analyze`, {
       method: 'POST',
@@ -68,17 +77,32 @@ export async function POST(request: Request) {
       const errorData = await response.json().catch(() => null);
       console.error(`[${requestId}] Backend API error:`, {
         status: response.status,
-        error: errorData
+        statusText: response.statusText,
+        error: errorData,
+        url: `${BACKEND_URL}/api/v1/smart-note/analyze`
       });
-      throw new Error(`Backend API responded with status: ${response.status}`);
+      throw new Error(`Backend API responded with status: ${response.status} (${response.statusText})`);
     }
 
     const data = await response.json();
     const totalDuration = Date.now() - startTime;
 
+    // Validate the response data structure
+    if (!data || typeof data !== 'object') {
+      console.error(`[${requestId}] Invalid response data format:`, {
+        dataType: typeof data,
+        data: data ? JSON.stringify(data).substring(0, 100) + '...' : 'null'
+      });
+      throw new Error('Invalid response data format from backend');
+    }
+
+    // Log success with more details
     console.info(`[${requestId}] Request completed successfully`, {
       duration_ms: totalDuration,
-      analysis_success: data.success || false
+      analysis_success: data.success || false,
+      has_data: !!data.data,
+      has_analysis: !!(data.data && data.data.analysis),
+      response_size: JSON.stringify(data).length
     });
 
     // Extract core idea if available
@@ -97,20 +121,29 @@ export async function POST(request: Request) {
     return NextResponse.json(data);
   } catch (error) {
     const totalDuration = Date.now() - startTime;
-    console.error(`[${requestId}] Request failed`, {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
+
+    // Get detailed error information
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    const errorName = error instanceof Error ? error.name : 'UnknownError';
+
+    console.error(`[${requestId}] Request failed: ${errorName}`, {
+      error: errorMessage,
+      stack: errorStack,
       duration_ms: totalDuration,
       timestamp: new Date().toISOString()
     });
 
+    // Return a more detailed error response
     return NextResponse.json({
       success: false,
-      error: 'Internal Server Error',
-      message: error instanceof Error ? error.message : 'An unexpected error occurred',
+      error: 'Analysis Failed',
+      message: errorMessage,
+      errorType: errorName,
       metadata: {
         request_id: requestId,
-        processing_time_ms: totalDuration
+        processing_time_ms: totalDuration,
+        timestamp: new Date().toISOString()
       }
     }, { status: 500 });
   }

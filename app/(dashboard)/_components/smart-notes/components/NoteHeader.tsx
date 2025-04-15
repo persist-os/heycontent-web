@@ -1,5 +1,5 @@
-import React from 'react';
-import { Lightbulb, Star, Brain, Save } from 'lucide-react';
+import React, { useState } from 'react';
+import { Lightbulb, Star, Brain, Save, Loader2 } from 'lucide-react';
 import type { Note, NoteType } from '../types/index';
 
 interface NoteHeaderProps {
@@ -10,6 +10,20 @@ interface NoteHeaderProps {
 }
 
 export function NoteHeader({ note, onUpdate, onSave, onRequestAIInsights }: NoteHeaderProps) {
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const handleRequestInsights = async () => {
+    if (isAnalyzing) return; // Prevent multiple clicks
+
+    try {
+      setIsAnalyzing(true);
+      await onRequestAIInsights(note.id, note);
+    } catch (error) {
+      console.error('Failed to request AI insights:', error);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
   return (
     <div className="border-b border-gray-100 px-6 py-4 flex justify-between items-center">
       <input
@@ -38,11 +52,12 @@ export function NoteHeader({ note, onUpdate, onSave, onRequestAIInsights }: Note
           <Star size={16} />
         </button>
         <button
-          className="w-8 h-8 rounded-full flex items-center justify-center bg-purple-100 text-purple-600 hover:bg-purple-200"
-          onClick={() => onRequestAIInsights(note.id, note)}
-          title="Get AI insights"
+          className={`w-8 h-8 rounded-full flex items-center justify-center ${isAnalyzing ? 'bg-purple-50' : 'bg-purple-100'} text-purple-600 hover:bg-purple-200`}
+          onClick={handleRequestInsights}
+          disabled={isAnalyzing}
+          title={isAnalyzing ? 'Analyzing note...' : 'Get AI insights'}
         >
-          <Brain size={16} />
+          {isAnalyzing ? <Loader2 size={16} className="animate-spin" /> : <Brain size={16} />}
         </button>
         <button
           className="w-8 h-8 rounded-full flex items-center justify-center bg-purple-600 text-white hover:bg-purple-700"
@@ -54,4 +69,4 @@ export function NoteHeader({ note, onUpdate, onSave, onRequestAIInsights }: Note
       </div>
     </div>
   );
-} 
+}
