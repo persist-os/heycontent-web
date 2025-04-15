@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
-// Type definition for note types
+// Type definition for note types and reference types
 const noteType = v.union(
   v.literal("ai_insight"),
   v.literal("conversation"),
@@ -11,8 +11,16 @@ const noteType = v.union(
   v.literal("date")
 );
 
+const referenceType = v.union(
+  v.literal("ai_insight"),
+  v.literal("conversation"),
+  v.literal("idea"),
+  v.literal("url"),
+  v.literal("date")
+);
+
 export const getNotes = query({
-  args: { 
+  args: {
     userId: v.string(),
     type: v.optional(noteType),
     important: v.optional(v.boolean()),
@@ -43,7 +51,11 @@ export const createNote = mutation({
     important: v.boolean(),
     type: v.optional(noteType),
     tags: v.optional(v.array(v.string())),
-    references: v.optional(v.array(v.string())),
+    references: v.optional(v.array(v.object({
+      type: referenceType,
+      content: v.string(),
+      isLoading: v.optional(v.boolean()),
+    }))),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -70,14 +82,18 @@ export const updateNote = mutation({
       important: v.optional(v.boolean()),
       type: v.optional(noteType),
       tags: v.optional(v.array(v.string())),
-      references: v.optional(v.array(v.string())),
-      updatedAt: v.number(),
+      references: v.optional(v.array(v.object({
+        type: referenceType,
+        content: v.string(),
+        isLoading: v.optional(v.boolean()),
+      }))),
+      updatedAt: v.optional(v.number()),
     }),
   },
   handler: async (ctx, args) => {
     const note = await ctx.db
       .query("notes")
-      .filter((q) => 
+      .filter((q) =>
         q.eq(q.field("_id"), args.noteId) &&
         q.eq(q.field("userId"), args.userId)
       )
@@ -87,8 +103,14 @@ export const updateNote = mutation({
       throw new Error("Note not found or unauthorized");
     }
 
-    await ctx.db.patch(note._id, args.updates);
-    return { ...note, ...args.updates };
+    // Always update the updatedAt timestamp
+    const updates = {
+      ...args.updates,
+      updatedAt: args.updates.updatedAt || Date.now()
+    };
+
+    await ctx.db.patch(note._id, updates);
+    return { ...note, ...updates };
   },
 });
 
@@ -100,7 +122,7 @@ export const deleteNote = mutation({
   handler: async (ctx, args) => {
     const note = await ctx.db
       .query("notes")
-      .filter((q) => 
+      .filter((q) =>
         q.eq(q.field("_id"), args.noteId) &&
         q.eq(q.field("userId"), args.userId)
       )
@@ -121,7 +143,7 @@ export const getIdeas = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("notes")
-      .filter((q) => 
+      .filter((q) =>
         q.eq(q.field("userId"), args.userId) &&
         q.eq(q.field("type"), "idea")
       )
@@ -135,7 +157,7 @@ export const getAIInsights = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("notes")
-      .filter((q) => 
+      .filter((q) =>
         q.eq(q.field("userId"), args.userId) &&
         q.eq(q.field("type"), "ai_insight")
       )
@@ -149,11 +171,29 @@ export const getConversations = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("notes")
-      .filter((q) => 
+      .filter((q) =>
         q.eq(q.field("userId"), args.userId) &&
         q.eq(q.field("type"), "conversation")
       )
       .order("desc")
       .collect();
   },
-}); 
+});
+
+export const getNote = query({
+  args: {
+    noteId: v.string(),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const note = await ctx.db
+      .query("notes")
+      .filter((q) =>
+        q.eq(q.field("_id"), args.noteId) &&
+        q.eq(q.field("userId"), args.userId)
+      )
+      .first();
+
+    return note;
+  },
+});

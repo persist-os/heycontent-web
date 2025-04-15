@@ -151,7 +151,17 @@ export default defineSchema({
       v.literal("date")
     )),
     tags: v.array(v.string()),
-    references: v.array(v.string()),
+    references: v.array(v.object({
+      type: v.union(
+        v.literal("ai_insight"),
+        v.literal("conversation"),
+        v.literal("idea"),
+        v.literal("url"),
+        v.literal("date")
+      ),
+      content: v.string(),
+      isLoading: v.optional(v.boolean()),
+    })),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

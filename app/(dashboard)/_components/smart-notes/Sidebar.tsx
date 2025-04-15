@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FileText, Star, Clock, Lightbulb, Trash2, Search, Plus, SortDesc } from 'lucide-react';
-import type { Note } from './index';
+import type { Note } from './types';
 
 interface SidebarProps {
   notes: Note[];
@@ -60,10 +60,11 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
         <h2 className="text-lg font-semibold mb-3">Smart Notes</h2>
         <button
           onClick={onCreateNote}
-          className="w-full bg-purple-500 text-white rounded-lg py-2 px-4 flex items-center justify-center gap-2 hover:bg-purple-600 transition-colors"
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-50 text-left"
+          title="Create new note"
         >
-          <Plus className="w-4 h-4" />
-          New Note
+          <Plus size={16} />
+          <span>New Note</span>
         </button>
       </div>
 
@@ -115,6 +116,7 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
           <button
             onClick={() => setShowSortOptions(!showSortOptions)}
             className="p-1 rounded hover:bg-gray-100"
+            title="Sort notes"
           >
             <SortDesc className="w-4 h-4 text-gray-500" />
           </button>
@@ -154,6 +156,7 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
                 className={`p-2 rounded-lg cursor-pointer group ${
                   activeNoteId === note.id ? 'bg-purple-50' : 'hover:bg-gray-50'
                 }`}
+                title={`Open note: ${note.title}`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
@@ -188,6 +191,7 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
                       onDeleteNote(note.id);
                     }}
                     className="p-1 rounded hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title={`Delete note: ${note.title}`}
                   >
                     <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-500" />
                   </button>
