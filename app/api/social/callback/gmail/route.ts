@@ -68,7 +68,8 @@ export async function GET(req: Request) {
     const profile = await gmail.users.getProfile({ userId: 'me' })
 
     // Store Gmail data in Convex
-    await convex.mutation(api.gmail.storeGmailData, {
+    console.log('Storing Gmail data in Convex...');
+    const storeResult = await convex.mutation(api.gmail.storeGmailData, {
       userId,
       profileData: {
         emailAddress: profile.data.emailAddress,
@@ -82,8 +83,10 @@ export async function GET(req: Request) {
       tokenType: tokens.token_type!,
       scope: tokens.scope!,
     });
+    console.log('Gmail data stored successfully, ID:', storeResult);
 
     // Store token in Convex tokens table
+    console.log('Storing Gmail token in Convex...');
     await convex.mutation(api.tokens.save, {
       userId,
       platform: 'gmail',
@@ -92,13 +95,55 @@ export async function GET(req: Request) {
       expiresAt: tokens.expiry_date ? Math.floor(tokens.expiry_date / 1000) : Date.now() + 3600 * 1000, // Default 1 hour if no expiry
       scope: tokens.scope
     });
+    console.log('Gmail token stored successfully');
+
+    // Check if social account is properly stored
+    console.log('Checking for Gmail social account in Convex...');
+    let socialAccount;
+    try {
+      const connectedAccounts = await convex.query(api.social.getConnectedAccounts, {
+        userId: userId
+      });
+      console.log('Connected accounts query result:', connectedAccounts ? `Found ${connectedAccounts.length} accounts` : 'No accounts found');
+
+      socialAccount = connectedAccounts?.find(account => account.platform === 'gmail');
+      console.log('Gmail social account in Convex:', socialAccount ? 'Account found' : 'No account found');
+    } catch (accountError) {
+      console.error('Error fetching social accounts:', accountError);
+      socialAccount = null;
+    }
+
+    // Ensure social account is properly stored
+    if (!socialAccount) {
+      console.log('Creating Gmail social account in Convex...');
+      try {
+        await convex.mutation(api.social.saveAccount, {
+          userId,
+          platform: 'gmail',
+          username: profile.data.emailAddress,
+          metadata: {
+            emailAddress: profile.data.emailAddress,
+            messagesTotal: profile.data.messagesTotal,
+            threadsTotal: profile.data.threadsTotal,
+            historyId: profile.data.historyId,
+          },
+          isConnected: true,
+          updatedAt: Date.now()
+        });
+        console.log('Gmail social account created successfully');
+      } catch (saveError) {
+        console.error('Error creating Gmail social account:', saveError);
+      }
+    }
 
     // Update connection status
+    console.log('Updating Gmail connection status in Convex...');
     await convex.mutation(api.social.updateConnectionStatus, {
       userId,
       platform: 'gmail',
       isConnected: true,
     });
+    console.log('Connection status updated successfully');
 
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?success=gmail_connected`)
 
