@@ -7,6 +7,7 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import { MessageBubble } from './chat/message-bubble'
 import { ChatInput } from './chat/chat-input'
+import { MessageSquare } from 'lucide-react'
 
 interface ChatResponse {
   chat_response: string;
@@ -51,22 +52,26 @@ const ChatScreen = () => {
       referencedMessage: referencedMessage ? {
         id: referencedMessage.id,
         content: referencedMessage.content
-      } : undefined
+      } : undefined,
+      chat_response: content
     }
     
     try {
       setIsLoading(true)
       setError(null)
       
-      setMessages(prev => [...prev, newMessage])
-      
-      setMessages(prev => [...prev, {
-        id: Date.now(),
-        content: '...',
-        role: 'assistant',
-        timestamp: new Date().toISOString(),
-        status: 'typing'
-      }])
+      setMessages(prev => [
+        ...prev,
+        newMessage,
+        {
+          id: Date.now(),
+          content: '...',
+          role: 'assistant',
+          timestamp: new Date().toISOString(),
+          status: 'typing',
+          chat_response: ''
+        }
+      ]);
 
       const response = await fetch('/api/chat/message', {
         method: 'POST',
@@ -91,6 +96,7 @@ const ChatScreen = () => {
         return [...withoutTyping, {
           id: Date.now(),
           content: typeof data === 'string' ? data : data.chat_response,
+          chat_response: typeof data === 'string' ? data : data.chat_response,
           role: 'assistant',
           timestamp: new Date().toISOString(),
           suggestions: data.suggestions || []
@@ -166,28 +172,29 @@ const ChatScreen = () => {
   }
 
   return (
-    <div className="h-full flex bg-white">
-      <div className="flex-1 flex flex-col">
-        <div className="shrink-0 border-b bg-white px-6 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="font-semibold text-lg">Chat</h2>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  setMessages([])
-                  setReferencedMessage(null)
-                  setSessionId(Date.now().toString())
-                }}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-text-gray hover:bg-gray-50 rounded-lg"
-              >
-                New Chat
-              </button>
-            </div>
+    <div className="h-full flex flex-col bg-white">
+      <div className="shrink-0 border-b bg-white px-6 py-4">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-pink-500" />
+            <h2 className="font-semibold text-lg">Chat</h2>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setMessages([])
+                setReferencedMessage(null)
+                setSessionId(Date.now().toString())
+              }}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-text-gray hover:bg-gray-50 rounded-lg"
+            >
+              New Chat
+            </button>
           </div>
         </div>
-        <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+      </div>
+      <div className="flex-1 overflow-hidden relative">
+        <div ref={chatContainerRef} className="h-full overflow-y-auto p-4 space-y-4 pb-32">
           {messages.map((message, index) => (
             <MessageBubble
               key={message.id}
@@ -205,14 +212,20 @@ const ChatScreen = () => {
             </div>
           )}
         </div>
-        <div className="shrink-0 border-t bg-white p-4">
-          <ChatInput
-            inputRef={inputRef}
-            onSend={handleSendMessage}
-            isLoading={isLoading}
-            referencedMessage={referencedMessage}
-            onClearReference={handleClearReference}
-          />
+        <div className="fixed bottom-0 left-0 right-0 pl-64 transition-all duration-300">
+          <div className="h-px bg-gray-200 w-full"></div>
+          <div className="bg-white shadow-sm flex">
+            <div className="w-px bg-gray-200 h-full"></div>
+            <div className="max-w-6xl mx-auto px-4 flex-1">
+              <ChatInput
+                inputRef={inputRef}
+                onSend={handleSendMessage}
+                isLoading={isLoading}
+                referencedMessage={referencedMessage}
+                onClearReference={handleClearReference}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>

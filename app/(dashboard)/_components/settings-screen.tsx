@@ -76,19 +76,35 @@ const SettingsScreen = () => {
 
   const handleSignOut = async () => {
     try {
-      if (auth) {
-        await signOut(auth)
-        router.push('/login')
+      // Call the logout API endpoint
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to logout')
       }
+
+      // Clear any remaining local storage
+      localStorage.clear()
+      sessionStorage.clear()
+
+      // Redirect to login page
+      router.push('/login')
     } catch (error) {
       console.error('Sign out error:', error)
-      router.push('/login')
+      toast.error('Failed to sign out. Please try again.')
     }
   }
 
   const handleResendVerification = async () => {
     setIsResending(true)
     try {
+      if (!auth) throw new Error('Auth not initialized');
+      
       const response = await fetch('/api/auth/verify-email', {
         method: 'POST',
         headers: {
@@ -147,10 +163,9 @@ const SettingsScreen = () => {
       }))
 
       // Update session
+      if (!auth?.currentUser) throw new Error('User not authenticated');
       await updateProfile(auth.currentUser, {
-        displayName: data.user.name,
-        currentPersona: data.persona?.currentState?.description || '',
-        futureVision: data.persona?.aspirations?.description || ''
+        displayName: data.user.name
       })
 
       toast.success('Profile updated successfully')
@@ -224,7 +239,7 @@ const SettingsScreen = () => {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Profile Information</CardTitle>
-                    {auth.currentUser ? (
+                    {auth?.currentUser ? (
                       <Badge variant="success">Verified</Badge>
                     ) : (
                       <div className="flex items-center gap-2">

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/app/auth"
+import { auth } from "@/app/lib/firebase"
 import { ConvexHttpClient } from "convex/browser"
 import { api } from "@/convex/_generated/api"
 
@@ -7,9 +7,16 @@ const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
 
 export async function GET() {
   try {
-    const session = await auth()
+    if (!auth) {
+      return NextResponse.json(
+        { error: "Authentication not initialized" },
+        { status: 500 }
+      )
+    }
+
+    const currentUser = auth.currentUser
     
-    if (!session?.user?.id) {
+    if (!currentUser?.uid) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -18,19 +25,19 @@ export async function GET() {
 
     // Fetch user data
     const user = await convex.query(api.users.get, {
-      userId: session.user.id
+      userId: currentUser.uid
     })
 
     // Fetch persona data
     const persona = await convex.query(api.personas.getPersona, {
-      userId: session.user.id
+      userId: currentUser.uid
     })
 
     return NextResponse.json({
       success: true,
       user: {
         name: user?.name || '',
-        email: session.user.email || '',
+        email: currentUser.email || '',
       },
       persona: persona ? {
         name: persona.name,
@@ -53,9 +60,16 @@ export async function GET() {
 
 export async function PUT(req: Request) {
   try {
-    const session = await auth()
+    if (!auth) {
+      return NextResponse.json(
+        { error: "Authentication not initialized" },
+        { status: 500 }
+      )
+    }
+
+    const currentUser = auth.currentUser
     
-    if (!session?.user?.id) {
+    if (!currentUser?.uid) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -66,15 +80,15 @@ export async function PUT(req: Request) {
     
     // Update user profile in Convex
     const user = await convex.mutation(api.users.update, {
-      userId: session.user.id,
+      userId: currentUser.uid,
       name,
-      email: session.user.email || '',
+      email: currentUser.email || '',
     })
 
     // Update persona in Convex
     if (currentPersona || futureVision) {
       await convex.mutation(api.personas.updatePersona, {
-        userId: session.user.id,
+        userId: currentUser.uid,
         currentPersona: currentPersona || '',
         futureVision: futureVision || '',
       })
@@ -82,14 +96,14 @@ export async function PUT(req: Request) {
 
     // Fetch the current persona
     const persona = await convex.query(api.personas.getPersona, {
-      userId: session.user.id
+      userId: currentUser.uid
     })
 
     return NextResponse.json({
       success: true,
       user: {
         name: name || '',
-        email: session.user.email || '',
+        email: currentUser.email || '',
       },
       persona: persona ? {
         name: persona.name,

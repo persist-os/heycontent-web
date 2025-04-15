@@ -15,13 +15,14 @@ export interface InteractiveResponse {
 
 export interface Message {
   id: number;
+  content: string;
   chat_response: string;
   role: 'user' | 'assistant';
   timestamp: string;
   status?: 'typing' | 'failed';
   referencedMessage?: {
     id: number;
-    chat_response: string;
+    content: string;
   };
   suggestions?: string[];
 }

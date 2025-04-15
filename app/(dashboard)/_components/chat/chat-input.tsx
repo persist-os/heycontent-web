@@ -88,7 +88,7 @@ export function ChatInput({
   const isAtLimit = characterCount >= maxLength
 
   return (
-    <form onSubmit={handleSubmit} className="border-t p-4">
+    <form onSubmit={handleSubmit} className="py-2">
       {/* Referenced message preview */}
       {referencedMessage && (
         <div className="max-w-5xl mx-auto mb-2">
@@ -115,9 +115,9 @@ export function ChatInput({
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            className={`w-full rounded-lg border px-4 py-2 
+            className={`w-full rounded-lg border px-3 py-1.5 
               focus:outline-none focus:ring-2 focus:ring-heycontent-yellow
-              resize-none overflow-hidden min-h-[44px] max-h-[200px]
+              resize-none overflow-hidden min-h-[36px] max-h-[200px]
               ${isAtLimit ? 'border-red-500' : ''}
               ${isNearLimit ? 'border-yellow-500' : ''}
               transition-colors duration-200
@@ -127,7 +127,7 @@ export function ChatInput({
             maxLength={maxLength}
           />
           {/* Character count */}
-          <div className={`absolute right-2 bottom-2 text-xs
+          <div className={`absolute right-2 bottom-1.5 text-xs
             ${isAtLimit ? 'text-red-500' : ''}
             ${isNearLimit ? 'text-yellow-500' : ''}
             ${isLoading ? 'hidden' : ''}
@@ -136,7 +136,7 @@ export function ChatInput({
           </div>
           {/* Loading indicator */}
           {isLoading && (
-            <div className="absolute right-3 bottom-3">
+            <div className="absolute right-3 bottom-2">
               <Loader2 className="w-4 h-4 animate-spin text-text-gray" />
             </div>
           )}
@@ -145,14 +145,14 @@ export function ChatInput({
           type="submit"
           aria-label="Send message"
           disabled={isLoading || !input.trim() || isAtLimit}
-          className="bg-heycontent-yellow text-black px-4 py-2 rounded-lg 
+          className="bg-heycontent-yellow text-black px-3 py-1.5 rounded-lg 
             hover:bg-heycontent-yellow/80 transition-colors disabled:opacity-50 
-            disabled:cursor-not-allowed h-[44px] flex items-center"
+            disabled:cursor-not-allowed h-[36px] flex items-center"
         >
-          <Send className="w-5 h-5" />
+          <Send className="w-4 h-4" />
         </button>
       </div>
-      <div className="mt-2 text-xs text-text-gray text-center">
+      <div className="mt-1 text-xs text-text-gray text-center">
         Press Enter to send, Shift+Enter for new line
       </div>
     </form>

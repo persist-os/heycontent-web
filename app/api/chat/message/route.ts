@@ -83,12 +83,7 @@ export async function POST(request: Request) {
       }
     };
 
-    return new NextResponse(JSON.stringify(responseData), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    return NextResponse.json(responseData);
   } catch (error) {
     const totalDuration = Date.now() - startTime;
     console.error(`[${requestId}] Request failed`, {

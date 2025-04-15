@@ -74,8 +74,10 @@ export default function DashboardLayout({
   return (
     <div className="h-screen flex bg-white">
       <DashboardNav />
-      <main className="flex-1">
-        {children}
+      <main className="flex-1 h-full overflow-y-auto">
+        <div className="max-w-6xl mx-auto px-6 py-8">
+          {children}
+        </div>
       </main>
     </div>
   )

@@ -8,7 +8,8 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { Logo } from '@/app/_components/logo'
 import { 
   Brain, Users, MessageSquare, Settings, 
-  Briefcase, ChevronLeft, Clock, Star, FileText
+  Briefcase, ChevronLeft, Clock, Star, FileText,
+  ChevronRight
 } from 'lucide-react'
 
 // Add type for recent chats
@@ -24,7 +25,7 @@ const navItems = [
     id: 'chat', 
     label: 'AI Assistant',
     icon: MessageSquare,
-    href: '/dashboard/chat',
+    href: '/chat',
     color: 'text-pink-500'
   },
   { 
@@ -61,9 +62,8 @@ export function DashboardNav() {
   const pathname = usePathname()
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
-  const [isExpanded, setIsExpanded] = useState(false)
   const [recentChats, setRecentChats] = useState<RecentChat[]>([])
-  const [isHovering, setIsHovering] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(true)
 
   useEffect(() => {
     if (!auth) {
@@ -102,44 +102,60 @@ export function DashboardNav() {
 
   return (
     <>
-      {/* Wider hover detection area with shadow indicator */}
-      <div 
-        className="fixed left-0 top-0 bottom-0 w-16 z-50 transition-all duration-300"
-        onMouseEnter={() => setIsHovering(true)}
-        style={{
-          background: 'linear-gradient(to right, rgba(0,0,0,0.01), transparent)',
-          pointerEvents: 'none'
-        }}
-      />
-      
-      {/* Actual hover detection area */}
-      <div 
-        className="fixed left-0 top-0 bottom-0 w-8 z-50"
-        onMouseEnter={() => setIsHovering(true)}
-      />
-
-      {/* Nav content */}
-      <div 
-        className={`fixed left-0 top-0 bottom-0 z-40 w-64 transition-transform duration-300 ease-in-out ${
-          isHovering ? 'translate-x-0' : '-translate-x-[calc(100%-1px)]'
-        }`}
-        onMouseLeave={() => setIsHovering(false)}
-      >
-        <div className="relative h-full bg-white/80 backdrop-blur-md border-r border-gray-100">
-          {/* Logo Area */}
-          <div className="h-16 flex items-center px-6">
-            <div 
-              className={`group flex items-center transition-all duration-300 ease-in-out transform
-                ${isHovering ? 'scale-100 opacity-100' : 'scale-90 opacity-50'}
-              `}
+      {/* Collapsed state overlay */}
+      {!isExpanded && (
+        <div 
+          className="h-full w-16 bg-white border-r border-gray-200 shadow-sm"
+          onClick={() => setIsExpanded(true)}
+        >
+          <div className="h-16 flex items-center justify-center border-b border-gray-100">
+            <Logo className="h-8 text-gray-900" />
+          </div>
+          <div className="flex flex-col items-center py-4 space-y-4">
+            {navItems.map((item) => (
+              <Link
+                key={item.id}
+                href={item.href}
+                className={`p-2 rounded-lg transition-all ${
+                  pathname === item.href 
+                    ? 'bg-gray-100 ' + item.color
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+                title={item.label}
+              >
+                <item.icon className={`w-5 h-5 ${pathname === item.href ? item.color : ''}`} />
+              </Link>
+            ))}
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100">
+            <Link
+              href="/settings"
+              className="flex items-center justify-center p-2 rounded-lg text-gray-600 hover:bg-gray-50"
+              title="Settings"
             >
-              <Logo 
-                className={`h-12 text-gray-900 animate-fade-in
-                  ${isHovering ? 'animate-float' : ''}
-                  group-hover:scale-105 group-hover:rotate-1 transition-all duration-300
-                `}
-              />
-            </div>
+              <Settings className="w-5 h-5" />
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Expanded state */}
+      <div 
+        className={`h-full bg-white border-r border-gray-200 shadow-sm transition-all duration-300 ${
+          isExpanded ? 'w-64' : 'w-0 overflow-hidden'
+        }`}
+      >
+        <div className="relative h-full">
+          {/* Logo Area with Toggle */}
+          <div className="h-16 flex items-center justify-between px-6 border-b border-gray-100">
+            <Logo className="h-12 text-gray-900" />
+            <button
+              onClick={() => setIsExpanded(false)}
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700"
+              title="Collapse sidebar"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Main Navigation */}
@@ -151,31 +167,25 @@ export function DashboardNav() {
                   <Link
                     key={item.id}
                     href={item.href}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all ${
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
                       pathname === item.href 
                         ? 'bg-gray-100 font-medium ' + item.color
                         : 'text-gray-600 hover:bg-gray-50'
                     }`}
                   >
                     <item.icon className={`w-5 h-5 ${pathname === item.href ? item.color : ''}`} />
-                    <span className="transition-opacity duration-200 ease-in-out"
-                      style={{ opacity: isHovering ? 1 : 0 }}
-                    >
-                      {item.label}
-                    </span>
+                    <span>{item.label}</span>
                   </Link>
                 ))}
               </div>
             </div>
 
             {/* Bottom Section */}
-            <div className="shrink-0 border-t transition-opacity duration-200 ease-in-out"
-              style={{ opacity: isHovering ? 1 : 0 }}
-            >
+            <div className="shrink-0 border-t border-gray-100">
               {/* Recent Chats */}
               <div className="px-3 py-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-500">Recent Chats</span>
+                  <span className="text-sm font-medium text-gray-700">Recent Chats</span>
                   <Link 
                     href="/history"
                     className="text-xs text-blue-500 hover:underline"
@@ -198,10 +208,10 @@ export function DashboardNav() {
               </div>
 
               {/* Settings */}
-              <div className="px-3 py-4 border-t">
+              <div className="px-3 py-4 border-t border-gray-100">
                 <Link
                   href="/settings"
-                  className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all ${
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
                     pathname === '/settings' 
                       ? 'bg-gray-100 font-medium text-gray-500'
                       : 'text-gray-600 hover:bg-gray-50'
