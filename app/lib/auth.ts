@@ -1,5 +1,6 @@
 import { auth as firebaseAuth } from '@/app/lib/firebase'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
+import { getServerSession } from './server-auth'
 
 interface AuthResponse {
   user: {
@@ -10,17 +11,26 @@ interface AuthResponse {
   };
 }
 
+// Check if we're on the client side
+const isClient = typeof window !== 'undefined';
+
 export async function auth(): Promise<AuthResponse | null> {
-  const firebaseAuthInstance = getAuth()
-  
+  // For server-side, use the server-auth module
+  if (!isClient) {
+    return getServerSession();
+  }
+
+  // For client-side, use the Firebase Auth SDK
+  const firebaseAuthInstance = getAuth();
+
   // Wait for auth state to be determined
   return new Promise((resolve) => {
     const unsubscribe = onAuthStateChanged(firebaseAuthInstance, (user) => {
-      unsubscribe()
-      
+      unsubscribe();
+
       if (!user) {
-        resolve(null)
-        return
+        resolve(null);
+        return;
       }
 
       resolve({
@@ -30,7 +40,7 @@ export async function auth(): Promise<AuthResponse | null> {
           name: user.displayName,
           image: user.photoURL
         }
-      })
-    })
-  })
-} 
+      });
+    });
+  });
+}

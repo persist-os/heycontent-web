@@ -1,24 +1,23 @@
 # HeyContent
 
-A modern content management platform built with Next.js, Convex, and Google OAuth.
+A modern content management platform built with Next.js, Convex, and Firebase.
 
 ## Tech Stack
 
 - **Frontend**: Next.js 14, React 18, TypeScript
 - **Styling**: Tailwind CSS, shadcn/ui
 - **Database**: Convex
-- **Authentication**: Google OAuth
-- **AI Integration**: OpenAI, LangChain
+- **Authentication**: Firebase Authentication
 - **Email**: Resend
 - **Testing**: Jest
 - **State Management**: Zustand
 
 ## Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - npm or yarn
-- Google Cloud Platform account (for OAuth)
-- OpenAI API key
+- Google Cloud Platform account (for Gmail and YouTube APIs)
+- Firebase project
 - Convex account
 
 ## Getting Started

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { auth } from '@/app/lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 
@@ -11,11 +11,13 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
+  const pathname = usePathname()
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!auth) {
-      console.error('Firebase auth not initialized')
+    // Check if we're on the client side and Firebase is initialized
+    if (typeof window === 'undefined' || !auth || Object.keys(auth).length === 0) {
+      console.error('Firebase auth not initialized or not on client side')
       setLoading(false)
       return
     }
@@ -23,7 +25,7 @@ export default function DashboardLayout({
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (!user) {
         // Only redirect if we're not already on the login page
-        if (!window.location.pathname.includes('/login')) {
+        if (!pathname?.includes('/login')) {
           router.push('/login')
         }
       }
@@ -31,7 +33,7 @@ export default function DashboardLayout({
     })
 
     return () => unsubscribe()
-  }, [router])
+  }, [router, pathname])
 
   if (loading) {
     return (

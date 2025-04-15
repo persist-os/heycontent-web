@@ -1,5 +1,8 @@
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAuth, setPersistence, browserLocalPersistence, Auth } from 'firebase/auth';
+
+// Check if we're on the client side
+const isClient = typeof window !== 'undefined';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -10,28 +13,58 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Debug logging
-console.log('Firebase Config:', {
-  hasApiKey: !!firebaseConfig.apiKey,
-  hasAuthDomain: !!firebaseConfig.authDomain,
-  hasProjectId: !!firebaseConfig.projectId,
-  hasStorageBucket: !!firebaseConfig.storageBucket,
-  hasMessagingSenderId: !!firebaseConfig.messagingSenderId,
-  hasAppId: !!firebaseConfig.appId,
-});
+// Only log in development
+if (process.env.NODE_ENV === 'development') {
+  console.log('Firebase Config:', {
+    hasApiKey: !!firebaseConfig.apiKey,
+    hasAuthDomain: !!firebaseConfig.authDomain,
+    hasProjectId: !!firebaseConfig.projectId,
+    hasStorageBucket: !!firebaseConfig.storageBucket,
+    hasMessagingSenderId: !!firebaseConfig.messagingSenderId,
+    hasAppId: !!firebaseConfig.appId,
+  });
+}
 
-// Initialize Firebase
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const auth = getAuth(app);
+// Initialize Firebase only on client side
+let app;
+let auth: Auth;
 
-// Debug logging
-console.log('Firebase initialized:', {
-  appInitialized: !!app,
-  authInitialized: !!auth,
-  existingApps: getApps().length
-});
+if (isClient) {
+  try {
+    // Check if Firebase is already initialized
+    if (getApps().length === 0) {
+      app = initializeApp(firebaseConfig);
+    } else {
+      app = getApp();
+    }
 
-// Set persistence
-setPersistence(auth, browserLocalPersistence);
+    // Initialize auth
+    auth = getAuth(app);
 
-export { app, auth }; 
+    // Set persistence
+    setPersistence(auth, browserLocalPersistence)
+      .catch(error => {
+        console.error('Error setting auth persistence:', error);
+      });
+
+    // Debug logging only in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Firebase initialized:', {
+        appInitialized: !!app,
+        authInitialized: !!auth,
+        existingApps: getApps().length,
+        isClient
+      });
+    }
+  } catch (error) {
+    console.error('Firebase initialization error:', error);
+  }
+} else {
+  // On server side, create a dummy auth object
+  auth = {} as Auth;
+}
+
+// Helper function to get Firebase token from cookies - moved to server-only file
+// This functionality is now in app/lib/server-auth.ts
+
+export { app, auth };

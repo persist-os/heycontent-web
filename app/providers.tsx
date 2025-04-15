@@ -2,11 +2,16 @@
 
 import { ReactNode } from 'react'
 import { AuthProvider } from './context/auth-context'
+import { ConvexProvider, ConvexReactClient } from 'convex/react'
+
+const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
-    <AuthProvider>
-      {children}
-    </AuthProvider>
+    <ConvexProvider client={convex}>
+      <AuthProvider>
+        {children}
+      </AuthProvider>
+    </ConvexProvider>
   )
-} 
+}

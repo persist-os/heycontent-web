@@ -1,7 +1,6 @@
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-import { auth } from '@/app/lib/auth'
 import { google } from 'googleapis'
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
@@ -20,6 +19,12 @@ export async function GET(req: Request) {
 
     // Decode state parameter
     const { userId, platform } = JSON.parse(Buffer.from(state, 'base64').toString())
+
+    // Verify that we have a userId in the state
+    if (!userId) {
+      console.error('No userId in state parameter');
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=invalid_state`);
+    }
 
     // Create OAuth2 client
     const oauth2Client = new google.auth.OAuth2(
@@ -48,7 +53,7 @@ export async function GET(req: Request) {
       'https://mail.google.com/'
     ];
 
-    const hasRequiredScopes = requiredScopes.every(scope => 
+    const hasRequiredScopes = requiredScopes.every(scope =>
       tokenInfo.scopes?.includes(scope)
     );
 
@@ -78,6 +83,16 @@ export async function GET(req: Request) {
       scope: tokens.scope!,
     });
 
+    // Store token in Convex tokens table
+    await convex.mutation(api.tokens.save, {
+      userId,
+      platform: 'gmail',
+      accessToken: tokens.access_token!,
+      refreshToken: tokens.refresh_token || undefined,
+      expiresAt: tokens.expiry_date ? Math.floor(tokens.expiry_date / 1000) : Date.now() + 3600 * 1000, // Default 1 hour if no expiry
+      scope: tokens.scope
+    });
+
     // Update connection status
     await convex.mutation(api.social.updateConnectionStatus, {
       userId,
@@ -91,4 +106,4 @@ export async function GET(req: Request) {
     console.error('[GMAIL_CALLBACK_ERROR]', error)
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=unknown`)
   }
-} 
+}

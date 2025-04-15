@@ -5,17 +5,19 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/src/components/ui/tabs'
 import { Switch } from "@/src/components/ui/switch"
-import { 
-  Bell, Globe, Users, 
-  Sliders, 
-  Download, Database, 
-  LogOut} from 'lucide-react'
+import {
+  Bell, Globe, Users,
+  Sliders,
+  Download, Database,
+  LogOut, Bug} from 'lucide-react'
 import { signOut, updateProfile } from 'firebase/auth'
 import { auth } from '@/app/lib/firebase'
 import { Badge } from "@/src/components/ui/badge"
 import { Button } from "@/src/components/ui/button"
 import { toast } from "react-hot-toast"
 import { PlatformConnect } from './platform-connect'
+import { fetchWithAuth } from '@/app/lib/api-helpers'
+import DebugTab from './debug-tab'
 
 const MAX_PERSONA_LENGTH = 500  // Enough for detailed description but not too long
 const MAX_VISION_LENGTH = 500
@@ -39,9 +41,9 @@ const SettingsScreen = () => {
 
   const fetchPersonaData = async () => {
     try {
-      const response = await fetch('/api/user/profile')
+      const response = await fetchWithAuth('/api/user/profile')
       const data = await response.json()
-      
+
       if (response.ok && data.persona) {
         setFormData(prev => ({
           ...prev,
@@ -77,11 +79,8 @@ const SettingsScreen = () => {
   const handleSignOut = async () => {
     try {
       // Call the logout API endpoint
-      const response = await fetch('/api/auth/logout', {
+      const response = await fetchWithAuth('/api/auth/logout', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
       })
 
       if (!response.ok) {
@@ -104,14 +103,11 @@ const SettingsScreen = () => {
     setIsResending(true)
     try {
       if (!auth) throw new Error('Auth not initialized');
-      
-      const response = await fetch('/api/auth/verify-email', {
+
+      const response = await fetchWithAuth('/api/auth/verify-email', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          email: auth.currentUser?.email 
+        body: JSON.stringify({
+          email: auth.currentUser?.email
         }),
       })
 
@@ -136,11 +132,8 @@ const SettingsScreen = () => {
     setIsUpdating(true)
 
     try {
-      const response = await fetch('/api/user/profile', {
+      const response = await fetchWithAuth('/api/user/profile', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           name: formData.name,
           currentPersona: formData.currentPersona,
@@ -179,7 +172,7 @@ const SettingsScreen = () => {
 
   return (
     <div className="h-full min-h-screen bg-background">
-      <div className="container max-w-6xl mx-auto py-6 space-y-6">
+      <div className="container max-w-6xl mx-auto py-6 px-4 sm:px-6 space-y-6">
         {isFirstTimeSetup && (
           <div className="mb-6 bg-purple-50 p-4 rounded-lg">
             <h2 className="text-lg font-semibold mb-2">Welcome to HeyContent! 🎉</h2>
@@ -209,7 +202,8 @@ const SettingsScreen = () => {
         </div>
 
         <Tabs defaultValue="account" className="space-y-6">
-          <TabsList>
+          <div className="overflow-x-auto pb-2">
+            <TabsList className="w-full md:w-auto flex flex-nowrap">
             <TabsTrigger value="account">
               <Users className="w-4 h-4 mr-2" />
               Account
@@ -230,11 +224,16 @@ const SettingsScreen = () => {
               <Database className="w-4 h-4 mr-2" />
               Data Management
             </TabsTrigger>
+            <TabsTrigger value="debug">
+              <Bug className="w-4 h-4 mr-2" />
+              Debug
+            </TabsTrigger>
           </TabsList>
+          </div>
 
           {/* Account Settings */}
           <TabsContent value="account">
-            <div className="grid gap-6">
+            <div className="grid gap-6 max-w-full">
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -244,8 +243,8 @@ const SettingsScreen = () => {
                     ) : (
                       <div className="flex items-center gap-2">
                         <Badge variant="destructive">Unverified</Badge>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={handleResendVerification}
                           disabled={isResending}
@@ -258,7 +257,7 @@ const SettingsScreen = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <form onSubmit={handleProfileUpdate}>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label htmlFor="name" className="text-sm font-medium">Name</label>
                         <input
@@ -285,12 +284,12 @@ const SettingsScreen = () => {
                       </div>
                     </div>
                     <div className="mt-4 space-y-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
                           <h3 className="text-sm font-medium">AI Persona Understanding</h3>
                           <p className="text-sm text-gray-600">Help Content understand your journey and goals</p>
                         </div>
-                        <Switch 
+                        <Switch
                           checked={showPersonaFields}
                           onCheckedChange={setShowPersonaFields}
                         />
@@ -357,7 +356,7 @@ const SettingsScreen = () => {
                   <CardTitle>Security</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-gray-50 rounded-lg gap-3">
                     <div>
                       <h3 className="font-medium">Two-Factor Authentication</h3>
                       <p className="text-sm text-gray-600">Add an extra layer of security</p>
@@ -383,7 +382,7 @@ const SettingsScreen = () => {
                   { title: 'Partnership Opportunities', desc: 'Updates about new collaboration possibilities' },
                   { title: 'Content Suggestions', desc: 'Receive content optimization recommendations' }
                 ].map((item, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-gray-50 rounded-lg gap-3">
                     <div>
                       <h3 className="font-medium">{item.title}</h3>
                       <p className="text-sm text-gray-600">{item.desc}</p>
@@ -397,7 +396,7 @@ const SettingsScreen = () => {
 
           {/* Integrations */}
           <TabsContent value="integrations">
-            <div className="grid gap-6">
+            <div className="grid gap-6 max-w-full">
               <Card>
                 <CardHeader>
                   <CardTitle>Connected Platforms</CardTitle>
@@ -422,7 +421,7 @@ const SettingsScreen = () => {
                   { title: 'Automated Actions', desc: 'Allow AI to take recommended actions' },
                   { title: 'Partnership Suggestions', desc: 'Receive AI-curated partnership opportunities' }
                 ].map((item, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-gray-50 rounded-lg gap-3">
                     <div>
                       <h3 className="font-medium">{item.title}</h3>
                       <p className="text-sm text-gray-600">{item.desc}</p>
@@ -436,22 +435,22 @@ const SettingsScreen = () => {
 
           {/* Data Management */}
           <TabsContent value="data">
-            <div className="grid gap-6">
+            <div className="grid gap-6 max-w-full">
               <Card>
                 <CardHeader>
                   <CardTitle>Data Export & Backup</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-gray-50 rounded-lg gap-3">
                     <div>
                       <h3 className="font-medium">Export All Data</h3>
                       <p className="text-sm text-gray-600">Download all your data in JSON format</p>
                     </div>
-                    <button className="px-4 py-2 bg-purple-500 text-white rounded-lg flex items-center gap-2">
+                    <button className="px-4 py-2 bg-purple-500 text-white rounded-lg flex items-center justify-center gap-2 w-full sm:w-auto">
                       <Download className="w-4 h-4" /> Export
                     </button>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-gray-50 rounded-lg gap-3">
                     <div>
                       <h3 className="font-medium">Automatic Backups</h3>
                       <p className="text-sm text-gray-600">Keep your data safe with regular backups</p>
@@ -466,25 +465,30 @@ const SettingsScreen = () => {
                   <CardTitle>Privacy & Data</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-gray-50 rounded-lg gap-3">
                     <div>
                       <h3 className="font-medium">Data Collection</h3>
                       <p className="text-sm text-gray-600">Manage what data is collected and analyzed</p>
                     </div>
-                    <button className="text-purple-500">Configure</button>
+                    <button className="text-purple-500 px-4 py-2 border border-purple-500 rounded-lg w-full sm:w-auto">Configure</button>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-gray-50 rounded-lg gap-3">
                     <div>
                       <h3 className="font-medium">Clear Data</h3>
                       <p className="text-sm text-gray-600">Delete all stored data and preferences</p>
                     </div>
-                    <button className="px-4 py-2 bg-red-500 text-white rounded-lg">
+                    <button className="px-4 py-2 bg-red-500 text-white rounded-lg w-full sm:w-auto">
                       Clear All
                     </button>
                   </div>
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Debug Tab */}
+          <TabsContent value="debug">
+            <DebugTab />
           </TabsContent>
         </Tabs>
       </div>

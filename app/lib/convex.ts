@@ -14,4 +14,8 @@ export class ConvexClient {
   async mutation(mutation: any, args: any) {
     return await this.client.mutation(mutation, args);
   }
-} 
+
+  async action(action: any, args: any) {
+    return await this.client.action(action, args);
+  }
+}

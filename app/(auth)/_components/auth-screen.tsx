@@ -3,21 +3,22 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card'
-import { 
-  Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  ArrowRight, 
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowRight,
   Chrome
 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'react-hot-toast'
 import { auth } from '@/app/lib/firebase'
-import { 
+import {
   GoogleAuthProvider,
   signInWithPopup,
-  onAuthStateChanged
+  onAuthStateChanged,
+  signInWithCustomToken
 } from 'firebase/auth'
 import { useAuth } from '@/app/context/auth-context'
 
@@ -40,9 +41,9 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
   const [showResendVerification, setShowResendVerification] = useState(false)
 
   useEffect(() => {
-    if (error === 'UNVERIFIED_EMAIL' || 
-        error === 'CallbackRouteError' || 
-        error === 'AccessDenied' || 
+    if (error === 'UNVERIFIED_EMAIL' ||
+        error === 'CallbackRouteError' ||
+        error === 'AccessDenied' ||
         urlError === 'AccessDenied') {
       setShowResendVerification(true)
     }
@@ -52,10 +53,8 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
     e.preventDefault()
     setError(null)
     setIsLoading(true)
-    
+
     try {
-      console.log('Attempting to submit form with:', { email, action: isLogin ? 'login' : 'register' })
-      
       const response = await fetch('/api/auth/firebase', {
         method: 'POST',
         headers: {
@@ -68,9 +67,7 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
         }),
       })
 
-      console.log('Auth response status:', response.status)
       const data = await response.json()
-      console.log('Auth response data:', data)
 
       if (!response.ok) {
         if (data.error === 'UNVERIFIED_EMAIL') {
@@ -80,30 +77,29 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
         throw new Error(data.error)
       }
 
-      // Wait for auth state to be updated and token to be set
-      await new Promise((resolve) => {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-          if (user) {
-            console.log('Auth state updated with user:', user.email);
-            // Get the latest token
-            const token = await user.getIdToken(true);
-            console.log('Token obtained successfully');
-            unsubscribe();
-            resolve(user);
+      // If we have a custom token, sign in with it
+      if (data.customToken && auth) {
+        try {
+          // Sign in with the custom token
+          const userCredential = await signInWithCustomToken(auth, data.customToken)
+          if (userCredential.user) {
+            // If we have a redirect URL in the response, use it
+            if (data.redirect) {
+              router.push(data.redirect)
+              return
+            }
           }
-        });
-      });
+        } catch (signInError) {
+          console.error('Error signing in with custom token:', signInError)
+          throw new Error('Failed to complete sign in')
+        }
+      }
 
-      // Add a small delay to ensure the cookie is set
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Use the redirect path from the server response if available
-      const redirectPath = data.redirect || '/chat';
-      console.log('Redirecting to:', redirectPath);
-      window.location.href = redirectPath;
+      // If all else fails, show an error
+      throw new Error('Authentication successful but unable to redirect')
     } catch (err) {
       console.error('Auth error:', err)
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setIsLoading(false)
     }
@@ -115,43 +111,34 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
       if (!auth) {
         throw new Error('Firebase auth not initialized')
       }
-      
+
       const provider = new GoogleAuthProvider()
       provider.setCustomParameters({
         prompt: 'select_account'
       })
-      
-      try {
-        const result = await signInWithPopup(auth, provider)
-        
-        if (result.user) {
-          const idToken = await result.user.getIdToken()
-          
-          const response = await fetch('/api/auth/firebase', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              idToken,
-              action: 'google'
-            }),
-          })
 
-          if (!response.ok) {
-            throw new Error('Failed to set session')
-          }
+      const result = await signInWithPopup(auth, provider)
 
-          const data = await response.json();
-          const redirectPath = data.redirect || '/chat';
-          console.log('Google sign-in redirecting to:', redirectPath);
-          window.location.href = redirectPath;
+      if (result.user) {
+        const idToken = await result.user.getIdToken()
+
+        const response = await fetch('/api/auth/firebase', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            idToken,
+            action: 'google'
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to set session')
         }
-      } catch (popupError) {
-        if (popupError instanceof Error && popupError.message.includes('popup')) {
-          throw new Error('Please allow popups for Google Sign-In')
-        }
-        throw popupError
+
+        // Use router.push instead of window.location
+        router.push('/chat')
       }
     } catch (err) {
       console.error('Google Sign-In error:', err)
@@ -292,4 +279,4 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
       </CardContent>
     </Card>
   )
-} 
+}

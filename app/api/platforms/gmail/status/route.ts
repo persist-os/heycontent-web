@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/app/lib/auth'
+import { getServerSession } from '@/app/lib/server-auth'
 import { google } from 'googleapis'
 import { GMAIL_CONFIG } from '@/app/lib/config/gmail'
 import { validateToken } from '@/app/lib/auth-helpers'
@@ -10,21 +10,21 @@ const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
 
 export async function GET() {
   try {
-    const session = await auth();
+    const session = await getServerSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Get user's Gmail token from Convex
-    const token = await convex.query(api.tokens.get, { 
+    const token = await convex.query(api.tokens.get, {
       userId: session.user.id,
       platform: 'gmail'
     });
 
     if (!token) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         isConnected: false,
-        error: GMAIL_CONFIG.ERROR_MESSAGES.NOT_CONNECTED 
+        error: GMAIL_CONFIG.ERROR_MESSAGES.NOT_CONNECTED
       });
     }
 
@@ -35,12 +35,12 @@ export async function GET() {
       process.env.GOOGLE_CLIENT_SECRET,
       process.env.GMAIL_REDIRECT_URI
     );
-    
+
     oauth2Client.setCredentials({ access_token: accessToken });
-    
+
     // Get token info to check scopes
     const tokenInfo = await oauth2Client.getTokenInfo(accessToken);
-    const hasRequiredScopes = GMAIL_CONFIG.REQUIRED_SCOPES.every(scope => 
+    const hasRequiredScopes = GMAIL_CONFIG.REQUIRED_SCOPES.every(scope =>
       tokenInfo.scopes?.includes(scope)
     );
 
@@ -52,7 +52,7 @@ export async function GET() {
         grantedScopes: tokenInfo.scopes
       });
     }
-    
+
     // Try a minimal Gmail API request
     const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
     const profile = await gmail.users.getProfile({
@@ -70,4 +70,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-} 
+}

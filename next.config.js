@@ -40,7 +40,15 @@ const nextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: "connect-src 'self' https://*.convex.cloud https://*.firebaseio.com https://*.googleapis.com https://identitytoolkit.googleapis.com http://localhost:9099"
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval'",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' blob: data:",
+              "font-src 'self'",
+              "connect-src 'self' wss://*.convex.cloud https://*.convex.cloud http://localhost:9099 https://*.firebaseio.com https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com",
+              "frame-ancestors 'self'"
+            ].join('; ')
           }
         ]
       }

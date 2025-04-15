@@ -12,7 +12,7 @@ export default defineSchema({
   })
   .index("by_userId", ["userId"])
   .index("by_email", ["email"]),
-  
+
   posts: defineTable({
     title: v.string(),
     content: v.string(),
@@ -23,31 +23,18 @@ export default defineSchema({
   })
   .index("by_author", ["authorId"])
   .index("by_creation", ["createdAt"]),
-  
+
   socialAccounts: defineTable({
-    userId: v.optional(v.string()),
-    creatorId: v.string(),
+    userId: v.string(),
     platform: v.string(),
-    name: v.optional(v.string()),
-    username: v.optional(v.string()),
-    accessToken: v.optional(v.string()),
-    refreshToken: v.optional(v.string()),
-    expiresAt: v.optional(v.number()),
-    tokenType: v.optional(v.string()),
-    scope: v.optional(v.string()),
-    profileUrl: v.optional(v.string()),
-    avatarUrl: v.optional(v.string()),
-    metadata: v.optional(v.any()),
-    isConnected: v.optional(v.boolean()),
-    isActive: v.optional(v.boolean()),
-    lastScraped: v.optional(v.number()),
-    createdAt: v.optional(v.number()),
-    updatedAt: v.optional(v.number()),
+    username: v.string(),
+    metadata: v.any(),
+    isConnected: v.boolean(),
+    updatedAt: v.number(),
   })
   .index("by_user_platform", ["userId", "platform"])
-  .index("by_creator_platform", ["creatorId", "platform"])
   .index("by_platform", ["platform"]),
-  
+
   platformMetrics: defineTable({
     userId: v.string(),
     platform: v.string(),
@@ -58,7 +45,7 @@ export default defineSchema({
   })
   .index("by_user_platform", ["userId", "platform"])
   .index("by_sync_date", ["lastSyncDate"]),
-  
+
   environment: defineTable({
     // OAuth client IDs and secrets
     googleClientId: v.optional(v.string()),
@@ -67,19 +54,19 @@ export default defineSchema({
     instagramClientSecret: v.optional(v.string()),
     tiktokClientId: v.optional(v.string()),
     tiktokClientSecret: v.optional(v.string()),
-    
+
     // Webhook verification tokens
     facebookVerifyToken: v.optional(v.string()),
     instagramVerifyToken: v.optional(v.string()),
-    
+
     // Application settings
     appScheme: v.optional(v.string()),
     apiBaseUrl: v.optional(v.string()),
-    
+
     // Metadata
     updatedAt: v.number(),
   }),
-  
+
   // Enhanced tables for Clerk-based OAuth integration
   gmailData: defineTable({
     userId: v.string(),
@@ -91,7 +78,7 @@ export default defineSchema({
   })
   .index("by_user", ["userId"])
   .index("by_timestamp", ["timestamp"]),
-  
+
   youtubeData: defineTable({
     userId: v.string(),
     resourceType: v.string(),
@@ -103,7 +90,7 @@ export default defineSchema({
   })
   .index("by_user_resource", ["userId", "resourceType"])
   .index("by_timestamp", ["timestamp"]),
-  
+
   socialConnectionStatus: defineTable({
     userId: v.string(),
     connections: v.object({
@@ -116,7 +103,7 @@ export default defineSchema({
     lastChecked: v.number(),
   })
   .index("by_user", ["userId"]),
-  
+
   conversations: defineTable({
     userId: v.string(),
     title: v.string(),
@@ -181,4 +168,4 @@ export default defineSchema({
     scope: v.optional(v.string()),
   })
   .index("by_user_platform", ["userId", "platform"]),
-}); 
+});
