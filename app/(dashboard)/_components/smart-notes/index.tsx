@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useState, useEffect } from 'react';
-import { FileText, Hash, AtSign, Star, Calendar, 
+import { FileText, Hash, AtSign, Star, Calendar,
   Image, LinkIcon, Lightbulb, MessageSquare, Clock, Keyboard } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { NoteArea } from './NoteArea';
@@ -20,6 +20,7 @@ export interface Note {
   references: {
     type: 'ai_insight' | 'conversation' | 'idea' | 'url' | 'date';
     content: string;
+    isLoading?: boolean;
   }[];
 }
 
@@ -28,7 +29,7 @@ export default function SmartNotes() {
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showShortcuts, setShowShortcuts] = useState(false);
-  
+
   useEffect(() => {
     const loadNotes = async () => {
       try {
@@ -53,7 +54,7 @@ export default function SmartNotes() {
         tags: [],
         references: []
       });
-      
+
       setNotes(prev => [...prev, newNote]);
       setActiveNoteId(newNote.id);
     } catch (error: any) {
@@ -86,7 +87,7 @@ export default function SmartNotes() {
       // Always sync metadata changes with server
       if (shouldSync || 'important' in updates || 'type' in updates) {
         const updatedNote = await updateNote(noteId, updates);
-        setNotes(prev => prev.map(note => 
+        setNotes(prev => prev.map(note =>
           note.id === noteId ? updatedNote : note
         ));
       }
@@ -112,23 +113,179 @@ export default function SmartNotes() {
       const note = notes.find(n => n.id === noteId);
       if (!note) return;
 
-      // In a real app, you'd make an API call to generate insights
-      // For demo purposes, we'll simulate this with a delayed response
-      
-      // Mock insights
-      const newInsight = {
+      // Show loading state
+      const loadingInsight = {
         type: 'ai_insight' as const,
-        content: 'Based on your note, here are some suggestions:\n- Add more specific examples\n- Consider breaking down into bullet points\n- Link to related content pieces'
+        content: 'Analyzing your note content...',
+        isLoading: true
       };
-      
-      // Add the insight to the note's references
-      const updatedReferences = [...(note.references || []), newInsight];
-      handleUpdateNote(noteId, { references: updatedReferences }, true);
-      
-      // Show a success message (in a real app)
+
+      // Add the loading insight to the note's references
+      const referencesWithLoading = [...(note.references || []), loadingInsight];
+      handleUpdateNote(noteId, { references: referencesWithLoading }, false);
+
+      // Call the smart note analysis API
+      const response = await fetch('/api/smart-note/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content_note: note.content }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Analysis failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.message || 'Analysis failed');
+      }
+
+      // Format the analysis into a readable insight
+      const analysis = data.data.analysis;
+      const formattedContent = formatAnalysisToMarkdown(analysis);
+
+      // Replace the loading insight with the actual analysis
+      const updatedReferences = Array.isArray(note.references)
+        ? note.references.filter(ref => !('isLoading' in ref))
+        : [];
+      updatedReferences.push({
+        type: 'ai_insight' as const,
+        content: formattedContent
+      });
+
+      // Check if we should update the title
+      const updates: Partial<Note> = { references: updatedReferences };
+
+      // If the note has the default title "Untitled Note" and we have a suggested title, update it
+      if (note.title === 'Untitled Note' && data.suggestedTitle) {
+        console.log(`Updating note title from "${note.title}" to "${data.suggestedTitle}"`);
+        updates.title = data.suggestedTitle;
+      }
+
+      // Update the note with new references and possibly a new title
+      handleUpdateNote(noteId, updates, true);
       console.log('AI insights generated successfully');
     } catch (error) {
       console.error('Failed to generate AI insights:', error);
+
+      // Remove the loading insight and add an error message
+      const note = notes.find(n => n.id === noteId);
+      if (note) {
+        const updatedReferences = Array.isArray(note.references)
+          ? note.references.filter(ref => !('isLoading' in ref))
+          : [];
+        updatedReferences.push({
+          type: 'ai_insight' as const,
+          content: `Error analyzing note: ${error instanceof Error ? error.message : 'Unknown error'}`
+        });
+
+        handleUpdateNote(noteId, { references: updatedReferences }, true);
+      }
+    }
+  };
+
+  // Helper function to format the analysis into markdown
+  const formatAnalysisToMarkdown = (analysis: any): string => {
+    try {
+      if (!analysis) return 'No analysis available';
+
+      // Content Strategy section
+      const contentStrategy = `## Content Strategy Analysis
+
+### Overview
+- **Category:** ${analysis.contentStrategy?.overview?.category || 'N/A'}
+- **Core Idea:** ${analysis.contentStrategy?.overview?.coreIdea || 'N/A'}
+- **Content Type:** ${analysis.contentStrategy?.overview?.contentType || 'N/A'}
+- **Stage:** ${analysis.contentStrategy?.overview?.stage || 'N/A'}
+
+### Target Audience
+- **Demographics:** ${analysis.contentStrategy?.marketAnalysis?.audience?.demographics || 'N/A'}
+- **Interests:** ${analysis.contentStrategy?.marketAnalysis?.audience?.interests || 'N/A'}
+- **Psychographics:** ${analysis.contentStrategy?.marketAnalysis?.audience?.psychographics || 'N/A'}
+
+### Competition
+- **Direct:** ${analysis.contentStrategy?.marketAnalysis?.competition?.direct || 'N/A'}
+- **Indirect:** ${analysis.contentStrategy?.marketAnalysis?.competition?.indirect || 'N/A'}
+- **Analysis:** ${analysis.contentStrategy?.marketAnalysis?.competition?.analysis || 'N/A'}`;
+
+      // Platform Strategy section
+      const platformsMarkdown = (analysis.platformStrategy?.platforms || []).map((p: any) =>
+        `- **${p.name}:** ${p.rationale}`
+      ).join('\n');
+
+      const platformStrategy = `## Platform Strategy
+
+### Recommended Platforms
+${platformsMarkdown || 'No platform recommendations available'}
+
+### Posting Schedule
+${Object.entries(analysis.platformStrategy?.timing || {}).map(([platform, data]: [string, any]) =>
+  `- **${platform}:** ${data.postingSchedule} - ${data.analysis}`
+).join('\n') || 'No posting schedule available'}`;
+
+      // Production Plan section
+      const productionPlan = `## Production Plan
+
+### Resources
+- **Equipment:** ${analysis.productionPlan?.resources?.equipment || 'N/A'}
+- **Software:** ${analysis.productionPlan?.resources?.software || 'N/A'}
+- **Props:** ${analysis.productionPlan?.resources?.props || 'N/A'}
+- **Budget:** ${analysis.productionPlan?.resources?.budget || 'N/A'}
+
+### Timeline
+${Object.entries(analysis.productionPlan?.timeline || {}).map(([phase, data]: [string, any]) =>
+  `- **${phase}:** ${data.duration} - ${data.goals}`
+).join('\n') || 'No timeline available'}`;
+
+      // Growth Strategy section
+      const monetizationOptions = (analysis.growthStrategy?.monetization?.options || []).map((option: string) =>
+        `- ${option}`
+      ).join('\n');
+
+      const growthTactics = (analysis.growthStrategy?.audience?.growthTactics || []).map((tactic: string) =>
+        `- ${tactic}`
+      ).join('\n');
+
+      const growthStrategy = `## Growth Strategy
+
+### Monetization Options
+${monetizationOptions || 'No monetization options available'}
+
+### Audience Growth Tactics
+${growthTactics || 'No growth tactics available'}
+
+### Projections
+- **Followers (Month 1):** ${analysis.growthStrategy?.projections?.followers?.month1 || 'N/A'}
+- **Followers (Month 6):** ${analysis.growthStrategy?.projections?.followers?.month6 || 'N/A'}
+- **Revenue (Year 1):** ${analysis.growthStrategy?.projections?.revenue?.year1 || 'N/A'}`;
+
+      // Recommendations section
+      const immediateRecs = (analysis.recommendations?.immediate || []).map((rec: string) =>
+        `- ${rec}`
+      ).join('\n');
+
+      const shortTermRecs = (analysis.recommendations?.shortTerm || []).map((rec: string) =>
+        `- ${rec}`
+      ).join('\n');
+
+      const recommendations = `## Recommendations
+
+### Immediate Actions
+${immediateRecs || 'No immediate recommendations available'}
+
+### Short-Term Actions
+${shortTermRecs || 'No short-term recommendations available'}`;
+
+      // Combine all sections
+      return `${contentStrategy}\n\n${platformStrategy}\n\n${productionPlan}\n\n${growthStrategy}\n\n${recommendations}`;
+    } catch (error) {
+      console.error('Error formatting analysis:', error);
+      // Fallback to raw JSON if rendering fails
+      return `## Analysis Results (Raw Data)
+\`\`\`json\n${JSON.stringify(analysis, null, 2)}\n\`\`\``;
     }
   };
 
@@ -144,7 +301,7 @@ export default function SmartNotes() {
     } catch (error) {
       console.warn('API fetch failed, using mock data:', error);
     }
-    
+
     // Fallback to mock data
     return [
       {
@@ -200,7 +357,7 @@ export default function SmartNotes() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(note)
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Failed to create note:', {
@@ -216,7 +373,7 @@ export default function SmartNotes() {
 
         throw new Error(errorData.details || 'Failed to create note');
       }
-      
+
       const data = await response.json();
       return data;
     } catch (error) {
@@ -275,7 +432,7 @@ export default function SmartNotes() {
         onCreateNote={handleCreateNote}
         onDeleteNote={handleDeleteNote}
       />
-      
+
       {activeNote ? (
         <div className="flex-1 relative">
           <NoteArea
@@ -297,4 +454,4 @@ export default function SmartNotes() {
       )}
     </div>
   );
-} 
+}

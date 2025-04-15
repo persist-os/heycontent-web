@@ -19,15 +19,15 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
   // Filter notes based on section and search query
   const filteredNotes = notes.filter(note => {
     // First apply section filter
-    const sectionMatches = 
+    const sectionMatches =
       selectedSection === 'all' ? true :
       selectedSection === 'important' ? note.important :
       selectedSection === 'ideas' ? note.type === 'idea' :
       true; // recent section - we'll just sort by date
-    
+
     // Then apply search filter if there's a query
     if (!sectionMatches) return false;
-    
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       return (
@@ -36,7 +36,7 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
         note.tags.some(tag => tag.toLowerCase().includes(query))
       );
     }
-    
+
     return true;
   });
 
@@ -58,7 +58,7 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
     <div className="w-64 border-r border-gray-100 flex flex-col h-full overflow-hidden">
       <div className="p-4 border-b border-gray-100">
         <h2 className="text-lg font-semibold mb-3">Smart Notes</h2>
-        <button 
+        <button
           onClick={onCreateNote}
           className="w-full bg-purple-500 text-white rounded-lg py-2 px-4 flex items-center justify-center gap-2 hover:bg-purple-600 transition-colors"
         >
@@ -81,7 +81,7 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
       </div>
 
       <div className="flex border-b border-gray-100">
-        <button 
+        <button
           onClick={() => setSelectedSection('all')}
           className={`flex-1 py-2 text-sm font-medium text-center ${
             selectedSection === 'all' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500 hover:text-gray-700'
@@ -89,7 +89,7 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
         >
           All
         </button>
-        <button 
+        <button
           onClick={() => setSelectedSection('important')}
           className={`flex-1 py-2 text-sm font-medium text-center ${
             selectedSection === 'important' ? 'text-yellow-600 border-b-2 border-yellow-500' : 'text-gray-500 hover:text-gray-700'
@@ -97,7 +97,7 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
         >
           Important
         </button>
-        <button 
+        <button
           onClick={() => setSelectedSection('ideas')}
           className={`flex-1 py-2 text-sm font-medium text-center ${
             selectedSection === 'ideas' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500 hover:text-gray-700'
@@ -118,7 +118,7 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
           >
             <SortDesc className="w-4 h-4 text-gray-500" />
           </button>
-          
+
           {showSortOptions && (
             <div className="absolute right-0 mt-1 w-32 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
               <button
@@ -173,7 +173,13 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
                       </h3>
                     </div>
                     <p className="text-xs text-gray-500 mt-1 truncate">
-                      {new Date(note.updatedAt).toLocaleDateString()} • {note.tags?.length > 0 ? note.tags.map(tag => `#${tag}`).join(' ') : 'No tags'}
+                      {new Date(note.updatedAt).toLocaleDateString()} • {note.tags?.length > 0 ? (
+                        <span>
+                          {note.tags.map((tag, tagIndex) => (
+                            <span key={`${note.id}-tag-${tagIndex}`}>#{tag}{tagIndex < note.tags.length - 1 ? ' ' : ''}</span>
+                          ))}
+                        </span>
+                      ) : 'No tags'}
                     </p>
                   </div>
                   <button
@@ -195,8 +201,8 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
             {searchQuery ? (
               <>
                 <p className="text-sm">No notes match your search</p>
-                <button 
-                  onClick={() => setSearchQuery('')} 
+                <button
+                  onClick={() => setSearchQuery('')}
                   className="text-xs text-purple-500 mt-2"
                 >
                   Clear search
@@ -205,8 +211,8 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
             ) : (
               <>
                 <p className="text-sm">No notes yet</p>
-                <button 
-                  onClick={onCreateNote} 
+                <button
+                  onClick={onCreateNote}
                   className="text-xs text-purple-500 mt-2"
                 >
                   Create your first note
@@ -218,4 +224,4 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
       </div>
     </div>
   );
-} 
+}

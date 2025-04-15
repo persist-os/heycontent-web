@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AtSign, Lightbulb, Hash, Star, Calendar, Image, LinkIcon, MessageSquare, Brain, Save, ChevronUp, ChevronDown, Zap, Target } from 'lucide-react';
+import { AtSign, Lightbulb, Hash, Star, Calendar, Image, LinkIcon, MessageSquare, Brain, Save, ChevronUp, ChevronDown, Zap, Target, ExternalLink, X } from 'lucide-react';
 import type { Note } from './index';
 import { ShortcutManager } from './keyboard-shortcuts';
 import { CommandMenu, type Command } from './CommandMenu';
@@ -20,9 +20,9 @@ interface NoteAreaProps {
   onRequestAIInsights?: (noteId: string) => void;
 }
 
-export function NoteArea({ 
-  note, 
-  onUpdate, 
+export function NoteArea({
+  note,
+  onUpdate,
   onSave,
   onToggleShortcuts,
   onRequestAIInsights
@@ -36,7 +36,9 @@ export function NoteArea({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFormat, setSelectedFormat] = useState<Set<string>>(new Set());
   const [isExpanded, setIsExpanded] = useState(false);
-  
+  const [showFullAnalysis, setShowFullAnalysis] = useState(false);
+  const [selectedInsight, setSelectedInsight] = useState<string | null>(null);
+
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const shortcutManager = useRef<ShortcutManager>();
   const references = Array.isArray(note.references) ? note.references : [];
@@ -48,11 +50,11 @@ export function NoteArea({
       const tagRegex = /#(\w+)/g;
       const tags: string[] = [];
       let match;
-      
+
       while ((match = tagRegex.exec(content)) !== null) {
         tags.push(match[1]);
       }
-      
+
       // Only update if the tags are different
       if (JSON.stringify(tags) !== JSON.stringify(note.tags)) {
         onUpdate(note.id, { tags: [...new Set(tags)] }); // Remove duplicates
@@ -74,22 +76,22 @@ export function NoteArea({
 
   const insertText = (text: string) => {
     if (!textAreaRef.current) return;
-    
+
     // Get the current selection
-    const start = textAreaRef.current.selectionStart;
-    const end = textAreaRef.current.selectionEnd;
-    
+    const start = textAreaRef.current.selectionStart || 0;
+    const end = textAreaRef.current.selectionEnd || 0;
+
     // If there's selected text, wrap it with the formatting
-    const selectedText = content.substring(start, end);
+    const selectedText = content ? content.substring(start, end) : '';
     let newText = text;
     let newCursorPosition = start + text.length;
-    
+
     if (text === '#' || text === '@' || text === '/') {
       // For tags, mentions, and commands just insert at cursor and show menu
       newText = text;
       newCursorPosition = start + 1;
       updateMenuPosition();
-      
+
       if (text === '/') {
         setShowCommands(true);
         setShowMentions(false);
@@ -130,15 +132,17 @@ export function NoteArea({
         newCursorPosition = start + 3;
       }
     }
-    
+
     // Create the new content
+    if (!content) return;
+
     const newContent = content.substring(0, start) + newText + content.substring(end);
-    
+
     // Update state and storage
     setContent(newContent);
     onUpdate(note.id, { content: newContent });
     saveToLocal(note.id, { content: newContent });
-    
+
     // Focus and set cursor position immediately
     if (textAreaRef.current) {
       textAreaRef.current.focus();
@@ -149,11 +153,11 @@ export function NoteArea({
   // Initialize shortcut manager once
   useEffect(() => {
     const handleBold = () => {
-      if (!textAreaRef.current) return;
+      if (!textAreaRef.current || !content) return;
       const start = textAreaRef.current.selectionStart;
       const end = textAreaRef.current.selectionEnd;
       const selectedText = content.substring(start, end);
-      
+
       if (selectedText) {
         const newContent = content.substring(0, start) + `**${selectedText}**` + content.substring(end);
         setContent(newContent);
@@ -166,11 +170,11 @@ export function NoteArea({
     };
 
     const handleItalic = () => {
-      if (!textAreaRef.current) return;
+      if (!textAreaRef.current || !content) return;
       const start = textAreaRef.current.selectionStart;
       const end = textAreaRef.current.selectionEnd;
       const selectedText = content.substring(start, end);
-      
+
       if (selectedText) {
         const newContent = content.substring(0, start) + `_${selectedText}_` + content.substring(end);
         setContent(newContent);
@@ -183,11 +187,11 @@ export function NoteArea({
     };
 
     const handleUnderline = () => {
-      if (!textAreaRef.current) return;
+      if (!textAreaRef.current || !content) return;
       const start = textAreaRef.current.selectionStart;
       const end = textAreaRef.current.selectionEnd;
       const selectedText = content.substring(start, end);
-      
+
       if (selectedText) {
         const newContent = content.substring(0, start) + `<u>${selectedText}</u>` + content.substring(end);
         setContent(newContent);
@@ -223,7 +227,7 @@ export function NoteArea({
         insertText('  ');
       },
       onUnindent: () => {
-        if (!textAreaRef.current) return;
+        if (!textAreaRef.current || !content) return;
         const start = textAreaRef.current.selectionStart;
         const lineStart = content.lastIndexOf('\n', start - 1) + 1;
         const line = content.substring(lineStart, start);
@@ -249,7 +253,7 @@ export function NoteArea({
 
   const handleCommand = (command: Command) => {
     setShowCommands(false);
-    
+
     if (command.type === 'metadata') {
       // Handle metadata updates (ideas, important)
       if (command.metadata?.type === 'idea' || command.metadata?.type === 'important') {
@@ -257,19 +261,19 @@ export function NoteArea({
       }
       return;
     }
-    
+
     // Handle block and format commands
     if (command.template) {
-      if (!textAreaRef.current) return;
+      if (!textAreaRef.current || !content) return;
       const start = textAreaRef.current.selectionStart;
       const end = textAreaRef.current.selectionEnd;
-      
+
       // Remove the trigger character
       const newContent = content.substring(0, start - 1) + command.template + content.substring(end);
       setContent(newContent);
       onUpdate(note.id, { content: newContent });
       saveToLocal(note.id, { content: newContent });
-      
+
       // Set cursor position after inserted text
       const newPosition = start - 1 + command.template.length;
       setTimeout(() => {
@@ -283,19 +287,19 @@ export function NoteArea({
 
   const updateMenuPosition = () => {
     if (!textAreaRef.current) return;
-    
+
     const textarea = textAreaRef.current;
     const cursorPosition = textarea.selectionStart;
     const text = textarea.value;
-    
+
     // Get cursor coordinates
     const coords = getCursorCoordinates(textarea, cursorPosition);
     const textareaRect = textarea.getBoundingClientRect();
-    
+
     // Calculate position accounting for scroll
     const scrollTop = textarea.scrollTop;
     const scrollLeft = textarea.scrollLeft;
-    
+
     // Set menu position with offset to not cover the cursor
     setMenuPosition({
       top: textareaRect.top + coords.top - scrollTop + 24, // Add offset below cursor
@@ -308,7 +312,7 @@ export function NoteArea({
     const text = textarea.value.substring(0, position);
     const mirror = document.createElement('div');
     const style = window.getComputedStyle(textarea);
-    
+
     // Copy textarea styles to mirror
     mirror.style.cssText = `
       position: absolute;
@@ -326,20 +330,20 @@ export function NoteArea({
       border-width: ${style.borderWidth};
       visibility: hidden;
     `;
-    
+
     // Create a span for the text before cursor
     const textNode = document.createTextNode(text);
     const span = document.createElement('span');
     span.appendChild(textNode);
     mirror.appendChild(span);
-    
+
     document.body.appendChild(mirror);
     const coords = {
       top: span.offsetTop,
       left: span.offsetLeft
     };
     document.body.removeChild(mirror);
-    
+
     return coords;
   };
 
@@ -391,7 +395,7 @@ export function NoteArea({
           </div>
         );
       }
-      
+
       // Handle bullet list
       if (line.startsWith('- ')) {
         const content = line.slice(2).trim();
@@ -432,8 +436,8 @@ export function NoteArea({
           key={index}
           onClick={() => {
             const start = textAreaRef.current?.selectionStart || 0;
-            const content = textAreaRef.current?.value || '';
-            const newContent = content.substring(0, start - 1) + `@${option} ` + content.substring(start);
+            const textContent = textAreaRef.current?.value || '';
+            const newContent = textContent.substring(0, start - 1) + `@${option} ` + textContent.substring(start);
             setContent(newContent);
             onUpdate(note.id, { content: newContent });
             saveToLocal(note.id, { content: newContent });
@@ -457,8 +461,8 @@ export function NoteArea({
           key={index}
           onClick={() => {
             const start = textAreaRef.current?.selectionStart || 0;
-            const content = textAreaRef.current?.value || '';
-            const newContent = content.substring(0, start - 1) + `#${option} ` + content.substring(start);
+            const textContent = textAreaRef.current?.value || '';
+            const newContent = textContent.substring(0, start - 1) + `#${option} ` + textContent.substring(start);
             setContent(newContent);
             onUpdate(note.id, { content: newContent });
             saveToLocal(note.id, { content: newContent });
@@ -476,7 +480,7 @@ export function NoteArea({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
     const cmdKey = isMac ? e.metaKey : e.ctrlKey;
-    
+
     // Let ShortcutManager handle its shortcuts first
     if (shortcutManager.current?.handleKeyDown(e as any)) {
       return;
@@ -485,9 +489,9 @@ export function NoteArea({
     // Handle command menu trigger
     if (e.key === '/' && !cmdKey) {
       const start = e.currentTarget.selectionStart;
-      const text = e.currentTarget.value;
+      const text = e.currentTarget.value || '';
       const beforeCursor = text.substring(0, start);
-      
+
       // Only trigger if at start of line or after whitespace
       if (start === 0 || /[\n\s]$/.test(beforeCursor)) {
         e.preventDefault();
@@ -520,16 +524,17 @@ export function NoteArea({
 
     // Handle search in command menu
     if (showCommands && e.key !== 'Escape') {
-      const newSearchTerm = e.currentTarget.value.substring(e.currentTarget.value.lastIndexOf('/') + 1);
+      const value = e.currentTarget.value || '';
+      const newSearchTerm = value.substring(value.lastIndexOf('/') + 1);
       setSearchTerm(newSearchTerm);
     }
 
     // Handle formatting shortcuts
-    if (cmdKey) {
+    if (cmdKey && content) {
       const start = e.currentTarget.selectionStart;
       const end = e.currentTarget.selectionEnd;
       const selectedText = content.substring(start, end);
-      
+
       switch (e.key.toLowerCase()) {
         case 'b':
           e.preventDefault();
@@ -548,12 +553,12 @@ export function NoteArea({
   };
 
   const applyFormat = (selectedText: string, prefix: string, suffix: string = prefix, start: number, end: number) => {
-    if (!textAreaRef.current) return;
-    
+    if (!textAreaRef.current || !content) return;
+
     let newContent = content;
     let newStart = start;
     let newEnd = end;
-    
+
     if (selectedText) {
       // If text is selected, wrap it with format
       newContent = content.substring(0, start) + prefix + selectedText + suffix + content.substring(end);
@@ -564,11 +569,11 @@ export function NoteArea({
       newStart = start + prefix.length;
       newEnd = newStart;
     }
-    
+
     setContent(newContent);
     onUpdate(note.id, { content: newContent });
     saveToLocal(note.id, { content: newContent });
-    
+
     // Restore selection
     textAreaRef.current.focus();
     textAreaRef.current.setSelectionRange(newStart, newEnd);
@@ -576,11 +581,11 @@ export function NoteArea({
 
   const handleCommandSelect = (command: Command) => {
     if (!textAreaRef.current) return;
-    
+
     const start = textAreaRef.current.selectionStart;
     const end = textAreaRef.current.selectionEnd;
-    const text = textAreaRef.current.value;
-    
+    const text = textAreaRef.current.value || '';
+
     // Find the start of the command (where the / is)
     const commandStart = text.substring(0, start).lastIndexOf('/');
     if (commandStart === -1) return;
@@ -589,36 +594,36 @@ export function NoteArea({
     if (command.label.startsWith('Heading')) {
       // Remove the command text (including the /)
       let newContent = text.substring(0, commandStart);
-      
+
       // Add a newline if we're not at the start of a line
       if (commandStart > 0 && text[commandStart - 1] !== '\n') {
         newContent += '\n';
       }
-      
+
       // Add the header markup only (without placeholder text)
       const headerLevel = command.label === 'Heading 1' ? '# ' : command.label === 'Heading 2' ? '## ' : '### ';
       newContent += headerLevel;
-      
+
       // Add the rest of the text
       newContent += text.substring(end);
-      
+
       // Update content
       setContent(newContent);
       onUpdate(note.id, { content: newContent });
       saveToLocal(note.id, { content: newContent });
-      
+
       // Position cursor after the header markup
-      const newPosition = commandStart + 
-        (commandStart > 0 && text[commandStart - 1] !== '\n' ? 1 : 0) + 
+      const newPosition = commandStart +
+        (commandStart > 0 && text[commandStart - 1] !== '\n' ? 1 : 0) +
         headerLevel.length;
-      
+
       setTimeout(() => {
         if (textAreaRef.current) {
           textAreaRef.current.focus();
           textAreaRef.current.setSelectionRange(newPosition, newPosition);
         }
       }, 0);
-      
+
       setShowCommands(false);
       return;
     }
@@ -631,13 +636,13 @@ export function NoteArea({
       } else if (command.metadata?.type === 'idea') {
         onUpdate(note.id, { type: 'idea' }, true); // Force sync
       }
-      
+
       // Remove the command text
       const newContent = text.substring(0, commandStart) + text.substring(end);
       setContent(newContent);
       onUpdate(note.id, { content: newContent });
       saveToLocal(note.id, { content: newContent });
-      
+
       // Position cursor at command start
       setTimeout(() => {
         if (textAreaRef.current) {
@@ -645,7 +650,7 @@ export function NoteArea({
           textAreaRef.current.setSelectionRange(commandStart, commandStart);
         }
       }, 0);
-      
+
       setShowCommands(false);
       return;
     } else if (command.template) {
@@ -671,7 +676,7 @@ export function NoteArea({
   return (
     <div className="flex-1 flex flex-col h-full">
       <div className="border-b border-gray-100 px-6 py-4 flex justify-between items-center">
-        <input 
+        <input
           type="text"
           value={note.title}
           onChange={(e) => {
@@ -683,28 +688,28 @@ export function NoteArea({
           placeholder="Untitled Note"
         />
         <div className="flex gap-2">
-          <button 
+          <button
             className={`w-8 h-8 rounded-full flex items-center justify-center ${note.type === 'idea' ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
             onClick={() => onUpdate(note.id, { type: note.type === 'idea' ? 'default' : 'idea' }, true)}
             title={note.type === 'idea' ? 'Remove idea status' : 'Mark as idea'}
           >
             <Lightbulb size={16} />
           </button>
-          <button 
+          <button
             className={`w-8 h-8 rounded-full flex items-center justify-center ${note.important ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
             onClick={() => onUpdate(note.id, { important: !note.important }, true)}
             title={note.important ? 'Remove importance' : 'Mark as important'}
           >
             <Star size={16} />
           </button>
-          <button 
+          <button
             className="w-8 h-8 rounded-full flex items-center justify-center bg-purple-100 text-purple-600 hover:bg-purple-200"
             onClick={() => onRequestAIInsights?.(note.id)}
             title="Get AI insights"
           >
             <Brain size={16} />
           </button>
-          <button 
+          <button
             className="w-8 h-8 rounded-full flex items-center justify-center bg-purple-600 text-white hover:bg-purple-700"
             onClick={onSave}
             title="Save note"
@@ -720,10 +725,10 @@ export function NoteArea({
             <div className="rounded-lg bg-purple-50 p-4 space-y-4 mb-6">
               <h3 className="font-medium text-purple-800">Insights & References</h3>
               {references.map((ref, index) => (
-                <div 
+                <div
                   key={index}
                   className={`p-3 rounded-lg ${
-                    ref.type === 'ai_insight' ? 'bg-purple-100' : 
+                    ref.type === 'ai_insight' ? 'bg-purple-100' :
                     ref.type === 'conversation' ? 'bg-blue-50 border-l-4 border-blue-500' :
                     ref.type === 'idea' ? 'bg-yellow-50 border-l-4 border-yellow-500' : 'bg-gray-50'
                   }`}
@@ -732,11 +737,103 @@ export function NoteArea({
                     {ref.type === 'ai_insight' && <Brain className="w-4 h-4 text-purple-600" />}
                     {ref.type === 'conversation' && <MessageSquare className="w-4 h-4 text-blue-600" />}
                     {ref.type === 'idea' && <Lightbulb className="w-4 h-4 text-yellow-600" />}
-                    {ref.type === 'ai_insight' ? 'AI Insight' : 
-                      ref.type === 'conversation' ? 'Conversation' : 
+                    {ref.type === 'ai_insight' ? 'AI Insight' :
+                      ref.type === 'conversation' ? 'Conversation' :
                       ref.type === 'idea' ? 'Idea' : 'Reference'}
+                    {ref.isLoading && <span className="ml-2 inline-block animate-pulse text-purple-600">Analyzing...</span>}
                   </div>
-                  <p className="text-gray-700">{ref.content}</p>
+                  {ref.isLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 rounded-full bg-purple-300 animate-pulse"></div>
+                      <div className="w-4 h-4 rounded-full bg-purple-400 animate-pulse delay-150"></div>
+                      <div className="w-4 h-4 rounded-full bg-purple-500 animate-pulse delay-300"></div>
+                      <p className="text-gray-500 ml-2">Analyzing your note with SmartNoteGemini...</p>
+                    </div>
+                  ) : (
+                    <div className="text-gray-700 whitespace-pre-line overflow-auto">
+                      {ref.content && (ref.content.includes('##') || ref.content.includes('```')) ? (
+                        <>
+                          <div className="markdown-content max-h-[400px] overflow-y-auto mb-2">
+                            {ref.content.split('\n').map((line, i, arr) => {
+                              // Handle code blocks
+                              if (line.startsWith('```json')) {
+                                // Find the closing code block
+                                let codeContent = [];
+                                let endIndex = i;
+                                for (let j = i + 1; j < arr.length; j++) {
+                                  if (arr[j] === '```') {
+                                    endIndex = j;
+                                    break;
+                                  }
+                                  codeContent.push(arr[j]);
+                                }
+
+                                // Skip the lines we've processed
+                                for (let j = i + 1; j <= endIndex; j++) {
+                                  arr[j] = '';
+                                }
+
+                                return (
+                                  <div key={i} className="bg-gray-800 text-white p-3 rounded-md my-2 overflow-x-auto">
+                                    <pre className="text-sm">{codeContent.join('\n')}</pre>
+                                  </div>
+                                );
+                              }
+
+                              // Skip empty lines (already processed in code blocks)
+                              if (line === '') return null;
+
+                              // Handle headings
+                              if (line.startsWith('## ')) {
+                                return <h2 key={i} className="text-xl font-bold mt-4 mb-2 text-purple-800">{line.substring(3)}</h2>;
+                              } else if (line.startsWith('### ')) {
+                                return <h3 key={i} className="text-lg font-semibold mt-3 mb-2 text-purple-700">{line.substring(4)}</h3>;
+                              }
+                              // Handle bullet points
+                              else if (line.trim().startsWith('- ')) {
+                                const content = line.trim().substring(2);
+                                return (
+                                  <div key={i} className="flex items-start my-1">
+                                    <span className="mr-2 mt-1 text-purple-500">•</span>
+                                    <span>{content}</span>
+                                  </div>
+                                );
+                              }
+                              // Handle bold text with **
+                              else if (line.includes('**')) {
+                                const parts = line.split(/\*\*(.*?)\*\*/g);
+                                return (
+                                  <p key={i} className="my-1">
+                                    {parts.map((part, partIndex) => {
+                                      return partIndex % 2 === 0 ?
+                                        part :
+                                        <strong key={partIndex} className="font-semibold">{part}</strong>;
+                                    })}
+                                  </p>
+                                );
+                              }
+                              // Regular paragraph
+                              else {
+                                return <p key={i} className="my-1">{line}</p>;
+                              }
+                            }).filter(Boolean)}
+                          </div>
+                          <button
+                            onClick={() => {
+                              setSelectedInsight(ref.content);
+                              setShowFullAnalysis(true);
+                            }}
+                            className="flex items-center gap-1 text-sm text-purple-600 hover:text-purple-800 mt-2"
+                          >
+                            <ExternalLink size={14} />
+                            View Full Analysis
+                          </button>
+                        </>
+                      ) : (
+                        ref.content
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -750,7 +847,7 @@ export function NoteArea({
               onKeyDown={handleKeyDown}
               placeholder="Type / for commands, @ to reference content, # to add tags"
               className="w-full p-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-base leading-relaxed absolute inset-0 text-transparent"
-              style={{ 
+              style={{
                 minHeight: 'calc(100vh - 300px)',
                 height: 'auto',
                 caretColor: '#4B5563', // Gray-600 for better cursor visibility
@@ -774,9 +871,9 @@ export function NoteArea({
             )}
 
             {showMentions && (
-              <div 
+              <div
                 className="absolute bg-white rounded-lg shadow-lg border border-gray-200 z-50 w-64"
-                style={{ 
+                style={{
                   top: menuPosition.top,
                   left: menuPosition.left
                 }}
@@ -786,9 +883,9 @@ export function NoteArea({
             )}
 
             {showTags && (
-              <div 
+              <div
                 className="absolute bg-white rounded-lg shadow-lg border border-gray-200 z-50 w-64"
-                style={{ 
+                style={{
                   top: menuPosition.top,
                   left: menuPosition.left
                 }}
@@ -799,6 +896,105 @@ export function NoteArea({
           </div>
         </div>
       </div>
+
+      {/* Full Analysis Modal */}
+      {showFullAnalysis && selectedInsight && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Brain className="w-5 h-5 text-purple-600" />
+                Smart Note Analysis
+              </h3>
+              <button
+                onClick={() => setShowFullAnalysis(false)}
+                className="p-1 rounded-full hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-6">
+              <div className="markdown-content">
+                {references.find(ref => ref.content === selectedInsight)?.content ? (
+                  references.find(ref => ref.content === selectedInsight)?.content?.split('\n')?.map((line, i, arr) => {
+                  // Handle code blocks
+                  if (line.startsWith('```json')) {
+                    // Find the closing code block
+                    let codeContent = [];
+                    let endIndex = i;
+                    for (let j = i + 1; j < arr.length; j++) {
+                      if (arr[j] === '```') {
+                        endIndex = j;
+                        break;
+                      }
+                      codeContent.push(arr[j]);
+                    }
+
+                    // Skip the lines we've processed
+                    for (let j = i + 1; j <= endIndex; j++) {
+                      arr[j] = '';
+                    }
+
+                    return (
+                      <div key={i} className="bg-gray-800 text-white p-3 rounded-md my-2 overflow-x-auto">
+                        <pre className="text-sm">{codeContent.join('\n')}</pre>
+                      </div>
+                    );
+                  }
+
+                  // Skip empty lines (already processed in code blocks)
+                  if (line === '') return null;
+
+                  // Handle headings
+                  if (line.startsWith('## ')) {
+                    return <h2 key={i} className="text-xl font-bold mt-4 mb-2 text-purple-800">{line.substring(3)}</h2>;
+                  } else if (line.startsWith('### ')) {
+                    return <h3 key={i} className="text-lg font-semibold mt-3 mb-2 text-purple-700">{line.substring(4)}</h3>;
+                  }
+                  // Handle bullet points
+                  else if (line.trim().startsWith('- ')) {
+                    const content = line.trim().substring(2);
+                    return (
+                      <div key={i} className="flex items-start my-1">
+                        <span className="mr-2 mt-1 text-purple-500">•</span>
+                        <span>{content}</span>
+                      </div>
+                    );
+                  }
+                  // Handle bold text with **
+                  else if (line.includes('**')) {
+                    const parts = line.split(/\*\*(.*?)\*\*/g);
+                    return (
+                      <p key={i} className="my-1">
+                        {parts.map((part, partIndex) => {
+                          return partIndex % 2 === 0 ?
+                            part :
+                            <strong key={partIndex} className="font-semibold">{part}</strong>;
+                        })}
+                      </p>
+                    );
+                  }
+                  // Regular paragraph
+                  else {
+                    return <p key={i} className="my-1">{line}</p>;
+                  }
+                }).filter(Boolean)
+                ) : (
+                  <p className="text-gray-500">No content available to display</p>
+                )}
+              </div>
+            </div>
+            <div className="p-4 border-t flex justify-end">
+              <button
+                onClick={() => setShowFullAnalysis(false)}
+                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-} 
+}
