@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { ChatAgent } from "@/app/lib/agent/chat-agent";
 import { RAGSystem } from "@/app/lib/rag";
 import { auth } from "../../../auth";
 import { SocialMediaService } from "@/app/lib/services/social-media";
@@ -276,25 +275,20 @@ export async function POST(req: Request) {
       }
     }
     
-    console.log('Initializing chat agent');
-    const agent = new ChatAgent(session.user.id, rag, platformStatus);
-    
-    console.log('Setting agent context with data:', {
+    console.log('Processing request with data:', {
       userId: session.user.id,
       type,
       hasYoutubeData: Object.keys(youtubeData).length > 0,
       contextProvided: !!context
     });
 
-    agent.setContext({
+    // Process the request directly without ChatAgent
+    const result = await rag.process(query, {
       userId: session.user.id,
       type,
       youtubeData,
-      ...context
+      context
     });
-
-    console.log('Processing query through agent');
-    const result = await agent.process(query) as AgentResult;
 
     console.log('Query processing complete:', {
       hasResponse: !!result?.output,

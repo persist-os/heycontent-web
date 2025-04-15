@@ -6,13 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/ca
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/src/components/ui/tabs'
 import { Switch } from "@/src/components/ui/switch"
 import { 
-  Settings, Bell, Lock, Palette, Globe, Users, 
-  Sliders, Mail, Briefcase, MessageSquare, Upload,
-  Download, Database, Instagram, Youtube, Video,
-  LogOut, X, Search
-} from 'lucide-react'
-import { signOut } from 'next-auth/react'
-import { useSession } from 'next-auth/react'
+  Bell, Globe, Users, 
+  Sliders, 
+  Download, Database, 
+  LogOut} from 'lucide-react'
+import { signOut, updateProfile } from 'firebase/auth'
+import { auth } from '@/app/lib/firebase'
 import { Badge } from "@/src/components/ui/badge"
 import { Button } from "@/src/components/ui/button"
 import { toast } from "react-hot-toast"
@@ -23,7 +22,6 @@ const MAX_VISION_LENGTH = 500
 
 const SettingsScreen = () => {
   const router = useRouter()
-  const { data: session, status, update: updateSession } = useSession()
   const [isFirstTimeSetup, setIsFirstTimeSetup] = useState(false)
   const [isResending, setIsResending] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
@@ -57,15 +55,16 @@ const SettingsScreen = () => {
   }
 
   useEffect(() => {
-    if (session?.user) {
+    const currentUser = auth?.currentUser
+    if (currentUser) {
       setFormData(prev => ({
         ...prev,
-        name: session.user.name || '',
-        email: session.user.email || ''
+        name: currentUser.displayName || '',
+        email: currentUser.email || ''
       }))
       fetchPersonaData()
     }
-  }, [session])
+  }, [])
 
   const handleEmailIntegration = () => {
     alert(`Email integration coming soon! This will allow you to:
@@ -77,15 +76,13 @@ const SettingsScreen = () => {
 
   const handleSignOut = async () => {
     try {
-      // Simple signout with redirect
-      await signOut({
-        callbackUrl: '/login',
-        redirect: true
-      })
+      if (auth) {
+        await signOut(auth)
+        router.push('/login')
+      }
     } catch (error) {
       console.error('Sign out error:', error)
-      // Fallback redirect
-      window.location.href = '/login'
+      router.push('/login')
     }
   }
 
@@ -98,7 +95,7 @@ const SettingsScreen = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          email: session?.user?.email 
+          email: auth.currentUser?.email 
         }),
       })
 
@@ -150,13 +147,10 @@ const SettingsScreen = () => {
       }))
 
       // Update session
-      await updateSession({
-        user: {
-          ...session?.user,
-          name: data.user.name,
-          currentPersona: data.persona?.currentState?.description || '',
-          futureVision: data.persona?.aspirations?.description || ''
-        }
+      await updateProfile(auth.currentUser, {
+        displayName: data.user.name,
+        currentPersona: data.persona?.currentState?.description || '',
+        futureVision: data.persona?.aspirations?.description || ''
       })
 
       toast.success('Profile updated successfully')
@@ -230,9 +224,7 @@ const SettingsScreen = () => {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Profile Information</CardTitle>
-                    {status === 'loading' ? (
-                      <Badge variant="outline">Loading...</Badge>
-                    ) : session?.user?.emailVerified ? (
+                    {auth.currentUser ? (
                       <Badge variant="success">Verified</Badge>
                     ) : (
                       <div className="flex items-center gap-2">

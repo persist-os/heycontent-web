@@ -9,7 +9,8 @@ import {
   RefreshCw, AlertCircle
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+import { auth } from '@/app/lib/firebase'
+import { onAuthStateChanged } from 'firebase/auth'
 
 interface QuotaError {
   service: string;
@@ -177,11 +178,24 @@ export function AIInsightsScreen() {
   const [activeTab, setActiveTab] = useState('content')
   const [canRefresh, setCanRefresh] = useState(true)
   const router = useRouter()
-  const { data: session } = useSession()
+  const [user, setUser] = useState<any>(null)
 
   // Add these inside the component
   const isRequestInProgress = useRef(false);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (!auth) {
+      console.error('Firebase auth not initialized')
+      return
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user)
+    })
+
+    return () => unsubscribe()
+  }, [])
 
   // Background fetch without loading state
   const backgroundFetch = async () => {
@@ -423,10 +437,10 @@ export function AIInsightsScreen() {
       }
     };
 
-    if (session?.user) {
+    if (user) {
       loadCache();
     }
-  }, [session]);
+  }, [user]);
 
   // Helper to check if it's the next day
   const isNextDay = (lastRefresh: Date) => {

@@ -7,14 +7,20 @@ export function SessionCleanup() {
   const router = useRouter()
 
   useEffect(() => {
-    // Clear cookies and storage on mount
+    // Only clear auth-related cookies and storage
+    const authCookies = ['token', 'next-auth.session-token', '__Secure-next-auth.session-token'];
     document.cookie.split(";").forEach((c) => {
-      document.cookie = c
-        .replace(/^ +/, "")
-        .replace(/=.*/, `=;expires=${new Date().toUTCString()};path=/`);
+      const cookieName = c.split("=")[0].trim();
+      if (authCookies.includes(cookieName)) {
+        document.cookie = c
+          .replace(/^ +/, "")
+          .replace(/=.*/, `=;expires=${new Date().toUTCString()};path=/`);
+      }
     });
-    localStorage.clear()
-    sessionStorage.clear()
+    
+    // Only clear auth-related storage
+    localStorage.removeItem('firebase:authUser');
+    sessionStorage.removeItem('firebase:authUser');
     
     // Force a hard reload to clear everything
     router.refresh()

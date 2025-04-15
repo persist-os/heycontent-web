@@ -11,9 +11,13 @@ import {
   ArrowRight, 
   Chrome
 } from 'lucide-react'
-import { signIn, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'react-hot-toast'
+import { auth } from '@/app/lib/firebase'
+import { 
+  GoogleAuthProvider,
+  signInWithPopup
+} from 'firebase/auth'
 
 interface AuthScreenProps {
   isLogin?: boolean
@@ -47,48 +51,34 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
     setIsLoading(true)
     
     try {
-      if (isLogin) {
-        const result = await signIn('credentials', {
+      const response = await fetch('/api/auth/firebase', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           email,
           password,
-          redirect: false
-        })
+          action: isLogin ? 'login' : 'register'
+        }),
+      })
 
-        if (result?.error) {
-          setError(result.error)
-          if (result.error === 'UNVERIFIED_EMAIL') {
-            router.push(`/verify-email?email=${encodeURIComponent(email)}`)
-            return
-          }
-          if (result.error === 'CallbackRouteError' || result.error === 'AccessDenied') {
-            setShowResendVerification(true)
-          }
-        } else {
-          router.push('/chat')
+      const data = await response.json()
+
+      if (!response.ok) {
+        if (data.error === 'UNVERIFIED_EMAIL') {
+          router.push(`/verify-email?email=${encodeURIComponent(email)}`)
+          return
         }
+        throw new Error(data.error)
+      }
+
+      if (data.redirect) {
+        router.push(data.redirect)
       } else {
-        console.log('📧 Registering new user...')
-        const response = await fetch('/api/auth/register', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email,
-            password,
-            name,
-          }),
-        })
-
-        const data = await response.json()
-
-        if (!response.ok) {
-          throw new Error(data.error)
-        }
-
-        console.log('✅ Registration successful!')
-        
-        if (onSuccess) {
+        if (isLogin) {
+          router.push('/')
+        } else if (onSuccess) {
           onSuccess(email)
         }
       }
@@ -102,30 +92,36 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
   const handleGoogleSignIn = async () => {
     try {
       setIsLoading(true)
-      const result = await signIn('google', { 
-        callbackUrl: '/chat',
-        redirect: false,
-      })
-
-      if (result?.ok) {
-        // Sync the session with Convex
-        await fetch('/api/auth/sync', {
+      if (!auth) {
+        throw new Error('Firebase auth not initialized')
+      }
+      const provider = new GoogleAuthProvider()
+      const result = await signInWithPopup(auth, provider)
+      
+      if (result.user) {
+        const idToken = await result.user.getIdToken()
+        
+        const response = await fetch('/api/auth/firebase', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
-          }
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            idToken,
+            action: 'google'
+          }),
         })
-        
-        // Now redirect
-        router.push('/chat')
-      } else {
-        throw new Error(result?.error || 'Failed to sign in')
+
+        if (!response.ok) {
+          throw new Error('Failed to set session')
+        }
+
+        router.push('/')
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to sign in with Google'
-      setError(errorMessage)
+      setError(err instanceof Error ? err.message : 'Failed to sign in with Google')
+    } finally {
       setIsLoading(false)
-      console.error('Google sign-in error:', err)
     }
   }
 
@@ -149,156 +145,115 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F0F9] flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-white/80 backdrop-blur-sm shadow-xl">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-semibold">
-            {isLogin ? "Welcome back to HeyContent" : "Join HeyContent"}
-          </CardTitle>
-          <p className="text-gray-500 text-sm">
-            {isLogin ? "Sign in to continue" : "Sign up to get started"}
-          </p>
-          {(error || urlError) && (
-            <p className="text-red-500 text-sm">
-              {getErrorMessage(error || urlError || '')}
-            </p>
+    <Card className="w-full max-w-md mx-auto">
+      <CardHeader>
+        <CardTitle className="text-center">
+          {isLogin ? 'Welcome Back' : 'Create Account'}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {!isLogin && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md"
+                required
+                placeholder="Enter your name"
+                aria-label="Full Name"
+              />
+            </div>
           )}
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <button 
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={isLoading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-            >
-              {isLoading ? (
-                <span>Signing in...</span>
-              ) : (
-                <>
-                  <Chrome className="w-4 h-4" />
-                  <span className="font-medium">Continue with Google</span>
-                </>
-              )}
-            </button>
-
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Email</label>
             <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-gray-500">or</span>
-              </div>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md pl-10"
+                required
+                placeholder="Enter your email"
+                aria-label="Email Address"
+              />
+              <Mail className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
             </div>
-
-            {!isLogin && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Full Name</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter your full name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required={!isLogin}
-                  />
-                  <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Email</label>
-              <div className="relative">
-                <input
-                  type="email"
-                  className="w-full px-3 py-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-                <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-              </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Password</label>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md pl-10 pr-10"
+                required
+                placeholder="Enter your password"
+                aria-label="Password"
+              />
+              <Lock className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-2.5"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5 text-gray-400" />
+                ) : (
+                  <Eye className="h-5 w-5 text-gray-400" />
+                )}
+              </button>
             </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Password</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  className="w-full px-3 py-2 pl-10 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
-              <div className="text-sm text-right">
-                <Link href="/forgot-password" className="text-blue-500 hover:underline">
-                  Forgot password?
+          </div>
+          {error && (
+            <div className="text-red-500 text-sm">{getErrorMessage(error)}</div>
+          )}
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 disabled:opacity-50"
+          >
+            {isLoading ? 'Loading...' : isLogin ? 'Sign In' : 'Create Account'}
+          </button>
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">Or continue with</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={isLoading}
+            className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 py-2 rounded-md hover:bg-gray-50 disabled:opacity-50"
+          >
+            <Chrome className="h-5 w-5" />
+            Google
+          </button>
+          <div className="text-center text-sm">
+            {isLogin ? (
+              <>
+                Don't have an account?{' '}
+                <Link href="/register" className="text-blue-500 hover:underline">
+                  Sign up
                 </Link>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? "Loading..." : isLogin ? "Sign in" : "Sign up"}
-              <ArrowRight className="w-4 h-4" />
-            </button>
-
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => router.push(isLogin ? '/register' : '/login')}
-                className="text-sm text-blue-500 hover:underline"
-              >
-                {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
-              </button>
-            </div>
-
-            {showResendVerification && (
-              <button
-                type="button"
-                onClick={() => {
-                  fetch('/api/auth/verify-email', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ email }),
-                  })
-                  .then(() => {
-                    toast.success('Verification email sent! Please check your inbox.')
-                  })
-                  .catch(() => {
-                    toast.error('Failed to send verification email.')
-                  })
-                }}
-                className="mt-2 text-sm text-blue-500 hover:underline"
-              >
-                Resend verification email
-              </button>
+              </>
+            ) : (
+              <>
+                Already have an account?{' '}
+                <Link href="/login" className="text-blue-500 hover:underline">
+                  Sign in
+                </Link>
+              </>
             )}
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   )
 } 

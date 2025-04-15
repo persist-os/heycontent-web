@@ -1,36 +1,25 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronUp, ChevronDown, Save, Calendar, Zap, Brain, Target } from 'lucide-react'
-import type { Message } from '@/app/types'
-import type { InteractiveOption } from '@/app/lib/chat/interactive-response'
-
-interface InsightType {
-  type: string;
-  summary: string;
-  confidence?: number;
-  source?: string;
-}
-
-interface SuggestionType {
-  type: string;
-  description: string;
-}
+import { ChevronUp, ChevronDown } from 'lucide-react'
 
 interface ExpandableInsightsProps {
   message: {
     id: number;
-    relatedInsights?: InsightType[];
+    relatedInsights?: Array<{
+      type: string;
+      summary: string;
+    }>;
     interactiveResponse?: {
-      options?: InteractiveOption[];
+      options?: Array<{
+        text: string;
+      }>;
     };
-    metadata?: {
-      suggestions?: SuggestionType[];
-    };
+    suggestions?: string[];
   };
   onReferenceClick?: (messageId: number) => void;
-  onOptionPress?: (option: InteractiveOption) => void;
-  onSuggestionPress?: (suggestion: SuggestionType) => void;
+  onOptionPress?: (option: { text: string }) => void;
+  onSuggestionPress?: (suggestion: string) => void;
 }
 
 export function ExpandableInsights({ 
@@ -42,8 +31,8 @@ export function ExpandableInsights({
   const [isExpanded, setIsExpanded] = useState(false);
   
   // Placeholder data in case the message doesn't have options or suggestions
-  const placeholderOptions: InteractiveOption[] = [];
-  const placeholderSuggestions: SuggestionType[] = [];
+  const placeholderOptions: Array<{ text: string }> = [];
+  const placeholderSuggestions: string[] = [];
 
   return (
     <div className="w-full border-t border-gray-100">
@@ -77,13 +66,7 @@ export function ExpandableInsights({
                     onClick={() => onReferenceClick?.(message.id)}
                   >
                     <div className="text-xs font-medium text-heycontent-yellow">{insight.type}</div>
-                    <div className="text-sm mt-1">
-                      {insight.summary}
-                      {insight.confidence && <span className="text-gray-500 text-xs"> ({insight.confidence}% confidence)</span>}
-                    </div>
-                    {insight.source && (
-                      <div className="text-xs text-gray-500 mt-1">Source: {insight.source}</div>
-                    )}
+                    <div className="text-sm mt-1">{insight.summary}</div>
                   </div>
                 ))}
               </div>
@@ -97,19 +80,9 @@ export function ExpandableInsights({
               {(message.interactiveResponse?.options || placeholderOptions).map((option, index) => (
                 <button
                   key={index}
-                  className={`
-                    flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-colors
-                    ${option.action === 'save_to_notes' ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : ''}
-                    ${option.action === 'review_calendar' ? 'bg-heycontent-light-purple text-heycontent-purple hover:bg-heycontent-purple/20' : ''}
-                    ${option.type === 'action' && !option.action?.includes('save_to_notes') && !option.action?.includes('review_calendar') ? 'bg-heycontent-light-yellow text-black hover:bg-heycontent-yellow/20' : ''}
-                    ${option.type === 'detail' ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : ''}
-                  `}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200"
                   onClick={() => onOptionPress?.(option)}
                 >
-                  {option.action === 'save_to_notes' && <Save size={16} className="text-gray-600" />}
-                  {option.action === 'review_calendar' && <Calendar size={16} className="text-heycontent-purple" />}
-                  {option.type === 'action' && !option.action?.includes('save_to_notes') && !option.action?.includes('review_calendar') && <Zap size={16} className="text-black" />}
-                  {option.type === 'detail' && <Brain size={16} className="text-gray-600" />}
                   <span>{option.text}</span>
                 </button>
               ))}
@@ -117,32 +90,24 @@ export function ExpandableInsights({
           </div>
 
           {/* Smart Suggestions Section */}
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-gray-700">Suggestions</h4>
-            <div className="flex flex-wrap gap-2">
-              {(message.metadata?.suggestions || placeholderSuggestions).map((suggestion, index) => (
-                <button
-                  key={index}
-                  className={`
-                    flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-colors
-                    ${suggestion.description.toLowerCase().includes('content calendar') ? 'bg-heycontent-light-purple text-heycontent-purple hover:bg-heycontent-purple/20' : ''}
-                    ${suggestion.type === 'action' && !suggestion.description.toLowerCase().includes('content calendar') ? 'bg-heycontent-light-yellow text-black hover:bg-heycontent-yellow/20' : ''}
-                    ${suggestion.type === 'strategic' ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : ''}
-                    ${suggestion.type === 'explore' ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : ''}
-                  `}
-                  onClick={() => onSuggestionPress?.(suggestion)}
-                >
-                  {suggestion.type === 'explore' && <Brain size={16} className="text-gray-600" />}
-                  {suggestion.description.toLowerCase().includes('content calendar') && <Calendar size={16} className="text-heycontent-purple" />}
-                  {suggestion.type === 'action' && !suggestion.description.toLowerCase().includes('content calendar') && <Zap size={16} className="text-black" />}
-                  {suggestion.type === 'strategic' && <Target size={16} className="text-gray-600" />}
-                  <span>{suggestion.description}</span>
-                </button>
-              ))}
+          {(message.suggestions?.length ?? 0) > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium text-gray-700">Suggestions</h4>
+              <div className="flex flex-wrap gap-2">
+                {message.suggestions?.map((suggestion, index) => (
+                  <button
+                    key={index}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    onClick={() => onSuggestionPress?.(suggestion)}
+                  >
+                    <span>{suggestion}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>
-  )
+  );
 } 

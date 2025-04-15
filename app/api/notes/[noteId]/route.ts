@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/auth';
+import { auth } from '@/app/lib/firebase';
 import { api } from '@/convex/_generated/api';
 import { fetchMutation } from 'convex/nextjs';
 

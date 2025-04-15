@@ -26,7 +26,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' blob: data:",
               "font-src 'self'",
-              "connect-src 'self' https://*.convex.cloud",
+              "connect-src 'self' wss://*.convex.cloud https://*.convex.cloud",
               "frame-ancestors 'self'"
             ].join('; ')
           }

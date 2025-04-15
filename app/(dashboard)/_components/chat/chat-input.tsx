@@ -143,6 +143,7 @@ export function ChatInput({
         </div>
         <button
           type="submit"
+          aria-label="Send message"
           disabled={isLoading || !input.trim() || isAtLimit}
           className="bg-heycontent-yellow text-black px-4 py-2 rounded-lg 
             hover:bg-heycontent-yellow/80 transition-colors disabled:opacity-50 

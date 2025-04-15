@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+import { auth } from '@/app/lib/firebase'
+import { onAuthStateChanged } from 'firebase/auth'
 import { Logo } from '@/app/_components/logo'
 import { 
   Brain, Users, MessageSquare, Settings, 
@@ -23,7 +24,7 @@ const navItems = [
     id: 'chat', 
     label: 'AI Assistant',
     icon: MessageSquare,
-    href: '/chat',
+    href: '/dashboard/chat',
     color: 'text-pink-500'
   },
   { 
@@ -59,15 +60,27 @@ const navItems = [
 export function DashboardNav() {
   const pathname = usePathname()
   const router = useRouter()
-  const { data: session } = useSession()
+  const [user, setUser] = useState<any>(null)
   const [isExpanded, setIsExpanded] = useState(false)
   const [recentChats, setRecentChats] = useState<RecentChat[]>([])
   const [isHovering, setIsHovering] = useState(false)
 
+  useEffect(() => {
+    if (!auth) {
+      console.error('Firebase auth not initialized')
+      return
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user)
+    })
+    return () => unsubscribe()
+  }, [])
+
   // Fetch recent chats
   useEffect(() => {
     const fetchRecentChats = async () => {
-      if (!session?.user?.id) return
+      if (!user?.uid) return
       try {
         const response = await fetch('/api/chat/history?limit=5')
         const data = await response.json()
@@ -85,7 +98,7 @@ export function DashboardNav() {
     }
 
     fetchRecentChats()
-  }, [session?.user?.id])
+  }, [user?.uid])
 
   return (
     <>

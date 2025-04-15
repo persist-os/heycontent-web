@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/auth';
+import { cookies } from 'next/headers';
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
 
@@ -7,12 +7,18 @@ const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const token = cookies().get('firebase-auth-token')?.value;
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const notes = await convex.query(api.notes.getNotes, { userId: session.user.id });
+    // Get the user ID from the token
+    const userId = await convex.query(api.auth.getUserIdFromToken, { token });
+    if (!userId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    const notes = await convex.query(api.notes.getNotes, { userId });
     return NextResponse.json(notes);
   } catch (error: any) {
     console.error('[NOTES_GET]', error);
@@ -25,16 +31,22 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const token = cookies().get('firebase-auth-token')?.value;
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Get the user ID from the token
+    const userId = await convex.query(api.auth.getUserIdFromToken, { token });
+    if (!userId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
     const json = await req.json();
     const { title, content, important, tags, references } = json;
 
     const noteId = await convex.mutation(api.notes.createNote, {
-      userId: session.user.id,
+      userId,
       title: title || 'Untitled Note',
       content: content || '',
       important: important || false,

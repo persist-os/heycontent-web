@@ -1,65 +1,40 @@
-import { NextResponse } from 'next/server'
-import { auth } from '@/app/auth'
-import { ConvexHttpClient } from "convex/browser";
-import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
-if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
-  throw new Error('Missing NEXT_PUBLIC_CONVEX_URL');
-}
+export async function GET(request: Request) {
+  const requestId = Math.random().toString(36).substring(7);
+  const { searchParams } = new URL(request.url);
+  const limit = parseInt(searchParams.get('limit') || '5', 10);
 
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL);
+  console.log(`[${requestId}] Fetching chat history`, {
+    limit,
+    timestamp: new Date().toISOString()
+  });
 
-export const runtime = 'nodejs'
-
-type Conversation = {
-  _id: Id<"conversations">;
-  title: string;
-  messages: Array<{
-    content: string;
-    role: string;
-    timestamp: number;
-  }>;
-  createdAt: number;
-  updatedAt: number;
-  starred: boolean;
-};
-
-export async function GET(req: Request) {
   try {
-    const session = await auth()
-    
-    if (!session?.user?.id) {
-      return NextResponse.json({ 
-        conversations: [],
-        success: false,
-        error: 'Unauthorized'
-      })
+    const token = cookies().get('firebase-auth-token')?.value;
+    if (!token) {
+      console.warn(`[${requestId}] Authentication failed: No token found`);
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const conversations = await convex.query(api.chat.getHistory, { 
-      userId: session.user.id,
-      limit: 5 
-    });
-
+    // For now, return empty array until we implement proper history storage
     return NextResponse.json({
-      conversations: conversations.map((conv: Conversation) => ({
-        id: conv._id,
-        topic: conv.title || 'Untitled Chat',
-        preview: conv.messages?.[0]?.content || 'No messages',
-        date: new Date(conv.createdAt).toLocaleDateString(),
-        messages: conv.messages || [],
-        starred: conv.starred || false
-      })),
-      success: true
-    })
-
+      chats: [],
+      metadata: {
+        request_id: requestId,
+        timestamp: new Date().toISOString()
+      }
+    });
   } catch (error) {
-    console.error('Failed to fetch chat history:', error)
+    console.error(`[${requestId}] Failed to fetch chat history`, {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    
     return NextResponse.json({ 
-      conversations: [],
-      success: false,
-      error: 'Internal Server Error'
-    })
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : 'An unexpected error occurred'
+    }, { status: 500 });
   }
 } 
