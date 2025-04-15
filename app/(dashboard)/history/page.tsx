@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
-import { 
-  Search, 
+import { useAuth } from '@/app/context/auth-context'
+import {
+  Search,
   MessageSquare,
   Trash2,
   Star
@@ -13,7 +13,7 @@ import { ChatHistory } from '@/app/types/chat'
 
 export default function HistoryPage() {
   const router = useRouter()
-  const { data: session } = useSession()
+  const { user } = useAuth()
   const [chats, setChats] = useState<ChatHistory[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [isLoading, setIsLoading] = useState(true)
@@ -21,7 +21,7 @@ export default function HistoryPage() {
   // Fetch chats
   useEffect(() => {
     const fetchChats = async () => {
-      if (!session?.user?.id) return
+      if (!user?.uid) return
       try {
         const response = await fetch('/api/chat/history')
         const data = await response.json()
@@ -36,7 +36,7 @@ export default function HistoryPage() {
     }
 
     fetchChats()
-  }, [session?.user?.id])
+  }, [user?.uid])
 
   const handleDeleteChat = async (chatId: string) => {
     try {
@@ -47,7 +47,7 @@ export default function HistoryPage() {
     }
   }
 
-  const filteredChats = chats.filter(chat => 
+  const filteredChats = chats.filter(chat =>
     chat.topic.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
@@ -78,7 +78,7 @@ export default function HistoryPage() {
               className="group bg-white border rounded-xl p-4 hover:shadow-md transition-all"
             >
               <div className="flex items-start justify-between">
-                <div 
+                <div
                   className="flex-1 cursor-pointer"
                   onClick={() => router.push(`/chat?id=${chat.id}`)}
                 >
@@ -108,4 +108,4 @@ export default function HistoryPage() {
       )}
     </div>
   )
-} 
+}

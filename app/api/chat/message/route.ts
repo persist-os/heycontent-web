@@ -6,7 +6,7 @@ const BACKEND_URL = 'https://backend.hicontent.co';
 export async function POST(request: Request) {
   const startTime = Date.now();
   const requestId = Math.random().toString(36).substring(7);
-  
+
   console.log(`[${requestId}] Chat message request started`, {
     timestamp: new Date().toISOString(),
     method: request.method,
@@ -28,9 +28,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
     }
 
+    // Log the request details
     console.info(`[${requestId}] Processing chat message`, {
-      session_id,
-      is_first_message,
+      session_id: session_id || 'null',
+      is_first_message: !!is_first_message,
       query_length: query?.length,
       has_token: !!token
     });
@@ -48,8 +49,8 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         user_id,
         query,
-        is_first_message: is_first_message || false,
-        session_id: session_id || Date.now().toString()
+        is_first_message: is_first_message === true,
+        session_id: is_first_message === true ? null : (session_id || null)
       })
     });
 
@@ -63,9 +64,9 @@ export async function POST(request: Request) {
     }
 
     const data = await response.json();
-    
+
     const totalDuration = Date.now() - startTime;
-    
+
     console.info(`[${requestId}] Request completed successfully`, {
       duration_ms: totalDuration,
       chat_response_length: data.chat_response?.length || data.response?.length || 0,
@@ -92,8 +93,8 @@ export async function POST(request: Request) {
       duration_ms: totalDuration,
       timestamp: new Date().toISOString()
     });
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       error: 'Internal Server Error',
       message: error instanceof Error ? error.message : 'An unexpected error occurred',
       metadata: {
@@ -102,4 +103,4 @@ export async function POST(request: Request) {
       }
     }, { status: 500 });
   }
-} 
+}

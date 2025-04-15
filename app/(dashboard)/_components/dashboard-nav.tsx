@@ -6,8 +6,9 @@ import { usePathname, useRouter } from 'next/navigation'
 import { auth } from '@/app/lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { Logo } from '@/app/_components/logo'
-import { 
-  Brain, Users, MessageSquare, Settings, 
+import { useSidebar } from '@/app/context/sidebar-context'
+import {
+  Brain, Users, MessageSquare, Settings,
   Briefcase, ChevronLeft, Clock, Star, FileText,
   ChevronRight
 } from 'lucide-react'
@@ -21,36 +22,36 @@ type RecentChat = {
 }
 
 const navItems = [
-  { 
-    id: 'chat', 
+  {
+    id: 'chat',
     label: 'AI Assistant',
     icon: MessageSquare,
     href: '/chat',
     color: 'text-pink-500'
   },
-  { 
-    id: 'ai-insights', 
+  {
+    id: 'ai-insights',
     label: 'AI Insights',
     icon: Brain,
     href: '/ai-insights',
     color: 'text-purple-500'
   },
-  { 
-    id: 'audience', 
+  {
+    id: 'audience',
     label: 'Audience DNA',
     icon: Users,
     href: '/audience',
     color: 'text-green-500'
   },
-  { 
-    id: 'partnerships', 
+  {
+    id: 'partnerships',
     label: 'Partnerships',
     icon: Briefcase,
     href: '/partnerships',
     color: 'text-orange-500'
   },
-  { 
-    id: 'notes', 
+  {
+    id: 'notes',
     label: 'Smart Notes',
     icon: FileText,
     href: '/notes',
@@ -63,7 +64,7 @@ export function DashboardNav() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [recentChats, setRecentChats] = useState<RecentChat[]>([])
-  const [isExpanded, setIsExpanded] = useState(true)
+  const { isExpanded, setIsExpanded } = useSidebar()
 
   useEffect(() => {
     if (!auth) {
@@ -104,7 +105,7 @@ export function DashboardNav() {
     <>
       {/* Collapsed state overlay */}
       {!isExpanded && (
-        <div 
+        <div
           className="h-full w-16 bg-white border-r border-gray-200 shadow-sm"
           onClick={() => setIsExpanded(true)}
         >
@@ -117,7 +118,7 @@ export function DashboardNav() {
                 key={item.id}
                 href={item.href}
                 className={`p-2 rounded-lg transition-all ${
-                  pathname === item.href 
+                  pathname === item.href
                     ? 'bg-gray-100 ' + item.color
                     : 'text-gray-600 hover:bg-gray-50'
                 }`}
@@ -140,7 +141,7 @@ export function DashboardNav() {
       )}
 
       {/* Expanded state */}
-      <div 
+      <div
         className={`h-full bg-white border-r border-gray-200 shadow-sm transition-all duration-300 ${
           isExpanded ? 'w-64' : 'w-0 overflow-hidden'
         }`}
@@ -168,7 +169,7 @@ export function DashboardNav() {
                     key={item.id}
                     href={item.href}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
-                      pathname === item.href 
+                      pathname === item.href
                         ? 'bg-gray-100 font-medium ' + item.color
                         : 'text-gray-600 hover:bg-gray-50'
                     }`}
@@ -186,7 +187,7 @@ export function DashboardNav() {
               <div className="px-3 py-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-gray-700">Recent Chats</span>
-                  <Link 
+                  <Link
                     href="/history"
                     className="text-xs text-blue-500 hover:underline"
                   >
@@ -212,7 +213,7 @@ export function DashboardNav() {
                 <Link
                   href="/settings"
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
-                    pathname === '/settings' 
+                    pathname === '/settings'
                       ? 'bg-gray-100 font-medium text-gray-500'
                       : 'text-gray-600 hover:bg-gray-50'
                   }`}

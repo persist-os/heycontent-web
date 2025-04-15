@@ -88,7 +88,7 @@ export function ChatInput({
   const isAtLimit = characterCount >= maxLength
 
   return (
-    <form onSubmit={handleSubmit} className="py-2">
+    <form onSubmit={handleSubmit} className="py-2 w-full">
       {/* Referenced message preview - mobile responsive */}
       {referencedMessage && (
         <div className="w-full mx-auto mb-2">
@@ -107,7 +107,7 @@ export function ChatInput({
         </div>
       )}
 
-      <div className="flex gap-1 sm:gap-2 items-end w-full mx-auto">
+      <div className="flex gap-1 sm:gap-2 items-end w-full mx-auto relative">
         <div className="flex-1 relative">
           <textarea
             ref={textAreaRef}
