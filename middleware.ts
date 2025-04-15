@@ -5,34 +5,47 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('firebase-auth-token')?.value;
 
-  console.log('Middleware - Path:', pathname, 'Token exists:', !!token);
-
-  // If token exists and trying to access auth pages, redirect to chat
-  if (token && (pathname.startsWith('/login') || pathname.startsWith('/register'))) {
-    console.log('Middleware - Token exists, redirecting to chat');
-    return NextResponse.redirect(new URL('/chat', request.url));
-  }
-
-  // Allow access to auth pages and public assets only if no token
-  if (!token && (
-    pathname.startsWith('/login') || 
-    pathname.startsWith('/register') || 
-    pathname.startsWith('/verify-email') ||
+  // Allow access to public routes
+  if (
     pathname.startsWith('/_next') ||
-    pathname.startsWith('/api/firebase')
-  )) {
-    console.log('Middleware - Allowing access to public route:', pathname);
-    return NextResponse.next();
+    pathname.startsWith('/api/auth') ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/register') ||
+    pathname.startsWith('/verify-email') ||
+    pathname === '/'
+  ) {
+    // If user is already authenticated and trying to access auth pages, redirect to chat
+    if (token && (pathname.startsWith('/login') || pathname.startsWith('/register'))) {
+      console.log('Authenticated user trying to access auth page, redirecting to chat');
+      return NextResponse.redirect(new URL('/chat', request.url));
+    }
+
+    const response = NextResponse.next();
+    // Add security headers for public routes
+    response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+    response.headers.set('Cross-Origin-Embedder-Policy', 'credentialless');
+    response.headers.set('Cross-Origin-Resource-Policy', 'cross-origin');
+    return response;
   }
 
-  // If no token and trying to access protected route
+  // If no token, redirect to login
   if (!token) {
-    console.log('Middleware - No token found, redirecting to login');
-    return NextResponse.redirect(new URL('/login', request.url));
+    console.log('No token found, redirecting to login from path:', pathname);
+    const response = NextResponse.redirect(new URL('/login', request.url));
+    // Add security headers for redirect
+    response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+    response.headers.set('Cross-Origin-Embedder-Policy', 'credentialless');
+    response.headers.set('Cross-Origin-Resource-Policy', 'cross-origin');
+    return response;
   }
 
-  console.log('Middleware - Allowing access to protected route:', pathname);
-  return NextResponse.next();
+  // If token exists, allow access
+  const response = NextResponse.next();
+  // Add security headers for authenticated routes
+  response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+  response.headers.set('Cross-Origin-Embedder-Policy', 'credentialless');
+  response.headers.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  return response;
 }
 
 export const config = {

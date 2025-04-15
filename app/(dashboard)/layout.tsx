@@ -26,7 +26,11 @@ export default function DashboardLayout({
       
       if (!user) {
         console.log('No user found, redirecting to login')
-        router.push('/login')
+        // Store current path for redirect back after login
+        const currentPath = window.location.pathname;
+        if (currentPath !== '/login') {
+          router.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
+        }
         return
       }
 

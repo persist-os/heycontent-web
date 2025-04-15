@@ -171,4 +171,14 @@ export default defineSchema({
   .index("by_user", ["userId"])
   .index("by_creation", ["createdAt"])
   .index("by_type", ["type"]),
+
+  tokens: defineTable({
+    userId: v.string(),
+    platform: v.string(),
+    accessToken: v.string(),
+    refreshToken: v.optional(v.string()),
+    expiresAt: v.number(),
+    scope: v.optional(v.string()),
+  })
+  .index("by_user_platform", ["userId", "platform"]),
 }); 

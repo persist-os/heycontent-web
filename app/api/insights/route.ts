@@ -14,7 +14,7 @@ export async function GET(req: Request) {
     const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL || '');
 
     // Get the user ID from the token
-    const userId = await convex.query(api.auth.getUserIdFromToken, { token });
+    const userId = await convex.query(api.queries.getUserIdFromToken, { token });
     if (!userId) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }

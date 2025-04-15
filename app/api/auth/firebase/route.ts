@@ -10,9 +10,13 @@ import { cookies } from 'next/headers'
 
 export async function POST(request: Request) {
   try {
-    const { email, password, action, idToken } = await request.json()
+    const body = await request.json()
+    console.log('Auth request body:', { ...body, password: body.password ? '[REDACTED]' : undefined })
+    
+    const { email, password, action, idToken } = body
 
     if (!auth) {
+      console.error('Firebase auth not initialized')
       return NextResponse.json(
         { error: 'Authentication service is not available' },
         { status: 500 }
@@ -20,6 +24,7 @@ export async function POST(request: Request) {
     }
 
     if (action === 'login') {
+      console.log('Attempting login for:', email)
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
 
@@ -50,6 +55,7 @@ export async function POST(request: Request) {
 
       return response
     } else if (action === 'register') {
+      console.log('Attempting registration for:', email)
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
 
@@ -72,7 +78,7 @@ export async function POST(request: Request) {
       console.log('Setting token for action:', action)
       const response = NextResponse.json({ 
         success: true,
-        redirect: action === 'refresh' ? undefined : '/'
+        redirect: action === 'refresh' ? undefined : '/chat'
       })
 
       // Set the Firebase auth token cookie
@@ -86,12 +92,14 @@ export async function POST(request: Request) {
 
       return response
     } else {
+      console.log('Invalid action provided:', action)
       return NextResponse.json(
         { error: 'Invalid action' },
         { status: 400 }
       )
     }
   } catch (err: any) {
+    console.error('Auth error:', err)
     let errorMessage = 'Something went wrong'
     
     switch (err.code) {

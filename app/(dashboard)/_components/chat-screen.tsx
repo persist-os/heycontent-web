@@ -212,7 +212,7 @@ const ChatScreen = () => {
             </div>
           )}
         </div>
-        <div className="fixed bottom-0 left-0 right-0 pl-64 transition-all duration-300">
+        <div className="fixed bottom-0 left-0 right-0 pl-64 transition-all duration-300 z-10">
           <div className="h-px bg-gray-200 w-full"></div>
           <div className="bg-white shadow-sm flex">
             <div className="w-px bg-gray-200 h-full"></div>

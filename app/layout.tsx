@@ -27,7 +27,7 @@ export default async function RootLayout({
         {isSignOut && (
           <meta
             httpEquiv="Clear-Site-Data"
-            content='"cache", "cookies", "storage"'
+            content="cache, cookies, storage"
           />
         )}
       </head>

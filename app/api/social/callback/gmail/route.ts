@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-import { auth } from '@/app/auth'
+import { auth } from '@/app/lib/auth'
 import { google } from 'googleapis'
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
@@ -45,32 +45,15 @@ export async function GET(req: Request) {
       'https://www.googleapis.com/auth/gmail.readonly',
       'https://www.googleapis.com/auth/gmail.modify',
       'https://www.googleapis.com/auth/gmail.labels',
-      'https://mail.google.com/',
-      // Google returns these with a URL prefix, so we should either remove these
-      // or update the verification logic to check for equivalent scopes
-      // 'email',
-      // 'profile',
-      // 'openid'
+      'https://mail.google.com/'
     ];
 
-    // Check if all required scopes are included in the token
-    // Modified to handle both formats: with and without URL prefixes
     const hasRequiredScopes = requiredScopes.every(scope => 
       tokenInfo.scopes?.includes(scope)
     );
 
-    // Check if the user profile info scopes are present in any format
-    const hasProfileScopes = tokenInfo.scopes?.some(scope => 
-      scope.includes('userinfo.email') || scope.includes('userinfo.profile') || scope === 'openid'
-    );
-
-    if (!hasRequiredScopes || !hasProfileScopes) {
-      console.error('Missing required Gmail scopes:', {
-        required: requiredScopes,
-        granted: tokenInfo.scopes,
-        missing: requiredScopes.filter(scope => !tokenInfo.scopes?.includes(scope))
-      });
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=insufficient_gmail_permissions`);
+    if (!hasRequiredScopes) {
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=insufficient_scopes`)
     }
 
     // Initialize Gmail API
@@ -89,17 +72,23 @@ export async function GET(req: Request) {
         historyId: profile.data.historyId,
       },
       accessToken: tokens.access_token!,
-      refreshToken: tokens.refresh_token,
+      refreshToken: tokens.refresh_token || undefined,
       expiresAt: tokens.expiry_date ? Math.floor(tokens.expiry_date / 1000) : undefined,
       tokenType: tokens.token_type!,
       scope: tokens.scope!,
     });
 
-    // Redirect back to settings page with success message
+    // Update connection status
+    await convex.mutation(api.social.updateConnectionStatus, {
+      userId,
+      platform: 'gmail',
+      isConnected: true,
+    });
+
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?success=gmail_connected`)
 
   } catch (error) {
     console.error('[GMAIL_CALLBACK_ERROR]', error)
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=gmail_connection_failed`)
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=unknown`)
   }
 } 

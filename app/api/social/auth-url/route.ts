@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/auth';
+import { auth } from '@/app/lib/auth';
 import { SocialPlatform } from '@/app/types/social-platforms';
 
 export const dynamic = 'force-dynamic';

@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-import { auth } from '@/app/auth'
+import { auth } from '@/app/lib/auth'
 import { google } from 'googleapis'
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
@@ -42,8 +42,8 @@ export async function GET(req: Request) {
 
     // Verify we have the required YouTube scopes
     const requiredScopes = [
-      'https://www.googleapis.com/auth/youtube.readonly',  // Basic read-only access
-      'https://www.googleapis.com/auth/youtube.force-ssl'  // Required for secure API access
+      'https://www.googleapis.com/auth/youtube.readonly',
+      'https://www.googleapis.com/auth/youtube.force-ssl'
     ];
 
     const hasRequiredScopes = requiredScopes.every(scope => 
@@ -51,27 +51,20 @@ export async function GET(req: Request) {
     );
 
     if (!hasRequiredScopes) {
-      console.error('Missing required YouTube scopes:', {
-        required: requiredScopes,
-        granted: tokenInfo.scopes,
-        missing: requiredScopes.filter(scope => !tokenInfo.scopes?.includes(scope))
-      });
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=insufficient_youtube_permissions`);
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=insufficient_scopes`)
     }
 
-    // Initialize YouTube API
+    // Get YouTube channel info
     const youtube = google.youtube('v3')
-
-    // Get channel information
-    const channelResponse = await youtube.channels.list({
+    const response = await youtube.channels.list({
       auth: oauth2Client,
-      part: ['snippet,statistics'],
+      part: ['snippet', 'statistics'],
       mine: true
     })
 
-    const channel = channelResponse.data.items?.[0]
+    const channel = response.data.items?.[0]
     if (!channel) {
-      throw new Error('No YouTube channel found')
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=no_channel`)
     }
 
     // Store YouTube data in Convex
@@ -85,7 +78,7 @@ export async function GET(req: Request) {
         avatarUrl: channel.snippet?.thumbnails?.default?.url,
       },
       accessToken: tokens.access_token!,
-      refreshToken: tokens.refresh_token,
+      refreshToken: tokens.refresh_token || undefined,
       expiresAt: tokens.expiry_date ? Math.floor(tokens.expiry_date / 1000) : undefined,
       tokenType: tokens.token_type!,
       scope: tokens.scope!,
@@ -98,11 +91,10 @@ export async function GET(req: Request) {
       isConnected: true,
     });
 
-    // Redirect back to settings page with success message
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?success=youtube_connected`)
 
   } catch (error) {
     console.error('[YOUTUBE_CALLBACK_ERROR]', error)
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=youtube_connection_failed`)
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=unknown`)
   }
 }

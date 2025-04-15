@@ -1,18 +1,45 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@/app/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  console.log('YouTube route hit');
-  
   try {
-    // Just return a test response first
-    return NextResponse.json({ 
-      test: true,
-      message: 'YouTube route is working'
-    });
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.YOUTUBE_REDIRECT_URI) {
+      throw new Error('Missing Google OAuth configuration');
+    }
+
+    const state = Buffer.from(JSON.stringify({
+      userId: session.user.id,
+      platform: 'youtube'
+    })).toString('base64');
+
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${process.env.GOOGLE_CLIENT_ID}&` +
+      `redirect_uri=${process.env.YOUTUBE_REDIRECT_URI}&` +
+      `scope=${encodeURIComponent([
+        'https://www.googleapis.com/auth/youtube.readonly',
+        'https://www.googleapis.com/auth/youtube.force-ssl',
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'openid'
+      ].join(' '))}&` +
+      `response_type=code&` +
+      `access_type=offline&` +
+      `prompt=consent&` +
+      `state=${state}`;
+
+    return NextResponse.json({ authUrl });
   } catch (error) {
-    console.error('YouTube route error:', error);
-    return NextResponse.json({ error: 'Test failed' }, { status: 500 });
+    console.error('YouTube auth URL error:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to generate auth URL' },
+      { status: 500 }
+    );
   }
 } 

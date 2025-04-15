@@ -13,7 +13,7 @@ export async function GET() {
     }
 
     // Get the user ID from the token
-    const userId = await convex.query(api.auth.getUserIdFromToken, { token });
+    const userId = await convex.query(api.queries.getUserIdFromToken, { token });
     if (!userId) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     }
 
     // Get the user ID from the token
-    const userId = await convex.query(api.auth.getUserIdFromToken, { token });
+    const userId = await convex.query(api.queries.getUserIdFromToken, { token });
     if (!userId) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }

@@ -208,7 +208,7 @@ export function DashboardNav() {
               </div>
 
               {/* Settings */}
-              <div className="px-3 py-4 border-t border-gray-100">
+              <div className="px-3 py-4 border-t border-gray-100 relative z-20">
                 <Link
                   href="/settings"
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${

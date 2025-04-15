@@ -16,8 +16,10 @@ import { toast } from 'react-hot-toast'
 import { auth } from '@/app/lib/firebase'
 import { 
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  onAuthStateChanged
 } from 'firebase/auth'
+import { useAuth } from '@/app/context/auth-context'
 
 interface AuthScreenProps {
   isLogin?: boolean
@@ -25,6 +27,7 @@ interface AuthScreenProps {
 }
 
 export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
+  const { user, loading: authLoading } = useAuth();
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -51,6 +54,8 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
     setIsLoading(true)
     
     try {
+      console.log('Attempting to submit form with:', { email, action: isLogin ? 'login' : 'register' })
+      
       const response = await fetch('/api/auth/firebase', {
         method: 'POST',
         headers: {
@@ -63,7 +68,9 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
         }),
       })
 
+      console.log('Auth response status:', response.status)
       const data = await response.json()
+      console.log('Auth response data:', data)
 
       if (!response.ok) {
         if (data.error === 'UNVERIFIED_EMAIL') {
@@ -73,16 +80,29 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
         throw new Error(data.error)
       }
 
-      if (data.redirect) {
-        router.push(data.redirect)
-      } else {
-        if (isLogin) {
-          router.push('/')
-        } else if (onSuccess) {
-          onSuccess(email)
-        }
-      }
+      // Wait for auth state to be updated and token to be set
+      await new Promise((resolve) => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+          if (user) {
+            console.log('Auth state updated with user:', user.email);
+            // Get the latest token
+            const token = await user.getIdToken(true);
+            console.log('Token obtained successfully');
+            unsubscribe();
+            resolve(user);
+          }
+        });
+      });
+
+      // Add a small delay to ensure the cookie is set
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Use the redirect path from the server response if available
+      const redirectPath = data.redirect || '/chat';
+      console.log('Redirecting to:', redirectPath);
+      window.location.href = redirectPath;
     } catch (err) {
+      console.error('Auth error:', err)
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
       setIsLoading(false)
@@ -95,30 +115,46 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
       if (!auth) {
         throw new Error('Firebase auth not initialized')
       }
-      const provider = new GoogleAuthProvider()
-      const result = await signInWithPopup(auth, provider)
       
-      if (result.user) {
-        const idToken = await result.user.getIdToken()
+      const provider = new GoogleAuthProvider()
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      })
+      
+      try {
+        const result = await signInWithPopup(auth, provider)
         
-        const response = await fetch('/api/auth/firebase', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            idToken,
-            action: 'google'
-          }),
-        })
+        if (result.user) {
+          const idToken = await result.user.getIdToken()
+          
+          const response = await fetch('/api/auth/firebase', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              idToken,
+              action: 'google'
+            }),
+          })
 
-        if (!response.ok) {
-          throw new Error('Failed to set session')
+          if (!response.ok) {
+            throw new Error('Failed to set session')
+          }
+
+          const data = await response.json();
+          const redirectPath = data.redirect || '/chat';
+          console.log('Google sign-in redirecting to:', redirectPath);
+          window.location.href = redirectPath;
         }
-
-        router.push('/')
+      } catch (popupError) {
+        if (popupError instanceof Error && popupError.message.includes('popup')) {
+          throw new Error('Please allow popups for Google Sign-In')
+        }
+        throw popupError
       }
     } catch (err) {
+      console.error('Google Sign-In error:', err)
       setError(err instanceof Error ? err.message : 'Failed to sign in with Google')
     } finally {
       setIsLoading(false)
