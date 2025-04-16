@@ -19,14 +19,6 @@ export async function POST(request: Request) {
         // First verify the user exists and is not disabled
         const userRecord = await adminAuth.getUserByEmail(email)
         
-        if (!userRecord.emailVerified) {
-          console.log('Login attempt with unverified email:', email)
-          return NextResponse.json(
-            { error: 'UNVERIFIED_EMAIL' },
-            { status: 401 }
-          )
-        }
-
         // Create a custom token for the user
         const customToken = await adminAuth.createCustomToken(userRecord.uid)
         
@@ -48,25 +40,15 @@ export async function POST(request: Request) {
               image: userRecord.photoURL || ''
             })
             console.log('User created in Convex')
-          } else {
-            console.log('User found in Convex, updating user information...')
-            await convex.action(api.auth.updateUser, {
-              userId: userRecord.uid,
-              name: userRecord.displayName || convexUser.name || 'Unknown User',
-              email: userRecord.email || convexUser.email || '',
-              image: userRecord.photoURL || convexUser.image || ''
-            })
-            console.log('User updated in Convex')
           }
         } catch (convexError) {
           console.error('Error with Convex user:', convexError)
-          // Continue even if Convex operations fail
         }
 
         const response = NextResponse.json({
           success: true,
           redirect: '/chat',
-          customToken // Send the custom token to the client
+          customToken
         })
 
         // Set the Firebase auth token cookie
@@ -104,18 +86,49 @@ export async function POST(request: Request) {
         const userRecord = await adminAuth.createUser({
           email,
           password,
-          emailVerified: false
+          emailVerified: true // Set email as verified by default
         })
 
-        // Send verification email
-        await adminAuth.generateEmailVerificationLink(email)
+        // Create a custom token for the user
+        const customToken = await adminAuth.createCustomToken(userRecord.uid)
+        
+        // Get the ID token
+        const idToken = await adminAuth.createCustomToken(userRecord.uid)
 
-        console.log('Registration successful, verification email sent to:', email)
+        // Ensure user exists in Convex
+        try {
+          const convexUser = await convex.query(api.users.getUserById, { userId: userRecord.uid })
 
-        return NextResponse.json({
+          if (!convexUser) {
+            console.log('User not found in Convex, creating user...')
+            await convex.action(api.auth.createUser, {
+              userId: userRecord.uid,
+              name: userRecord.displayName || 'Unknown User',
+              email: userRecord.email || '',
+              image: userRecord.photoURL || ''
+            })
+            console.log('User created in Convex')
+          }
+        } catch (convexError) {
+          console.error('Error with Convex user:', convexError)
+        }
+
+        const response = NextResponse.json({
           success: true,
-          redirect: `/verify-email?email=${encodeURIComponent(email)}`
+          redirect: '/chat',
+          customToken
         })
+
+        // Set the Firebase auth token cookie
+        response.cookies.set('firebase-auth-token', idToken, {
+          httpOnly: false,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/',
+          maxAge: 60 * 60 * 24 * 7 // 1 week
+        })
+
+        return response
       } catch (error: any) {
         if (error.code === 'auth/email-already-in-use') {
           return NextResponse.json(

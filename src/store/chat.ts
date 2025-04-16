@@ -1,11 +1,10 @@
 import { create } from 'zustand'
-import { type PrismaClient } from '@prisma/client'
 
 // Define types based on your Prisma schema
 interface Message {
   id: string
   content: string
-  role: string
+  role: 'user' | 'assistant'
   timestamp: Date
   conversationId: string
   referencedMessageId?: string | null

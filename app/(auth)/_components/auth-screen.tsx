@@ -38,16 +38,6 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const urlError = searchParams.get('error')
-  const [showResendVerification, setShowResendVerification] = useState(false)
-
-  useEffect(() => {
-    if (error === 'UNVERIFIED_EMAIL' ||
-        error === 'CallbackRouteError' ||
-        error === 'AccessDenied' ||
-        urlError === 'AccessDenied') {
-      setShowResendVerification(true)
-    }
-  }, [error, urlError])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -70,10 +60,6 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
       const data = await response.json()
 
       if (!response.ok) {
-        if (data.error === 'UNVERIFIED_EMAIL') {
-          router.push(`/verify-email?email=${encodeURIComponent(email)}`)
-          return
-        }
         throw new Error(data.error)
       }
 
@@ -88,6 +74,9 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
               router.push(data.redirect)
               return
             }
+            // Default redirect after successful login
+            router.push('/chat')
+            return
           }
         } catch (signInError) {
           console.error('Error signing in with custom token:', signInError)

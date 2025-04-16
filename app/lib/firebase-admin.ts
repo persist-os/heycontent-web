@@ -1,38 +1,41 @@
 import { initializeApp, cert, getApps, App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Initialize Firebase Admin SDK
-const firebaseAdminConfig = {
-  projectId: 'heycontent-a9bc3',
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-};
-
-// Check if Firebase Admin is already initialized
 let adminApp: App | null = null;
 
 if (getApps().length === 0) {
   try {
-    if (!firebaseAdminConfig.projectId) {
-      throw new Error('Firebase project ID is not defined');
+    // Path to the service account key file
+    const serviceAccountPath = path.join(process.cwd(), 'firebase_key.json');
+    
+    // Check if the file exists
+    if (!fs.existsSync(serviceAccountPath)) {
+      throw new Error('firebase_key.json not found. Please make sure the file exists in the root directory.');
     }
 
-    // If we have service account credentials, use them
-    if (firebaseAdminConfig.clientEmail && firebaseAdminConfig.privateKey) {
-      adminApp = initializeApp({
-        credential: cert({
-          projectId: firebaseAdminConfig.projectId,
-          clientEmail: firebaseAdminConfig.clientEmail,
-          privateKey: firebaseAdminConfig.privateKey,
-        }),
-      });
-      console.log('Firebase Admin initialized with service account for project:', firebaseAdminConfig.projectId);
-    } else {
-      throw new Error('Firebase Admin credentials are missing. Please check FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY environment variables.');
-    }
+    // Read the service account key file
+    const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+
+    // Log the service account details (excluding private key)
+    console.log('Firebase Admin Config:', {
+      projectId: serviceAccount.project_id,
+      clientEmail: serviceAccount.client_email,
+      privateKeyPresent: !!serviceAccount.private_key,
+      privateKeyLength: serviceAccount.private_key?.length
+    });
+
+    // Initialize Firebase Admin
+    adminApp = initializeApp({
+      credential: cert(serviceAccount)
+    });
+
+    console.log('Firebase Admin initialized with service account for project:', serviceAccount.project_id);
   } catch (error) {
     console.error('Firebase Admin initialization error:', error);
-    throw error; // Re-throw to prevent silent failures
+    throw error;
   }
 } else {
   adminApp = getApps()[0];

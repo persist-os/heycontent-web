@@ -21,6 +21,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isRedirecting = useRef(false);
 
   useEffect(() => {
+    // Skip auth state changes on server side
+    if (typeof window === 'undefined') {
+      setLoading(false);
+      return;
+    }
+
     if (!auth) {
       setError('Firebase auth not initialized');
       setLoading(false);

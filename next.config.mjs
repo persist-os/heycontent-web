@@ -23,11 +23,13 @@ const nextConfig = {
             value: [
               "default-src 'self'",
               "script-src 'self' 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval'",
+              "script-src-elem 'self' 'unsafe-inline' https://apis.google.com https://accounts.google.com https://www.gstatic.com",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' blob: data:",
+              "img-src 'self' blob: data: https://*.googleusercontent.com",
               "font-src 'self'",
-              "connect-src 'self' wss://*.convex.cloud https://*.convex.cloud http://localhost:9099 https://*.firebaseio.com https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com",
-              "frame-ancestors 'self'"
+              "connect-src 'self' wss://*.convex.cloud https://*.convex.cloud http://localhost:9099 https://*.firebaseio.com https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://accounts.google.com",
+              "frame-ancestors 'self'",
+              "frame-src 'self' https://accounts.google.com https://apis.google.com"
             ].join('; ')
           }
         ],

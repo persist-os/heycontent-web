@@ -27,7 +27,7 @@ if (process.env.NODE_ENV === 'development') {
 
 // Initialize Firebase only on client side
 let app;
-let auth: Auth;
+let auth: Auth | null = null;
 
 if (isClient) {
   try {
@@ -59,9 +59,6 @@ if (isClient) {
   } catch (error) {
     console.error('Firebase initialization error:', error);
   }
-} else {
-  // On server side, create a dummy auth object
-  auth = {} as Auth;
 }
 
 // Helper function to get Firebase token from cookies - moved to server-only file
