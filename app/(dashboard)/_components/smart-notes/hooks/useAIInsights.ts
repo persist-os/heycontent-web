@@ -1,7 +1,7 @@
-import { Note, Reference } from '../types';
+import { Note, NoteUpdate } from '../types';
 import { formatAnalysisToMarkdown } from '../utils/format-utils';
 
-export function useAIInsights(updateNote: (noteId: string, updates: any) => Promise<void>) {
+export function useAIInsights(updateNote: (noteId: string, updates: NoteUpdate) => Promise<Note>) {
   const requestAIInsights = async (noteId: string, note: Note) => {
     if (!note || !noteId) {
       console.error('Invalid note or noteId:', { noteId, note });
@@ -9,8 +9,8 @@ export function useAIInsights(updateNote: (noteId: string, updates: any) => Prom
     }
 
     // Show loading state
-    const loadingInsight: Reference = {
-      type: 'ai_insight',
+    const loadingInsight = {
+      type: 'ai_insight' as const,
       content: 'Analyzing your note content...',
       isLoading: true
     };
@@ -40,7 +40,6 @@ export function useAIInsights(updateNote: (noteId: string, updates: any) => Prom
       }
 
       // Format the analysis into a readable insight
-      // Check if data.data exists and has analysis property
       const analysis = data.data?.analysis;
 
       if (!analysis) {
@@ -55,12 +54,12 @@ export function useAIInsights(updateNote: (noteId: string, updates: any) => Prom
         ? note.references.filter(ref => !('isLoading' in ref))
         : [];
       updatedReferences.push({
-        type: 'ai_insight',
+        type: 'ai_insight' as const,
         content: formattedContent
       });
 
       // Check if we should update the title
-      const updates: any = { references: updatedReferences };
+      const updates: NoteUpdate = { references: updatedReferences };
 
       // If the note has the default title "Untitled Note" and we have a suggested title, update it
       if (note.title === 'Untitled Note' && data.suggestedTitle) {
@@ -90,7 +89,7 @@ export function useAIInsights(updateNote: (noteId: string, updates: any) => Prom
         ? note.references.filter(ref => !('isLoading' in ref))
         : [];
       updatedReferences.push({
-        type: 'ai_insight',
+        type: 'ai_insight' as const,
         content: `Error analyzing note: ${errorMessage}`
       });
 

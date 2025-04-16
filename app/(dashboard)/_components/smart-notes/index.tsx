@@ -4,9 +4,8 @@ import { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { NoteArea } from './NoteArea';
 import { ShortcutsHelp } from './ShortcutsHelp';
-import { useNotes } from './hooks/useNotes';
+import { useNotes, Note } from './hooks/useNotes';
 import { useAIInsights } from './hooks/useAIInsights';
-import { Note } from './types';
 
 export default function SmartNotes() {
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
@@ -17,11 +16,9 @@ export default function SmartNotes() {
 
   const handleCreateNote = async () => {
     try {
-      // Create a new note with default values
       const newNote = await createNote({});
-      
-      if (newNote && newNote.id) {
-        setActiveNoteId(newNote.id);
+      if (newNote) {
+        setActiveNoteId(newNote._id);
       } else {
         console.error('Failed to create note: Invalid note object returned');
       }
@@ -44,7 +41,7 @@ export default function SmartNotes() {
     }
   };
 
-  const activeNote = notes.find(note => note.id === activeNoteId);
+  const activeNote = notes.find(note => note._id === activeNoteId);
 
   if (isLoading) {
     return (
@@ -69,7 +66,7 @@ export default function SmartNotes() {
           <NoteArea
             note={activeNote}
             onUpdate={(noteId, updates) => updateNote(noteId, updates)}
-            onSave={() => activeNote && updateNote(activeNote.id, {})}
+            onSave={() => activeNote && updateNote(activeNote._id, {})}
             onToggleShortcuts={() => setShowShortcuts(!showShortcuts)}
             onRequestAIInsights={requestAIInsights}
           />

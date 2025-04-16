@@ -1,12 +1,16 @@
-export type NoteType = 'default' | 'idea';
+import { Id } from "@/convex/_generated/dataModel";
+
+export type NoteType = 'ai_insight' | 'conversation' | 'idea' | 'url' | 'date';
 export type ReferenceType = 'ai_insight' | 'conversation' | 'idea' | 'url' | 'date';
 
 export interface Note {
-  id: string;
+  _id: Id<"notes">;
+  _creationTime: number;
+  userId: string;
   title: string;
   content: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: number;
+  updatedAt: number;
   important: boolean;
   type?: NoteType;
   tags: string[];
@@ -36,6 +40,7 @@ export interface Command {
     value: boolean;
   };
   template?: string;
+  shortcut?: string;
 }
 
 export interface Shortcut {

@@ -57,3 +57,5 @@ logs
 # Cache
 .cache
 .temp
+
+firebase_key.json

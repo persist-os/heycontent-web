@@ -1,151 +1,56 @@
-import { useState, useEffect } from 'react';
-import { Note, NoteUpdate } from '../types';
-
-async function fetchNotes(): Promise<Note[]> {
-  try {
-    const response = await fetch('/api/notes');
-    if (response.ok) {
-      return await response.json();
-    }
-    throw new Error('Failed to fetch notes');
-  } catch (error) {
-    console.warn('API fetch failed, using mock data:', error);
-    // Fallback to mock data
-    return [
-      {
-        id: '1',
-        title: 'Welcome to Smart Notes',
-        content: '# Getting Started\n\nSmart Notes helps you organize your thoughts and ideas.',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        important: true,
-        type: 'default',
-        tags: ['welcome'],
-        references: []
-      }
-    ];
-  }
-}
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useAuth } from "@clerk/nextjs";
+import { Note, NoteUpdate } from "../types";
 
 export function useNotes() {
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { userId } = useAuth();
 
-  useEffect(() => {
-    loadNotes();
-  }, []);
-
-  const loadNotes = async () => {
-    try {
-      const data = await fetchNotes();
-      setNotes(data);
-    } catch (error) {
-      console.error('Failed to load notes:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const notes = useQuery(api.notes.getNotes, userId ? { userId } : "skip");
+  const createNoteMutation = useMutation(api.notes.createNote);
+  const updateNoteMutation = useMutation(api.notes.updateNote);
+  const deleteNoteMutation = useMutation(api.notes.deleteNote);
 
   const createNote = async (note: Partial<Note>) => {
-    try {
-      const response = await fetch('/api/notes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}) // Always send empty object to create a fresh note
-      });
+    if (!userId) throw new Error("User must be logged in");
+    
+    const newNote = await createNoteMutation({
+      userId,
+      title: note.title || "Untitled Note",
+      content: note.content || "",
+      important: note.important || false,
+      type: note.type,
+      tags: note.tags || [],
+      references: note.references || [],
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.details || 'Failed to create note');
-      }
-
-      const newNote = await response.json();
-
-      // Validate the note object
-      if (!newNote || !newNote.id) {
-        throw new Error('Invalid note object returned from API');
-      }
-
-      // Ensure dates are properly parsed
-      const formattedNote: Note = {
-        ...newNote,
-        createdAt: newNote.createdAt instanceof Date ? newNote.createdAt : new Date(newNote.createdAt),
-        updatedAt: newNote.updatedAt instanceof Date ? newNote.updatedAt : new Date(newNote.updatedAt),
-        tags: Array.isArray(newNote.tags) ? newNote.tags : [],
-        references: Array.isArray(newNote.references) ? newNote.references : []
-      };
-
-      setNotes(prev => [...prev, formattedNote]);
-      return formattedNote;
-    } catch (error) {
-      console.error('Create note error:', error);
-      throw error;
-    }
+    return newNote;
   };
 
   const updateNote = async (noteId: string, updates: NoteUpdate) => {
-    try {
-      const response = await fetch(`/api/notes/${noteId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.details || 'Failed to update note');
-      }
-
-      const updatedNote = await response.json();
-
-      // Validate the note object
-      if (!updatedNote || !updatedNote.id) {
-        throw new Error('Invalid note object returned from API');
-      }
-
-      // Ensure dates are properly parsed
-      const formattedNote: Note = {
-        ...updatedNote,
-        createdAt: updatedNote.createdAt instanceof Date ? updatedNote.createdAt : new Date(updatedNote.createdAt),
-        updatedAt: updatedNote.updatedAt instanceof Date ? updatedNote.updatedAt : new Date(updatedNote.updatedAt),
-        tags: Array.isArray(updatedNote.tags) ? updatedNote.tags : [],
-        references: Array.isArray(updatedNote.references) ? updatedNote.references : []
-      };
-
-      setNotes(prev => prev.map(note =>
-        note.id === noteId ? formattedNote : note
-      ));
-      return formattedNote;
-    } catch (error) {
-      console.error('Update note error:', error);
-      throw error;
-    }
+    if (!userId) throw new Error("User must be logged in");
+    
+    return await updateNoteMutation({
+      noteId,
+      userId,
+      updates,
+    });
   };
 
   const deleteNote = async (noteId: string) => {
-    try {
-      const response = await fetch(`/api/notes/${noteId}`, {
-        method: 'DELETE'
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.details || 'Failed to delete note');
-      }
-
-      setNotes(prev => prev.filter(note => note.id !== noteId));
-    } catch (error) {
-      console.error('Delete note error:', error);
-      throw error;
-    }
+    if (!userId) throw new Error("User must be logged in");
+    
+    return await deleteNoteMutation({
+      noteId,
+      userId,
+    });
   };
 
   return {
-    notes,
-    isLoading,
+    notes: notes || [],
+    isLoading: notes === undefined,
     createNote,
     updateNote,
     deleteNote,
-    loadNotes
   };
 }
