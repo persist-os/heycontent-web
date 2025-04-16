@@ -1,14 +1,7 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import ChatScreen from './_components/chat-screen'
 
 export default function DashboardPage() {
-  const router = useRouter()
-
-  useEffect(() => {
-    router.push('/chat')
-  }, [router])
-
-  return null
+  return <ChatScreen />
 } 

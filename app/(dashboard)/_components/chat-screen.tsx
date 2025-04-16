@@ -1,220 +1,45 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card'
-import { 
-  Send, Plus, Paperclip,
-  ChevronRight, Filter, Calendar,
-  Zap, Target, Edit3, TrendingUp,
-  MessageSquare, Brain, Settings,
-  Users, DollarSign, Activity, Globe, Video
-} from 'lucide-react'
-import { Message, ChatHistory, InsightReference } from '@/app/types/chat'
-import { actionableInsights } from '@/src/data/insights'
-import { useSession } from 'next-auth/react'
+import { Message } from '@/app/types/chat'
+import { auth } from '@/app/lib/firebase'
+import { onAuthStateChanged } from 'firebase/auth'
+import { useRouter } from 'next/navigation'
 import { MessageBubble } from './chat/message-bubble'
 import { ChatInput } from './chat/chat-input'
-import type { InteractiveOption } from '@/app/lib/chat/interactive-response'
+import { MessageSquare } from 'lucide-react'
+import { useSidebar } from '@/app/context/sidebar-context'
 
-interface AIActionableInsight {
-  id: number;
-  opportunity: {
-    title: string;
-  };
-}
-
-const liveInsights = [
-  "Engagement up 23% in last hour",
-  "3 high-value comments need response",
-  "New audience segment emerging",
-  "Optimal posting window in 2 hours"
-]
-
-interface SuggestedAction {
-  type: 'explore' | 'clarify' | 'action' | 'strategic';
-  description: string;
-  context?: string;
-  confidence: number;
-}
-
-const SuggestionChip = ({ suggestion, onClick }: { 
-  suggestion: SuggestedAction, 
-  onClick: () => void 
-}) => (
-  <button
-    onClick={onClick}
-    className="px-3 py-1.5 text-sm bg-heycontent-light-yellow hover:bg-heycontent-yellow/20 text-black rounded-full flex items-center gap-2 transition-colors"
-  >
-    {suggestion.type === 'explore' && <Brain className="w-4 h-4" />}
-    {suggestion.type === 'clarify' && <MessageSquare className="w-4 h-4" />}
-    {suggestion.type === 'action' && <Zap className="w-4 h-4" />}
-    {suggestion.type === 'strategic' && <Target className="w-4 h-4" />}
-    {suggestion.description}
-  </button>
-);
-
-interface InteractiveResponse {
-  options: Array<{
-    text: string;
-    action?: string;
-  }>;
-  followUp: Array<{
-    question: string;
-    choices?: string[];
-  }>;
-  contextualSuggestions: Array<{
-    text: string;
-    type: string;
-  }>;
-}
-
-interface AnalysisResponse {
-  result: {
-    output: {
-      content: string;
-      insights?: any[];
-      suggestions?: any[];
-      response?: string;
-    };
-    suggestions?: any[];
-    interactiveResponse?: InteractiveResponse;
-  };
-}
-
-interface ChatResponse {
-  id: number;
-  content: string;
+// Interface for the chat response from the API
+interface ChatResponseData {
+  chat_response: string;
+  suggestions?: string[];
+  session_id: string;
   metadata?: {
-    suggestions?: any[];
-    ambientInsight?: any;
+    request_id: string;
+    processing_time_ms: number;
   };
-  options?: InteractiveResponse['options'];
-  followUp?: InteractiveResponse['followUp'];
-  contextualSuggestions?: InteractiveResponse['contextualSuggestions'];
 }
 
-function isAnalysisResponse(response: AnalysisResponse | ChatResponse): response is AnalysisResponse {
-  return 'result' in response;
+interface ChatScreenProps {
+  chatId?: string | null;
 }
 
-// Helper functions for generating interactive content
-const generateContextualSuggestions = (content: string, type: 'video' | 'email' | null): string[] => {
-  const suggestions: string[] = [];
-  
-  if (type === 'video') {
-    if (content.includes('views') || content.includes('performance')) {
-      suggestions.push('Compare with previous videos performance');
-      suggestions.push('Show engagement trends over time');
-      suggestions.push('Analyze audience retention patterns');
-    }
-    if (content.includes('comment') || content.includes('engagement')) {
-      suggestions.push('Show most engaging video segments');
-      suggestions.push('Analyze comment sentiment trends');
-      suggestions.push('Identify top fan interactions');
-    }
-    if (content.includes('subscriber') || content.includes('growth')) {
-      suggestions.push('Show subscriber growth patterns');
-      suggestions.push('Analyze subscriber demographics');
-      suggestions.push('Compare with channel benchmarks');
-    }
-  } else if (type === 'email') {
-    if (content.includes('partnership') || content.includes('collaboration')) {
-      suggestions.push('Review partnership history');
-      suggestions.push('Analyze communication patterns');
-      suggestions.push('Check similar partnerships');
-    }
-    if (content.includes('timeline') || content.includes('delay')) {
-      suggestions.push('Analyze timeline impact');
-      suggestions.push('Review similar delays');
-      suggestions.push('Check alternative timelines');
-    }
-    if (content.includes('response') || content.includes('draft')) {
-      suggestions.push('Review response templates');
-      suggestions.push('Check communication best practices');
-      suggestions.push('Analyze tone and style');
-    }
-  }
-  
-  // Add general suggestions if none were added
-  if (suggestions.length === 0) {
-    suggestions.push('Get more details');
-    suggestions.push('See related insights');
-    suggestions.push('Explore next steps');
-  }
-  
-  return suggestions;
-};
-
-const generateFollowUpChoices = (content: string, type: 'video' | 'email' | null): string[] => {
-  const choices: string[] = [];
-  
-  if (type === 'video') {
-    if (content.includes('views') || content.includes('performance')) {
-      choices.push('What caused these performance changes?');
-      choices.push('How can we improve these metrics?');
-      choices.push('What are the trends over time?');
-    }
-    if (content.includes('comment') || content.includes('engagement')) {
-      choices.push('What drives the most engagement?');
-      choices.push('How can we increase engagement?');
-      choices.push('What are viewers saying?');
-    }
-    if (content.includes('subscriber') || content.includes('growth')) {
-      choices.push('What is driving subscriber growth?');
-      choices.push('How can we accelerate growth?');
-      choices.push('Who are our most engaged subscribers?');
-    }
-  } else if (type === 'email') {
-    if (content.includes('partnership') || content.includes('collaboration')) {
-      choices.push('What are the next steps for this partnership?');
-      choices.push('How can we optimize this collaboration?');
-      choices.push('What are potential risks to consider?');
-    }
-    if (content.includes('timeline') || content.includes('delay')) {
-      choices.push('How should we adjust our timeline?');
-      choices.push('What are the implications of the delay?');
-      choices.push('Should we explore alternatives?');
-    }
-    if (content.includes('response') || content.includes('draft')) {
-      choices.push('What key points should we address?');
-      choices.push('How can we improve the response?');
-      choices.push('What tone should we use?');
-    }
-  }
-  
-  // Add general choices if none were added
-  if (choices.length === 0) {
-    choices.push('Can you provide more details?');
-    choices.push('What are the key takeaways?');
-    choices.push('What actions should we take?');
-  }
-  
-  return choices;
-};
-
-const ChatScreen = () => {
-  const { data: session, status } = useSession()
+const ChatScreen = ({ chatId }: ChatScreenProps) => {
+  const router = useRouter()
+  const [user, setUser] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const { isExpanded } = useSidebar()
 
-  // All state declarations
   const [messages, setMessages] = useState<Message[]>([])
-  const [inputValue, setInputValue] = useState('')
-  const [showAmbient, setShowAmbient] = useState(true)
-  const [currentInsight, setCurrentInsight] = useState(0)
-  const [activeInsight, setActiveInsight] = useState<InsightReference | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [initializing, setInitializing] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [referencedMessage, setReferencedMessage] = useState<Message | null>(null)
-  const [analyzedVideos, setAnalyzedVideos] = useState<Set<string>>(new Set());
-  const [currentVideoContext, setCurrentVideoContext] = useState<string | null>(null);
-  const [lastAnalysisType, setLastAnalysisType] = useState<'video' | 'email' | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [conversationSaved, setConversationSaved] = useState(false)
 
-  // Add this ref map to store references to message elements
-  const messageRefs = useRef<Map<number, HTMLDivElement>>(new Map())
-
-  // Utility functions
   const scrollToBottom = useCallback(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTo({
@@ -224,108 +49,9 @@ const ChatScreen = () => {
     }
   }, [])
 
-  // Analysis request detection
-  const isAnalysisRequest = useCallback((content: string) => {
-    const youtubeKeywords = [
-      'video', 'channel', 'subscriber',
-      'view', 'comment', 'like',
-      'watch time', 'retention', 'audience',
-      'youtube', 'content', 'upload'
-    ];
-    
-    const emailKeywords = [
-      'email', 'mail', 'gmail',
-      'message', 'inbox', 'sent'
-    ];
-    
-    const analysisKeywords = [
-      'analyze', 'performance', 'engagement',
-      'growth', 'trend', 'metric',
-      'analytics', 'revenue', 'monetization',
-      'stats', 'statistics', 'data'
-    ];
-    
-    const questionPatterns = [
-      'how many', 'what is', 'what are',
-      'tell me about', 'show me', 'can you check',
-      'how is', 'how are', 'why is',
-      'when', 'which', 'this video'
-    ];
-    
-    content = content.toLowerCase();
+  const handleSendMessage = useCallback(async (content: string) => {
+    if (!content || typeof content !== 'string' || !content.trim()) return;
 
-    // Check if this is an email-related query
-    const hasEmailContext = emailKeywords.some(keyword => 
-      content.includes(keyword)
-    );
-
-    // If it's an email query, clear video context
-    if (hasEmailContext) {
-      setCurrentVideoContext(null);
-      setLastAnalysisType('email');
-      return false; // Let it be handled by the chat endpoint
-    }
-    
-    // Check for quoted titles or content between backticks
-    const titleMatch = content.match(/"([^"]+)"/) || content.match(/`([^`]+)`/);
-    if (titleMatch) {
-      const newVideoTitle = titleMatch[1];
-      // Only set as current if it's different from the last one
-      if (newVideoTitle !== currentVideoContext) {
-        setCurrentVideoContext(newVideoTitle);
-        setAnalyzedVideos(prev => new Set([...prev, newVideoTitle]));
-      }
-      setLastAnalysisType('video');
-      return true;
-    }
-    
-    // If we have current video context, check if the question is still about videos
-    if (currentVideoContext && lastAnalysisType === 'video') {
-      const isStillAboutVideos = youtubeKeywords.some(keyword => 
-        content.includes(keyword)
-      ) || questionPatterns.some(pattern => 
-        content.includes(pattern)
-      );
-      
-      // If the question seems unrelated to videos, clear the context
-      if (!isStillAboutVideos) {
-        setCurrentVideoContext(null);
-        setLastAnalysisType(null);
-        return false;
-      }
-      return true;
-    }
-    
-    // Must have YouTube context
-    const hasYoutubeContext = youtubeKeywords.some(keyword => 
-      content.includes(keyword)
-    );
-    
-    // Must also have either analysis intent or be a question
-    const hasAnalysisIntent = analysisKeywords.some(keyword =>
-      content.includes(keyword)
-    );
-    
-    const hasQuestionPattern = questionPatterns.some(pattern => 
-      content.includes(pattern)
-    );
-    
-    const isYoutubeAnalysis = hasYoutubeContext && (hasAnalysisIntent || hasQuestionPattern);
-    if (isYoutubeAnalysis) {
-      setLastAnalysisType('video');
-    }
-    return isYoutubeAnalysis;
-  }, [currentVideoContext, lastAnalysisType, setCurrentVideoContext, setLastAnalysisType, setAnalyzedVideos]);
-
-  const handleSendMessage = useCallback(async (content: string, insightId?: number) => {
-    // Guard against undefined content
-    if (!content || typeof content !== 'string') {
-      console.warn('Attempted to send undefined or invalid message content');
-      return;
-    }
-
-    if (!content.trim()) return;
-    
     const newMessage: Message = {
       id: Date.now(),
       content,
@@ -334,161 +60,84 @@ const ChatScreen = () => {
       referencedMessage: referencedMessage ? {
         id: referencedMessage.id,
         content: referencedMessage.content
-      } : undefined
+      } : undefined,
+      chat_response: content
     }
-    
+
     try {
       setIsLoading(true)
       setError(null)
-      
-      // Add user message immediately
-      setMessages(prev => [...prev, newMessage])
-      
-      // Add typing indicator
-      setMessages(prev => [...prev, {
-        id: Date.now(),
-        content: '...',
-        role: 'assistant',
-        timestamp: new Date().toISOString(),
-        status: 'typing'
-      }])
 
-      let response;
-      let responseData: AnalysisResponse | ChatResponse;
+      setMessages(prev => [
+        ...prev,
+        newMessage,
+        {
+          id: Date.now(),
+          content: '...',
+          role: 'assistant',
+          timestamp: new Date().toISOString(),
+          status: 'typing',
+          chat_response: ''
+        }
+      ]);
 
-      if (isAnalysisRequest(content)) {
-        console.log('Sending analysis request with context:', {
-          query: content,
-          type: 'youtube',
-          context: {
-            currentVideo: currentVideoContext
-          }
-        });
-        
-        response = await fetch('/api/ai/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: content,
-            type: 'youtube',
-            context: {
-              currentVideo: currentVideoContext
-            }
-          })
-        });
-      } else {
-        console.log('Sending chat request with context:', {
-          message: content,
-          context: {
-            currentVideo: currentVideoContext,
-            previousMessages: messages
-          }
-        });
-        
-        response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: content,
-            context: {
-              currentVideo: currentVideoContext,
-              previousMessages: messages
-            }
-          })
-        });
+      // For the first message, don't send a session_id
+      const isFirstMessage = messages.length === 0;
+
+      const requestBody: any = {
+        query: content,
+        is_first_message: isFirstMessage
+      };
+
+      // Only include session_id for subsequent messages
+      if (!isFirstMessage && sessionId) {
+        requestBody.session_id = sessionId;
       }
 
+      console.log('Sending chat message:', requestBody);
+
+      const response = await fetch('/api/chat/message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      });
+
       if (!response.ok) {
-        console.error('API response error:', {
-          status: response.status,
-          statusText: response.statusText
-        });
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Error details:', errorData);
         throw new Error('Failed to send message');
       }
 
-      const data = await response.json();
-      console.log('API response data:', {
-        hasResult: !!data.result,
-        resultType: data.result ? typeof data.result : 'none',
-        hasOutput: data.result?.output ? 'yes' : 'no',
-        hasInteractiveResponse: data.result?.interactiveResponse ? 'yes' : 'no',
-        emailContext: data.result?.emailContext ? 'yes' : 'no'
-      });
-      
-      // Remove typing indicator and add AI response
-      setMessages(prev => {
-        const withoutTyping = prev.filter(msg => msg.status !== 'typing')
-        
-        // Get the first followUp question if available
-        const followUp = isAnalysisRequest(content) 
-          ? data.result.interactiveResponse?.followUp?.[0]
-          : data.followUp?.[0];
-        
-        // Extract contextual suggestions
-        const contextualSuggestions = isAnalysisRequest(content)
-          ? data.result.interactiveResponse?.contextualSuggestions
-          : data.contextualSuggestions;
+      const data: ChatResponseData = await response.json();
 
+      setMessages(prev => {
+        const withoutTyping = prev.filter(msg => msg.status !== 'typing');
         return [...withoutTyping, {
-          id: data.id || Date.now(),
-          content: isAnalysisRequest(content) 
-            ? (typeof data.result.output === 'object' 
-                ? data.result.output.response || data.result.output.content || 'No response available'
-                : data.result.output)
-            : (typeof data.content === 'object'
-                ? data.content.response || 'No response available'
-                : data.content),
+          id: Date.now(),
+          content: data.chat_response,
+          chat_response: data.chat_response,
           role: 'assistant',
           timestamp: new Date().toISOString(),
-          relatedInsights: data.relatedInsights || [],
-          metadata: {
-            suggestions: isAnalysisRequest(content) 
-              ? (data.result.suggestions || [])
-              : (data.metadata?.suggestions || []),
-            insights: isAnalysisRequest(content)
-              ? data.result.output.insights
-              : data.metadata?.insights
-          },
-          interactiveResponse: {
-            options: (isAnalysisRequest(content) 
-              ? data.result.interactiveResponse?.options 
-              : data.options)?.map((opt: InteractiveOption) => ({
-              ...opt,
-              type: opt.action ? 'action' : 'suggestion'
-            })) || [],
-            followUp: followUp ? {
-              question: followUp.question,
-              choices: followUp.choices || generateFollowUpChoices(
-                isAnalysisRequest(content) 
-                  ? data.result.output.content || data.result.output.response
-                  : data.content,
-                lastAnalysisType
-              )
-            } : undefined,
-            contextualSuggestions: contextualSuggestions || generateContextualSuggestions(
-              isAnalysisRequest(content)
-                ? data.result.output.content || data.result.output.response
-                : data.content,
-              lastAnalysisType
-            )
-          }
-        }]
-      })
-      
-      // Clear the reference after sending
+          suggestions: data.suggestions || []
+        }];
+      });
+
+      if (data.session_id) {
+        console.log('Received session ID from API:', data.session_id);
+        setSessionId(data.session_id);
+      } else {
+        console.warn('No session ID received from API');
+      }
+
       setReferencedMessage(null)
-      scrollToBottom()
     } catch (error) {
       console.error('Failed to send message:', error)
-      // Remove typing indicator and show error
       setMessages(prev => prev.filter(msg => msg.status !== 'typing'))
       setError((error as Error).message)
     } finally {
       setIsLoading(false)
     }
-  }, [messages, referencedMessage, scrollToBottom, analyzedVideos, currentVideoContext, lastAnalysisType, isAnalysisRequest])
+  }, [referencedMessage, sessionId])
 
   const handleMessageReference = (message: Message) => {
     setReferencedMessage(message)
@@ -501,71 +150,121 @@ const ChatScreen = () => {
     setReferencedMessage(null)
   }
 
-  // Add this function to handle reference clicks
-  const handleReferenceClick = useCallback((messageId: number) => {
-    const messageElement = messageRefs.current.get(messageId)
-    if (messageElement) {
-      messageElement.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'center'
-      })
-      // Add a brief highlight effect
-      messageElement.classList.add('highlight-message')
-      setTimeout(() => {
-        messageElement.classList.remove('highlight-message')
-      }, 2000)
-    }
-  }, [])
-
-  const handleOptionClick = useCallback((option: InteractiveOption) => {
-    if (!option?.text) return; // Guard against undefined options
-    
-    if (option.action) {
-      // Handle specific actions with more contextual responses
-      switch (option.action) {
-        case 'show_metrics':
-          handleSendMessage('Can you analyze the performance metrics for these partnership discussions?');
-          break;
-        case 'view_partnerships':
-          handleSendMessage('What are the key points from this partnership discussion with AVA Setail?');
-          break;
-        case 'view_content_insights':
-          handleSendMessage('What insights can you provide about the communication timeline and delays in this partnership discussion?');
-          break;
-        case 'view_audience_insights':
-          handleSendMessage('How should we handle this partnership given the pregnancy situation?');
-          break;
-        case 'personalize':
-          handleSendMessage('Can you help draft a response considering the current situation?');
-          break;
-        case 'view_pending_actions':
-          handleSendMessage('What are the next steps needed for this partnership discussion?');
-          break;
-        default:
-          handleSendMessage(option.text);
-      }
-    } else {
-      handleSendMessage(option.text);
-    }
+  const handleOptionClick = useCallback((option: { text: string }) => {
+    if (!option?.text) return;
+    handleSendMessage(option.text);
   }, [handleSendMessage]);
 
   const handleFollowUpClick = useCallback((choice: string) => {
     handleSendMessage(choice);
   }, [handleSendMessage]);
 
-  // All useEffects
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentInsight((prev) => (prev + 1) % liveInsights.length)
-    }, 5000)
-    return () => clearInterval(timer)
-  }, [liveInsights.length])
+  // Save conversation to Convex
+  const saveConversation = useCallback(async () => {
+    // Only save if we have at least 2 messages (a user message and a response)
+    if (messages.length < 2 || conversationSaved) {
+      console.log('Skipping save conversation:', {
+        messageCount: messages.length,
+        alreadySaved: conversationSaved
+      });
+      return;
+    }
+
+    try {
+      console.log('Saving conversation with messages:', messages.length);
+
+      // Generate a title from the first user message
+      const firstUserMessage = messages.find(msg => msg.role === 'user');
+      const title = firstUserMessage ?
+        (firstUserMessage.content.length > 30 ?
+          firstUserMessage.content.substring(0, 30) + '...' :
+          firstUserMessage.content) :
+        'Chat conversation';
+
+      const response = await fetch('/api/chat/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages,
+          title,
+          sessionId
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to save conversation - API error:', {
+          status: response.status,
+          error: errorData
+        });
+        throw new Error(`Failed to save conversation: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Conversation saved successfully:', data);
+      setConversationSaved(true);
+    } catch (error) {
+      console.error('Failed to save conversation:', error);
+    }
+  }, [messages, sessionId, conversationSaved]);
+
+  // Load conversation by ID
+  const loadConversation = useCallback(async (id: string) => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/chat/conversation/${id}`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to load conversation: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.conversation) {
+        setMessages(data.conversation.messages);
+        // Use the conversation ID as the session ID for continuing the conversation
+        setSessionId(data.conversation.id);
+        setConversationSaved(true); // Mark as saved since it's loaded from history
+        console.log('Loaded conversation:', data.conversation.id);
+      }
+    } catch (error) {
+      console.error('Failed to load conversation:', error);
+      setError('Failed to load conversation. Starting a new chat.');
+      // Start a new session if loading fails
+      setSessionId(Date.now().toString());
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
 
   useEffect(() => {
-    if (!showAmbient && inputRef.current) {
-      inputRef.current.focus()
+    if (!auth) {
+      console.error('Firebase auth not initialized')
+      return
     }
-  }, [showAmbient])
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setUser(user)
+      if (user) {
+        if (chatId) {
+          // If we have a chat ID, we'll load the conversation in a separate effect
+        } else {
+          // For a new chat, set sessionId to null initially
+          // It will be set after the first message is sent
+          setSessionId(null);
+        }
+      }
+      setLoading(false)
+    })
+
+    return () => {
+      unsubscribe();
+    }
+  }, [chatId])
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -573,314 +272,161 @@ const ChatScreen = () => {
     }
   }, [messages.length, scrollToBottom])
 
+  // Scroll to bottom when sidebar state changes
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const contextParam = params.get('context')
-    const type = params.get('type')
-    
-    if (contextParam && !initializing) {
-      try {
-        const contextData = JSON.parse(decodeURIComponent(contextParam))
-        setShowAmbient(false)
-        setMessages([])
+    if (messages.length > 0) {
+      // Add a small delay to allow the layout to update
+      const timer = setTimeout(() => {
+        scrollToBottom()
+      }, 300)
+      return () => clearTimeout(timer)
+    }
+  }, [isExpanded, scrollToBottom, messages.length])
 
-        if (type === 'insight') {
-          // Handle full insight discussion
-          handleSendMessage(
-            `I'd like to discuss this insight about "${contextData.title}". Here's what I know:\n` +
-            `- Description: ${contextData.description}\n` +
-            `- Impact: ${contextData.impact}\n` +
-            `- Timing: ${contextData.timing}\n` +
-            `- Confidence: ${contextData.confidence}%\n\n` +
-            `What specific recommendations do you have based on this information?`
-          )
-        } else if (type === 'action') {
-          // Handle specific action step discussion
-          const step = contextData.step
-          handleSendMessage(
-            `I want to work on this action step: "${step.content}"\n\n` +
-            `This is part of the insight: "${contextData.insight.title}"\n` +
-            `Context: ${contextData.insight.description}\n\n` +
-            `Can you help me implement this step effectively?`
-          )
-        }
+  // Add resize observer to handle window resizing
+  useEffect(() => {
+    if (messages.length > 0) {
+      const handleResize = () => {
+        scrollToBottom()
+      }
 
-        // Clear URL parameters without refreshing
-        window.history.replaceState({}, '', window.location.pathname)
-      } catch (error) {
-        console.error('Error parsing context:', error)
+      window.addEventListener('resize', handleResize)
+      return () => window.removeEventListener('resize', handleResize)
+    }
+  }, [scrollToBottom, messages.length])
+
+  // Save conversation when messages change
+  useEffect(() => {
+    // Only save if we have at least 2 messages (a user message and a response)
+    if (messages.length >= 2 && !conversationSaved) {
+      console.log('Scheduling conversation save after message change');
+      // Save after a short delay to avoid saving too frequently
+      const saveTimeout = setTimeout(() => {
+        console.log('Executing scheduled conversation save');
+        saveConversation()
+      }, 1000) // 1 second delay
+
+      return () => clearTimeout(saveTimeout)
+    }
+  }, [messages, saveConversation, conversationSaved])
+
+  // Force save conversation after a certain number of messages
+  useEffect(() => {
+    // Force save after 4 messages regardless of previous save status
+    if (messages.length >= 4) {
+      console.log('Force saving conversation due to message count threshold');
+      saveConversation();
+    }
+  }, [messages.length, saveConversation])
+
+  // Save conversation when component unmounts
+  useEffect(() => {
+    return () => {
+      // Save conversation if it hasn't been saved yet
+      if (messages.length >= 2 && !conversationSaved) {
+        saveConversation()
       }
     }
-    setInitializing(false)
-  }, [handleSendMessage, initializing, setShowAmbient, setMessages])
+  }, [messages.length, conversationSaved, saveConversation])
 
-  // Add error handling for session
+  // Load conversation when user and chatId are available
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      console.error('Session not authenticated')
-      return
+    if (user && chatId && !loading) {
+      loadConversation(chatId)
     }
-    
-    if (status === 'authenticated' && session?.user?.id) {
-      // Your session-dependent code here
-    }
-  }, [status, session?.user?.id])
+  }, [user, chatId, loading, loadConversation])
 
-  // Loading state
-  if (status === 'loading') return null
-
-  // Ambient insights
-  const ambientInsights = [
-    {
-      type: 'trend',
-      title: 'Trending Topic Alert',
-      description: 'Tech tutorials gaining 45% more engagement',
-      icon: TrendingUp,
-      action: "Tell me more about content trends"
-    },
-    {
-      type: 'opportunity',
-      title: 'Partnership Match',
-      description: 'New brand alignment: TechCo (94% match)',
-      icon: Target,
-      action: "Show partnership details"
-    },
-    {
-      type: 'content',
-      title: 'Content Gap Found',
-      description: 'Missing key topic: AI Development basics',
-      icon: Edit3,
-      action: "Generate content ideas"
-    },
-    {
-      type: 'performance',
-      title: 'Performance Spike',
-      description: 'Latest video outperforming by 2x',
-      icon: Zap,
-      action: "Analyze performance factors"
-    },
-    {
-      type: 'audience',
-      title: 'Audience Growth Opportunity',
-      description: 'Similar creators growing 3x faster with short-form content',
-      icon: Users,
-      action: "Explore growth strategy"
-    },
-    {
-      type: 'monetization',
-      title: 'Revenue Opportunity',
-      description: 'Premium course potential: $15K/month based on demand',
-      icon: DollarSign,
-      action: "View revenue analysis"
-    },
-    {
-      type: 'engagement',
-      title: 'Engagement Pattern',
-      description: 'Morning posts receiving 40% more interaction',
-      icon: Activity,
-      action: "Optimize posting schedule"
-    },
-    {
-      type: 'crossplatform',
-      title: 'Platform Expansion',
-      description: 'Your content style matches well with LinkedIn',
-      icon: Globe,
-      action: "See platform strategy"
-    },
-    {
-      type: 'content',
-      title: 'Content Series Potential',
-      description: 'High demand for beginner-friendly tutorials',
-      icon: Video,
-      action: "Plan content series"
-    },
-    {
-      type: 'community',
-      title: 'Community Insight',
-      description: 'Active discussions around your coding tips',
-      icon: MessageSquare,
-      action: "View community trends"
-    }
-  ]
-
-  const handleInsightClick = (action: string, insight: typeof ambientInsights[0]) => {
-    setShowAmbient(false)
-    const message = `${action} - Regarding: ${insight.title} (${insight.description})`
-    handleSendMessage(message)
+  if (loading) {
+    return <div className="flex items-center justify-center h-full w-full p-4">Loading...</div>
   }
 
-  const loadConversation = (conversation: ChatHistory) => {
-    setMessages(conversation.messages as Message[])
-    setShowAmbient(false)
+  if (!user) {
+    return null
   }
-
-  const handleSuggestionClick = (suggestion: SuggestedAction) => {
-    setInputValue(suggestion.description);
-    inputRef.current?.focus();
-  };
-
-  if (initializing) return null
 
   return (
-    <div className="h-full flex bg-white">
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
-        {/* Fixed Header */}
-        <div className="shrink-0 border-b bg-white px-6 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="font-semibold text-lg">HeyContent</h2>
-              <div className="text-sm text-text-gray mt-1 animate-pulse">
-                {liveInsights[currentInsight]}
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  setShowAmbient(true)
+    <div className="h-full flex flex-col bg-white w-full">
+      {/* Responsive header */}
+      <div className="shrink-0 border-b bg-white px-3 sm:px-6 py-3 sm:py-4 sticky top-0 z-20">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-pink-500" />
+            <h2 className="font-semibold text-lg">Chat</h2>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                // Save current conversation if needed before starting a new one
+                if (messages.length >= 2 && !conversationSaved) {
+                  saveConversation()
+                }
+
+                // Navigate to a clean chat page
+                if (chatId) {
+                  router.push('/chat')
+                } else {
+                  // If we're already on a clean page, just reset the state
                   setMessages([])
                   setReferencedMessage(null)
-                }}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-text-gray hover:bg-gray-50 rounded-lg"
-              >
-                <Plus className="w-4 h-4" />
-                New Chat
-              </button>
-            </div>
+                  setSessionId(null) // Set to null for first message
+                  setConversationSaved(false)
+                }
+              }}
+              className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-text-gray hover:bg-gray-50 rounded-lg"
+            >
+              New Chat
+            </button>
           </div>
         </div>
-
-        {/* Scrollable Messages */}
-        <div 
+      </div>
+      {/* Main chat container */}
+      <div className="flex-1 overflow-hidden relative">
+        <div
           ref={chatContainerRef}
-          className="flex-1 overflow-y-auto bg-gray-50"
+          className="h-full overflow-y-auto p-2 sm:p-4 space-y-3 sm:space-y-4 pb-28 sm:pb-32 md:pb-36"
         >
-          {showAmbient && messages.length === 0 ? (
-            <div className="p-6">
-              <div className="grid grid-cols-2 gap-4 max-w-5xl mx-auto">
-                {ambientInsights.map((insight, index) => (
-                  <div
-                    key={index}
-                    onClick={() => handleInsightClick(insight.action, insight)}
-                    className="bg-white border shadow-sm p-4 rounded-xl cursor-pointer 
-                      hover:shadow-md transition-all duration-200 hover:scale-[1.02]"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="p-2 rounded-lg bg-heycontent-light-yellow">
-                        <insight.icon className="w-5 h-5 text-black" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-medium text-sm mb-1">{insight.title}</h3>
-                        <p className="text-sm text-text-gray">{insight.description}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="p-6">
-              <div className="max-w-5xl mx-auto space-y-4">
-                {messages.map((message, index) => (
-                  <div
-                    key={message.id}
-                    ref={el => {
-                      if (el) {
-                        messageRefs.current.set(message.id, el)
-                      }
-                    }}
-                    className="transition-all duration-300"
-                  >
-                    <MessageBubble
-                      message={message}
-                      isLastMessage={index === messages.length - 1}
-                      onReference={handleMessageReference}
-                      showReferenceButton={!referencedMessage && message.status !== 'typing'}
-                      onReferenceClick={handleReferenceClick}
-                      onOptionClick={handleOptionClick}
-                      onFollowUpClick={handleFollowUpClick}
-                    />
-                    {message.relatedInsights && message.relatedInsights.length > 0 && (
-                      <div className="ml-12 mt-2 space-y-2">
-                        {message.relatedInsights.map((insight, i) => (
-                          <div
-                            key={i}
-                            className="bg-heycontent-light-yellow p-2 rounded-lg text-sm text-text-dark cursor-pointer hover:bg-heycontent-yellow/20"
-                            onClick={() => handleInsightClick(
-                              `Tell me more about this ${insight.type}`,
-                              { type: insight.type, title: insight.summary, description: '' } as any
-                            )}
-                          >
-                            <div className="font-medium">{insight.type}</div>
-                            <div className="text-text-dark">{insight.summary}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {message.role === 'assistant' && message.metadata?.suggestions && (
-                      <div className="mt-3 flex flex-wrap gap-2 pl-12">
-                        {message.metadata.suggestions.map((suggestion: SuggestedAction, index: number) => (
-                          <SuggestionChip
-                            key={index}
-                            suggestion={suggestion}
-                            onClick={() => handleSuggestionClick(suggestion)}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {error && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-4">
-                    <p className="text-red-600 text-sm">{error}</p>
-                    <button 
-                      onClick={() => setError(null)}
-                      className="text-xs text-red-500 hover:text-red-700 mt-1"
-                    >
-                      Dismiss
-                    </button>
-                  </div>
-                )}
-              </div>
+          {messages.map((message, index) => (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              isLastMessage={index === messages.length - 1}
+              onReference={handleMessageReference}
+              showReferenceButton={true}
+              onOptionClick={handleOptionClick}
+              onFollowUpClick={handleFollowUpClick}
+            />
+          ))}
+          {error && (
+            <div className="text-red-500 text-sm p-2 bg-red-50 rounded mx-2 sm:mx-0">
+              {error}
             </div>
           )}
         </div>
-
-        {/* Fixed Bottom Section */}
-        <div className="shrink-0 bg-white">
-          {showAmbient && messages.length === 0 && (
-            <div className="border-t border-gray-100">
-              <div className="max-w-5xl mx-auto px-6 py-2">
-                <div className="flex gap-2 overflow-x-auto scrollbar-none">
-                  {ambientInsights.map((insight, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleInsightClick(insight.action, insight)}
-                      className="shrink-0 px-4 h-8 text-xs text-text-gray bg-gray-50 hover:bg-gray-100 
-                        rounded-full flex items-center transition-colors"
-                    >
-                      {insight.action}
-                    </button>
-                  ))}
-                </div>
+        {/* Responsive chat input container that respects the dashboard layout */}
+        <div className="fixed bottom-0 right-0 left-0 z-10">
+          <div className="h-px bg-gray-200 w-full"></div>
+          <div className="flex w-full">
+            {/* Left sidebar spacer - dynamically matches the dashboard layout */}
+            <div className={`hidden md:block flex-shrink-0 ${isExpanded ? 'md:w-64' : 'md:w-16'}`}></div>
+            {/* Main content area with the chat input */}
+            <div className="flex-1 bg-white shadow-md">
+              <div className="max-w-6xl mx-auto px-2 sm:px-4 pb-safe">
+                <ChatInput
+                  inputRef={inputRef}
+                  onSend={handleSendMessage}
+                  isLoading={isLoading}
+                  referencedMessage={referencedMessage}
+                  onClearReference={handleClearReference}
+                />
               </div>
             </div>
-          )}
-          
-          {/* Input Area */}
-          <ChatInput 
-            onSend={(content) => {
-              handleSendMessage(content)
-              setShowAmbient(content === '')
-            }}
-            isLoading={isLoading}
-            inputRef={inputRef}
-            referencedMessage={referencedMessage}
-            onClearReference={handleClearReference}
-          />
+            {/* Right padding to ensure the input doesn't overlap with any right sidebar */}
+            <div className="hidden lg:block w-0 flex-shrink-0"></div>
+          </div>
         </div>
       </div>
     </div>
   )
 }
+
 export default ChatScreen

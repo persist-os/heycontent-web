@@ -8,7 +8,7 @@ export const getConnectedAccounts = query({
   handler: async (ctx, args) => {
     const accounts = await ctx.db
       .query("socialAccounts")
-      .filter((q) => 
+      .filter((q) =>
         q.eq(q.field("userId"), args.userId) &&
         q.eq(q.field("isConnected"), true)
       )
@@ -35,12 +35,17 @@ export const getConnectionStatus = query({
 export const disconnect = mutation({
   args: {
     userId: v.string(),
-    platform: v.string(),
+    platform: v.union(
+      v.literal("gmail"),
+      v.literal("youtube"),
+      v.literal("instagram"),
+      v.literal("tiktok")
+    ),
   },
   handler: async (ctx, args) => {
     const account = await ctx.db
       .query("socialAccounts")
-      .filter((q) => 
+      .filter((q) =>
         q.eq(q.field("userId"), args.userId) &&
         q.eq(q.field("platform"), args.platform)
       )
@@ -64,23 +69,31 @@ export const disconnect = mutation({
       .first();
 
     if (status) {
-      // Normalize platform name to match the schema
-      const normalizedPlatform = args.platform.toLowerCase();
+      // Create a new connections object with only valid platforms
+      const updatedConnections = {
+        gmail: status.connections.gmail,
+        youtube: status.connections.youtube,
+        instagram: status.connections.instagram || false,
+        tiktok: status.connections.tiktok || false,
+        [args.platform]: false
+      };
+
       await ctx.db.patch(status._id, {
-        connections: {
-          ...status.connections,
-          [normalizedPlatform]: false,
-        },
+        connections: updatedConnections,
         lastChecked: Date.now(),
       });
     } else {
-      // Create new status if it doesn't exist
+      // Initialize with all platforms set to false
+      const initialConnections = {
+        gmail: false,
+        youtube: false,
+        instagram: false,
+        tiktok: false
+      };
+
       await ctx.db.insert("socialConnectionStatus", {
         userId: args.userId,
-        connections: {
-          gmail: false,
-          youtube: false,
-        },
+        connections: initialConnections,
         lastChecked: Date.now(),
       });
     }
@@ -91,7 +104,12 @@ export const disconnect = mutation({
 export const updateConnectionStatus = mutation({
   args: {
     userId: v.string(),
-    platform: v.string(),
+    platform: v.union(
+      v.literal("gmail"),
+      v.literal("youtube"),
+      v.literal("instagram"),
+      v.literal("tiktok")
+    ),
     isConnected: v.boolean(),
   },
   handler: async (ctx, args) => {
@@ -100,26 +118,112 @@ export const updateConnectionStatus = mutation({
       .filter((q) => q.eq(q.field("userId"), args.userId))
       .first();
 
-    const normalizedPlatform = args.platform.toLowerCase();
-    
     if (status) {
       await ctx.db.patch(status._id, {
         connections: {
           ...status.connections,
-          [normalizedPlatform]: args.isConnected,
+          [args.platform]: args.isConnected,
         },
         lastChecked: Date.now(),
       });
     } else {
+      // Initialize with all platforms set to false
+      const initialConnections = {
+        gmail: false,
+        youtube: false,
+        instagram: false,
+        tiktok: false
+      };
+
       await ctx.db.insert("socialConnectionStatus", {
         userId: args.userId,
         connections: {
-          gmail: false,
-          youtube: false,
-          [normalizedPlatform]: args.isConnected,
+          ...initialConnections,
+          [args.platform]: args.isConnected,
         },
         lastChecked: Date.now(),
       });
     }
   },
-}); 
+});
+
+// Save or update a social account
+export const saveAccount = mutation({
+  args: {
+    userId: v.string(),
+    platform: v.string(),
+    username: v.string(),
+    metadata: v.any(),
+    isConnected: v.boolean(),
+    updatedAt: v.number()
+  },
+  handler: async (ctx, args) => {
+    const { userId, platform, username, metadata, isConnected, updatedAt } = args;
+
+    // Check if account exists
+    const existingAccount = await ctx.db
+      .query("socialAccounts")
+      .filter((q) =>
+        q.eq(q.field("userId"), userId) &&
+        q.eq(q.field("platform"), platform)
+      )
+      .first();
+
+    let accountId;
+    if (existingAccount) {
+      // Update existing account
+      await ctx.db.patch(existingAccount._id, {
+        username,
+        metadata,
+        isConnected,
+        updatedAt
+      });
+      accountId = existingAccount._id;
+    } else {
+      // Create new account
+      accountId = await ctx.db.insert("socialAccounts", {
+        userId,
+        platform,
+        username,
+        metadata,
+        isConnected,
+        updatedAt
+      });
+    }
+
+    // Also update the connection status
+    const status = await ctx.db
+      .query("socialConnectionStatus")
+      .filter((q) => q.eq(q.field("userId"), userId))
+      .first();
+
+    if (status) {
+      await ctx.db.patch(status._id, {
+        connections: {
+          ...status.connections,
+          [platform]: isConnected,
+        },
+        lastChecked: updatedAt,
+      });
+    } else {
+      // Initialize with all platforms set to false
+      const initialConnections = {
+        gmail: false,
+        youtube: false,
+        instagram: false,
+        tiktok: false
+      };
+
+      await ctx.db.insert("socialConnectionStatus", {
+        userId,
+        connections: {
+          ...initialConnections,
+          [platform]: isConnected,
+        },
+        lastChecked: updatedAt,
+      });
+    }
+
+    return accountId;
+  },
+});

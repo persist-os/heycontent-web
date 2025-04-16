@@ -1,43 +1,46 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { auth } from "./app/auth";
 
-export async function middleware(request: NextRequest) {
-  const session = await auth();
-  
-  const isAuthPage = request.nextUrl.pathname.startsWith("/login");
+export function middleware(request: NextRequest) {
+  const token = request.cookies.get('firebase-auth-token')?.value;
+  const { pathname } = request.nextUrl;
 
-  if (isAuthPage) {
-    if (session?.user) {
-      return NextResponse.redirect(new URL("/chat", request.url));
-    }
+  // Public routes that don't need auth
+  const publicRoutes = [
+    '/_next',
+    '/api/auth',
+    '/login',
+    '/register',
+    '/verify-email',
+    '/'
+  ];
+
+  // Check if the current path is a public route
+  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+
+  // If it's a public route, allow access
+  if (isPublicRoute) {
     return NextResponse.next();
   }
 
-  if (!session?.user) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  // If no token and not a public route, redirect to login
+  if (!token) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
+  // If we have a token, allow access
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    "/chat",
-    "/chat/:path*",
-    "/settings",
-    "/settings/:path*",
-    "/notes",
-    "/notes/:path*",
-    "/partnerships",
-    "/partnerships/:path*",
-    "/audience",
-    "/audience/:path*",
-    "/ai-insights",
-    "/ai-insights/:path*",
-    "/test-rag",
-    "/test-rag/:path*",
-    "/login",
-    "/login/:path*"
-  ]
-}; 
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+  ],
+};

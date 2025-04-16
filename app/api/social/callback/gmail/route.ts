@@ -1,7 +1,6 @@
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-import { auth } from '@/app/auth'
 import { google } from 'googleapis'
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
@@ -20,6 +19,12 @@ export async function GET(req: Request) {
 
     // Decode state parameter
     const { userId, platform } = JSON.parse(Buffer.from(state, 'base64').toString())
+
+    // Verify that we have a userId in the state
+    if (!userId) {
+      console.error('No userId in state parameter');
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=invalid_state`);
+    }
 
     // Create OAuth2 client
     const oauth2Client = new google.auth.OAuth2(
@@ -45,32 +50,15 @@ export async function GET(req: Request) {
       'https://www.googleapis.com/auth/gmail.readonly',
       'https://www.googleapis.com/auth/gmail.modify',
       'https://www.googleapis.com/auth/gmail.labels',
-      'https://mail.google.com/',
-      // Google returns these with a URL prefix, so we should either remove these
-      // or update the verification logic to check for equivalent scopes
-      // 'email',
-      // 'profile',
-      // 'openid'
+      'https://mail.google.com/'
     ];
 
-    // Check if all required scopes are included in the token
-    // Modified to handle both formats: with and without URL prefixes
-    const hasRequiredScopes = requiredScopes.every(scope => 
+    const hasRequiredScopes = requiredScopes.every(scope =>
       tokenInfo.scopes?.includes(scope)
     );
 
-    // Check if the user profile info scopes are present in any format
-    const hasProfileScopes = tokenInfo.scopes?.some(scope => 
-      scope.includes('userinfo.email') || scope.includes('userinfo.profile') || scope === 'openid'
-    );
-
-    if (!hasRequiredScopes || !hasProfileScopes) {
-      console.error('Missing required Gmail scopes:', {
-        required: requiredScopes,
-        granted: tokenInfo.scopes,
-        missing: requiredScopes.filter(scope => !tokenInfo.scopes?.includes(scope))
-      });
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=insufficient_gmail_permissions`);
+    if (!hasRequiredScopes) {
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=insufficient_scopes`)
     }
 
     // Initialize Gmail API
@@ -80,7 +68,8 @@ export async function GET(req: Request) {
     const profile = await gmail.users.getProfile({ userId: 'me' })
 
     // Store Gmail data in Convex
-    await convex.mutation(api.gmail.storeGmailData, {
+    console.log('Storing Gmail data in Convex...');
+    const storeResult = await convex.mutation(api.gmail.storeGmailData, {
       userId,
       profileData: {
         emailAddress: profile.data.emailAddress,
@@ -89,17 +78,77 @@ export async function GET(req: Request) {
         historyId: profile.data.historyId,
       },
       accessToken: tokens.access_token!,
-      refreshToken: tokens.refresh_token,
+      refreshToken: tokens.refresh_token || undefined,
       expiresAt: tokens.expiry_date ? Math.floor(tokens.expiry_date / 1000) : undefined,
       tokenType: tokens.token_type!,
       scope: tokens.scope!,
     });
+    console.log('Gmail data stored successfully, ID:', storeResult);
 
-    // Redirect back to settings page with success message
+    // Store token in Convex tokens table
+    console.log('Storing Gmail token in Convex...');
+    await convex.mutation(api.tokens.save, {
+      userId,
+      platform: 'gmail',
+      accessToken: tokens.access_token!,
+      refreshToken: tokens.refresh_token || undefined,
+      expiresAt: tokens.expiry_date ? Math.floor(tokens.expiry_date / 1000) : Date.now() + 3600 * 1000, // Default 1 hour if no expiry
+      scope: tokens.scope
+    });
+    console.log('Gmail token stored successfully');
+
+    // Check if social account is properly stored
+    console.log('Checking for Gmail social account in Convex...');
+    let socialAccount;
+    try {
+      const connectedAccounts = await convex.query(api.social.getConnectedAccounts, {
+        userId: userId
+      });
+      console.log('Connected accounts query result:', connectedAccounts ? `Found ${connectedAccounts.length} accounts` : 'No accounts found');
+
+      socialAccount = connectedAccounts?.find(account => account.platform === 'gmail');
+      console.log('Gmail social account in Convex:', socialAccount ? 'Account found' : 'No account found');
+    } catch (accountError) {
+      console.error('Error fetching social accounts:', accountError);
+      socialAccount = null;
+    }
+
+    // Ensure social account is properly stored
+    if (!socialAccount) {
+      console.log('Creating Gmail social account in Convex...');
+      try {
+        await convex.mutation(api.social.saveAccount, {
+          userId,
+          platform: 'gmail',
+          username: profile.data.emailAddress,
+          metadata: {
+            emailAddress: profile.data.emailAddress,
+            messagesTotal: profile.data.messagesTotal,
+            threadsTotal: profile.data.threadsTotal,
+            historyId: profile.data.historyId,
+          },
+          isConnected: true,
+          updatedAt: Date.now()
+        });
+        console.log('Gmail social account created successfully');
+      } catch (saveError) {
+        console.error('Error creating Gmail social account:', saveError);
+      }
+    }
+
+    // Update connection status
+    console.log('Updating Gmail connection status in Convex...');
+    await convex.mutation(api.social.updateConnectionStatus, {
+      userId,
+      platform: 'gmail',
+      isConnected: true,
+    });
+    console.log('Connection status updated successfully');
+
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?success=gmail_connected`)
 
   } catch (error) {
     console.error('[GMAIL_CALLBACK_ERROR]', error)
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=gmail_connection_failed`)
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=unknown`)
   }
-} 
+}

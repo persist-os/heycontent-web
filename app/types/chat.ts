@@ -1,4 +1,8 @@
-import type { InteractiveOption } from '@/app/lib/chat/interactive-response'
+export interface InteractiveOption {
+  text: string;
+  type?: string;
+  action?: string;
+}
 
 export interface InteractiveResponse {
   options?: InteractiveOption[];
@@ -12,6 +16,7 @@ export interface InteractiveResponse {
 export interface Message {
   id: number;
   content: string;
+  chat_response: string;
   role: 'user' | 'assistant';
   timestamp: string;
   status?: 'typing' | 'failed';
@@ -19,30 +24,7 @@ export interface Message {
     id: number;
     content: string;
   };
-  relatedInsights?: Array<{
-    type: string;
-    summary: string;
-  }>;
-  metadata?: {
-    suggestions?: Array<{
-      type: 'explore' | 'clarify' | 'action' | 'strategic';
-      description: string;
-      context?: string;
-      confidence: number;
-    }>;
-    emailMetadata?: {
-      messageId: string;
-      threadId: string;
-      subject: string;
-      from: string;
-      to: string[];
-      date: string;
-      labels: string[];
-      isRead: boolean;
-      isStarred: boolean;
-    };
-  };
-  interactiveResponse?: InteractiveResponse;
+  suggestions?: string[];
 }
 
 export interface ChatHistory {

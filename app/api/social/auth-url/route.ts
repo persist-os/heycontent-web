@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/auth';
+import { getServerSession } from '@/app/lib/server-auth';
 import { SocialPlatform } from '@/app/types/social-platforms';
+import { adminAuth } from '@/app/lib/firebase-admin';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,22 +56,67 @@ const PLATFORM_CONFIGS: Record<SocialPlatform, {
 
 export async function GET(request: Request) {
   console.group('Auth URL Generation');
-  
+
   const { searchParams } = new URL(request.url);
   const platform = searchParams.get('platform') as SocialPlatform;
   const useFacebook = searchParams.get('useFacebook') === 'true';
-  
+
   console.log('Request details:', {
     platform,
     useFacebook,
     url: request.url
   });
 
+  // Log all headers for debugging
+  const headers = {};
+  request.headers.forEach((value, key) => {
+    headers[key] = key.toLowerCase() === 'authorization' ? 'Bearer [REDACTED]' : value;
+  });
+  console.log('Request headers:', headers);
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      throw new Error('Unauthorized');
+    console.log('Auth URL: Getting server session');
+    let sessionData = await getServerSession();
+    console.log('Session result:', sessionData ? 'Session found' : 'No session found');
+
+    if (!sessionData?.user?.id) {
+      console.error('No authenticated user found');
+
+      // Get the token from the Authorization header as a fallback
+      const authHeader = request.headers.get('Authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        try {
+          console.log('Trying to verify token from Authorization header');
+          const token = authHeader.substring(7);
+          const decodedToken = await adminAuth.verifyIdToken(token);
+
+          if (decodedToken && decodedToken.uid) {
+            console.log('Token verified successfully, using user ID:', decodedToken.uid);
+
+            // Create a session object with the user information from the verified token
+            sessionData = {
+              user: {
+                id: decodedToken.uid,
+                email: decodedToken.email || null,
+                name: decodedToken.name || null,
+                image: decodedToken.picture || null
+              }
+            };
+          } else {
+            console.error('Token verification failed');
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+          }
+        } catch (tokenError) {
+          console.error('Error verifying token:', tokenError);
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+      } else {
+        console.error('No Authorization header found');
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
     }
+
+    console.log('Auth URL: User authenticated, ID:', sessionData.user.id);
 
     const config = PLATFORM_CONFIGS[platform];
     if (!config) {
@@ -82,7 +128,7 @@ export async function GET(request: Request) {
     }
 
     const state = Buffer.from(JSON.stringify({
-      userId: session.user.id,
+      userId: sessionData.user.id,
       platform,
       useFacebook
     })).toString('base64');

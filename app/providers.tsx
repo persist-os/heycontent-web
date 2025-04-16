@@ -1,16 +1,20 @@
 'use client'
 
-import { SessionProvider } from "next-auth/react"
-import { ConvexProvider, ConvexReactClient } from "convex/react"
+import { ReactNode } from 'react'
+import { AuthProvider } from './context/auth-context'
+import { SidebarProvider } from './context/sidebar-context'
+import { ConvexProvider, ConvexReactClient } from 'convex/react'
 
-const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL as string)
+const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({ children }: { children: ReactNode }) {
   return (
     <ConvexProvider client={convex}>
-      <SessionProvider>
-        {children}
-      </SessionProvider>
+      <AuthProvider>
+        <SidebarProvider>
+          {children}
+        </SidebarProvider>
+      </AuthProvider>
     </ConvexProvider>
   )
-} 
+}
