@@ -78,18 +78,31 @@ const SettingsScreen = () => {
 
   const handleSignOut = async () => {
     try {
-      // Call the logout API endpoint
-      const response = await fetchWithAuth('/api/auth/logout', {
-        method: 'POST',
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to logout')
-      }
-
-      // Clear any remaining local storage
+      // Clear any remaining local storage first
       localStorage.clear()
       sessionStorage.clear()
+
+      // Make the logout API call
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.details || data.error || 'Failed to logout')
+      }
+
+      // Sign out from Firebase last
+      if (auth) {
+        try {
+          await signOut(auth)
+        } catch (firebaseError) {
+          console.warn('Firebase signOut error:', firebaseError)
+          // Continue with redirect even if Firebase signOut fails
+        }
+      }
 
       // Redirect to login page
       router.push('/login')
