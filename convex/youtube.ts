@@ -318,3 +318,46 @@ export const saveChannelData = mutation({
     return youtubeDataId;
   },
 });
+
+export const get_youtube_credentials = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("tokens")
+      .withIndex("by_user_platform", (q) => 
+        q.eq("userId", args.userId).eq("platform", "youtube")
+      )
+      .first();
+  },
+});
+
+export const update_youtube_token = mutation({
+  args: {
+    userId: v.string(),
+    accessToken: v.string(),
+    expiresAt: v.number()
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("tokens")
+      .withIndex("by_user_platform", (q) => 
+        q.eq("userId", args.userId).eq("platform", "youtube")
+      )
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        accessToken: args.accessToken,
+        expiresAt: args.expiresAt
+      });
+    } else {
+      await ctx.db.insert("tokens", {
+        userId: args.userId,
+        platform: "youtube",
+        accessToken: args.accessToken,
+        expiresAt: args.expiresAt
+      });
+    }
+  },
+});
+
