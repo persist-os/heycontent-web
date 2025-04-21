@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Star, Clock, Lightbulb, Trash2, Search, Plus, SortDesc } from 'lucide-react';
+import { FileText, Star, Clock, Lightbulb, Trash2, Search, Plus, SortDesc, PenLine } from 'lucide-react';
 import type { Note } from './types';
 
 interface SidebarProps {
@@ -8,9 +8,10 @@ interface SidebarProps {
   onNoteSelect: (id: string) => void;
   onCreateNote: () => void;
   onDeleteNote: (id: string) => void;
+  onHideSidebar: () => void;
 }
 
-export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDeleteNote }: SidebarProps) {
+export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDeleteNote, onHideSidebar }: SidebarProps) {
   const [selectedSection, setSelectedSection] = useState<'all' | 'important' | 'recent' | 'ideas'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'title' | 'importance'>('date');
@@ -54,18 +55,34 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
     }
   });
 
+  const handleCreateNote = async () => {
+    onHideSidebar();
+    onCreateNote();
+  };
+
   return (
     <div className="w-64 border-r border-gray-100 flex flex-col h-full overflow-hidden">
-      <div className="p-4 border-b border-gray-100">
-        <h2 className="text-lg font-semibold mb-3">Smart Notes</h2>
-        <button
-          onClick={onCreateNote}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-50 text-left"
-          title="Create new note"
-        >
-          <Plus size={16} />
-          <span>New Note</span>
-        </button>
+      <div className="px-6 py-4 border-b border-gray-100">
+        <div className="flex justify-between items-center">
+          <div className="w-[24px] sm:w-[24px]"></div>
+          <div className="flex-1 flex justify-start">
+            <div>
+              <h1 className="text-base font-medium text-black dark:text-white whitespace-nowrap">Smart Notes</h1>
+              <p className="hidden sm:block text-text-gray dark:text-gray-400 font-normal text-sm">
+                Organize your thoughts and ideas
+              </p>
+            </div>
+          </div>
+          <div className="w-[100px] sm:w-auto flex justify-end">
+            <button
+              onClick={handleCreateNote}
+              className="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-600 flex items-center justify-center"
+              title="Create new note"
+            >
+              <PenLine size={18} />
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="px-4 py-3 border-b border-gray-100">
@@ -151,10 +168,10 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
           <div className="space-y-1 p-2">
             {sortedNotes.map((note) => (
               <div
-                key={note.id}
-                onClick={() => onNoteSelect(note.id)}
+                key={note._id}
+                onClick={() => onNoteSelect(note._id)}
                 className={`p-2 rounded-lg cursor-pointer group ${
-                  activeNoteId === note.id ? 'bg-purple-50' : 'hover:bg-gray-50'
+                  activeNoteId === note._id ? 'bg-purple-50' : 'hover:bg-gray-50'
                 }`}
                 title={`Open note: ${note.title}`}
               >
@@ -179,7 +196,7 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
                       {new Date(note.updatedAt).toLocaleDateString()} • {note.tags?.length > 0 ? (
                         <span>
                           {note.tags.map((tag, tagIndex) => (
-                            <span key={`${note.id}-tag-${tagIndex}`}>#{tag}{tagIndex < note.tags.length - 1 ? ' ' : ''}</span>
+                            <span key={`${note._id}-tag-${tagIndex}`}>#{tag}{tagIndex < note.tags.length - 1 ? ' ' : ''}</span>
                           ))}
                         </span>
                       ) : 'No tags'}
@@ -188,12 +205,12 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onDeleteNote(note.id);
+                      onDeleteNote(note._id);
                     }}
-                    className="p-1 rounded hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-red-500"
                     title={`Delete note: ${note.title}`}
                   >
-                    <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-500" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -216,7 +233,7 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
               <>
                 <p className="text-sm">No notes yet</p>
                 <button
-                  onClick={onCreateNote}
+                  onClick={handleCreateNote}
                   className="text-xs text-purple-500 mt-2"
                 >
                   Create your first note

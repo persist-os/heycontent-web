@@ -32,6 +32,7 @@ export function ChatInput({
 }: ChatInputProps) {
   const [input, setInput] = useState('')
   const [placeholder, setPlaceholder] = useState(placeholders[0])
+  const [showFullReply, setShowFullReply] = useState(false)
   const textAreaRef = useRef<HTMLTextAreaElement>(null)
 
   // Rotate placeholders
@@ -94,14 +95,27 @@ export function ChatInput({
         <div className="w-full mx-auto mb-2">
           <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-500 bg-gray-50 p-1.5 sm:p-2 rounded-lg">
             <MessageSquare className="w-3 sm:w-4 h-3 sm:h-4 flex-shrink-0" />
-            <span className="flex-1 truncate">
-              Replying to: {referencedMessage.content}
-            </span>
-            <button
-              onClick={() => onClearReference?.()}
-              className="text-gray-400 hover:text-gray-600 p-1"
+            <button 
+              onClick={() => setShowFullReply(!showFullReply)}
+              className="flex-1 text-left hover:text-gray-700 transition-colors"
             >
-              ×
+              <span className={showFullReply ? "break-words whitespace-pre-wrap" : "truncate block"}>
+                Replying to: {showFullReply 
+                  ? referencedMessage.content 
+                  : referencedMessage.content.length > 50 
+                    ? `${referencedMessage.content.slice(0, 50)}...` 
+                    : referencedMessage.content}
+              </span>
+            </button>
+            <button
+              onClick={() => {
+                setShowFullReply(false)
+                onClearReference?.()
+              }}
+              className="text-gray-600 hover:text-gray-800 p-1.5 rounded-full hover:bg-gray-200 flex-shrink-0 ml-1"
+              aria-label="Clear reply"
+            >
+              <span className="text-base font-medium">×</span>
             </button>
           </div>
         </div>

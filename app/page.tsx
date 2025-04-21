@@ -10,7 +10,7 @@ import Link from 'next/link'
 
 const featureCards = [
   {
-    title: "AI Assistant",
+    title: "Chat With Content",
     stat: "40% Time Saved",
     icon: Brain,
     color: "from-purple-500/10",
@@ -55,19 +55,21 @@ export default function LandingPage() {
       <section className="min-h-screen bg-gradient-to-r from-[#F8F0F9] to-blue-50">
         {/* Featured Influencers */}
         <div className="relative">
-          <div className="max-w-6xl mx-auto flex justify-between items-center px-6 mb-3 pt-12">
-            <h2 className="text-xl font-medium">Featured</h2>
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 sm:px-6 mb-3 pt-8 sm:pt-12">
+            <h2 className="text-xl font-medium mb-4 sm:mb-0">Featured</h2>
             <div className="flex items-center gap-4">
               <div className="flex gap-1">
                 <button 
                   onClick={() => scrollSection('left', 'featured-scroll')}
                   className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  aria-label="Scroll left"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <button 
                   onClick={() => scrollSection('right', 'featured-scroll')}
                   className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  aria-label="Scroll right"
                 >
                   <ChevronRight className="w-5 h-5" />
                 </button>
@@ -77,10 +79,10 @@ export default function LandingPage() {
           
           <div 
             id="featured-scroll" 
-            className="mb-12 px-6 overflow-x-auto overflow-y-hidden hide-scrollbar scroll-smooth mt-2"
+            className="mb-8 sm:mb-12 px-4 sm:px-6 overflow-x-auto overflow-y-hidden hide-scrollbar scroll-smooth mt-2"
           >
             <div className="max-w-6xl mx-auto">
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 {/* First Influencer */}
                 <div className="overflow-hidden relative group cursor-pointer transform transition-all duration-300 hover:scale-[1.02] hover:shadow-xl rounded-2xl">
                   {/* Follower Count */}
@@ -147,19 +149,21 @@ export default function LandingPage() {
 
         {/* Feature Cards */}
         <div className="relative">
-          <div className="max-w-6xl mx-auto flex justify-between items-center px-6 mb-3 pt-12">
-            <h2 className="text-xl font-medium">Research</h2>
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 sm:px-6 mb-3 pt-8 sm:pt-12">
+            <h2 className="text-xl font-medium mb-4 sm:mb-0">Research</h2>
             <div className="flex items-center gap-4">
               <div className="flex gap-1">
                 <button 
                   onClick={() => scrollSection('left', 'features-scroll')}
                   className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  aria-label="Scroll left"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <button 
                   onClick={() => scrollSection('right', 'features-scroll')}
                   className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  aria-label="Scroll right"
                 >
                   <ChevronRight className="w-5 h-5" />
                 </button>
@@ -169,10 +173,10 @@ export default function LandingPage() {
           
           <div 
             id="features-scroll" 
-            className="px-6 mb-12 overflow-x-auto overflow-y-hidden hide-scrollbar scroll-smooth mt-2"
+            className="px-4 sm:px-6 mb-8 sm:mb-12 overflow-x-auto overflow-y-hidden hide-scrollbar scroll-smooth mt-2"
           >
             <div className="max-w-6xl mx-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8">
                 {featureCards.map((card, index) => (
                   <div 
                     key={index} 
@@ -189,18 +193,18 @@ export default function LandingPage() {
                       
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-90 group-hover:opacity-70 transition-opacity duration-300" />
                       
-                      <div className="absolute inset-0 p-6 flex flex-col h-full text-white">
+                      <div className="absolute inset-0 p-4 sm:p-6 flex flex-col h-full text-white">
                         <div className="mb-auto transform transition-all duration-300 group-hover:-translate-y-2">
                           <div className="p-3 bg-white/10 backdrop-blur-sm rounded-xl w-fit">
-                            <card.icon className="w-6 h-6" />
+                            <card.icon className="w-5 h-5 sm:w-6 sm:h-6" />
                           </div>
-                          <h3 className="text-2xl font-bold mt-4">{card.title}</h3>
+                          <h3 className="text-xl sm:text-2xl font-bold mt-4">{card.title}</h3>
                           <p className="text-white/80 mt-2">
                             {card.role}
                           </p>
                         </div>
-                        <div className="flex items-center justify-between mt-6 transform transition-all duration-300 group-hover:translate-y-2">
-                          <span className="text-lg font-medium">{card.stat}</span>
+                        <div className="flex items-center justify-between mt-4 sm:mt-6 transform transition-all duration-300 group-hover:translate-y-2">
+                          <span className="text-base sm:text-lg font-medium">{card.stat}</span>
                           <ArrowRight className="w-5 h-5 transform transition-transform duration-300 group-hover:translate-x-2" />
                         </div>
                       </div>
@@ -213,16 +217,16 @@ export default function LandingPage() {
         </div>
 
         {/* Final CTA Section */}
-        <section className="bg-gradient-to-r from-[#F8F0F9] to-blue-50 py-16">
-          <div className="max-w-6xl mx-auto text-center px-6">
-            <div className="bg-white/40 backdrop-blur-md rounded-3xl p-24 border border-white/50 shadow-lg">
-              <h2 className="text-4xl font-medium mb-8 text-gray-800">
+        <section className="bg-gradient-to-r from-[#F8F0F9] to-blue-50 py-12 sm:py-16">
+          <div className="max-w-6xl mx-auto text-center px-4 sm:px-6">
+            <div className="bg-white/40 backdrop-blur-md rounded-3xl p-8 sm:p-24 border border-white/50 shadow-lg">
+              <h2 className="text-2xl sm:text-4xl font-medium mb-6 sm:mb-8 text-gray-800">
                 Instant insights. Smarter strategy.{' '}
                 <span className="block mt-2">Limitless growth for creators.</span>
               </h2>
               <button
                 onClick={() => router.push('/register')}
-                className="mt-8 bg-blue-500 text-white px-6 py-3 rounded-xl hover:bg-blue-600 transition-colors inline-flex items-center gap-2"
+                className="mt-6 sm:mt-8 bg-blue-500 text-white px-6 py-3 rounded-xl hover:bg-blue-600 transition-colors inline-flex items-center gap-2"
               >
                 Try HeyContent
                 <ArrowRight className="w-4 h-4" />
@@ -232,8 +236,8 @@ export default function LandingPage() {
         </section>
 
         {/* Stats/Footer */}
-        <footer className="border-t py-12 px-6">
-          <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
+        <footer className="border-t py-8 sm:py-12 px-4 sm:px-6">
+          <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
             <div>
               <h3 className="font-medium mb-4">Product</h3>
               <div className="flex flex-col gap-3 text-gray-600">

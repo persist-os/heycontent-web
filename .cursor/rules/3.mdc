@@ -18,4 +18,3 @@ clean up leftover prisma or supabase code. keep files short and clean.
 prioritize connecting to the google cloud run backend. 
 
 we will want to use firebase for authentication and convex for database
-

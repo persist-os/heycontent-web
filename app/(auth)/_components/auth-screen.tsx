@@ -58,6 +58,7 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
       })
 
       const data = await response.json()
+      console.log('Auth response:', { ...data, customToken: data.customToken ? '[TOKEN_PRESENT]' : undefined })
 
       if (!response.ok) {
         throw new Error(data.error)
@@ -66,8 +67,10 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
       // If we have a custom token, sign in with it
       if (data.customToken && auth) {
         try {
+          console.log('Attempting to sign in with custom token...')
           // Sign in with the custom token
           const userCredential = await signInWithCustomToken(auth, data.customToken)
+          console.log('Sign in successful:', userCredential.user?.uid)
           if (userCredential.user) {
             // If we have a redirect URL in the response, use it
             if (data.redirect) {
@@ -97,40 +100,61 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
   const handleGoogleSignIn = async () => {
     try {
       setIsLoading(true)
+      console.log('Starting Google Sign-In process...');
+      
       if (!auth) {
+        console.error('Firebase auth not initialized');
         throw new Error('Firebase auth not initialized')
       }
 
       const provider = new GoogleAuthProvider()
+      // Add explicit configuration
+      provider.addScope('email')
+      provider.addScope('profile')
       provider.setCustomParameters({
-        prompt: 'select_account'
+        prompt: 'select_account',
+        login_hint: ''
       })
+      console.log('Google provider configured with scopes:', provider.scopes);
 
-      const result = await signInWithPopup(auth, provider)
+      console.log('Attempting to sign in with popup...');
+      try {
+        const result = await signInWithPopup(auth, provider)
+        console.log('Sign in with popup successful');
 
-      if (result.user) {
-        const idToken = await result.user.getIdToken()
+        if (result.user) {
+          console.log('User signed in, getting ID token...');
+          const idToken = await result.user.getIdToken()
+          console.log('ID token obtained');
 
-        const response = await fetch('/api/auth/firebase', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            idToken,
-            action: 'google'
-          }),
-        })
+          console.log('Sending token to backend...');
+          const response = await fetch('/api/auth/firebase', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              idToken,
+              action: 'google'
+            }),
+          })
 
-        if (!response.ok) {
-          throw new Error('Failed to set session')
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Backend response error:', errorData);
+            throw new Error('Failed to set session')
+          }
+          console.log('Backend authentication successful');
+
+          // Use router.push instead of window.location
+          router.push('/chat')
         }
-
-        // Use router.push instead of window.location
-        router.push('/chat')
+      } catch (popupError) {
+        console.error('Popup error details:', popupError);
+        throw popupError;
       }
     } catch (err) {
-      console.error('Google Sign-In error:', err)
+      console.error('Google Sign-In error details:', err);
       setError(err instanceof Error ? err.message : 'Failed to sign in with Google')
     } finally {
       setIsLoading(false)
@@ -157,7 +181,7 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto">
+    <Card className="w-full max-w-md bg-white/80 backdrop-blur-sm shadow-xl">
       <CardHeader>
         <CardTitle className="text-center">
           {isLogin ? 'Welcome Back' : 'Create Account'}

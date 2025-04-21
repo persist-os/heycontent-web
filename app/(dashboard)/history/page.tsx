@@ -54,7 +54,8 @@ export default function HistoryPage() {
   return (
     <div className="max-w-4xl mx-auto p-6">
       {/* Search */}
-      <div className="mb-6">
+      <div className="mt-16 mb-6">
+        <p className="text-gray-600 mb-2 font-medium text-lg">Your chat history</p>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <input

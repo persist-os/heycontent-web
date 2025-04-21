@@ -14,14 +14,15 @@ export function Logo({ className = '', size = 'medium' }: LogoProps) {
   }
 
   return (
-    <Link href="/" className={`flex items-center gap-2 ${className}`}>
+    <Link href="/chat" className={`flex items-center gap-2 ${className}`}>
       <div className="rounded-2xl bg-white p-1 shadow-sm">
         <Image
           src={logoMap[size]}
           alt="HeyContent Logo"
-          width={size === 'small' ? 32 : size === 'medium' ? 48 : 64}
-          height={size === 'small' ? 32 : size === 'medium' ? 48 : 64}
+          width={size === 'small' ? 24 : size === 'medium' ? 32 : 48}
+          height={size === 'small' ? 24 : size === 'medium' ? 32 : 48}
           className="transition-transform duration-300 hover:scale-105"
+          priority
         />
       </div>
     </Link>

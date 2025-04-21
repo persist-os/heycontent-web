@@ -4,6 +4,7 @@ import React, { useEffect } from 'react'
 import { DashboardNav } from './_components/dashboard-nav'
 import { useAuth } from '@/app/context/auth-context'
 import { usePathname } from 'next/navigation'
+import { useSidebar } from '@/app/context/sidebar-context'
 
 export default function DashboardLayout({
   children,
@@ -12,6 +13,7 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname()
   const { user, loading } = useAuth()
+  const { isExpanded, setIsExpanded } = useSidebar()
 
   useEffect(() => {
     if (!loading && !user) {
@@ -32,9 +34,11 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen">
-      <DashboardNav />
-      <main className="flex-1 p-4">
+    <div className="relative flex min-h-screen">
+      <div className="fixed inset-y-0 left-0 z-40">
+        <DashboardNav />
+      </div>
+      <main className={`flex-1 transition-[margin] duration-300 ${isExpanded ? 'md:ml-64' : ''}`}>
         {children}
       </main>
     </div>
