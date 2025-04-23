@@ -16,15 +16,19 @@ export interface InteractiveResponse {
 export interface Message {
   id: number;
   content: string;
-  chat_response: string;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'system';
   timestamp: string;
-  status?: 'typing' | 'failed';
   referencedMessage?: {
     id: number;
     content: string;
   };
-  suggestions?: string[];
+  status?: 'typing' | 'sent' | 'delivered' | 'read';
+  chat_response: string;
+  suggestions?: any[];
+  metadata?: {
+    suggestions?: any[];
+    [key: string]: any;
+  };
 }
 
 export interface ChatHistory {

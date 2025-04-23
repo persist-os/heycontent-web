@@ -1,21 +1,22 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth } from "@/app/context/auth-context";
 import { Note, NoteUpdate } from "../types";
+import { Id } from "@/convex/_generated/dataModel";
 
 export function useNotes() {
-  const { userId } = useAuth();
+  const { user } = useAuth();
 
-  const notes = useQuery(api.notes.getNotes, userId ? { userId } : "skip");
+  const notes = useQuery(api.notes.getNotes, user?.uid ? { userId: user.uid } : "skip");
   const createNoteMutation = useMutation(api.notes.createNote);
   const updateNoteMutation = useMutation(api.notes.updateNote);
   const deleteNoteMutation = useMutation(api.notes.deleteNote);
 
-  const createNote = async (note: Partial<Note>) => {
-    if (!userId) throw new Error("User must be logged in");
+  const createNote = async (note: Partial<Note>): Promise<Id<"notes">> => {
+    if (!user?.uid) throw new Error("User must be logged in");
     
-    const newNote = await createNoteMutation({
-      userId,
+    const noteId = await createNoteMutation({
+      userId: user.uid,
       title: note.title || "Untitled Note",
       content: note.content || "",
       important: note.important || false,
@@ -24,25 +25,25 @@ export function useNotes() {
       references: note.references || [],
     });
 
-    return newNote;
+    return noteId;
   };
 
   const updateNote = async (noteId: string, updates: NoteUpdate) => {
-    if (!userId) throw new Error("User must be logged in");
+    if (!user?.uid) throw new Error("User must be logged in");
     
     return await updateNoteMutation({
       noteId,
-      userId,
+      userId: user.uid,
       updates,
     });
   };
 
   const deleteNote = async (noteId: string) => {
-    if (!userId) throw new Error("User must be logged in");
+    if (!user?.uid) throw new Error("User must be logged in");
     
     return await deleteNoteMutation({
       noteId,
-      userId,
+      userId: user.uid,
     });
   };
 

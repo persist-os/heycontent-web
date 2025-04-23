@@ -22,6 +22,8 @@ if (process.env.NODE_ENV === 'development') {
     hasStorageBucket: !!firebaseConfig.storageBucket,
     hasMessagingSenderId: !!firebaseConfig.messagingSenderId,
     hasAppId: !!firebaseConfig.appId,
+    authDomain: firebaseConfig.authDomain,
+    projectId: firebaseConfig.projectId
   });
 }
 
@@ -31,33 +33,36 @@ let auth: Auth | null = null;
 
 if (isClient) {
   try {
+    console.log('Initializing Firebase client...');
+    
     // Check if Firebase is already initialized
     if (getApps().length === 0) {
+      console.log('Creating new Firebase app instance...');
       app = initializeApp(firebaseConfig);
+      console.log('Firebase app initialized successfully');
     } else {
+      console.log('Reusing existing Firebase app instance');
       app = getApp();
     }
 
     // Initialize auth
+    console.log('Initializing Firebase Auth...');
     auth = getAuth(app);
+    console.log('Firebase Auth initialized successfully');
 
     // Set persistence
+    console.log('Setting auth persistence...');
     setPersistence(auth, browserLocalPersistence)
+      .then(() => {
+        console.log('Auth persistence set successfully');
+      })
       .catch(error => {
         console.error('Error setting auth persistence:', error);
       });
 
-    // Debug logging only in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Firebase initialized:', {
-        appInitialized: !!app,
-        authInitialized: !!auth,
-        existingApps: getApps().length,
-        isClient
-      });
-    }
   } catch (error) {
     console.error('Firebase initialization error:', error);
+    throw error;
   }
 }
 

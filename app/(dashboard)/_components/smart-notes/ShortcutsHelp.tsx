@@ -42,28 +42,31 @@ export function ShortcutsHelp({ onClose }: ShortcutsHelpProps) {
   return (
     <div 
       ref={helpRef}
-      className="bg-white/80 backdrop-blur-sm rounded-lg p-4 shadow-lg border border-gray-100"
+      className="fixed bottom-16 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-gray-200 w-80 max-h-[60vh] overflow-y-auto"
     >
-      <h3 className="font-medium mb-4">Keyboard Shortcuts</h3>
-      <div className="space-y-2 max-h-[400px] overflow-y-auto">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-medium text-gray-700">Keyboard Shortcuts</h3>
+        <button
+          onClick={onClose}
+          className="text-gray-400 hover:text-gray-600"
+        >
+          ×
+        </button>
+      </div>
+      <div className="space-y-1.5">
         {SHORTCUTS.map((shortcut, index) => (
-          <div key={index} className="flex items-center justify-between hover:bg-gray-50 p-2 rounded-lg">
-            <div className="flex items-center gap-3">
-              <code className="px-2 py-1 bg-gray-100 rounded text-sm font-mono">
+          <div key={index} className="flex items-center justify-between hover:bg-gray-50 p-1.5 rounded">
+            <div className="flex items-center gap-2">
+              <code className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">
                 {shortcut.key}
               </code>
-              <span className="text-gray-600">{shortcut.description}</span>
+              <span className="text-xs text-gray-600">{shortcut.description}</span>
             </div>
             {shortcut.example && (
-              <span className="text-sm text-gray-400 font-mono">{shortcut.example}</span>
+              <span className="text-xs text-gray-400 font-mono">{shortcut.example}</span>
             )}
           </div>
         ))}
-      </div>
-      <div className="mt-4 pt-4 border-t border-gray-100">
-        <p className="text-xs text-gray-500">
-          Press ⌘ + / to toggle this help menu at any time
-        </p>
       </div>
     </div>
   );

@@ -22,9 +22,6 @@ export async function POST(request: Request) {
         // Create a custom token for the user
         const customToken = await adminAuth.createCustomToken(userRecord.uid)
         
-        // Get the ID token
-        const idToken = await adminAuth.createCustomToken(userRecord.uid)
-
         console.log('Login successful, setting token for user:', userRecord.email)
 
         // Ensure user exists in Convex
@@ -52,7 +49,7 @@ export async function POST(request: Request) {
         })
 
         // Set the Firebase auth token cookie
-        response.cookies.set('firebase-auth-token', idToken, {
+        response.cookies.set('firebase-auth-token', customToken, {
           httpOnly: false,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'lax',
@@ -92,8 +89,7 @@ export async function POST(request: Request) {
         // Create a custom token for the user
         const customToken = await adminAuth.createCustomToken(userRecord.uid)
         
-        // Get the ID token
-        const idToken = await adminAuth.createCustomToken(userRecord.uid)
+        console.log('Login successful, setting token for user:', userRecord.email)
 
         // Ensure user exists in Convex
         try {
@@ -120,7 +116,7 @@ export async function POST(request: Request) {
         })
 
         // Set the Firebase auth token cookie
-        response.cookies.set('firebase-auth-token', idToken, {
+        response.cookies.set('firebase-auth-token', customToken, {
           httpOnly: false,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'lax',

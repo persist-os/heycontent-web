@@ -7,6 +7,7 @@ import { NoteHeader } from './components/NoteHeader';
 import { NoteReferences } from './components/NoteReferences';
 import { CommandMenus } from './components/CommandMenus';
 import { FullAnalysisModal } from './components/FullAnalysisModal';
+import { Keyboard } from 'lucide-react';
 
 interface NoteAreaProps {
   note: Note;
@@ -14,6 +15,8 @@ interface NoteAreaProps {
   onSave: () => void;
   onToggleShortcuts: () => void;
   onRequestAIInsights: (noteId: string, note: Note) => Promise<void>;
+  onBack: () => void;
+  isMobile: boolean;
 }
 
 export function NoteArea({
@@ -21,7 +24,9 @@ export function NoteArea({
   onUpdate,
   onSave,
   onToggleShortcuts,
-  onRequestAIInsights
+  onRequestAIInsights,
+  onBack,
+  isMobile
 }: NoteAreaProps) {
   const [content, setContent] = useState(note.content || '');
   const [cursorPosition, setCursorPosition] = useState<number | null>(null);
@@ -36,7 +41,53 @@ export function NoteArea({
   const [selectedInsight, setSelectedInsight] = useState<string | null>(null);
 
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
-  const shortcutManager = useRef<ShortcutManager>();
+  const shortcutManager = useRef<ShortcutManager>(
+    new ShortcutManager({
+      onSave,
+      onQuickCapture: () => onRequestAIInsights(note._id, note),
+      onCommandMenu: () => {
+        if (textAreaRef.current) {
+          const cursorPos = textAreaRef.current.selectionStart;
+          const lineStart = content.lastIndexOf('\n', cursorPos) + 1;
+          const lineContent = content.substring(lineStart, cursorPos);
+          if (lineContent.trim() === '') {
+            setShowCommands(true);
+            updateMenuPosition();
+          }
+        }
+      },
+      onMention: () => {
+        setShowMentions(true);
+        updateMenuPosition();
+      },
+      onTag: () => {
+        setShowTags(true);
+        updateMenuPosition();
+      },
+      onBold: () => handleFormat('**', '**'),
+      onItalic: () => handleFormat('*', '*'),
+      onUnderline: () => handleFormat('_', '_'),
+      onIndent: () => insertText('  '),
+      onUnindent: () => {
+        if (textAreaRef.current) {
+          const start = textAreaRef.current.selectionStart || 0;
+          const lineStart = content.lastIndexOf('\n', start) + 1;
+          const lineContent = content.substring(lineStart, start);
+          if (lineContent.startsWith('  ')) {
+            const newContent = content.substring(0, lineStart) + content.substring(lineStart + 2);
+            setContent(newContent);
+            onUpdate(note._id, { content: newContent });
+          }
+        }
+      },
+      onToggleShortcuts,
+      onEscape: () => {
+        setShowCommands(false);
+        setShowMentions(false);
+        setShowTags(false);
+      }
+    })
+  );
   const references = Array.isArray(note.references) ? note.references : [];
 
   // Extract tags from content
@@ -166,6 +217,9 @@ export function NoteArea({
         note={note}
         onUpdate={(updates) => onUpdate(note._id, updates)}
         onSave={onSave}
+        onBack={onBack}
+        isMobile={isMobile}
+        onRequestAIInsights={onRequestAIInsights}
       />
       <div className="flex-1 overflow-auto p-4">
         <textarea
@@ -206,6 +260,13 @@ export function NoteArea({
         selectedInsight={selectedInsight}
         references={references}
       />
+      <button
+        onClick={onToggleShortcuts}
+        className="fixed bottom-4 left-4 p-2 bg-white/80 backdrop-blur-sm rounded-full shadow-lg border border-gray-200 hover:bg-white transition-colors"
+        title="Keyboard Shortcuts (⌘ + /)"
+      >
+        <Keyboard className="w-5 h-5 text-gray-600" />
+      </button>
     </div>
   );
 }

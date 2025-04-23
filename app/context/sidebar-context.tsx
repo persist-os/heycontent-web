@@ -5,12 +5,20 @@ import React, { createContext, useContext, useState, useEffect } from 'react'
 interface SidebarContextType {
   isExpanded: boolean
   setIsExpanded: (value: boolean) => void
+  isViewingNote: boolean
+  setIsViewingNote: (value: boolean) => void
 }
 
-const SidebarContext = createContext<SidebarContextType | undefined>(undefined)
+const SidebarContext = createContext<SidebarContextType>({
+  isExpanded: false,
+  setIsExpanded: () => {},
+  isViewingNote: false,
+  setIsViewingNote: () => {}
+})
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
-  const [isExpanded, setIsExpanded] = useState(true)
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [isViewingNote, setIsViewingNote] = useState(false)
 
   // Initialize from localStorage if available
   useEffect(() => {
@@ -34,16 +42,10 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   }, [isExpanded])
 
   return (
-    <SidebarContext.Provider value={{ isExpanded, setIsExpanded }}>
+    <SidebarContext.Provider value={{ isExpanded, setIsExpanded, isViewingNote, setIsViewingNote }}>
       {children}
     </SidebarContext.Provider>
   )
 }
 
-export function useSidebar() {
-  const context = useContext(SidebarContext)
-  if (context === undefined) {
-    throw new Error('useSidebar must be used within a SidebarProvider')
-  }
-  return context
-}
+export const useSidebar = () => useContext(SidebarContext)
