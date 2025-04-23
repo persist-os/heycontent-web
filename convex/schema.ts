@@ -178,4 +178,14 @@ export default defineSchema({
     scope: v.optional(v.string()),
   })
   .index("by_user_platform", ["userId", "platform"]),
+
+  api_keys: defineTable({
+    hashed_key: v.string(), // bcrypt-hashed
+    user_id: v.string(),
+    scopes: v.optional(v.array(v.string())),
+    rate_tier: v.optional(v.string()), // "free", "premium", etc.
+    status: v.union(v.literal("active"), v.literal("revoked")),
+    created_at: v.number(),
+  }).index("by_user", ["user_id"]),
+
 });

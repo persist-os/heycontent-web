@@ -322,12 +322,26 @@ export const saveChannelData = mutation({
 export const get_youtube_credentials = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db
-      .query("tokens")
-      .withIndex("by_user_platform", (q) => 
-        q.eq("userId", args.userId).eq("platform", "youtube")
+    const channelData = await ctx.db
+      .query("youtubeData")
+      .withIndex("by_user_resource", (q) => 
+        q.eq("userId", args.userId).eq("resourceType", "channel")
       )
+      .order("desc") // Get the most recent entry
       .first();
+
+    // Return only the credential-related fields if found
+    if (channelData && channelData.data) {
+      return {
+        accessToken: channelData.data.accessToken,
+        refreshToken: channelData.data.refreshToken,
+        expiresAt: channelData.data.expiresAt,
+        tokenType: channelData.data.tokenType,
+        scope: channelData.data.scope,
+      };
+    }
+    
+    return null; // Return null if no channel data or credentials found
   },
 });
 
@@ -361,3 +375,32 @@ export const update_youtube_token = mutation({
   },
 });
 
+// Store video analysis data
+export const storeVideoAnalysis = mutation({
+  args: {
+    userId: v.string(),
+    videoId: v.string(),
+    analysisData: v.any(),
+  },
+  handler: async (ctx, args) => {
+    const { userId, videoId, analysisData } = args;
+    const timestamp = Date.now();
+
+    try {
+      await ctx.db.insert("youtubeData", {
+        userId,
+        resourceType: "video_analysis",
+        data: {
+          videoId,
+          analysisData,
+        },
+        timestamp,
+      });
+      console.log(`Stored analysis for video ${videoId} by user ${userId}`);
+      return { success: true };
+    } catch (error) {
+      console.error('Error storing video analysis:', error);
+      throw new Error(`Failed to store video analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});

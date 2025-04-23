@@ -13,6 +13,7 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as apiKeys from "../apiKeys.js";
 import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
 import type * as gmail from "../gmail.js";
@@ -36,6 +37,7 @@ import type * as youtube from "../youtube.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  apiKeys: typeof apiKeys;
   auth: typeof auth;
   chat: typeof chat;
   gmail: typeof gmail;
