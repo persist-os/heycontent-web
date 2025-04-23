@@ -319,6 +319,7 @@ export function ContentAnalyticsScreen() {
             <div className="hidden sm:flex items-center gap-2 text-sm">
               <Calendar className="w-4 h-4" />
               <select 
+                aria-label="Select time range"
                 value={timeRange}
                 onChange={(e) => setTimeRange(e.target.value)}
                 className="bg-transparent border-none focus:ring-0"
@@ -644,6 +645,7 @@ export function ContentAnalyticsScreen() {
                 </p>
               </div>
               <button 
+                aria-label="Close"
                 onClick={() => setSelectedContent(null)}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
               >
