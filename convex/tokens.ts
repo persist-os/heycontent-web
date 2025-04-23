@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server"
 import { v } from "convex/values"
+import { Id } from "./_generated/dataModel"
 
 export const get = query({
   args: {
@@ -7,14 +8,12 @@ export const get = query({
     platform: v.string()
   },
   handler: async (ctx, args) => {
-    const token = await ctx.db
+    return await ctx.db
       .query("tokens")
       .withIndex("by_user_platform", (q) =>
         q.eq("userId", args.userId).eq("platform", args.platform)
       )
       .first()
-
-    return token
   }
 })
 
@@ -25,36 +24,57 @@ export const save = mutation({
     accessToken: v.string(),
     refreshToken: v.optional(v.string()),
     expiresAt: v.number(),
-    scope: v.optional(v.string())
+    tokenType: v.string(),
+    scope: v.array(v.string())
   },
   handler: async (ctx, args) => {
-    // Check if token exists
-    const existingToken = await ctx.db
+    const existing = await ctx.db
       .query("tokens")
       .withIndex("by_user_platform", (q) =>
         q.eq("userId", args.userId).eq("platform", args.platform)
       )
       .first()
 
-    if (existingToken) {
-      // Update existing token
-      await ctx.db.patch(existingToken._id, {
+    if (existing) {
+      await ctx.db.patch(existing._id, {
         accessToken: args.accessToken,
         refreshToken: args.refreshToken,
         expiresAt: args.expiresAt,
-        scope: args.scope
+        tokenType: args.tokenType,
+        scope: args.scope,
+        lastRefreshed: Date.now()
       })
-      return existingToken._id
     } else {
-      // Create new token
-      return await ctx.db.insert("tokens", {
+      await ctx.db.insert("tokens", {
         userId: args.userId,
         platform: args.platform,
         accessToken: args.accessToken,
         refreshToken: args.refreshToken,
         expiresAt: args.expiresAt,
-        scope: args.scope
+        tokenType: args.tokenType,
+        scope: args.scope,
+        lastRefreshed: Date.now()
       })
     }
+  }
+})
+
+export const update = mutation({
+  args: {
+    id: v.id("tokens"),
+    accessToken: v.string(),
+    expiresAt: v.number(),
+    tokenType: v.string(),
+    scope: v.array(v.string()),
+    lastRefreshed: v.number()
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, {
+      accessToken: args.accessToken,
+      expiresAt: args.expiresAt,
+      tokenType: args.tokenType,
+      scope: args.scope,
+      lastRefreshed: args.lastRefreshed
+    })
   }
 }) 

@@ -81,8 +81,46 @@ export default defineSchema({
 
   youtubeData: defineTable({
     userId: v.string(),
-    resourceType: v.string(),
-    data: v.any(),
+    resourceType: v.union(v.literal("channel"), v.literal("video"), v.literal("video_analysis")),
+    data: v.object({
+      id: v.string(),
+      snippet: v.optional(v.object({
+        title: v.string(),
+        description: v.string(),
+        customUrl: v.optional(v.string()),
+        thumbnails: v.optional(v.object({
+          default: v.optional(v.object({
+            url: v.string(),
+            width: v.number(),
+            height: v.number()
+          })),
+          medium: v.optional(v.object({
+            url: v.string(),
+            width: v.number(),
+            height: v.number()
+          })),
+          high: v.optional(v.object({
+            url: v.string(),
+            width: v.number(),
+            height: v.number()
+          }))
+        })),
+        publishedAt: v.optional(v.string())
+      })),
+      statistics: v.optional(v.object({
+        viewCount: v.string(),
+        subscriberCount: v.string(),
+        hiddenSubscriberCount: v.boolean(),
+        videoCount: v.string()
+      })),
+      accessToken: v.optional(v.string()),
+      refreshToken: v.optional(v.string()),
+      expiresAt: v.optional(v.number()),
+      tokenType: v.optional(v.string()),
+      scope: v.optional(v.string()),
+      videoId: v.optional(v.string()),
+      analysisData: v.optional(v.any())
+    }),
     timestamp: v.number(),
     videoCount: v.optional(v.number()),
     subscriberCount: v.optional(v.number()),
@@ -175,7 +213,19 @@ export default defineSchema({
     accessToken: v.string(),
     refreshToken: v.optional(v.string()),
     expiresAt: v.number(),
-    scope: v.optional(v.string()),
+    scope: v.array(v.string()),
+    tokenType: v.string(),
+    lastRefreshed: v.optional(v.number()),
   })
   .index("by_user_platform", ["userId", "platform"]),
+
+  api_keys: defineTable({
+    hashed_key: v.string(), // bcrypt-hashed
+    user_id: v.string(),
+    scopes: v.optional(v.array(v.string())),
+    rate_tier: v.optional(v.string()), // "free", "premium", etc.
+    status: v.union(v.literal("active"), v.literal("revoked")),
+    created_at: v.number(),
+  }).index("by_user", ["user_id"]),
+
 });
