@@ -23,11 +23,8 @@ export async function GET() {
       `client_id=${process.env.GOOGLE_CLIENT_ID}&` +
       `redirect_uri=${process.env.YOUTUBE_REDIRECT_URI}&` +
       `scope=${encodeURIComponent([
-        'https://www.googleapis.com/auth/youtube.readonly',
         'https://www.googleapis.com/auth/youtube.force-ssl',
-        'https://www.googleapis.com/auth/userinfo.email',
-        'https://www.googleapis.com/auth/userinfo.profile',
-        'openid'
+        'https://www.googleapis.com/auth/yt-analytics.readonly'
       ].join(' '))}&` +
       `response_type=code&` +
       `access_type=offline&` +

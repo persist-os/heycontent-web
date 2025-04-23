@@ -93,7 +93,8 @@ export async function GET(req: Request) {
       accessToken: tokens.access_token!,
       refreshToken: tokens.refresh_token || undefined,
       expiresAt: tokens.expiry_date ? Math.floor(tokens.expiry_date / 1000) : Date.now() + 3600 * 1000, // Default 1 hour if no expiry
-      scope: tokens.scope
+      scope: typeof tokens.scope === 'string' ? tokens.scope.split(' ') : [],
+      tokenType: tokens.token_type!
     });
     console.log('Gmail token stored successfully');
 
@@ -120,7 +121,7 @@ export async function GET(req: Request) {
         await convex.mutation(api.social.saveAccount, {
           userId,
           platform: 'gmail',
-          username: profile.data.emailAddress,
+          username: profile.data.emailAddress || '',
           metadata: {
             emailAddress: profile.data.emailAddress,
             messagesTotal: profile.data.messagesTotal,

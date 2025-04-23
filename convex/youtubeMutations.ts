@@ -1,6 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
-import { api } from "./_generated/api";
+import { mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 // Store YouTube channel data
@@ -118,54 +117,6 @@ export const storeYouTubeData = mutation({
   },
 });
 
-// Get YouTube data for a user
-export const getYouTubeData = query({
-  args: { userId: v.string() },
-  handler: async (ctx, args) => {
-    try {
-      const youtubeData = await ctx.db
-        .query("youtubeData")
-        .filter((q) => q.eq(q.field("userId"), args.userId))
-        .order("desc")
-        .first();
-
-      if (!youtubeData) {
-        return null;
-      }
-
-      // Also get the social account data for consistency
-      const socialAccount = await ctx.db
-        .query("socialAccounts")
-        .filter((q) =>
-          q.eq(q.field("userId"), args.userId) &&
-          q.eq(q.field("platform"), "youtube")
-        )
-        .first();
-
-      return {
-        ...youtubeData,
-        socialAccount: socialAccount || null
-      };
-    } catch (error) {
-      console.error('Error getting YouTube data:', error);
-      throw new Error(`Failed to get YouTube data: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  },
-});
-
-// Check YouTube connection status
-export const getYouTubeConnectionStatus = query({
-  args: { userId: v.string() },
-  handler: async (ctx, args) => {
-    const status = await ctx.db
-      .query("socialConnectionStatus")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .first();
-
-    return status?.connections.youtube ?? false;
-  },
-});
-
 // Store video data
 export const storeVideoData = mutation({
   args: {
@@ -188,23 +139,6 @@ export const storeVideoData = mutation({
   },
 });
 
-// Get video data
-export const getVideoData = query({
-  args: { userId: v.string(), videoId: v.string() },
-  handler: async (ctx, args) => {
-    const data = await ctx.db
-      .query("youtubeData")
-      .withIndex("by_user_resource", (q) =>
-        q.eq("userId", args.userId).eq("resourceType", "video")
-      )
-      .filter((q) => q.eq(q.field("data.videoId"), args.videoId))
-      .order("desc")
-      .first();
-
-    return data;
-  },
-});
-
 // Save YouTube channel data
 export const saveChannelData = mutation({
   args: {
@@ -215,9 +149,10 @@ export const saveChannelData = mutation({
     customUrl: v.string(),
     thumbnails: v.any(),
     statistics: v.object({
-      subscribers: v.number(),
-      videos: v.number(),
-      views: v.number()
+      viewCount: v.string(),
+      subscriberCount: v.string(),
+      hiddenSubscriberCount: v.boolean(),
+      videoCount: v.string()
     }),
     updatedAt: v.number()
   },
@@ -239,9 +174,9 @@ export const saveChannelData = mutation({
         statistics
       },
       timestamp: updatedAt,
-      videoCount: statistics.videos,
-      subscriberCount: statistics.subscribers,
-      viewCount: statistics.views
+      videoCount: Number(statistics.videoCount),
+      subscriberCount: Number(statistics.subscriberCount),
+      viewCount: Number(statistics.viewCount)
     });
 
     // Also save to socialAccounts for consistent retrieval
@@ -258,9 +193,9 @@ export const saveChannelData = mutation({
       await ctx.db.patch(existingAccount._id, {
         username: title,
         metadata: {
-          subscribers: statistics.subscribers,
-          videos: statistics.videos,
-          views: statistics.views,
+          subscribers: Number(statistics.subscriberCount),
+          videos: Number(statistics.videoCount),
+          views: Number(statistics.viewCount),
           channelId: channelId,
           title: title,
           description: description
@@ -275,9 +210,9 @@ export const saveChannelData = mutation({
         platform: "youtube",
         username: title,
         metadata: {
-          subscribers: statistics.subscribers,
-          videos: statistics.videos,
-          views: statistics.views,
+          subscribers: Number(statistics.subscriberCount),
+          videos: Number(statistics.videoCount),
+          views: Number(statistics.viewCount),
           channelId: channelId,
           title: title,
           description: description
@@ -319,59 +254,27 @@ export const saveChannelData = mutation({
   },
 });
 
-export const get_youtube_credentials = query({
-  args: { userId: v.string() },
-  handler: async (ctx, args) => {
-    const channelData = await ctx.db
-      .query("youtubeData")
-      .withIndex("by_user_resource", (q) => 
-        q.eq("userId", args.userId).eq("resourceType", "channel")
-      )
-      .order("desc") // Get the most recent entry
-      .first();
-
-    // Return only the credential-related fields if found
-    if (channelData && channelData.data) {
-      return {
-        accessToken: channelData.data.accessToken,
-        refreshToken: channelData.data.refreshToken,
-        expiresAt: channelData.data.expiresAt,
-        tokenType: channelData.data.tokenType,
-        scope: channelData.data.scope,
-      };
-    }
-    
-    return null; // Return null if no channel data or credentials found
-  },
-});
-
+// Update YouTube token
 export const update_youtube_token = mutation({
   args: {
     userId: v.string(),
     accessToken: v.string(),
-    expiresAt: v.number()
+    refreshToken: v.optional(v.string()),
+    expiresAt: v.number(),
+    tokenType: v.string(),
+    scope: v.array(v.string())
   },
   handler: async (ctx, args) => {
-    const existing = await ctx.db
-      .query("tokens")
-      .withIndex("by_user_platform", (q) => 
-        q.eq("userId", args.userId).eq("platform", "youtube")
-      )
-      .first();
-
-    if (existing) {
-      await ctx.db.patch(existing._id, {
-        accessToken: args.accessToken,
-        expiresAt: args.expiresAt
-      });
-    } else {
-      await ctx.db.insert("tokens", {
-        userId: args.userId,
-        platform: "youtube",
-        accessToken: args.accessToken,
-        expiresAt: args.expiresAt
-      });
-    }
+    await ctx.db.insert("tokens", {
+      userId: args.userId,
+      platform: "youtube",
+      accessToken: args.accessToken,
+      refreshToken: args.refreshToken,
+      expiresAt: args.expiresAt,
+      tokenType: args.tokenType,
+      scope: args.scope,
+      lastRefreshed: Date.now()
+    });
   },
 });
 
@@ -391,6 +294,7 @@ export const storeVideoAnalysis = mutation({
         userId,
         resourceType: "video_analysis",
         data: {
+          id: videoId,
           videoId,
           analysisData,
         },
@@ -404,3 +308,74 @@ export const storeVideoAnalysis = mutation({
     }
   },
 });
+
+// Clean up YouTube data when disconnecting
+export const disconnectYouTube = mutation({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const { userId } = args;
+    const timestamp = Date.now();
+
+    try {
+      // Delete all YouTube data for the user
+      const youtubeData = await ctx.db
+        .query("youtubeData")
+        .filter((q) => q.eq(q.field("userId"), userId))
+        .collect();
+
+      for (const data of youtubeData) {
+        await ctx.db.delete(data._id);
+      }
+
+      // Update social account to disconnected
+      const socialAccount = await ctx.db
+        .query("socialAccounts")
+        .filter((q) =>
+          q.eq(q.field("userId"), userId) &&
+          q.eq(q.field("platform"), "youtube")
+        )
+        .first();
+
+      if (socialAccount) {
+        await ctx.db.patch(socialAccount._id, {
+          isConnected: false,
+          updatedAt: timestamp
+        });
+      }
+
+      // Update connection status
+      const status = await ctx.db
+        .query("socialConnectionStatus")
+        .filter((q) => q.eq(q.field("userId"), userId))
+        .first();
+
+      if (status) {
+        await ctx.db.patch(status._id, {
+          connections: {
+            ...status.connections,
+            youtube: false,
+          },
+          lastChecked: timestamp,
+        });
+      }
+
+      // Delete tokens
+      const tokens = await ctx.db
+        .query("tokens")
+        .filter((q) =>
+          q.eq(q.field("userId"), userId) &&
+          q.eq(q.field("platform"), "youtube")
+        )
+        .collect();
+
+      for (const token of tokens) {
+        await ctx.db.delete(token._id);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error disconnecting YouTube:', error);
+      throw new Error(`Failed to disconnect YouTube: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+}); 

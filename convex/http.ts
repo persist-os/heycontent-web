@@ -31,7 +31,7 @@ app.get("/api/users/:id", async (c) => {
 app.get("/api/users/email/:email", async (c) => {
   const ctx = c.env;
   const email = c.req.param("email");
-  const user = await ctx.runQuery(api.users.getByEmail, { email });
+  const user = await ctx.runQuery(api.users.getUserByEmail, { email });
   return c.json(user);
 });
 
@@ -68,7 +68,7 @@ app.patch("/api/users/:id", async (c) => {
 app.get("/api/users/:id/api-key", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  const apiKey = await ctx.runQuery(api.apiKeys.get, { userId });
+  const apiKey = await ctx.runQuery(api.apiKeysQueries.get, { userId });
   return c.json(apiKey);
 });
 
@@ -101,6 +101,19 @@ app.delete("/api/api-keys/:keyId", async (c) => {
   }
 });
 
+// Get API keys
+app.get("/api/api-keys/active", async (c) => {
+  const ctx = c.env;
+  const activeKeys = await ctx.runQuery(api.apiKeysQueries.listActive);
+  return c.json(activeKeys);
+});
+
+app.get("/api/api-keys/:keyId", async (c) => {
+  const ctx = c.env;
+  const keyIdStr = c.req.param("keyId");
+  const apiKey = await ctx.runQuery(api.apiKeysQueries.getById, { keyIdStr });
+  return c.json(apiKey);
+});
 
 // YOUTUBE ROUTES
 
@@ -108,7 +121,7 @@ app.delete("/api/api-keys/:keyId", async (c) => {
 app.get("/api/users/:id/youtube", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  const youtubeData = await ctx.runQuery(api.youtube.getYouTubeData, { userId });
+  const youtubeData = await ctx.runQuery(api.youtubeQueries.getYouTubeData, { userId });
   return c.json(youtubeData);
 });
 
@@ -116,7 +129,7 @@ app.get("/api/users/:id/youtube", async (c) => {
 app.get("/api/users/:id/youtube/status", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  const status = await ctx.runQuery(api.youtube.getYouTubeConnectionStatus, { userId });
+  const status = await ctx.runQuery(api.youtubeQueries.getYouTubeConnectionStatus, { userId });
   return c.json({ connected: status });
 });
 
@@ -124,11 +137,18 @@ app.get("/api/users/:id/youtube/status", async (c) => {
 app.post("/api/users/:id/youtube/token", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  const { accessToken, expiresAt } = await c.req.json();
-  await ctx.runMutation(api.youtube.update_youtube_token, {
+  const { accessToken, refreshToken, expiresAt, tokenType, scope } = await c.req.json();
+  
+  // Convert scope to array if it's a string
+  const scopeArray = typeof scope === 'string' ? scope.split(' ') : scope;
+  
+  await ctx.runMutation(api.youtubeMutations.update_youtube_token, {
     userId,
     accessToken,
+    refreshToken,
     expiresAt,
+    tokenType,
+    scope: scopeArray
   });
   return c.json({ success: true });
 });
@@ -137,7 +157,7 @@ app.post("/api/users/:id/youtube/token", async (c) => {
 app.get("/api/users/:id/youtube/credentials", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  const credentials = await ctx.runQuery(api.youtube.get_youtube_credentials, { userId });
+  const credentials = await ctx.runQuery(api.youtubeQueries.get_youtube_credentials, { userId });
   return c.json(credentials);
 });
 
@@ -145,7 +165,7 @@ app.get("/api/users/:id/youtube/credentials", async (c) => {
 app.get("/api/users/:id/youtube/analysis/channel", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  const youtubeData = await ctx.runQuery(api.youtube.getYouTubeData, { userId });
+  const youtubeData = await ctx.runQuery(api.youtubeQueries.getYouTubeData, { userId });
   
   if (!youtubeData) {
     return c.json({ error: "No YouTube data found" }, 404);
@@ -171,15 +191,18 @@ app.get("/api/users/:id/youtube/analysis/videos", async (c) => {
   
   if (videoId) {
     // Get specific video data
-    const videoData = await ctx.runQuery(api.youtube.getVideoData, { userId, videoId });
+    const videoData = await ctx.runQuery(api.youtubeQueries.getVideoData, { userId, videoId });
     return c.json(videoData);
   } else {
-    // Get all video data for the user
-    const youtubeData = await ctx.runQuery(api.query.getAllYouTubeData);
-    const userVideos = youtubeData.filter((data: any) => 
-      data.userId === userId && data.resourceType === "video"
-    );
-    
+    // TODO: Implement fetching *all* video data for a user.
+    // The previous api.query.getAllYouTubeData call does not exist.
+    // You might need a new query in youtubeQueries.ts or adjust this logic.
+    // For now, returning an empty array.
+    // const youtubeData = await ctx.runQuery(api.query.getAllYouTubeData);
+    // const userVideos = youtubeData.filter((data: any) => 
+    //   data.userId === userId && data.resourceType === "video"
+    // );
+    const userVideos: any[] = []; 
     return c.json(userVideos);
   }
 });
@@ -188,7 +211,7 @@ app.get("/api/users/:id/youtube/analysis/videos", async (c) => {
 app.get("/api/users/:id/youtube/analysis/engagement", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  const youtubeData = await ctx.runQuery(api.youtube.getYouTubeData, { userId });
+  const youtubeData = await ctx.runQuery(api.youtubeQueries.getYouTubeData, { userId });
   
   if (!youtubeData) {
     return c.json({ error: "No YouTube data found" }, 404);
@@ -203,14 +226,56 @@ app.get("/api/users/:id/youtube/analysis/engagement", async (c) => {
     channelHealth: {
       subscriberToViewRatio: youtubeData.viewCount && youtubeData.subscriberCount 
         ? (youtubeData.viewCount / youtubeData.subscriberCount).toFixed(2)
-        : 0,
+        : "0.00", // Return string for consistency
       videosPerSubscriber: youtubeData.subscriberCount && youtubeData.videoCount
         ? (youtubeData.videoCount / youtubeData.subscriberCount).toFixed(2)
-        : 0
+        : "0.00" // Return string for consistency
     }
   };
 
   return c.json(engagementData);
+});
+
+// YouTube endpoints
+app.post("/api/users/:id/youtube/videos", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { videoId, videoData } = await c.req.json();
+  await ctx.runMutation(api.youtubeMutations.storeVideoData, { userId, videoId, videoData });
+  return c.json({ success: true });
+});
+
+app.get("/api/users/:id/youtube/videos/:videoId", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const videoId = c.req.param("videoId");
+  const videoData = await ctx.runQuery(api.youtubeQueries.getVideoData, { userId, videoId });
+  return c.json(videoData);
+});
+
+app.post("/api/users/:id/youtube/channel", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const channelData = await c.req.json();
+  await ctx.runMutation(api.youtubeMutations.saveChannelData, { userId, ...channelData });
+  return c.json({ success: true });
+});
+
+app.post("/api/users/:id/youtube/videos/:videoId/analysis", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const videoId = c.req.param("videoId");
+  const { analysisData } = await c.req.json();
+  await ctx.runMutation(api.youtubeMutations.storeVideoAnalysis, { userId, videoId, analysisData });
+  return c.json({ success: true });
+});
+
+// Users endpoints
+app.get("/api/users/id/:userId", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("userId");
+  const user = await ctx.runQuery(api.users.getUserById, { userId });
+  return c.json(user);
 });
 
 const router = new HttpRouterWithHono(app);

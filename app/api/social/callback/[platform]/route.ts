@@ -169,9 +169,10 @@ export async function GET(
       userId,
       platform,
       accessToken: tokenData.access_token,
-      refreshToken: tokenData.refresh_token || '',
+      refreshToken: tokenData.refresh_token || undefined,
       expiresAt: tokenData.expires_in ? Date.now() + tokenData.expires_in * 1000 : Date.now() + 3600 * 1000,
-      scope: tokenData.scope || ''
+      tokenType: tokenData.token_type || 'Bearer',
+      scope: tokenData.scope ? tokenData.scope.split(' ') : []
     });
 
     // Save social account in Convex (skip for YouTube as it's handled by storeYouTubeData)
