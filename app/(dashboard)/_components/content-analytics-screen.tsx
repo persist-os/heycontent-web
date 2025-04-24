@@ -17,9 +17,18 @@ import {
   Users,
   Clock,
   Share2,
-  ExternalLink
+  ExternalLink,
+  Loader2
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { getAuth, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { FirebaseApp } from 'firebase/app';
+import { app } from '@/app/lib/firebase';
+
+// Define the type for the imported app variable
+const typedApp: FirebaseApp | undefined = app;
 
 interface ContentItem {
   id: string;
@@ -67,8 +76,25 @@ export function ContentAnalyticsScreen() {
   const [filterType, setFilterType] = useState('all')
   const [selectedContent, setSelectedContent] = useState<ContentItem | null>(null)
   const router = useRouter()
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
-  // Add click outside handler
+  // Add Firebase auth listener
+  useEffect(() => {
+    // Check if app is initialized before using it
+    if (typedApp) {
+      const auth = getAuth(typedApp);
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setFirebaseUser(user);
+        setAuthLoading(false);
+      });
+      return () => unsubscribe();
+    } else {
+      console.error("Firebase app not initialized.");
+      setAuthLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (filterRef && !filterRef.contains(event.target as Node)) {
@@ -82,29 +108,15 @@ export function ContentAnalyticsScreen() {
     }
   }, [filterRef])
 
-  // Mock data - Replace with actual API call
-  const contentItems: ContentItem[] = [
-    {
-      id: '1',
-      platform: 'instagram',
-      type: 'post',
-      content: {
-        text: 'Check out these React performance tips! 🚀',
-        mediaUrl: '/mock-content-1.jpg'
-      },
-      metrics: {
-        views: 1500,
-        engagement: 8.5,
-        likes: 245,
-        comments: 32,
-        shares: 15
-      },
-      performance: {
-        trend: 'up',
-        percentageChange: 15
-      },
-      publishedAt: '2024-03-20T10:00:00Z'
-    },
+  // Fetch data from Convex - Use firebaseUser.uid
+  const youtubeVideos = useQuery(
+    api.youtubeQueries.listUserYouTubeVideos,
+    !authLoading && firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
+  );
+
+  const allContentItems: ContentItem[] | undefined | null = youtubeVideos as ContentItem[] | undefined | null;
+
+  const mockGmailItems: ContentItem[] = [
     {
       id: '2',
       platform: 'gmail',
@@ -116,7 +128,7 @@ export function ContentAnalyticsScreen() {
         emailType: 'newsletter'
       },
       metrics: {
-        views: 1800,
+        views: 1800, // Represents opens for emails
         engagement: 12.5,
         openRate: 72,
         clickRate: 15,
@@ -143,8 +155,8 @@ export function ContentAnalyticsScreen() {
         }
       },
       metrics: {
-        views: 1,
-        engagement: 100,
+        views: 1, // Opened once
+        engagement: 100, // Placeholder
         openRate: 100,
         replies: 3,
         responseTime: 2.5,
@@ -157,6 +169,8 @@ export function ContentAnalyticsScreen() {
       publishedAt: '2024-03-18T10:00:00Z'
     }
   ]
+
+  const combinedContent = [...(allContentItems || []), ...mockGmailItems]; // Combine fetched YT with mock Gmail
 
   const discussContent = (item: ContentItem) => {
     const context = {
@@ -268,7 +282,9 @@ export function ContentAnalyticsScreen() {
     )
   }
 
-  const sortAndFilterContent = (items: ContentItem[]) => {
+  const sortAndFilterContent = (items: ContentItem[] | undefined | null) => {
+    if (!items) return []; // Handle null or undefined input
+
     // First apply type filter
     let filtered = items
     if (filterType !== 'all') {
@@ -289,16 +305,48 @@ export function ContentAnalyticsScreen() {
     return [...filtered].sort((a, b) => {
       switch (sortBy) {
         case 'date':
-          return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+          // Ensure publishedAt is valid before comparing
+          const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+          const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+          return dateB - dateA;
         case 'engagement':
-          return b.metrics.engagement - a.metrics.engagement
+          return (b.metrics.engagement || 0) - (a.metrics.engagement || 0);
         case 'performance':
-          return b.performance.percentageChange - a.performance.percentageChange
+          // Performance data might be missing or placeholder
+          return (b.performance?.percentageChange || 0) - (a.performance?.percentageChange || 0);
         default:
           return 0
       }
     })
   }
+
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin" />
+        <span className="ml-2">Authenticating...</span>
+      </div>
+    );
+  }
+
+  if (!firebaseUser) {
+     return (
+      <div className="flex items-center justify-center h-screen">
+        <span>Please log in to view content analytics.</span>
+      </div>
+    );
+  }
+
+  if (youtubeVideos === undefined) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin" />
+        <span className="ml-2">Loading content...</span>
+      </div>
+    );
+  }
+
+  const displayItems = sortAndFilterContent(combinedContent); // Use combined data
 
   return (
     <div className="relative">
@@ -341,7 +389,7 @@ export function ContentAnalyticsScreen() {
 
               {/* Filter Dropdown */}
               {isFilterOpen && (
-                <div className="absolute right-6 top-[4.5rem] w-72 bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-lg shadow-lg p-4 space-y-4 z-50">
+                 <div className="absolute right-6 top-[4.5rem] w-72 bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-lg shadow-lg p-4 space-y-4 z-50">
                   {/* Time Range - Only visible on mobile */}
                   <div className="space-y-2 sm:hidden">
                     <h3 className="font-medium text-sm text-text-dark dark:text-white">Time Range</h3>
@@ -481,10 +529,10 @@ export function ContentAnalyticsScreen() {
         </div>
       </div>
 
-      {/* Content */}
+      {/* Content */} 
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
-          {/* Platform Tabs */}
+          {/* Platform Tabs */} 
           <Tabs defaultValue="all" className="w-full" onValueChange={setSelectedPlatform}>
             <TabsList className="mb-6">
               <TabsTrigger value="all">All Platforms</TabsTrigger>
@@ -494,9 +542,9 @@ export function ContentAnalyticsScreen() {
               <TabsTrigger value="tiktok">TikTok</TabsTrigger>
             </TabsList>
 
-            {/* Email Type Filter - Only show when Gmail is selected */}
-            {selectedPlatform === 'gmail' && (
-              <div className="mb-6 flex gap-2">
+            {/* Email Type Filter - Only show when Gmail is selected */} 
+             {selectedPlatform === 'gmail' && (
+              <div className="mb-6 flex gap-2 flex-wrap">
                 <button
                   onClick={() => setSelectedEmailType('all')}
                   className={`px-3 py-1.5 rounded-full text-sm ${
@@ -540,15 +588,15 @@ export function ContentAnalyticsScreen() {
               </div>
             )}
 
-            {/* Content Grid */}
+            {/* Content Grid */} 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sortAndFilterContent(contentItems)
-                .map((item) => (
+              {displayItems.length > 0 ? (
+                displayItems.map((item) => (
                   <Card key={item.id} className="overflow-hidden">
                     {/* Content Preview */}
                     <div className="relative aspect-video bg-gray-100 dark:bg-gray-800">
                       {item.platform === 'gmail' ? (
-                        <div className="absolute inset-0 flex items-center justify-center p-6">
+                        <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
                           <div className="w-full">
                             <h3 className="font-medium text-lg mb-2 line-clamp-2">{item.content.subject}</h3>
                             {item.content.emailType === 'partnership' && (
@@ -567,29 +615,35 @@ export function ContentAnalyticsScreen() {
                             )}
                           </div>
                         </div>
-                      ) : item.content.mediaUrl && (
+                      // Use thumbnail for YouTube, mediaUrl for others (adjust if needed)
+                      ) : (item.content.thumbnail || item.content.mediaUrl) && (
                         <img 
-                          src={item.content.mediaUrl} 
-                          alt=""
+                          src={item.content.thumbnail || item.content.mediaUrl}
+                          alt="Content thumbnail" // Add alt text
                           className="w-full h-full object-cover"
+                          onError={(e) => { e.currentTarget.src = '/placeholder-image.svg'; }} // Add basic fallback
                         />
                       )}
-                      <div className="absolute top-2 left-2">
+                      {/* Platform Icon - Ensure it's visible */} 
+                      <div className="absolute top-2 left-2 p-1 bg-black/30 rounded-full text-white">
                         {getPlatformIcon(item.platform)}
                       </div>
                     </div>
 
                     {/* Content Info */}
-                    <div className="p-4">
+                     <div className="p-4">
                       <div className="flex items-start justify-between mb-4">
                         <div>
                           <p className="font-medium dark:text-white line-clamp-2">
+                            {/* Display subject for email, text for others */}
                             {item.platform === 'gmail' ? item.content.subject : item.content.text}
                           </p>
                           <p className="text-sm text-text-gray dark:text-gray-400">
-                            {new Date(item.publishedAt).toLocaleDateString()}
+                             {/* Format date nicely */}
+                            {item.publishedAt ? new Date(item.publishedAt).toLocaleDateString() : 'Date unknown'}
                           </p>
                         </div>
+                        {/* Performance Trend - simplified for now */} 
                         <div className={`flex items-center gap-1 text-sm ${
                           item.performance.trend === 'up' 
                             ? 'text-green-500' 
@@ -597,17 +651,19 @@ export function ContentAnalyticsScreen() {
                             ? 'text-red-500'
                             : 'text-gray-500'
                         }`}>
-                          <TrendingUp className="w-4 h-4" />
-                          {item.performance.percentageChange}%
+                           {item.performance.trend !== 'stable' && (
+                             <TrendingUp className={`w-4 h-4 ${item.performance.trend === 'down' ? 'transform rotate-180' : ''}`} />
+                           )}
+                          {item.performance.percentageChange !== 0 ? `${item.performance.percentageChange}%` : '-'}
                         </div>
                       </div>
 
-                      {/* Metrics */}
+                      {/* Metrics */} 
                       <div className="grid grid-cols-3 gap-4 mb-4">
                         {getMetricsDisplay(item)}
                       </div>
 
-                      {/* Action Buttons */}
+                      {/* Action Buttons */} 
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => discussContent(item)}
@@ -626,21 +682,28 @@ export function ContentAnalyticsScreen() {
                       </div>
                     </div>
                   </Card>
-                ))}
+                ))
+              ) : (
+                // Show message when no content matches filters
+                <div className="col-span-full text-center py-10 text-text-gray dark:text-gray-400">
+                  No content found matching your criteria.
+                </div>
+              )}
             </div>
           </Tabs>
         </div>
       </div>
 
-      {/* Detailed Analytics Modal */}
+      {/* Detailed Analytics Modal */} 
       {selectedContent && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-900 rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b dark:border-gray-800 flex items-center justify-between">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */} 
+            <div className="px-6 py-4 border-b dark:border-gray-800 flex items-center justify-between flex-shrink-0">
               <div>
                 <h2 className="text-lg font-medium text-black dark:text-white">Detailed Analytics</h2>
                 <p className="text-sm text-text-gray dark:text-gray-400">
+                  {/* Capitalize platform and type */}
                   {selectedContent.platform.charAt(0).toUpperCase() + selectedContent.platform.slice(1)} • {selectedContent.type.charAt(0).toUpperCase() + selectedContent.type.slice(1)}
                 </p>
               </div>
@@ -653,39 +716,55 @@ export function ContentAnalyticsScreen() {
               </button>
             </div>
 
-            {/* Modal Content */}
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+            {/* Modal Content */} 
+            <div className="p-6 overflow-y-auto flex-grow">
               <div className="space-y-6">
-                {/* Content Preview */}
+                {/* Content Preview */} 
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                   <div className="flex items-start gap-4">
-                    {selectedContent.content.mediaUrl && (
+                    {/* Use thumbnail for YT, mediaUrl for others */} 
+                    {(selectedContent.content.thumbnail || selectedContent.content.mediaUrl) && (
                       <img 
-                        src={selectedContent.content.mediaUrl} 
-                        alt="" 
-                        className="w-24 h-24 object-cover rounded-lg"
+                        src={selectedContent.content.thumbnail || selectedContent.content.mediaUrl}
+                        alt="Content thumbnail" 
+                        className="w-24 h-24 object-cover rounded-lg flex-shrink-0"
+                        onError={(e) => { e.currentTarget.src = '/placeholder-image.svg'; }} // Add basic fallback
                       />
                     )}
                     <div>
                       <h3 className="font-medium text-black dark:text-white mb-2">
+                        {/* Subject for email, text otherwise */} 
                         {selectedContent.platform === 'gmail' 
                           ? selectedContent.content.subject 
                           : selectedContent.content.text}
                       </h3>
                       <p className="text-sm text-text-gray dark:text-gray-400">
-                        Published {new Date(selectedContent.publishedAt).toLocaleDateString()} • {
+                        {/* Nicer date and type display */} 
+                        Published {selectedContent.publishedAt ? new Date(selectedContent.publishedAt).toLocaleDateString() : 'Date unknown'} • {
                           selectedContent.content.emailType 
                             ? `${selectedContent.content.emailType.charAt(0).toUpperCase() + selectedContent.content.emailType.slice(1)} Email`
-                            : 'Content Post'
+                            : `${selectedContent.type.charAt(0).toUpperCase() + selectedContent.type.slice(1)}`
                         }
                       </p>
+                       {/* Add link to original content if possible */} 
+                       {selectedContent.platform === 'youtube' && (
+                         <a 
+                           href={`https://www.youtube.com/watch?v=${selectedContent.id}`}
+                           target="_blank" 
+                           rel="noopener noreferrer"
+                           className="text-sm text-heycontent-purple hover:underline inline-flex items-center gap-1 mt-1"
+                         >
+                           View on YouTube <ExternalLink className="w-3 h-3" />
+                         </a>
+                       )}
+                       {/* TODO: Add links for other platforms */} 
                     </div>
                   </div>
                 </div>
 
-                {/* Performance Metrics */}
+                {/* Performance Metrics - General */} 
                 <div>
-                  <h3 className="text-base font-medium mb-4 text-black dark:text-white">Performance Metrics</h3>
+                  <h3 className="text-base font-medium mb-4 text-black dark:text-white">Performance Overview</h3>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <Card className="p-4">
                       <div className="flex items-center gap-3">
@@ -693,8 +772,10 @@ export function ContentAnalyticsScreen() {
                           <Users className="w-5 h-5" />
                         </div>
                         <div>
-                          <p className="text-sm text-text-gray dark:text-gray-400">Views</p>
-                          <p className="text-lg font-medium">{selectedContent.metrics.views.toLocaleString()}</p>
+                          <p className="text-sm text-text-gray dark:text-gray-400">
+                            {selectedContent.platform === 'gmail' ? 'Opens' : 'Views'}
+                          </p>
+                          <p className="text-lg font-medium">{selectedContent.metrics.views?.toLocaleString() || 'N/A'}</p>
                         </div>
                       </div>
                     </Card>
@@ -705,89 +786,132 @@ export function ContentAnalyticsScreen() {
                         </div>
                         <div>
                           <p className="text-sm text-text-gray dark:text-gray-400">Engagement</p>
-                          <p className="text-lg font-medium">{selectedContent.metrics.engagement}%</p>
+                           {/* Show N/A for email engagement? */} 
+                          <p className="text-lg font-medium">{selectedContent.metrics.engagement?.toFixed(1) || 'N/A'}%</p>
                         </div>
                       </div>
                     </Card>
                     <Card className="p-4">
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-heycontent-light-yellow rounded-lg">
-                          <Share2 className="w-5 h-5" />
+                          <MessageSquare className="w-5 h-5" /> 
                         </div>
                         <div>
-                          <p className="text-sm text-text-gray dark:text-gray-400">Shares</p>
-                          <p className="text-lg font-medium">{selectedContent.metrics.shares || 0}</p>
+                          <p className="text-sm text-text-gray dark:text-gray-400">
+                            {selectedContent.platform === 'gmail' ? 'Replies' : 'Comments'}
+                          </p>
+                          <p className="text-lg font-medium">{selectedContent.metrics.comments?.toLocaleString() || selectedContent.metrics.replies?.toLocaleString() || 'N/A'}</p>
                         </div>
                       </div>
                     </Card>
                     <Card className="p-4">
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-heycontent-light-yellow rounded-lg">
-                          <Clock className="w-5 h-5" />
+                           {/* Use Clock for email response time, Shares for others? */}
+                          {selectedContent.platform === 'gmail' && selectedContent.metrics.responseTime ? <Clock className="w-5 h-5" /> : <Share2 className="w-5 h-5" />}
                         </div>
                         <div>
-                          <p className="text-sm text-text-gray dark:text-gray-400">Avg. Time</p>
-                          <p className="text-lg font-medium">2.5m</p>
+                           <p className="text-sm text-text-gray dark:text-gray-400">
+                            {selectedContent.platform === 'gmail' ? 
+                              (selectedContent.metrics.responseTime ? 'Avg. Response' : 'Shares') // Fallback if no responseTime
+                              : 'Shares'}
+                           </p>
+                           <p className="text-lg font-medium">
+                             {selectedContent.platform === 'gmail' && selectedContent.metrics.responseTime ? `${selectedContent.metrics.responseTime}h` : (selectedContent.metrics.shares?.toLocaleString() || 'N/A')}
+                           </p>
                         </div>
                       </div>
                     </Card>
                   </div>
                 </div>
 
-                {/* Platform-specific Metrics */}
+                {/* Platform-specific Metrics */} 
                 {selectedContent.platform === 'gmail' ? (
                   <div>
                     <h3 className="text-base font-medium mb-4 text-black dark:text-white">Email Metrics</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <Card className="p-4">
-                        <h4 className="text-sm font-medium mb-3">Open Rate Over Time</h4>
-                        <div className="h-40 bg-gray-50 dark:bg-gray-800 rounded-lg flex items-center justify-center">
-                          <p className="text-sm text-text-gray">Chart placeholder</p>
+                         <h4 className="text-sm font-medium mb-1">Open Rate</h4>
+                         <p className="text-2xl font-semibold mb-3">{selectedContent.metrics.openRate?.toFixed(1) || 'N/A'}%</p>
+                         {/* Placeholder for graph */}
+                        <div className="h-32 bg-gray-50 dark:bg-gray-800 rounded-lg flex items-center justify-center">
+                          <p className="text-xs text-text-gray">Open Rate Over Time (Chart)</p>
                         </div>
                       </Card>
                       <Card className="p-4">
-                        <h4 className="text-sm font-medium mb-3">Click Distribution</h4>
-                        <div className="h-40 bg-gray-50 dark:bg-gray-800 rounded-lg flex items-center justify-center">
-                          <p className="text-sm text-text-gray">Chart placeholder</p>
+                         <h4 className="text-sm font-medium mb-1">Click Rate</h4>
+                         <p className="text-2xl font-semibold mb-3">{selectedContent.metrics.clickRate?.toFixed(1) || 'N/A'}%</p>
+                         {/* Placeholder for graph */}
+                        <div className="h-32 bg-gray-50 dark:bg-gray-800 rounded-lg flex items-center justify-center">
+                          <p className="text-xs text-text-gray">Click Distribution (Chart)</p>
                         </div>
                       </Card>
+                      {/* Add Deal Value / Thread Info if relevant */} 
+                       {selectedContent.content.emailType === 'partnership' && selectedContent.metrics.dealValue && (
+                        <Card className="p-4 sm:col-span-2">
+                           <h4 className="text-sm font-medium mb-1">Deal Value</h4>
+                           <p className="text-2xl font-semibold">${selectedContent.metrics.dealValue.toLocaleString()}</p>
+                           <p className="text-xs text-text-gray">Associated with partner: {selectedContent.content.partnerName}</p>
+                         </Card>
+                       )}
+                       {selectedContent.content.thread && (
+                        <Card className="p-4 sm:col-span-2">
+                           <h4 className="text-sm font-medium mb-1">Conversation Thread</h4>
+                           <p className="text-lg font-medium">{selectedContent.content.thread.messageCount} Messages</p>
+                           <p className="text-xs text-text-gray">Last Reply: {new Date(selectedContent.content.thread.lastReplyDate).toLocaleString()}</p>
+                         </Card>
+                       )}
                     </div>
                   </div>
-                ) : (
+                ) : ( // YouTube / Instagram / TikTok specific metrics
                   <div>
-                    <h3 className="text-base font-medium mb-4 text-black dark:text-white">Engagement Breakdown</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                     <h3 className="text-base font-medium mb-4 text-black dark:text-white">{selectedContent.platform.charAt(0).toUpperCase() + selectedContent.platform.slice(1)} Metrics</h3>
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <Card className="p-4">
-                        <h4 className="text-sm font-medium mb-3">Engagement by Time</h4>
-                        <div className="h-40 bg-gray-50 dark:bg-gray-800 rounded-lg flex items-center justify-center">
-                          <p className="text-sm text-text-gray">Chart placeholder</p>
+                         <h4 className="text-sm font-medium mb-1">Likes</h4>
+                         <p className="text-2xl font-semibold mb-3">{selectedContent.metrics.likes?.toLocaleString() || 'N/A'}</p>
+                         {/* Placeholder for graph */}
+                        <div className="h-32 bg-gray-50 dark:bg-gray-800 rounded-lg flex items-center justify-center">
+                          <p className="text-xs text-text-gray">Likes Over Time (Chart)</p>
                         </div>
                       </Card>
                       <Card className="p-4">
-                        <h4 className="text-sm font-medium mb-3">Audience Demographics</h4>
-                        <div className="h-40 bg-gray-50 dark:bg-gray-800 rounded-lg flex items-center justify-center">
-                          <p className="text-sm text-text-gray">Chart placeholder</p>
+                         <h4 className="text-sm font-medium mb-1">Audience Retention</h4>
+                         <p className="text-2xl font-semibold mb-3">N/A</p> {/* Placeholder */} 
+                         {/* Placeholder for graph */}
+                        <div className="h-32 bg-gray-50 dark:bg-gray-800 rounded-lg flex items-center justify-center">
+                          <p className="text-xs text-text-gray">Retention Graph (Chart)</p>
                         </div>
                       </Card>
+                       {/* Add more platform-specific cards as needed */}
                     </div>
                   </div>
                 )}
-
-                {/* Actions */}
-                <div className="flex items-center justify-end gap-3 pt-4 border-t dark:border-gray-800">
-                  <button
-                    onClick={() => discussContent(selectedContent)}
-                    className="flex items-center gap-2 px-4 py-2 text-sm bg-heycontent-light-yellow text-black rounded-lg hover:bg-heycontent-yellow/90"
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                    Discuss with Content
-                  </button>
-                  <button className="flex items-center gap-2 px-4 py-2 text-sm bg-heycontent-yellow text-black rounded-lg hover:bg-heycontent-yellow/90">
-                    <ExternalLink className="w-4 h-4" />
-                    View on Platform
-                  </button>
-                </div>
               </div>
+            </div>
+            
+            {/* Modal Footer Actions */} 
+            <div className="px-6 py-4 border-t dark:border-gray-800 flex items-center justify-end gap-3 flex-shrink-0">
+              <button
+                onClick={() => discussContent(selectedContent)}
+                className="flex items-center gap-2 px-4 py-2 text-sm bg-heycontent-light-yellow text-black rounded-lg hover:bg-heycontent-yellow/90"
+              >
+                <MessageSquare className="w-4 h-4" />
+                Discuss with Content
+              </button>
+              {/* Conditionally render View on Platform button */} 
+              {selectedContent.platform === 'youtube' && (
+                <a 
+                  href={`https://www.youtube.com/watch?v=${selectedContent.id}`}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2 text-sm bg-heycontent-yellow text-black rounded-lg hover:bg-heycontent-yellow/90"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  View on YouTube
+                </a>
+              )}
+               {/* TODO: Add links for other platforms */}
             </div>
           </div>
         </div>

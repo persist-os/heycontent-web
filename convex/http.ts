@@ -194,15 +194,8 @@ app.get("/api/users/:id/youtube/analysis/videos", async (c) => {
     const videoData = await ctx.runQuery(api.youtubeQueries.getVideoData, { userId, videoId });
     return c.json(videoData);
   } else {
-    // TODO: Implement fetching *all* video data for a user.
-    // The previous api.query.getAllYouTubeData call does not exist.
-    // You might need a new query in youtubeQueries.ts or adjust this logic.
-    // For now, returning an empty array.
-    // const youtubeData = await ctx.runQuery(api.query.getAllYouTubeData);
-    // const userVideos = youtubeData.filter((data: any) => 
-    //   data.userId === userId && data.resourceType === "video"
-    // );
-    const userVideos: any[] = []; 
+    // Fetch all video data for the user
+    const userVideos = await ctx.runQuery(api.youtubeQueries.listUserYouTubeVideos, { userId });
     return c.json(userVideos);
   }
 });
