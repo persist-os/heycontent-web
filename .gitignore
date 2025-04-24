@@ -57,3 +57,7 @@ logs
 # Cache
 .cache
 .temp
+
+# Gmail API Integration files to ignore
+GMAIL_API_INTEGRATION_CHECKLIST.md
+__tests__/gmail/

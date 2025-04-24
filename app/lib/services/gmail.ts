@@ -224,7 +224,7 @@ export class GmailService {
 
       // Get full message details and analyze them
       const messages = await Promise.all(
-        messageList.data.messages.map(async (message) => {
+        messageList.data.messages.map(async (message: gmail_v1.Schema$Message) => {
           const fullMessage = await this.gmail.users.messages.get({
             auth,
             userId: 'me',
@@ -243,10 +243,10 @@ export class GmailService {
           }
 
           const headers = fullMessage.data.payload?.headers;
-          const subject = headers?.find(h => h.name === 'Subject')?.value || '';
-          const from = headers?.find(h => h.name === 'From')?.value || '';
-          const to = headers?.find(h => h.name === 'To')?.value?.split(',') || [];
-          const date = headers?.find(h => h.name === 'Date')?.value || '';
+          const subject = headers?.find((h: Schema$MessagePartHeader) => h.name === 'Subject')?.value || '';
+          const from = headers?.find((h: Schema$MessagePartHeader) => h.name === 'From')?.value || '';
+          const to = headers?.find((h: Schema$MessagePartHeader) => h.name === 'To')?.value?.split(',') || [];
+          const date = headers?.find((h: Schema$MessagePartHeader) => h.name === 'Date')?.value || '';
           const body = this.getMessageBody(fullMessage.data);
 
           // Analyze partnership details using AI with thread context
@@ -300,6 +300,9 @@ export class GmailService {
           return email;
         })
       );
+
+      // Add logging to inspect analysis objects before sorting
+      console.log('Messages before sorting:', JSON.stringify(messages.map(m => m.analysis), null, 2));
 
       // Sort by priority and deal value
       return messages.sort((a, b) => {
@@ -609,4 +612,4 @@ Body: ${this.getMessageBody(m)}
       throw error;
     }
   }
-} 
+}

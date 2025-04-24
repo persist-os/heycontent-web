@@ -16,6 +16,7 @@ import type {
 import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
 import type * as gmail from "../gmail.js";
+import type * as gmailTokens from "../gmailTokens.js";
 import type * as internal_ from "../internal.js";
 import type * as notes from "../notes.js";
 import type * as personas from "../personas.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   chat: typeof chat;
   gmail: typeof gmail;
+  gmailTokens: typeof gmailTokens;
   internal: typeof internal_;
   notes: typeof notes;
   personas: typeof personas;
