@@ -234,10 +234,72 @@ const ChatScreen = ({ chatId }: ChatScreenProps) => {
 
       console.log('Sending chat message:', requestBody);
 
+      // Get API key from localStorage
+      let apiKey = null;
+      let userId = null;
+      
+      try {
+        // Try to get API key from localStorage
+        const storedApiKey = localStorage.getItem('apiKey');
+        if (storedApiKey) {
+          apiKey = JSON.parse(storedApiKey);
+          console.log('Retrieved API key from localStorage');
+        } else {
+          console.warn('No API key found in localStorage, will try to use Firebase user');
+        }
+        
+        // If no API key, get the Firebase user ID directly
+        if (!apiKey && auth && auth.currentUser) {
+          userId = auth.currentUser.uid;
+          console.log('Using Firebase user ID instead:', userId);
+          
+          // Generate a temporary API key format for the request
+          apiKey = `heycontent_${userId}_temporary`;
+          
+          // Also save the Firebase ID token to localStorage for future use
+          const idToken = await auth.currentUser.getIdToken(true);
+          console.log('Got new Firebase ID token, sending to backend to create API key...');
+          
+          // Request an API key in the background
+          fetch('/api/auth/firebase', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              idToken,
+              action: 'refresh'
+            }),
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.apiKey) {
+              localStorage.setItem('apiKey', JSON.stringify(data.apiKey));
+              console.log('API key received and saved to localStorage for future requests');
+            }
+          })
+          .catch(err => {
+            console.error('Failed to get API key from backend:', err);
+          });
+        }
+      } catch (error) {
+        console.error('Error setting up authentication:', error);
+      }
+
+      if (!apiKey && !userId) {
+        throw new Error('You are not authenticated. Please log in again.');
+      }
+
+      // If we're using Firebase user ID directly, we need to add it to the request
+      if (userId && !requestBody.user_id) {
+        requestBody.user_id = userId;
+      }
+      
       const response = await fetch('/api/chat/message', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify(requestBody)
       });
@@ -393,6 +455,7 @@ const ChatScreen = ({ chatId }: ChatScreenProps) => {
 
     try {
       setLoading(true);
+      
       const response = await fetch(`/api/chat/conversation/${id}`);
 
       if (!response.ok) {

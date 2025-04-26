@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 
 const BACKEND_URL = 'https://backend.hicontent.co';
 
@@ -14,37 +13,59 @@ export async function POST(request: Request) {
   });
 
   try {
-    const token = cookies().get('firebase-auth-token')?.value;
-    if (!token) {
-      console.warn(`[${requestId}] Authentication failed: No token found`);
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Get API key from Authorization header
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.warn(`[${requestId}] Authentication failed: No Authorization header or invalid format`);
+      return NextResponse.json({ error: 'Unauthorized - Missing or invalid Authorization header' }, { status: 401 });
+    }
+    
+    // Extract the API key from the Authorization header
+    const apiKey = authHeader.substring(7); // Remove 'Bearer ' prefix
+    if (!apiKey) {
+      console.warn(`[${requestId}] Authentication failed: No API key found`);
+      return NextResponse.json({ error: 'Unauthorized - Missing API key' }, { status: 401 });
     }
 
     const body = await request.json();
-    const { query, is_first_message, session_id } = body;
+    const { query, is_first_message, session_id, user_id: requestUserId } = body;
 
     if (!query) {
       console.warn(`[${requestId}] Invalid request: Missing query`);
       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
     }
 
+    // User ID can come from either the API key or the request body
+    let user_id = requestUserId; // First try to use the user_id from the request body
+    
+    // If not provided in the request, extract from API key
+    if (!user_id) {
+      const apiKeyParts = apiKey.split('_');
+      if (apiKeyParts.length >= 2) {
+        user_id = apiKeyParts[1];
+      }
+    }
+    
+    if (!user_id) {
+      console.warn(`[${requestId}] Authentication failed: Could not determine user_id`);
+      return NextResponse.json({ error: 'Unauthorized - Invalid API key format or missing user_id' }, { status: 401 });
+    }
+    
     // Log the request details
     console.info(`[${requestId}] Processing chat message`, {
       session_id: session_id || 'null',
       is_first_message: !!is_first_message,
       query_length: query?.length,
-      has_token: !!token
+      has_api_key: !!apiKey,
+      user_id: user_id
     });
-
-    // Extract user_id from token (first part before the first dot)
-    const user_id = token.split('.')[0];
 
     const response = await fetch(`${BACKEND_URL}/api/v1/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
         user_id,
