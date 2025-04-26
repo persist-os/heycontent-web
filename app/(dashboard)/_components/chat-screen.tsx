@@ -224,29 +224,49 @@ const ChatScreen = ({ chatId }: ChatScreenProps) => {
 
   // Load conversation by ID
   const handleLoadConversation = useCallback(async (id: string) => {
-    if (!user) return;
-
-    try {
-      setLoading(true);
-      
-      const data = await loadConversation(id);
-
-      if (data.conversation) {
-        setMessages(data.conversation.messages);
-        // Use the conversation ID as the session ID for continuing the conversation
-        setSessionId(data.conversation.id);
-        setConversationSaved(true); // Mark as saved since it's loaded from history
-        console.log('Loaded conversation:', data.conversation.id);
+  if (!user) return;
+  try {
+    setLoading(true);
+    const data = await loadConversation(id);
+    if (data.conversation) {
+      setMessages(data.conversation.messages);
+      setSessionId(data.conversation.id);
+      setConversationSaved(true);
+      console.log('Loaded conversation:', data.conversation.id);
+    }
+  } catch (error: any) {
+    // Check if error is a 404 (conversation not found)
+    if (error.message && error.message.includes('404')) {
+      console.warn('Conversation not found, creating a new one...');
+      try {
+        // Create a new conversation with the given id as sessionId
+        const conversationId = await saveConversation([], 'New Conversation', id);
+        if (conversationId) {
+          // Try loading the newly created conversation
+          const data = await loadConversation(conversationId);
+          if (data.conversation) {
+            setMessages(data.conversation.messages);
+            setSessionId(data.conversation.id);
+            setConversationSaved(true);
+            console.log('Created and loaded new conversation:', data.conversation.id);
+            setError(null);
+            return;
+          }
+        }
+      } catch (createError) {
+        console.error('Failed to create new conversation:', createError);
+        setError('Failed to create a new conversation.');
       }
-    } catch (error) {
+    } else {
       console.error('Failed to load conversation:', error);
       setError('Failed to load conversation. Starting a new chat.');
-      // Start a new session if loading fails
-      setSessionId(Date.now().toString());
-    } finally {
-      setLoading(false);
     }
-  }, [user]);
+    // Start a new session if loading fails for any reason
+    setSessionId(Date.now().toString());
+  } finally {
+    setLoading(false);
+  }
+}, [user]);
 
   useEffect(() => {
     if (!auth) {
