@@ -7,71 +7,20 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import { MessageBubble } from './chat/message-bubble'
 import { ChatInput } from './chat/chat-input'
-import { MessageSquare, Brain, Zap, Target, RefreshCw, Plus, FileText } from 'lucide-react'
+import { MessageSquare, RefreshCw, Plus } from 'lucide-react'
 import { useSidebar } from '@/app/context/sidebar-context'
 
-// Interface for the chat response from the API
-interface ChatResponseData {
-  chat_response: string;
-  suggestions?: string[];
-  session_id: string;
-  metadata?: {
-    request_id: string;
-    processing_time_ms: number;
-  };
-}
-
-interface ChatScreenProps {
-  chatId?: string | null;
-}
-
-interface SuggestedAction {
-  type: 'explore' | 'clarify' | 'action' | 'strategic';
-  description: string;
-  context?: string;
-  confidence: number;
-}
-
-interface AmbientInsight {
-  type: string;
-  title: string;
-  description: string;
-  icon: React.ComponentType;
-  action: string;
-}
-
-const InsightIcon = ({ icon: Icon, type }: { icon: React.ComponentType<{ className?: string }>, type: string }) => {
-  // Map type to color like in the nav
-  let colorClass = "text-blue-500"; // Default blue for notes type
-  
-  if (type === "content") {
-    colorClass = "text-purple-500"; // AI Insights - purple
-  } else if (type === "platform") {
-    colorClass = "text-green-500"; // Audience DNA - green
-  } else if (type === "strategy") {
-    colorClass = "text-orange-500"; // Partnerships - orange
-  } else if (type === "notes") {
-    colorClass = "text-blue-500"; // Smart Notes - blue
-  }
-  
-  return <Icon className={`w-5 h-5 ${colorClass}`} />;
-};
-
-const SuggestionChip = ({ suggestion, onClick }: { 
-  suggestion: SuggestedAction, 
-  onClick: () => void 
-}) => (
-  <button
-    onClick={onClick}
-    className="px-3 py-1.5 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full flex items-center gap-2 transition-colors"
-  >
-    {suggestion.type === 'explore' && <Brain className="w-4 h-4" />}
-    {suggestion.type === 'clarify' && <MessageSquare className="w-4 h-4" />}
-    {suggestion.type === 'action' && <Zap className="w-4 h-4" />}
-    {suggestion.type === 'strategic' && <Target className="w-4 h-4" />}
-    {suggestion.description}
-  </button>
-);
+// Import newly extracted types, components and utilities
+import { ChatResponseData, ChatScreenProps, SuggestedAction, AmbientInsight } from './chat/types'
+import { SuggestionChip } from './chat/components/SuggestionChip'
+import { AmbientInsights } from './chat/components/AmbientInsights'
+import { ambientInsights } from './chat/data/ambient-insights'
+import { 
+  sendChatMessage, 
+  saveConversation, 
+  loadConversation, 
+  generateLocalSessionId 
+} from './chat/utils/api-utils'
 
 const ChatScreen = ({ chatId }: ChatScreenProps) => {
   const router = useRouter()
@@ -90,80 +39,6 @@ const ChatScreen = ({ chatId }: ChatScreenProps) => {
   const [showAmbient, setShowAmbient] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
-
-  // Mock data for ambient insights - replace with actual API call
-  const [ambientInsights, setAmbientInsights] = useState<AmbientInsight[]>([
-    {
-      type: 'notes',
-      title: "React Performance Patterns",
-      description: "From your notes on React optimization techniques, there's an opportunity to explore advanced performance patterns.",
-      action: "Discuss React performance insights",
-      icon: FileText
-    },
-    {
-      type: 'content',
-      title: 'High-Impact Tutorial Series',
-      description: 'Your audience is showing strong interest in React Native content',
-      icon: MessageSquare,
-      action: 'Analyze content performance'
-    },
-    {
-      type: 'platform',
-      title: 'TikTok Growth Opportunity',
-      description: 'Your tutorial style perfect for TikTok\'s format',
-      icon: Brain,
-      action: 'View platform insights'
-    },
-    {
-      type: 'strategy',
-      title: 'Cross-Platform Partnership',
-      description: 'Potential collaboration opportunity with mobile dev learning platforms',
-      icon: Target,
-      action: 'Explore partnership opportunity'
-    },
-    {
-      type: 'content',
-      title: 'Beginner Developer Focus',
-      description: 'Large audience gap in beginner-friendly content',
-      icon: Zap,
-      action: 'Explore content strategy'
-    },
-    {
-      type: 'content',
-      title: 'Email List Growth Strategy',
-      description: 'High conversion potential from your tutorial viewers',
-      icon: Target,
-      action: 'View growth opportunities'
-    },
-    {
-      type: 'platform',
-      title: 'Instagram Carousel Strategy',
-      description: 'Your technical insights perfect for visual learning',
-      icon: MessageSquare,
-      action: 'Analyze platform performance'
-    },
-    {
-      type: 'content',
-      title: 'Short-Form Code Tips',
-      description: 'Huge potential in quick problem-solving content',
-      icon: Brain,
-      action: 'Explore content ideas'
-    },
-    {
-      type: 'strategy',
-      title: 'Developer Community Partnership',
-      description: 'Opportunity to collaborate with coding bootcamps for content distribution',
-      icon: Target,
-      action: 'Discuss partnership strategy'
-    },
-    {
-      type: 'platform',
-      title: 'Content Strategy',
-      description: 'Optimize your content strategy based on platform trends',
-      icon: Zap,
-      action: 'View strategy recommendations'
-    }
-  ])
   const [ambientLoading, setAmbientLoading] = useState(false)
 
   const scrollToBottom = useCallback(() => {
@@ -206,6 +81,7 @@ const ChatScreen = ({ chatId }: ChatScreenProps) => {
       setIsLoading(true)
       setError(null)
 
+      // Add user message and typing indicator
       setMessages(prev => [
         ...prev,
         newMessage,
@@ -222,94 +98,10 @@ const ChatScreen = ({ chatId }: ChatScreenProps) => {
       // For the first message, don't send a session_id
       const isFirstMessage = messages.length === 0;
 
-      const requestBody: any = {
-        query: content,
-        is_first_message: isFirstMessage
-      };
+      // Send message to the backend
+      const data = await sendChatMessage(content, isFirstMessage, sessionId);
 
-      // Only include session_id for subsequent messages
-      if (!isFirstMessage && sessionId) {
-        requestBody.session_id = sessionId;
-      }
-
-      console.log('Sending chat message:', requestBody);
-
-      // Get API key from localStorage
-      let apiKey = null;
-      let userId = null;
-      
-      try {
-        // Try to get API key from localStorage
-        const storedApiKey = localStorage.getItem('apiKey');
-        if (storedApiKey) {
-          apiKey = JSON.parse(storedApiKey);
-          console.log('Retrieved API key from localStorage');
-        } else {
-          console.warn('No API key found in localStorage, will try to use Firebase user');
-        }
-        
-        // If no API key, get the Firebase user ID directly
-        if (!apiKey && auth && auth.currentUser) {
-          userId = auth.currentUser.uid;
-          console.log('Using Firebase user ID instead:', userId);
-          
-          // Generate a temporary API key format for the request
-          apiKey = `heycontent_${userId}_temporary`;
-          
-          // Also save the Firebase ID token to localStorage for future use
-          const idToken = await auth.currentUser.getIdToken(true);
-          console.log('Got new Firebase ID token, sending to backend to create API key...');
-          
-          // Request an API key in the background
-          fetch('/api/auth/firebase', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              idToken,
-              action: 'refresh'
-            }),
-          })
-          .then(response => response.json())
-          .then(data => {
-            if (data.apiKey) {
-              localStorage.setItem('apiKey', JSON.stringify(data.apiKey));
-              console.log('API key received and saved to localStorage for future requests');
-            }
-          })
-          .catch(err => {
-            console.error('Failed to get API key from backend:', err);
-          });
-        }
-      } catch (error) {
-        console.error('Error setting up authentication:', error);
-      }
-
-      if (!apiKey && !userId) {
-        throw new Error('You are not authenticated. Please log in again.');
-      }
-
-      // If we're using Firebase user ID directly, we need to add it to the request
-      if (userId && !requestBody.user_id) {
-        requestBody.user_id = userId;
-      }
-      
-      const response = await fetch('/api/chat/message', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to send message');
-      }
-
-      const data: ChatResponseData = await response.json();
-
+      // Update messages with the response
       setMessages(prev => {
         const withoutTyping = prev.filter(msg => msg.status !== 'typing');
         return [...withoutTyping, {
@@ -322,11 +114,14 @@ const ChatScreen = ({ chatId }: ChatScreenProps) => {
         }];
       });
 
+      // Handle session ID with a fallback
       if (data.session_id) {
         console.log('Received session ID from API:', data.session_id);
         setSessionId(data.session_id);
       } else {
-        console.warn('No session ID received from API');
+        console.warn('No session ID received from API, generating local one');
+        // If the API doesn't return a session ID, generate one locally
+        setSessionId(generateLocalSessionId());
       }
 
       setReferencedMessage(null)
@@ -398,8 +193,8 @@ const ChatScreen = ({ chatId }: ChatScreenProps) => {
     }
   }, []);
 
-  // Save conversation to Convex
-  const saveConversation = useCallback(async () => {
+  // Save conversation to backend
+  const handleSaveConversation = useCallback(async () => {
     // Only save if we have at least 2 messages (a user message and a response)
     if (messages.length < 2 || conversationSaved) {
       console.log('Skipping save conversation:', {
@@ -410,8 +205,6 @@ const ChatScreen = ({ chatId }: ChatScreenProps) => {
     }
 
     try {
-      console.log('Saving conversation with messages:', messages.length);
-
       // Generate a title from the first user message
       const firstUserMessage = messages.find(msg => msg.role === 'user');
       const title = firstUserMessage ?
@@ -420,49 +213,23 @@ const ChatScreen = ({ chatId }: ChatScreenProps) => {
           firstUserMessage.content) :
         'Chat conversation';
 
-      const response = await fetch('/api/chat/save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages,
-          title,
-          sessionId
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Failed to save conversation - API error:', {
-          status: response.status,
-          error: errorData
-        });
-        throw new Error(`Failed to save conversation: ${response.status}`);
+      const conversationId = await saveConversation(messages, title, sessionId);
+      if (conversationId) {
+        setConversationSaved(true);
       }
-
-      const data = await response.json();
-      console.log('Conversation saved successfully:', data);
-      setConversationSaved(true);
     } catch (error) {
       console.error('Failed to save conversation:', error);
     }
   }, [messages, sessionId, conversationSaved]);
 
   // Load conversation by ID
-  const loadConversation = useCallback(async (id: string) => {
+  const handleLoadConversation = useCallback(async (id: string) => {
     if (!user) return;
 
     try {
       setLoading(true);
       
-      const response = await fetch(`/api/chat/conversation/${id}`);
-
-      if (!response.ok) {
-        throw new Error(`Failed to load conversation: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await loadConversation(id);
 
       if (data.conversation) {
         setMessages(data.conversation.messages);
@@ -543,38 +310,38 @@ const ChatScreen = ({ chatId }: ChatScreenProps) => {
       // Save after a short delay to avoid saving too frequently
       const saveTimeout = setTimeout(() => {
         console.log('Executing scheduled conversation save');
-        saveConversation()
+        handleSaveConversation()
       }, 1000) // 1 second delay
 
       return () => clearTimeout(saveTimeout)
     }
-  }, [messages, saveConversation, conversationSaved])
+  }, [messages, handleSaveConversation, conversationSaved])
 
   // Force save conversation after a certain number of messages
   useEffect(() => {
     // Force save after 4 messages regardless of previous save status
     if (messages.length >= 4) {
       console.log('Force saving conversation due to message count threshold');
-      saveConversation();
+      handleSaveConversation();
     }
-  }, [messages.length, saveConversation])
+  }, [messages.length, handleSaveConversation])
 
   // Save conversation when component unmounts
   useEffect(() => {
     return () => {
       // Save conversation if it hasn't been saved yet
       if (messages.length >= 2 && !conversationSaved) {
-        saveConversation()
+        handleSaveConversation()
       }
     }
-  }, [messages.length, conversationSaved, saveConversation])
+  }, [messages.length, conversationSaved, handleSaveConversation])
 
   // Load conversation when user and chatId are available
   useEffect(() => {
     if (user && chatId && !loading) {
-      loadConversation(chatId)
+      handleLoadConversation(chatId)
     }
-  }, [user, chatId, loading, loadConversation])
+  }, [user, chatId, loading, handleLoadConversation])
 
   if (loading) {
     return <div className="flex items-center justify-center h-full w-full p-4">Loading...</div>
@@ -631,38 +398,12 @@ const ChatScreen = ({ chatId }: ChatScreenProps) => {
         >
           {showAmbient && messages.length === 0 ? (
             <div className="p-6">
-              {ambientLoading ? (
-                <div className="text-center text-gray-500">Loading insights...</div>
-              ) : ambientInsights.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl mx-auto">
-                  {ambientInsights.map((insight, index) => (
-                    <div
-                      key={index}
-                      onClick={() => handleInsightClick(insight.action, insight)}
-                      className="bg-white border border-gray-200 shadow-sm p-4 rounded-xl cursor-pointer 
-                        hover:shadow-md transition-all duration-200 hover:scale-[1.02]"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-lg bg-gray-50">
-                          <InsightIcon icon={insight.icon} type={insight.type} />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-medium text-sm text-gray-900 mb-1">{insight.title}</h3>
-                          <p className="text-sm text-gray-600">{insight.description}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : error ? (
-                <div className="text-center text-red-500">
-                  Failed to load insights. Please try again later.
-                </div>
-              ) : (
-                <div className="text-center text-gray-500">
-                  No insights available at the moment.
-                </div>
-              )}
+              <AmbientInsights 
+                insights={ambientInsights}
+                loading={ambientLoading}
+                error={error}
+                onInsightClick={handleInsightClick}
+              />
             </div>
           ) : (
             <div className="p-6">
