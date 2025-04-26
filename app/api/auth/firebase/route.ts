@@ -6,6 +6,13 @@ import { api } from "@/convex/_generated/api"
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
 
+
+        
+const BACKEND_URL = 'https://backend.hicontent.co';
+        
+const requestId = `auth-key-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+
+
 // Logger utility to standardize logging format
 const logger = {
   info: (message: string, context: Record<string, any> = {}) => {
@@ -88,9 +95,6 @@ export async function POST(request: Request) {
           logger.error('Error with Convex user operation', convexError, { requestId, userId: userRecord.uid });
           // Continue with auth flow even if Convex operation fails
         }
-
-        // The API key will be generated later by the frontend using the ID token
-        // This simplifies our backend code and ensures we're using the proper ID token
 
         const response = NextResponse.json({
           success: true,
@@ -192,8 +196,73 @@ export async function POST(request: Request) {
           // Continue with auth flow even if Convex operation fails
         }
 
-        // The API key will be generated later by the frontend using the ID token
-        // This simplifies our backend code and ensures we're using the proper ID token
+        try {
+          // Get the request body
+          const body = await request.json();
+          const { idToken, action } = body;
+          
+          if (!idToken) {
+            console.warn(`[${requestId}] Missing idToken in request`);
+            return NextResponse.json({ error: 'ID Token is required' }, { status: 400 });
+          }
+          
+          console.log(`[${requestId}] Proxying API key request to backend`);
+          
+          // Forward the request to the actual backend
+          console.log(`[${requestId}] Making API key request to ${BACKEND_URL}/api/v1/api-keys/`);
+          
+          const response = await fetch(`${BACKEND_URL}/api/v1/api-keys/`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({
+              // The v1 API expects userId and doesn't need the action or idToken in the body
+              // The idToken in the Authorization header is enough
+              userId: body.userId
+            }),
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            let errorData;
+            try {
+              errorData = JSON.parse(errorText);
+            } catch (e) {
+              errorData = { message: errorText || 'Unknown error' };
+            }
+            
+            console.error(`[${requestId}] Backend API error:`, {
+              status: response.status,
+              statusText: response.statusText,
+              error: errorData,
+              rawResponse: errorText.substring(0, 500) // Log first 500 chars in case it's a large response
+            });
+            
+            // For debugging: pass through the full error details to the client
+            return NextResponse.json(
+              { 
+                error: errorData.message || `Backend responded with status: ${response.status}`,
+                details: errorData,
+                status: response.status,
+                requestId
+              },
+              { status: response.status }
+            );
+          }
+          
+          const data = await response.json();
+          console.log(`[${requestId}] API key request successful`);
+          
+          return NextResponse.json(data);
+        } catch (error) {
+          console.error(`[${requestId}] Error processing API key request:`, error);
+          return NextResponse.json(
+            { error: 'Internal Server Error', message: error instanceof Error ? error.message : 'An unexpected error occurred' },
+            { status: 500 }
+          );
+        }
 
         const response = NextResponse.json({
           success: true,
@@ -312,17 +381,67 @@ export async function POST(request: Request) {
         // Continue even if Convex operations fail
       }
 
-      // API key generation is handled on the frontend during login
-      logger.info('Authentication successful, API key will be handled by frontend', { 
+      // API key generation is handled by the backend via the /api/auth/key endpoint
+      logger.info('Fetching API key from backend', { 
         requestId, 
         userId: decodedToken.uid 
       });
-
-      const response = NextResponse.json({
+      
+      // Prepare response data
+      interface ResponseData {
+        success: boolean;
+        redirect?: string;
+        apiKey?: string;
+        apiKeyData?: any; // Using 'any' for simplicity, ideally this would be properly typed
+      }
+      
+      let responseData: ResponseData = {
         success: true,
-        redirect: action === 'refresh' ? undefined : '/chat',
-        // API key is handled by frontend
-      })
+        redirect: action === 'refresh' ? undefined : '/chat'
+      };
+      
+      // Call the /api/auth/key endpoint to get the API key
+      try {
+        const apiKeyResponse = await fetch(new URL('/api/auth/key', request.url).toString(), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            idToken,
+            userId: decodedToken.uid
+          })
+        });
+        
+        if (!apiKeyResponse.ok) {
+          logger.warn('Failed to get API key from backend', { 
+            requestId, 
+            userId: decodedToken.uid,
+            status: apiKeyResponse.status
+          });
+        } else {
+          const apiKeyData = await apiKeyResponse.json();
+          logger.info('Successfully obtained API key from backend', { 
+            requestId, 
+            userId: decodedToken.uid 
+          });
+          
+          // Include the API key data in the response data
+          responseData = {
+            ...responseData,
+            apiKey: apiKeyData.apiKey,
+            apiKeyData
+          };
+        }
+      } catch (apiKeyError) {
+        logger.error('Error fetching API key', apiKeyError, { 
+          requestId, 
+          userId: decodedToken.uid 
+        });
+      }
+      
+      // Create the response with our data
+      const response = NextResponse.json(responseData)
 
       // Set the Firebase auth token cookie
       response.cookies.set('firebase-auth-token', idToken, {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://backend.hicontent.co';
+const BACKEND_URL = 'https://backend.hicontent.co';
 
 export async function POST(request: Request) {
   const requestId = `auth-key-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
