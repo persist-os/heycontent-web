@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { HonoWithConvex, HttpRouterWithHono } from "convex-helpers/server/hono";
 import { ActionCtx } from "./_generated/server";
 import { api } from "./_generated/api";
+import { getRateLimitData, storeRateLimitRequest } from "./rateLimiting";
 import { cors } from "hono/cors";
 
 const app: HonoWithConvex<ActionCtx> = new Hono();
@@ -301,6 +302,56 @@ app.get("/api/users/id/:userId", async (c) => {
   const userId = c.req.param("userId");
   const user = await ctx.runQuery(api.users.getUserById, { userId });
   return c.json(user);
+});
+
+// RATE LIMITING ENDPOINTS
+
+// Get rate limit data
+app.post("/getRateLimitData", async (c) => {
+  const ctx = c.env;
+  const { id, window_start } = await c.req.json();
+  
+  if (!id) {
+    return c.json({ error: "Missing rate limit key" }, 400);
+  }
+  
+  try {
+    // Get rate limit data from Convex table
+    // Use the imported function reference directly from rateLimiting.ts
+    const rateLimitData = await ctx.runQuery(api.rateLimiting.getRateLimitData, { 
+      id, 
+      window_start: window_start || (Date.now() / 1000 - 900) // Default 15 min window
+    });
+    
+    return c.json(rateLimitData);
+  } catch (error) {
+    console.error("Failed to get rate limit data:", error);
+    return c.json({ error: "Failed to retrieve rate limit data", timestamps: [] }, 500);
+  }
+});
+
+// Store rate limit request
+app.post("/addRateLimitRequest", async (c) => {
+  const ctx = c.env;
+  const { id, timestamp } = await c.req.json();
+  
+  if (!id) {
+    return c.json({ error: "Missing rate limit key" }, 400);
+  }
+  
+  try {
+    // Store the rate limit request
+    // Use the imported function reference directly from rateLimiting.ts
+    const result = await ctx.runMutation(api.rateLimiting.storeRateLimitRequest, { 
+      id, 
+      timestamp: timestamp || Math.floor(Date.now() / 1000)
+    });
+    
+    return c.json({ success: true, result });
+  } catch (error) {
+    console.error("Failed to store rate limit request:", error);
+    return c.json({ success: false, error: "Failed to store rate limit request" }, 500);
+  }
 });
 
 const router = new HttpRouterWithHono(app);

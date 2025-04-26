@@ -25,6 +25,7 @@ import type * as notes from "../notes.js";
 import type * as personas from "../personas.js";
 import type * as queries from "../queries.js";
 import type * as query from "../query.js";
+import type * as rateLimiting from "../rateLimiting.js";
 import type * as social from "../social.js";
 import type * as tokens from "../tokens.js";
 import type * as users from "../users.js";
@@ -53,6 +54,7 @@ declare const fullApi: ApiFromModules<{
   personas: typeof personas;
   queries: typeof queries;
   query: typeof query;
+  rateLimiting: typeof rateLimiting;
   social: typeof social;
   tokens: typeof tokens;
   users: typeof users;

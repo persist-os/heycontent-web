@@ -228,4 +228,12 @@ export default defineSchema({
     status: v.optional(v.string()),
   }),
 
+  rate_limits: defineTable({
+    user_id: v.string(), // Firebase user ID (same as used in api_keys)
+    resource: v.string(), // Resource being rate limited (endpoint, action, etc.)
+    timestamps: v.array(v.number()), // Array of Unix timestamps for requests
+    lastUpdated: v.number(), // Last updated timestamp
+  })
+  .index("by_user_resource", ["user_id", "resource"]),
+
 });
