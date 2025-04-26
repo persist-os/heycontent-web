@@ -2,31 +2,37 @@ import { mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
 
-// Helper mutation for the action to use
-export const insertApiKey = mutation({
+export const insert_api_key = mutation({
   args: {
-    hashed_key: v.string(),
     user_id: v.string(),
-    scopes: v.array(v.string()),
-    rate_tier: v.string(),
-    status: v.union(v.literal("active"), v.literal("revoked")),
-    created_at: v.number(),
+    key_hash: v.string(),
+    scopes: v.optional(v.array(v.string())),
+    rate_tier: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    return await ctx.db.insert("api_keys", {
-      hashed_key: args.hashed_key,
+    await ctx.db.insert("api_keys", {
       user_id: args.user_id,
-      scopes: args.scopes,
-      rate_tier: args.rate_tier,
-      status: args.status,
-      created_at: args.created_at,
+      hashed_key: args.key_hash,
+      created_at: Date.now(),
+      scopes: args.scopes || [],
+      rate_tier: args.rate_tier || "default",
+      status: "active",
     });
   },
 });
 
-export const revoke = mutation({
-    args: { key_id: v.id("api_keys") },
-    handler: async (ctx, args) => {
-        await ctx.db.patch(args.key_id, { status: "revoked" });
-    },
+export const delete_api_key = mutation({
+  args: { key_id: v.id("api_keys") },
+  handler: async (ctx, args) => {
+    // Check if the key exists before attempting deletion
+    const existingKey = await ctx.db.get(args.key_id);
+    if (!existingKey) {
+      console.warn(`API key with id ${args.key_id} not found for deletion.`);
+      // Depending on requirements, you might throw an error or return a specific status
+      return { success: false, message: "Key not found" }; 
+    }
+    await ctx.db.delete(args.key_id);
+    console.log(`Deleted API key with id ${args.key_id}`);
+    return { success: true };
+  },
 }); 

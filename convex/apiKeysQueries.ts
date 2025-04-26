@@ -7,12 +7,7 @@ export const get = query({
     handler: async (ctx, args) => {
         const apiKeys = await ctx.db
             .query("api_keys")
-            .filter((q) =>
-                q.and(
-                    q.eq(q.field("user_id"), args.userId),
-                    q.eq(q.field("status"), "active")
-                )
-            )
+            .filter((q) => q.eq(q.field("user_id"), args.userId))
             .collect();
 
         return apiKeys.length > 0 ?
@@ -21,12 +16,11 @@ export const get = query({
     },
 });
 
-export const listActive = query({
+export const listAll = query({
     args: {},
     handler: async (ctx) => {
         return await ctx.db
             .query("api_keys")
-            .filter((q) => q.eq(q.field("status"), "active"))
             .collect();
     },
 });
@@ -53,5 +47,43 @@ export const getById = query({
       // Consider if throwing the error might be better depending on usage
       return null;
     }
+  },
+});
+
+export const validate_api_key = query({
+  args: {
+    key_hash: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const result = await ctx.db
+      .query("api_keys")
+      .filter((q) => q.eq(q.field("hashed_key"), args.key_hash))
+      .first();
+
+    return result ? result.user_id : null;
+  },
+});
+
+export const getUserKeys = query({
+  args: {
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const apiKeys = await ctx.db
+      .query("api_keys")
+      .filter((q) => q.eq(q.field("user_id"), args.userId))
+      .collect();
+
+    // Format keys to return relevant data but exclude the hashed_key for security
+    // Use the Convex _id as the key_id in the response
+    const formattedKeys = apiKeys.map(key => ({
+      key_id: key._id, // This is the Convex-generated ID
+      created_at: key.created_at,
+      scopes: key.scopes || [],
+      rate_tier: key.rate_tier || "default",
+      status: key.status || "active"
+    }));
+
+    return formattedKeys;
   },
 }); 

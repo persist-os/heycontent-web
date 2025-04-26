@@ -6,6 +6,35 @@ import { api } from "@/convex/_generated/api"
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
 
+// Helper function to generate API key via backend API
+async function generateApiKey(idToken: string) {
+  try {
+    console.log('Using Firebase ID token for backend authentication')
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/api-keys/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`
+      },
+      body: JSON.stringify({
+        scopes: ["all"],
+        rate_tier: "standard"
+      })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to generate API key');
+    }
+    
+    console.log('API key generated successfully');
+    return data.data; // Return the data object containing the API key
+  } catch (error) {
+    console.error('Error generating API key:', error);
+    throw error;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json()
@@ -21,6 +50,9 @@ export async function POST(request: Request) {
         
         // Create a custom token for the user
         const customToken = await adminAuth.createCustomToken(userRecord.uid)
+        
+        // Log the custom token
+        console.log('Firebase custom token:', customToken)
         
         console.log('Login successful, setting token for user:', userRecord.email)
 
@@ -41,6 +73,9 @@ export async function POST(request: Request) {
         } catch (convexError) {
           console.error('Error with Convex user:', convexError)
         }
+
+        // The API key will be generated later by the frontend using the ID token
+        // This simplifies our backend code and ensures we're using the proper ID token
 
         const response = NextResponse.json({
           success: true,
@@ -89,6 +124,9 @@ export async function POST(request: Request) {
         // Create a custom token for the user
         const customToken = await adminAuth.createCustomToken(userRecord.uid)
         
+        // Log the custom token
+        console.log('Firebase custom token:', customToken)
+        
         console.log('Login successful, setting token for user:', userRecord.email)
 
         // Ensure user exists in Convex
@@ -108,6 +146,9 @@ export async function POST(request: Request) {
         } catch (convexError) {
           console.error('Error with Convex user:', convexError)
         }
+
+        // The API key will be generated later by the frontend using the ID token
+        // This simplifies our backend code and ensures we're using the proper ID token
 
         const response = NextResponse.json({
           success: true,
@@ -144,9 +185,24 @@ export async function POST(request: Request) {
       }
 
       console.log('Setting token for action:', action)
+      
+      // Log the received ID token (full token for debugging)
+      console.log('Firebase ID token (received from client):', idToken)
 
       // Verify the token with Firebase Admin
       const decodedToken = await adminAuth.verifyIdToken(idToken)
+      
+      // Log the decoded token information
+      console.log('Decoded Firebase token payload:', {
+        uid: decodedToken.uid,
+        email: decodedToken.email,
+        emailVerified: decodedToken.email_verified,
+        authTime: new Date(decodedToken.auth_time * 1000).toISOString(),
+        issuedAt: new Date(decodedToken.iat * 1000).toISOString(),
+        expiresAt: new Date(decodedToken.exp * 1000).toISOString(),
+        provider: decodedToken.firebase?.sign_in_provider
+      })
+      
       console.log('Token verified successfully for user:', decodedToken.uid)
 
       // Ensure user exists in Convex
@@ -177,9 +233,32 @@ export async function POST(request: Request) {
         // Continue even if Convex operations fail
       }
 
+      // Check and generate API key if needed
+      let apiKey = null;
+      try {
+        const apiKeyStatus = await convex.query(api.apiKeysQueries.get, { userId: decodedToken.uid });
+        if (!apiKeyStatus.exists) {
+          console.log('No active API key found for user, generating one...');
+          
+          // Here we have a proper ID token from the client
+          console.log('Using Firebase ID token for backend authentication');
+          
+          // Use the provided ID token to authenticate with the backend API
+          const apiKeyData = await generateApiKey(idToken);
+          apiKey = apiKeyData; // Store the API key data
+          console.log('API key generated for user:', decodedToken.uid);
+        } else {
+          console.log('User already has an active API key.');
+        }
+      } catch (apiKeyError) {
+        console.error('Error checking/generating API key:', apiKeyError);
+        // Decide if this error should prevent login or just be logged
+      }
+
       const response = NextResponse.json({
         success: true,
-        redirect: action === 'refresh' ? undefined : '/chat'
+        redirect: action === 'refresh' ? undefined : '/chat',
+        apiKey // Include the API key in the response
       })
 
       // Set the Firebase auth token cookie

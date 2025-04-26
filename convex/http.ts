@@ -64,55 +64,87 @@ app.patch("/api/users/:id", async (c) => {
 
 // API KEY ROUTES
 
-// Get API key for user
-app.get("/api/users/:id/api-key", async (c) => {
+// Insert API key
+app.post("/api/api-keys", async (c) => {
   const ctx = c.env;
-  const userId = c.req.param("id");
-  const apiKey = await ctx.runQuery(api.apiKeysQueries.get, { userId });
-  return c.json(apiKey);
-});
-
-// Generate API key for user
-app.post("/api/users/:id/api-key", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const { scopes, rate_tier } = await c.req.json();
-  const result = await ctx.runAction(api.apiKeys.generate, {
-    user_id: userId,
-    scopes,
-    rate_tier
-  });
-  return c.json(result);
-});
-
-// Revoke API key
-app.delete("/api/api-keys/:keyId", async (c) => {
-  const ctx = c.env;
-  const keyIdStr = c.req.param("keyId");
-  
+  const { user_id, key_hash, scopes, rate_tier } = await c.req.json();
+  if (!user_id || !key_hash) {
+    return c.json({ error: "Missing user_id or key_hash" }, 400);
+  }
   try {
-    // Instead of trying to convert the string to an ID,
-    // let's create an action to handle the revocation by key string ID
-    await ctx.runAction(api.apiKeys.revokeByStringId, { keyIdStr });
-    return c.json({ success: true });
+    await ctx.runMutation(api.apiKeysMutations.insert_api_key, {
+      user_id,
+      key_hash,
+      scopes,
+      rate_tier,
+    });
+    return c.json({ success: true }, 201); // 201 Created status
   } catch (error) {
-    console.error("Failed to revoke API key:", error);
-    return c.json({ success: false, error: "Failed to revoke API key" }, 500);
+    console.error("Failed to create API key:", error);
+    return c.json({ success: false, error: "Failed to create API key" }, 500);
   }
 });
 
-// Get API keys
-app.get("/api/api-keys/active", async (c) => {
+// Validate API key
+app.post("/api/api-keys/validate", async (c) => {
   const ctx = c.env;
-  const activeKeys = await ctx.runQuery(api.apiKeysQueries.listActive);
-  return c.json(activeKeys);
+  const { key_hash } = await c.req.json();
+
+  if (!key_hash) {
+    return c.json({ error: "Missing key_hash" }, 400);
+  }
+
+  try {
+    // Use the validate_api_key query
+    const userId = await ctx.runQuery(api.apiKeysQueries.validate_api_key, {
+      key_hash: key_hash, 
+    });
+
+    if (userId) {
+      // Key is valid, return success and potentially the user ID
+      return c.json({ success: true, userId });
+    } else {
+      // Key is invalid
+      return c.json({ success: false, error: "Invalid API key" }, 401); // 401 Unauthorized
+    }
+  } catch (error) {
+    console.error("Failed to validate API key:", error);
+    return c.json({ success: false, error: "Failed to validate API key" }, 500);
+  }
 });
 
-app.get("/api/api-keys/:keyId", async (c) => {
+// Get user API keys
+app.get("/api/api-keys/user/:userId", async (c) => {
   const ctx = c.env;
-  const keyIdStr = c.req.param("keyId");
-  const apiKey = await ctx.runQuery(api.apiKeysQueries.getById, { keyIdStr });
-  return c.json(apiKey);
+  const userId = c.req.param("userId");
+  
+  try {
+    const keys = await ctx.runQuery(api.apiKeysQueries.getUserKeys, { userId });
+    return c.json({ success: true, keys });
+  } catch (error) {
+    console.error("Failed to get user API keys:", error);
+    return c.json({ success: false, error: "Failed to retrieve API keys" }, 500);
+  }
+});
+
+// Delete API key endpoint (with request body)
+app.delete("/api/api-keys/delete", async (c) => {
+  const ctx = c.env;
+  const { key_id, user_id } = await c.req.json();
+  
+  if (!key_id) {
+    return c.json({ success: false, error: "Missing key_id" }, 400);
+  }
+
+  try {
+    // key_id is expected to be a string representation of the Convex _id
+    // deleteByStringId will find the key by its _id string and delete it
+    await ctx.runAction(api.apiKeys.deleteByStringId, { keyIdStr: key_id });
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Failed to delete API key:", error);
+    return c.json({ success: false, error: "Failed to delete API key" }, 500);
+  }
 });
 
 // YOUTUBE ROUTES

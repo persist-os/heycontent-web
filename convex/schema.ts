@@ -220,12 +220,12 @@ export default defineSchema({
   .index("by_user_platform", ["userId", "platform"]),
 
   api_keys: defineTable({
-    hashed_key: v.string(), // bcrypt-hashed
-    user_id: v.string(),
-    scopes: v.optional(v.array(v.string())),
-    rate_tier: v.optional(v.string()), // "free", "premium", etc.
-    status: v.union(v.literal("active"), v.literal("revoked")),
+    user_id: v.string(), // Firebase UID
+    hashed_key: v.string(), // SHA-256 hash of API key
     created_at: v.number(),
-  }).index("by_user", ["user_id"]),
+    rate_tier: v.optional(v.string()),
+    scopes: v.optional(v.array(v.string())),
+    status: v.optional(v.string()),
+  }),
 
 });
