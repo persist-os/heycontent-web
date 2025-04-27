@@ -1,14 +1,14 @@
 import React from 'react';
-import { TimeRange, SortOption, FilterType } from '../types';
+import { TimeRange, SortOption, PlatformFilterType } from '../types';
 
 interface FilterDropdownProps {
   isOpen: boolean;
   timeRange: TimeRange;
   sortBy: SortOption;
-  filterType: FilterType;
+  filterType: PlatformFilterType;
   onTimeRangeChange: (range: TimeRange) => void;
   onSortByChange: (sort: SortOption) => void;
-  onFilterTypeChange: (filter: FilterType) => void;
+  onFilterTypeChange: (filter: PlatformFilterType) => void;
   onReset: () => void;
 }
 
@@ -16,16 +16,16 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
   isOpen,
   timeRange,
   sortBy,
-  filterType,
   onTimeRangeChange,
   onSortByChange,
-  onFilterTypeChange,
-  onReset
+  onReset,
+  onFilterTypeChange
 }) => {
   if (!isOpen) return null;
 
   return (
     <div className="absolute right-6 top-[4.5rem] w-72 bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-lg shadow-lg p-4 space-y-4 z-50">
+
       {/* Time Range - Only visible on mobile */}
       <div className="space-y-2 sm:hidden">
         <h3 className="font-medium text-sm text-text-dark dark:text-white">Time Range</h3>
@@ -77,74 +77,97 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
             Date
           </button>
           <button
-            onClick={() => onSortByChange('engagement')}
+            onClick={() => onSortByChange('views')}
             className={`px-3 py-1 rounded-lg text-sm ${
-              sortBy === 'engagement'
+              sortBy === 'views'
                 ? 'bg-heycontent-yellow text-black'
                 : 'bg-heycontent-light-yellow text-text-dark'
             }`}
           >
-            Engagement
+            Views
           </button>
           <button
-            onClick={() => onSortByChange('performance')}
+            onClick={() => onSortByChange('likes')}
             className={`px-3 py-1 rounded-lg text-sm ${
-              sortBy === 'performance'
+              sortBy === 'likes'
                 ? 'bg-heycontent-yellow text-black'
                 : 'bg-heycontent-light-yellow text-text-dark'
             }`}
           >
-            Performance
+            Likes
+          </button>
+          <button
+            onClick={() => onSortByChange('comments')}
+            className={`px-3 py-1 rounded-lg text-sm ${
+              sortBy === 'comments'
+                ? 'bg-heycontent-yellow text-black'
+                : 'bg-heycontent-light-yellow text-text-dark'
+            }`}
+          >
+            Comments
+          </button>
+          <button
+            onClick={() => onSortByChange('replies')}
+            className={`px-3 py-1 rounded-lg text-sm ${
+              sortBy === 'replies'
+                ? 'bg-heycontent-yellow text-black'
+                : 'bg-heycontent-light-yellow text-text-dark'
+            }`}
+          >
+            Replies
+          </button>
+          <button
+            onClick={() => onSortByChange('openRate')}
+            className={`px-3 py-1 rounded-lg text-sm ${
+              sortBy === 'openRate'
+                ? 'bg-heycontent-yellow text-black'
+                : 'bg-heycontent-light-yellow text-text-dark'
+            }`}
+          >
+            Open Rate
+          </button>
+          <button
+            onClick={() => onSortByChange('reach')}
+            className={`px-3 py-1 rounded-lg text-sm ${
+              sortBy === 'reach'
+                ? 'bg-heycontent-yellow text-black'
+                : 'bg-heycontent-light-yellow text-text-dark'
+            }`}
+          >
+            Reach
+          </button>
+          <button
+            onClick={() => onSortByChange('impressions')}
+            className={`px-3 py-1 rounded-lg text-sm ${
+              sortBy === 'impressions'
+                ? 'bg-heycontent-yellow text-black'
+                : 'bg-heycontent-light-yellow text-text-dark'
+            }`}
+          >
+            Impressions
+          </button>
+          <button
+            onClick={() => onSortByChange('watchTimeMinutes')}
+            className={`px-3 py-1 rounded-lg text-sm ${
+              sortBy === 'watchTimeMinutes'
+                ? 'bg-heycontent-yellow text-black'
+                : 'bg-heycontent-light-yellow text-text-dark'
+            }`}
+          >
+            Watch Time (min)
+          </button>
+          <button
+            onClick={() => onSortByChange('clickRate')}
+            className={`px-3 py-1 rounded-lg text-sm ${
+              sortBy === 'clickRate'
+                ? 'bg-heycontent-yellow text-black'
+                : 'bg-heycontent-light-yellow text-text-dark'
+            }`}
+          >
+            Click Rate
           </button>
         </div>
       </div>
-
-      <div className="space-y-2">
-        <h3 className="font-medium text-sm text-text-dark dark:text-white">Content Type</h3>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => onFilterTypeChange('all')}
-            className={`px-3 py-1 rounded-lg text-sm ${
-              filterType === 'all'
-                ? 'bg-heycontent-yellow text-black'
-                : 'bg-heycontent-light-yellow text-text-dark'
-            }`}
-          >
-            All Types
-          </button>
-          <button
-            onClick={() => onFilterTypeChange('post')}
-            className={`px-3 py-1 rounded-lg text-sm ${
-              filterType === 'post'
-                ? 'bg-heycontent-yellow text-black'
-                : 'bg-heycontent-light-yellow text-text-dark'
-            }`}
-          >
-            Posts
-          </button>
-          <button
-            onClick={() => onFilterTypeChange('video')}
-            className={`px-3 py-1 rounded-lg text-sm ${
-              filterType === 'video'
-                ? 'bg-heycontent-yellow text-black'
-                : 'bg-heycontent-light-yellow text-text-dark'
-            }`}
-          >
-            Videos
-          </button>
-          <button
-            onClick={() => onFilterTypeChange('email')}
-            className={`px-3 py-1 rounded-lg text-sm ${
-              filterType === 'email'
-                ? 'bg-heycontent-yellow text-black'
-                : 'bg-heycontent-light-yellow text-text-dark'
-            }`}
-          >
-            Emails
-          </button>
-        </div>
-      </div>
-
       <div className="pt-4 border-t dark:border-gray-800">
         <button
           onClick={onReset}

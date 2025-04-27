@@ -22,7 +22,7 @@ import { LoadingState } from '../loading/LoadingState';
 import { Header } from '../header/Header';
 
 // Import types and utilities
-import { AnyContentItem, TimeRange, SortOption, PlatformType, EmailTypeFilter as TEmailTypeFilter, YouTubeContentItem, InstagramContentItem, GmailContentItem } from '../types';
+import { AnyContentItem, TimeRange, SortOption, PlatformType, EmailTypeFilter as TEmailTypeFilter, YouTubeContentItem, InstagramContentItem, GmailContentItem, PlatformFilterType } from '../types';
 import { sortAndFilterContent, getMockGmailItems, getMockInstagramItem, getMockYouTubeItem } from '../utils';
 
 // Define the type for the imported app variable
@@ -36,7 +36,7 @@ export function ContentAnalyticsScreen() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filterRef, setFilterRef] = useState<HTMLDivElement | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>('date');
-  const [filterType, setFilterType] = useState<string>('all');
+  const [filterType, setFilterType] = useState<PlatformFilterType>('all');
   const [selectedContent, setSelectedContent] = useState<AnyContentItem | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);

@@ -72,20 +72,38 @@ export async function POST(request: Request) {
       }
     });
 
-    const response = await fetch(`${BACKEND_URL}/api/v1/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        user_id,
-        query,
-        is_first_message: is_first_message === true,
-        session_id: is_first_message === true ? null : (session_id || null)
-      })
-    });
+    // Retry logic with exponential backoff for 500/429 errors
+    const maxRetries = 4;
+    const backoffTimes = [500, 1000, 2000, 4000]; // ms
+    let response: Response | null = null;
+    let lastError: any = null;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      response = await fetch(`${BACKEND_URL}/api/v1/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          user_id,
+          query,
+          is_first_message: is_first_message === true,
+          session_id: is_first_message === true ? null : (session_id || null)
+        })
+      });
+      if (response.status !== 500 && response.status !== 429) {
+        break; // Success or other error, don't retry
+      }
+      lastError = `Backend responded with status ${response.status}`;
+      console.warn(`[${requestId}] Backend responded with ${response.status}. Retrying in ${backoffTimes[attempt] || 0}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
+      if (attempt < maxRetries) {
+        await new Promise(res => setTimeout(res, backoffTimes[attempt]));
+      }
+    }
+    if (!response || response.status === 500 || response.status === 429) {
+      throw new Error(lastError || 'Backend unavailable after retries');
+    }
 
     // Log backend response headers and status
     console.debug(`[${requestId}] Backend response status`, response.status, response.statusText);

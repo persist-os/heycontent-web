@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { getBearerToken, getUserIdFromApiKey } from '../../utils';
 import { ConvexHttpClient } from 'convex/browser';
 import { api } from '@/convex/_generated/api';
 
@@ -15,21 +15,21 @@ export async function GET(
   });
 
   try {
-    const token = cookies().get('firebase-auth-token')?.value;
-    if (!token) {
-      console.warn(`[${requestId}] Authentication failed: No token found`);
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // API key authentication and userId extraction using utils
+    const apiKey = getBearerToken(request);
+    if (!apiKey) {
+      console.warn(`[${requestId}] Authentication failed: No Authorization header or invalid format`);
+      return NextResponse.json({ error: 'Unauthorized - Missing or invalid Authorization header' }, { status: 401 });
+    }
+    const userId = getUserIdFromApiKey(apiKey);
+    if (!userId) {
+      console.warn(`[${requestId}] Invalid API key: Could not get user ID`);
+      return NextResponse.json({ error: 'Invalid API key' }, { status: 401 });
     }
 
     // Initialize Convex client
     const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL || '');
 
-    // Get the user ID from the token
-    const userId = await convex.query(api.queries.getUserIdFromToken, { token });
-    if (!userId) {
-      console.warn(`[${requestId}] Invalid token: Could not get user ID`);
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
 
     // We need to add a function to get a specific conversation by ID
     // For now, we'll fetch all conversations and filter on the client side
