@@ -157,7 +157,7 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
         if (result.user) {
           console.log('User signed in, getting ID token...');
           const idToken = await result.user.getIdToken()
-          console.log('ID token obtained:', idToken);
+          console.log('ID token obtained:', idToken.slice(0, 5) + '...' + idToken.slice(-5));
 
           console.log('Sending token to backend...');
           const response = await fetch('/api/auth/firebase', {
