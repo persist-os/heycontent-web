@@ -1,3 +1,3 @@
-import { ContentAnalyticsScreen } from '../_components/content-analytics/screens/ContentAnalyticsScreen'
+import { ContentAnalyticsScreen } from '../_components/content-analytics/components/ContentAnalyticsScreen'
 
 export default ContentAnalyticsScreen 

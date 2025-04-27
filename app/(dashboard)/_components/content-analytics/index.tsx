@@ -1,1 +1,1 @@
-export * from './screens/ContentAnalyticsScreen';
+export * from './components/ContentAnalyticsScreen';
