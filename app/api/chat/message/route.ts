@@ -28,29 +28,25 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { query, is_first_message, session_id, user_id: requestUserId } = body;
+    const { query, is_first_message, session_id } = body;
 
     if (!query) {
       console.warn(`[${requestId}] Invalid request: Missing query`);
       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
     }
 
-    // User ID can come from either the API key or the request body
-    let user_id = requestUserId; // First try to use the user_id from the request body
-    
-    // If not provided in the request, extract from API key
-    if (!user_id) {
-      const apiKeyParts = apiKey.split('_');
-      if (apiKeyParts.length >= 2) {
-        user_id = apiKeyParts[1];
-      }
+    // Always extract user_id from API key, never from client
+    let user_id: string | undefined = undefined;
+    const apiKeyParts = apiKey.split('_');
+    if (apiKeyParts.length >= 2) {
+      user_id = apiKeyParts[1];
     }
-    
     if (!user_id) {
-      console.warn(`[${requestId}] Authentication failed: Could not determine user_id`);
+      console.warn(`[${requestId}] Authentication failed: Could not determine user_id from API key`);
       return NextResponse.json({ error: 'Unauthorized - Invalid API key format or missing user_id' }, { status: 401 });
     }
-    
+    console.debug(`[${requestId}] Extracted user_id from API key:`, user_id);
+
     // Log the request details
     console.info(`[${requestId}] Processing chat message`, {
       session_id: session_id || 'null',
@@ -58,6 +54,22 @@ export async function POST(request: Request) {
       query_length: query?.length,
       has_api_key: !!apiKey,
       user_id: user_id
+    });
+
+    // Log the full request body
+    console.debug(`[${requestId}] Sending request to backend`, {
+      url: `${BACKEND_URL}/api/v1/chat`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: {
+        user_id,
+        query,
+        is_first_message: is_first_message === true,
+        session_id: is_first_message === true ? null : (session_id || null)
+      }
     });
 
     const response = await fetch(`${BACKEND_URL}/api/v1/chat`, {
@@ -75,30 +87,69 @@ export async function POST(request: Request) {
       })
     });
 
+    // Log backend response headers and status
+    console.debug(`[${requestId}] Backend response status`, response.status, response.statusText);
+    console.debug(`[${requestId}] Backend response headers`, Object.fromEntries(response.headers.entries()));
+
+    let data: any;
+    try {
+      data = await response.json();
+    } catch (jsonErr) {
+      console.error(`[${requestId}] Failed to parse backend JSON`, jsonErr);
+      throw new Error('Failed to parse backend JSON');
+    }
+
+    // Log the raw backend data
+    console.debug(`[${requestId}] Raw backend data`, data);
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => null);
       console.error(`[${requestId}] Backend API error:`, {
         status: response.status,
-        error: errorData
+        error: data
       });
       throw new Error(`Backend API responded with status: ${response.status}`);
     }
 
-    const data = await response.json();
+    // The backend may return { response: 'json-string', ... }
+    let chat_response = data.chat_response;
+    let suggestions = data.suggestions;
+    let session_id_resp = data.session_id;
+
+    // If "response" is present and is a JSON string, parse it
+    if (!chat_response && typeof data.response === 'string') {
+      try {
+        // Remove markdown code block if present
+        let respStr = data.response.trim();
+        if (respStr.startsWith('```json')) {
+          respStr = respStr.slice(7);
+        }
+        if (respStr.endsWith('```')) {
+          respStr = respStr.slice(0, -3);
+        }
+        const parsed = JSON.parse(respStr);
+        chat_response = parsed.chat_response || '';
+        suggestions = parsed.suggestions || [];
+        session_id_resp = session_id_resp || parsed.session_id;
+        console.debug(`[${requestId}] Parsed chat_response and suggestions from backend response string`, { chat_response, suggestions, session_id_resp });
+      } catch (parseErr) {
+        console.error(`[${requestId}] Failed to parse backend response string`, parseErr, data.response);
+        chat_response = data.response;
+      }
+    }
 
     const totalDuration = Date.now() - startTime;
-
     console.info(`[${requestId}] Request completed successfully`, {
       duration_ms: totalDuration,
-      chat_response_length: data.chat_response?.length || data.response?.length || 0,
-      suggestions_count: data.suggestions?.length || 0
+      chat_response_length: chat_response?.length || 0,
+      suggestions_count: suggestions?.length || 0,
+      session_id: session_id_resp
     });
 
-    // Ensure we're not double-stringifying the response
+    // Return the correct structure to the frontend
     const responseData = {
-      chat_response: data.chat_response || data.response,
-      suggestions: data.suggestions || [],
-      session_id: data.session_id,
+      chat_response: chat_response,
+      suggestions: suggestions || [],
+      session_id: session_id_resp,
       metadata: {
         request_id: requestId,
         processing_time_ms: totalDuration
