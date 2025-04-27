@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -10,31 +10,34 @@ import { app } from '@/app/lib/firebase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/src/components/ui/tabs';
 
 // Import components
-import { ContentCard } from '../cards/ContentCard';
 import { YouTubeCard } from '../cards/YouTubeCard';
+import { InstagramCard, InstagramCardPlaceholder } from '../cards/InstagramCard';
+import { GmailCard } from '../cards/GmailCard';
 import { FilterDropdown } from '../filters/FilterDropdown';
 import { EmailTypeFilter } from '../filters/EmailTypeFilter';
-import { DetailedAnalyticsModal } from '../modals/DetailedAnalyticsModal';
+import { GmailModal } from '../modals/GmailModal';
+import { InstagramModal } from '../modals/InstagramModal';
+import { YoutubeModal } from '../modals/YoutubeModal';
 import { LoadingState } from '../loading/LoadingState';
 import { Header } from '../header/Header';
 
 // Import types and utilities
-import { ContentItem, TimeRange, SortOption, FilterType, Platform, EmailType } from '../types';
-import { sortAndFilterContent, getMockGmailItems } from '../utils';
+import { AnyContentItem, TimeRange, SortOption, PlatformType, EmailTypeFilter as TEmailTypeFilter, YouTubeContentItem, InstagramContentItem, GmailContentItem } from '../types';
+import { sortAndFilterContent, getMockGmailItems, getMockInstagramItem, getMockYouTubeItem } from '../utils';
 
 // Define the type for the imported app variable
 const typedApp: FirebaseApp | undefined = app;
 
 export function ContentAnalyticsScreen() {
   // State management
-  const [selectedPlatform, setSelectedPlatform] = useState<Platform>('all');
-  const [selectedEmailType, setSelectedEmailType] = useState<EmailType>('all');
+  const [selectedPlatform, setSelectedPlatform] = useState<PlatformType>('all');
+  const [selectedEmailType, setSelectedEmailType] = useState<TEmailTypeFilter>('all');
   const [timeRange, setTimeRange] = useState<TimeRange>('7d');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filterRef, setFilterRef] = useState<HTMLDivElement | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>('date');
-  const [filterType, setFilterType] = useState<FilterType>('all');
-  const [selectedContent, setSelectedContent] = useState<ContentItem | null>(null);
+  const [filterType, setFilterType] = useState<string>('all');
+  const [selectedContent, setSelectedContent] = useState<AnyContentItem | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   
@@ -76,45 +79,35 @@ export function ContentAnalyticsScreen() {
     !authLoading && firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
   );
 
-  const allContentItems: ContentItem[] | undefined | null = youtubeVideos as ContentItem[] | undefined | null;
-  const mockGmailItems: ContentItem[] = getMockGmailItems();
+  const allContentItems: AnyContentItem[] | undefined | null = useMemo(() => {
+    // Placeholder: Combine actual fetched data if available, e.g., youtubeVideos
+    return []; // Replace with actual data fetching/combination logic later
+  }, []); // Add dependencies if youtubeVideos or others change
 
-// Mock YouTube ContentItem for testing
-const mockYouTubeItem: ContentItem = {
-  id: 'mock-youtube-1',
-  platform: 'youtube',
-  type: 'video',
-  content: {
-    text: 'How to Grow on YouTube in 2025',
-    thumbnail: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
-    mediaUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-  },
-  metrics: {
-    views: 12345,
-    engagement: 87,
-    likes: 543,
-    comments: 67,
-    shares: 12,
-  },
-  performance: {
-    trend: 'up',
-    percentageChange: 12.5,
-  },
-  publishedAt: '2025-04-01T12:00:00Z',
-};
+  const mockYouTubeItem = getMockYouTubeItem('1');
+  const mockInstagramItem = getMockInstagramItem('1');
+  const mockGmailItems = getMockGmailItems(10);
 
-const combinedContent = [mockYouTubeItem, ...(allContentItems || []), ...mockGmailItems]; // Always show mock YT
+  const combinedContent = useMemo(() => {
+    // Generate some initial mock items for display before useEffect loads everything
+    // Note: These specific items might be duplicated when useEffect loads the full set
+    const initialYouTube = getMockYouTubeItem('initial-yt');
+    const initialInstagram = getMockInstagramItem('initial-insta');
+    const initialGmail = getMockGmailItems(2); // Get 2 initial emails
+
+    // Combine initial mocks with the loaded content from state
+    return [initialYouTube, initialInstagram, ...initialGmail, ...(allContentItems || [])];
+  }, [allContentItems]);
 
   // Navigate to chat with content context
-  const discussContent = (item: ContentItem) => {
+  const discussContent = (item: AnyContentItem) => {
     const context = {
-      contentType: item.type,
       platform: item.platform,
-      metrics: item.metrics,
-      performance: item.performance,
-      content: item.content
+      contentId: item.id,
+      // Add other relevant context, e.g., title, key metrics
     };
-    router.push(`/chat?context=${encodeURIComponent(JSON.stringify(context))}&type=content&id=${item.id}`);
+    const encodedContext = encodeURIComponent(JSON.stringify(context));
+    router.push(`/chat?contentContext=${encodedContext}`);
   };
 
   // Reset filters
@@ -141,10 +134,10 @@ const combinedContent = [mockYouTubeItem, ...(allContentItems || []), ...mockGma
   // Filter and sort content
   const displayItems = sortAndFilterContent(
     combinedContent,
-    filterType,
     selectedPlatform,
     selectedEmailType,
-    sortBy
+    sortBy,
+    timeRange
   );
 
   return (
@@ -174,22 +167,37 @@ const combinedContent = [mockYouTubeItem, ...(allContentItems || []), ...mockGma
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
           {/* Platform Tabs */} 
-          <Tabs defaultValue="all" className="w-full" onValueChange={(value) => setSelectedPlatform(value as Platform)}>
+          <Tabs defaultValue="all" className="w-full" onValueChange={(value) => setSelectedPlatform(value as PlatformType)}>
             <TabsList className="mb-6">
               <TabsTrigger value="all">All Platforms</TabsTrigger>
               <TabsTrigger value="gmail">Email</TabsTrigger>
               <TabsTrigger value="instagram">Instagram</TabsTrigger>
               <TabsTrigger value="youtube">YouTube</TabsTrigger>
-              <TabsTrigger value="tiktok">TikTok</TabsTrigger>
+              {/* Add other platforms as needed */}
             </TabsList>
 
             {/* AI Analysis Section - Show for YouTube */}
             {selectedPlatform === 'youtube' && (
               <div className="mb-6">
-                {/* Placeholder for AI-driven insights. Replace with real AI analysis when available. */}
                 <div className="p-4 bg-heycontent-light-yellow rounded-lg text-black dark:text-black">
                   <h3 className="font-semibold mb-2">AI Analysis</h3>
                   <p className="text-sm">Get actionable insights and recommendations for your YouTube content. (Coming soon)</p>
+                </div>
+              </div>
+            )}
+            {selectedPlatform === 'instagram' && (
+              <div className="mb-6">
+                <div className="p-4 bg-gradient-to-r from-pink-200 via-purple-200 to-yellow-200 rounded-lg text-black dark:text-black">
+                  <h3 className="font-semibold mb-2">AI Instagram Insights</h3>
+                  <p className="text-sm">Discover trends, best posting times, and engagement drivers for your Instagram content. (Coming soon)</p>
+                </div>
+              </div>
+            )}
+            {selectedPlatform === 'gmail' && (
+              <div className="mb-6">
+                <div className="p-4 bg-gradient-to-r from-blue-100 via-white to-green-100 rounded-lg text-black dark:text-black">
+                  <h3 className="font-semibold mb-2">AI Gmail Insights</h3>
+                  <p className="text-sm">See partnership opportunities, response rates, and actionable email analytics. (Coming soon)</p>
                 </div>
               </div>
             )}
@@ -205,25 +213,40 @@ const combinedContent = [mockYouTubeItem, ...(allContentItems || []), ...mockGma
             {/* Content Grid */} 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {displayItems.length > 0 ? (
-                displayItems.map((item) => (
-                  item.platform === 'youtube' ? (
-                    <YouTubeCard
-                      key={item.id}
-                      item={item}
-                      onDiscussContent={discussContent}
-                      onViewDetailedAnalytics={() => setSelectedContent(item)}
-                    />
-                  ) : (
-                    <ContentCard
-                      key={item.id}
-                      item={item}
-                      onDiscussContent={discussContent}
-                      onViewDetailedAnalytics={() => setSelectedContent(item)}
-                    />
-                  )
-                ))
+                <>
+                  {displayItems.map((item) => {
+                    if (item.platform === 'instagram') {
+                      return (
+                        <InstagramCard
+                          key={item.id}
+                          item={item as InstagramContentItem}
+                          onDiscussContent={() => discussContent(item)}
+                          onViewDetailedAnalytics={() => setSelectedContent(item)}
+                        />
+                      );
+                    } else if (item.platform === 'youtube') {
+                      return (
+                        <YouTubeCard
+                          key={item.id}
+                          item={item as YouTubeContentItem}
+                          onDiscussContent={() => discussContent(item)}
+                          onViewDetailedAnalytics={() => setSelectedContent(item)}
+                        />
+                      );
+                    } else if (item.platform === 'gmail') {
+                      return (
+                        <GmailCard
+                          key={item.id}
+                          item={item as GmailContentItem}
+                          onDiscussContent={() => discussContent(item)}
+                          onViewDetailedAnalytics={() => setSelectedContent(item)}
+                        />
+                      );
+                    }
+                    return null; // Should not happen if platform is always defined
+                  })}
+                </>
               ) : (
-                // Show message when no content matches filters
                 <div className="col-span-full text-center py-10 text-text-gray dark:text-gray-400">
                   No content found matching your criteria.
                 </div>
@@ -233,13 +256,35 @@ const combinedContent = [mockYouTubeItem, ...(allContentItems || []), ...mockGma
         </div>
       </div>
 
-      {/* Detailed Analytics Modal */} 
+      {/* Detailed Analytics Modal - Platform Specific */}
       {selectedContent && (
-        <DetailedAnalyticsModal
-          selectedContent={selectedContent}
-          onClose={() => setSelectedContent(null)}
-          onDiscussContent={discussContent}
-        />
+        <>
+          {selectedContent.platform === 'gmail' && (
+            <GmailModal
+              selectedContent={selectedContent as GmailContentItem}
+              onClose={() => setSelectedContent(null)}
+              onDiscussContent={() => discussContent(selectedContent)}
+            />
+          )}
+          {selectedContent.platform === 'instagram' && (
+            <InstagramModal
+              selectedContent={selectedContent as InstagramContentItem}
+              onClose={() => setSelectedContent(null)}
+              onDiscussContent={() => discussContent(selectedContent)}
+            />
+          )}
+          {selectedContent.platform === 'youtube' && (
+            <YoutubeModal
+              selectedContent={selectedContent as YouTubeContentItem}
+              onClose={() => setSelectedContent(null)}
+              onDiscussContent={() => discussContent(selectedContent)}
+            />
+          )}
+          {/* Optional: Fallback or error case if platform is unexpected */}
+          {/* {['gmail', 'instagram', 'youtube'].indexOf(selectedContent.platform) === -1 && (
+            <div>Error: Unknown content platform for detailed view.</div>
+          )} */}
+        </>
       )}
     </div>
   );

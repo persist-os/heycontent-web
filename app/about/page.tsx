@@ -15,7 +15,7 @@ export default function About() {
         <h2 className="text-2xl font-semibold text-gray-700 mb-4">Redefining Digital Strategy Through AI</h2>
         
         <p className="mb-8">
-          HeyContent (Intelligent Relationship and Insight System) stands at the intersection of artificial intelligence, 
+          HeyContent stands at the intersection of artificial intelligence,
           brand strategy, and content creation. We're transforming how creators and brands navigate the digital landscape 
           by providing AI-powered insights, strategic consulting, and growth optimization through our innovative platform.
         </p>

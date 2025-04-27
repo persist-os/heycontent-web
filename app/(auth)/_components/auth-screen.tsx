@@ -65,6 +65,7 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
 
       // Save API key to localStorage if it exists in the response
       if (data.apiKey) {
+        localStorage.removeItem('apiKey'); // Clear any previous API key
         localStorage.setItem('apiKey', JSON.stringify(data.apiKey));
         console.log('API key saved to localStorage');
       }
@@ -99,6 +100,7 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
               
               const apiKeyData = await apiKeyResponse.json()
               if (apiKeyData.apiKey) {
+                localStorage.removeItem('apiKey'); // Clear any previous API key
                 localStorage.setItem('apiKey', JSON.stringify(apiKeyData.apiKey));
                 console.log('API key received and saved to localStorage');
               }
@@ -181,6 +183,7 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
 
           // Save API key to localStorage if it exists in the response
           if (data.apiKey) {
+            localStorage.removeItem('apiKey'); // Clear any previous API key
             localStorage.setItem('apiKey', JSON.stringify(data.apiKey));
             console.log('API key saved to localStorage');
           }

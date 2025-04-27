@@ -1,3 +1,8 @@
-import { ContentAnalyticsScreen } from '../_components/content-analytics/components/ContentAnalyticsScreen'
+import React from "react";
+import { ContentAnalyticsScreen } from "@/app/(dashboard)/_components/content-analytics";
 
-export default ContentAnalyticsScreen 
+const ContentAnalyticsPage = () => {
+  return <ContentAnalyticsScreen />;
+};
+
+export default ContentAnalyticsPage;
