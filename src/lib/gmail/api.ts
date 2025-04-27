@@ -1,25 +1,14 @@
 import { google } from 'googleapis';
 import { api } from '@/convex/_generated/api';
 import { ConvexHttpClient } from 'convex/browser';
-import { storeGmailCredentials } from './auth';
+import { getValidGmailToken } from './tokenRefresh';
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
-// Helper: Check if token is expired or about to expire (within 2 minutes)
-function isTokenExpired(expiryDate: number | undefined) {
-  if (!expiryDate) return true;
-  const now = Date.now();
-  // 2 minutes buffer
-  return now > expiryDate - 2 * 60 * 1000;
-}
-
 // Initialize the Gmail API client with refresh logic
 const getGmailClient = async () => {
-  let tokens = await convex.query(api.gmailTokens.getGmailTokens);
-  if (!tokens) {
-    throw new Error('No Gmail tokens found');
-  }
-
+  const accessToken = await getValidGmailToken();
+  
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
@@ -27,36 +16,8 @@ const getGmailClient = async () => {
   );
 
   oauth2Client.setCredentials({
-    access_token: tokens.accessToken,
-    refresh_token: tokens.refreshToken,
-    expiry_date: tokens.expiryDate,
+    access_token: accessToken,
   });
-
-  // Refresh if expired or about to expire
-  if (isTokenExpired(tokens.expiryDate)) {
-    if (!tokens.refreshToken) {
-      throw new Error('No refresh token available to refresh Gmail access token');
-    }
-    try {
-      const { credentials } = await oauth2Client.refreshAccessToken();
-      // Update Convex with new tokens
-      await storeGmailCredentials({
-        access_token: credentials.access_token!,
-        refresh_token: credentials.refresh_token || tokens.refreshToken,
-        scope: credentials.scope || tokens.scope,
-        expiry_date: credentials.expiry_date!,
-      });
-      // Update local tokens for this session
-      oauth2Client.setCredentials({
-        access_token: credentials.access_token!,
-        refresh_token: credentials.refresh_token || tokens.refreshToken,
-        expiry_date: credentials.expiry_date!,
-      });
-    } catch (err) {
-      console.error('Failed to refresh Gmail access token:', err);
-      throw err;
-    }
-  }
 
   return google.gmail({ version: 'v1', auth: oauth2Client });
 };
