@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { type PrismaClient } from '@prisma/client'
 
 // Define types based on your Prisma schema
 interface Message {

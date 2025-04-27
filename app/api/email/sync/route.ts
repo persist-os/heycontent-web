@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/app/auth'
-import prisma from '@/app/lib/prisma'
 import { google, gmail_v1 } from 'googleapis'
 import { Client, AuthProvider } from '@microsoft/microsoft-graph-client'
 import { getCompletion } from '@/app/lib/openai'
-import type { Account } from '@prisma/client'
 
 interface EmailData {
   id: string
@@ -135,88 +133,29 @@ export async function GET() {
     }
 
     console.log('Finding connected accounts...');
-    const accounts = await prisma.account.findMany({
-      where: {
-        userId: session.user.id,
-        provider: 'google',
-        scope: {
-          contains: 'gmail.readonly'
-        }
-      },
-      select: {
-        provider: true,
-        access_token: true,
-        refresh_token: true,
-        scope: true
-      }
-    });
+    // TODO: Migrate all Prisma-dependent logic to Convex.
+    // const accounts = await prisma.account.findMany({
+    //   where: {
+    //     userId: session.user.id,
+    //     provider: 'google',
+    //     scope: {
+    //       contains: 'gmail.readonly'
+    //     }
+    //   },
+    //   select: {
+    //     provider: true,
+    //     access_token: true,
+    //     refresh_token: true,
+    //     scope: true
+    //   }
+    // });
 
-    console.log('Found accounts:', accounts.length, accounts.map((a: EmailAccount) => ({
-      provider: a.provider,
-      hasAccessToken: !!a.access_token,
-      hasRefreshToken: !!a.refresh_token,
-      scope: a.scope
-    })));
-    if (accounts.length === 0) {
-      return NextResponse.json([]);
-    }
-
-    const emailPromises = accounts.map(async (account: EmailAccount) => {
-      try {
-        console.log(`Fetching emails using token:`, account.access_token?.substring(0, 20) + '...');
-        const emails = await getGmailEmails(account.access_token!, account.refresh_token);
-        console.log(`Found ${emails.length} emails`);
-
-        // Analyze each email for partnerships
-        const analyzedEmails = await Promise.all(
-          emails.map(async (email) => {
-            const analysis = await getCompletion([
-              { role: 'system', content: 'You are a helpful assistant that analyzes emails to determine if they are related to brand partnerships or collaborations.' },
-              { role: 'user', content: `Please analyze this email and determine if it's related to a brand partnership or collaboration. Respond with only "true" or "false".\n\nSubject: ${email.subject}\n\nBody: ${email.body}` }
-            ])
-
-            if (analysis) {
-              await prisma.partnership.create({
-                data: {
-                  userId: session.user.id,
-                  name: email.subject,
-                  description: email.body.substring(0, 1000),
-                  status: 'pending',
-                  brand: email.from.split('@')[1].split('.')[0],
-                  type: 'email',
-                  receivedDate: new Date(email.date),
-                  history: {
-                    create: {
-                      date: new Date(),
-                      event: 'Created from email'
-                    }
-                  }
-                }
-              });
-            }
-
-            return {
-              ...email,
-              isPartnership: analysis?.toLowerCase() === 'true' || false
-            }
-          })
-        )
-
-        return {
-          provider: account.provider,
-          emails: analyzedEmails
-        }
-      } catch (error) {
-        console.error(`Error fetching ${account.provider} emails:`, error)
-        return {
-          provider: account.provider,
-          error: 'Failed to fetch emails'
-        }
-      }
-    })
-
-    const results = await Promise.all(emailPromises)
-    return NextResponse.json(results)
+    // TODO: Migrate all Prisma-dependent logic to Convex.
+    // const emailPromises = accounts.map(async (account: EmailAccount) => { ... });
+    // const results = await Promise.all(emailPromises)
+    // return NextResponse.json(results)
+    // END TODO
+    return NextResponse.json({ error: 'Account fetching not yet migrated from Prisma to Convex.' }, { status: 501 });
 
   } catch (error) {
     console.error('[EMAIL_SYNC_ERROR]', error)
