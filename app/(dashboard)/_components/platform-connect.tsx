@@ -78,25 +78,25 @@ const PLATFORMS = [
 ] as const
 
 export function PlatformConnect() {
-  const { user } = useAuth()
-  const [connecting, setConnecting] = useState<SocialPlatform | null>(null)
-  const [disconnecting, setDisconnecting] = useState<SocialPlatform | null>(null)
-  const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccount[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showInstagramOptions, setShowInstagramOptions] = useState(false)
-
+  const { user } = useAuth();
   // Use Convex queries for all platform data
-  const youtubeData = useQuery(api.youtube.getYouTubeData, { userId: user?.uid || '' })
-  const gmailData = useQuery(api.gmail.getGmailData, { userId: user?.uid || '' })
-  const socialAccounts = useQuery(api.social.getConnectedAccounts, { userId: user?.uid || '' })
+  const youtubeData = user?.uid ? useQuery(api.youtubeQueries.getYouTubeData, { userId: user.uid }) : undefined;
+  const gmailData = user?.uid ? useQuery(api.gmail.getGmailData, { userId: user.uid }) : undefined;
+  const socialAccounts = user?.uid ? useQuery(api.social.getConnectedAccounts, { userId: user.uid }) : undefined;
 
-  // Add console logging for Convex responses
-  useEffect(() => {
-    console.log('YouTube Data:', youtubeData)
-    console.log('Gmail Data:', gmailData)
-    console.log('Social Accounts:', socialAccounts)
-  }, [youtubeData, gmailData, socialAccounts])
+  // All hooks must be declared at the top, before any return
+  const [connecting, setConnecting] = useState<SocialPlatform | null>(null);
+  const [disconnecting, setDisconnecting] = useState<SocialPlatform | null>(null);
+  const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccount[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showInstagramOptions, setShowInstagramOptions] = useState(false);
 
+  // Helper to detect error-like objects (Convex or network errors)
+  function isError(data: any): data is { error: string } {
+    return data && typeof data === 'object' && 'error' in data;
+  }
+
+  // Define fetchConnectedPlatforms before using it in any hooks
   const fetchConnectedPlatforms = async () => {
     try {
       setLoading(true)
@@ -104,7 +104,7 @@ export function PlatformConnect() {
       const accounts: ConnectedAccount[] = []
       
       // Add YouTube account from Convex
-      if (youtubeData) {
+      if (youtubeData && !isError(youtubeData) && youtubeData !== null) {
         accounts.push({
           platform: 'youtube',
           username: youtubeData.data?.snippet?.title || 'YouTube Channel',
@@ -114,32 +114,31 @@ export function PlatformConnect() {
             views: youtubeData.viewCount
           },
           updatedAt: youtubeData.timestamp,
-          
           isActive: true
-        })
+        });
       }
 
       // Add Gmail account from Convex
-      if (gmailData?.socialAccount) {
+      if (gmailData && !isError(gmailData) && gmailData.socialAccount) {
         accounts.push({
           platform: 'gmail',
           username: gmailData.socialAccount.username,
           metadata: gmailData.socialAccount.metadata,
           updatedAt: gmailData.socialAccount.updatedAt,
           isActive: gmailData.socialAccount.isConnected
-        })
+        });
       }
 
       // Add Instagram accounts from social accounts
-      if (socialAccounts) {
-        const instagramAccounts = socialAccounts.filter(acc => acc.platform === 'instagram')
+      if (Array.isArray(socialAccounts)) {
+        const instagramAccounts = socialAccounts.filter(acc => acc.platform === 'instagram');
         accounts.push(...instagramAccounts.map(acc => ({
           platform: acc.platform as SocialPlatform,
           username: acc.username,
           metadata: acc.metadata,
           updatedAt: acc.updatedAt,
           isActive: acc.isConnected
-        })))
+        })));
       }
 
       setConnectedAccounts(accounts)
@@ -150,11 +149,19 @@ export function PlatformConnect() {
     }
   }
 
+  // Add console logging for Convex responses
+  useEffect(() => {
+    console.log('YouTube Data:', youtubeData);
+    console.log('Gmail Data:', gmailData);
+    console.log('Social Accounts:', socialAccounts);
+  }, [youtubeData, gmailData, socialAccounts]);
+
   // Update connected accounts when data changes
   useEffect(() => {
     fetchConnectedPlatforms()
-  }, [youtubeData, gmailData, socialAccounts])
+  }, [youtubeData, gmailData, socialAccounts]);
 
+  // URL error handling effect
   useEffect(() => {
     // Check for error in URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -167,6 +174,23 @@ export function PlatformConnect() {
       );
     }
   }, []);
+
+  // Early error/fallback handling (AFTER all hooks)
+  if (youtubeData === undefined || gmailData === undefined || socialAccounts === undefined) {
+    return <div className="flex items-center justify-center h-40">Loading platform data...</div>;
+  }
+  if (isError(youtubeData)) {
+    return <div className="text-red-500 p-4">Failed to load YouTube data: {youtubeData.error}</div>;
+  }
+  if (isError(gmailData)) {
+    return <div className="text-red-500 p-4">Failed to load Gmail data: {gmailData.error}</div>;
+  }
+  if (isError(socialAccounts)) {
+    return <div className="text-red-500 p-4">Failed to load social accounts: {socialAccounts.error}</div>;
+  }
+  if (youtubeData === null && gmailData === null && (!Array.isArray(socialAccounts) || socialAccounts.length === 0)) {
+    return <div className="text-gray-500 p-4">No platform data found for your account.</div>;
+  }
 
   const handleConnect = async (platform: SocialPlatform, options?: { useFacebook?: boolean }) => {
     try {

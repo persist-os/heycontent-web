@@ -11,7 +11,7 @@ import { MessageSquare, RefreshCw, Plus } from 'lucide-react'
 import { useSidebar } from '@/app/context/sidebar-context'
 
 // Import newly extracted types, components and utilities
-import { ChatResponseData, ChatScreenProps, SuggestedAction, AmbientInsight } from './chat/types'
+import { ChatScreenProps, SuggestedAction, AmbientInsight } from './chat/types'
 import { SuggestionChip } from './chat/components/SuggestionChip'
 import { AmbientInsights } from './chat/components/AmbientInsights'
 import { ambientInsights } from './chat/data/ambient-insights'
