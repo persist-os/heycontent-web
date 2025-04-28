@@ -1,27 +1,27 @@
 import React from 'react';
 import { Card } from '@/src/components/ui/card';
-import { MessageSquare, TrendingUp, BarChart3, PlayCircle } from 'lucide-react';
-import { ContentItem } from '../types';
+import { MessageSquare, ThumbsUp, PlayCircle, Eye, Clock, BarChart3 } from 'lucide-react';
+
+import { YouTubeContentItem } from '../types';
 
 interface YouTubeCardProps {
-  item: ContentItem;
-  onDiscussContent: (item: ContentItem) => void;
-  onViewDetailedAnalytics: (item: ContentItem) => void;
+  item: YouTubeContentItem;
+  onDiscussContent: (item: YouTubeContentItem) => void;
+  onViewDetailedAnalytics: (item: YouTubeContentItem) => void;
 }
 
 export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent, onViewDetailedAnalytics }) => {
-  const { content, metrics, publishedAt, performance } = item;
+  const { content, metrics, publishedAt } = item;
 
   return (
     <Card key={item.id} className="overflow-hidden border-2 border-red-500 dark:border-red-400 shadow-lg">
       {/* Thumbnail */}
       <div className="relative aspect-video bg-gray-100 dark:bg-gray-800">
-        {content.thumbnail ? (
+        {content.thumbnailUrl ? (
           <img
-            src={content.thumbnail}
-            alt={content.text || 'YouTube Video'}
+            src={content.thumbnailUrl}
+            alt={content.title || 'YouTube Video'}
             className="w-full h-full object-cover"
-        
           />
         ) : (
           <div className="flex items-center justify-center h-full text-gray-400">
@@ -31,38 +31,33 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
       </div>
       {/* Video Info */}
       <div className="p-4">
-        <h3 className="font-semibold text-lg mb-1 line-clamp-2">{content.text || 'Untitled Video'}</h3>
+        <h3 className="font-semibold text-lg mb-1 line-clamp-2">{content.title || 'Untitled Video'}</h3>
         <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-2">
-          <span className="mr-2">Published:</span>
           <span>{new Date(publishedAt).toLocaleDateString()}</span>
         </div>
+
         {/* Metrics */}
-        <div className="flex flex-wrap gap-4 mb-3">
-          <div className="flex items-center gap-1">
-            <TrendingUp className="w-4 h-4 text-red-500" />
-            <span>{metrics.views.toLocaleString()}</span>
-            <span className="ml-1 text-xs">Views</span>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm mb-4">
+          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-300">
+            <Eye className="w-4 h-4" />
+            <span>{(metrics?.views ?? 0).toLocaleString()} Views</span>
           </div>
-          <div className="flex items-center gap-1">
-            <BarChart3 className="w-4 h-4 text-blue-500" />
-            <span>{metrics.likes?.toLocaleString() ?? 0}</span>
-            <span className="ml-1 text-xs">Likes</span>
+          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-300">
+            <Clock className="w-4 h-4" />
+            <span>{(metrics?.watchTimeMinutes ?? 0).toLocaleString()} min Watch Time</span>
           </div>
-          <div className="flex items-center gap-1">
-            <MessageSquare className="w-4 h-4 text-green-500" />
-            <span>{metrics.comments?.toLocaleString() ?? 0}</span>
-            <span className="ml-1 text-xs">Comments</span>
+          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-300">
+            <BarChart3 className="w-4 h-4" />
+            <span>{metrics?.averageViewDurationSeconds ?? 0} sec Avg. Duration</span>
           </div>
-        </div>
-        {/* Performance */}
-        <div className="flex items-center gap-2 text-xs">
-          <span className={
-            performance.trend === 'up' ? 'text-green-600' : performance.trend === 'down' ? 'text-red-600' : 'text-gray-500'
-          }>
-            {performance.trend === 'up' ? '▲' : performance.trend === 'down' ? '▼' : '■'}
-            {performance.percentageChange}%
-          </span>
-          <span>Performance</span>
+          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-300">
+            <ThumbsUp className="w-4 h-4" />
+            <span>{(metrics?.likes ?? 0).toLocaleString()} Likes</span>
+          </div>
+          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-300">
+            <MessageSquare className="w-4 h-4" />
+            <span>{(metrics?.comments ?? 0).toLocaleString()} Comments</span>
+          </div>
         </div>
         {/* Actions */}
         <div className="flex gap-2 mt-4">

@@ -1,5 +1,5 @@
 import React from 'react';
-import { EmailType } from '../types';
+import type { EmailTypeFilter as EmailType } from '../types';
 
 interface EmailTypeFilterProps {
   selectedEmailType: EmailType;
