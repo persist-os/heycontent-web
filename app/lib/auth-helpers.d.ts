@@ -1,0 +1,1 @@
+export declare function validateToken(userId: string, platform: string): Promise<string>; 

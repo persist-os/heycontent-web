@@ -1,61 +1,65 @@
 'use client';
 
-import React from 'react';
 import { useState, useEffect } from 'react';
-import { FileText, Hash, AtSign, Star, Calendar, 
-  Image, LinkIcon, Lightbulb, MessageSquare, Clock, Keyboard } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { NoteArea } from './NoteArea';
 import { ShortcutsHelp } from './ShortcutsHelp';
+import { useNotes } from './hooks/useNotes';
+import { Note } from './types';
+import { useAIInsights } from './hooks/useAIInsights';
+import { FileText, Plus, Lightbulb, ArrowLeft } from 'lucide-react';
+import { useSidebar } from '@/app/context/sidebar-context';
 
-export interface Note {
-  id: string;
-  title: string;
-  content: string;
-  createdAt: Date;
-  updatedAt: Date;
-  important: boolean;
-  type?: 'default' | 'idea';
-  tags: string[];
-  references: {
-    type: 'ai_insight' | 'conversation' | 'idea';
-    content: string;
-  }[];
+function EmptyState({ onCreateNote }: { onCreateNote: () => void }) {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center text-gray-500 p-8">
+      <div className="bg-purple-50 rounded-full p-4 mb-4">
+        <FileText className="w-12 h-12 text-purple-500" />
+      </div>
+      <h3 className="text-xl font-semibold mb-2">No Notes Yet</h3>
+      <p className="text-gray-600 text-center mb-6 max-w-md">
+        Start organizing your thoughts, ideas, and insights. Create your first note to get started.
+      </p>
+      <div className="flex flex-col items-center gap-4">
+        <button
+          onClick={onCreateNote}
+          className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Create Your First Note</span>
+        </button>
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <Lightbulb className="w-4 h-4" />
+          <span>Tip: Use keyboard shortcuts for faster note-taking</span>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function SmartNotes() {
-  const [notes, setNotes] = useState<Note[]>([]);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(false);
   
-  useEffect(() => {
-    const loadNotes = async () => {
-      try {
-        const data = await fetchNotes();
-        setNotes(data);
-      } catch (error) {
-        console.error('Failed to load notes:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const { notes, isLoading, createNote, updateNote, deleteNote } = useNotes();
+  const { requestAIInsights } = useAIInsights(updateNote);
+  const { setIsViewingNote } = useSidebar();
 
-    loadNotes();
-  }, []);
+  // Update isViewingNote when showSidebar changes
+  useEffect(() => {
+    setIsViewingNote(!showSidebar);
+  }, [showSidebar, setIsViewingNote]);
 
   const handleCreateNote = async () => {
     try {
-      const newNote = await createNote({
-        title: 'Untitled Note',
-        content: '',
-        important: false,
-        tags: [],
-        references: []
-      });
-      
-      setNotes(prev => [...prev, newNote]);
-      setActiveNoteId(newNote.id);
+      const noteId = await createNote({});
+      if (noteId) {
+        setActiveNoteId(noteId);
+        setShowSidebar(false);
+      } else {
+        console.error('Failed to create note: Invalid note ID returned');
+      }
     } catch (error: any) {
       console.error('Failed to create note:', error);
       if (error.message.includes('log in')) {
@@ -64,41 +68,9 @@ export default function SmartNotes() {
     }
   };
 
-  const handleUpdateNote = async (noteId: string, updates: Partial<Note>, shouldSync: boolean = false) => {
-    try {
-      // Update local state immediately
-      setNotes(prev => prev.map(note => {
-        if (note.id === noteId) {
-          // Handle metadata updates (important, type) specially
-          if ('important' in updates || 'type' in updates) {
-            return {
-              ...note,
-              ...updates,
-              updatedAt: new Date()
-            };
-          }
-          // Handle content updates
-          return { ...note, ...updates };
-        }
-        return note;
-      }));
-
-      // Always sync metadata changes with server
-      if (shouldSync || 'important' in updates || 'type' in updates) {
-        const updatedNote = await updateNote(noteId, updates);
-        setNotes(prev => prev.map(note => 
-          note.id === noteId ? updatedNote : note
-        ));
-      }
-    } catch (error) {
-      console.error('Failed to update note:', error);
-    }
-  };
-
   const handleDeleteNote = async (noteId: string) => {
     try {
-      await fetch(`/api/notes/${noteId}`, { method: 'DELETE' });
-      setNotes(prev => prev.filter(note => note.id !== noteId));
+      await deleteNote(noteId);
       if (activeNoteId === noteId) {
         setActiveNoteId(null);
       }
@@ -107,58 +79,7 @@ export default function SmartNotes() {
     }
   };
 
-  const activeNote = notes.find(note => note.id === activeNoteId);
-
-  const fetchNotes = async () => {
-    const response = await fetch('/api/notes');
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.details || 'Failed to fetch notes');
-    }
-    return response.json();
-  };
-
-  const createNote = async (note: Partial<Note>) => {
-    try {
-      const response = await fetch('/api/notes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(note)
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Failed to create note:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorData
-        });
-
-        if (response.status === 401) {
-          window.location.href = '/login';
-          throw new Error('Please log in to create notes');
-        }
-
-        throw new Error(errorData.details || 'Failed to create note');
-      }
-      
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Create note error:', error);
-      throw error;
-    }
-  };
-
-  const updateNote = async (noteId: string, updates: Partial<Note>) => {
-    const response = await fetch(`/api/notes/${noteId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates)
-    });
-    if (!response.ok) throw new Error('Failed to update note');
-    return response.json();
-  };
+  const activeNote = notes.find(note => note._id === activeNoteId);
 
   if (isLoading) {
     return (
@@ -170,32 +91,80 @@ export default function SmartNotes() {
 
   return (
     <div className="flex h-screen bg-white/70 backdrop-blur-sm rounded-3xl overflow-hidden">
-      <Sidebar
-        notes={notes}
-        activeNoteId={activeNoteId}
-        onNoteSelect={setActiveNoteId}
-        onCreateNote={handleCreateNote}
-        onDeleteNote={handleDeleteNote}
-      />
-      
-      {activeNote ? (
-        <div className="flex-1 relative">
+      {/* Main content area */}
+      <div className="flex-1 relative">
+        {activeNote ? (
           <NoteArea
             note={activeNote}
-            onUpdate={(noteId, updates) => handleUpdateNote(noteId, updates, false)}
-            onSave={() => activeNote && handleUpdateNote(activeNote.id, {}, true)}
+            onUpdate={(noteId, updates) => updateNote(noteId, updates)}
+            onSave={() => activeNote && updateNote(activeNote._id, {})}
             onToggleShortcuts={() => setShowShortcuts(!showShortcuts)}
+            onRequestAIInsights={requestAIInsights}
+            onBack={() => {
+              setShowSidebar(true);
+              setActiveNoteId(null);
+            }}
+            isMobile={!showSidebar}
+          />
+        ) : notes.length === 0 ? (
+          <EmptyState onCreateNote={handleCreateNote} />
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center text-gray-500 p-8 relative">
+            {!showSidebar && (
+              <button
+                onClick={() => setShowSidebar(true)}
+                className="absolute top-4 left-4 p-2 rounded-full hover:bg-gray-100"
+                title="Back to notes"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </button>
+            )}
+            <div className="bg-purple-50 rounded-full p-4 mb-4">
+              <FileText className="w-12 h-12 text-purple-500" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Select a Note</h3>
+            <p className="text-gray-600 text-center mb-6 max-w-md">
+              Choose a note from the sidebar or create a new one to start writing.
+            </p>
+            <div className="flex flex-col items-center gap-4">
+              <button
+                onClick={handleCreateNote}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create New Note</span>
+              </button>
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <Lightbulb className="w-4 h-4" />
+                <span>Tip: Use keyboard shortcuts for faster note-taking</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Overlay sidebar */}
+        <div 
+          className={`${
+            showSidebar ? 'translate-x-0' : '-translate-x-full'
+          } transform transition-transform absolute top-0 left-0 h-full z-50 bg-white shadow-lg`}
+        >
+          <Sidebar
+            notes={notes}
+            activeNoteId={activeNoteId}
+            onNoteSelect={(id) => {
+              setActiveNoteId(id);
+              setShowSidebar(false);
+            }}
+            onCreateNote={handleCreateNote}
+            onDeleteNote={handleDeleteNote}
+            onHideSidebar={() => setShowSidebar(false)}
           />
         </div>
-      ) : (
-        <div className="flex-1 flex items-center justify-center text-gray-500">
-          Select a note or create a new one
-        </div>
-      )}
+      </div>
 
       {showShortcuts && (
         <ShortcutsHelp onClose={() => setShowShortcuts(false)} />
       )}
     </div>
   );
-} 
+}

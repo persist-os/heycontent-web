@@ -1,15 +1,20 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/auth';
+import { getServerSession } from '@/app/lib/server-auth';
 import { SocialPlatform } from '@/app/types/social-platforms';
+import { adminAuth } from '@/app/lib/firebase-admin';
+import { auth } from '@/app/lib/auth';
+import { YOUTUBE_CONFIG } from '@/app/lib/config/youtube';
 
 export const dynamic = 'force-dynamic';
 
+type Platform = 'youtube' | 'gmail' | 'instagram' | 'tiktok';
+
 // Platform-specific OAuth configurations
-const PLATFORM_CONFIGS: Record<SocialPlatform, {
+const PLATFORM_CONFIGS: Record<Platform, {
   clientId: string | undefined;
   clientSecret: string | undefined;
   redirectUri: string;
-  scope: string[];
+  scope: readonly string[];
 }> = {
   instagram: {
     clientId: process.env.INSTAGRAM_BASIC_CLIENT_ID,
@@ -20,22 +25,19 @@ const PLATFORM_CONFIGS: Record<SocialPlatform, {
       'instagram_business_content_publish',
       'instagram_business_manage_messages',
       'instagram_business_manage_comments'
-    ]
+    ] as const
   },
   tiktok: {
     clientId: process.env.TIKTOK_CLIENT_ID,
     clientSecret: process.env.TIKTOK_CLIENT_SECRET,
     redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/social/callback/tiktok`,
-    scope: ['user.info.basic', 'video.list']
+    scope: ['user.info.basic', 'video.list'] as const
   },
   youtube: {
     clientId: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     redirectUri: process.env.YOUTUBE_REDIRECT_URI!,
-    scope: [
-      'https://www.googleapis.com/auth/youtube.readonly',
-      'https://www.googleapis.com/auth/youtube.force-ssl'
-    ]
+    scope: YOUTUBE_CONFIG.REQUIRED_SCOPES
   },
   gmail: {
     clientId: process.env.GOOGLE_CLIENT_ID,
@@ -49,28 +51,73 @@ const PLATFORM_CONFIGS: Record<SocialPlatform, {
       'email',
       'profile',
       'openid'
-    ]
+    ] as const
   }
-}
+};
 
 export async function GET(request: Request) {
   console.group('Auth URL Generation');
-  
+
   const { searchParams } = new URL(request.url);
-  const platform = searchParams.get('platform') as SocialPlatform;
+  const platform = searchParams.get('platform') as Platform;
   const useFacebook = searchParams.get('useFacebook') === 'true';
-  
+
   console.log('Request details:', {
     platform,
     useFacebook,
     url: request.url
   });
 
+  // Log all headers for debugging
+  const headers: Record<string, string> = {};
+  request.headers.forEach((value, key) => {
+    headers[key] = key.toLowerCase() === 'authorization' ? 'Bearer [REDACTED]' : value;
+  });
+  console.log('Request headers:', headers);
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      throw new Error('Unauthorized');
+    console.log('Auth URL: Getting server session');
+    let sessionData = await getServerSession();
+    console.log('Session result:', sessionData ? 'Session found' : 'No session found');
+
+    if (!sessionData?.user?.id) {
+      console.error('No authenticated user found');
+
+      // Get the token from the Authorization header as a fallback
+      const authHeader = request.headers.get('Authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        try {
+          console.log('Trying to verify token from Authorization header');
+          const token = authHeader.substring(7);
+          const decodedToken = await adminAuth.verifyIdToken(token);
+
+          if (decodedToken && decodedToken.uid) {
+            console.log('Token verified successfully, using user ID:', decodedToken.uid);
+
+            // Create a session object with the user information from the verified token
+            sessionData = {
+              user: {
+                id: decodedToken.uid,
+                email: decodedToken.email || null,
+                name: decodedToken.name || null,
+                image: decodedToken.picture || null
+              }
+            };
+          } else {
+            console.error('Token verification failed');
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+          }
+        } catch (tokenError) {
+          console.error('Error verifying token:', tokenError);
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+      } else {
+        console.error('No Authorization header found');
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
     }
+
+    console.log('Auth URL: User authenticated, ID:', sessionData.user.id);
 
     const config = PLATFORM_CONFIGS[platform];
     if (!config) {
@@ -82,7 +129,7 @@ export async function GET(request: Request) {
     }
 
     const state = Buffer.from(JSON.stringify({
-      userId: session.user.id,
+      userId: sessionData.user.id,
       platform,
       useFacebook
     })).toString('base64');

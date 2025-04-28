@@ -4,7 +4,7 @@ import { create } from 'zustand'
 interface Message {
   id: string
   content: string
-  role: string
+  role: 'user' | 'assistant'
   timestamp: Date
   conversationId: string
   referencedMessageId?: string | null

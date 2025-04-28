@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
-import { 
-  Search, 
+import { useAuth } from '@/app/context/auth-context'
+import {
+  Search,
   MessageSquare,
   Trash2,
   Star
@@ -13,7 +13,7 @@ import { ChatHistory } from '@/app/types/chat'
 
 export default function HistoryPage() {
   const router = useRouter()
-  const { data: session } = useSession()
+  const { user } = useAuth()
   const [chats, setChats] = useState<ChatHistory[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [isLoading, setIsLoading] = useState(true)
@@ -21,7 +21,7 @@ export default function HistoryPage() {
   // Fetch chats
   useEffect(() => {
     const fetchChats = async () => {
-      if (!session?.user?.id) return
+      if (!user?.uid) return
       try {
         const response = await fetch('/api/chat/history')
         const data = await response.json()
@@ -36,7 +36,7 @@ export default function HistoryPage() {
     }
 
     fetchChats()
-  }, [session?.user?.id])
+  }, [user?.uid])
 
   const handleDeleteChat = async (chatId: string) => {
     try {
@@ -47,14 +47,15 @@ export default function HistoryPage() {
     }
   }
 
-  const filteredChats = chats.filter(chat => 
+  const filteredChats = chats.filter(chat =>
     chat.topic.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   return (
     <div className="max-w-4xl mx-auto p-6">
       {/* Search */}
-      <div className="mb-6">
+      <div className="mt-16 mb-6">
+        <p className="text-gray-600 mb-2 font-medium text-lg">Your chat history</p>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <input
@@ -78,7 +79,7 @@ export default function HistoryPage() {
               className="group bg-white border rounded-xl p-4 hover:shadow-md transition-all"
             >
               <div className="flex items-start justify-between">
-                <div 
+                <div
                   className="flex-1 cursor-pointer"
                   onClick={() => router.push(`/chat?id=${chat.id}`)}
                 >
@@ -108,4 +109,4 @@ export default function HistoryPage() {
       )}
     </div>
   )
-} 
+}

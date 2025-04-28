@@ -1,7 +1,11 @@
 export const YOUTUBE_CONFIG = {
   REQUIRED_SCOPES: [
     'https://www.googleapis.com/auth/youtube.readonly',
-    'https://www.googleapis.com/auth/youtube.force-ssl'
+    'https://www.googleapis.com/auth/youtube.force-ssl',
+    'https://www.googleapis.com/auth/yt-analytics.readonly',
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+    'openid'
   ] as const,
   
   OAUTH_ENDPOINTS: {
@@ -21,8 +25,8 @@ export const YOUTUBE_CONFIG = {
 export type YouTubeScope = typeof YOUTUBE_CONFIG.REQUIRED_SCOPES[number];
 
 export interface TokenValidationResult {
-  isValid: boolean;
-  accessToken?: string;
+  valid: boolean;
   error?: string;
-  expiresAt?: Date;
+  newToken?: string;
+  expiresAt?: number;
 } 

@@ -5,12 +5,16 @@ import { SocialPlatform } from '@/app/types/social-platforms'
 import { useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
+import { fetchWithAuth } from '@/app/lib/api-helpers'
+import { useQuery } from 'convex/react'
+import { api } from '@/convex/_generated/api'
+import { useAuth } from '@/app/context/auth-context'
 
 interface ConnectedAccount {
   platform: SocialPlatform
-  username: string
+  username: string | null
   metadata: any
-  lastUpdated: Date | string
+  updatedAt: number
   isActive: boolean
 }
 
@@ -74,32 +78,70 @@ const PLATFORMS = [
 ] as const
 
 export function PlatformConnect() {
-  const [connecting, setConnecting] = useState<SocialPlatform | null>(null)
-  const [disconnecting, setDisconnecting] = useState<SocialPlatform | null>(null)
-  const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccount[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showInstagramOptions, setShowInstagramOptions] = useState(false)
+  const { user } = useAuth();
+  // Use Convex queries for all platform data
+  const youtubeData = user?.uid ? useQuery(api.youtubeQueries.getYouTubeData, { userId: user.uid }) : undefined;
+  const gmailData = user?.uid ? useQuery(api.gmail.getGmailData, { userId: user.uid }) : undefined;
+  const socialAccounts = user?.uid ? useQuery(api.social.getConnectedAccounts, { userId: user.uid }) : undefined;
 
+  // All hooks must be declared at the top, before any return
+  const [connecting, setConnecting] = useState<SocialPlatform | null>(null);
+  const [disconnecting, setDisconnecting] = useState<SocialPlatform | null>(null);
+  const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccount[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showInstagramOptions, setShowInstagramOptions] = useState(false);
+
+  // Helper to detect error-like objects (Convex or network errors)
+  function isError(data: any): data is { error: string } {
+    return data && typeof data === 'object' && 'error' in data;
+  }
+
+  // Define fetchConnectedPlatforms before using it in any hooks
   const fetchConnectedPlatforms = async () => {
     try {
-      console.log('Starting to fetch connected platforms...')
       setLoading(true)
-      const response = await fetch('/api/social/connected-platforms')
       
-      console.log('Response status:', response.status)
-      const responseText = await response.text()
-      console.log('Raw response:', responseText)
+      const accounts: ConnectedAccount[] = []
       
-      if (!response.ok) {
-        console.error('Failed to fetch platforms:', responseText)
-        return
+      // Add YouTube account from Convex
+      if (youtubeData && !isError(youtubeData) && youtubeData !== null) {
+        accounts.push({
+          platform: 'youtube',
+          username: youtubeData.data?.snippet?.title || 'YouTube Channel',
+          metadata: {
+            subscribers: youtubeData.subscriberCount,
+            videos: youtubeData.videoCount,
+            views: youtubeData.viewCount
+          },
+          updatedAt: youtubeData.timestamp,
+          isActive: true
+        });
       }
-      
-      const data = JSON.parse(responseText)
-      console.log('Parsed platform data:', data)
-      console.log('Connected accounts:', data.accounts)
-      
-      setConnectedAccounts(data.accounts || [])
+
+      // Add Gmail account from Convex
+      if (gmailData && !isError(gmailData) && gmailData.socialAccount) {
+        accounts.push({
+          platform: 'gmail',
+          username: gmailData.socialAccount.username,
+          metadata: gmailData.socialAccount.metadata,
+          updatedAt: gmailData.socialAccount.updatedAt,
+          isActive: gmailData.socialAccount.isConnected
+        });
+      }
+
+      // Add Instagram accounts from social accounts
+      if (Array.isArray(socialAccounts)) {
+        const instagramAccounts = socialAccounts.filter(acc => acc.platform === 'instagram');
+        accounts.push(...instagramAccounts.map(acc => ({
+          platform: acc.platform as SocialPlatform,
+          username: acc.username,
+          metadata: acc.metadata,
+          updatedAt: acc.updatedAt,
+          isActive: acc.isConnected
+        })));
+      }
+
+      setConnectedAccounts(accounts)
     } catch (error) {
       console.error('Error fetching connected platforms:', error)
     } finally {
@@ -107,15 +149,24 @@ export function PlatformConnect() {
     }
   }
 
+  // Add console logging for Convex responses
+  useEffect(() => {
+    console.log('YouTube Data:', youtubeData);
+    console.log('Gmail Data:', gmailData);
+    console.log('Social Accounts:', socialAccounts);
+  }, [youtubeData, gmailData, socialAccounts]);
+
+  // Update connected accounts when data changes
   useEffect(() => {
     fetchConnectedPlatforms()
-  }, [])
+  }, [youtubeData, gmailData, socialAccounts]);
 
+  // URL error handling effect
   useEffect(() => {
     // Check for error in URL
     const urlParams = new URLSearchParams(window.location.search);
     const error = urlParams.get('error');
-    
+
     if (error === 'no_pages_found') {
       toast.error(
         'Facebook Page required. Please create a Facebook Page and connect it to your Instagram Professional account first.',
@@ -124,29 +175,40 @@ export function PlatformConnect() {
     }
   }, []);
 
+  // Early error/fallback handling (AFTER all hooks)
+  if (youtubeData === undefined || gmailData === undefined || socialAccounts === undefined) {
+    return <div className="flex items-center justify-center h-40">Loading platform data...</div>;
+  }
+  if (isError(youtubeData)) {
+    return <div className="text-red-500 p-4">Failed to load YouTube data: {youtubeData.error}</div>;
+  }
+  if (isError(gmailData)) {
+    return <div className="text-red-500 p-4">Failed to load Gmail data: {gmailData.error}</div>;
+  }
+  if (isError(socialAccounts)) {
+    return <div className="text-red-500 p-4">Failed to load social accounts: {socialAccounts.error}</div>;
+  }
+  if (youtubeData === null && gmailData === null && (!Array.isArray(socialAccounts) || socialAccounts.length === 0)) {
+    return <div className="text-gray-500 p-4">No platform data found for your account.</div>;
+  }
+
   const handleConnect = async (platform: SocialPlatform, options?: { useFacebook?: boolean }) => {
     try {
       setConnecting(platform)
-      
+
       let url = `/api/social/auth-url?platform=${platform}`
       if (options?.useFacebook !== undefined) {
         url += `&useFacebook=${options.useFacebook}`
       }
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Cache-Control': 'no-cache'
-        }
-      })
-      
+
+      const response = await fetchWithAuth(url)
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
-      
+
       const data = await response.json()
-      
+
       if (data.authUrl) {
         window.location.href = data.authUrl
       } else {
@@ -164,19 +226,16 @@ export function PlatformConnect() {
   const handleDisconnect = async (platform: SocialPlatform) => {
     try {
       setDisconnecting(platform)
-      
-      const response = await fetch('/api/social/disconnect', {
+
+      const response = await fetchWithAuth('/api/social/disconnect', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ platform })
       })
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
-      
+
       // Refresh the connected platforms list
       await fetchConnectedPlatforms()
       toast.success(`Successfully disconnected ${platform}`)
@@ -194,6 +253,8 @@ export function PlatformConnect() {
 
   const renderMetrics = (platform: string, metadata: any) => {
     if (!metadata) return null
+
+    console.log(`Rendering metrics for ${platform}:`, metadata)
 
     switch (platform) {
       case 'youtube':
@@ -249,8 +310,8 @@ export function PlatformConnect() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => handleConnect(platform.id as SocialPlatform, { 
-                          useFacebook: option.id === 'facebook' 
+                        onClick={() => handleConnect(platform.id as SocialPlatform, {
+                          useFacebook: option.id === 'facebook'
                         })}
                         className="px-3 py-1 text-sm rounded-md text-white"
                         style={{ background: platform.gradient }}
@@ -318,7 +379,7 @@ export function PlatformConnect() {
       <div className="space-y-2">
         <h2 className="text-xl font-semibold">Platform Integrations</h2>
         <p className="text-muted-foreground">
-          Connect your social media accounts to unlock powerful analytics and insights. 
+          Connect your social media accounts to unlock powerful analytics and insights.
           Content will help you track engagement, monitor growth, and identify opportunities across all your platforms.
         </p>
       </div>
@@ -358,28 +419,28 @@ export function PlatformConnect() {
                 <div>
                   <h3 className="text-lg font-semibold">{platform.name}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {isLoading 
-                      ? (connecting ? 'Connecting...' : 'Disconnecting...') 
-                      : account 
+                    {isLoading
+                      ? (connecting ? 'Connecting...' : 'Disconnecting...')
+                      : account
                         ? `Connected as ${account.username}`
                         : 'Not connected'}
                   </p>
                 </div>
               </div>
-              
+
               {account && (
                 <>
                   {renderMetrics(platform.id, account.metadata)}
                   <div className="mt-2 text-xs text-gray-500">
-                    Last updated: {formatDistanceToNow(new Date(account.lastUpdated), { addSuffix: true })}
+                    Last updated: {formatDistanceToNow(new Date(account.updatedAt), { addSuffix: true })}
                   </div>
                 </>
               )}
-              
+
               <p className="text-sm text-muted-foreground my-4">
                 {platform.description}
               </p>
-              
+
               {renderConnectionButton(platform)}
             </Card>
           )
@@ -387,5 +448,5 @@ export function PlatformConnect() {
       </div>
     </div>
   )
-} 
+}
 

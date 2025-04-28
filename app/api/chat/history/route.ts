@@ -1,65 +1,73 @@
-import { NextResponse } from 'next/server'
-import { auth } from '@/app/auth'
-import { ConvexHttpClient } from "convex/browser";
-import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { ConvexHttpClient } from 'convex/browser';
+import { api } from '@/convex/_generated/api';
 
-if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
-  throw new Error('Missing NEXT_PUBLIC_CONVEX_URL');
-}
+export async function GET(request: Request) {
+  const requestId = Math.random().toString(36).substring(7);
+  const { searchParams } = new URL(request.url);
+  const limit = parseInt(searchParams.get('limit') || '20', 10);
 
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL);
+  console.log(`[${requestId}] Fetching chat history`, {
+    limit,
+    timestamp: new Date().toISOString()
+  });
 
-export const runtime = 'nodejs'
-
-type Conversation = {
-  _id: Id<"conversations">;
-  title: string;
-  messages: Array<{
-    content: string;
-    role: string;
-    timestamp: number;
-  }>;
-  createdAt: number;
-  updatedAt: number;
-  starred: boolean;
-};
-
-export async function GET(req: Request) {
   try {
-    const session = await auth()
-    
-    if (!session?.user?.id) {
-      return NextResponse.json({ 
-        conversations: [],
-        success: false,
-        error: 'Unauthorized'
-      })
+    const token = cookies().get('firebase-auth-token')?.value;
+    if (!token) {
+      console.warn(`[${requestId}] Authentication failed: No token found`);
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const conversations = await convex.query(api.chat.getHistory, { 
-      userId: session.user.id,
-      limit: 5 
+    // Initialize Convex client
+    const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL || '');
+
+    // Get the user ID from the token
+    const userId = await convex.query(api.queries.getUserIdFromToken, { token });
+    if (!userId) {
+      console.warn(`[${requestId}] Invalid token: Could not get user ID`);
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    // Fetch conversations from Convex
+    const conversations = await convex.query(api.chat.getHistory, {
+      userId,
+      limit
+    });
+
+    // Map Convex data to the format expected by the frontend
+    const formattedConversations = conversations.map(conv => ({
+      id: conv._id,
+      topic: conv.title || 'Untitled Chat',
+      preview: conv.messages[0]?.content || '',
+      starred: conv.starred || false,
+      messages: conv.messages.map((msg, index) => ({
+        id: index,
+        content: msg.content,
+        role: msg.role,
+        timestamp: new Date(msg.timestamp).toISOString()
+      }))
+    }));
+
+    console.log(`[${requestId}] Successfully fetched ${formattedConversations.length} conversations`);
+
+    return NextResponse.json({
+      conversations: formattedConversations,
+      metadata: {
+        request_id: requestId,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error(`[${requestId}] Failed to fetch chat history`, {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
     });
 
     return NextResponse.json({
-      conversations: conversations.map((conv: Conversation) => ({
-        id: conv._id,
-        topic: conv.title || 'Untitled Chat',
-        preview: conv.messages?.[0]?.content || 'No messages',
-        date: new Date(conv.createdAt).toLocaleDateString(),
-        messages: conv.messages || [],
-        starred: conv.starred || false
-      })),
-      success: true
-    })
-
-  } catch (error) {
-    console.error('Failed to fetch chat history:', error)
-    return NextResponse.json({ 
-      conversations: [],
-      success: false,
-      error: 'Internal Server Error'
-    })
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : 'An unexpected error occurred'
+    }, { status: 500 });
   }
-} 
+}

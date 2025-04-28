@@ -19,7 +19,7 @@ export default defineSchema({
   })
   .index("by_userId", ["userId"])
   .index("by_email", ["email"]),
-  
+
   posts: defineTable({
     title: v.string(),
     content: v.string(),
@@ -30,31 +30,18 @@ export default defineSchema({
   })
   .index("by_author", ["authorId"])
   .index("by_creation", ["createdAt"]),
-  
+
   socialAccounts: defineTable({
-    userId: v.optional(v.string()),
-    creatorId: v.string(),
+    userId: v.string(),
     platform: v.string(),
-    name: v.optional(v.string()),
-    username: v.optional(v.string()),
-    accessToken: v.optional(v.string()),
-    refreshToken: v.optional(v.string()),
-    expiresAt: v.optional(v.number()),
-    tokenType: v.optional(v.string()),
-    scope: v.optional(v.string()),
-    profileUrl: v.optional(v.string()),
-    avatarUrl: v.optional(v.string()),
-    metadata: v.optional(v.any()),
-    isConnected: v.optional(v.boolean()),
-    isActive: v.optional(v.boolean()),
-    lastScraped: v.optional(v.number()),
-    createdAt: v.optional(v.number()),
-    updatedAt: v.optional(v.number()),
+    username: v.string(),
+    metadata: v.any(),
+    isConnected: v.boolean(),
+    updatedAt: v.number(),
   })
   .index("by_user_platform", ["userId", "platform"])
-  .index("by_creator_platform", ["creatorId", "platform"])
   .index("by_platform", ["platform"]),
-  
+
   platformMetrics: defineTable({
     userId: v.string(),
     platform: v.string(),
@@ -65,7 +52,7 @@ export default defineSchema({
   })
   .index("by_user_platform", ["userId", "platform"])
   .index("by_sync_date", ["lastSyncDate"]),
-  
+
   environment: defineTable({
     // OAuth client IDs and secrets
     googleClientId: v.optional(v.string()),
@@ -74,19 +61,19 @@ export default defineSchema({
     instagramClientSecret: v.optional(v.string()),
     tiktokClientId: v.optional(v.string()),
     tiktokClientSecret: v.optional(v.string()),
-    
+
     // Webhook verification tokens
     facebookVerifyToken: v.optional(v.string()),
     instagramVerifyToken: v.optional(v.string()),
-    
+
     // Application settings
     appScheme: v.optional(v.string()),
     apiBaseUrl: v.optional(v.string()),
-    
+
     // Metadata
     updatedAt: v.number(),
   }),
-  
+
   // Enhanced tables for Clerk-based OAuth integration
   gmailData: defineTable({
     userId: v.string(),
@@ -98,11 +85,49 @@ export default defineSchema({
   })
   .index("by_user", ["userId"])
   .index("by_timestamp", ["timestamp"]),
-  
+
   youtubeData: defineTable({
     userId: v.string(),
-    resourceType: v.string(),
-    data: v.any(),
+    resourceType: v.union(v.literal("channel"), v.literal("video"), v.literal("video_analysis")),
+    data: v.object({
+      id: v.string(),
+      snippet: v.optional(v.object({
+        title: v.string(),
+        description: v.string(),
+        customUrl: v.optional(v.string()),
+        thumbnails: v.optional(v.object({
+          default: v.optional(v.object({
+            url: v.string(),
+            width: v.number(),
+            height: v.number()
+          })),
+          medium: v.optional(v.object({
+            url: v.string(),
+            width: v.number(),
+            height: v.number()
+          })),
+          high: v.optional(v.object({
+            url: v.string(),
+            width: v.number(),
+            height: v.number()
+          }))
+        })),
+        publishedAt: v.optional(v.string())
+      })),
+      statistics: v.optional(v.object({
+        viewCount: v.string(),
+        subscriberCount: v.string(),
+        hiddenSubscriberCount: v.boolean(),
+        videoCount: v.string()
+      })),
+      accessToken: v.optional(v.string()),
+      refreshToken: v.optional(v.string()),
+      expiresAt: v.optional(v.number()),
+      tokenType: v.optional(v.string()),
+      scope: v.optional(v.string()),
+      videoId: v.optional(v.string()),
+      analysisData: v.optional(v.any())
+    }),
     timestamp: v.number(),
     videoCount: v.optional(v.number()),
     subscriberCount: v.optional(v.number()),
@@ -110,17 +135,20 @@ export default defineSchema({
   })
   .index("by_user_resource", ["userId", "resourceType"])
   .index("by_timestamp", ["timestamp"]),
-  
+
   socialConnectionStatus: defineTable({
     userId: v.string(),
     connections: v.object({
       gmail: v.boolean(),
       youtube: v.boolean(),
+      instagram: v.optional(v.boolean()),
+      tiktok: v.optional(v.boolean()),
+      facebook: v.optional(v.boolean())
     }),
     lastChecked: v.number(),
   })
   .index("by_user", ["userId"]),
-  
+
   conversations: defineTable({
     userId: v.string(),
     title: v.string(),
@@ -160,11 +188,61 @@ export default defineSchema({
     title: v.string(),
     content: v.string(),
     important: v.boolean(),
+    type: v.optional(v.union(
+      v.literal("ai_insight"),
+      v.literal("conversation"),
+      v.literal("idea"),
+      v.literal("url"),
+      v.literal("date")
+    )),
     tags: v.array(v.string()),
-    references: v.array(v.string()),
+    references: v.array(v.object({
+      type: v.union(
+        v.literal("ai_insight"),
+        v.literal("conversation"),
+        v.literal("idea"),
+        v.literal("url"),
+        v.literal("date")
+      ),
+      content: v.string(),
+      isLoading: v.optional(v.boolean()),
+    })),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
   .index("by_user", ["userId"])
-  .index("by_creation", ["createdAt"]),
+
+  .index("by_creation", ["createdAt"])
+  .index("by_type", ["type"]),
+
+  tokens: defineTable({
+    userId: v.string(),
+    platform: v.string(),
+    accessToken: v.string(),
+    refreshToken: v.optional(v.string()),
+    expiresAt: v.number(),
+    scope: v.array(v.string()),
+    tokenType: v.string(),
+    lastRefreshed: v.optional(v.number()),
+  })
+  .index("by_user_platform", ["userId", "platform"]),
+
+  api_keys: defineTable({
+    user_id: v.string(), // Firebase UID
+    hashed_key: v.string(), // SHA-256 hash of API key
+    created_at: v.number(),
+    rate_tier: v.optional(v.string()),
+    scopes: v.optional(v.array(v.string())),
+    status: v.optional(v.string()),
+  }),
+
+  rate_limits: defineTable({
+    user_id: v.string(), // Firebase user ID (same as used in api_keys)
+    resource: v.string(), // Resource being rate limited (endpoint, action, etc.)
+    timestamps: v.array(v.number()), // Array of Unix timestamps for requests
+    lastUpdated: v.number(), // Last updated timestamp
+  })
+  .index("by_user_resource", ["user_id", "resource"]),
+
+
 });

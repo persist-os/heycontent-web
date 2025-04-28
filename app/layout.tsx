@@ -9,7 +9,7 @@ import { Toaster } from 'react-hot-toast'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'AVA OwnIt',
+  title: 'HeyContent',
   description: 'AI-powered creator management platform',
 }
 
@@ -24,10 +24,11 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         {isSignOut && (
           <meta
             httpEquiv="Clear-Site-Data"
-            content='"cache", "cookies", "storage"'
+            content="cache, cookies, storage"
           />
         )}
       </head>

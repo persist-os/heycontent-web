@@ -9,7 +9,8 @@ import {
   RefreshCw, AlertCircle
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+import { auth } from '@/app/lib/firebase'
+import { onAuthStateChanged } from 'firebase/auth'
 
 interface QuotaError {
   service: string;
@@ -43,19 +44,19 @@ interface AIActionableInsight {
   id: string | number;
   type: 'partnership' | 'content' | 'platform';
   opportunity: {
-    title: string;
-    description: string;
-    impact: string;
-    timing: string;
-    confidence: number;
+      title: string;
+      description: string;
+      impact: string;
+      timing: string;
+      confidence: number;
   };
   action: {
-    steps: string[];
-    timeToImplement: string;
-    expectedOutcome: string;
-    requirements: string[];
-    type?: string;
-    priority?: 'high' | 'medium' | 'low';
+      steps: string[];
+      timeToImplement: string;
+      expectedOutcome: string;
+      requirements: string[];
+      type?: string;
+      priority?: 'high' | 'medium' | 'low';
   };
   context: ExtendedInsightContext;
 }
@@ -78,20 +79,21 @@ interface APIInsightResponse {
   confidence: number;
   source?: string;
   action?: {
-    steps: string[];
-    timeToImplement: string;
-    requirements: string[];
-    type?: string;
-    priority?: 'high' | 'medium' | 'low';
+      steps: string[];
+      timeToImplement: string;
+      requirements: string[];
+      type?: string;
+      priority?: 'high' | 'medium' | 'low';
   };
   data?: {
-    emails?: InsightEmail[];
-    videos?: InsightVideo[];
-    sourceDetails?: string[];
-    data?: string[];
-    engagementPotential?: string;
+      emails?: InsightEmail[];
+      videos?: InsightVideo[];
+      sourceDetails?: string[];
+      data?: string[];
+      engagementPotential?: string;
   };
 }
+
 
 const CACHE_VERSION = 1;
 const QUOTA_COOLDOWN = 30 * 60 * 1000; // 30 minutes
@@ -177,11 +179,24 @@ export function AIInsightsScreen() {
   const [activeTab, setActiveTab] = useState('content')
   const [canRefresh, setCanRefresh] = useState(true)
   const router = useRouter()
-  const { data: session } = useSession()
+  const [user, setUser] = useState<any>(null)
 
   // Add these inside the component
   const isRequestInProgress = useRef(false);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (!auth) {
+      console.error('Firebase auth not initialized')
+      return
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user)
+    })
+
+    return () => unsubscribe()
+  }, [])
 
   // Background fetch without loading state
   const backgroundFetch = async () => {
@@ -423,10 +438,10 @@ export function AIInsightsScreen() {
       }
     };
 
-    if (session?.user) {
+    if (user) {
       loadCache();
     }
-  }, [session]);
+  }, [user]);
 
   // Helper to check if it's the next day
   const isNextDay = (lastRefresh: Date) => {
@@ -511,31 +526,38 @@ export function AIInsightsScreen() {
   return (
     <div className="relative">
       {/* Fixed Header - Now with refresh button */}
-      <div className="shrink-0 px-6 py-4 border-b bg-white dark:bg-gray-900 dark:border-gray-800">
+      <div className="shrink-0 px-6 py-4 bg-white dark:bg-gray-900">
         <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-lg font-semibold mb-1 dark:text-white">AI Insights</h1>
-            <p className="text-text-gray dark:text-gray-400">
-              Personalized recommendations for your content strategy
-              {lastUpdated && (
-                <span className="ml-2 text-sm">
-                  Updated {lastUpdated.toLocaleDateString()}
-                </span>
-              )}
-            </p>
+          <div className="w-[100px] sm:w-[24px]"></div>
+          <div className="flex-1 flex justify-center sm:justify-start">
+            <div className="text-center sm:text-left">
+              <h1 className="text-base font-medium text-black dark:text-white">AI Insights</h1>
+              <p className="text-text-gray dark:text-gray-400">
+                <span className="hidden sm:inline">Personalized recommendations for your content strategy</span>
+                {lastUpdated && (
+                  <span className="ml-2 text-sm">
+                    Updated {lastUpdated.toLocaleDateString()}
+                  </span>
+                )}
+              </p>
+            </div>
           </div>
-          <button
-            onClick={handleRefresh}
-            disabled={!canRefresh || isRefreshing}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-              canRefresh && !isRefreshing
-                ? 'bg-heycontent-light-yellow text-black hover:bg-heycontent-yellow/20 dark:bg-heycontent-yellow/30 dark:text-heycontent-yellow dark:hover:bg-heycontent-yellow/50'
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500'
-            }`}
-          >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? 'Refreshing...' : 'Refresh Insights'}
-          </button>
+          <div className="w-[100px] sm:w-auto flex justify-end">
+            <button
+              onClick={handleRefresh}
+              disabled={!canRefresh || isRefreshing}
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors ${
+                canRefresh && !isRefreshing
+                  ? 'bg-heycontent-light-yellow text-black hover:bg-heycontent-yellow/20 dark:bg-heycontent-yellow/30 dark:text-heycontent-yellow dark:hover:bg-heycontent-yellow/50'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500'
+              }`}
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">
+                {isRefreshing ? 'Refreshing...' : 'Refresh Insights'}
+              </span>
+            </button>
+          </div>
         </div>
       </div>
 

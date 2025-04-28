@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card'
 import { Badge } from "@/src/components/ui/badge"
 import { 
@@ -21,6 +21,31 @@ const PartnershipsScreen = () => {
   const [sortBy, setSortBy] = useState('date') // 'date', 'value', 'progress'
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [filterType, setFilterType] = useState('all')
+  const [filterValue, setFilterValue] = useState('all')
+  const [filterProgress, setFilterProgress] = useState('all')
+
+  // Add refs for the search and filter containers
+  const searchRef = useRef<HTMLDivElement>(null)
+  const filterRef = useRef<HTMLDivElement>(null)
+
+  // Add click outside handler
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setSearchQuery('')
+      }
+      if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
+        setIsFilterOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   // Sample data structure for partnerships
   const partnerships = {
@@ -255,26 +280,23 @@ const PartnershipsScreen = () => {
     return () => window.removeEventListener('keydown', handleKeyPress)
   }, [])
 
-  // Add new state for filter dropdown
-  const [isFilterOpen, setIsFilterOpen] = useState(false)
-
-  // Add these near your other filter states
-  const [filterType, setFilterType] = useState('all')
-  const [filterValue, setFilterValue] = useState('all')
-  const [filterProgress, setFilterProgress] = useState('all')
-
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Fixed Header */}
-      <div className="shrink-0 px-6 py-4 border-b bg-white">
+      <div className="shrink-0 px-6 py-4 bg-white dark:bg-gray-900">
         <div className="flex justify-between items-center">
-          <div className="flex-1">
-            <h1 className="text-lg font-semibold mb-1">Partnership Management</h1>
-            <p className="text-gray-600">Track and manage your brand collaborations</p>
+          <div className="w-[100px] sm:w-[24px]"></div>
+          <div className="flex-1 flex justify-center sm:justify-start">
+            <div className="text-center sm:text-left">
+              <h1 className="text-base font-medium text-black dark:text-white">Partnership Management</h1>
+              <p className="text-text-gray dark:text-gray-400">
+                <span className="hidden sm:inline">Track and manage your brand collaborations</span>
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="w-[100px] sm:w-auto flex justify-end gap-2">
             {/* Search Button */}
-            <div className="relative">
+            <div className="relative" ref={searchRef}>
               {searchQuery ? (
                 <div className="flex items-center bg-white border rounded-lg">
                   <input
@@ -301,20 +323,21 @@ const PartnershipsScreen = () => {
                 </button>
               )}
             </div>
-
-            {/* Filter Button */}
-            <button 
-              onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl hover:bg-gray-50"
-            >
-              <Filter className="w-4 h-4" />
-              Filter
-            </button>
-
-            {/* Sync Inbox Button */}
-            <button className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-xl hover:bg-purple-600">
-              <Mail className="w-4 h-4" />
-              Sync Inbox
+            <div ref={filterRef}>
+              <button
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+              >
+                <Filter className="w-4 h-4" />
+                <span className="hidden sm:inline">Filter</span>
+              </button>
+            </div>
+            <button className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors bg-heycontent-yellow text-black hover:bg-heycontent-yellow/90">
+              <div className="relative">
+                <Mail className="w-4 h-4" />
+                <div className="absolute -top-1 -right-1 w-2 h-2 bg-heycontent-green rounded-full animate-pulse" />
+              </div>
+              <span className="hidden sm:inline">Sync Inbox</span>
             </button>
           </div>
         </div>
@@ -324,18 +347,18 @@ const PartnershipsScreen = () => {
       <div className="flex-1 overflow-y-auto">
         <div className="p-6 space-y-6">
           {/* Metrics Grid */}
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
             {metrics.map((metric, i) => (
               <Card key={i}>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-xl bg-gray-50">
-                      <metric.icon className={`w-6 h-6 ${metric.color}`} />
+                <CardContent className="pt-4 sm:pt-6">
+                  <div className="flex items-start gap-3 sm:gap-4">
+                    <div className="p-1.5 sm:p-2 rounded-xl bg-heycontent-light-yellow shrink-0">
+                      <metric.icon className={`w-4 h-4 sm:w-6 sm:h-6 ${metric.color}`} />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">{metric.label}</p>
-                      <h3 className="text-2xl font-semibold">{metric.value}</h3>
-                      <span className="text-sm text-green-500">{metric.trend}</span>
+                      <p className="text-xs sm:text-sm text-text-gray">{metric.label}</p>
+                      <h3 className="text-lg sm:text-2xl font-semibold text-text-dark">{metric.value}</h3>
+                      <span className="text-xs sm:text-sm text-heycontent-green">{metric.trend}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -344,50 +367,107 @@ const PartnershipsScreen = () => {
           </div>
 
           {/* Main Content Grid */}
-          <div className="grid grid-cols-12 gap-6">
+          <div className="grid grid-cols-1 gap-4 md:gap-6">
             {/* Partnerships List */}
-            <div className="col-span-8 space-y-6">
+            <div className="space-y-4 md:space-y-6">
               {/* Active Partnerships */}
               <Card>
                 <CardHeader>
                   <CardTitle>Active Partnerships</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
+                  <div className="space-y-3 md:space-y-4">
                     {processedPartnerships.map((partnership) => (
-                      <div 
-                        key={partnership.id}
-                        onClick={() => setSelectedPartnership(partnership)}
-                        className="p-4 bg-white rounded-xl hover:bg-gray-50 cursor-pointer border"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-medium">{partnership.brand}</h3>
-                              <Badge className="bg-gray-100 text-gray-700">
-                                {partnership.type}
-                              </Badge>
+                      <div key={partnership.id}>
+                        <div 
+                          onClick={() => setSelectedPartnership(partnership)}
+                          className="p-3 md:p-4 bg-white rounded-xl hover:bg-gray-50 cursor-pointer border"
+                        >
+                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-0">
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="font-medium text-text-dark">{partnership.brand}</h3>
+                                <Badge className="bg-heycontent-light-yellow text-text-dark text-xs">
+                                  {partnership.type}
+                                </Badge>
+                              </div>
+                              <p className="text-xs sm:text-sm text-text-gray mt-1">
+                                {partnership.deadline ? `Due: ${partnership.deadline}` : 'No deadline set'}
+                                {partnership.value ? ` · Value: ${partnership.value}` : ''}
+                              </p>
                             </div>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {partnership.deadline ? `Due: ${partnership.deadline}` : 'No deadline set'}
-                              {partnership.value ? ` · Value: ${partnership.value}` : ''}
-                            </p>
+                            <div className="text-left sm:text-right">
+                              <div className="text-xs sm:text-sm font-medium text-heycontent-purple">
+                                {partnership.progress ?? 0}% Complete
+                              </div>
+                              <div className="text-xs sm:text-sm text-text-gray mt-0.5">
+                                Last updated: {partnership.lastContact || 'Not available'}
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <div className="text-sm font-medium text-purple-500">
-                              {partnership.progress ?? 0}% Complete
-                            </div>
-                            <div className="text-sm text-gray-500 mt-1">
-                              Last updated: {partnership.lastContact || 'Not available'}
-                            </div>
+                          <div className="mt-3 h-1.5 sm:h-2 bg-heycontent-light-yellow rounded-full">
+                            <div 
+                              className="h-1.5 sm:h-2 bg-heycontent-yellow rounded-full"
+                              style={{ width: `${partnership.progress ?? 0}%` }}
+                            />
                           </div>
                         </div>
-                        <div className="mt-3 h-2 bg-gray-100 rounded-full">
-                          <div 
-                            className="h-2 bg-purple-500 rounded-full"
-                            style={{ width: `${partnership.progress ?? 0}%` }}
-                          />
-                        </div>
+                        
+                        {/* Partnership Details - Shown when selected */}
+                        {selectedPartnership?.id === partnership.id && (
+                          <div className="mt-3 p-3 md:p-4 bg-heycontent-light-yellow rounded-xl border border-heycontent-yellow/20">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div>
+                                <h3 className="text-sm font-medium mb-2 text-text-dark">Requirements</h3>
+                                <div className="space-y-2">
+                                  {selectedPartnership.requirements?.map((req: string, i: number) => (
+                                    <div key={i} className="flex items-center gap-2 text-xs sm:text-sm text-text-dark">
+                                      <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-heycontent-green shrink-0" />
+                                      {req}
+                                    </div>
+                                  )) || (
+                                    <div className="text-xs sm:text-sm text-text-gray">No requirements specified</div>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div>
+                                <h3 className="text-sm font-medium mb-2 text-text-dark">Contacts</h3>
+                                {selectedPartnership.contacts.map((contact: PartnershipContact, i: number) => (
+                                  <div key={i} className="text-xs sm:text-sm space-y-1">
+                                    <div className="font-medium text-text-dark">{contact.name}</div>
+                                    <div className="text-text-gray">{contact.role}</div>
+                                    <div className="text-heycontent-purple">{contact.email}</div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              <div>
+                                <h3 className="text-sm font-medium mb-2 text-text-dark">Timeline</h3>
+                                <div className="space-y-2">
+                                  {selectedPartnership.history.map((event: PartnershipEvent, i: number) => (
+                                    <div key={i} className="flex items-start gap-2 text-xs sm:text-sm">
+                                      <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-text-gray mt-0.5 shrink-0" />
+                                      <div>
+                                        <div className="text-text-gray">{event.date}</div>
+                                        <div className="text-text-dark">{event.event}</div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-2 mt-4">
+                              <button className="flex-1 px-4 py-2 bg-heycontent-yellow text-black text-xs sm:text-sm rounded-lg hover:bg-heycontent-yellow/90">
+                                View Contract
+                              </button>
+                              <button className="flex-1 px-4 py-2 bg-heycontent-purple text-white text-xs sm:text-sm rounded-lg hover:bg-heycontent-purple/90">
+                                Message Team
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -400,30 +480,30 @@ const PartnershipsScreen = () => {
                   <CardTitle>Incoming Proposals</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
+                  <div className="space-y-3 md:space-y-4">
                     {partnerships.incoming.map((proposal) => (
                       <div 
                         key={proposal.id}
-                        className="p-4 bg-white rounded-xl hover:bg-gray-50 cursor-pointer border"
+                        className="p-3 md:p-4 bg-white rounded-xl hover:bg-gray-50 cursor-pointer border"
                       >
-                        <div className="flex justify-between items-start">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-0">
                           <div>
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-medium">{proposal.brand}</h3>
-                              <Badge className="bg-purple-100 text-purple-700">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="font-medium text-text-dark">{proposal.brand}</h3>
+                              <Badge className="bg-heycontent-light-purple text-heycontent-purple text-xs">
                                 {proposal.type}
                               </Badge>
                             </div>
-                            <p className="text-sm text-gray-600 mt-1">
+                            <p className="text-xs sm:text-sm text-text-gray mt-1">
                               Received: {proposal.receivedDate || 'Recently'} 
                               {proposal.estimatedValue ? ` · Est. Value: ${proposal.estimatedValue}` : ''}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-green-500">
+                          <div className="flex items-center gap-2 text-left sm:text-right">
+                            <span className="text-xs sm:text-sm font-medium text-heycontent-green">
                               {proposal.alignmentScore ?? 0}% Match
                             </span>
-                            <Mail className="w-4 h-4 text-gray-400" />
+                            <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-text-gray" />
                           </div>
                         </div>
                       </div>
@@ -438,42 +518,49 @@ const PartnershipsScreen = () => {
                   <CardTitle>AI-Detected Opportunities</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
+                  <div className="space-y-3 md:space-y-4">
                     {partnerships.suggested.map((suggestion) => (
-                      <div 
-                        key={suggestion.id}
-                        className="p-4 bg-white rounded-xl hover:bg-gray-50 cursor-pointer border"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-medium">{suggestion.brand}</h3>
-                              <Badge className="bg-purple-100 text-purple-700">
-                                AI Suggested
-                              </Badge>
+                      <div key={suggestion.id}>
+                        <div className="p-3 md:p-4 bg-white rounded-xl hover:bg-gray-50 cursor-pointer border">
+                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-0">
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="font-medium text-text-dark">{suggestion.brand}</h3>
+                                <Badge className="bg-heycontent-light-green text-heycontent-green text-xs">
+                                  AI Detected
+                                </Badge>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2 mt-1">
+                                <p className="text-xs sm:text-sm text-text-gray">
+                                  Potential Value: {suggestion.potentialValue}
+                                </p>
+                                <span className="text-xs sm:text-sm font-medium text-heycontent-green">
+                                  {suggestion.confidence}% Confidence
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                              <div className="flex items-center gap-1">
-                                <MessageSquare className="w-4 h-4" />
-                                {suggestion.signals?.comments || 0} comments
+                            <div className="flex flex-col sm:items-end gap-1">
+                              <div className="flex items-center gap-2 text-xs sm:text-sm text-text-gray">
+                                <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4" />
+                                <span>{suggestion.signals.comments} Comments</span>
                               </div>
-                              <div className="flex items-center gap-1">
-                                <Heart className="w-4 h-4" />
-                                {suggestion.signals?.likes || 0} likes
+                              <div className="flex items-center gap-2 text-xs sm:text-sm text-text-gray">
+                                <Heart className="w-3 h-3 sm:w-4 sm:h-4" />
+                                <span>{suggestion.signals.likes} Likes</span>
                               </div>
-                              <div className="flex items-center gap-1">
-                                <Mail className="w-4 h-4" />
-                                {suggestion.signals?.dms || 0} messages
+                              <div className="flex items-center gap-2 text-xs sm:text-sm text-text-gray">
+                                <Mail className="w-3 h-3 sm:w-4 sm:h-4" />
+                                <span>{suggestion.signals.dms} DMs</span>
                               </div>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <span className="text-sm font-medium text-purple-500">
-                              {suggestion.confidence}% Confidence
-                            </span>
-                            <p className="text-sm text-gray-500 mt-1">
-                              Est. Value: {suggestion.potentialValue}
-                            </p>
+                          <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                            <button className="flex-1 px-3 py-1.5 bg-heycontent-yellow text-black text-xs sm:text-sm rounded-lg hover:bg-heycontent-yellow/90">
+                              Start Outreach
+                            </button>
+                            <button className="flex-1 px-3 py-1.5 bg-heycontent-light-yellow text-text-dark text-xs sm:text-sm rounded-lg hover:bg-heycontent-light-yellow/80">
+                              View Analysis
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -481,74 +568,6 @@ const PartnershipsScreen = () => {
                   </div>
                 </CardContent>
               </Card>
-            </div>
-
-            {/* Details Panel */}
-            <div className="col-span-4">
-              {selectedPartnership ? (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Partnership Details</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div>
-                      <h3 className="font-medium mb-2">Requirements</h3>
-                      <div className="space-y-2">
-                        {selectedPartnership.requirements?.map((req: string, i: number) => (
-                          <div key={i} className="flex items-center gap-2 text-sm">
-                            <CheckCircle className="w-4 h-4 text-green-500" />
-                            {req}
-                          </div>
-                        )) || (
-                          <div className="text-sm text-gray-500">No requirements specified</div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="font-medium mb-2">Contacts</h3>
-                      {selectedPartnership.contacts.map((contact: PartnershipContact, i: number) => (
-                        <div key={i} className="text-sm space-y-1">
-                          <div className="font-medium">{contact.name}</div>
-                          <div className="text-gray-600">{contact.role}</div>
-                          <div className="text-purple-500">{contact.email}</div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div>
-                      <h3 className="font-medium mb-2">Timeline</h3>
-                      <div className="space-y-3">
-                        {selectedPartnership.history.map((event: PartnershipEvent, i: number) => (
-                          <div key={i} className="flex items-start gap-2 text-sm">
-                            <Clock className="w-4 h-4 text-gray-400 mt-1" />
-                            <div>
-                              <div className="text-gray-600">{event.date}</div>
-                              <div>{event.event}</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button className="flex-1 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600">
-                        View Contract
-                      </button>
-                      <button className="flex-1 px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200">
-                        Message Team
-                      </button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card>
-                  <CardContent className="p-6 text-center text-gray-500">
-                    <Briefcase className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                    <p>Select a partnership to view details</p>
-                  </CardContent>
-                </Card>
-              )}
             </div>
           </div>
         </div>
@@ -580,8 +599,138 @@ const PartnershipsScreen = () => {
 
       {/* Filter Dropdown - Positioned absolutely */}
       {isFilterOpen && (
-        <div className="absolute right-6 top-[4.5rem] w-72 bg-white border rounded-lg shadow-lg p-4 space-y-4 z-50">
-          {/* Filter content... */}
+        <div className="absolute right-6 top-[4.5rem] w-72 bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-lg shadow-lg p-4 space-y-4 z-50">
+          <div className="space-y-2">
+            <h3 className="font-medium text-sm text-text-dark">Status</h3>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setFilterStatus('all')}
+                className={`px-3 py-1 rounded-lg text-sm ${
+                  filterStatus === 'all'
+                    ? 'bg-heycontent-yellow text-black'
+                    : 'bg-heycontent-light-yellow text-text-dark'
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setFilterStatus('active')}
+                className={`px-3 py-1 rounded-lg text-sm ${
+                  filterStatus === 'active'
+                    ? 'bg-heycontent-yellow text-black'
+                    : 'bg-heycontent-light-yellow text-text-dark'
+                }`}
+              >
+                Active
+              </button>
+              <button
+                onClick={() => setFilterStatus('pending')}
+                className={`px-3 py-1 rounded-lg text-sm ${
+                  filterStatus === 'pending'
+                    ? 'bg-heycontent-yellow text-black'
+                    : 'bg-heycontent-light-yellow text-text-dark'
+                }`}
+              >
+                Pending
+              </button>
+              <button
+                onClick={() => setFilterStatus('completed')}
+                className={`px-3 py-1 rounded-lg text-sm ${
+                  filterStatus === 'completed'
+                    ? 'bg-heycontent-yellow text-black'
+                    : 'bg-heycontent-light-yellow text-text-dark'
+                }`}
+              >
+                Completed
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="font-medium text-sm text-text-dark">Sort By</h3>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSortBy('date')}
+                className={`px-3 py-1 rounded-lg text-sm ${
+                  sortBy === 'date'
+                    ? 'bg-heycontent-yellow text-black'
+                    : 'bg-heycontent-light-yellow text-text-dark'
+                }`}
+              >
+                Date
+              </button>
+              <button
+                onClick={() => setSortBy('value')}
+                className={`px-3 py-1 rounded-lg text-sm ${
+                  sortBy === 'value'
+                    ? 'bg-heycontent-yellow text-black'
+                    : 'bg-heycontent-light-yellow text-text-dark'
+                }`}
+              >
+                Value
+              </button>
+              <button
+                onClick={() => setSortBy('progress')}
+                className={`px-3 py-1 rounded-lg text-sm ${
+                  sortBy === 'progress'
+                    ? 'bg-heycontent-yellow text-black'
+                    : 'bg-heycontent-light-yellow text-text-dark'
+                }`}
+              >
+                Progress
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="font-medium text-sm text-text-dark">Type</h3>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setFilterType('all')}
+                className={`px-3 py-1 rounded-lg text-sm ${
+                  filterType === 'all'
+                    ? 'bg-heycontent-yellow text-black'
+                    : 'bg-heycontent-light-yellow text-text-dark'
+                }`}
+              >
+                All Types
+              </button>
+              <button
+                onClick={() => setFilterType('product')}
+                className={`px-3 py-1 rounded-lg text-sm ${
+                  filterType === 'product'
+                    ? 'bg-heycontent-yellow text-black'
+                    : 'bg-heycontent-light-yellow text-text-dark'
+                }`}
+              >
+                Product Review
+              </button>
+              <button
+                onClick={() => setFilterType('sponsored')}
+                className={`px-3 py-1 rounded-lg text-sm ${
+                  filterType === 'sponsored'
+                    ? 'bg-heycontent-yellow text-black'
+                    : 'bg-heycontent-light-yellow text-text-dark'
+                }`}
+              >
+                Sponsored Content
+              </button>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t dark:border-gray-800">
+            <button
+              onClick={() => {
+                setFilterStatus('all')
+                setSortBy('date')
+                setFilterType('all')
+                setIsFilterOpen(false)
+              }}
+              className="w-full px-4 py-2 text-sm text-text-dark hover:bg-heycontent-light-yellow rounded-lg"
+            >
+              Reset Filters
+            </button>
+          </div>
         </div>
       )}
     </div>
