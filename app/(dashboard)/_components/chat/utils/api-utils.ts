@@ -57,7 +57,8 @@ export async function getApiKey(): Promise<string | null> {
         const response = await fetch('/api/auth/key', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
           },
           body: JSON.stringify({
             idToken,
@@ -86,17 +87,23 @@ export async function getApiKey(): Promise<string | null> {
         } else {
           const errorData = await response.json();
           console.warn('Failed to get API key from backend:', errorData);
+          return null;
         }
       } catch (apiError) {
         console.error('Error requesting API key from backend:', apiError);
+        return null;
       }
       // No API key available if backend fails
       return null;
     }
+    
+    // If we get here, it means needsRefresh is true but no auth/currentUser is available
+    console.log('No valid API key and no authenticated user to request one');
+    return null;
   } catch (error) {
     console.error('Error getting API key:', error);
+    throw new Error('No valid API key available. Please contact support.');
   }
-  return null;
 }
 
 
