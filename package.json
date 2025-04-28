@@ -64,6 +64,7 @@
   },
   "devDependencies": {
     "@commander-js/extra-typings": "^13.1.0",
+    "@jest/globals": "^29.7.0",
     "@sentry/tracing": "^7.120.3",
     "@shadcn/ui": "^0.0.4",
     "@tailwindcss/typography": "^0.5.15",
@@ -92,7 +93,7 @@
     "postcss": "^8.4.49",
     "serve-handler": "^6.1.6",
     "tailwindcss": "^3.4.15",
-    "ts-jest": "^29.2.5",
+    "ts-jest": "^29.3.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.3",

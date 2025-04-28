@@ -1,9 +1,16 @@
 "use node";
-
-import { defineSchema, defineTable } from "convex/server";
+import { defineSchema, defineTable } from "convex/server"; // Changed import path
 import { v } from "convex/values";
 
 export default defineSchema({
+  gmailTokens: defineTable({
+    userId: v.string(),
+    accessToken: v.string(),
+    refreshToken: v.string(),
+    expiryDate: v.number(), // Store expiry date as a number (timestamp)
+    scope: v.string(),
+  }).index("by_userId", ["userId"]),
+
   users: defineTable({
     name: v.string(),
     email: v.string(),
@@ -204,6 +211,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
   .index("by_user", ["userId"])
+
   .index("by_creation", ["createdAt"])
   .index("by_type", ["type"]),
 
@@ -235,5 +243,6 @@ export default defineSchema({
     lastUpdated: v.number(), // Last updated timestamp
   })
   .index("by_user_resource", ["user_id", "resource"]),
+
 
 });
