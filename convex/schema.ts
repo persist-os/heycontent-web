@@ -81,8 +81,46 @@ export default defineSchema({
 
   youtubeData: defineTable({
     userId: v.string(),
-    resourceType: v.string(),
-    data: v.any(),
+    resourceType: v.union(v.literal("channel"), v.literal("video"), v.literal("video_analysis")),
+    data: v.object({
+      id: v.string(),
+      snippet: v.optional(v.object({
+        title: v.string(),
+        description: v.string(),
+        customUrl: v.optional(v.string()),
+        thumbnails: v.optional(v.object({
+          default: v.optional(v.object({
+            url: v.string(),
+            width: v.number(),
+            height: v.number()
+          })),
+          medium: v.optional(v.object({
+            url: v.string(),
+            width: v.number(),
+            height: v.number()
+          })),
+          high: v.optional(v.object({
+            url: v.string(),
+            width: v.number(),
+            height: v.number()
+          }))
+        })),
+        publishedAt: v.optional(v.string())
+      })),
+      statistics: v.optional(v.object({
+        viewCount: v.string(),
+        subscriberCount: v.string(),
+        hiddenSubscriberCount: v.boolean(),
+        videoCount: v.string()
+      })),
+      accessToken: v.optional(v.string()),
+      refreshToken: v.optional(v.string()),
+      expiresAt: v.optional(v.number()),
+      tokenType: v.optional(v.string()),
+      scope: v.optional(v.string()),
+      videoId: v.optional(v.string()),
+      analysisData: v.optional(v.any())
+    }),
     timestamp: v.number(),
     videoCount: v.optional(v.number()),
     subscriberCount: v.optional(v.number()),
@@ -175,7 +213,27 @@ export default defineSchema({
     accessToken: v.string(),
     refreshToken: v.optional(v.string()),
     expiresAt: v.number(),
-    scope: v.optional(v.string()),
+    scope: v.array(v.string()),
+    tokenType: v.string(),
+    lastRefreshed: v.optional(v.number()),
   })
   .index("by_user_platform", ["userId", "platform"]),
+
+  api_keys: defineTable({
+    user_id: v.string(), // Firebase UID
+    hashed_key: v.string(), // SHA-256 hash of API key
+    created_at: v.number(),
+    rate_tier: v.optional(v.string()),
+    scopes: v.optional(v.array(v.string())),
+    status: v.optional(v.string()),
+  }),
+
+  rate_limits: defineTable({
+    user_id: v.string(), // Firebase user ID (same as used in api_keys)
+    resource: v.string(), // Resource being rate limited (endpoint, action, etc.)
+    timestamps: v.array(v.number()), // Array of Unix timestamps for requests
+    lastUpdated: v.number(), // Last updated timestamp
+  })
+  .index("by_user_resource", ["user_id", "resource"]),
+
 });

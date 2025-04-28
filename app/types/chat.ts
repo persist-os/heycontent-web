@@ -22,7 +22,7 @@ export interface Message {
     id: number;
     content: string;
   };
-  status?: 'typing' | 'sent' | 'delivered' | 'read';
+  status?: 'typing' | 'sent' | 'delivered' | 'read' | 'failed';
   chat_response: string;
   suggestions?: any[];
   metadata?: {

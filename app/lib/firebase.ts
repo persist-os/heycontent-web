@@ -1,4 +1,4 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, setPersistence, browserLocalPersistence, Auth } from 'firebase/auth';
 
 // Check if we're on the client side
@@ -28,7 +28,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Initialize Firebase only on client side
-let app;
+let app: FirebaseApp;
 let auth: Auth | null = null;
 
 if (isClient) {

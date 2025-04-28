@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import { google } from 'googleapis'
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
+import { YOUTUBE_CONFIG } from '@/app/lib/config/youtube';
 
 // Initialize Convex client with better error handling
 let convex: ConvexHttpClient;
@@ -57,16 +58,15 @@ export async function GET(req: Request) {
     })
 
     // Verify we have the required YouTube scopes
-    const requiredScopes = [
-      'https://www.googleapis.com/auth/youtube.readonly',
-      'https://www.googleapis.com/auth/youtube.force-ssl'
-    ];
-
-    const hasRequiredScopes = requiredScopes.every(scope =>
+    const hasRequiredScopes = YOUTUBE_CONFIG.REQUIRED_SCOPES.every(scope =>
       tokenInfo.scopes?.includes(scope)
     );
 
     if (!hasRequiredScopes) {
+      console.error('Missing required scopes:', {
+        required: YOUTUBE_CONFIG.REQUIRED_SCOPES,
+        granted: tokenInfo.scopes
+      });
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=insufficient_scopes`)
     }
 
@@ -96,89 +96,24 @@ export async function GET(req: Request) {
     });
 
     try {
-      const youtubeDataId = await convex.mutation(api.youtube.storeYouTubeData, {
+      await convex.mutation(api.youtube.storeYouTubeData, {
         userId,
-        channelData: {
-          id: channel.id,
-          snippet: channel.snippet,
-          statistics: channel.statistics,
-          profileUrl: `https://youtube.com/channel/${channel.id}`,
-          avatarUrl: channel.snippet?.thumbnails?.default?.url,
-        },
+        channelData: channel,
         accessToken: tokens.access_token!,
         refreshToken: tokens.refresh_token || undefined,
-        expiresAt: tokens.expiry_date ? Math.floor(tokens.expiry_date / 1000) : undefined,
+        expiresAt: tokens.expiry_date || undefined,
         tokenType: tokens.token_type!,
-        scope: tokens.scope!,
+        scope: tokenInfo.scopes?.join(' ') || ''
       });
-      console.log('YouTube data saved successfully to Convex, ID:', youtubeDataId);
-    } catch (convexError) {
-      console.error('Error saving YouTube data to Convex:', convexError);
-      throw new Error(`Convex mutation failed: ${convexError instanceof Error ? convexError.message : 'Unknown error'}`);
+
+      console.log('Successfully stored YouTube data');
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?success=youtube_connected`);
+    } catch (error) {
+      console.error('Failed to store YouTube data:', error);
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=store_failed`);
     }
-
-    // Store token in Convex tokens table with better error handling
-    try {
-      const tokenId = await convex.mutation(api.tokens.save, {
-        userId,
-        platform: 'youtube',
-        accessToken: tokens.access_token!,
-        refreshToken: tokens.refresh_token || undefined,
-        expiresAt: tokens.expiry_date ? Math.floor(tokens.expiry_date / 1000) : Date.now() + 3600 * 1000, // Default 1 hour if no expiry
-        scope: tokens.scope
-      });
-      console.log('Token saved successfully to Convex, ID:', tokenId);
-    } catch (tokenError) {
-      console.error('Error saving token to Convex:', tokenError);
-      throw new Error(`Convex token mutation failed: ${tokenError instanceof Error ? tokenError.message : 'Unknown error'}`);
-    }
-
-    // Explicitly update connection status as a fallback
-    try {
-      await convex.mutation(api.social.updateConnectionStatus, {
-        userId,
-        platform: 'youtube',
-        isConnected: true
-      });
-      console.log('Connection status updated successfully');
-    } catch (statusError) {
-      console.error('Error updating connection status:', statusError);
-      // Don't throw here, as we've already saved the main data
-    }
-
-    // Note: Connection status is already updated by storeYouTubeData
-
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?success=youtube_connected`)
-
   } catch (error) {
-    console.error('[YOUTUBE_CALLBACK_ERROR]', error);
-
-    // Determine the specific error type for better debugging
-    let errorType = 'unknown';
-    let errorDetails = '';
-
-    if (error instanceof Error) {
-      errorDetails = error.message;
-
-      if (error.message.includes('Convex')) {
-        errorType = 'convex_error';
-      } else if (error.message.includes('token')) {
-        errorType = 'token_error';
-      } else if (error.message.includes('YouTube')) {
-        errorType = 'youtube_api_error';
-      }
-    }
-
-    console.error(`Error type: ${errorType}, Details: ${errorDetails}`);
-
-    // Log additional debugging information
-    console.log('Environment variables check:', {
-      NEXT_PUBLIC_CONVEX_URL: process.env.NEXT_PUBLIC_CONVEX_URL ? 'Set' : 'Not set',
-      GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? 'Set' : 'Not set',
-      GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ? 'Set' : 'Not set',
-      YOUTUBE_REDIRECT_URI: process.env.YOUTUBE_REDIRECT_URI ? 'Set' : 'Not set'
-    });
-
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=${errorType}&details=${encodeURIComponent(errorDetails)}`)
+    console.error('YouTube OAuth callback error:', error);
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=oauth_failed`);
   }
 }

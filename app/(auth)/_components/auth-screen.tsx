@@ -8,7 +8,6 @@ import {
   Lock,
   Eye,
   EyeOff,
-  ArrowRight,
   Chrome
 } from 'lucide-react'
 import Link from 'next/link'
@@ -64,6 +63,12 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
         throw new Error(data.error)
       }
 
+      // Save API key to localStorage if it exists in the response
+      if (data.apiKey) {
+        localStorage.setItem('apiKey', JSON.stringify(data.apiKey));
+        console.log('API key saved to localStorage');
+      }
+
       // If we have a custom token, sign in with it
       if (data.customToken && auth) {
         try {
@@ -71,7 +76,34 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
           // Sign in with the custom token
           const userCredential = await signInWithCustomToken(auth, data.customToken)
           console.log('Sign in successful:', userCredential.user?.uid)
+          
           if (userCredential.user) {
+            // Get Firebase ID token after authenticating with custom token
+            console.log('Getting Firebase ID token for backend auth...')
+            const idToken = await userCredential.user.getIdToken(true)
+            console.log('Firebase ID token obtained:', idToken)
+            
+            // Send ID token to backend for proper authentication and API key generation if needed
+            if (!data.apiKey) {
+              console.log('No API key in initial response, sending ID token to backend...')
+              const apiKeyResponse = await fetch('/api/auth/firebase', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  idToken,
+                  action: 'refresh'
+                }),
+              })
+              
+              const apiKeyData = await apiKeyResponse.json()
+              if (apiKeyData.apiKey) {
+                localStorage.setItem('apiKey', JSON.stringify(apiKeyData.apiKey));
+                console.log('API key received and saved to localStorage');
+              }
+            }
+            
             // If we have a redirect URL in the response, use it
             if (data.redirect) {
               router.push(data.redirect)
@@ -115,7 +147,7 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
         prompt: 'select_account',
         login_hint: ''
       })
-      console.log('Google provider configured with scopes:', provider.scopes);
+      console.log('Google provider configured with scopes');
 
       console.log('Attempting to sign in with popup...');
       try {
@@ -125,7 +157,7 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
         if (result.user) {
           console.log('User signed in, getting ID token...');
           const idToken = await result.user.getIdToken()
-          console.log('ID token obtained');
+          console.log('ID token obtained:', idToken.slice(0, 5) + '...' + idToken.slice(-5));
 
           console.log('Sending token to backend...');
           const response = await fetch('/api/auth/firebase', {
@@ -139,12 +171,19 @@ export function AuthScreen({ isLogin = true, onSuccess }: AuthScreenProps) {
             }),
           })
 
+          const data = await response.json();
+          
           if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Backend response error:', errorData);
+            console.error('Backend response error:', data);
             throw new Error('Failed to set session')
           }
           console.log('Backend authentication successful');
+
+          // Save API key to localStorage if it exists in the response
+          if (data.apiKey) {
+            localStorage.setItem('apiKey', JSON.stringify(data.apiKey));
+            console.log('API key saved to localStorage');
+          }
 
           // Use router.push instead of window.location
           router.push('/chat')

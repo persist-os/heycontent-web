@@ -2,15 +2,19 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from '@/app/lib/server-auth';
 import { SocialPlatform } from '@/app/types/social-platforms';
 import { adminAuth } from '@/app/lib/firebase-admin';
+import { auth } from '@/app/lib/auth';
+import { YOUTUBE_CONFIG } from '@/app/lib/config/youtube';
 
 export const dynamic = 'force-dynamic';
 
+type Platform = 'youtube' | 'gmail' | 'instagram' | 'tiktok';
+
 // Platform-specific OAuth configurations
-const PLATFORM_CONFIGS: Record<SocialPlatform, {
+const PLATFORM_CONFIGS: Record<Platform, {
   clientId: string | undefined;
   clientSecret: string | undefined;
   redirectUri: string;
-  scope: string[];
+  scope: readonly string[];
 }> = {
   instagram: {
     clientId: process.env.INSTAGRAM_BASIC_CLIENT_ID,
@@ -21,22 +25,19 @@ const PLATFORM_CONFIGS: Record<SocialPlatform, {
       'instagram_business_content_publish',
       'instagram_business_manage_messages',
       'instagram_business_manage_comments'
-    ]
+    ] as const
   },
   tiktok: {
     clientId: process.env.TIKTOK_CLIENT_ID,
     clientSecret: process.env.TIKTOK_CLIENT_SECRET,
     redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/social/callback/tiktok`,
-    scope: ['user.info.basic', 'video.list']
+    scope: ['user.info.basic', 'video.list'] as const
   },
   youtube: {
     clientId: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     redirectUri: process.env.YOUTUBE_REDIRECT_URI!,
-    scope: [
-      'https://www.googleapis.com/auth/youtube.readonly',
-      'https://www.googleapis.com/auth/youtube.force-ssl'
-    ]
+    scope: YOUTUBE_CONFIG.REQUIRED_SCOPES
   },
   gmail: {
     clientId: process.env.GOOGLE_CLIENT_ID,
@@ -50,15 +51,15 @@ const PLATFORM_CONFIGS: Record<SocialPlatform, {
       'email',
       'profile',
       'openid'
-    ]
+    ] as const
   }
-}
+};
 
 export async function GET(request: Request) {
   console.group('Auth URL Generation');
 
   const { searchParams } = new URL(request.url);
-  const platform = searchParams.get('platform') as SocialPlatform;
+  const platform = searchParams.get('platform') as Platform;
   const useFacebook = searchParams.get('useFacebook') === 'true';
 
   console.log('Request details:', {
@@ -68,7 +69,7 @@ export async function GET(request: Request) {
   });
 
   // Log all headers for debugging
-  const headers = {};
+  const headers: Record<string, string> = {};
   request.headers.forEach((value, key) => {
     headers[key] = key.toLowerCase() === 'authorization' ? 'Bearer [REDACTED]' : value;
   });
