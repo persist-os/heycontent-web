@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server'
 import { adminAuth } from '@/app/lib/firebase-admin'
+import { proxyApiKeyRequest } from '../utils/apiKeyProxy';
 import { cookies } from 'next/headers'
 import { ConvexHttpClient } from "convex/browser"
 import { api } from "@/convex/_generated/api"
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
-
-
-        
 const BACKEND_URL = 'https://backend.hicontent.co';
         
 const requestId = `auth-key-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
@@ -56,15 +54,12 @@ export async function POST(request: Request) {
         const userRecord = await adminAuth.getUserByEmail(email)
         
         // Create a custom token for the user
-        const customToken = await adminAuth.createCustomToken(userRecord.uid)
-        
-        // Log the custom token with partial redaction for security
+        const customToken = await adminAuth.createCustomToken(userRecord.uid);
         logger.debug('Firebase custom token generated for new user', { 
           requestId, 
           tokenPreview: customToken ? `${customToken.substring(0, 10)}...${customToken.substring(customToken.length - 5)}` : 'null',
           tokenLength: customToken?.length
         });
-        
         logger.info('Registration successful', { 
           requestId, 
           email: userRecord.email,
@@ -74,8 +69,7 @@ export async function POST(request: Request) {
 
         // Ensure user exists in Convex
         try {
-          const convexUser = await convex.query(api.users.getUserById, { userId: userRecord.uid })
-
+          const convexUser = await convex.query(api.users.getUserById, { userId: userRecord.uid });
           if (!convexUser) {
             logger.info('User not found in Convex, creating user...', { requestId, userId: userRecord.uid });
             const convexStartTime = Date.now();
@@ -96,22 +90,13 @@ export async function POST(request: Request) {
           // Continue with auth flow even if Convex operation fails
         }
 
-        const response = NextResponse.json({
+        // Instead of returning or using the custom token directly, instruct the client to use it to sign in and obtain an ID token
+        return NextResponse.json({
           success: true,
           redirect: '/chat',
-          customToken
-        })
-
-        // Set the Firebase auth token cookie
-        response.cookies.set('firebase-auth-token', customToken, {
-          httpOnly: false,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          path: '/',
-          maxAge: 60 * 60 * 24 * 7 // 1 week
-        })
-
-        return response
+          customToken,
+          message: 'Use this customToken with Firebase Auth client SDK to sign in, then send your ID token to the backend for API requests.'
+        });
       } catch (error: any) {
         const errorCode = error.code || 'unknown';
         logger.warn('Login failed', { 
@@ -378,70 +363,24 @@ export async function POST(request: Request) {
         }
       } catch (convexError) {
         logger.error('Error with Convex user operation', convexError, { requestId, userId: decodedToken.uid });
-        // Continue even if Convex operations fail
+      }
+      
+      // Call the /api/auth/key route to get an API key for this user
+      let apiKeyData = null;
+      try {
+        // Use shared utility for API key proxy
+        apiKeyData = await proxyApiKeyRequest({ idToken, userId: decodedToken.uid });
+      } catch (apiKeyError) {
+        apiKeyData = { error: 'Exception fetching API key', details: apiKeyError?.message || apiKeyError };
       }
 
-      // API key generation is handled by the backend via the /api/auth/key endpoint
-      logger.info('Fetching API key from backend', { 
-        requestId, 
-        userId: decodedToken.uid 
-      });
-      
-      // Prepare response data
-      interface ResponseData {
-        success: boolean;
-        redirect?: string;
-        apiKey?: string;
-        apiKeyData?: any; // Using 'any' for simplicity, ideally this would be properly typed
-      }
-      
-      let responseData: ResponseData = {
+      // Create the response with authentication data and API key data
+      const response = NextResponse.json({
         success: true,
-        redirect: action === 'refresh' ? undefined : '/chat'
-      };
-      
-      // Call the /api/auth/key endpoint to get the API key
-      try {
-        const apiKeyResponse = await fetch(new URL('/api/auth/key', request.url).toString(), {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            idToken,
-            userId: decodedToken.uid
-          })
-        });
-        
-        if (!apiKeyResponse.ok) {
-          logger.warn('Failed to get API key from backend', { 
-            requestId, 
-            userId: decodedToken.uid,
-            status: apiKeyResponse.status
-          });
-        } else {
-          const apiKeyData = await apiKeyResponse.json();
-          logger.info('Successfully obtained API key from backend', { 
-            requestId, 
-            userId: decodedToken.uid 
-          });
-          
-          // Include the API key data in the response data
-          responseData = {
-            ...responseData,
-            apiKey: apiKeyData.apiKey,
-            apiKeyData
-          };
-        }
-      } catch (apiKeyError) {
-        logger.error('Error fetching API key', apiKeyError, { 
-          requestId, 
-          userId: decodedToken.uid 
-        });
-      }
-      
-      // Create the response with our data
-      const response = NextResponse.json(responseData)
+        redirect: action === 'refresh' ? undefined : '/chat',
+        apiKey: apiKeyData?.apiKey,
+        apiKeyData
+      });
 
       // Set the Firebase auth token cookie
       response.cookies.set('firebase-auth-token', idToken, {
