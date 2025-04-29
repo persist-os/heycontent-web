@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server'
 import { adminAuth } from '@/app/lib/firebase-admin'
 import { proxyApiKeyRequest } from '../utils/apiKeyProxy';
-import { ConvexHttpClient } from "convex/browser"
 import { api } from "@/convex/_generated/api"
+import { fetchQuery, fetchMutation } from "convex/nextjs";
 import { logger, ensureConvexUser, updateConvexUser, mapAuthErrorCodeToMessage, redactToken } from './helpers';
-
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
 
 export async function POST(request: Request) {
   const requestId = `auth-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
@@ -43,7 +41,10 @@ export async function POST(request: Request) {
           userId: userRecord.uid,
           processingTime: Date.now() - loginStartTime
         });
-        await ensureConvexUser(convex, userRecord, requestId);
+        await ensureConvexUser({
+  query: (fn: any, args: any) => fetchQuery(fn, args),
+  action: (fn: any, args: any) => fetchMutation(fn, args)
+}, userRecord, requestId);
         return NextResponse.json({
           success: true,
           redirect: '/chat',
@@ -105,7 +106,10 @@ export async function POST(request: Request) {
           userId: userRecord.uid,
           processingTime: Date.now() - registrationStartTime
         });
-        await ensureConvexUser(convex, userRecord, requestId);
+        await ensureConvexUser({
+  query: (fn: any, args: any) => fetchQuery(fn, args),
+  action: (fn: any, args: any) => fetchMutation(fn, args)
+}, userRecord, requestId);
         return NextResponse.json({
           success: true,
           redirect: '/chat',
@@ -156,11 +160,17 @@ export async function POST(request: Request) {
       });
       logger.info('Firebase token verified successfully', { requestId, userId: decodedToken.uid, provider: decodedToken.firebase?.sign_in_provider });
       // Ensure user exists or update in Convex
-      const convexUser = await convex.query(api.users.getUserById, { userId: decodedToken.uid });
+      const convexUser = await fetchQuery(api.users.getUserById, { userId: decodedToken.uid });
       if (!convexUser) {
-        await ensureConvexUser(convex, { uid: decodedToken.uid, displayName: decodedToken.name, email: decodedToken.email, photoURL: decodedToken.picture }, requestId);
+        await ensureConvexUser({
+          query: (fn: any, args: any) => fetchQuery(fn, args),
+          action: (fn: any, args: any) => fetchMutation(fn, args)
+        }, { uid: decodedToken.uid, displayName: decodedToken.name, email: decodedToken.email, photoURL: decodedToken.picture }, requestId);
       } else {
-        await updateConvexUser(convex, decodedToken, convexUser, requestId);
+        await updateConvexUser({
+          query: (fn: any, args: any) => fetchQuery(fn, args),
+          action: (fn: any, args: any) => fetchMutation(fn, args)
+        }, decodedToken, convexUser, requestId);
       }
       // Call the /api/auth/key route to get an API key for this user
       let apiKeyData = null;
