@@ -7,10 +7,10 @@ import { toast } from 'react-hot-toast'
 export default function RegisterPage() {
   const router = useRouter()
 
-  const onRegisterSuccess = (email: string) => {
-    router.push(`/verify-email?email=${encodeURIComponent(email)}`)
-    toast.success('Please check your email to verify your account.')
-  }
+  const onRegisterSuccess = (apiKey: string) => {
+    router.push('/chat');
+    toast.success('Registration successful! Welcome to HeyContent.');
+  };
 
   return <AuthScreen 
     isLogin={false} 

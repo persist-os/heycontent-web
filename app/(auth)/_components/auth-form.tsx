@@ -19,6 +19,8 @@ const AuthForm: React.FC<AuthFormProps> = ({ isLogin = true, onAuthSuccess, onLo
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
+    // Always clear any previous API key before login/register to avoid mismatches
+    localStorage.removeItem('apiKey');
     e.preventDefault();
     setError(null);
     setIsLoading(true);
@@ -50,12 +52,31 @@ const AuthForm: React.FC<AuthFormProps> = ({ isLogin = true, onAuthSuccess, onLo
           setError('Firebase sign-in with custom token failed: ' + (err.message || err.code));
           return;
         }
+        let idToken: string | undefined;
         try {
           // This ensures the ID token is fresh and valid
-          await auth.currentUser?.getIdToken(true);
+          idToken = await auth.currentUser?.getIdToken(true);
         } catch (err: any) {
           setError('Failed to get Firebase ID token: ' + (err.message || err.code));
           return;
+        }
+        // Now send the ID token to your backend to get the API key
+        if (idToken) {
+          const apiKeyResponse = await fetch('/api/auth/firebase', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              idToken,
+              action: 'getApiKey'
+            }),
+          });
+          const apiKeyData = await apiKeyResponse.json();
+          if (apiKeyResponse.ok && apiKeyData.apiKey) {
+            localStorage.setItem('apiKey', JSON.stringify(apiKeyData.apiKey));
+          } else if (!apiKeyResponse.ok) {
+            setError(apiKeyData.error || 'Failed to get API key');
+            return;
+          }
         }
       }
       // Only signal success, do not pass API key. Waitlist will handle API key generation.

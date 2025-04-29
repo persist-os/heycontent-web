@@ -73,11 +73,15 @@ export async function getApiKey(): Promise<string | null> {
           if (!apiKey && data.data && typeof data.data.key === 'string') {
             apiKey = data.data.key;
           }
+          // Log the full backend response for debugging
+          console.log('[getApiKey] Full backend response:', data);
           // Log the userId we requested and the key returned
           console.log('[getApiKey] Requested API key for Firebase user:', userId, '| API key received from backend:', apiKey);
           if (typeof apiKey === 'string' && apiKey.startsWith('heycontent_') && !apiKey.endsWith('_temporary')) {
             localStorage.setItem('apiKey', JSON.stringify(apiKey));
             console.log('API key saved to localStorage:', apiKey);
+            // Log what is now in localStorage
+            console.log('API key in localStorage after save:', localStorage.getItem('apiKey'));
             return apiKey;
           } else {
             console.warn('Received invalid or temporary API key from backend:', apiKey);
