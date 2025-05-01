@@ -2,10 +2,8 @@ export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { google } from 'googleapis'
-import { ConvexHttpClient } from "convex/browser";
+import { fetchQuery, fetchMutation } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
-
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function GET(req: Request) {
   try {
@@ -69,7 +67,7 @@ export async function GET(req: Request) {
 
     // Store Gmail data in Convex
     console.log('Storing Gmail data in Convex...');
-    const storeResult = await convex.mutation(api.gmail.storeGmailData, {
+    const storeResult = await fetchMutation(api.gmail.storeGmailData, {
       userId,
       profileData: {
         emailAddress: profile.data.emailAddress,
@@ -87,7 +85,7 @@ export async function GET(req: Request) {
 
     // Store token in Convex tokens table
     console.log('Storing Gmail token in Convex...');
-    await convex.mutation(api.tokens.save, {
+    await fetchMutation(api.tokens.save, {
       userId,
       platform: 'gmail',
       accessToken: tokens.access_token!,
@@ -102,7 +100,7 @@ export async function GET(req: Request) {
     console.log('Checking for Gmail social account in Convex...');
     let socialAccount;
     try {
-      const connectedAccounts = await convex.query(api.social.getConnectedAccounts, {
+      const connectedAccounts = await fetchQuery(api.social.getConnectedAccounts, {
         userId: userId
       });
       console.log('Connected accounts query result:', connectedAccounts ? `Found ${connectedAccounts.length} accounts` : 'No accounts found');
@@ -118,7 +116,7 @@ export async function GET(req: Request) {
     if (!socialAccount) {
       console.log('Creating Gmail social account in Convex...');
       try {
-        await convex.mutation(api.social.saveAccount, {
+        await fetchMutation(api.social.saveAccount, {
           userId,
           platform: 'gmail',
           username: profile.data.emailAddress || '',
@@ -139,7 +137,7 @@ export async function GET(req: Request) {
 
     // Update connection status
     console.log('Updating Gmail connection status in Convex...');
-    await convex.mutation(api.social.updateConnectionStatus, {
+    await fetchMutation(api.social.updateConnectionStatus, {
       userId,
       platform: 'gmail',
       isConnected: true,

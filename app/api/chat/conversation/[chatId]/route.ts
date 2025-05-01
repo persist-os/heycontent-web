@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getBearerToken, getUserIdFromApiKey } from '../../utils';
-import { ConvexHttpClient } from 'convex/browser';
+import { fetchQuery } from 'convex/nextjs';
 import { api } from '@/convex/_generated/api';
 
 export async function GET(
@@ -27,13 +27,9 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid API key' }, { status: 401 });
     }
 
-    // Initialize Convex client
-    const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL || '');
-
-
     // We need to add a function to get a specific conversation by ID
     // For now, we'll fetch all conversations and filter on the client side
-    const conversations = await convex.query(api.chat.getHistory, { 
+    const conversations = await fetchQuery(api.chat.getHistory, { 
       userId
     });
 

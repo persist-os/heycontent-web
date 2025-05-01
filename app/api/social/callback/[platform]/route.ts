@@ -196,7 +196,7 @@ export async function GET(
       });
 
       // Use the improved storeYouTubeData mutation that updates both youtubeData and socialAccounts
-      await convex.mutation(api.youtube.storeYouTubeData, {
+      await convex.mutation(api.youtubeMutations.storeYouTubeData, {
         userId,
         channelData: {
           id: profile.id,

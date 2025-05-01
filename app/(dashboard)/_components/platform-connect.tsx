@@ -18,6 +18,219 @@ interface ConnectedAccount {
   isActive: boolean
 }
 
+// Utility: error detection for API/Convex/network
+function isError(data: any): data is { error: string } {
+  return data && typeof data === 'object' && 'error' in data;
+}
+
+// Utility: get account details by platform
+function getAccountDetails(accounts: ConnectedAccount[], platform: string) {
+  return accounts.find(account => account.platform === platform);
+}
+
+// Utility: render metrics per platform
+function renderMetrics(platform: string, metadata: any) {
+  if (!metadata) return null;
+  switch (platform) {
+    case 'youtube':
+      return (
+        <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
+          <div>Subscribers: {metadata.subscribers || 0}</div>
+          <div>Videos: {metadata.videos || 0}</div>
+          <div>Total Views: {metadata.views || 0}</div>
+        </div>
+      );
+    case 'gmail':
+      return (
+        <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
+          <div>Total Messages: {metadata.messagesTotal || 0}</div>
+          <div>Total Threads: {metadata.threadsTotal || 0}</div>
+        </div>
+      );
+    default:
+      return null;
+  }
+}
+
+// Subcomponent: Connect/Disconnect button logic
+function PlatformConnectButton({
+  platform,
+  account,
+  connecting,
+  disconnecting,
+  showInstagramOptions,
+  setShowInstagramOptions,
+  handleConnect,
+  handleDisconnect,
+}: {
+  platform: typeof PLATFORMS[number],
+  account: ConnectedAccount | undefined,
+  connecting: SocialPlatform | null,
+  disconnecting: SocialPlatform | null,
+  showInstagramOptions: boolean,
+  setShowInstagramOptions: (show: boolean) => void,
+  handleConnect: (platform: SocialPlatform, options?: { useFacebook?: boolean }) => void,
+  handleDisconnect: (platform: SocialPlatform) => void,
+}) {
+  const isLoading = connecting === platform.id || disconnecting === platform.id;
+
+  if (account) {
+    return (
+      <button
+        type="button"
+        onClick={() => handleDisconnect(platform.id as SocialPlatform)}
+        disabled={isLoading}
+        className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50"
+        style={{ background: '#94A3B8' }}
+      >
+        {isLoading ? 'Disconnecting...' : 'Disconnect'}
+      </button>
+    );
+  }
+
+  if (platform.id === 'instagram' && !account) {
+    return (
+      <div className="space-y-2">
+        {showInstagramOptions ? (
+          <>
+            <div className="space-y-4 mb-4 p-4 bg-gray-50 rounded-lg">
+              {platform.connectionOptions?.map((option) => (
+                <div key={option.id} className="space-y-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-medium">{option.name}</h4>
+                      <p className="text-sm text-gray-600">{option.description}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleConnect(platform.id as SocialPlatform, {
+                        useFacebook: option.id === 'facebook',
+                      })}
+                      className="px-3 py-1 text-sm rounded-md text-white"
+                      style={{ background: platform.gradient }}
+                    >
+                      Select
+                    </button>
+                  </div>
+                  <ul className="text-sm text-gray-600 list-disc list-inside pl-2">
+                    {option.features.map((feature, i) => (
+                      <li key={i}>{feature}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setShowInstagramOptions(false)}
+                className="w-full py-2 px-4 rounded-lg text-gray-600 bg-gray-200 hover:bg-gray-300 transition-all duration-200"
+              >
+                Cancel
+              </button>
+            </div>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowInstagramOptions(true)}
+            disabled={isLoading}
+            className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50"
+            style={{ background: platform.gradient }}
+          >
+            {isLoading ? 'Connecting...' : 'Connect'}
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => handleConnect(platform.id as SocialPlatform)}
+      disabled={isLoading}
+      className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50"
+      style={{ background: platform.gradient }}
+    >
+      {isLoading ? 'Connecting...' : 'Connect'}
+    </button>
+  );
+}
+
+// Subcomponent: Platform Card
+function PlatformCard({
+  platform,
+  account,
+  connecting,
+  disconnecting,
+  showInstagramOptions,
+  setShowInstagramOptions,
+  handleConnect,
+  handleDisconnect,
+}: {
+  platform: typeof PLATFORMS[number],
+  account: ConnectedAccount | undefined,
+  connecting: SocialPlatform | null,
+  disconnecting: SocialPlatform | null,
+  showInstagramOptions: boolean,
+  setShowInstagramOptions: (show: boolean) => void,
+  handleConnect: (platform: SocialPlatform, options?: { useFacebook?: boolean }) => void,
+  handleDisconnect: (platform: SocialPlatform) => void,
+}) {
+  const isLoading = connecting === platform.id || disconnecting === platform.id;
+  return (
+    <Card key={platform.id} className="p-6 relative">
+      {account && !isLoading && (
+        <div className="absolute top-4 right-4">
+          {account.isActive ? (
+            <CheckCircle2 className="w-5 h-5 text-green-500" />
+          ) : (
+            <AlertCircle className="w-5 h-5 text-yellow-500" />
+          )}
+        </div>
+      )}
+      {isLoading && (
+        <div className="absolute top-4 right-4">
+          <Loader2 className="w-5 h-5 animate-spin" />
+        </div>
+      )}
+      <div className="flex items-center gap-3 mb-2">
+        <div className={`w-12 h-12 rounded-lg ${platform.color} flex items-center justify-center`}>
+          <platform.icon className="w-6 h-6 text-white" />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold">{platform.name}</h3>
+          <p className="text-sm text-muted-foreground">
+            {isLoading
+              ? (connecting ? 'Connecting...' : 'Disconnecting...')
+              : account
+                ? `Connected as ${account.username}`
+                : 'Not connected'}
+          </p>
+        </div>
+      </div>
+      {account && (
+        <>
+          {renderMetrics(platform.id, account.metadata)}
+          <div className="mt-2 text-xs text-gray-500">
+            Last updated: {formatDistanceToNow(new Date(account.updatedAt), { addSuffix: true })}
+          </div>
+        </>
+      )}
+      <p className="text-sm text-muted-foreground my-4">{platform.description}</p>
+      <PlatformConnectButton
+        platform={platform}
+        account={account}
+        connecting={connecting}
+        disconnecting={disconnecting}
+        showInstagramOptions={showInstagramOptions}
+        setShowInstagramOptions={setShowInstagramOptions}
+        handleConnect={handleConnect}
+        handleDisconnect={handleDisconnect}
+      />
+    </Card>
+  );
+}
+
 const PLATFORMS = [
   {
     id: 'instagram',
@@ -79,6 +292,18 @@ const PLATFORMS = [
 
 export function PlatformConnect() {
   const { user } = useAuth();
+  const [refetchKey, setRefetchKey] = useState(0);
+
+  // Refetch on successful connection and clean up the URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('success') === 'youtube_connected') {
+      setRefetchKey(k => k + 1);
+      // Remove the query param from the URL for clean UX
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
   // Use Convex queries for all platform data
   const youtubeData = user?.uid ? useQuery(api.youtubeQueries.getYouTubeData, { userId: user.uid }) : undefined;
   const gmailData = user?.uid ? useQuery(api.gmail.getGmailData, { userId: user.uid }) : undefined;
@@ -90,11 +315,6 @@ export function PlatformConnect() {
   const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInstagramOptions, setShowInstagramOptions] = useState(false);
-
-  // Helper to detect error-like objects (Convex or network errors)
-  function isError(data: any): data is { error: string } {
-    return data && typeof data === 'object' && 'error' in data;
-  }
 
   // Define fetchConnectedPlatforms before using it in any hooks
   const fetchConnectedPlatforms = async () => {
@@ -247,121 +467,6 @@ export function PlatformConnect() {
     }
   }
 
-  const getAccountDetails = (platform: string) => {
-    return connectedAccounts.find(account => account.platform === platform)
-  }
-
-  const renderMetrics = (platform: string, metadata: any) => {
-    if (!metadata) return null
-
-    console.log(`Rendering metrics for ${platform}:`, metadata)
-
-    switch (platform) {
-      case 'youtube':
-        return (
-          <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
-            <div>Subscribers: {metadata.subscribers || 0}</div>
-            <div>Videos: {metadata.videos || 0}</div>
-            <div>Total Views: {metadata.views || 0}</div>
-          </div>
-        )
-      case 'gmail':
-        return (
-          <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
-            <div>Total Messages: {metadata.messagesTotal || 0}</div>
-            <div>Total Threads: {metadata.threadsTotal || 0}</div>
-          </div>
-        )
-      default:
-        return null
-    }
-  }
-
-  const renderConnectionButton = (platform: typeof PLATFORMS[number]) => {
-    const account = getAccountDetails(platform.id)
-    const isLoading = connecting === platform.id || disconnecting === platform.id
-
-    if (account) {
-      return (
-        <button
-          type="button"
-          onClick={() => handleDisconnect(platform.id as SocialPlatform)}
-          disabled={isLoading}
-          className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50"
-          style={{ background: '#94A3B8' }}
-        >
-          {isLoading ? 'Disconnecting...' : 'Disconnect'}
-        </button>
-      )
-    }
-
-    if (platform.id === 'instagram' && !account) {
-      return (
-        <div className="space-y-2">
-          {showInstagramOptions ? (
-            <>
-              <div className="space-y-4 mb-4 p-4 bg-gray-50 rounded-lg">
-                {platform.connectionOptions?.map((option) => (
-                  <div key={option.id} className="space-y-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-medium">{option.name}</h4>
-                        <p className="text-sm text-gray-600">{option.description}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleConnect(platform.id as SocialPlatform, {
-                          useFacebook: option.id === 'facebook'
-                        })}
-                        className="px-3 py-1 text-sm rounded-md text-white"
-                        style={{ background: platform.gradient }}
-                      >
-                        Select
-                      </button>
-                    </div>
-                    <ul className="text-sm text-gray-600 list-disc list-inside pl-2">
-                      {option.features.map((feature, i) => (
-                        <li key={i}>{feature}</li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setShowInstagramOptions(false)}
-                  className="w-full py-2 px-4 rounded-lg text-gray-600 bg-gray-200 hover:bg-gray-300 transition-all duration-200"
-                >
-                  Cancel
-                </button>
-              </div>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowInstagramOptions(true)}
-              disabled={isLoading}
-              className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50"
-              style={{ background: platform.gradient }}
-            >
-              {isLoading ? 'Connecting...' : 'Connect'}
-            </button>
-          )}
-        </div>
-      )
-    }
-
-    return (
-      <button
-        type="button"
-        onClick={() => handleConnect(platform.id as SocialPlatform)}
-        disabled={isLoading}
-        className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50"
-        style={{ background: platform.gradient }}
-      >
-        {isLoading ? 'Connecting...' : 'Connect'}
-      </button>
-    )
-  }
 
   if (loading) {
     return (
@@ -375,7 +480,7 @@ export function PlatformConnect() {
   }
 
   return (
-    <div className="space-y-6">
+    <div key={refetchKey} className="space-y-6">
       <div className="space-y-2">
         <h2 className="text-xl font-semibold">Platform Integrations</h2>
         <p className="text-muted-foreground">
@@ -392,59 +497,19 @@ export function PlatformConnect() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {PLATFORMS.map(platform => {
-          const account = getAccountDetails(platform.id)
-          const isLoading = connecting === platform.id || disconnecting === platform.id
-
-          return (
-            <Card key={platform.id} className="p-6 relative">
-              {account && !isLoading && (
-                <div className="absolute top-4 right-4">
-                  {account.isActive ? (
-                    <CheckCircle2 className="w-5 h-5 text-green-500" />
-                  ) : (
-                    <AlertCircle className="w-5 h-5 text-yellow-500" />
-                  )}
-                </div>
-              )}
-              {isLoading && (
-                <div className="absolute top-4 right-4">
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                </div>
-              )}
-              <div className="flex items-center gap-3 mb-2">
-                <div className={`w-12 h-12 rounded-lg ${platform.color} flex items-center justify-center`}>
-                  <platform.icon className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold">{platform.name}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {isLoading
-                      ? (connecting ? 'Connecting...' : 'Disconnecting...')
-                      : account
-                        ? `Connected as ${account.username}`
-                        : 'Not connected'}
-                  </p>
-                </div>
-              </div>
-
-              {account && (
-                <>
-                  {renderMetrics(platform.id, account.metadata)}
-                  <div className="mt-2 text-xs text-gray-500">
-                    Last updated: {formatDistanceToNow(new Date(account.updatedAt), { addSuffix: true })}
-                  </div>
-                </>
-              )}
-
-              <p className="text-sm text-muted-foreground my-4">
-                {platform.description}
-              </p>
-
-              {renderConnectionButton(platform)}
-            </Card>
-          )
-        })}
+        {PLATFORMS.map(platform => (
+          <PlatformCard
+            key={platform.id}
+            platform={platform}
+            account={getAccountDetails(connectedAccounts, platform.id)}
+            connecting={connecting}
+            disconnecting={disconnecting}
+            showInstagramOptions={showInstagramOptions}
+            setShowInstagramOptions={setShowInstagramOptions}
+            handleConnect={handleConnect}
+            handleDisconnect={handleDisconnect}
+          />
+        ))}
       </div>
     </div>
   )

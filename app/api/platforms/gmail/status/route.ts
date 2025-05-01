@@ -3,10 +3,8 @@ import { getServerSession } from '@/app/lib/server-auth'
 import { google } from 'googleapis'
 import { GMAIL_CONFIG } from '@/app/lib/config/gmail'
 import { validateToken } from '@/app/lib/auth-helpers'
-import { ConvexHttpClient } from "convex/browser"
+import { fetchQuery } from "convex/nextjs"
 import { api } from "@/convex/_generated/api"
-
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
 
 export async function GET() {
   try {
@@ -16,7 +14,7 @@ export async function GET() {
     }
 
     // Get user's Gmail token from Convex
-    const token = await convex.query(api.tokens.get, {
+    const token = await fetchQuery(api.tokens.get, {
       userId: session.user.id,
       platform: 'gmail'
     });

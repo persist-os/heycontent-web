@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
 import { adminAuth } from '@/app/lib/firebase-admin';
-import { ConvexHttpClient } from "convex/browser";
+import { fetchQuery, fetchAction } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
-
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function POST(request: Request) {
   try {
@@ -46,7 +44,7 @@ export async function POST(request: Request) {
         // Check if user exists in Convex
         console.log('Getting user info from Convex...');
         try {
-          const convexUser = await convex.query(api.users.getUserById, { userId: decodedToken.uid });
+          const convexUser = await fetchQuery(api.users.getUserById, { userId: decodedToken.uid });
           return NextResponse.json({
             success: true,
             user: convexUser
@@ -64,7 +62,7 @@ export async function POST(request: Request) {
         // Create user in Convex
         console.log('Creating user in Convex...');
         try {
-          await convex.action(api.auth.createUser, {
+          await fetchAction(api.auth.createUser, {
             userId: decodedToken.uid,
             name: decodedToken.name || 'Unknown User',
             email: decodedToken.email || '',
@@ -72,7 +70,7 @@ export async function POST(request: Request) {
           });
           
           // Fetch the user to confirm creation
-          const convexUser = await convex.query(api.users.getUserById, { userId: decodedToken.uid });
+          const convexUser = await fetchQuery(api.users.getUserById, { userId: decodedToken.uid });
           
           return NextResponse.json({
             success: true,
@@ -92,7 +90,7 @@ export async function POST(request: Request) {
         // Update user in Convex
         console.log('Updating user in Convex...');
         try {
-          await convex.action(api.auth.updateUser, {
+          await fetchAction(api.auth.updateUser, {
             userId: decodedToken.uid,
             name: decodedToken.name || 'Updated User',
             email: decodedToken.email || '',
@@ -100,7 +98,7 @@ export async function POST(request: Request) {
           });
           
           // Fetch the user to confirm update
-          const convexUser = await convex.query(api.users.getUserById, { userId: decodedToken.uid });
+          const convexUser = await fetchQuery(api.users.getUserById, { userId: decodedToken.uid });
           
           return NextResponse.json({
             success: true,
@@ -120,7 +118,7 @@ export async function POST(request: Request) {
         // Get social connection status
         console.log('Getting connection status from Convex...');
         try {
-          const connectionStatus = await convex.query(api.social.getConnectionStatus, { 
+          const connectionStatus = await fetchQuery(api.social.getConnectionStatus, { 
             userId: decodedToken.uid 
           });
           
@@ -141,7 +139,7 @@ export async function POST(request: Request) {
         // Get Gmail data
         console.log('Getting Gmail data from Convex...');
         try {
-          const gmailData = await convex.query(api.query.getAllGmailData);
+          const gmailData = await fetchQuery(api.query.getAllGmailData);
           
           return NextResponse.json({
             success: true,
@@ -160,7 +158,7 @@ export async function POST(request: Request) {
         // Get YouTube data
         console.log('Getting YouTube data from Convex...');
         try {
-          const youtubeData = await convex.query(api.query.getAllYouTubeData);
+          const youtubeData = await fetchQuery(api.query.getAllYouTubeData);
           
           return NextResponse.json({
             success: true,
@@ -180,7 +178,7 @@ export async function POST(request: Request) {
         console.log('Testing Convex connection...');
         try {
           // Try to get all users as a simple connection test
-          const users = await convex.query(api.users.list);
+          const users = await fetchQuery(api.users.list);
           
           return NextResponse.json({
             success: true,
