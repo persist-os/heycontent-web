@@ -2,11 +2,10 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from '@/app/lib/server-auth';
 import { google } from 'googleapis';
 import { validateToken } from '@/app/lib/auth-helpers';
-import { ConvexHttpClient } from "convex/browser";
+import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { adminAuth } from '@/app/lib/firebase-admin';
 
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function POST(request: Request) {
   try {
@@ -45,7 +44,7 @@ export async function POST(request: Request) {
 
     // Get user's Gmail token from Convex
     console.log('Getting Gmail token from Convex...');
-    const gmailToken = await convex.query(api.tokens.get, {
+    const gmailToken = await fetchQuery(api.tokens.get, {
       userId: decodedToken.uid,
       platform: 'gmail'
     });

@@ -16,8 +16,6 @@ if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
   throw new Error('Missing NEXT_PUBLIC_CONVEX_URL');
 }
 
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL);
-
 export async function GET(request: Request) {
   try {
     console.log('Connected platforms: Getting server session');
@@ -74,7 +72,7 @@ export async function GET(request: Request) {
     // Get connected platforms from Convex
     console.log('Fetching connected accounts for user:', sessionData.user.id);
 
-    const connectedAccounts = await convex.query(api.social.getConnectedAccounts, {
+    const connectedAccounts = await fetchQuery(api.social.getConnectedAccounts, {
       userId: sessionData.user.id
     }).catch(error => {
       console.error('[CONNECTED_PLATFORMS_ERROR] Convex query failed:', error)

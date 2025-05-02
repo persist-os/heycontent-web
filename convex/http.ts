@@ -262,6 +262,33 @@ app.get("/api/users/:id/youtube/analysis/engagement", async (c) => {
   return c.json(engagementData);
 });
 
+// Store YouTube channel data (generic, with tokens)
+app.post("/api/users/:id/youtube/data", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { channelData, accessToken, refreshToken, expiresAt, tokenType, scope } = await c.req.json();
+
+  if (!channelData || !accessToken || !tokenType || !scope) {
+    return c.json({ success: false, error: "Missing required fields" }, 400);
+  }
+
+  try {
+    await ctx.runMutation(api.youtubeMutations.storeYouTubeData, {
+      userId,
+      channelData,
+      accessToken,
+      refreshToken,
+      expiresAt,
+      tokenType,
+      scope,
+    });
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Failed to store YouTube data:", error);
+    return c.json({ success: false, error: "Failed to store YouTube data" }, 500);
+  }
+});
+
 // YouTube endpoints
 app.post("/api/users/:id/youtube/videos", async (c) => {
   const ctx = c.env;

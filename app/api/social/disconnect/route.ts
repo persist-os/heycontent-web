@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     // Call the appropriate disconnect mutation based on platform
     switch (platform) {
       case 'youtube':
-        await fetchMutation(api.youtube.disconnectYouTube, {
+        await fetchMutation(api.youtubeMutations.disconnectYouTube, {
           userId: session.user.id
         })
         break

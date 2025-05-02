@@ -1,16 +1,13 @@
 import { NextResponse } from 'next/server';
-import { ConvexHttpClient } from "convex/browser";
+import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 
 export async function GET() {
   try {
     console.log('Testing Convex connection...');
     
-    // Initialize Convex client
-    const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
-    
     // Test connection by getting all users
-    const users = await convex.query(api.users.list);
+    const users = await fetchQuery(api.users.list);
     
     // Get environment info
     const envInfo = {
