@@ -31,7 +31,7 @@ export async function ensureConvexUser(convex: any, user: { uid: string; display
     if (!convexUser) {
       logger.info("User not found in Convex, creating user...", { requestId, userId: user.uid });
       const convexStartTime = Date.now();
-      await convex.action(api.auth.createUser, {
+      await convex.action(api.users.create, {
         userId: user.uid,
         name: user.displayName || "Unknown User",
         email: user.email || "",
@@ -54,7 +54,7 @@ export async function updateConvexUser(convex: any, decodedToken: any, convexUse
   try {
     logger.info("User found in Convex, updating user information...", { requestId, userId: decodedToken.uid });
     const updateStartTime = Date.now();
-    await convex.action(api.auth.updateUser, {
+    await convex.action(api.users.update, {
       userId: decodedToken.uid,
       name: decodedToken.name || convexUser.name || "Unknown User",
       email: decodedToken.email || convexUser.email || "",

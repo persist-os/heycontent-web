@@ -62,7 +62,7 @@ export async function POST(request: Request) {
         // Create user in Convex
         console.log('Creating user in Convex...');
         try {
-          await fetchAction(api.auth.createUser, {
+          await fetchAction(api.users.create, {
             userId: decodedToken.uid,
             name: decodedToken.name || 'Unknown User',
             email: decodedToken.email || '',

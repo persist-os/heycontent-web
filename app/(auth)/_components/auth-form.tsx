@@ -35,6 +35,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ isLogin = true, onAuthSuccess, onLo
           email,
           password,
           action: isLogin ? 'login' : 'register',
+          ...(isLogin ? {} : { name }),
         }),
       });
       const data = await response.json();
