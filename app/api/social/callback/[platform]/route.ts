@@ -164,19 +164,20 @@ export async function GET(
       views: profile.statistics?.viewCount
     } : profile;
 
-    // Save token in Convex
-    await convex.mutation(api.tokens.save, {
-      userId,
-      platform,
-      accessToken: tokenData.access_token,
-      refreshToken: tokenData.refresh_token || undefined,
-      expiresAt: tokenData.expires_in ? Date.now() + tokenData.expires_in * 1000 : Date.now() + 3600 * 1000,
-      tokenType: tokenData.token_type || 'Bearer',
-      scope: tokenData.scope ? tokenData.scope.split(' ') : []
-    });
-
-    // Save social account in Convex (skip for YouTube as it's handled by storeYouTubeData)
+    // Only store tokens and social accounts in Convex for non-YouTube platforms
     if (platform !== 'youtube') {
+      // Save token in Convex
+      await convex.mutation(api.tokens.save, {
+        userId,
+        platform,
+        accessToken: tokenData.access_token,
+        refreshToken: tokenData.refresh_token || undefined,
+        expiresAt: tokenData.expires_in ? Date.now() + tokenData.expires_in * 1000 : Date.now() + 3600 * 1000,
+        tokenType: tokenData.token_type || 'Bearer',
+        scope: tokenData.scope ? tokenData.scope.split(' ') : []
+      });
+
+      // Save social account in Convex
       await convex.mutation(api.social.saveAccount, {
         userId,
         platform,
@@ -187,31 +188,18 @@ export async function GET(
       });
     }
 
-    // If it's YouTube, save additional data
+    // For YouTube, do not store anything in Convex from this route. Just log and proceed.
     if (platform === 'youtube' && profile) {
-      console.log('Saving YouTube channel data:', {
+      console.log('Fetched YouTube channel data:', {
         channelId: profile.id,
         title: profile.snippet?.title,
         statistics: profile.statistics
       });
-
-      // Use the improved storeYouTubeData mutation that updates both youtubeData and socialAccounts
-      await convex.mutation(api.youtubeMutations.storeYouTubeData, {
-        userId,
-        channelData: {
-          id: profile.id,
-          snippet: profile.snippet,
-          statistics: profile.statistics,
-          profileUrl: `https://youtube.com/channel/${profile.id}`,
-          avatarUrl: profile.snippet?.thumbnails?.default?.url,
-        },
-        accessToken: tokenData.access_token,
-        refreshToken: tokenData.refresh_token || undefined,
-        expiresAt: tokenData.expires_in ? Date.now() + tokenData.expires_in * 1000 : Date.now() + 3600 * 1000,
-        tokenType: 'Bearer',
-        scope: tokenData.scope || '',
-      });
+      // Optionally, you can add any further processing or return/redirect logic here.
     }
+          id: profile.id,
+          snippet: {
+
 
     // If it's Gmail, save additional data
     if (platform === 'gmail' && profile) {
