@@ -19,11 +19,45 @@ export const storeYouTubeData = mutation({
 
     try {
       // Store channel data in youtubeData table
+      // Strictly map channelData to schema (remove unwanted fields)
+      const snippet = channelData.snippet ? {
+        title: channelData.snippet.title,
+        description: channelData.snippet.description,
+        customUrl: channelData.snippet.customUrl,
+        publishedAt: channelData.snippet.publishedAt,
+        thumbnails: channelData.snippet.thumbnails ? {
+          default: channelData.snippet.thumbnails.default ? {
+            url: channelData.snippet.thumbnails.default.url,
+            width: channelData.snippet.thumbnails.default.width,
+            height: channelData.snippet.thumbnails.default.height,
+          } : undefined,
+          medium: channelData.snippet.thumbnails.medium ? {
+            url: channelData.snippet.thumbnails.medium.url,
+            width: channelData.snippet.thumbnails.medium.width,
+            height: channelData.snippet.thumbnails.medium.height,
+          } : undefined,
+          high: channelData.snippet.thumbnails.high ? {
+            url: channelData.snippet.thumbnails.high.url,
+            width: channelData.snippet.thumbnails.high.width,
+            height: channelData.snippet.thumbnails.high.height,
+          } : undefined,
+        } : undefined
+      } : undefined;
+
+      const statistics = channelData.statistics ? {
+        viewCount: channelData.statistics.viewCount,
+        subscriberCount: channelData.statistics.subscriberCount,
+        hiddenSubscriberCount: channelData.statistics.hiddenSubscriberCount,
+        videoCount: channelData.statistics.videoCount,
+      } : undefined;
+
       const youtubeDataId = await ctx.db.insert("youtubeData", {
         userId,
         resourceType: "channel",
         data: {
-          ...channelData,
+          id: channelData.id,
+          snippet,
+          statistics,
           accessToken,
           refreshToken,
           expiresAt,
@@ -31,9 +65,9 @@ export const storeYouTubeData = mutation({
           scope,
         },
         timestamp,
-        videoCount: Number(channelData.statistics?.videoCount) || 0,
-        subscriberCount: Number(channelData.statistics?.subscriberCount) || 0,
-        viewCount: Number(channelData.statistics?.viewCount) || 0,
+        videoCount: Number(statistics?.videoCount) || 0,
+        subscriberCount: Number(statistics?.subscriberCount) || 0,
+        viewCount: Number(statistics?.viewCount) || 0,
       });
 
       // Extract channel information

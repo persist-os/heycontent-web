@@ -1,24 +1,27 @@
 import { google } from 'googleapis';
-import { api } from '@/convex/_generated/api';
-import { ConvexHttpClient } from 'convex/browser';
-import { getValidGmailToken } from './tokenRefresh';
 
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+// Fetch Gmail token from backend (which stores it in Convex)
+async function fetchGmailToken(): Promise<string> {
+  const response = await fetch('/api/gmail/token', {
+    method: 'GET',
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch Gmail token from backend');
+  }
+  const data = await response.json();
+  return data.access_token;
+}
 
 // Initialize the Gmail API client with refresh logic
 const getGmailClient = async () => {
-  const accessToken = await getValidGmailToken();
-  
+  const accessToken = await fetchGmailToken();
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
     process.env.GOOGLE_REDIRECT_URI
   );
-
-  oauth2Client.setCredentials({
-    access_token: accessToken,
-  });
-
+  oauth2Client.setCredentials({ access_token: accessToken });
   return google.gmail({ version: 'v1', auth: oauth2Client });
 };
 

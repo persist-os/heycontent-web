@@ -21,12 +21,19 @@ export async function GET(req: Request) {
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=invalid_state`);
     }
 
+    // Check for Authorization header
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized - Missing or invalid Authorization header' }, { status: 401 });
+    }
+
     // Proxy OAuth callback to FastAPI backend
     try {
       const backendRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/youtube/oauth/callback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': req.headers.get('Authorization') || '',
         },
         body: JSON.stringify({ code, userId }),
       });

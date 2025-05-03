@@ -1,8 +1,8 @@
 import { api } from "@/convex/_generated/api";
-import { ConvexHttpClient } from "convex/browser";
+
 
 // Create a client instance outside of the function
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+
 
 export const storeGmailCredentials = async (
   tokenResponse: {
@@ -12,10 +12,5 @@ export const storeGmailCredentials = async (
     expiry_date: number;
   }
 ) => {
-  await convex.mutation(api.gmailTokens.storeGmailTokens, {
-    accessToken: tokenResponse.access_token,
-    refreshToken: tokenResponse.refresh_token,
-    expiryDate: tokenResponse.expiry_date,
-    scope: tokenResponse.scope,
-  });
+  // Convex storage for Gmail tokens is now handled exclusively by the backend (FastAPI). This function is now a no-op.
 };
