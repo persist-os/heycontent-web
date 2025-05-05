@@ -44,6 +44,10 @@ export default function AuthTestPage() {
     try {
       // Test the auth endpoint
       const response = await fetchWithAuth('/api/auth/test');
+      if(!response) {
+        throw new Error()
+       }
+      
       const data = await response.json();
 
       setTestResult({
@@ -66,6 +70,9 @@ export default function AuthTestPage() {
     try {
       // Test the profile endpoint
       const response = await fetchWithAuth('/api/user/profile');
+      if(!response) {
+        throw new Error()
+       }
       const data = await response.json();
 
       setTestResult({
@@ -85,9 +92,13 @@ export default function AuthTestPage() {
     setError(null);
     setTestResult(null);
 
+
     try {
       // Test the debug endpoint
       const response = await fetchWithAuth('/api/debug');
+      if(!response) {
+       throw new Error()
+      }
       const data = await response.json();
 
       setTestResult({
