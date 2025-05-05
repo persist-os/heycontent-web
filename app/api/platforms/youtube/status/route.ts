@@ -38,6 +38,11 @@ export async function GET() {
         details: backendErr instanceof Error ? backendErr.message : backendErr
       }, { status: 502 });
     }
+  } catch (err) {
+    console.error('Error in YouTube status route:', err);
+    return NextResponse.json({
+      error: 'Failed to contact backend',
+      details: err instanceof Error ? err.message : err
+    }, { status: 500 });
   }
 }
-

@@ -7,6 +7,7 @@ import { auth } from '@/app/lib/firebase';
  * Automatically adds the Firebase ID token to the request headers
  */
 export async function fetchWithAuth(url: string, options: RequestInit = {}) {
+  if (!auth) return;
   try {
     // Get the current user
     const user = auth.currentUser;
@@ -32,34 +33,6 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
     };
 
     console.log(`fetchWithAuth: Making request to ${url}`);
-
-    // Only fix the session if we haven't done so recently
-    const lastFixAttempt = localStorage.getItem('last-session-fix');
-    const now = Date.now();
-    const fiveMinutesAgo = now - 5 * 60 * 1000; // 5 minutes ago
-
-    if (!lastFixAttempt || parseInt(lastFixAttempt) < fiveMinutesAgo) {
-      try {
-        console.log('Fixing session before request...');
-        const fixResponse = await fetch('/api/auth/fix-session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ token })
-        });
-
-        if (fixResponse.ok) {
-          localStorage.setItem('last-session-fix', now.toString());
-          console.log('Session fixed successfully');
-        }
-      } catch (e) {
-        console.warn('Failed to fix session, but continuing with request:', e);
-      }
-    } else {
-      console.log('Skipping session fix, last attempt was too recent');
-    }
 
     // Make the request with the token
     const response = await fetch(url, {

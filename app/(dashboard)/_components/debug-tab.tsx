@@ -21,6 +21,7 @@ export default function DebugTab() {
   const [convexResult, setConvexResult] = useState<any>(null)
 
   useEffect(() => {
+    if (!auth) return;
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user)
       if (user) {

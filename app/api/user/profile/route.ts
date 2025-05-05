@@ -143,74 +143,10 @@ export async function PUT(req: Request) {
 
     if (!session?.user?.id) {
       console.error('Profile PUT: No authenticated user found');
-
-      // Try to fix the session by calling fix-session endpoint
-      if (authHeader) {
-        // Check if we've recently attempted to fix the session
-        const lastFixAttempt = cookies().get('session-fix-attempt')?.value;
-        const now = Date.now();
-        const fiveMinutesAgo = now - 5 * 60 * 1000; // 5 minutes ago
-
-        if (!lastFixAttempt || parseInt(lastFixAttempt) < fiveMinutesAgo) {
-          console.log('Profile PUT: Attempting to fix session with auth header');
-          try {
-            // Make a server-side request to fix-session
-            const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/fix-session`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': authHeader
-              },
-              body: JSON.stringify({})
-            });
-
-            // Set a cookie to track when we last attempted to fix the session
-            const responseWithCookie = NextResponse.next();
-            responseWithCookie.cookies.set('session-fix-attempt', now.toString(), {
-              httpOnly: true,
-              secure: process.env.NODE_ENV === 'production',
-              sameSite: 'lax',
-              path: '/',
-              maxAge: 60 * 60 // 1 hour
-            });
-
-            if (response.ok) {
-              console.log('Profile PUT: Session fix successful, retrying getServerSession');
-              // Try again with the fixed session
-              const fixedSession = await getServerSession();
-              if (fixedSession?.user?.id) {
-                console.log('Profile PUT: Session fixed successfully');
-                // Continue with the fixed session
-                const result = await handleProfileUpdateRequest(req, fixedSession);
-                // Copy the session-fix-attempt cookie to the result
-                const resultWithCookie = NextResponse.json(
-                  await result.json(),
-                  { status: result.status, headers: result.headers }
-                );
-                resultWithCookie.cookies.set('session-fix-attempt', now.toString(), {
-                  httpOnly: true,
-                  secure: process.env.NODE_ENV === 'production',
-                  sameSite: 'lax',
-                  path: '/',
-                  maxAge: 60 * 60 // 1 hour
-                });
-                return resultWithCookie;
-              }
-            } else {
-              console.error('Profile PUT: Session fix failed:', await response.text());
-            }
-          } catch (fixError) {
-            console.error('Profile PUT: Error fixing session:', fixError);
-          }
-        } else {
-          console.log('Profile PUT: Skipping session fix attempt, last attempt was too recent');
-        }
-      }
-
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
-      )
+      );
     }
 
     return await handleProfileUpdateRequest(req, session);
