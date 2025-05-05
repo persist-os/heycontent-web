@@ -9,7 +9,7 @@ export const createUser = action({
     userId: v.string(),
     name: v.string(),
     email: v.string(),
-    image: v.string()
+    image: v.optional(v.string())
   },
   handler: async (ctx, args) => {
     await ctx.runMutation(api.users.create, args);
@@ -21,7 +21,7 @@ export const updateUser = action({
     userId: v.string(),
     name: v.string(),
     email: v.string(),
-    image: v.string()
+    image: v.optional(v.string())
   },
   handler: async (ctx, args) => {
     await ctx.runMutation(api.users.update, args);

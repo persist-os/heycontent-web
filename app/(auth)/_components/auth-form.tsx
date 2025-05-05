@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { Mail, Lock, Eye, EyeOff, Chrome } from 'lucide-react';
 import Link from 'next/link';
-import { toast } from 'react-hot-toast';
 
 interface AuthFormProps {
   isLogin?: boolean;
