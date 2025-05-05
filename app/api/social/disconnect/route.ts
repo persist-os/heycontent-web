@@ -13,8 +13,12 @@ export async function POST(req: Request) {
 
     // If no session, try to extract and verify the token directly
     if (!userId) {
-      const token = getFirebaseToken();
-      console.log('[DISCONNECT] Fallback: token from header/cookie:', typeof token, token ? token.substring(0, 20) + '...' : null);
+      const token = await getFirebaseToken();
+      console.log(
+        '[DISCONNECT] Fallback: token from header/cookie:',
+        typeof token,
+        token && typeof token === 'string' ? token.substring(0, 20) + '...' : null
+      );
       if (typeof token === 'string') {
         try {
           const decoded = await adminAuth.verifyIdToken(token);
@@ -24,7 +28,7 @@ export async function POST(req: Request) {
           console.error('[DISCONNECT] Token verification failed:', err);
         }
       } else {
-        console.error('[DISCONNECT] Token is not a string:', typeof token);
+        console.error('[DISCONNECT] Token is not a string or is null:', typeof token, token);
       }
     }
 
