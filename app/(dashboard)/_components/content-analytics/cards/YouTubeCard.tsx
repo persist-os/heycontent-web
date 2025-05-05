@@ -1,27 +1,17 @@
-"use client"
-
 import React from 'react';
 import { Card } from '@/src/components/ui/card';
 import { MessageSquare, ThumbsUp, PlayCircle, Eye, Clock, BarChart3 } from 'lucide-react';
+
 import { YouTubeContentItem } from '../types';
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
 
 interface YouTubeCardProps {
   item: YouTubeContentItem;
   onDiscussContent: (item: YouTubeContentItem) => void;
   onViewDetailedAnalytics: (item: YouTubeContentItem) => void;
-  userId: string;
 }
 
-export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent, onViewDetailedAnalytics, userId }) => {
+export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent, onViewDetailedAnalytics }) => {
   const { content, metrics, publishedAt } = item;
-
-  const videos = useQuery(api.youtubeQueries.listUserYouTubeVideos, {
-    userId: userId
-  });
-
-  console.log(videos);
 
   return (
     <Card key={item.id} className="overflow-hidden border-2 border-red-500 dark:border-red-400 shadow-lg">
