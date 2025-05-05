@@ -27,6 +27,10 @@ export const logger = {
 export async function ensureConvexUser(convex: any, user: { uid: string; displayName?: string; email?: string; photoURL?: string }, requestId: string) {
   // Ensures user exists in Convex, creates if not
   try {
+    if (!user.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) {
+      logger.warn("Invalid or missing email for user", { requestId, userId: user.uid, email: user.email });
+      throw new Error("Invalid or missing email address");
+    }
     const convexUser = await convex.query(api.users.getUserByEmail, { email: user.email });
     if (!convexUser) {
       logger.info("User not found in Convex, creating user...", { requestId, userId: user.uid });
