@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { adminAuth } from '@/app/lib/firebase-admin'
 import { proxyApiKeyRequest } from '../utils/apiKeyProxy';
 import { api } from "@/convex/_generated/api"
-import { fetchQuery, fetchMutation } from "convex/nextjs";
+import { fetchQuery, fetchMutation, fetchAction } from "convex/nextjs";
 import { logger, ensureConvexUser, updateConvexUser, mapAuthErrorCodeToMessage, redactToken } from './helpers';
 
 export async function POST(request: Request) {
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
         });
         await ensureConvexUser({
   query: (fn: any, args: any) => fetchQuery(fn, args),
-  action: (fn: any, args: any) => fetchMutation(fn, args)
+  action: (fn: any, args: any) => fetchAction(fn, args)
 }, userRecord, requestId);
         return NextResponse.json({
           success: true,
@@ -91,7 +91,6 @@ export async function POST(request: Request) {
         const userRecord = await adminAuth.createUser({
           email,
           password,
-          // No email verification required
         })
         // Create a custom token for the user
         const customToken = await adminAuth.createCustomToken(userRecord.uid)
@@ -108,7 +107,7 @@ export async function POST(request: Request) {
         });
         await ensureConvexUser({
   query: (fn: any, args: any) => fetchQuery(fn, args),
-  action: (fn: any, args: any) => fetchMutation(fn, args)
+  action: (fn: any, args: any) => fetchAction(fn, args)
 }, userRecord, requestId);
         return NextResponse.json({
           success: true,
@@ -164,12 +163,12 @@ export async function POST(request: Request) {
       if (!convexUser) {
         await ensureConvexUser({
           query: (fn: any, args: any) => fetchQuery(fn, args),
-          action: (fn: any, args: any) => fetchMutation(fn, args)
+          action: (fn: any, args: any) => fetchAction(fn, args)
         }, { uid: decodedToken.uid, displayName: decodedToken.name, email: decodedToken.email, photoURL: decodedToken.picture }, requestId);
       } else {
         await updateConvexUser({
           query: (fn: any, args: any) => fetchQuery(fn, args),
-          action: (fn: any, args: any) => fetchMutation(fn, args)
+          action: (fn: any, args: any) => fetchAction(fn, args)
         }, decodedToken, convexUser, requestId);
       }
       // Call the /api/auth/key route to get an API key for this user

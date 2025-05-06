@@ -197,9 +197,6 @@ export async function GET(
       });
       // Optionally, you can add any further processing or return/redirect logic here.
     }
-          id: profile.id,
-          snippet: {
-
 
     // If it's Gmail, save additional data
     if (platform === 'gmail' && profile) {

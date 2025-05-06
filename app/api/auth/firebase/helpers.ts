@@ -27,11 +27,15 @@ export const logger = {
 export async function ensureConvexUser(convex: any, user: { uid: string; displayName?: string; email?: string; photoURL?: string }, requestId: string) {
   // Ensures user exists in Convex, creates if not
   try {
-    const convexUser = await convex.query(api.users.getUserById, { userId: user.uid });
+    if (!user.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) {
+      logger.warn("Invalid or missing email for user", { requestId, userId: user.uid, email: user.email });
+      throw new Error("Invalid or missing email address");
+    }
+    const convexUser = await convex.query(api.users.getUserByEmail, { email: user.email });
     if (!convexUser) {
       logger.info("User not found in Convex, creating user...", { requestId, userId: user.uid });
       const convexStartTime = Date.now();
-      await convex.action(api.users.create, {
+      await convex.action(api.auth.createUser, {
         userId: user.uid,
         name: user.displayName || "Unknown User",
         email: user.email || "",
@@ -45,7 +49,7 @@ export async function ensureConvexUser(convex: any, user: { uid: string; display
     }
   } catch (convexError) {
     logger.error("Error with Convex user operation", convexError, { requestId, userId: user.uid });
-    // Continue with auth flow even if Convex operation fails
+    throw new Error("Convex user operation failed: " + (convexError as Error).message);
   }
 }
 
@@ -54,7 +58,7 @@ export async function updateConvexUser(convex: any, decodedToken: any, convexUse
   try {
     logger.info("User found in Convex, updating user information...", { requestId, userId: decodedToken.uid });
     const updateStartTime = Date.now();
-    await convex.action(api.users.update, {
+    await convex.action(api.auth.updateUser, {
       userId: decodedToken.uid,
       name: decodedToken.name || convexUser.name || "Unknown User",
       email: decodedToken.email || convexUser.email || "",

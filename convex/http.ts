@@ -54,13 +54,13 @@ app.patch("/api/users/:id", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
   const { name, email, image } = await c.req.json();
-  const result = await ctx.runMutation(api.users.update, {
+  await ctx.runAction(api.auth.updateUser, {
     name,
     email,
     image,
     userId,
   });
-  return c.json(result);
+  return c.json({ success: true });
 });
 
 // API KEY ROUTES
