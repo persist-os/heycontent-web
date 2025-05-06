@@ -10,7 +10,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'HeyContent',
-  description: 'AI-powered creator management platform',
+  description: 'AI-powered platform for content creators',
 }
 
 export default async function RootLayout({

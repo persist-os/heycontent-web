@@ -158,14 +158,6 @@ app.get("/api/users/:id/youtube", async (c) => {
   return c.json(youtubeData);
 });
 
-// Get YouTube connection status
-app.get("/api/users/:id/youtube/status", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const status = await ctx.runQuery(api.youtubeQueries.getYouTubeConnectionStatus, { userId });
-  return c.json({ connected: status });
-});
-
 // Update YouTube token
 app.post("/api/users/:id/youtube/token", async (c) => {
   const ctx = c.env;
@@ -186,13 +178,6 @@ app.post("/api/users/:id/youtube/token", async (c) => {
   return c.json({ success: true });
 });
 
-// Get YouTube credentials
-app.get("/api/users/:id/youtube/credentials", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const credentials = await ctx.runQuery(api.youtubeQueries.get_youtube_credentials, { userId });
-  return c.json(credentials);
-});
 
 // Get YouTube channel analysis
 app.get("/api/users/:id/youtube/analysis/channel", async (c) => {
@@ -210,7 +195,7 @@ app.get("/api/users/:id/youtube/analysis/channel", async (c) => {
     videos: youtubeData.videoCount || 0,
     views: youtubeData.viewCount || 0,
     lastUpdated: new Date(youtubeData.timestamp).toISOString(),
-    channelInfo: youtubeData.socialAccount?.metadata || null
+    channelInfo: youtubeData.data?.snippet || null
   };
 
   return c.json(channelData);
@@ -226,68 +211,10 @@ app.get("/api/users/:id/youtube/analysis/videos", async (c) => {
     // Get specific video data
     const videoData = await ctx.runQuery(api.youtubeQueries.getVideoData, { userId, videoId });
     return c.json(videoData);
-  } else {
-    // Fetch all video data for the user
-    const userVideos = await ctx.runQuery(api.youtubeQueries.listUserYouTubeVideos, { userId });
-    return c.json(userVideos);
   }
+
 });
 
-// Get YouTube engagement metrics
-app.get("/api/users/:id/youtube/analysis/engagement", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const youtubeData = await ctx.runQuery(api.youtubeQueries.getYouTubeData, { userId });
-  
-  if (!youtubeData) {
-    return c.json({ error: "No YouTube data found" }, 404);
-  }
-
-  // Calculate engagement metrics
-  const engagementData = {
-    subscriberGrowth: youtubeData.subscriberCount || 0,
-    videoGrowth: youtubeData.videoCount || 0,
-    viewGrowth: youtubeData.viewCount || 0,
-    lastUpdated: new Date(youtubeData.timestamp).toISOString(),
-    channelHealth: {
-      subscriberToViewRatio: youtubeData.viewCount && youtubeData.subscriberCount 
-        ? (youtubeData.viewCount / youtubeData.subscriberCount).toFixed(2)
-        : "0.00", // Return string for consistency
-      videosPerSubscriber: youtubeData.subscriberCount && youtubeData.videoCount
-        ? (youtubeData.videoCount / youtubeData.subscriberCount).toFixed(2)
-        : "0.00" // Return string for consistency
-    }
-  };
-
-  return c.json(engagementData);
-});
-
-// Store YouTube channel data (generic, with tokens)
-app.post("/api/users/:id/youtube/data", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const { channelData, accessToken, refreshToken, expiresAt, tokenType, scope } = await c.req.json();
-
-  if (!channelData || !accessToken || !tokenType || !scope) {
-    return c.json({ success: false, error: "Missing required fields" }, 400);
-  }
-
-  try {
-    await ctx.runMutation(api.youtubeMutations.storeYouTubeData, {
-      userId,
-      channelData,
-      accessToken,
-      refreshToken,
-      expiresAt,
-      tokenType,
-      scope,
-    });
-    return c.json({ success: true });
-  } catch (error) {
-    console.error("Failed to store YouTube data:", error);
-    return c.json({ success: false, error: "Failed to store YouTube data" }, 500);
-  }
-});
 
 // YouTube endpoints
 app.post("/api/users/:id/youtube/videos", async (c) => {
