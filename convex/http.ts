@@ -158,14 +158,6 @@ app.get("/api/users/:id/youtube", async (c) => {
   return c.json(youtubeData);
 });
 
-// Get YouTube connection status
-app.get("/api/users/:id/youtube/status", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const status = await ctx.runQuery(api.youtubeQueries.getYouTubeConnectionStatus, { userId });
-  return c.json({ connected: status });
-});
-
 // Update YouTube token
 app.post("/api/users/:id/youtube/token", async (c) => {
   const ctx = c.env;
@@ -186,13 +178,6 @@ app.post("/api/users/:id/youtube/token", async (c) => {
   return c.json({ success: true });
 });
 
-// Get YouTube credentials
-app.get("/api/users/:id/youtube/credentials", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const credentials = await ctx.runQuery(api.youtubeQueries.get_youtube_credentials, { userId });
-  return c.json(credentials);
-});
 
 // Get YouTube channel analysis
 app.get("/api/users/:id/youtube/analysis/channel", async (c) => {
