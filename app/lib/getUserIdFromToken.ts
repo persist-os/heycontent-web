@@ -32,6 +32,10 @@ export async function getUserIdFromToken(tokenValue: string): Promise<string | n
     // If verification fails, try to decode manually (may be expired or invalid)
     try {
       const manualDecoded = jwtDecode<FirebaseToken>(tokenValue);
+      const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+      if (manualDecoded.exp < currentTime) {
+        return null; // Token has expired
+      }
       return manualDecoded.uid || manualDecoded.user_id || manualDecoded.sub || null;
     } catch (decodeError) {
       // Both verification and decode failed
