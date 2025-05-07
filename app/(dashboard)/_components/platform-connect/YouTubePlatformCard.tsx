@@ -17,7 +17,6 @@ export function YouTubePlatformCard({
   account,
   connecting,
   disconnecting,
-  handleConnect,
   handleDisconnect,
   userId,
 }: YouTubePlatformCardProps) {
@@ -29,7 +28,14 @@ export function YouTubePlatformCard({
       client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
       redirect_uri: `${process.env.NEXT_PUBLIC_BACKEND_URL}/youtube/oauth/callback`,
       response_type: 'code',
-      scope: 'https://www.googleapis.com/auth/youtube.readonly email profile',
+      scope: [
+        'https://www.googleapis.com/auth/youtube.readonly',
+        'https://www.googleapis.com/auth/youtube.upload',
+        'https://www.googleapis.com/auth/youtube.force-ssl',
+        'openid',
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile',
+      ].join(' '),
       state: btoa(JSON.stringify({ userId, platform: 'youtube' })),
       access_type: 'offline',
       prompt: 'consent',

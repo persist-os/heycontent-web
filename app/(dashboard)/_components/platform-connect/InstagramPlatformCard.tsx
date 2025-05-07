@@ -19,10 +19,42 @@ export function InstagramPlatformCard({
   disconnecting,
   showInstagramOptions,
   setShowInstagramOptions,
-  handleConnect,
   handleDisconnect,
 }: InstagramPlatformCardProps) {
   const isLoading = connecting || disconnecting;
+
+  // Placeholder Instagram OAuth logic
+  const handleInstagramConnect = () => {
+    const params = new URLSearchParams({
+      client_id: process.env.NEXT_PUBLIC_INSTAGRAM_CLIENT_ID!,
+      redirect_uri: `${process.env.NEXT_PUBLIC_BACKEND_URL}/instagram/oauth/callback`,
+      response_type: 'code',
+      scope: [
+        'user_profile',
+        'user_media',
+      ].join(','),
+      state: btoa(JSON.stringify({ platform: 'instagram' })),
+    });
+    const instagramAuthUrl = `https://api.instagram.com/oauth/authorize?${params.toString()}`;
+    window.location.href = instagramAuthUrl;
+  };
+
+  const handleFacebookConnect = () => {
+    const params = new URLSearchParams({
+      client_id: process.env.NEXT_PUBLIC_FACEBOOK_CLIENT_ID!,
+      redirect_uri: `${process.env.NEXT_PUBLIC_BACKEND_URL}/instagram/facebook/callback`,
+      response_type: 'code',
+      scope: [
+        'instagram_basic',
+        'pages_show_list',
+        'pages_read_engagement',
+        'public_profile',
+      ].join(','),
+      state: btoa(JSON.stringify({ platform: 'instagram_facebook' })),
+    });
+    const facebookAuthUrl = `https://www.facebook.com/v19.0/dialog/oauth?${params.toString()}`;
+    window.location.href = facebookAuthUrl;
+  };
 
   return (
     <Card className="p-6 relative">
@@ -52,10 +84,10 @@ export function InstagramPlatformCard({
           {showInstagramOptions ? (
             <>
               <div className="space-y-4 mb-4 p-4 bg-gray-50 rounded-lg">
-                {/* Example options, replace with real options if needed */}
+                {/* Placeholder connect options for Instagram */}
                 <button
                   type="button"
-                  onClick={() => handleConnect({ useFacebook: false })}
+                  onClick={handleInstagramConnect}
                   className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50"
                   style={{ background: 'linear-gradient(to right, rgb(168, 85, 247), rgb(236, 72, 153))' }}
                   disabled={isLoading}
@@ -64,7 +96,7 @@ export function InstagramPlatformCard({
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleConnect({ useFacebook: true })}
+                  onClick={handleFacebookConnect}
                   className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50"
                   style={{ background: 'linear-gradient(to right, rgb(168, 85, 247), rgb(236, 72, 153))' }}
                   disabled={isLoading}
@@ -93,16 +125,29 @@ export function InstagramPlatformCard({
           )}
         </div>
       )}
+      {/* Instagram metrics placeholder */}
+      {account && account.metadata && (
+        <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
+          <div>Followers: {account.metadata.followers ?? 0}</div>
+          <div>Posts: {account.metadata.posts ?? 0}</div>
+          <div>Engagement: {account.metadata.engagement ?? 0}</div>
+        </div>
+      )}
       {account && (
-        <button
-          type="button"
-          onClick={handleDisconnect}
-          disabled={isLoading}
-          className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50 mt-4"
-          style={{ background: '#94A3B8' }}
-        >
-          {isLoading ? 'Disconnecting...' : 'Disconnect'}
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={handleDisconnect}
+            disabled={isLoading}
+            className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50 mt-4"
+            style={{ background: '#94A3B8' }}
+          >
+            {isLoading ? 'Disconnecting...' : 'Disconnect'}
+          </button>
+          <div className="mt-2 text-xs text-gray-400">
+            Updated {account.updatedAt ? new Date(account.updatedAt).toLocaleString() : ''}
+          </div>
+        </>
       )}
     </Card>
   );
