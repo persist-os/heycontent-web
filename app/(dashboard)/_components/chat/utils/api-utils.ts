@@ -171,7 +171,7 @@ export async function sendChatMessage(
 /**
  * Save conversation to backend storage
  */
-export async function saveConversation(messages: any[], title: string, sessionId: string | null) {
+export async function saveConversation(messages: any[], title: string, sessionId: string | null, conversationId?: string) {
   // Only save if we have messages
   if (messages.length < 1) {
     console.log('No messages to save');
@@ -179,7 +179,7 @@ export async function saveConversation(messages: any[], title: string, sessionId
   }
 
   try {
-    console.log('Saving conversation with messages:', messages.length);
+    console.log('Saving conversation with messages:', messages.length, conversationId ? '(updating existing)' : '(creating new)');
 
     const response = await fetch('/api/chat/save', {
       method: 'POST',
@@ -189,7 +189,8 @@ export async function saveConversation(messages: any[], title: string, sessionId
       body: JSON.stringify({
         messages,
         title,
-        sessionId
+        sessionId,
+        conversationId // Pass the conversationId if we have one
       })
     });
 

@@ -196,10 +196,9 @@ const ChatScreen = ({ chatId }: ChatScreenProps) => {
   // Save conversation to backend
   const handleSaveConversation = useCallback(async () => {
     // Only save if we have at least 2 messages (a user message and a response)
-    if (messages.length < 2 || conversationSaved) {
+    if (messages.length < 2) {
       console.log('Skipping save conversation:', {
-        messageCount: messages.length,
-        alreadySaved: conversationSaved
+        messageCount: messages.length
       });
       return;
     }
@@ -213,14 +212,26 @@ const ChatScreen = ({ chatId }: ChatScreenProps) => {
           firstUserMessage.content) :
         'Chat conversation';
 
-      const conversationId = await saveConversation(messages, title, sessionId);
+      // Pass the sessionId as conversationId if we already have one
+      // This ensures we update the existing conversation instead of creating duplicates
+      const conversationId = await saveConversation(
+        messages, 
+        title, 
+        sessionId,
+        sessionId || undefined // Convert null to undefined to satisfy type checking
+      );
+      
       if (conversationId) {
+        // If this is the first save, update our sessionId with the returned conversationId
+        if (!sessionId) {
+          setSessionId(conversationId);
+        }
         setConversationSaved(true);
       }
     } catch (error) {
       console.error('Failed to save conversation:', error);
     }
-  }, [messages, sessionId, conversationSaved]);
+  }, [messages, sessionId]);
 
   // Load conversation by ID
   const handleLoadConversation = useCallback(async (id: string) => {

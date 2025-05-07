@@ -27,14 +27,11 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid API key' }, { status: 401 });
     }
 
-    // We need to add a function to get a specific conversation by ID
-    // For now, we'll fetch all conversations and filter on the client side
-    const conversations = await fetchQuery(api.chat.getHistory, { 
-      userId
+    // Use the direct getConversation query for better performance
+    const conversation = await fetchQuery(api.chat.getConversation, { 
+      userId,
+      conversationId: params.chatId
     });
-
-    // Find the specific conversation
-    const conversation = conversations.find(conv => conv._id === params.chatId);
     
     if (!conversation) {
       console.warn(`[${requestId}] Conversation not found: ${params.chatId}`);

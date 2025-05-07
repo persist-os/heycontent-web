@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { messages, title, sessionId } = body;
+    const { messages, title, sessionId, conversationId } = body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       console.warn(`[${requestId}] Invalid request: Missing or empty messages array`);
@@ -46,7 +46,43 @@ export async function POST(request: Request) {
     // Generate a title if not provided
     const chatTitle = title || `Chat from ${new Date().toLocaleString()}`;
 
-    console.log(`[${requestId}] Formatted conversation for saving:`, {
+    // If we have an existing conversationId, add the latest message instead of creating a new conversation
+    if (conversationId) {
+      console.log(`[${requestId}] Updating existing conversation:`, {
+        conversationId,
+        userId,
+        messageCount: formattedMessages.length
+      });
+
+      // Get the latest message only
+      const latestMessage = formattedMessages[formattedMessages.length - 1];
+      
+      if (latestMessage) {
+        const result = await convex.mutation(api.chat.addMessageToConversation, {
+          conversationId,
+          userId,
+          message: latestMessage
+        });
+
+        console.log(`[${requestId}] Successfully updated conversation`, {
+          conversationId,
+          result
+        });
+
+        return NextResponse.json({
+          success: true,
+          conversationId,
+          metadata: {
+            request_id: requestId,
+            timestamp: new Date().toISOString(),
+            action: 'updated'
+          }
+        });
+      }
+    }
+
+    // Default behavior: create a new conversation
+    console.log(`[${requestId}] Creating new conversation:`, {
       userId,
       title: chatTitle,
       messageCount: formattedMessages.length,
@@ -55,23 +91,24 @@ export async function POST(request: Request) {
     });
 
     // Save conversation to Convex
-    const conversationId = await convex.mutation(api.chat.createConversation, {
+    const newConversationId = await convex.mutation(api.chat.createConversation, {
       userId,
       title: chatTitle,
       messages: formattedMessages
     });
 
-    console.log(`[${requestId}] Successfully saved conversation`, {
-      conversationId,
+    console.log(`[${requestId}] Successfully saved new conversation`, {
+      conversationId: newConversationId,
       messageCount: messages.length
     });
 
     return NextResponse.json({
       success: true,
-      conversationId,
+      conversationId: newConversationId,
       metadata: {
         request_id: requestId,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        action: 'created'
       }
     });
   } catch (error) {
