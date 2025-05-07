@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { fetchMutation, fetchQuery } from 'convex/nextjs';
 import { api } from "@/convex/_generated/api";
+import { getUserIdFromToken } from '@/app/lib/getUserIdFromToken';
 
 export async function GET(
   _req: Request,
@@ -14,7 +15,7 @@ export async function GET(
     }
 
     // Get the user ID from the token
-    const userId = await fetchQuery(api.queries.getUserIdFromToken, { token });
+    const userId = await getUserIdFromToken(token);
     if (!userId) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
@@ -63,7 +64,7 @@ export async function PUT(
     }
 
     // Get the user ID from the token
-    const userId = await fetchQuery(api.queries.getUserIdFromToken, { token });
+    const userId = await getUserIdFromToken(token);
     if (!userId) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
@@ -120,7 +121,7 @@ export async function DELETE(
     }
 
     // Get the user ID from the token
-    const userId = await fetchQuery(api.queries.getUserIdFromToken, { token });
+    const userId = await getUserIdFromToken(token);
     if (!userId) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }

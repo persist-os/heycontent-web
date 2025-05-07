@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { fetchQuery } from 'convex/nextjs';
 import { api } from '@/convex/_generated/api';
+import { getUserIdFromToken } from '@/app/lib/getUserIdFromToken';
 
 export async function GET(request: Request) {
   const requestId = Math.random().toString(36).substring(7);
@@ -20,8 +21,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get the user ID from the token
-    const userId = await fetchQuery(api.queries.getUserIdFromToken, { token });
+    // Get the user ID from the token using local utility
+    const userId = await getUserIdFromToken(token);
     if (!userId) {
       console.warn(`[${requestId}] Invalid token: Could not get user ID`);
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });

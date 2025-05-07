@@ -158,6 +158,19 @@ app.get("/api/users/:id/youtube", async (c) => {
   return c.json(youtubeData);
 });
 
+// Get all YouTube tokens for a user
+app.get("/api/users/:id/youtube/tokens", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  try {
+    const tokens = await ctx.runQuery(api.youtubeQueries.getYouTubeTokens, { userId });
+    return c.json({ success: true, tokens });
+  } catch (error) {
+    console.error("Failed to get user tokens:", error);
+    return c.json({ success: false, error: "Failed to retrieve user tokens" }, 500);
+  }
+});
+
 // Update YouTube token
 app.post("/api/users/:id/youtube/token", async (c) => {
   const ctx = c.env;
@@ -279,6 +292,7 @@ app.get("/api/users/id/:userId", async (c) => {
   const user = await ctx.runQuery(api.users.getUserById, { userId });
   return c.json(user);
 });
+
 
 // RATE LIMITING ENDPOINTS
 

@@ -44,6 +44,23 @@ export const getYouTubeData = query({
   },
 });
 
+// Get all YouTube tokens for a user
+export const getYouTubeTokens = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    try {
+      const tokens = await ctx.db
+        .query("youtubeTokens")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .collect();
+      return tokens;
+    } catch (error) {
+      console.error('Error getting YouTube tokens:', error);
+      throw new Error(`Failed to get YouTube tokens: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
 
 // Get video data
 export const getVideoData = query({
