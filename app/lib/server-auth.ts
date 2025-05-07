@@ -8,7 +8,7 @@ import { adminAuth } from './firebase-admin';
 interface FirebaseToken {
   uid?: string;
   user_id?: string;
-  sub?: string; // Firebase tokens often use 'sub' for the user ID
+  sub?: string;
   email?: string;
   name?: string;
   picture?: string;

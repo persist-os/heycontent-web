@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
+import { getUserIdFromToken } from '@/app/lib/getUserIdFromToken';
 
 export async function GET(req: Request) {
   try {
@@ -11,7 +12,7 @@ export async function GET(req: Request) {
     }
 
     // Get the user ID from the token
-    const userId = await fetchQuery(api.queries.getUserIdFromToken, { token });
+    const userId = await getUserIdFromToken(token);
     if (!userId) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
