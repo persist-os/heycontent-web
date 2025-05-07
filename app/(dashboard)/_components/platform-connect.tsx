@@ -181,7 +181,7 @@ export function PlatformConnect() {
                 disconnecting={isDisconnecting}
                 showInstagramOptions={showInstagramOptions}
                 setShowInstagramOptions={setShowInstagramOptions}
-                handleConnect={(options) => handleConnect('instagram', options)}
+                handleConnect={() => {}}
                 handleDisconnect={() => handleDisconnect('instagram')}
               />
             );
