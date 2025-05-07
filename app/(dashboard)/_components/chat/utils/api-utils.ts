@@ -18,7 +18,7 @@ export async function getApiKey(): Promise<string | null> {
     if (storedApiKey) {
       const apiKey = JSON.parse(storedApiKey);
       // Check for invalid/temporary key
-      let isValid = (typeof apiKey === 'string' && !apiKey.endsWith('_temporary'));
+      const isValid = (typeof apiKey === 'string' && !apiKey.endsWith('_temporary'));
       // Check if the key matches the current user
       let userMatches = false;
       let keyUserId = null, firebaseUserId = null;
@@ -132,12 +132,18 @@ export async function sendChatMessage(
   sessionId: string | null
 ): Promise<ChatResponseData> {
   // Get API key - make sure we have one before proceeding
-  let apiKey = await getApiKey();
+  const apiKey = await getApiKey();
   if (!apiKey) {
     throw new Error('You are not authenticated. Please log in again.');
   }
 
-  const requestBody: any = {
+  interface ChatRequestBody {
+    query: string;
+    is_first_message: boolean;
+    session_id?: string;
+  }
+
+  const requestBody: ChatRequestBody = {
     query: content,
     is_first_message: isFirstMessage
   };
