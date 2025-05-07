@@ -181,6 +181,7 @@ export function PlatformConnect() {
                 disconnecting={isDisconnecting}
                 showInstagramOptions={showInstagramOptions}
                 setShowInstagramOptions={setShowInstagramOptions}
+                // The handleConnect prop is intentionally set to a no-op function to disable the broken connect logic for Instagram.
                 handleConnect={() => {}}
                 handleDisconnect={() => handleDisconnect('instagram')}
               />
