@@ -163,19 +163,28 @@ app.post("/api/users/:id/youtube/token", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
   const { accessToken, refreshToken, expiresAt, tokenType, scope } = await c.req.json();
-  
-  // Convert scope to array if it's a string
-  const scopeArray = typeof scope === 'string' ? scope.split(' ') : scope;
-  
-  await ctx.runMutation(api.youtubeMutations.update_youtube_token, {
-    userId,
-    accessToken,
-    refreshToken,
-    expiresAt,
-    tokenType,
-    scope: scopeArray
-  });
-  return c.json({ success: true });
+
+  // Ensure scope is an array of strings
+  const scopeArray = Array.isArray(scope)
+    ? scope
+    : typeof scope === "string"
+    ? scope.split(" ")
+    : [];
+
+  try {
+    await ctx.runMutation(api.youtubeMutations.update_youtube_token, {
+      userId,
+      accessToken,
+      refreshToken,
+      expiresAt,
+      tokenType,
+      scope: scopeArray,
+    });
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Failed to store YouTube token:", error);
+    return c.json({ success: false, error: "Failed to store YouTube token" }, 500);
+  }
 });
 
 

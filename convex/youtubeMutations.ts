@@ -78,14 +78,29 @@ export const update_youtube_token = mutation({
     scope: v.array(v.string())
   },
   handler: async (ctx, args) => {
-    await ctx.db.insert("youtubeTokens", {
-      userId: args.userId,
-      accessToken: args.accessToken,
-      refreshToken: args.refreshToken,
-      expiryDate: args.expiresAt,
-      scope: args.scope.join(" "),
-      lastRefreshed: Date.now()
-    });
+    // Upsert logic: patch if exists, insert if not
+    const existing = await ctx.db
+      .query("youtubeTokens")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        accessToken: args.accessToken,
+        refreshToken: args.refreshToken,
+        expiryDate: args.expiresAt,
+        scope: args.scope.join(" "),
+        lastRefreshed: Date.now()
+      });
+    } else {
+      await ctx.db.insert("youtubeTokens", {
+        userId: args.userId,
+        accessToken: args.accessToken,
+        refreshToken: args.refreshToken,
+        expiryDate: args.expiresAt,
+        scope: args.scope.join(" "),
+        lastRefreshed: Date.now()
+      });
+    }
   },
 });
 
