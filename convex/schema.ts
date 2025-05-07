@@ -32,6 +32,31 @@ export default defineSchema({
   .index("by_user", ["creatorId"])
   .index("by_active", ["isActive"]),
 
+  // Gmail Accounts By Paing
+  gmailAccounts: defineTable({
+    userId: v.string(),
+    email: v.string(),
+    messagesTotal: v.optional(v.number()),
+    threadsTotal: v.optional(v.number()),
+    historyId: v.optional(v.string()),
+    accessToken: v.string(),
+    refreshToken: v.optional(v.string()),
+    expiresAt: v.optional(v.number()),
+    tokenType: v.string(),
+  })
+  .index("by_user", ["userId"]),
+
+  //Gmail Tokens
+  gmailTokens: defineTable({
+    userId: v.string(),
+    accessToken: v.string(),
+    refreshToken: v.string(),
+    expiryDate: v.number(),
+    scope: v.string(),
+    lastRefreshed: v.number(),
+    tokenType: v.string(),
+  }).index("by_userId", ["userId"]),
+
 
   // YouTube Full Profile (channel + videos)
   youtube_full_profiles: defineTable({
@@ -96,6 +121,7 @@ export default defineSchema({
     scope: v.string(),
     lastRefreshed: v.number(),
   }).index("by_userId", ["userId"]),
+
 
   // Chat conversations
   conversations: defineTable({
