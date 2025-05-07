@@ -17,9 +17,10 @@ global.TransformStream = TransformStream;
 process.env.OPENAI_API_KEY = 'test-api-key';
 process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://localhost:54321';
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
-process.env.GOOGLE_CLIENT_ID = 'test-client-id';
-process.env.GOOGLE_CLIENT_SECRET = 'test-client-secret';
+process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID = 'test-client-id';
+process.env.NEXT_PUBLIC_GOOGLE_CLIENT_SECRET = 'test-client-secret';
 process.env.GOOGLE_REDIRECT_URI = 'http://localhost:3000/api/auth/callback/google';
+process.env.GMAIL_REDIRECT_URI = 'http://localhost:3000/api/social/callback/gmail';
 process.env.NEXT_PUBLIC_CONVEX_URL = 'https://test-convex-url.convex.cloud';
 
 // Mock console methods to reduce noise in tests

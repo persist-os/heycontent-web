@@ -63,15 +63,15 @@ export const PLATFORM_CONFIGS: Record<Platform, {
     scope: TIKTOK_SCOPES,
   },
   youtube: {
-    clientId: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    redirectUri: `${process.env.NEXT_PUBLIC_BACKEND_URL}/youtube/oauth/callback`,
+    clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+    clientSecret: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_SECRET,
+    redirectUri: process.env.GOOGLE_REDIRECT_URI!,
     scope: YOUTUBE_SCOPES,
   },
   gmail: {
-    clientId: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/social/callback/gmail`,
+    clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+    clientSecret: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_SECRET,
+    redirectUri: process.env.GMAIL_REDIRECT_URI!,
     scope: GMAIL_SCOPES,
   },
 };

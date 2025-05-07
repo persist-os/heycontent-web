@@ -18,6 +18,7 @@ import type * as apiKeysMutations from "../apiKeysMutations.js";
 import type * as apiKeysQueries from "../apiKeysQueries.js";
 import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
+import type * as gmailMutations from "../gmailMutations.js";
 import type * as http from "../http.js";
 import type * as internal_ from "../internal.js";
 import type * as notes from "../notes.js";
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   apiKeysQueries: typeof apiKeysQueries;
   auth: typeof auth;
   chat: typeof chat;
+  gmailMutations: typeof gmailMutations;
   http: typeof http;
   internal: typeof internal_;
   notes: typeof notes;

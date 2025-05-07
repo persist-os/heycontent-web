@@ -1,3 +1,5 @@
+// Written by Paing 
+
 import React from 'react';
 import { Card } from '@/src/components/ui/card';
 import { Mail } from 'lucide-react';
@@ -20,8 +22,22 @@ export function GmailPlatformCard({
   handleDisconnect,
   userId,
 }: GmailPlatformCardProps) {
-  // Placeholder logic for Gmail connect
   const isLoading = connecting || disconnecting;
+
+  // Gmail OAuth logic
+  const handleGmailConnect = () => {
+    const params = new URLSearchParams({
+      client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
+      redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}api/social/callback/gmail`,
+      response_type: 'code',
+      scope: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.labels email profile',
+      state: btoa(JSON.stringify({ userId, platform: 'gmail' })),
+      access_type: 'offline',
+      prompt: 'consent',
+    });
+    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+    window.location.href = googleAuthUrl;
+  };
 
   return (
     <Card className="p-6 relative">
@@ -60,7 +76,7 @@ export function GmailPlatformCard({
         ) : (
           <button
             type="button"
-            onClick={handleConnect}
+            onClick={handleGmailConnect}
             disabled={isLoading}
             className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50"
             style={{ background: '#ef4444' }}
