@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 
-const BACKEND_URL = 'https://backend.hicontent.co';
-
 import { proxyApiKeyRequest } from '../utils/apiKeyProxy';
 
 export async function POST(request: Request) {

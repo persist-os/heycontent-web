@@ -33,6 +33,15 @@ export default defineSchema({
   .index("by_active", ["isActive"]),
 
 
+  // YouTube Full Profile (channel + videos)
+  youtube_full_profiles: defineTable({
+    userId: v.string(),
+    channel: v.any(), // You can replace with a stricter object schema if desired
+    videos: v.array(v.any()), // Or use a stricter schema for video objects
+    createdAt: v.number(), // Unix timestamp
+  })
+  .index("by_user", ["userId"]),
+
   // YouTube Data
   youtubeData: defineTable({
     userId: v.string(),

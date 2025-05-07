@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
-const BACKEND_URL = 'https://backend.hicontent.co';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 // Helper function to extract core idea and format it as a title
 function extractCoreIdeaAsTitle(coreIdea: string): string {

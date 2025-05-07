@@ -241,6 +241,19 @@ app.post("/api/users/:id/youtube/channel", async (c) => {
   return c.json({ success: true });
 });
 
+// Store full YouTube profile (channel + videos) for a user
+app.post("/api/users/:id/youtube/full_profile", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { channel, videos } = await c.req.json();
+  await ctx.runMutation(api.youtubeMutations.upsertYoutubeFullProfile, {
+    userId,
+    channel,
+    videos,
+  });
+  return c.json({ success: true });
+});
+
 app.post("/api/users/:id/youtube/videos/:videoId/analysis", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
