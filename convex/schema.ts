@@ -30,23 +30,9 @@ export default defineSchema({
     updatedAt: v.number(),
   })
   .index("by_user", ["creatorId"])
-  .index("by_active", ["isActive"]),
-
-  // Gmail Accounts By Paing
-  gmailAccounts: defineTable({
-    userId: v.string(),
-    email: v.string(),
-    messagesTotal: v.optional(v.number()),
-    threadsTotal: v.optional(v.number()),
-    historyId: v.optional(v.string()),
-    accessToken: v.string(),
-    refreshToken: v.optional(v.string()),
-    expiresAt: v.optional(v.number()),
-    tokenType: v.string(),
-  })
-  .index("by_user", ["userId"]),
-
-  //Gmail Tokens
+    .index("by_active", ["isActive"]),
+  
+  // Gmail Tokens
   gmailTokens: defineTable({
     userId: v.string(),
     accessToken: v.string(),
@@ -57,15 +43,33 @@ export default defineSchema({
     tokenType: v.string(),
   }).index("by_userId", ["userId"]),
 
-
-  // YouTube Full Profile (channel + videos)
-  youtube_full_profiles: defineTable({
+  // Gmail Data - unified table for messages and threads
+  gmailData: defineTable({
     userId: v.string(),
-    channel: v.any(), // You can replace with a stricter object schema if desired
-    videos: v.array(v.any()), // Or use a stricter schema for video objects
-    createdAt: v.number(), // Unix timestamp
+    email: v.string(),
+    resourceType: v.union(v.literal("message"), v.literal("thread"), v.literal("account")),
+    resourceId: v.string(), // Either messageId, threadId, or email for accounts
+    threadId: v.optional(v.string()), // Only for messages, links to their thread
+    snippet: v.optional(v.string()), // Optional now since accounts don't have snippets
+    historyId: v.optional(v.string()),
+    internalDate: v.optional(v.number()),
+    labelIds: v.optional(v.array(v.string())),
+    messages: v.optional(v.array(v.string())), // For threads: array of message IDs
+    data: v.any(), // Full message payload, thread data, or account data
+    sizeEstimate: v.optional(v.number()),
+    timestamp: v.number(), // When this record was created/updated
+    // Account specific fields
+    messagesTotal: v.optional(v.number()),
+    threadsTotal: v.optional(v.number()),
+    labelsTotal: v.optional(v.number()),
   })
-  .index("by_user", ["userId"]),
+  .index("by_user", ["userId"])
+  .index("by_email", ["userId", "email"])
+  .index("by_resource_type", ["resourceType"])
+  .index("by_resource_id", ["resourceId"])
+  .index("by_thread_id", ["threadId"])
+  .index("by_user_resource", ["userId", "resourceType"])
+  .index("by_timestamp", ["timestamp"]),
 
   // YouTube Data
   youtubeData: defineTable({
@@ -111,7 +115,9 @@ export default defineSchema({
     viewCount: v.optional(v.number()),
   })
   .index("by_user_resource", ["userId", "resourceType"])
-  .index("by_timestamp", ["timestamp"]),
+  .index("by_timestamp", ["timestamp"])
+  .index("by_user", ["userId"])
+  .index("by_resource_type", ["resourceType"]),
 
   youtubeTokens: defineTable({
     userId: v.string(),

@@ -1,8 +1,9 @@
-// Written by Paing 
+// Aria + Paing
 
 import React from 'react';
 import { Card } from '@/src/components/ui/card';
-import { Mail } from 'lucide-react';
+import { Mail, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 import { ConnectedAccount } from './platform-utils';
 
 interface GmailPlatformCardProps {
@@ -18,7 +19,6 @@ export function GmailPlatformCard({
   account,
   connecting,
   disconnecting,
-  handleConnect,
   handleDisconnect,
   userId,
 }: GmailPlatformCardProps) {
@@ -28,9 +28,16 @@ export function GmailPlatformCard({
   const handleGmailConnect = () => {
     const params = new URLSearchParams({
       client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
-      redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}api/social/callback/gmail`,
+      redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/social/callback/gmail`,
       response_type: 'code',
-      scope: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.labels email profile',
+      scope: [
+        "https://www.googleapis.com/auth/gmail.readonly",
+        "https://www.googleapis.com/auth/gmail.modify",
+        "https://www.googleapis.com/auth/gmail.send",
+        "openid",
+        "https://www.googleapis.com/auth/userinfo.email",
+        "https://www.googleapis.com/auth/userinfo.profile"
+      ].join(' '),
       state: btoa(JSON.stringify({ userId, platform: 'gmail' })),
       access_type: 'offline',
       prompt: 'consent',
@@ -41,6 +48,20 @@ export function GmailPlatformCard({
 
   return (
     <Card className="p-6 relative">
+      {account && !isLoading && (
+        <div className="absolute top-4 right-4">
+          {account.isActive ? (
+            <CheckCircle2 className="w-5 h-5 text-green-500" />
+          ) : (
+            <AlertCircle className="w-5 h-5 text-yellow-500" />
+          )}
+        </div>
+      )}
+      {isLoading && (
+        <div className="absolute top-4 right-4">
+          <Loader2 className="w-5 h-5 animate-spin" />
+        </div>
+      )}
       <div className="flex items-center gap-3 mb-2">
         <div className="w-12 h-12 rounded-lg bg-red-500 flex items-center justify-center">
           <Mail className="w-6 h-6 text-white" />
@@ -61,7 +82,13 @@ export function GmailPlatformCard({
       <div className="text-sm text-gray-600 mb-2">
         Manage partnerships and business communications and more
       </div>
-      {/* Placeholder for Gmail metrics */}
+      {account && account.metadata && (
+        <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
+          <div>Emails: {account.metadata.emails || 0}</div>
+          <div>Labels: {account.metadata.labels || 0}</div>
+          <div>Threads: {account.metadata.threads || 0}</div>
+        </div>
+      )}
       <div className="mt-4">
         {account ? (
           <button
@@ -85,6 +112,11 @@ export function GmailPlatformCard({
           </button>
         )}
       </div>
+      {account && (
+        <div className="mt-2 text-xs text-gray-400">
+          Updated {formatDistanceToNow(account.updatedAt, { addSuffix: true })}
+        </div>
+      )}
     </Card>
   );
 }

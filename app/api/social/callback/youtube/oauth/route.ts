@@ -1,3 +1,5 @@
+// Written by Aria
+
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
