@@ -20,8 +20,8 @@ export const getHistory = query({
 
 export const getConversation = query({
   args: {
-    conversationId: v.string(),
     userId: v.string(),
+    conversationId: v.string(),
   },
   handler: async (ctx, args) => {
     const conversation = await ctx.db
@@ -62,8 +62,8 @@ export const createConversation = mutation({
 
 export const addMessageToConversation = mutation({
   args: {
-    conversationId: v.string(),
     userId: v.string(),
+    conversationId: v.string(),
     message: v.object({
       content: v.string(),
       role: v.string(),

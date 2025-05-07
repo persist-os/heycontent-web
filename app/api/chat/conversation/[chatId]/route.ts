@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getBearerToken, getUserIdFromApiKey } from '../../utils';
 import { fetchQuery } from 'convex/nextjs';
 import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 
 export async function GET(
   request: Request,
@@ -54,7 +55,9 @@ export async function GET(
       starred: conversation.starred || false
     };
 
-    console.log(`[${requestId}] Successfully fetched conversation ${params.chatId}`);
+    console.log(`[${requestId}] Successfully fetched conversation ${params.chatId}`, {
+      messageCount: formattedConversation.messages.length
+    });
 
     return NextResponse.json({
       conversation: formattedConversation,

@@ -68,23 +68,23 @@ export async function getApiKey(): Promise<string | null> {
         });
         if (response.ok) {
           const data = await response.json();
-          let apiKey = data.apiKey;
+          let apiKeyValue = data.apiKey;
           // Accept key from data.data.key if present (backend returns this structure)
-          if (!apiKey && data.data && typeof data.data.key === 'string') {
-            apiKey = data.data.key;
+          if (!apiKeyValue && data.data && typeof data.data.key === 'string') {
+            apiKeyValue = data.data.key;
           }
           // Log the full backend response for debugging
           console.log('[getApiKey] Full backend response:', data);
           // Log the userId we requested and the key returned
-          console.log('[getApiKey] Requested API key for Firebase user:', userId, '| API key received from backend:', apiKey);
-          if (typeof apiKey === 'string' && apiKey.startsWith('heycontent_') && !apiKey.endsWith('_temporary')) {
-            localStorage.setItem('apiKey', JSON.stringify(apiKey));
-            console.log('API key saved to localStorage:', apiKey);
+          console.log('[getApiKey] Requested API key for Firebase user:', userId, '| API key received from backend:', apiKeyValue);
+          if (typeof apiKeyValue === 'string' && apiKeyValue.startsWith('heycontent_') && !apiKeyValue.endsWith('_temporary')) {
+            localStorage.setItem('apiKey', JSON.stringify(apiKeyValue));
+            console.log('API key saved to localStorage:', apiKeyValue);
             // Log what is now in localStorage
             console.log('API key in localStorage after save:', localStorage.getItem('apiKey'));
-            return apiKey;
+            return apiKeyValue;
           } else {
-            console.warn('Received invalid or temporary API key from backend:', apiKey);
+            console.warn('Received invalid or temporary API key from backend:', apiKeyValue);
             localStorage.removeItem('apiKey');
             return null;
           }
@@ -137,13 +137,7 @@ export async function sendChatMessage(
     throw new Error('You are not authenticated. Please log in again.');
   }
 
-  interface ChatRequestBody {
-    query: string;
-    is_first_message: boolean;
-    session_id?: string;
-  }
-
-  const requestBody: ChatRequestBody = {
+  const requestBody: any = {
     query: content,
     is_first_message: isFirstMessage
   };
@@ -177,7 +171,12 @@ export async function sendChatMessage(
 /**
  * Save conversation to backend storage
  */
-export async function saveConversation(messages: any[], title: string, sessionId: string | null, conversationId?: string) {
+export async function saveConversation(
+  messages: any[], 
+  title: string, 
+  sessionId: string | null, 
+  conversationId?: string
+) {
   // Only save if we have messages
   if (messages.length < 1) {
     console.log('No messages to save');
@@ -185,7 +184,14 @@ export async function saveConversation(messages: any[], title: string, sessionId
   }
 
   try {
-    console.log('Saving conversation with messages:', messages.length, conversationId ? '(updating existing)' : '(creating new)');
+    console.log('Saving conversation:', { 
+      messageCount: messages.length,
+      sessionId,
+      conversationId,
+      mode: conversationId ? 'update' : 'create',
+      firstMessage: messages[0]?.content?.substring(0, 30),
+      lastMessage: messages[messages.length - 1]?.content?.substring(0, 30)
+    });
 
     const response = await fetch('/api/chat/save', {
       method: 'POST',
@@ -196,7 +202,7 @@ export async function saveConversation(messages: any[], title: string, sessionId
         messages,
         title,
         sessionId,
-        conversationId // Pass the conversationId if we have one
+        conversationId // Pass the conversationId if available
       })
     });
 
@@ -210,7 +216,11 @@ export async function saveConversation(messages: any[], title: string, sessionId
     }
 
     const data = await response.json();
-    console.log('Conversation saved successfully:', data);
+    console.log('Conversation saved successfully:', {
+      conversationId: data.conversationId,
+      action: data.metadata?.action || 'unknown',
+      timestamp: data.metadata?.timestamp
+    });
     return data.conversationId;
   } catch (error) {
     console.error('Failed to save conversation:', error);
