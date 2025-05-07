@@ -92,38 +92,6 @@ export function PlatformConnect() {
     return <div className="text-red-500 p-4">Failed to load YouTube data: {youtubeData.error}</div>;
   }
 
-
-
-
-  const handleConnect = async (platform: SocialPlatform, options?: { useFacebook?: boolean }) => {
-    try {
-      setConnecting(platform);
-      let url = `/api/social/auth-url?platform=${platform}`;
-      if (options?.useFacebook !== undefined) {
-        url += `&useFacebook=${options.useFacebook}`;
-      }
-      const response = await fetchWithAuth(url);
-      if (!response) {
-        throw new Error('No response from server');
-      }
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      if (data.authUrl) {
-        window.location.href = data.authUrl;
-      } else {
-        throw new Error('No auth URL in response');
-      }
-    } catch (error) {
-      console.error('Connection error:', error);
-      toast.error(`Failed to connect to ${platform}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setConnecting(null);
-      setShowInstagramOptions(false);
-    }
-  };
-
   const handleDisconnect = async (platform: SocialPlatform) => {
     try {
       setDisconnecting(platform);

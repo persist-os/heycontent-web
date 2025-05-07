@@ -16,11 +16,30 @@ export function GmailPlatformCard({
   account,
   connecting,
   disconnecting,
-  handleConnect,
   handleDisconnect,
   userId,
 }: GmailPlatformCardProps) {
-  // Placeholder logic for Gmail connect
+  // Gmail OAuth logic (placeholder)
+  const handleGmailConnect = () => {
+    const params = new URLSearchParams({
+      client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
+      redirect_uri: `${process.env.NEXT_PUBLIC_BACKEND_URL}/gmail/oauth/callback`,
+      response_type: 'code',
+      scope: [
+        'https://www.googleapis.com/auth/gmail.readonly',
+        'https://www.googleapis.com/auth/gmail.send',
+        'openid',
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile',
+      ].join(' '),
+      state: btoa(JSON.stringify({ userId, platform: 'gmail' })),
+      access_type: 'offline',
+      prompt: 'consent',
+    });
+    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+    window.location.href = googleAuthUrl;
+  };
+
   const isLoading = connecting || disconnecting;
 
   return (
@@ -46,6 +65,13 @@ export function GmailPlatformCard({
         Manage partnerships and business communications and more
       </div>
       {/* Placeholder for Gmail metrics */}
+      {account && account.metadata && (
+        <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
+          <div>Inbox: {account.metadata.inboxCount ?? 0}</div>
+          <div>Sent: {account.metadata.sentCount ?? 0}</div>
+          <div>Unread: {account.metadata.unreadCount ?? 0}</div>
+        </div>
+      )}
       <div className="mt-4">
         {account ? (
           <button
@@ -60,7 +86,7 @@ export function GmailPlatformCard({
         ) : (
           <button
             type="button"
-            onClick={handleConnect}
+            onClick={handleGmailConnect}
             disabled={isLoading}
             className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50"
             style={{ background: '#ef4444' }}
@@ -69,6 +95,11 @@ export function GmailPlatformCard({
           </button>
         )}
       </div>
+      {account && (
+        <div className="mt-2 text-xs text-gray-400">
+          Updated {account.updatedAt ? new Date(account.updatedAt).toLocaleString() : ''}
+        </div>
+      )}
     </Card>
   );
 }
