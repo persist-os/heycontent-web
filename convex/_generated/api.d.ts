@@ -21,6 +21,8 @@ import type * as chat from "../chat.js";
 import type * as gmailMutations from "../gmailMutations.js";
 import type * as gmailQueries from "../gmailQueries.js";
 import type * as http from "../http.js";
+import type * as instagramMutations from "../instagramMutations.js";
+import type * as instagramQueries from "../instagramQueries.js";
 import type * as internal_ from "../internal.js";
 import type * as notes from "../notes.js";
 import type * as personas from "../personas.js";
@@ -46,6 +48,8 @@ declare const fullApi: ApiFromModules<{
   gmailMutations: typeof gmailMutations;
   gmailQueries: typeof gmailQueries;
   http: typeof http;
+  instagramMutations: typeof instagramMutations;
+  instagramQueries: typeof instagramQueries;
   internal: typeof internal_;
   notes: typeof notes;
   personas: typeof personas;

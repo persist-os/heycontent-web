@@ -2,7 +2,6 @@ import { Hono } from "hono";
 import { HonoWithConvex, HttpRouterWithHono } from "convex-helpers/server/hono";
 import { ActionCtx } from "./_generated/server";
 import { api } from "./_generated/api";
-import { getRateLimitData, storeRateLimitRequest } from "./rateLimiting";
 import { cors } from "hono/cors";
 
 const app: HonoWithConvex<ActionCtx> = new Hono();
@@ -246,7 +245,7 @@ app.post("/api/users/:id/gmail/full_profile", async (c) => {
     
     return c.json({ 
       success: true,
-      result: result.results
+      result
     });
   } catch (error) {
     console.error("Error storing Gmail full profile:", error);
@@ -341,6 +340,113 @@ app.post("/api/users/:id/youtube/channel", async (c) => {
   }
 });
 
+// INSTAGRAM ROUTES
+
+// Get Instagram tokens for a user
+app.get("/api/users/:id/instagram/tokens", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  try {
+    const tokens = await ctx.runQuery(api.instagramQueries.getInstagramTokens, { userId });
+    return c.json({ success: true, tokens });
+  } catch (error) {
+    console.error("Failed to get Instagram tokens:", error);
+    return c.json({ success: false, error: "Failed to retrieve Instagram tokens" }, 500);
+  }
+});
+
+// Update Instagram token
+app.post("/api/users/:id/instagram/token", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { accessToken, refreshToken, expiresAt, scope } = await c.req.json();
+
+  // Ensure scope is an array of strings
+  const scopeArray = Array.isArray(scope)
+    ? scope
+    : typeof scope === "string"
+    ? scope.split(" ")
+    : [];
+
+  try {
+    await ctx.runMutation(api.instagramMutations.updateInstagramToken, {
+      userId,
+      accessToken,
+      refreshToken,
+      expiresAt,
+      scope: scopeArray,
+    });
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Failed to store Instagram token:", error);
+    return c.json({ success: false, error: "Failed to store Instagram token" }, 500);
+  }
+});
+
+// Store full Instagram profile (profile + posts + stories + reels) for a user
+app.post("/api/users/:id/instagram/full_profile", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { profile, posts, stories, reels } = await c.req.json();
+  
+  if (!profile || !profile.id) {
+    return c.json({ success: false, error: "Valid profile data is required" }, 400);
+  }
+  
+  try {
+    const result = await ctx.runMutation(api.instagramMutations.storeInstagramFullProfile, {
+      userId,
+      profile,
+      posts,
+      stories,
+      reels
+    });
+    return c.json({ success: true, result });
+  } catch (error) {
+    console.error("Error storing Instagram full profile:", error);
+    return c.json({ 
+      success: false, 
+      error: `Failed to store Instagram profile: ${error instanceof Error ? error.message : 'Unknown error'}`
+    }, 500);
+  }
+});
+
+// Store Instagram profile data
+app.post("/api/users/:id/instagram/profile", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { profileId, username, fullName, biography, profilePicture, statistics } = await c.req.json();
+  
+  if (!profileId || !username) {
+    return c.json({ success: false, error: "Profile ID and username are required" }, 400);
+  }
+  
+  try {
+    const result = await ctx.runMutation(api.instagramMutations.storeProfileData, {
+      userId,
+      profileId,
+      username,
+      fullName,
+      biography,
+      profilePicture,
+      statistics,
+      updatedAt: Date.now()
+    });
+    
+    return c.json({ 
+      success: true,
+      status: result.status,
+      profileId: result.profileId 
+    });
+  } catch (error) {
+    console.error("Failed to store Instagram profile data:", error);
+    return c.json({ 
+      success: false, 
+      error: `Failed to store Instagram profile data: ${error instanceof Error ? error.message : 'Unknown error'}`
+    }, 500);
+  }
+});
+
 // RATE LIMITING ENDPOINTS
 
 // Get rate limit data
@@ -353,8 +459,6 @@ app.post("/getRateLimitData", async (c) => {
   }
   
   try {
-    // Get rate limit data from Convex table
-    // Use the imported function reference directly from rateLimiting.ts
     const rateLimitData = await ctx.runQuery(api.rateLimiting.getRateLimitData, { 
       id, 
       window_start: window_start || (Date.now() / 1000 - 900) // Default 15 min window
@@ -377,8 +481,7 @@ app.post("/addRateLimitRequest", async (c) => {
   }
   
   try {
-    // Store the rate limit request
-    // Use the imported function reference directly from rateLimiting.ts
+
     const result = await ctx.runMutation(api.rateLimiting.storeRateLimitRequest, { 
       id, 
       timestamp: timestamp || Math.floor(Date.now() / 1000)

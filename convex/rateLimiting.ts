@@ -8,6 +8,7 @@
 import { query, mutation, httpAction } from "./_generated/server";
 import { v } from "convex/values";
 import { httpRouter } from "convex/server";
+import { api } from "./_generated/api";
 
 // Query to get rate limit data
 export const getRateLimitData = query({
@@ -147,7 +148,7 @@ http.route({
       console.log(`Rate limit check for: ${id}, window: ${window_start || 'default'}`);
       
       // Get rate limit data - use the query defined in this file
-      const rateLimitData = await runQuery(getRateLimitData, { 
+      const rateLimitData = await runQuery(api.rateLimiting.getRateLimitData, { 
         id, 
         window_start: window_start || (Date.now() / 1000 - 900) // Default 15 min window
       });
@@ -194,7 +195,7 @@ http.route({
       console.log(`Adding rate limit request for: ${id}`);
       
       // Store the rate limit request - use the mutation defined in this file
-      const result = await runMutation(storeRateLimitRequest, { 
+      const result = await runMutation(api.rateLimiting.storeRateLimitRequest, { 
         id, 
         timestamp: timestamp || Math.floor(Date.now() / 1000)
       });

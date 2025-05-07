@@ -195,4 +195,36 @@ export default defineSchema({
     lastUpdated: v.number(), // Last updated timestamp
   })
   .index("by_user_resource", ["user_id", "resource"]),
+
+  // Instagram Tokens
+  instagramTokens: defineTable({
+    userId: v.string(),
+    accessToken: v.string(),
+    refreshToken: v.string(),
+    expiryDate: v.number(),
+    scope: v.string(),
+    lastRefreshed: v.number(),
+  }).index("by_userId", ["userId"]),
+
+  // Instagram Data
+  instagramData: defineTable({
+    userId: v.string(),
+    resourceType: v.union(
+      v.literal("profile"), 
+      v.literal("post"), 
+      v.literal("story"),
+      v.literal("reel")
+    ),
+    resourceId: v.string(),
+    data: v.any(),
+    timestamp: v.number(),
+    followerCount: v.optional(v.number()),
+    followingCount: v.optional(v.number()),
+    postCount: v.optional(v.number()),
+  })
+  .index("by_user", ["userId"])
+  .index("by_resource_type", ["resourceType"])
+  .index("by_resource_id", ["resourceId"])
+  .index("by_user_resource", ["userId", "resourceType"])
+  .index("by_timestamp", ["timestamp"]),
 });
