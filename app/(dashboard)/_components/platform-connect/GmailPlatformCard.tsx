@@ -28,7 +28,7 @@ export function GmailPlatformCard({
   const handleGmailConnect = () => {
     const params = new URLSearchParams({
       client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
-      redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/social/callback/gmail`,
+      redirect_uri: `${process.env.NEXT_PUBLIC_BACKEND_URL}/gmail/oauth/callback`,
       response_type: 'code',
       scope: [
         "https://www.googleapis.com/auth/gmail.readonly",

@@ -545,8 +545,25 @@ export const saveProfileData = mutation({
         });
         return { status: "updated", accountId: existingAccount._id };
       } else {
-        // For profile updates, we require the account to exist first
-        throw new Error(`Cannot update profile data: Account ${args.email} not found for user ${args.userId}`);
+        // Create a new account entry if it does not exist
+        const accountId = await ctx.db.insert("gmailData", {
+          userId: args.userId,
+          email: args.email, // required for schema
+          resourceId: args.email, // for accounts, resourceId is the email
+          resourceType: "account",
+          messagesTotal: args.profileData.messagesTotal,
+          threadsTotal: args.profileData.threadsTotal,
+          historyId: args.profileData.historyId,
+          labelsTotal: args.profileData.labelsTotal,
+          data: {
+            messagesTotal: args.profileData.messagesTotal,
+            threadsTotal: args.profileData.threadsTotal,
+            historyId: args.profileData.historyId,
+            labelsTotal: args.profileData.labelsTotal,
+          },
+          timestamp,
+        });
+        return { status: "created", accountId };
       }
     } catch (error) {
       console.error('Error updating Gmail profile data:', error);
