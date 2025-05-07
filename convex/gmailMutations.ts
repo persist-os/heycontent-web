@@ -358,6 +358,10 @@ export const storeGmailFullProfile = mutation({
         if (Array.isArray(messages)) {
           for (const msg of messages) {
             const resourceId = msg.id || msg.messageId;
+            if (!resourceId) {
+              console.warn(`Skipping message with undefined resourceId: ${JSON.stringify(msg)}`);
+              continue;
+            }
             const existingMsg = await ctx.db
               .query("gmailData")
               .withIndex("by_resource_id", (q) => q.eq("resourceId", resourceId))
