@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 
-const BACKEND_URL = 'https://backend.hicontent.co';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 /**
  * Proxy an API key request to the backend, given a Firebase idToken and userId.

@@ -6,7 +6,9 @@ import { api } from '@/convex/_generated/api';
 import { useAuth } from '@/app/context/auth-context';
 import { SocialPlatform } from '@/app/types/social-platforms';
 import { PLATFORMS } from './platform-connect/platforms';
-import { PlatformCard } from './platform-connect/PlatformCard';
+import { YouTubePlatformCard } from './platform-connect/YouTubePlatformCard';
+import { GmailPlatformCard } from './platform-connect/GmailPlatformCard';
+import { InstagramPlatformCard } from './platform-connect/InstagramPlatformCard';
 import { isError, getAccountDetails, ConnectedAccount } from './platform-connect/platform-utils';
 
 export function PlatformConnect() {
@@ -25,8 +27,6 @@ export function PlatformConnect() {
 
   // Use Convex queries for all platform data
   const youtubeData = user?.uid ? useQuery(api.youtubeQueries.getYouTubeData, { userId: user.uid }) : undefined;
-  const gmailData = user?.uid ? useQuery(api.gmail.getGmailData, { userId: user.uid }) : undefined;
-  const socialAccounts = user?.uid ? useQuery(api.social.getConnectedAccounts, { userId: user.uid }) : undefined;
 
   // All hooks must be declared at the top, before any return
   const [connecting, setConnecting] = useState<SocialPlatform | null>(null);
@@ -54,27 +54,7 @@ export function PlatformConnect() {
           isActive: true
         });
       }
-      // Add Gmail account from Convex
-      if (gmailData && !isError(gmailData) && gmailData.socialAccount) {
-        accounts.push({
-          platform: 'gmail',
-          username: gmailData.socialAccount.username,
-          metadata: gmailData.socialAccount.metadata,
-          updatedAt: gmailData.socialAccount.updatedAt,
-          isActive: gmailData.socialAccount.isConnected
-        });
-      }
-      // Add Instagram accounts from social accounts
-      if (Array.isArray(socialAccounts)) {
-        const instagramAccounts = socialAccounts.filter(acc => acc.platform === 'instagram');
-        accounts.push(...instagramAccounts.map(acc => ({
-          platform: acc.platform as SocialPlatform,
-          username: acc.username,
-          metadata: acc.metadata,
-          updatedAt: acc.updatedAt,
-          isActive: acc.isConnected
-        })));
-      }
+
       setConnectedAccounts(accounts);
     } catch (error) {
       console.error('Error fetching connected platforms:', error);
@@ -84,16 +64,12 @@ export function PlatformConnect() {
   };
 
   // Add console logging for Convex responses
-  useEffect(() => {
-    console.log('YouTube Data:', youtubeData);
-    console.log('Gmail Data:', gmailData);
-    console.log('Social Accounts:', socialAccounts);
-  }, [youtubeData, gmailData, socialAccounts]);
+
 
   // Update connected accounts when data changes
   useEffect(() => {
     fetchConnectedPlatforms();
-  }, [youtubeData, gmailData, socialAccounts]);
+  }, [youtubeData]);
 
   // URL error handling effect
   useEffect(() => {
@@ -109,21 +85,15 @@ export function PlatformConnect() {
   }, []);
 
   // Early error/fallback handling (AFTER all hooks)
-  if (youtubeData === undefined || gmailData === undefined || socialAccounts === undefined) {
+  if (youtubeData === undefined) {
     return <div className="flex items-center justify-center h-40">Loading platform data...</div>;
   }
   if (isError(youtubeData)) {
     return <div className="text-red-500 p-4">Failed to load YouTube data: {youtubeData.error}</div>;
   }
-  if (isError(gmailData)) {
-    return <div className="text-red-500 p-4">Failed to load Gmail data: {gmailData.error}</div>;
-  }
-  if (isError(socialAccounts)) {
-    return <div className="text-red-500 p-4">Failed to load social accounts: {socialAccounts.error}</div>;
-  }
-  if (youtubeData === null && gmailData === null && (!Array.isArray(socialAccounts) || socialAccounts.length === 0)) {
-    return <div className="text-gray-500 p-4">No platform data found for your account.</div>;
-  }
+
+
+
 
   const handleConnect = async (platform: SocialPlatform, options?: { useFacebook?: boolean }) => {
     try {
@@ -204,19 +174,53 @@ export function PlatformConnect() {
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {PLATFORMS.map(platform => (
-          <PlatformCard
-            key={platform.id}
-            platform={platform}
-            account={getAccountDetails(connectedAccounts, platform.id)}
-            connecting={connecting}
-            disconnecting={disconnecting}
-            showInstagramOptions={showInstagramOptions}
-            setShowInstagramOptions={setShowInstagramOptions}
-            handleConnect={handleConnect}
-            handleDisconnect={handleDisconnect}
-          />
-        ))}
+        {PLATFORMS.map(platform => {
+          const account = getAccountDetails(connectedAccounts, platform.id);
+          const isConnecting = connecting === platform.id;
+          const isDisconnecting = disconnecting === platform.id;
+          if (platform.id === 'youtube') {
+            return (
+              <YouTubePlatformCard
+                key={platform.id}
+                account={account}
+                connecting={isConnecting}
+                disconnecting={isDisconnecting}
+                handleConnect={() => {}}
+                handleDisconnect={() => handleDisconnect('youtube')}
+                userId={user?.uid || ''}
+              />
+            );
+          }
+          if (platform.id === 'gmail') {
+            return (
+              <GmailPlatformCard
+                key={platform.id}
+                account={account}
+                connecting={isConnecting}
+                disconnecting={isDisconnecting}
+                handleConnect={() => {}}
+                handleDisconnect={() => handleDisconnect('gmail')}
+                userId={user?.uid || ''}
+              />
+            );
+          }
+          if (platform.id === 'instagram') {
+            return (
+              <InstagramPlatformCard
+                key={platform.id}
+                account={account}
+                connecting={isConnecting}
+                disconnecting={isDisconnecting}
+                showInstagramOptions={showInstagramOptions}
+                setShowInstagramOptions={setShowInstagramOptions}
+                handleConnect={(options) => handleConnect('instagram', options)}
+                handleDisconnect={() => handleDisconnect('instagram')}
+              />
+            );
+          }
+          // Skip rendering for unknown platforms
+          return null;
+        })}
       </div>
     </div>
   );

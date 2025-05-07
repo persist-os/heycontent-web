@@ -31,13 +31,6 @@ export async function GET(req: Request) {
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=invalid_state`);
     }
 
-    // Check for Authorization header
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.error('[YouTube OAuth] Missing or invalid Authorization header.');
-      return NextResponse.json({ error: 'Unauthorized - Missing or invalid Authorization header' }, { status: 401 });
-    }
-
     // Proxy OAuth callback to FastAPI backend
     const backendUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/youtube/oauth/callback`;
     console.log('[YouTube OAuth] Forwarding callback to backend:', { backendUrl, userId });
@@ -46,7 +39,6 @@ export async function GET(req: Request) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': authHeader,
         },
         body: JSON.stringify({ code, userId }),
       });
