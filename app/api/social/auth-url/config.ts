@@ -65,7 +65,7 @@ export const PLATFORM_CONFIGS: Record<Platform, {
   youtube: {
     clientId: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    redirectUri: process.env.YOUTUBE_REDIRECT_URI!,
+    redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/social/callback/youtube/oauth`,
     scope: YOUTUBE_SCOPES,
   },
   gmail: {

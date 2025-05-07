@@ -120,6 +120,38 @@ export const storeVideoAnalysis = mutation({
   },
 });
 
+// Upsert full YouTube profile (channel + videos)
+export const upsertYoutubeFullProfile = mutation({
+  args: {
+    userId: v.string(),
+    channel: v.any(),
+    videos: v.array(v.any()),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("youtube_full_profiles")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .first();
+    const now = Date.now();
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        channel: args.channel,
+        videos: args.videos,
+        createdAt: now,
+      });
+      return { status: "updated" };
+    } else {
+      await ctx.db.insert("youtube_full_profiles", {
+        userId: args.userId,
+        channel: args.channel,
+        videos: args.videos,
+        createdAt: now,
+      });
+      return { status: "created" };
+    }
+  },
+});
+
 // Clean up YouTube data when disconnecting
 export const disconnectYouTube = mutation({
   args: { userId: v.string() },
