@@ -287,13 +287,16 @@ export const storeYoutubeFullProfile = mutation({
           continue;
         }
         
+        // Map video.id to video.videoId for consistency
+        video.videoId = video.id;
+        
         // Check if video already exists
         const existingVideo = await ctx.db
           .query("youtubeData")
           .withIndex("by_user_resource", (q) => 
             q.eq("userId", userId).eq("resourceType", "video")
           )
-          .filter((q) => q.eq(q.field("data.id"), video.id))
+          .filter((q) => q.eq(q.field("data.videoId"), video.videoId))
           .first();
           
         if (existingVideo) {
