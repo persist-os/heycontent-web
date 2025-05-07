@@ -10,7 +10,6 @@ const app: HonoWithConvex<ActionCtx> = new Hono();
 // Add CORS middleware
 app.use("*", cors());
 
-
 // USER ROUTES
 
 // List all users
@@ -148,17 +147,119 @@ app.delete("/api/api-keys/delete", async (c) => {
   }
 });
 
-// YOUTUBE ROUTES
+// GMAIL ROUTES
 
-// Get YouTube data for user
-app.get("/api/users/:id/youtube", async (c) => {
+// Gmail token endpoints
+// Get Gmail tokens for a user
+app.get("/api/users/:id/gmail/tokens", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  const youtubeData = await ctx.runQuery(api.youtubeQueries.getYouTubeData, { userId });
-  return c.json(youtubeData);
+  try {
+    const token = await ctx.runQuery(api.gmailQueries.getGmailToken, { userId });
+    return c.json({ success: true, token });
+  } catch (error) {
+    console.error("Failed to get Gmail tokens:", error);
+    return c.json({ success: false, error: "Failed to retrieve Gmail tokens" }, 500);
+  }
 });
 
-// Get all YouTube tokens for a user
+// Update Gmail token
+app.post("/api/users/:id/gmail/token", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { accessToken, refreshToken, expiryDate, scope, tokenType } = await c.req.json();
+
+  if (!accessToken || !refreshToken || !expiryDate) {
+    return c.json({ success: false, error: "Missing required token fields" }, 400);
+  }
+
+  try {
+    await ctx.runMutation(api.gmailMutations.updateGmailToken, {
+      userId,
+      accessToken,
+      refreshToken,
+      expiryDate,
+      scope: scope || "",
+      tokenType: tokenType || "Bearer",
+    });
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Failed to store Gmail token:", error);
+    return c.json({ success: false, error: "Failed to store Gmail token" }, 500);
+  }
+});
+
+// Store Gmail account data
+app.post("/api/users/:id/gmail/account", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { email, messagesTotal, threadsTotal, labelsTotal, historyId } = await c.req.json();
+  
+  if (!email) {
+    return c.json({ success: false, error: "Email is required" }, 400);
+  }
+
+  try {
+    // Use the saveProfileData mutation
+    const result = await ctx.runMutation(api.gmailMutations.saveProfileData, {
+      userId,
+      email,
+      profileData: {
+        messagesTotal,
+        threadsTotal,
+        historyId,
+        labelsTotal,
+      }
+    });
+    
+    return c.json({ 
+      success: true,
+      status: result.status,
+      accountId: result.accountId
+    });
+  } catch (error) {
+    console.error("Failed to store Gmail account data:", error);
+    return c.json({ 
+      success: false, 
+      error: `Failed to store Gmail account data: ${error instanceof Error ? error.message : 'Unknown error'}`
+    }, 500);
+  }
+});
+
+// Store full Gmail profile (account + messages + threads) for a user
+app.post("/api/users/:id/gmail/full_profile", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { account, messages, threads } = await c.req.json();
+  
+  if (!account || !account.email) {
+    return c.json({ success: false, error: "Account and email are required" }, 400);
+  }
+  
+  try {
+    const result = await ctx.runMutation(api.gmailMutations.storeGmailFullProfile, {
+      userId,
+      account,
+      messages,
+      threads,
+    });
+    
+    return c.json({ 
+      success: true,
+      result: result.results
+    });
+  } catch (error) {
+    console.error("Error storing Gmail full profile:", error);
+    return c.json({ 
+      success: false, 
+      error: `Failed to store Gmail profile: ${error instanceof Error ? error.message : 'Unknown error'}`
+    }, 500);
+  }
+});
+
+// YOUTUBE ROUTES
+
+// Get YouTube tokens for a user
 app.get("/api/users/:id/youtube/tokens", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
@@ -200,75 +301,12 @@ app.post("/api/users/:id/youtube/token", async (c) => {
   }
 });
 
-
-// Get YouTube channel analysis
-app.get("/api/users/:id/youtube/analysis/channel", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const youtubeData = await ctx.runQuery(api.youtubeQueries.getYouTubeData, { userId });
-  
-  if (!youtubeData) {
-    return c.json({ error: "No YouTube data found" }, 404);
-  }
-
-  // Extract channel metrics
-  const channelData = {
-    subscribers: youtubeData.subscriberCount || 0,
-    videos: youtubeData.videoCount || 0,
-    views: youtubeData.viewCount || 0,
-    lastUpdated: new Date(youtubeData.timestamp).toISOString(),
-    channelInfo: youtubeData.data?.snippet || null
-  };
-
-  return c.json(channelData);
-});
-
-// Get YouTube video analysis
-app.get("/api/users/:id/youtube/analysis/videos", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const videoId = c.req.query("videoId");
-  
-  if (videoId) {
-    // Get specific video data
-    const videoData = await ctx.runQuery(api.youtubeQueries.getVideoData, { userId, videoId });
-    return c.json(videoData);
-  }
-
-});
-
-
-// YouTube endpoints
-app.post("/api/users/:id/youtube/videos", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const { videoId, videoData } = await c.req.json();
-  await ctx.runMutation(api.youtubeMutations.storeVideoData, { userId, videoId, videoData });
-  return c.json({ success: true });
-});
-
-app.get("/api/users/:id/youtube/videos/:videoId", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const videoId = c.req.param("videoId");
-  const videoData = await ctx.runQuery(api.youtubeQueries.getVideoData, { userId, videoId });
-  return c.json(videoData);
-});
-
-app.post("/api/users/:id/youtube/channel", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const channelData = await c.req.json();
-  await ctx.runMutation(api.youtubeMutations.saveChannelData, { userId, ...channelData });
-  return c.json({ success: true });
-});
-
 // Store full YouTube profile (channel + videos) for a user
 app.post("/api/users/:id/youtube/full_profile", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
   const { channel, videos } = await c.req.json();
-  await ctx.runMutation(api.youtubeMutations.upsertYoutubeFullProfile, {
+  await ctx.runMutation(api.youtubeMutations.storeYoutubeFullProfile, {
     userId,
     channel,
     videos,
@@ -276,23 +314,32 @@ app.post("/api/users/:id/youtube/full_profile", async (c) => {
   return c.json({ success: true });
 });
 
-app.post("/api/users/:id/youtube/videos/:videoId/analysis", async (c) => {
+// Store YouTube channel data
+app.post("/api/users/:id/youtube/channel", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  const videoId = c.req.param("videoId");
-  const { analysisData } = await c.req.json();
-  await ctx.runMutation(api.youtubeMutations.storeVideoAnalysis, { userId, videoId, analysisData });
-  return c.json({ success: true });
+  const { channelId, title, description, customUrl, thumbnails, statistics } = await c.req.json();
+  
+  try {
+    await ctx.runMutation(api.youtubeMutations.saveChannelData, {
+      userId,
+      channelId,
+      title,
+      description,
+      customUrl,
+      thumbnails,
+      statistics,
+      updatedAt: Date.now()
+    });
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Failed to store YouTube channel data:", error);
+    return c.json({ 
+      success: false, 
+      error: `Failed to store YouTube channel data: ${error instanceof Error ? error.message : 'Unknown error'}`
+    }, 500);
+  }
 });
-
-// Users endpoints
-app.get("/api/users/id/:userId", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("userId");
-  const user = await ctx.runQuery(api.users.getUserById, { userId });
-  return c.json(user);
-});
-
 
 // RATE LIMITING ENDPOINTS
 

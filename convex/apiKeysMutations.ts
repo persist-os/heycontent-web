@@ -1,6 +1,5 @@
 import { mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { api } from "./_generated/api";
 
 export const insert_api_key = mutation({
   args: {
@@ -10,6 +9,18 @@ export const insert_api_key = mutation({
     rate_tier: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Find all existing API keys for this user
+    const existingKeys = await ctx.db
+      .query("api_keys")
+      .filter(q => q.eq(q.field("user_id"), args.user_id))
+      .collect();
+    
+    // Delete all existing keys for this user
+    for (const key of existingKeys) {
+      await ctx.db.delete(key._id);
+    }
+    
+    // Insert the new API key
     await ctx.db.insert("api_keys", {
       user_id: args.user_id,
       hashed_key: args.key_hash,
