@@ -169,66 +169,6 @@ export async function sendChatMessage(
 }
 
 /**
- * Save conversation to backend storage
- */
-export async function saveConversation(
-  messages: any[], 
-  title: string, 
-  sessionId: string | null, 
-  conversationId?: string
-) {
-  // Only save if we have messages
-  if (messages.length < 1) {
-    console.log('No messages to save');
-    return null;
-  }
-
-  try {
-    console.log('Saving conversation:', { 
-      messageCount: messages.length,
-      sessionId,
-      conversationId,
-      mode: conversationId ? 'update' : 'create',
-      firstMessage: messages[0]?.content?.substring(0, 30),
-      lastMessage: messages[messages.length - 1]?.content?.substring(0, 30)
-    });
-
-    const response = await fetch('/api/chat/save', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messages,
-        title,
-        sessionId,
-        conversationId // Pass the conversationId if available
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('Failed to save conversation - API error:', {
-        status: response.status,
-        error: errorData
-      });
-      throw new Error(`Failed to save conversation: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log('Conversation saved successfully:', {
-      conversationId: data.conversationId,
-      action: data.metadata?.action || 'unknown',
-      timestamp: data.metadata?.timestamp
-    });
-    return data.conversationId;
-  } catch (error) {
-    console.error('Failed to save conversation:', error);
-    return null;
-  }
-}
-
-/**
  * Load conversation by ID
  */
 export async function loadConversation(id: string) {

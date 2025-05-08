@@ -3,6 +3,8 @@ import { Message } from '@/app/types/chat'
 import { sendChatMessage } from '../utils/api-utils'
 import { ChatStateReturnType } from './useChatState'
 
+import { v4 as uuidv4 } from 'uuid';
+
 export const useChat = (
   chatState: ChatStateReturnType
 ) => {
@@ -23,7 +25,7 @@ export const useChat = (
     if (!content || typeof content !== 'string' || !content.trim()) return;
 
     const newMessage: Message = {
-      id: Date.now(),
+      id: uuidv4() as string,
       content,
       role: 'user',
       timestamp: new Date().toISOString(),
@@ -43,7 +45,7 @@ export const useChat = (
         ...prev,
         newMessage,
         {
-          id: Date.now(),
+          id: uuidv4(),
           content: '...',
           role: 'assistant',
           timestamp: new Date().toISOString(),
@@ -67,7 +69,7 @@ export const useChat = (
       setMessages(prev => {
         const withoutTyping = prev.filter(msg => msg.status !== 'typing');
         return [...withoutTyping, {
-          id: Date.now(),
+          id: uuidv4(),
           content: data.chat_response,
           chat_response: data.chat_response,
           role: 'assistant',
@@ -116,7 +118,7 @@ export const useChat = (
     handleSendMessage(choice);
   }, [handleSendMessage]);
 
-  const handleReferenceClick = useCallback((messageId: number) => {
+  const handleReferenceClick = useCallback((messageId: string) => {
     const messageElement = document.getElementById(`message-${messageId}`);
     if (messageElement) {
       messageElement.scrollIntoView({ 

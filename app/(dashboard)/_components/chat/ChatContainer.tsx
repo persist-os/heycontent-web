@@ -23,7 +23,7 @@ import { useChat } from './hooks/useChat'
 import { useConversation } from './hooks/useConversation'
 import { useUIEffects } from './hooks/useUIEffects'
 
-const ChatContainer = ({ chatId }: ChatScreenProps) => {
+const ChatContainer: React.FC<ChatScreenProps> = ({ chatId }) => {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const { isExpanded } = useSidebar()
@@ -59,16 +59,21 @@ const ChatContainer = ({ chatId }: ChatScreenProps) => {
     handleClearReference,
     handleOptionClick,
     handleFollowUpClick,
-    handleReferenceClick
+    handleReferenceClick: handleReferenceClickProp
   } = useChat(chatState)
+
+  const handleReferenceClick = (messageId: string) => {
+    handleReferenceClickProp(messageId)
+  }
 
   // Initialize conversation hook with shared state
   const {
     loading,
     setLoading,
-    handleSaveConversation,
+
     handleLoadConversation,
-    setupUnmountSave
+
+    initSession // Extract the initSession function from the hook
   } = useConversation(chatState, user)
 
   // Wrapper for insight click to pass handleSendMessage
@@ -82,8 +87,12 @@ const ChatContainer = ({ chatId }: ChatScreenProps) => {
     resetChat(); // UI/scroll resets, if any
     setMessages([]); // Clear all messages
     handleClearReference && handleClearReference(); // Clear referenced message if supported
-    chatState.setSessionId(null); // Reset sessionId so next message starts a new conversation
-    chatState.setConversationSaved(false); // Mark as unsaved
+    
+    // Use the new initSession function to create a proper UUID for the new session
+    // This ensures each new chat gets a unique UUID-based session ID
+    initSession(); // Replaces setSessionId(null)
+    
+    console.log('Started new chat with fresh session ID');
     // Add any additional per-conversation state resets here if needed
   };
 
@@ -115,9 +124,6 @@ const ChatContainer = ({ chatId }: ChatScreenProps) => {
       unsubscribe()
     }
   }, [chatId, chatState.setSessionId])
-
-  // Set up unmount save effect
-  useEffect(setupUnmountSave, [setupUnmountSave])
 
   // Load conversation when user and chatId are available
   useEffect(() => {
