@@ -176,6 +176,7 @@ export function PlatformConnect() {
             return (
               <InstagramPlatformCard
                 key={platform.id}
+                userId={user?.uid || ''}
                 account={account}
                 connecting={isConnecting}
                 disconnecting={isDisconnecting}

@@ -314,55 +314,195 @@ export const storeBatchGmailMessages = mutation({
 export const storeGmailFullProfile = mutation({
   args: {
     userId: v.string(),
-    email: v.string(),
-    profile: v.object({
-      emailAddress: v.string(),
-      messagesTotal: v.optional(v.number()),
-      threadsTotal: v.optional(v.number()),
-      historyId: v.optional(v.string()),
-      labelsTotal: v.optional(v.number()),
-    }),
-    profileData: v.any(), // Full Gmail profile data
+    account: v.any(),
+    messages: v.optional(v.array(v.any())),
+    threads: v.optional(v.array(v.any())),
   },
   handler: async (ctx, args) => {
     try {
       const timestamp = Date.now();
-      
+      const { userId, account, messages, threads } = args;
+      if (!account || !account.email) {
+        throw new Error("Account and email are required");
+      }
+      // Extract fields from account
+      const email = account.email;
+      const profile = {
+        emailAddress: account.email,
+        messagesTotal: account.messagesTotal,
+        threadsTotal: account.threadsTotal,
+        historyId: account.historyId,
+        labelsTotal: account.labelsTotal,
+      };
+      const profileData = account;
       // Check if the account already exists
       const existingAccount = await ctx.db
         .query("gmailData")
-        .withIndex("by_resource_id", (q) => q.eq("resourceId", args.email))
+        .withIndex("by_resource_id", (q) => q.eq("resourceId", email))
         .filter((q) => 
-          q.eq(q.field("userId"), args.userId) && 
+          q.eq(q.field("userId"), userId) && 
           q.eq(q.field("resourceType"), "account")
         )
         .first();
-
       if (existingAccount) {
         // Update existing account
         await ctx.db.patch(existingAccount._id, {
-          data: args.profileData,
-          messagesTotal: args.profile.messagesTotal,
-          threadsTotal: args.profile.threadsTotal,
-          historyId: args.profile.historyId,
-          labelsTotal: args.profile.labelsTotal,
+          data: profileData,
+          messagesTotal: profile.messagesTotal,
+          threadsTotal: profile.threadsTotal,
+          historyId: profile.historyId,
+          labelsTotal: profile.labelsTotal,
           timestamp,
         });
+        // Store messages and threads if provided
+        if (Array.isArray(messages)) {
+          for (const msg of messages) {
+            const resourceId = msg.id || msg.messageId;
+            if (!resourceId) {
+              console.warn(`Skipping message with undefined resourceId: ${JSON.stringify(msg)}`);
+              continue;
+            }
+            const existingMsg = await ctx.db
+              .query("gmailData")
+              .withIndex("by_resource_id", (q) => q.eq("resourceId", resourceId))
+              .filter((q) => 
+                q.eq(q.field("userId"), userId) && 
+                q.eq(q.field("email"), email) &&
+                q.eq(q.field("resourceType"), "message")
+              )
+              .first();
+            
+            if (existingMsg) {
+              // Update existing message
+              await ctx.db.patch(existingMsg._id, {
+                data: msg,
+                timestamp,
+              });
+            } else {
+              // Insert new message
+              await ctx.db.insert("gmailData", {
+                userId,
+                email,
+                resourceType: "message",
+                resourceId,
+                data: msg,
+                timestamp,
+              });
+            }
+          }
+        }
+        if (Array.isArray(threads)) {
+          for (const thread of threads) {
+            const resourceId = thread.id || thread.threadId;
+            const existingThread = await ctx.db
+              .query("gmailData")
+              .withIndex("by_resource_id", (q) => q.eq("resourceId", resourceId))
+              .filter((q) => 
+                q.eq(q.field("userId"), userId) && 
+                q.eq(q.field("email"), email) &&
+                q.eq(q.field("resourceType"), "thread")
+              )
+              .first();
+            
+            if (existingThread) {
+              // Update existing thread
+              await ctx.db.patch(existingThread._id, {
+                data: thread,
+                timestamp,
+              });
+            } else {
+              // Insert new thread
+              await ctx.db.insert("gmailData", {
+                userId,
+                email,
+                resourceType: "thread",
+                resourceId,
+                data: thread,
+                timestamp,
+              });
+            }
+          }
+        }
         return { status: "updated", accountId: existingAccount._id };
       } else {
         // Insert new account
         const accountId = await ctx.db.insert("gmailData", {
-          userId: args.userId,
-          email: args.email,
+          userId,
+          email,
           resourceType: "account",
-          resourceId: args.email, // Use the email as the resource ID for accounts
-          data: args.profileData,
-          messagesTotal: args.profile.messagesTotal,
-          threadsTotal: args.profile.threadsTotal,
-          historyId: args.profile.historyId,
-          labelsTotal: args.profile.labelsTotal,
+          resourceId: email, // Use the email as the resource ID for accounts
+          data: profileData,
+          messagesTotal: profile.messagesTotal,
+          threadsTotal: profile.threadsTotal,
+          historyId: profile.historyId,
+          labelsTotal: profile.labelsTotal,
           timestamp,
         });
+        // Store messages and threads if provided
+        if (Array.isArray(messages)) {
+          for (const msg of messages) {
+            const resourceId = msg.id || msg.messageId;
+            const existingMsg = await ctx.db
+              .query("gmailData")
+              .withIndex("by_resource_id", (q) => q.eq("resourceId", resourceId))
+              .filter((q) => 
+                q.eq(q.field("userId"), userId) && 
+                q.eq(q.field("email"), email) &&
+                q.eq(q.field("resourceType"), "message")
+              )
+              .first();
+            
+            if (existingMsg) {
+              // Update existing message
+              await ctx.db.patch(existingMsg._id, {
+                data: msg,
+                timestamp,
+              });
+            } else {
+              // Insert new message
+              await ctx.db.insert("gmailData", {
+                userId,
+                email,
+                resourceType: "message",
+                resourceId,
+                data: msg,
+                timestamp,
+              });
+            }
+          }
+        }
+        if (Array.isArray(threads)) {
+          for (const thread of threads) {
+            const resourceId = thread.id || thread.threadId;
+            const existingThread = await ctx.db
+              .query("gmailData")
+              .withIndex("by_resource_id", (q) => q.eq("resourceId", resourceId))
+              .filter((q) => 
+                q.eq(q.field("userId"), userId) && 
+                q.eq(q.field("email"), email) &&
+                q.eq(q.field("resourceType"), "thread")
+              )
+              .first();
+            
+            if (existingThread) {
+              // Update existing thread
+              await ctx.db.patch(existingThread._id, {
+                data: thread,
+                timestamp,
+              });
+            } else {
+              // Insert new thread
+              await ctx.db.insert("gmailData", {
+                userId,
+                email,
+                resourceType: "thread",
+                resourceId,
+                data: thread,
+                timestamp,
+              });
+            }
+          }
+        }
         return { status: "created", accountId };
       }
     } catch (error) {
@@ -409,8 +549,25 @@ export const saveProfileData = mutation({
         });
         return { status: "updated", accountId: existingAccount._id };
       } else {
-        // For profile updates, we require the account to exist first
-        throw new Error(`Cannot update profile data: Account ${args.email} not found for user ${args.userId}`);
+        // Create a new account entry if it does not exist
+        const accountId = await ctx.db.insert("gmailData", {
+          userId: args.userId,
+          email: args.email, // required for schema
+          resourceId: args.email, // for accounts, resourceId is the email
+          resourceType: "account",
+          messagesTotal: args.profileData.messagesTotal,
+          threadsTotal: args.profileData.threadsTotal,
+          historyId: args.profileData.historyId,
+          labelsTotal: args.profileData.labelsTotal,
+          data: {
+            messagesTotal: args.profileData.messagesTotal,
+            threadsTotal: args.profileData.threadsTotal,
+            historyId: args.profileData.historyId,
+            labelsTotal: args.profileData.labelsTotal,
+          },
+          timestamp,
+        });
+        return { status: "created", accountId };
       }
     } catch (error) {
       console.error('Error updating Gmail profile data:', error);

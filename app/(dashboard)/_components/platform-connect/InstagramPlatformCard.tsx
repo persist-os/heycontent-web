@@ -4,6 +4,7 @@ import { Instagram } from 'lucide-react';
 import { ConnectedAccount } from './platform-utils';
 
 interface InstagramPlatformCardProps {
+  userId: string;
   account: ConnectedAccount | undefined;
   connecting: boolean;
   disconnecting: boolean;
@@ -14,6 +15,7 @@ interface InstagramPlatformCardProps {
 }
 
 export function InstagramPlatformCard({
+  userId,
   account,
   connecting,
   disconnecting,
@@ -23,37 +25,29 @@ export function InstagramPlatformCard({
 }: InstagramPlatformCardProps) {
   const isLoading = connecting || disconnecting;
 
-  // Placeholder Instagram OAuth logic
-  const handleInstagramConnect = () => {
-    const params = new URLSearchParams({
-      client_id: process.env.NEXT_PUBLIC_INSTAGRAM_CLIENT_ID!,
-      redirect_uri: `${process.env.NEXT_PUBLIC_BACKEND_URL}/instagram/oauth/callback`,
-      response_type: 'code',
-      scope: [
-        'user_profile',
-        'user_media',
-      ].join(','),
-      state: btoa(JSON.stringify({ platform: 'instagram' })),
-    });
-    const instagramAuthUrl = `https://api.instagram.com/oauth/authorize?${params.toString()}`;
-    window.location.href = instagramAuthUrl;
+  // Instagram OAuth using backend API (POST with userId)
+  const handleInstagramConnect = async () => {
+    try {
+      const res = await fetch('/api/social/instagram/auth-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+      const data = await res.json();
+      if (data.auth_url || data.authUrl) {
+        window.location.href = data.auth_url || data.authUrl;
+      } else {
+        alert('Failed to get Instagram auth URL.');
+      }
+    } catch (err) {
+      alert('Error connecting to Instagram.');
+    }
   };
 
+
+  // Facebook Business Connect (if needed, can also be routed through backend for consistency)
   const handleFacebookConnect = () => {
-    const params = new URLSearchParams({
-      client_id: process.env.NEXT_PUBLIC_FACEBOOK_CLIENT_ID!,
-      redirect_uri: `${process.env.NEXT_PUBLIC_BACKEND_URL}/instagram/facebook/callback`,
-      response_type: 'code',
-      scope: [
-        'instagram_basic',
-        'pages_show_list',
-        'pages_read_engagement',
-        'public_profile',
-      ].join(','),
-      state: btoa(JSON.stringify({ platform: 'instagram_facebook' })),
-    });
-    const facebookAuthUrl = `https://www.facebook.com/v19.0/dialog/oauth?${params.toString()}`;
-    window.location.href = facebookAuthUrl;
+    alert('Facebook Business connect coming soon!');
   };
 
   return (
@@ -92,7 +86,7 @@ export function InstagramPlatformCard({
                   style={{ background: 'linear-gradient(to right, rgb(168, 85, 247), rgb(236, 72, 153))' }}
                   disabled={isLoading}
                 >
-                  Connect Basic
+                  Connect Instagram
                 </button>
                 <button
                   type="button"
