@@ -30,23 +30,9 @@ export default defineSchema({
     updatedAt: v.number(),
   })
   .index("by_user", ["creatorId"])
-  .index("by_active", ["isActive"]),
-
-  // Gmail Accounts By Paing
-  gmailAccounts: defineTable({
-    userId: v.string(),
-    email: v.string(),
-    messagesTotal: v.optional(v.number()),
-    threadsTotal: v.optional(v.number()),
-    historyId: v.optional(v.string()),
-    accessToken: v.string(),
-    refreshToken: v.optional(v.string()),
-    expiresAt: v.optional(v.number()),
-    tokenType: v.string(),
-  })
-  .index("by_user", ["userId"]),
-
-  //Gmail Tokens
+    .index("by_active", ["isActive"]),
+  
+  // Gmail Tokens
   gmailTokens: defineTable({
     userId: v.string(),
     accessToken: v.string(),
@@ -57,61 +43,48 @@ export default defineSchema({
     tokenType: v.string(),
   }).index("by_userId", ["userId"]),
 
-
-  // YouTube Full Profile (channel + videos)
-  youtube_full_profiles: defineTable({
+  // Gmail Data - unified table for messages and threads
+  gmailData: defineTable({
     userId: v.string(),
-    channel: v.any(), // You can replace with a stricter object schema if desired
-    videos: v.array(v.any()), // Or use a stricter schema for video objects
-    createdAt: v.number(), // Unix timestamp
+    email: v.string(),
+    resourceType: v.union(v.literal("message"), v.literal("thread"), v.literal("account")),
+    resourceId: v.optional(v.any()), // Either messageId, threadId, or email for accounts
+    threadId: v.optional(v.any()), // More flexible
+    snippet: v.optional(v.any()), // More flexible
+    historyId: v.optional(v.any()),
+    internalDate: v.optional(v.any()),
+    labelIds: v.optional(v.any()),
+    messages: v.optional(v.any()), // For threads: array of message IDs
+    data: v.any(), // Full message payload, thread data, or account data
+    sizeEstimate: v.optional(v.any()),
+    timestamp: v.number(), // When this record was created/updated
+    // Account specific fields
+    messagesTotal: v.optional(v.any()),
+    threadsTotal: v.optional(v.any()),
+    labelsTotal: v.optional(v.any()),
   })
-  .index("by_user", ["userId"]),
+  .index("by_user", ["userId"])
+  .index("by_email", ["userId", "email"])
+  .index("by_resource_type", ["resourceType"])
+  .index("by_resource_id", ["resourceId"])
+  .index("by_thread_id", ["threadId"])
+  .index("by_user_resource", ["userId", "resourceType"])
+  .index("by_timestamp", ["timestamp"]),
 
   // YouTube Data
   youtubeData: defineTable({
     userId: v.string(),
     resourceType: v.union(v.literal("channel"), v.literal("video"), v.literal("video_analysis")),
-    data: v.object({
-      id: v.string(),
-      snippet: v.optional(v.object({
-        title: v.string(),
-        description: v.string(),
-        customUrl: v.optional(v.string()),
-        thumbnails: v.optional(v.object({
-          default: v.optional(v.object({
-            url: v.string(),
-            width: v.number(),
-            height: v.number()
-          })),
-          medium: v.optional(v.object({
-            url: v.string(),
-            width: v.number(),
-            height: v.number()
-          })),
-          high: v.optional(v.object({
-            url: v.string(),
-            width: v.number(),
-            height: v.number()
-          }))
-        })),
-        publishedAt: v.optional(v.string())
-      })),
-      statistics: v.optional(v.object({
-        viewCount: v.string(),
-        subscriberCount: v.string(),
-        hiddenSubscriberCount: v.boolean(),
-        videoCount: v.string()
-      })),
-      videoId: v.optional(v.string()),
-      analysisData: v.optional(v.any())
-    }),
+    data: v.any(),
     timestamp: v.number(),
     videoCount: v.optional(v.number()),
     subscriberCount: v.optional(v.number()),
     viewCount: v.optional(v.number()),
   })
   .index("by_user_resource", ["userId", "resourceType"])
-  .index("by_timestamp", ["timestamp"]),
+  .index("by_timestamp", ["timestamp"])
+  .index("by_user", ["userId"])
+  .index("by_resource_type", ["resourceType"]),
 
   youtubeTokens: defineTable({
     userId: v.string(),
@@ -189,4 +162,36 @@ export default defineSchema({
     lastUpdated: v.number(), // Last updated timestamp
   })
   .index("by_user_resource", ["user_id", "resource"]),
+
+  // Instagram Tokens
+  instagramTokens: defineTable({
+    userId: v.string(),
+    accessToken: v.string(),
+    refreshToken: v.string(),
+    expiryDate: v.number(),
+    scope: v.string(),
+    lastRefreshed: v.number(),
+  }).index("by_userId", ["userId"]),
+
+  // Instagram Data
+  instagramData: defineTable({
+    userId: v.string(),
+    resourceType: v.union(
+      v.literal("profile"), 
+      v.literal("post"), 
+      v.literal("story"),
+      v.literal("reel")
+    ),
+    resourceId: v.string(),
+    data: v.any(),
+    timestamp: v.number(),
+    followerCount: v.optional(v.number()),
+    followingCount: v.optional(v.number()),
+    postCount: v.optional(v.number()),
+  })
+  .index("by_user", ["userId"])
+  .index("by_resource_type", ["resourceType"])
+  .index("by_resource_id", ["resourceId"])
+  .index("by_user_resource", ["userId", "resourceType"])
+  .index("by_timestamp", ["timestamp"]),
 });
