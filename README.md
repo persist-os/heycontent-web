@@ -1,126 +1,127 @@
 # HeyContent
 
-A modern content management platform built with Next.js, Convex, and Firebase.
+A comprehensive AI-powered content creation and management platform that provides intelligent insights, social media integration, and content analysis tools.
 
-## Tech Stack
+## Project Overview
 
-- **Frontend**: Next.js 14, React 18, TypeScript
-- **Styling**: Tailwind CSS, shadcn/ui
-- **Database**: Convex
+HeyContent is a web application designed to assist creators and content managers by providing AI-powered analytics, insights, and management tools. It integrates with various social platforms (Gmail, YouTube, Instagram) and offers chat-based interaction with AI assistants.
+
+### Core Functionality
+
+- **AI Chat Assistance**: Interactive chat interface with AI for content creation support
+- **Social Platform Integration**: Connect and manage Gmail, YouTube, and Instagram accounts
+- **Content Analytics**: Performance metrics and insights for your content
+- **Notes & Organization**: Create, manage, and organize content ideas and strategies
+- **AI Insights**: Automated analysis and suggestions for content improvement
+
+## Technical Architecture
+
+### Frontend
+- **Framework**: Next.js 15 with App Router
+- **UI Components**: React 18 with TypeScript
+- **Styling**: Tailwind CSS with shadcn/ui components
 - **Authentication**: Firebase Authentication
-- **Email**: Resend
-- **Testing**: Jest
-- **State Management**: Zustand
 
-## Prerequisites
+### Backend
+- **Database**: Convex (serverless backend with real-time sync)
+- **External API**: Integration with backend.hicontent.co for advanced processing
+- **Authentication**: Firebase for user authentication and session management
 
-- Node.js 18+
-- npm or yarn
-- Google Cloud Platform account (for Gmail and YouTube APIs)
-- Firebase project
-- Convex account
+## Project Structure (Note: May be out of date)
+
+```
+heycontent-web/
+├── app/                        # Next.js app directory (App Router)
+│   ├── (auth)/                 # Authentication routes and components
+│   ├── (dashboard)/            # Main application dashboard
+│   │   ├── _components/        # Dashboard-specific components
+│   │   ├── ai-insights/        # AI analysis and insights
+│   │   ├── audience/           # Audience analytics
+│   │   ├── chat/               # AI chat interface
+│   │   ├── content/            # Content management
+│   │   ├── notes/              # Notes and ideas
+│   │   └── settings/           # User settings
+│   ├── api/                    # API routes
+│   │   ├── auth/               # Authentication endpoints
+│   │   ├── chat/               # Chat functionality
+│   │   ├── social/             # Social platform connectors
+│   │   └── notes/              # Notes management
+│   ├── lib/                    # Utility functions and helpers
+│   └── types/                  # TypeScript type definitions
+├── convex/                     # Convex database functions and schema
+│   ├── schema.ts               # Database schema definition
+│   ├── auth.ts                 # Authentication utilities
+│   ├── chat.ts                 # Chat functionality
+│   ├── gmailMutations.ts       # Gmail integration - mutations
+│   ├── gmailQueries.ts         # Gmail integration - queries
+│   ├── youtubeMutations.ts     # YouTube integration - mutations
+│   ├── youtubeQueries.ts       # YouTube integration - queries
+│   └── instagramMutations.ts   # Instagram integration - mutations
+├── public/                     # Static assets
+└── src/                        # Additional source files
+```
+
+## Database Schema
+
+The Convex database includes tables for:
+- **Users**: User profiles and authentication data
+- **Personas**: User-created content personas with descriptions and aspirations
+- **Chat**: Conversations between users and AI
+- **Notes**: User notes and content ideas
+- **Social Integration**: Tables for Gmail, YouTube, and Instagram data
+- **API Keys**: Management of API access
+- **Rate Limiting**: Controls for API usage
+
+## Authentication Flow
+
+1. The application uses Firebase Authentication for user management
+2. Authentication tokens are stored as cookies and used in the Authorization header
+3. Server-side authentication verification using Firebase Admin SDK
+4. API keys are generated with the backend and stored in localStorage
+5. Integration with Convex for user data management
 
 ## Getting Started
+
+### Prerequisites
+
+- Node.js 18+ and npm/yarn
+- Firebase project
+- Convex account
+- Google Cloud Platform account (for Gmail and YouTube APIs)
+
+### Setup Instructions
 
 1. **Clone the repository**
    ```bash
    git clone [repository-url]
-   cd heycontent
+   cd heycontent-web
    ```
 
 2. **Install dependencies**
    ```bash
    npm install
-   # or
-   yarn install
    ```
 
-3. **Set up environment variables**
-   - Copy `.env.example` to `.env.local`
-   - Fill in the required environment variables:
-     - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` from Google Cloud Console
-     - `OPENAI_API_KEY` from OpenAI dashboard
-     - `RESEND_API_KEY` from Resend.com
-     - `NEXTAUTH_SECRET` (generate a secure random string)
-     - `CONVEX_URL` from your Convex deployment
+3. **Environment configuration**
+   Set up environment variables. 
 
 4. **Start the development server**
    ```bash
    npm run dev
-   # or
-   yarn dev
    ```
 
-5. **Open [http://localhost:3000](http://localhost:3000)** in your browser
+5. **Access the application**
+   - Open [http://localhost:3000](http://localhost:3000) in your browser
+
+## API Integration
+
+The application interacts with:
+1. **Convex Database**: Direct integration for data storage and retrieval
+2. **External Backend**: API calls to backend.hicontent.co for specialized processing
+3. **Social Platforms**: Integration with Gmail, YouTube, and Instagram APIs
 
 ## Available Scripts
 
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run start` - Start production server
-- `npm run lint` - Run ESLint
-- `npm run test` - Run Jest tests
-- `npm run test:watch` - Run Jest tests in watch mode
-
-## Project Structure
-
-```
-heycontent/
-├── app/              # Next.js app directory
-├── components/       # Reusable React components
-├── convex/          # Convex backend functions
-├── public/          # Static assets
-├── src/             # Source files
-├── types/           # TypeScript type definitions
-└── scripts/         # Utility scripts
-```
-
-## Authentication
-
-The application uses Google OAuth for authentication. To set up:
-
-1. Create a project in Google Cloud Console
-2. Enable the Google OAuth API
-3. Create OAuth 2.0 credentials
-4. Add authorized redirect URIs:
-   - `http://localhost:3000/api/auth/callback/google` (development)
-   - `[your-production-url]/api/auth/callback/google` (production)
-
-## Database
-
-The application uses Convex as the database. Make sure to:
-
-1. Set up your Convex project
-2. Configure the `CONVEX_URL` in your environment variables
-3. Deploy your Convex functions using the Convex CLI
-
-## Testing
-
-The project uses Jest for testing. Run tests with:
-
-```bash
-npm run test
-```
-
-## Contributing
-
-1. Create a new branch for your feature
-2. Make your changes
-3. Run tests and ensure they pass
-4. Submit a pull request
-
-## Environment Variables
-
-Required environment variables are documented in `.env.example`. Make sure to set up all required variables before running the application.
-
-## Deployment
-
-The application can be deployed to any platform that supports Next.js applications. Make sure to:
-
-1. Set up all required environment variables
-2. Build the application with `npm run build`
-3. Start the production server with `npm run start`
-
-## Support
-
-For support, please contact the development team or create an issue in the repository.
