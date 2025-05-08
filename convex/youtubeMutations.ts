@@ -11,39 +11,30 @@ export const storeVideoData = mutation({
   },
   handler: async (ctx, args) => {
     const { userId, videoId, videoData } = args;
-    const timestamp = Date.now();
+    const now = Date.now();
 
     try {
-      // Check if video already exists
+      // Check if video already exists in youtubeVideos
       const existingVideo = await ctx.db
-        .query("youtubeData")
-        .withIndex("by_user_resource", (q) => 
-          q.eq("userId", userId).eq("resourceType", "video")
-        )
-        .filter((q) => q.eq(q.field("data.videoId"), videoId))
+        .query("youtubeVideos")
+        .withIndex("by_videoId", (q) => q.eq("videoId", videoId))
         .first();
 
+      // Prepare video doc for flexible schema
+      const videoDoc = {
+        userId,
+        id: videoId,
+        videoId,
+        ...videoData,
+        updatedAt: now,
+        createdAt: videoData.createdAt || now,
+      };
+
       if (existingVideo) {
-        // Update existing video
-        await ctx.db.patch(existingVideo._id, {
-          data: {
-            videoId,
-            ...videoData,
-          },
-          timestamp,
-        });
+        await ctx.db.patch(existingVideo._id, videoDoc);
         return { status: "updated", videoId: existingVideo._id };
       } else {
-        // Insert new video
-        const id = await ctx.db.insert("youtubeData", {
-          userId,
-          resourceType: "video",
-          data: {
-            videoId,
-            ...videoData,
-          },
-          timestamp,
-        });
+        const id = await ctx.db.insert("youtubeVideos", videoDoc);
         return { status: "created", videoId: id };
       }
     } catch (error) {
@@ -74,15 +65,16 @@ export const saveChannelData = mutation({
     const { userId, channelId, title, description, customUrl, thumbnails, statistics, updatedAt } = args;
 
     try {
-      // Check if channel already exists
+      // Check if channel already exists in youtubeChannels
       const existingChannel = await ctx.db
-        .query("youtubeData")
-        .withIndex("by_user_resource", (q) => 
-          q.eq("userId", userId).eq("resourceType", "channel")
-        )
+        .query("youtubeChannels")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .filter((q) => q.eq(q.field("id"), channelId))
         .first();
 
-      const channelData = {
+      // Prepare channel doc for flexible schema
+      const channelDoc = {
+        userId,
         id: channelId,
         snippet: {
           title,
@@ -90,30 +82,16 @@ export const saveChannelData = mutation({
           customUrl,
           thumbnails
         },
-        statistics
+        statistics,
+        updatedAt,
+        createdAt: updatedAt,
       };
 
       if (existingChannel) {
-        // Update existing channel
-        await ctx.db.patch(existingChannel._id, {
-          data: channelData,
-          timestamp: updatedAt,
-          videoCount: Number(statistics.videoCount),
-          subscriberCount: Number(statistics.subscriberCount),
-          viewCount: Number(statistics.viewCount)
-        });
+        await ctx.db.patch(existingChannel._id, channelDoc);
         return { status: "updated", channelId: existingChannel._id };
       } else {
-        // Insert new channel
-        const id = await ctx.db.insert("youtubeData", {
-          userId,
-          resourceType: "channel",
-          data: channelData,
-          timestamp: updatedAt,
-          videoCount: Number(statistics.videoCount),
-          subscriberCount: Number(statistics.subscriberCount),
-          viewCount: Number(statistics.viewCount)
-        });
+        const id = await ctx.db.insert("youtubeChannels", channelDoc);
         return { status: "created", channelId: id };
       }
     } catch (error) {
@@ -215,7 +193,9 @@ export const storeVideoAnalysis = mutation({
   },
 });
 
-// Store full YouTube profile data in youtubeData table
+// Store full YouTube profile data in appropriate tables
+import { api } from "./_generated/api";
+
 export const storeYoutubeFullProfile = mutation({
   args: {
     userId: v.string(),
@@ -225,109 +205,59 @@ export const storeYoutubeFullProfile = mutation({
   handler: async (ctx, args) => {
     const { userId, channel, videos } = args;
     const timestamp = Date.now();
-    
     try {
       // Validate channel object
       if (!channel || !channel.id) {
         throw new Error("Invalid channel data: missing required channel ID");
       }
-      
-      // First, store the channel data
-      // Check if channel already exists to avoid duplicates
-      const existingChannel = await ctx.db
-        .query("youtubeData")
-        .withIndex("by_user_resource", (q) => 
-          q.eq("userId", userId).eq("resourceType", "channel")
-        )
-        .first();
-      
-      // Get statistics values with safe defaults
-      const videoCount = Number(channel.statistics?.videoCount || 0);
-      const subscriberCount = Number(channel.statistics?.subscriberCount || 0);
-      const viewCount = Number(channel.statistics?.viewCount || 0);
-      
-      if (existingChannel) {
-        // Update existing channel record
-        await ctx.db.patch(existingChannel._id, {
-          data: channel,
-          timestamp,
-          videoCount,
-          subscriberCount,
-          viewCount
-        });
-        console.log(`Updated channel ${channel.id} for user ${userId}`);
-      } else {
-        // Insert new channel record
-        await ctx.db.insert("youtubeData", {
-          userId,
-          resourceType: "channel",
-          data: channel,
-          timestamp,
-          videoCount,
-          subscriberCount,
-          viewCount
-        });
-        console.log(`Inserted new channel ${channel.id} for user ${userId}`);
-      }
-      
-      // Then store each video, checking for duplicates by videoId
+      // Save channel using saveChannelData
+      await ctx.runMutation(api.youtubeMutations.saveChannelData, {
+        userId,
+        channelId: channel.id,
+        title: channel.snippet?.title || "",
+        description: channel.snippet?.description || "",
+        customUrl: channel.snippet?.customUrl || "",
+        thumbnails: channel.snippet?.thumbnails || {},
+        statistics: channel.statistics || {},
+        updatedAt: timestamp,
+      });
+
+      // Save each video using storeVideoData
       const results = {
         processed: 0,
         inserted: 0,
         updated: 0,
-        skipped: 0
+        skipped: 0,
       };
-      
       for (const video of videos) {
         results.processed++;
-        
-        if (!video.id) {
-          console.warn(`Skipping video without ID for user ${userId}`);
+        const videoId = video.videoId || video.id;
+        if (!videoId) {
           results.skipped++;
           continue;
         }
-        
-        // Map video.id to video.videoId for consistency
-        video.videoId = video.id;
-        
-        // Check if video already exists
-        const existingVideo = await ctx.db
-          .query("youtubeData")
-          .withIndex("by_user_resource", (q) => 
-            q.eq("userId", userId).eq("resourceType", "video")
-          )
-          .filter((q) => q.eq(q.field("data.videoId"), video.videoId))
-          .first();
-          
-        if (existingVideo) {
-          // Update existing video
-          await ctx.db.patch(existingVideo._id, {
-            data: video,
-            timestamp
-          });
-          results.updated++;
-        } else {
-          // Insert new video
-          await ctx.db.insert("youtubeData", {
-            userId,
-            resourceType: "video",
-            data: video,
-            timestamp
-          });
+        const resp = await ctx.runMutation(api.youtubeMutations.storeVideoData, {
+          userId,
+          videoId,
+          videoData: video,
+        });
+        if (resp.status === "created") {
           results.inserted++;
+        } else if (resp.status === "updated") {
+          results.updated++;
         }
       }
-      
-      return { 
+      return {
         channelId: channel.id,
         videoResults: results,
-        status: "success" 
+        status: "success",
       };
     } catch (error) {
       console.error('Error storing YouTube full profile:', error);
       throw new Error(`Failed to store YouTube profile: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
+
 });
 
 
@@ -343,19 +273,28 @@ export const disconnectYouTube = mutation({
         tokensDeleted: 0
       };
       
-      // Delete all YouTube data for the user using the by_user index
-      const youtubeData = await ctx.db
-        .query("youtubeData")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
+      // Delete all YouTube channel data for the user
+      const youtubeChannels = await ctx.db
+        .query("youtubeChannels")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
         .collect();
-
-      console.log(`Found ${youtubeData.length} YouTube data records to delete for user ${userId}`);
-      
-      for (const data of youtubeData) {
-        await ctx.db.delete(data._id);
+      console.log(`Found ${youtubeChannels.length} YouTube channel records to delete for user ${userId}`);
+      for (const channel of youtubeChannels) {
+        await ctx.db.delete(channel._id);
         results.dataDeleted++;
       }
-     
+
+      // Delete all YouTube video data for the user
+      const youtubeVideos = await ctx.db
+        .query("youtubeVideos")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .collect();
+      console.log(`Found ${youtubeVideos.length} YouTube video records to delete for user ${userId}`);
+      for (const video of youtubeVideos) {
+        await ctx.db.delete(video._id);
+        results.dataDeleted++;
+      }
+
       // Delete tokens using the by_userId index
       const tokens = await ctx.db
         .query("youtubeTokens")
