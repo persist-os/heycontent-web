@@ -42,6 +42,7 @@ const SettingsScreen = () => {
   const fetchPersonaData = async () => {
     try {
       const response = await fetchWithAuth('/api/user/profile')
+      if (!response) throw new Error('Failed to fetch persona data')
       const data = await response.json()
 
       if (response.ok && data.persona) {
@@ -78,39 +79,47 @@ const SettingsScreen = () => {
 
   const handleSignOut = async () => {
     try {
-      // Clear any remaining local storage first
-      localStorage.clear()
-      sessionStorage.clear()
+      // Explicitly remove known auth/session keys
+      localStorage.removeItem('apiKey');
+      localStorage.removeItem('firebaseToken');
+      localStorage.removeItem('userId');
+      sessionStorage.removeItem('apiKey');
+      sessionStorage.removeItem('firebaseToken');
+      sessionStorage.removeItem('userId');
+
+      // Fallback: clear all storage
+      localStorage.clear();
+      sessionStorage.clear();
 
       // Make the logout API call
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
         credentials: 'include'
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.details || data.error || 'Failed to logout')
+        throw new Error(data.details || data.error || 'Failed to logout');
       }
 
       // Sign out from Firebase last
       if (auth) {
         try {
-          await signOut(auth)
+          await signOut(auth);
         } catch (firebaseError) {
-          console.warn('Firebase signOut error:', firebaseError)
-          // Continue with redirect even if Firebase signOut fails
+          console.warn('Firebase signOut error:', firebaseError);
         }
       }
 
-      // Redirect to login page
-      router.push('/login')
+      // Redirect to login page and reload to ensure state reset
+      router.push('/login');
+      window.location.reload();
     } catch (error) {
-      console.error('Sign out error:', error)
-      toast.error('Failed to sign out. Please try again.')
+      console.error('Sign out error:', error);
+      toast.error('Failed to sign out. Please try again.');
     }
-  }
+  };
 
   const handleResendVerification = async () => {
     setIsResending(true)
@@ -123,6 +132,7 @@ const SettingsScreen = () => {
           email: auth.currentUser?.email
         }),
       })
+      if (!response) throw new Error('Failed to resend verification email')
 
       if (!response.ok) {
         const data = await response.json()
@@ -153,6 +163,7 @@ const SettingsScreen = () => {
           futureVision: formData.futureVision
         }),
       })
+      if (!response) throw new Error('Failed to update profile')
 
       const data = await response.json()
 

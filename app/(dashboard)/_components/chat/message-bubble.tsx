@@ -1,6 +1,7 @@
 'use client'
 
 import type { Message } from '@/app/types/chat'
+import type { InteractiveOption } from './interactive-response'
 import { MessageSquare } from 'lucide-react'
 
 interface MessageBubbleProps {
@@ -9,10 +10,10 @@ interface MessageBubbleProps {
   onRetry?: () => void
   onReference?: (message: Message) => void
   showReferenceButton?: boolean
-  onReferenceClick?: (messageId: number) => void
-  onOptionClick?: (option: { text: string }) => void
+  onReferenceClick?: (messageId: string) => void
+  onOptionClick?: (option: InteractiveOption) => void
   onFollowUpClick?: (choice: string) => void
-  onScrollToMessage?: (messageId: number) => void
+  onScrollToMessage?: (messageId: string) => void
   className?: string
 }
 

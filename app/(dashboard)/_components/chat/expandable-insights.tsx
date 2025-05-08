@@ -5,7 +5,7 @@ import { ChevronUp, ChevronDown } from 'lucide-react'
 
 interface ExpandableInsightsProps {
   message: {
-    id: number;
+    id: string;
     relatedInsights?: Array<{
       type: string;
       summary: string;
@@ -17,7 +17,7 @@ interface ExpandableInsightsProps {
     };
     suggestions?: string[];
   };
-  onReferenceClick?: (messageId: number) => void;
+  onReferenceClick?: (messageId: string) => void;
   onOptionPress?: (option: { text: string }) => void;
   onSuggestionPress?: (suggestion: string) => void;
 }

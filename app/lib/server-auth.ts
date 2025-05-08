@@ -21,10 +21,11 @@ interface FirebaseToken {
 /**
  * Get Firebase token from cookies or Authorization header
  */
-export const getFirebaseToken = () => {
+export const getFirebaseToken = async () => {
   try {
     // First try to get token from Authorization header
-    const authHeader = headers().get('Authorization');
+    const resolvedHeaders = await headers();
+    const authHeader = resolvedHeaders.get('Authorization');
     if (authHeader && authHeader.startsWith('Bearer ')) {
       console.log('Found token in Authorization header');
       const token = authHeader.substring(7);
@@ -45,15 +46,16 @@ export const getFirebaseToken = () => {
     }
 
     // Fallback to cookie
-    const cookieToken = cookies().get('firebase-auth-token')?.value;
+    const resolvedCookies = await cookies();
+    const cookieToken = resolvedCookies.get('firebase-auth-token')?.value;
     if (cookieToken) {
       console.log('Found token in cookie');
       return cookieToken;
     }
 
     // Log all cookies for debugging
-    const allCookies = cookies().getAll();
-    console.log('All cookies:', allCookies.map(c => c.name));
+    const allCookies = await resolvedCookies.getAll();
+    console.log('All cookies:', allCookies.map((c: { name: string }) => c.name));
 
     console.log('No token found in Authorization header or cookie');
     return null;
@@ -68,7 +70,7 @@ export const getFirebaseToken = () => {
  */
 export const getServerSession = async () => {
   console.log('getServerSession called');
-  const tokenValue = getFirebaseToken();
+  const tokenValue = await getFirebaseToken();
   if (!tokenValue) {
     console.log('No Firebase token found');
     return null;
@@ -141,7 +143,7 @@ export const getServerSession = async () => {
     // Ensure the token is set in cookies for future requests
     // This is done in API routes, but we'll ensure it's set here as well
     try {
-      const cookieStore = cookies();
+      const cookieStore = await cookies();
       const existingCookie = cookieStore.get('firebase-auth-token');
 
       // If the cookie doesn't exist or has a different value, update it

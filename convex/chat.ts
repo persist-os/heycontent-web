@@ -18,6 +18,24 @@ export const getHistory = query({
   },
 });
 
+export const getConversation = query({
+  args: {
+    userId: v.string(),
+    conversationId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const conversation = await ctx.db
+      .query("conversations")
+      .filter((q) => 
+        q.eq(q.field("_id"), args.conversationId) &&
+        q.eq(q.field("userId"), args.userId)
+      )
+      .first();
+    
+    return conversation;
+  },
+});
+
 export const createConversation = mutation({
   args: {
     userId: v.string(),
@@ -39,6 +57,48 @@ export const createConversation = mutation({
     });
 
     return conversationId;
+  },
+});
+
+export const addMessageToConversation = mutation({
+  args: {
+    userId: v.string(),
+    conversationId: v.string(),
+    message: v.object({
+      content: v.string(),
+      role: v.string(),
+      timestamp: v.optional(v.number()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    // Find the conversation and verify ownership
+    const conversation = await ctx.db
+      .query("conversations")
+      .filter((q) =>
+        q.eq(q.field("_id"), args.conversationId) &&
+        q.eq(q.field("userId"), args.userId)
+      )
+      .first();
+
+    if (!conversation) {
+      throw new Error("Conversation not found or unauthorized");
+    }
+
+    const message = {
+      ...args.message,
+      timestamp: args.message.timestamp || Date.now(),
+    };
+
+    // Add the new message to the existing messages array
+    const updatedMessages = [...conversation.messages, message];
+
+    // Update the conversation with the new message
+    await ctx.db.patch(conversation._id, {
+      messages: updatedMessages,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true, conversationId: conversation._id };
   },
 });
 

@@ -113,31 +113,104 @@ export async function POST(request: Request) {
     console.debug(`[${requestId}] Backend response status`, response.status, response.statusText);
     console.debug(`[${requestId}] Backend response headers`, Object.fromEntries(response.headers.entries()));
 
+    // Enhanced response handling with content-type detection
     let data: any;
+    let chat_response: string | undefined;
+    let suggestions: any[] = [];
+    let session_id_resp: string | undefined;
+    
     try {
-      data = await response.json();
-    } catch (jsonErr) {
-      console.error(`[${requestId}] Failed to parse backend JSON`, jsonErr);
-      throw new Error('Failed to parse backend JSON');
+      // Check content type to determine parsing strategy
+      const contentType = response.headers.get('Content-Type') || '';
+      
+      if (!response.ok) {
+        console.error(`[${requestId}] Backend API error with status: ${response.status}`);
+        throw new Error(`Backend API responded with status: ${response.status}`);
+      }
+      
+      if (contentType.includes('application/json')) {
+        // Standard JSON handling
+        data = await response.json();
+        console.debug(`[${requestId}] Raw backend JSON data`, data);
+        // Proactive error/permission handling
+        if (data && (data.error || data.response?.toLowerCase().includes('forbidden') || data.response?.toLowerCase().includes('only access your own'))) {
+          const msg = typeof data.error === 'string' ? data.error : 'You are not authorized to access this chat.';
+          const status = data.error?.includes('401') || data.error?.toLowerCase().includes('unauthorized') ? 401 : 403;
+          return NextResponse.json({ error: msg }, { status });
+        }
+      } else {
+        // Handle non-JSON responses (text, html, etc.)
+        const textResponse = await response.text();
+        console.debug(`[${requestId}] Raw backend text response`, textResponse);
+        
+        // Try to extract JSON if it's embedded in text
+        try {
+          // First check if the whole text is valid JSON despite content-type
+          data = JSON.parse(textResponse);
+          console.debug(`[${requestId}] Parsed JSON from text response despite content-type`, data);
+        } catch (parseErr) {
+          // Try to find JSON-like content in the text
+          try {
+            // Match anything that looks like JSON using regex
+            // Using a workaround for the 's' flag compatibility
+            const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+            if (jsonMatch && jsonMatch[0]) {
+              data = JSON.parse(jsonMatch[0]);
+              console.debug(`[${requestId}] Extracted JSON from text response`, data);
+            } else {
+              // Fallback: create a structured response with the text as chat_response
+              data = { 
+                response: textResponse,
+                chat_response: textResponse,
+                suggestions: [],
+                session_id: session_id
+              };
+              console.debug(`[${requestId}] Created fallback data object from text`, data);
+            }
+          } catch (extractErr) {
+            // Ultimate fallback: just use the text response directly
+            data = { 
+              response: textResponse,
+              chat_response: textResponse,
+              suggestions: [],
+              session_id: session_id
+            };
+            console.debug(`[${requestId}] Created ultimate fallback data from text`, data);
+          }
+        }
+      }
+      
+      // Extract the response components with fallbacks
+      if (data.error) {
+        chat_response = 'Sorry, you are not authorized to access this chat or there was a permissions error.';
+        suggestions = [];
+      } else {
+        chat_response = data.chat_response;
+        suggestions = Array.isArray(data.suggestions) ? data.suggestions : [];
+      }
+      session_id_resp = data.session_id;
+    } catch (error) {
+      console.error(`[${requestId}] Response processing error:`, error);
+      // Provide a graceful fallback instead of throwing
+      data = { 
+        chat_response: "Sorry, I encountered an issue processing the response. Please try again.",
+        suggestions: [],
+        session_id: session_id
+      };
+      chat_response = data.chat_response;
+      suggestions = [];
+      session_id_resp = session_id;
     }
+    
+    // Log the processed data
+    console.debug(`[${requestId}] Processed response data`, {
+      has_chat_response: !!chat_response,
+      chat_response_length: chat_response?.length || 0,
+      suggestions_count: suggestions?.length || 0,
+      session_id: session_id_resp
+    });
 
-    // Log the raw backend data
-    console.debug(`[${requestId}] Raw backend data`, data);
-
-    if (!response.ok) {
-      console.error(`[${requestId}] Backend API error:`, {
-        status: response.status,
-        error: data
-      });
-      throw new Error(`Backend API responded with status: ${response.status}`);
-    }
-
-    // The backend may return { response: 'json-string', ... }
-    let chat_response = data.chat_response;
-    let suggestions = data.suggestions;
-    let session_id_resp = data.session_id;
-
-    // If "response" is present and is a JSON string, parse it
+    // Parse embedded JSON in response field if needed
     if (!chat_response && typeof data.response === 'string') {
       try {
         // Remove markdown code block if present
@@ -148,15 +221,36 @@ export async function POST(request: Request) {
         if (respStr.endsWith('```')) {
           respStr = respStr.slice(0, -3);
         }
-        const parsed = JSON.parse(respStr);
-        chat_response = parsed.chat_response || '';
-        suggestions = parsed.suggestions || [];
-        session_id_resp = session_id_resp || parsed.session_id;
-        console.debug(`[${requestId}] Parsed chat_response and suggestions from backend response string`, { chat_response, suggestions, session_id_resp });
+        
+        // Try to parse the response as JSON
+        try {
+          const parsed = JSON.parse(respStr);
+          chat_response = parsed.chat_response || '';
+          if (Array.isArray(parsed.suggestions)) {
+            suggestions = parsed.suggestions;
+          }
+          // Successfully parsed JSON response
+        } catch (err) {
+          // Always handle non-JSON responses gracefully
+          console.error(`[${requestId}] Response is not valid JSON, treating as plain text.`, {
+            error: err,
+            response: respStr
+          });
+          // Use the plain text response directly instead of showing an error message
+          chat_response = respStr;
+          suggestions = [];
+        }
       } catch (parseErr) {
-        console.error(`[${requestId}] Failed to parse backend response string`, parseErr, data.response);
-        chat_response = data.response;
+        console.error(`[${requestId}] Error processing backend response string`, parseErr);
+        chat_response = data.response || "I encountered an issue processing the response.";
       }
+    }
+    
+    // Final fallback - if we somehow still don't have a chat_response
+    if (!chat_response && data.response) {
+      chat_response = typeof data.response === 'string' ? data.response : JSON.stringify(data.response);
+    } else if (!chat_response) {
+      chat_response = "I received a response but couldn't process it properly.";
     }
 
     const totalDuration = Date.now() - startTime;

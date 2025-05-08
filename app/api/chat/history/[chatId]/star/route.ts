@@ -16,7 +16,8 @@ export async function POST(
   });
 
   try {
-    const token = cookies().get('firebase-auth-token')?.value;
+    const cookieStore = await cookies();
+    const token = cookieStore.get('firebase-auth-token')?.value;
     if (!token) {
       console.warn(`[${requestId}] Authentication failed: No token found`);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
