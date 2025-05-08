@@ -125,3 +125,5 @@ The application interacts with:
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run start` - Start production server
+- `npx convex dev` — Deploy Convex to the dev branch
+- `npx convex deploy` — Deploy Convex to the prod branch
