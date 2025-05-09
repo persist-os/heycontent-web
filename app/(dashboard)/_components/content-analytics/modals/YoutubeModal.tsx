@@ -39,8 +39,11 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
       // Create a video URL from the ID
       const videoUrl = `https://youtu.be/${videoId}`;
       
-      // Call our API endpoint
-      const response = await fetch('/api/youtube/analyze', {
+      // Call our API endpoint - use the current window location origin to handle port changes
+      const apiUrl = `${window.location.origin}/api/youtube/analyze`;
+      console.log('Making API request to:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -51,16 +54,65 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
         })
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to analyze video');
-      }
-
-      const data = await response.json();
+      // Read the response data once
+      const responseData = await response.json();
+      console.log('Backend analysis response:', responseData);
       
-      // Set the analysis result (adjust based on your backend response format)
-      setAiAnalysis(data.analysis || 
-        `AI Analysis for "${selectedContent.content.title}":\n\n${data.summary || 'Analysis completed successfully.'}`);
+      // Then check if the response was OK
+      if (!response.ok) {
+        throw new Error(responseData.error || `Failed to analyze video: ${response.status} ${response.statusText}`);
+      }
+      
+      // If we're here, the response was OK, so use the already parsed data
+      const data = responseData;
+      
+      // Extract all relevant analysis data and format it properly
+      const analysisContent = data.analysis || data.content || data.insights?.analysis;
+      const summaryContent = data.summary || data.content_summary || data.insights?.summary;
+      const keyPointsContent = data.key_points || data.keyPoints || data.insights?.keyPoints;
+      const sentimentContent = data.sentiment || data.insights?.sentiment;
+      
+      // Build a comprehensive analysis display
+      let formattedAnalysis = `AI Analysis for "${selectedContent.content.title}":\n\n`;
+      
+      if (analysisContent) {
+        formattedAnalysis += typeof analysisContent === 'string' 
+          ? analysisContent 
+          : JSON.stringify(analysisContent, null, 2);
+      } else if (summaryContent) {
+        formattedAnalysis += typeof summaryContent === 'string'
+          ? summaryContent
+          : JSON.stringify(summaryContent, null, 2);
+      }
+      
+      // Add key points if available
+      if (keyPointsContent) {
+        formattedAnalysis += '\n\nKey Points:\n';
+        if (Array.isArray(keyPointsContent)) {
+          keyPointsContent.forEach((point, idx) => {
+            formattedAnalysis += `\n${idx + 1}. ${point}`;
+          });
+        } else if (typeof keyPointsContent === 'string') {
+          formattedAnalysis += keyPointsContent;
+        } else {
+          formattedAnalysis += JSON.stringify(keyPointsContent, null, 2);
+        }
+      }
+      
+      // Add sentiment if available
+      if (sentimentContent) {
+        formattedAnalysis += '\n\nSentiment: ';
+        formattedAnalysis += typeof sentimentContent === 'string'
+          ? sentimentContent
+          : JSON.stringify(sentimentContent, null, 2);
+      }
+      
+      // If we still don't have meaningful content, display the entire response
+      if (formattedAnalysis.endsWith(':\n\n')) {
+        formattedAnalysis += JSON.stringify(data, null, 2);
+      }
+      
+      setAiAnalysis(formattedAnalysis);
     } catch (error: any) {
       console.error('Error analyzing YouTube video:', error);
       setAiAnalysis(`Error: ${error.message || 'Failed to analyze video. Please try again.'}`);
@@ -126,27 +178,40 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
           <div>
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-base font-medium text-black dark:text-white">AI Analysis</h3>
-              <Button size="sm" onClick={requestAiAnalysis} disabled={loading || !!aiAnalysis}>
+              <Button size="sm" onClick={requestAiAnalysis} disabled={loading}>
                 <Sparkles className="w-4 h-4 mr-2" />
-                {loading ? 'Analyzing...' : (aiAnalysis ? 'Analysis Complete' : 'Request Analysis')}
+                {loading ? 'Analyzing...' : (aiAnalysis ? 'Re-analyze' : 'Request Analysis')}
               </Button>
             </div>
-            <Card className="p-4 bg-gradient-to-br from-red-50 to-yellow-50 dark:from-gray-800 dark:to-gray-900 min-h-[72px] flex flex-col justify-center">
+            <Card className="p-4 bg-gradient-to-br from-red-50 to-yellow-50 dark:from-gray-800 dark:to-gray-900 min-h-[120px] flex flex-col justify-center">
               {aiAnalysis ? (
                 <div className="space-y-3">
-                  <p className="text-sm text-black dark:text-white whitespace-pre-line">{aiAnalysis}</p>
-                  <Button variant="outline" size="sm" onClick={() => setChatOpen(!chatOpen)}>
-                    <Bot className="w-4 h-4 mr-2" />
-                    {chatOpen ? 'Close Chat' : 'Chat with Analysis'}
-                  </Button>
-                  {chatOpen && (
-                    <div className="mt-2 p-3 border rounded-lg bg-gray-50 dark:bg-gray-700">
-                      <p className="text-xs text-text-gray italic">Chat interface placeholder...</p>
-                    </div>
-                  )}
+                  <p className="text-sm text-black dark:text-white whitespace-pre-line leading-relaxed">{aiAnalysis}</p>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => {
+                      // Create a modified content item with the analysis included
+                      const contentWithAnalysis = {
+                        ...selectedContent,
+                        aiAnalysis: aiAnalysis // Add the analysis to the content item
+                      };
+                      // Call onDiscussContent with the enhanced content item
+                      onDiscussContent(contentWithAnalysis);
+                    }}>
+                      <Bot className="w-4 h-4 mr-2" />
+                      Chat with Analysis
+                    </Button>
+                    {videoId && (
+                      <a href={`https://www.youtube.com/watch?v=${videoId}`} target="_blank" rel="noopener noreferrer">
+                        <Button variant="secondary" size="sm">
+                          <Youtube className="w-4 h-4 mr-2" /> Watch Video
+                        </Button>
+                      </a>
+                    )}
+                  </div>
+                  {/* Chat interface removed as we now redirect to the chat page */}
                 </div>
               ) : (
-                <p className="text-text-gray text-sm italic text-center">Click 'Request Analysis' to get AI insights.</p>
+                <p className="text-text-gray text-sm italic text-center">Click 'Request Analysis' to get AI insights about this video content.</p>
               )}
             </Card>
           </div>

@@ -224,7 +224,7 @@ export const getVideoStatsSummary = query({
         videoCount,
         averageViewsPerVideo: videoCount > 0 ? totalViews / videoCount : 0,
         videos: videos
-          .sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime())
+          .sort((a, b) => new Date(b.snippet?.published_at || '').getTime() - new Date(a.snippet?.published_at || '').getTime())
           .slice(0, 5), // Return 5 most recent videos
       };
     } catch (error) {
