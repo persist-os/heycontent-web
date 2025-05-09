@@ -4,6 +4,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 export async function POST(request: Request) {
   const requestId = Math.random().toString(36).substring(7);
+  const startTime = Date.now();
 
   console.log(`[${requestId}] YouTube analysis request started`, {
     timestamp: new Date().toISOString(),
@@ -118,7 +119,7 @@ export async function POST(request: Request) {
 
     const data = await response.json();
     console.debug(`[${requestId}] YouTube analysis successful`, {
-      responseTime: Date.now() - new Date().getTime(),
+      responseTime: Date.now() - startTime,
     });
 
     return NextResponse.json(data);
