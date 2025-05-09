@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getApiKey } from '@/app/(dashboard)/_components/chat/utils/api-utils';
 import { Card } from '@/src/components/ui/card';
 import { X, MessageSquare, Youtube, Sparkles, Bot, ExternalLink } from 'lucide-react';
 import { YouTubeContentItem } from '../types';
@@ -22,12 +23,50 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
 
   const requestAiAnalysis = async () => {
     setLoading(true);
-    // Simulate API call - TODO: Replace with actual API call
-    await new Promise(resolve => setTimeout(resolve, 1200));
-    const watchTime = selectedContent.metrics.watchTimeMinutes?.toLocaleString() || 'N/A';
-    const views = selectedContent.metrics.views.toLocaleString();
-    setAiAnalysis(`AI Analysis for "${selectedContent.content.title}":\n- Views (${views}) are decent, but watch time (${watchTime} min) indicates viewers might drop off.\n- Consider improving the video intro or breaking content into shorter segments.\n- Likes (${selectedContent.metrics.likes}) vs. Comments (${selectedContent.metrics.comments}) ratio is good.`);
-    setLoading(false);
+    try {
+      // Get API key for authentication
+      const apiKey = await getApiKey();
+      if (!apiKey) {
+        throw new Error('You are not authenticated. Please log in again.');
+      }
+
+      // Extract video ID from the YouTube URL
+      const videoId = selectedContent.id;
+      if (!videoId) {
+        throw new Error('Invalid YouTube video ID');
+      }
+
+      // Create a video URL from the ID
+      const videoUrl = `https://youtu.be/${videoId}`;
+      
+      // Call our API endpoint
+      const response = await fetch('/api/youtube/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          video_url: videoUrl
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to analyze video');
+      }
+
+      const data = await response.json();
+      
+      // Set the analysis result (adjust based on your backend response format)
+      setAiAnalysis(data.analysis || 
+        `AI Analysis for "${selectedContent.content.title}":\n\n${data.summary || 'Analysis completed successfully.'}`);
+    } catch (error: any) {
+      console.error('Error analyzing YouTube video:', error);
+      setAiAnalysis(`Error: ${error.message || 'Failed to analyze video. Please try again.'}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const videoId = selectedContent.id; // Assuming ID corresponds to YouTube video ID
