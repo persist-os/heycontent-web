@@ -26,7 +26,7 @@ export function PlatformConnect() {
   }, []);
 
   // Use Convex queries for all platform data
-  const youtubeData = user?.uid ? useQuery(api.youtubeQueries.getYouTubeData, { userId: user.uid }) : undefined;
+  const youtubeData = user?.uid ? useQuery(api.youtubeQueries.getYouTubeChannelData, { userId: user.uid }) : undefined;
 
   // All hooks must be declared at the top, before any return
   const [connecting, setConnecting] = useState<SocialPlatform | null>(null);
@@ -40,17 +40,17 @@ export function PlatformConnect() {
     try {
       setLoading(true);
       const accounts: ConnectedAccount[] = [];
-      // Add YouTube account from Convex
+      // Add YouTube account from Convex using youtubeChannels table
       if (youtubeData && !isError(youtubeData) && youtubeData !== null) {
         accounts.push({
           platform: 'youtube',
-          username: youtubeData.data?.snippet?.title || 'YouTube Channel',
+          username: youtubeData.snippet?.title || 'YouTube Channel',
           metadata: {
-            subscribers: youtubeData.subscriberCount,
-            videos: youtubeData.videoCount,
-            views: youtubeData.viewCount
+            subscribers: youtubeData.statistics?.subscriberCount || '0',
+            videos: youtubeData.statistics?.videoCount || '0',
+            views: youtubeData.statistics?.viewCount || '0'
           },
-          updatedAt: youtubeData.timestamp,
+          updatedAt: youtubeData.updatedAt || Date.now(),
           isActive: true
         });
       }

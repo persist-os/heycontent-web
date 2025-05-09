@@ -31,6 +31,14 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'identitytoolkit.googleapis.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'i.ytimg.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'img.youtube.com',
+      },
     ],
   },
   async headers() {
@@ -44,7 +52,7 @@ const nextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval'",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' blob: data:",
+              "img-src 'self' blob: data: *.ytimg.com *.youtube.com",
               "font-src 'self'",
               "connect-src 'self' wss://*.convex.cloud https://*.convex.cloud http://localhost:9099 https://*.firebaseio.com https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com",
               "frame-ancestors 'self'"
