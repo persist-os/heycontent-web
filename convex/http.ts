@@ -271,6 +271,29 @@ app.get("/api/users/:id/youtube/tokens", async (c) => {
   }
 });
 
+// Store YouTube video analysis
+app.post("/api/users/:userId/youtube/videos/:videoId/analysis", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("userId");
+  const videoId = c.req.param("videoId");
+  const { analysisData } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.youtubeMutations.storeVideoAnalysis, { 
+      userId, 
+      videoId, 
+      analysisData 
+    });
+    return c.json(result);
+  } catch (error) {
+    console.error("Failed to store video analysis:", error);
+    return c.json({ 
+      success: false, 
+      error: `Failed to store video analysis: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    }, 500);
+  }
+});
+
 // Update YouTube token
 app.post("/api/users/:id/youtube/token", async (c) => {
   const ctx = c.env;

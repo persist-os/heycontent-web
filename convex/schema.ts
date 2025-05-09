@@ -311,6 +311,16 @@ export default defineSchema({
   .index("by_likes", ["statistics.likes"]),
 
 
+  youtubeAnalysis: defineTable({
+    userId: v.string(),
+    videoId: v.string(),
+    analysis: v.any(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_userId", ["userId"])
+  .index("by_videoId", ["videoId"]),
+
   // Instagram Tokens
   instagramTokens: defineTable({
     userId: v.string(),
