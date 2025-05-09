@@ -167,9 +167,7 @@ export default defineSchema({
 
   youtubeChannels: defineTable({
     userId: v.string(),
-    etag: v.optional(v.string()),
     id: v.string(),
-    kind: v.optional(v.string()),
     snippet: v.optional(v.object({
       customUrl: v.optional(v.string()),
       description: v.optional(v.string()),
@@ -211,38 +209,104 @@ export default defineSchema({
   .index("by_channelId", ["id"]),
 
   youtubeVideos: defineTable({
-    userId: v.string(),
-    id: v.optional(v.string()),
-    videoId: v.optional(v.string()),
-    url: v.optional(v.string()),
+    userId: v.string(), // Required field
+    videoId: v.string(), // Required - this is the YouTube video ID
+    id: v.optional(v.string()), // For internal IDs if different from videoId
+    url: v.optional(v.string()), // Full YouTube URL
+    
+    // Video metadata from YouTube API
     snippet: v.optional(v.object({
       title: v.optional(v.string()),
       description: v.optional(v.string()),
-      publishedAt: v.optional(v.string()),
+      published_at: v.optional(v.string()),
       channel: v.optional(v.object({
         id: v.optional(v.string()),
         title: v.optional(v.string()),
       })),
-      thumbnails: v.optional(v.any()), // Can be variable structure
+      thumbnails: v.optional(v.object({
+        default: v.optional(v.string()),
+        medium: v.optional(v.string()),
+        high: v.optional(v.string()),
+        standard: v.optional(v.string()),
+        maxres: v.optional(v.string()),
+      })),
       tags: v.optional(v.array(v.string())),
     })),
-    contentDetails: v.optional(v.any()), // Can be variable structure
-    statistics: v.optional(v.object({
-      views: v.optional(v.number()),
-      likes: v.optional(v.number()),
-      dislikes: v.optional(v.number()),
-      comments: v.optional(v.number()),
+    
+    // Technical details of the video
+    content_details: v.optional(v.object({
+      duration: v.optional(v.string()),
+      dimension: v.optional(v.string()),
+      definition: v.optional(v.string()),
+      has_captions: v.optional(v.boolean()),
+      is_live: v.optional(v.boolean()),
     })),
-    status: v.optional(v.any()), // Allow for any status structure
-    captions: v.optional(v.any()),
-    comments: v.optional(v.any()),
-    createdAt: v.optional(v.number()),
-    updatedAt: v.optional(v.number()),
+    
+    // View/engagement statistics
+    statistics: v.optional(v.object({
+      views: v.optional(v.float64()),
+      likes: v.optional(v.float64()),
+      dislikes: v.optional(v.float64()),
+      comments: v.optional(v.float64()),
+    })),
+    
+    // Video status information
+    status: v.optional(v.object({
+      privacyStatus: v.optional(v.string()),
+      uploadStatus: v.optional(v.string()),
+      embeddable: v.optional(v.boolean()),
+      license: v.optional(v.string()),
+      madeForKids: v.optional(v.boolean()),
+      selfDeclaredMadeForKids: v.optional(v.boolean()),
+      publicStatsViewable: v.optional(v.boolean()),
+    })),
+    
+    // Caption information - flexible structure for different responses
+    captions: v.optional(v.object({
+      status: v.optional(v.string()),
+      message: v.optional(v.string()),
+      video_url: v.optional(v.string()),
+      // Caption track containing actual captions data
+      caption_track: v.optional(v.object({
+        id: v.optional(v.string()),
+        format: v.optional(v.string()),
+        language: v.optional(v.string()),
+        name: v.optional(v.string()),
+        text: v.optional(v.string()),
+      })),
+      data: v.optional(v.any()), // For storing additional caption data if needed
+    })),
+    
+    // Comment information - flexible structure
+    comments: v.optional(v.object({
+      status: v.optional(v.string()),
+      video_url: v.optional(v.string()),
+      message: v.optional(v.string()), // Error message when comments are disabled or not found
+      total_comments: v.optional(v.float64()),
+      top_level_comments: v.optional(v.float64()),
+      comments: v.optional(v.array(v.object({
+        id: v.optional(v.string()),
+        text: v.optional(v.string()),
+        published_at: v.optional(v.string()),
+        likes: v.optional(v.float64()),
+        replies: v.optional(v.float64()),
+        is_reply: v.optional(v.boolean()),
+        author: v.optional(v.object({
+          channel_id: v.optional(v.string()),
+          display_name: v.optional(v.string()),
+          profile_image: v.optional(v.string()),
+        })),
+      }))),
+    })),
+    
+    // Timestamps
+    createdAt: v.optional(v.float64()),
+    updatedAt: v.optional(v.float64()),
   })
   .index("by_userId", ["userId"])
   .index("by_videoId", ["videoId"])
   .index("by_channelId", ["snippet.channel.id"])
-  .index("by_publishedAt", ["snippet.publishedAt"])
+  .index("by_publishedAt", ["snippet.published_at"])
   .index("by_views", ["statistics.views"])
   .index("by_likes", ["statistics.likes"]),
 
