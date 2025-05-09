@@ -16,23 +16,9 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
   const metrics = item?.metrics || {};
   const publishedAt = item?.publishedAt || new Date().toISOString();
   
-  // Debug the exact data received by this component
-  console.log('YouTubeCard rendering with data:', JSON.stringify({
-    id: item.id,
-    content: content,
-    metrics: metrics,
-    publishedAt: publishedAt
-  }, null, 2));
-
   // Create a direct thumbnail URL - using either our data or constructing from video ID
   let thumbnailUrl = '';
-  
-  // Debug what we're working with
-  console.log('Thumbnail data:', {
-    fromContent: content.thumbnailUrl,
-    videoId: item.id
-  });
-  
+
   // First try using the standard YouTube thumbnail URL format 
   if (item.id) {
     // Construct a YouTube thumbnail URL directly from video ID - most reliable method
@@ -42,8 +28,6 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
   else if (content.thumbnailUrl) {
     thumbnailUrl = content.thumbnailUrl;
   }
-  
-  console.log('Using thumbnail URL:', thumbnailUrl);
   
   // Format metrics for display with fallbacks
   const views = metrics?.views ? Number(metrics.views) : 0;
