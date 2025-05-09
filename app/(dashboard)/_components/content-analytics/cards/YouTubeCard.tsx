@@ -11,18 +11,68 @@ interface YouTubeCardProps {
 }
 
 export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent, onViewDetailedAnalytics }) => {
-  const { content, metrics, publishedAt } = item;
+  // Extract data with null checks
+  const content = item?.content || {};
+  const metrics = item?.metrics || {};
+  const publishedAt = item?.publishedAt || new Date().toISOString();
+  
+  // Create a direct thumbnail URL - using either our data or constructing from video ID
+  let thumbnailUrl = '';
+
+  // First try using the standard YouTube thumbnail URL format 
+  if (item.id) {
+    // Construct a YouTube thumbnail URL directly from video ID - most reliable method
+    thumbnailUrl = `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`;
+  } 
+  // Fall back to content.thumbnailUrl if necessary
+  else if (content.thumbnailUrl) {
+    thumbnailUrl = content.thumbnailUrl;
+  }
+  
+  // Format metrics for display with fallbacks
+  const views = metrics?.views ? Number(metrics.views) : 0;
+  const likes = metrics?.likes ? Number(metrics.likes) : 0;
+  const comments = metrics?.comments ? Number(metrics.comments) : 0;
 
   return (
     <Card key={item.id} className="overflow-hidden border-2 border-red-500 dark:border-red-400 shadow-lg">
       {/* Thumbnail */}
-      <div className="relative aspect-video bg-gray-100 dark:bg-gray-800">
-        {content.thumbnailUrl ? (
-          <img
-            src={content.thumbnailUrl}
-            alt={content.title || 'YouTube Video'}
-            className="w-full h-full object-cover"
-          />
+      <div className="relative aspect-video bg-gray-100 dark:bg-gray-800 overflow-hidden">
+        {thumbnailUrl ? (
+          <>
+            <img
+              src={thumbnailUrl}
+              alt={content?.title || 'YouTube Video'}
+              className="w-full h-full object-cover"
+              loading="eager"
+              onError={(e) => {
+                console.error('Error loading YouTube thumbnail:', thumbnailUrl);
+                e.currentTarget.onerror = null; // Prevent infinite loop
+                e.currentTarget.style.display = 'none'; // Hide the broken image
+                
+                // Try fallback image with direct YouTube URL pattern if needed
+                if (item.id && !thumbnailUrl.includes('i.ytimg.com')) {
+                  const fallbackImg = document.createElement('img');
+                  fallbackImg.src = `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`;
+                  fallbackImg.alt = content?.title || 'YouTube Video';
+                  fallbackImg.className = 'w-full h-full object-cover';
+                  e.currentTarget.parentElement?.appendChild(fallbackImg);
+                } else {
+                  // If still failing, show placeholder icon
+                  const placeholder = document.createElement('div');
+                  placeholder.className = 'flex items-center justify-center h-full w-full';
+                  placeholder.innerHTML = '<div class="w-16 h-16 text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg></div>';
+                  e.currentTarget.parentElement?.appendChild(placeholder);
+                }
+              }}
+            />
+            {/* Overlay play button to make it look more like a video */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
+              <div className="bg-black bg-opacity-50 rounded-full p-2">
+                <PlayCircle className="w-10 h-10 text-white" />
+              </div>
+            </div>
+          </>
         ) : (
           <div className="flex items-center justify-center h-full text-gray-400">
             <PlayCircle className="w-16 h-16" />

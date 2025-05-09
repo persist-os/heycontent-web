@@ -79,25 +79,59 @@ export function ContentAnalyticsScreen() {
     !authLoading && firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
   );
 
+  // Console log YouTube data for debugging
+  useEffect(() => {
+    console.log('YouTube Videos from Convex:', youtubeVideos);
+  }, [youtubeVideos]);
+  
   const allContentItems: AnyContentItem[] | undefined | null = useMemo(() => {
-    // Placeholder: Combine actual fetched data if available, e.g., youtubeVideos
-    return []; // Replace with actual data fetching/combination logic later
-  }, []); // Add dependencies if youtubeVideos or others change
-
-  const mockYouTubeItem = getMockYouTubeItem('1');
+    // Combine actual fetched data from all sources
+    const items: AnyContentItem[] = [];
+    
+    // Add YouTube videos if available - using direct assignment rather than spread
+    if (youtubeVideos && Array.isArray(youtubeVideos) && youtubeVideos.length > 0) {
+      // Log each YouTube item for debugging
+      console.log(`Found ${youtubeVideos.length} real YouTube videos`);
+      items.push(...youtubeVideos);
+    } else {
+      console.log('No YouTube videos found or data is not an array:', youtubeVideos);
+    }
+    
+    // We'll add other platform data here as they become available
+    // For now, we're only using real YouTube data
+    
+    return items;
+  }, [youtubeVideos]); // Update when any data source changes
+  
+  // Mock data for other platforms - will replace with real data later
   const mockInstagramItem = getMockInstagramItem('1');
   const mockGmailItems = getMockGmailItems(10);
 
   const combinedContent = useMemo(() => {
-    // Generate some initial mock items for display before useEffect loads everything
-    // Note: These specific items might be duplicated when useEffect loads the full set
-    const initialYouTube = getMockYouTubeItem('initial-yt');
-    const initialInstagram = getMockInstagramItem('initial-insta');
-    const initialGmail = getMockGmailItems(2); // Get 2 initial emails
-
-    // Combine initial mocks with the loaded content from state
-    return [initialYouTube, initialInstagram, ...initialGmail, ...(allContentItems || [])];
-  }, [allContentItems]);
+    // Start with an empty array
+    const combinedItems: AnyContentItem[] = [];
+    
+    // IMPORTANT: Directly use YouTube videos from the query if available
+    if (youtubeVideos && Array.isArray(youtubeVideos) && youtubeVideos.length > 0) {
+      console.log('Adding real YouTube videos to combinedContent:', youtubeVideos.length);
+      combinedItems.push(...youtubeVideos);
+    } else {
+      // Only add mock YouTube data if we don't have real data AND we're not still loading
+      if (youtubeVideos !== undefined) {
+        console.log('Adding mock YouTube data as fallback');
+        combinedItems.push(getMockYouTubeItem('mock-yt-fallback'));
+      }
+    }
+    
+    // Always add mock Instagram data for now
+    combinedItems.push(getMockInstagramItem('mock-insta'));
+    
+    // Always add mock Gmail data for now
+    combinedItems.push(...getMockGmailItems(2));
+    
+    console.log('Final combined content items:', combinedItems.length);
+    return combinedItems;
+  }, [youtubeVideos]);
 
   // Navigate to chat with content context
   const discussContent = (item: AnyContentItem) => {
@@ -131,14 +165,35 @@ export function ContentAnalyticsScreen() {
     return <LoadingState type="content" />;
   }
 
-  // Filter and sort content
-  const displayItems = sortAndFilterContent(
-    combinedContent,
-    selectedPlatform,
-    selectedEmailType,
-    sortBy,
-    timeRange
-  );
+  // Create a special set of items that directly includes YouTube videos
+  const youtubeItemsArray = youtubeVideos && Array.isArray(youtubeVideos) ? youtubeVideos : [];
+  
+  // Log YouTube items before filtering
+  console.log('Direct YouTube items available:', youtubeItemsArray.length, youtubeItemsArray);
+  
+  // Apply normal filtering for non-YouTube content
+  const filteredContent = selectedPlatform === 'youtube' 
+    ? [...youtubeItemsArray] // If YouTube tab selected, directly use YouTube items 
+    : sortAndFilterContent(
+        combinedContent,
+        selectedPlatform,
+        selectedEmailType,
+        sortBy,
+        timeRange
+      );
+  
+  // Final display items - ensure YouTube items are always included when YouTube tab is selected
+  const displayItems = selectedPlatform === 'youtube' 
+    ? filteredContent 
+    : selectedPlatform === 'all' 
+      ? [...filteredContent, ...youtubeItemsArray] // Include YouTube items when 'all' is selected
+      : filteredContent;
+  
+  // Log the final items to be displayed
+  console.log('Final displayItems:', displayItems.length, 
+    selectedPlatform, 
+    displayItems.map(item => item.platform));
+
 
   return (
     <div className="relative">
@@ -215,6 +270,9 @@ export function ContentAnalyticsScreen() {
               {displayItems.length > 0 ? (
                 <>
                   {displayItems.map((item) => {
+                    // Debug each item being rendered
+                    console.log(`Rendering item for platform: ${item.platform}`, item);
+                    
                     if (item.platform === 'instagram') {
                       return (
                         <InstagramCard
@@ -225,6 +283,14 @@ export function ContentAnalyticsScreen() {
                         />
                       );
                     } else if (item.platform === 'youtube') {
+                      // Debug YouTube item in detail
+                      console.log('Rendering YouTube item:', {
+                        id: item.id,
+                        title: item.content?.title,
+                        thumbnailUrl: item.content?.thumbnailUrl,
+                        metrics: item.metrics
+                      });
+                      
                       return (
                         <YouTubeCard
                           key={item.id}

@@ -147,41 +147,32 @@ export const storeVideoAnalysis = mutation({
   },
   handler: async (ctx, args) => {
     const { userId, videoId, analysisData } = args;
-    const timestamp = Date.now();
+    const now = Date.now();
 
     try {
       // Check if analysis already exists
       const existingAnalysis = await ctx.db
-        .query("youtubeData")
-        .withIndex("by_user_resource", (q) => 
-          q.eq("userId", userId).eq("resourceType", "video_analysis")
-        )
-        .filter((q) => q.eq(q.field("data.videoId"), videoId))
+        .query("youtubeAnalysis")
+        .withIndex("by_videoId", (q) => q.eq("videoId", videoId))
+        .filter((q) => q.eq("userId", userId))
         .first();
 
       if (existingAnalysis) {
         // Update existing analysis
         await ctx.db.patch(existingAnalysis._id, {
-          data: {
-            id: videoId,
-            videoId,
-            analysisData,
-          },
-          timestamp,
+          analysis: analysisData,
+          updatedAt: now,
         });
         console.log(`Updated analysis for video ${videoId} by user ${userId}`);
         return { success: true, status: "updated" };
       } else {
         // Insert new analysis
-        await ctx.db.insert("youtubeData", {
+        await ctx.db.insert("youtubeAnalysis", {
           userId,
-          resourceType: "video_analysis",
-          data: {
-            id: videoId,
-            videoId,
-            analysisData,
-          },
-          timestamp,
+          videoId,
+          analysis: analysisData,
+          createdAt: now,
+          updatedAt: now,
         });
         console.log(`Stored new analysis for video ${videoId} by user ${userId}`);
         return { success: true, status: "created" };

@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { getApiKey } from '@/app/(dashboard)/_components/chat/utils/api-utils';
 import { Card } from '@/src/components/ui/card';
 import { X, MessageSquare, Youtube, Sparkles, Bot, ExternalLink } from 'lucide-react';
 import { YouTubeContentItem } from '../types';
@@ -19,18 +22,204 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [analysisTimestamp, setAnalysisTimestamp] = useState<number | null>(null);
+  const [isStoredAnalysis, setIsStoredAnalysis] = useState(false);
+  
+  // We need to extract the user ID from the API key
+  const [userId, setUserId] = useState<string | null>(null);
+  const videoId = selectedContent.id;
+  
+  // Extract user ID from the API key on component mount
+  useEffect(() => {
+    const extractUserIdFromApiKey = async () => {
+      try {
+        // First get the API key
+        const apiKey = await getApiKey();
+        if (!apiKey) return null;
+        
+        // Extract userId from the API key (format: heycontent_<userId>_...)
+        const keyParts = apiKey.split('_');
+        if (keyParts.length >= 3) {
+          const extractedUserId = keyParts[1];
+          console.log('YoutubeModal - Extracted User ID from API key:', extractedUserId);
+          setUserId(extractedUserId);
+        }
+      } catch (error) {
+        console.error('Error extracting user ID from API key:', error);
+      }
+    };
+    
+    extractUserIdFromApiKey();
+  }, []);
+  
+  // Add logging to help debug
+  useEffect(() => {
+    console.log('YoutubeModal - User ID state:', userId);
+    console.log('YoutubeModal - Video ID:', videoId);
+  }, [userId, videoId]);
+  
+  // Only query if we have both userId and videoId
+  const storedAnalysis = useQuery(
+    api.youtubeQueries.getVideoAnalysis, 
+    userId && videoId ? {
+      userId: userId,
+      videoId: videoId
+    } : 'skip'
+  );
+  
+  // This effect runs when the userId gets set from the API key
+  useEffect(() => {
+    console.log('YoutubeModal - UserId changed, will attempt to query analysis:', userId);
+  }, [userId]);
+  
+  // Log the query result for debugging
+  useEffect(() => {
+    console.log('YoutubeModal - Convex Analysis Query Result:', storedAnalysis);
+  }, [storedAnalysis]);
+  
+  // Only retrieve analysis, don't store it
+
+  // Load stored analysis when component mounts or when storedAnalysis changes
+  useEffect(() => {
+    // Skip if still loading or if we don't have a valid result
+    if (loading || !storedAnalysis) return;
+    
+    console.log('YoutubeModal - Processing stored analysis:', storedAnalysis);
+    
+    if (storedAnalysis) {
+      console.log('YoutubeModal - Analysis object:', storedAnalysis);
+      
+      if (storedAnalysis.analysis) {
+        console.log('YoutubeModal - Analysis data:', storedAnalysis.analysis);
+        
+        // Format the analysis for display
+        let formattedAnalysis = `AI Analysis for "${selectedContent.content.title}":\n\n`;
+        
+        // Add the actual analysis content
+        const analysisData = storedAnalysis.analysis;
+        
+        if (analysisData.aiAnalysis) {
+          formattedAnalysis += typeof analysisData.aiAnalysis === 'string' 
+            ? analysisData.aiAnalysis 
+            : JSON.stringify(analysisData.aiAnalysis, null, 2);
+        } else {
+          formattedAnalysis += JSON.stringify(analysisData, null, 2);
+        }
+        
+        console.log('YoutubeModal - Formatted Analysis:', formattedAnalysis);
+        
+        setAiAnalysis(formattedAnalysis);
+        setAnalysisTimestamp(storedAnalysis.updatedAt);
+        setIsStoredAnalysis(true);
+      }
+    }
+  }, [storedAnalysis, selectedContent, loading]);
 
   const requestAiAnalysis = async () => {
     setLoading(true);
-    // Simulate API call - TODO: Replace with actual API call
-    await new Promise(resolve => setTimeout(resolve, 1200));
-    const watchTime = selectedContent.metrics.watchTimeMinutes?.toLocaleString() || 'N/A';
-    const views = selectedContent.metrics.views.toLocaleString();
-    setAiAnalysis(`AI Analysis for "${selectedContent.content.title}":\n- Views (${views}) are decent, but watch time (${watchTime} min) indicates viewers might drop off.\n- Consider improving the video intro or breaking content into shorter segments.\n- Likes (${selectedContent.metrics.likes}) vs. Comments (${selectedContent.metrics.comments}) ratio is good.`);
-    setLoading(false);
+    try {
+      // Get API key for authentication
+      const apiKey = await getApiKey();
+      if (!apiKey) {
+        throw new Error('You are not authenticated. Please log in again.');
+      }
+
+      // Extract video ID from the YouTube URL
+      const videoId = selectedContent.id;
+      if (!videoId) {
+        throw new Error('Invalid YouTube video ID');
+      }
+
+      // Create a video URL from the ID
+      const videoUrl = `https://youtu.be/${videoId}`;
+      
+      // Call our API endpoint - use the current window location origin to handle port changes
+      const apiUrl = `${window.location.origin}/api/youtube/analyze`;
+      console.log('Making API request to:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          video_url: videoUrl
+        })
+      });
+
+      // Read the response data once
+      const responseData = await response.json();
+      console.log('Backend analysis response:', responseData);
+      
+      // Then check if the response was OK
+      if (!response.ok) {
+        throw new Error(responseData.error || `Failed to analyze video: ${response.status} ${response.statusText}`);
+      }
+      
+      // If we're here, the response was OK, so use the already parsed data
+      const data = responseData;
+      
+      // Extract all relevant analysis data and format it properly
+      const analysisContent = data.analysis || data.content || data.insights?.analysis;
+      const summaryContent = data.summary || data.content_summary || data.insights?.summary;
+      const keyPointsContent = data.key_points || data.keyPoints || data.insights?.keyPoints;
+      const sentimentContent = data.sentiment || data.insights?.sentiment;
+      
+      // Build a comprehensive analysis display
+      let formattedAnalysis = `AI Analysis for "${selectedContent.content.title}":\n\n`;
+      
+      if (analysisContent) {
+        formattedAnalysis += typeof analysisContent === 'string' 
+          ? analysisContent 
+          : JSON.stringify(analysisContent, null, 2);
+      } else if (summaryContent) {
+        formattedAnalysis += typeof summaryContent === 'string'
+          ? summaryContent
+          : JSON.stringify(summaryContent, null, 2);
+      }
+      
+      // Add key points if available
+      if (keyPointsContent) {
+        formattedAnalysis += '\n\nKey Points:\n';
+        if (Array.isArray(keyPointsContent)) {
+          keyPointsContent.forEach((point, idx) => {
+            formattedAnalysis += `\n${idx + 1}. ${point}`;
+          });
+        } else if (typeof keyPointsContent === 'string') {
+          formattedAnalysis += keyPointsContent;
+        } else {
+          formattedAnalysis += JSON.stringify(keyPointsContent, null, 2);
+        }
+      }
+      
+      // Add sentiment if available
+      if (sentimentContent) {
+        formattedAnalysis += '\n\nSentiment: ';
+        formattedAnalysis += typeof sentimentContent === 'string'
+          ? sentimentContent
+          : JSON.stringify(sentimentContent, null, 2);
+      }
+      
+      // If we still don't have meaningful content, display the entire response
+      if (formattedAnalysis.endsWith(':\n\n')) {
+        formattedAnalysis += JSON.stringify(data, null, 2);
+      }
+      
+      // Set the analysis in the component state
+      setAiAnalysis(formattedAnalysis);
+      const now = Date.now();
+      setAnalysisTimestamp(now);
+      setIsStoredAnalysis(false);
+    } catch (error: any) {
+      console.error('Error analyzing YouTube video:', error);
+      setAiAnalysis(`Error: ${error.message || 'Failed to analyze video. Please try again.'}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const videoId = selectedContent.id; // Assuming ID corresponds to YouTube video ID
+  // videoId is already declared at the top of the component
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -87,27 +276,51 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
           <div>
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-base font-medium text-black dark:text-white">AI Analysis</h3>
-              <Button size="sm" onClick={requestAiAnalysis} disabled={loading || !!aiAnalysis}>
-                <Sparkles className="w-4 h-4 mr-2" />
-                {loading ? 'Analyzing...' : (aiAnalysis ? 'Analysis Complete' : 'Request Analysis')}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={requestAiAnalysis} disabled={loading}>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  {loading ? 'Analyzing...' : (aiAnalysis ? 'New Analysis' : 'Request Analysis')}
+                </Button>
+                {analysisTimestamp && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {isStoredAnalysis ? 'Saved' : 'Created'}: {new Date(analysisTimestamp).toLocaleString()}
+                  </span>
+                )}
+              </div>
             </div>
-            <Card className="p-4 bg-gradient-to-br from-red-50 to-yellow-50 dark:from-gray-800 dark:to-gray-900 min-h-[72px] flex flex-col justify-center">
-              {aiAnalysis ? (
+            <Card className="p-4 bg-gradient-to-br from-red-50 to-yellow-50 dark:from-gray-800 dark:to-gray-900 min-h-[120px] flex flex-col justify-center">
+              {loading ? (
+                <div className="flex items-center justify-center h-24">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-heycontent-purple"></div>
+                </div>
+              ) : aiAnalysis ? (
                 <div className="space-y-3">
-                  <p className="text-sm text-black dark:text-white whitespace-pre-line">{aiAnalysis}</p>
-                  <Button variant="outline" size="sm" onClick={() => setChatOpen(!chatOpen)}>
-                    <Bot className="w-4 h-4 mr-2" />
-                    {chatOpen ? 'Close Chat' : 'Chat with Analysis'}
-                  </Button>
-                  {chatOpen && (
-                    <div className="mt-2 p-3 border rounded-lg bg-gray-50 dark:bg-gray-700">
-                      <p className="text-xs text-text-gray italic">Chat interface placeholder...</p>
-                    </div>
-                  )}
+                  <p className="text-sm text-black dark:text-white whitespace-pre-line leading-relaxed">{aiAnalysis}</p>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => {
+                      // Create a modified content item with the analysis included
+                      const contentWithAnalysis = {
+                        ...selectedContent,
+                        aiAnalysis: aiAnalysis // Add the analysis to the content item
+                      };
+                      // Call onDiscussContent with the enhanced content item
+                      onDiscussContent(contentWithAnalysis);
+                    }}>
+                      <Bot className="w-4 h-4 mr-2" />
+                      Chat with Analysis
+                    </Button>
+                    {videoId && (
+                      <a href={`https://www.youtube.com/watch?v=${videoId}`} target="_blank" rel="noopener noreferrer">
+                        <Button variant="secondary" size="sm">
+                          <Youtube className="w-4 h-4 mr-2" /> Watch Video
+                        </Button>
+                      </a>
+                    )}
+                  </div>
+                  {/* Chat interface removed as we now redirect to the chat page */}
                 </div>
               ) : (
-                <p className="text-text-gray text-sm italic text-center">Click 'Request Analysis' to get AI insights.</p>
+                <p className="text-text-gray text-sm italic text-center">Click 'Request Analysis' to get AI insights about this video content.</p>
               )}
             </Card>
           </div>
