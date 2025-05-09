@@ -223,7 +223,9 @@ export const getVideoStatsSummary = query({
         totalComments,
         videoCount,
         averageViewsPerVideo: videoCount > 0 ? totalViews / videoCount : 0,
-        videos: videos.slice(0, 5), // Return 5 most recent videos
+        videos: videos
+          .sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime())
+          .slice(0, 5), // Return 5 most recent videos
       };
     } catch (error) {
       console.error('Error getting video stats summary:', error);
