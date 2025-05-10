@@ -113,49 +113,84 @@ export default defineSchema({
     tokenType: v.string(),
   }).index("by_userId", ["userId"]),
 
-  // PLACEHOLDER Gmail Data - unified table for messages, threads, and accounts (change later, for data collection purposes)
-  gmailData: defineTable({
+  // Gmail Account Info
+  gmailAccounts: defineTable({
     userId: v.string(),
     email: v.string(),
-    resourceType: v.union(v.literal("message"), v.literal("thread"), v.literal("account")),
-    resourceId: v.optional(v.any()), // Either messageId, threadId, or email for accounts
-    threadId: v.optional(v.any()), // More flexible
-    snippet: v.optional(v.any()), // More flexible
-    historyId: v.optional(v.any()),
-    internalDate: v.optional(v.any()),
-    labelIds: v.optional(v.any()),
-    messages: v.optional(v.any()), // For threads: array of message IDs
-    data: v.any(), // Full message payload, thread data, or account data
-    sizeEstimate: v.optional(v.any()),
-    timestamp: v.number(), // When this record was created/updated
-    // Account specific fields
-    messagesTotal: v.optional(v.any()),
-    threadsTotal: v.optional(v.any()),
-    labelsTotal: v.optional(v.any()),
+    historyId: v.optional(v.string()),
+    messagesTotal: v.optional(v.number()),
+    threadsTotal: v.optional(v.number()),
+    labelsTotal: v.optional(v.union(v.number(), v.null())), // Make more flexible to handle null values
+    data: v.optional(v.any()), // Any additional account data
+    createdAt: v.number(),
+    updatedAt: v.number(),
   })
-  .index("by_user", ["userId"])
-  .index("by_email", ["userId", "email"])
-  .index("by_resource_type", ["resourceType"])
-  .index("by_resource_id", ["resourceId"])
-  .index("by_thread_id", ["threadId"])
-  .index("by_user_resource", ["userId", "resourceType"])
-  .index("by_timestamp", ["timestamp"]),
+  .index("by_userId", ["userId"])
+  .index("by_email", ["email"]),
 
-  // YouTube Data (placeholder, used for data collection purposes)
-  youtubeData: defineTable({
+  // Gmail Threads
+  gmailThreads: defineTable({
     userId: v.string(),
-    resourceType: v.union(v.literal("channel"), v.literal("video"), v.literal("video_analysis")),
-    data: v.any(),
-    timestamp: v.number(),
-    videoCount: v.optional(v.number()),
-    subscriberCount: v.optional(v.number()),
-    viewCount: v.optional(v.number()),
+    email: v.string(),
+    threadId: v.string(),
+    message_count: v.optional(v.number()),
+    messages: v.optional(v.array(v.object({
+      id: v.string(),
+      from: v.optional(v.string()),
+      subject: v.optional(v.string()),
+      snippet: v.optional(v.string()),
+      label_ids: v.optional(v.array(v.string())),
+    }))),
+    snippet: v.optional(v.string()),
+    historyId: v.optional(v.string()),
+    labelIds: v.optional(v.array(v.string())),
+    data: v.optional(v.any()), // Complete thread data
+    createdAt: v.number(),
+    updatedAt: v.number(),
   })
-  .index("by_user_resource", ["userId", "resourceType"])
-  .index("by_timestamp", ["timestamp"])
-  .index("by_user", ["userId"])
-  .index("by_resource_type", ["resourceType"]),
+  .index("by_userId", ["userId"])
+  .index("by_email", ["email"])
+  .index("by_threadId", ["threadId"])
+  .index("by_user_email", ["userId", "email"]),
 
+  // Gmail Messages
+  gmailMessages: defineTable({
+    userId: v.string(),
+    email: v.string(),
+    messageId: v.string(),
+    threadId: v.string(),
+    from: v.optional(v.string()),
+    subject: v.optional(v.string()),
+    snippet: v.optional(v.string()),
+    labelIds: v.optional(v.array(v.string())),
+    internalDate: v.optional(v.string()),
+    sizeEstimate: v.optional(v.number()),
+    historyId: v.optional(v.string()),
+    data: v.optional(v.any()), // Complete message data
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_userId", ["userId"])
+  .index("by_email", ["email"])
+  .index("by_messageId", ["messageId"])
+  .index("by_threadId", ["threadId"])
+  .index("by_user_email", ["userId", "email"]),
+
+  
+  // For storing Gmail push notifications history
+  gmailHistory: defineTable({
+    userId: v.string(),
+    email: v.string(),
+    historyId: v.string(),
+    timestamp: v.number(),
+    data: v.optional(v.any()), // History data from Gmail API
+    createdAt: v.number(),
+  })
+  .index("by_userId", ["userId"])
+  .index("by_email", ["email"])
+  .index("by_historyId", ["historyId"])
+  .index("by_timestamp", ["timestamp"]),
+  
   youtubeTokens: defineTable({
     userId: v.string(),
     accessToken: v.string(),
