@@ -1,6 +1,7 @@
 // Written by Aria
 import { v } from "convex/values";
 import { query } from "./_generated/server";
+import { api } from "./_generated/api";
 
 // Get Gmail account data for a user
 export const getGmailAccounts = query({
@@ -8,11 +9,9 @@ export const getGmailAccounts = query({
   handler: async (ctx, args) => {
     try {
       const gmailAccounts = await ctx.db
-        .query("gmailData")
-        .withIndex("by_user", (q) => q.eq("userId", args.userId))
-        .filter((q) => q.eq(q.field("resourceType"), "account"))
+        .query("gmailAccounts")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
         .collect();
-
       return gmailAccounts;
     } catch (error) {
       console.error('Error getting Gmail accounts:', error);
@@ -27,11 +26,10 @@ export const getGmailAccountByEmail = query({
   handler: async (ctx, args) => {
     try {
       const gmailAccount = await ctx.db
-        .query("gmailData")
-        .withIndex("by_email", (q) => q.eq("userId", args.userId).eq("email", args.email))
-        .filter((q) => q.eq(q.field("resourceType"), "account"))
+        .query("gmailAccounts")
+        .withIndex("by_email", (q) => q.eq("email", args.email))
+        .filter((q) => q.eq(q.field("userId"), args.userId))
         .first();
-
       return gmailAccount;
     } catch (error) {
       console.error('Error getting Gmail account by email:', error);
@@ -61,19 +59,19 @@ export const getGmailToken = query({
 export const getGmailMessageById = query({
   args: { 
     userId: v.string(),
-    messageId: v.string()
+    email: v.string(), 
+    messageId: v.string() 
   },
   handler: async (ctx, args) => {
     try {
       const message = await ctx.db
-        .query("gmailData")
-        .withIndex("by_resource_id", (q) => q.eq("resourceId", args.messageId))
+        .query("gmailMessages")
+        .withIndex("by_messageId", (q) => q.eq("messageId", args.messageId))
         .filter((q) => 
           q.eq(q.field("userId"), args.userId) && 
-          q.eq(q.field("resourceType"), "message")
+          q.eq(q.field("email"), args.email)
         )
         .first();
-      
       return message;
     } catch (error) {
       console.error('Error getting Gmail message by ID:', error);
@@ -86,19 +84,19 @@ export const getGmailMessageById = query({
 export const getGmailThreadById = query({
   args: { 
     userId: v.string(),
-    threadId: v.string()
+    email: v.string(), 
+    threadId: v.string() 
   },
   handler: async (ctx, args) => {
     try {
       const thread = await ctx.db
-        .query("gmailData")
-        .withIndex("by_resource_id", (q) => q.eq("resourceId", args.threadId))
+        .query("gmailThreads")
+        .withIndex("by_threadId", (q) => q.eq("threadId", args.threadId))
         .filter((q) => 
           q.eq(q.field("userId"), args.userId) && 
-          q.eq(q.field("resourceType"), "thread")
+          q.eq(q.field("email"), args.email)
         )
         .first();
-      
       return thread;
     } catch (error) {
       console.error('Error getting Gmail thread by ID:', error);
@@ -111,23 +109,23 @@ export const getGmailThreadById = query({
 export const getGmailMessagesByThread = query({
   args: { 
     userId: v.string(),
-    threadId: v.string()
+    email: v.string(), 
+    threadId: v.string() 
   },
   handler: async (ctx, args) => {
     try {
       const messages = await ctx.db
-        .query("gmailData")
-        .withIndex("by_thread_id", (q) => q.eq("threadId", args.threadId))
+        .query("gmailMessages")
+        .withIndex("by_threadId", (q) => q.eq("threadId", args.threadId))
         .filter((q) => 
           q.eq(q.field("userId"), args.userId) && 
-          q.eq(q.field("resourceType"), "message")
+          q.eq(q.field("email"), args.email)
         )
         .collect();
-      
       return messages;
     } catch (error) {
-      console.error('Error getting Gmail messages by thread:', error);
-      throw new Error(`Failed to get Gmail messages by thread: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Error getting Gmail messages by thread ID:', error);
+      throw new Error(`Failed to get Gmail messages by thread ID: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
 });
@@ -137,23 +135,24 @@ export const getRecentGmailMessages = query({
   args: { 
     userId: v.string(),
     email: v.optional(v.string()),
-    limit: v.optional(v.number())
+    limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     try {
-      let messagesQuery = ctx.db
-        .query("gmailData")
-        .withIndex("by_user_resource", (q) => 
-          q.eq("userId", args.userId).eq("resourceType", "message")
-        );
+      let query = ctx.db
+        .query("gmailMessages")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId));
       
+      // Filter by email if provided
       if (args.email) {
-        messagesQuery = messagesQuery.filter((q) => q.eq(q.field("email"), args.email));
+        query = query.filter((q) => q.eq(q.field("email"), args.email));
       }
       
-      const messages = await messagesQuery
-        .order("desc")
-        .take(args.limit || 50);
+      // Sort by updatedAt (newest first)
+      const sortedQuery = query.order("desc");
+      
+      // Apply limit if provided
+      const messages = await (args.limit ? sortedQuery.take(args.limit) : sortedQuery.collect());
       
       return messages;
     } catch (error) {
@@ -168,23 +167,24 @@ export const getRecentGmailThreads = query({
   args: { 
     userId: v.string(),
     email: v.optional(v.string()),
-    limit: v.optional(v.number())
+    limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     try {
-      let threadsQuery = ctx.db
-        .query("gmailData")
-        .withIndex("by_user_resource", (q) => 
-          q.eq("userId", args.userId).eq("resourceType", "thread")
-        );
+      let query = ctx.db
+        .query("gmailThreads")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId));
       
+      // Filter by email if provided
       if (args.email) {
-        threadsQuery = threadsQuery.filter((q) => q.eq(q.field("email"), args.email));
+        query = query.filter((q) => q.eq(q.field("email"), args.email));
       }
       
-      const threads = await threadsQuery
-        .order("desc")
-        .take(args.limit || 50);
+      // Sort by updatedAt (newest first)
+      const sortedQuery = query.order("desc");
+      
+      // Apply limit if provided
+      const threads = await (args.limit ? sortedQuery.take(args.limit) : sortedQuery.collect());
       
       return threads;
     } catch (error) {
@@ -194,32 +194,66 @@ export const getRecentGmailThreads = query({
   },
 });
 
-// Get Gmail data by resource type
-export const getGmailDataByType = query({
-  args: {
-    userId: v.string(),
-    resourceType: v.union(v.literal("message"), v.literal("thread")),
-    email: v.optional(v.string()),
-    limit: v.optional(v.number()),
-  },
+// List Gmail threads for content analytics page - compatible with UI components
+export const listUserGmailThreads = query({
+  args: { userId: v.string() },
   handler: async (ctx, args) => {
     try {
-      let query = ctx.db
-        .query("gmailData")
-        .withIndex("by_user_resource", (q) => 
-          q.eq("userId", args.userId).eq("resourceType", args.resourceType)
-        );
-      
-      if (args.email) {
-        query = query.filter((q) => q.eq(q.field("email"), args.email));
-      }
-      
-      return await query
+      // Fetch threads from the gmailThreads table
+      const threads = await ctx.db
+        .query("gmailThreads")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
         .order("desc")
-        .take(args.limit || 50);
+        .collect();
+      
+      // Transform threads to match the GmailContentItem format for UI
+      return threads.map(thread => {
+        // Extract the first message in the thread for display
+        const firstMessage = thread.messages && thread.messages.length > 0 ? thread.messages[0] : null;
+        
+        // Determine if this is a newsletter or regular email (basic logic - can be enhanced)
+        let emailType: 'newsletter' | 'partnership' | 'individual' | 'other' = 'individual';
+        const from = firstMessage?.from || thread.data?.from || '';
+        const subject = firstMessage?.subject || thread.data?.subject || 'No Subject';
+        
+        // Simple heuristic to guess email type - could be improved with more sophisticated logic
+        if (from.toLowerCase().includes('newsletter') || subject.toLowerCase().includes('newsletter')) {
+          emailType = 'newsletter';
+        } else if (from.toLowerCase().includes('partner') || subject.toLowerCase().includes('partner')) {
+          emailType = 'partnership';
+        } else if ((thread.message_count && thread.message_count > 3) || (thread.messages && thread.messages.length > 3)) {
+          // Longer threads are more likely to be individual conversations
+          emailType = 'individual';
+        } else {
+          emailType = 'other';
+        }
+        
+        return {
+          id: thread.threadId || '',
+          platform: 'gmail' as const,
+          publishedAt: thread.createdAt ? new Date(thread.createdAt).toISOString() : new Date().toISOString(),
+          content: {
+            subject: subject,
+            from: from,
+            snippet: thread.snippet || firstMessage?.snippet || '',
+            threadId: thread.threadId,
+            messageCount: thread.message_count || (thread.messages?.length || 0),
+            emailType: emailType, // Add required emailType property
+            // Use default value for recipients as it's optional in the interface
+            recipients: 1 // Default to 1 recipient
+          },
+          metrics: {
+            // These would normally come from Gmail analytics data
+            // For now, we'll use placeholders or default values
+            replies: thread.message_count ? thread.message_count - 1 : 0,
+            openRate: 0.75, // Placeholder
+            clickRate: 0.25, // Placeholder
+          }
+        };
+      });
     } catch (error) {
-      console.error(`Error getting Gmail ${args.resourceType}s:`, error);
-      throw new Error(`Failed to get Gmail ${args.resourceType}s: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Error listing Gmail threads:', error);
+      throw new Error(`Failed to list Gmail threads: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
-}); 
+});

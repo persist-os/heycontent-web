@@ -79,10 +79,17 @@ export function ContentAnalyticsScreen() {
     !authLoading && firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
   );
 
-  // Console log YouTube data for debugging
+  // Fetch Gmail threads from Convex
+  const gmailThreads = useQuery(
+    api.gmailQueries.listUserGmailThreads,
+    !authLoading && firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
+  );
+
+  // Console log data for debugging
   useEffect(() => {
     console.log('YouTube Videos from Convex:', youtubeVideos);
-  }, [youtubeVideos]);
+    console.log('Gmail Threads from Convex:', gmailThreads);
+  }, [youtubeVideos, gmailThreads]);
   
   const allContentItems: AnyContentItem[] | undefined | null = useMemo(() => {
     // Combine actual fetched data from all sources
@@ -123,23 +130,42 @@ export function ContentAnalyticsScreen() {
       }
     }
     
+    // Add real Gmail data if available
+    if (gmailThreads && Array.isArray(gmailThreads) && gmailThreads.length > 0) {
+      console.log('Adding real Gmail threads to combinedContent:', gmailThreads.length);
+      combinedItems.push(...gmailThreads);
+    } else {
+      // Only add mock Gmail data if we don't have real data AND we're not still loading
+      if (gmailThreads !== undefined) {
+        console.log('Adding mock Gmail data as fallback');
+        combinedItems.push(...getMockGmailItems(2));
+      }
+    }
+    
     // Always add mock Instagram data for now
     combinedItems.push(getMockInstagramItem('mock-insta'));
     
-    // Always add mock Gmail data for now
-    combinedItems.push(...getMockGmailItems(2));
-    
     console.log('Final combined content items:', combinedItems.length);
     return combinedItems;
-  }, [youtubeVideos]);
+  }, [youtubeVideos, gmailThreads]);
 
   // Navigate to chat with content context
   const discussContent = (item: AnyContentItem) => {
+    // Create a context object with the basic content info
     const context = {
       platform: item.platform,
       contentId: item.id,
-      // Add other relevant context, e.g., title, key metrics
+      // Include analysis if it exists
+      analysis: (item as any).aiAnalysis || null,
+      // Include title if available
+      title: item.platform === 'youtube' 
+        ? (item as YouTubeContentItem).content?.title
+        : item.platform === 'instagram'
+          ? (item as InstagramContentItem).content?.text
+          : (item as GmailContentItem).content?.subject
     };
+    
+    console.log('Sending to chat with context:', context);
     const encodedContext = encodeURIComponent(JSON.stringify(context));
     router.push(`/chat?contentContext=${encodedContext}`);
   };
@@ -154,40 +180,47 @@ export function ContentAnalyticsScreen() {
 
   // Render loading state if needed
   if (authLoading) {
-    return <LoadingState type="auth" />;
+    return <LoadingState type="auth" />
   }
 
   if (!firebaseUser) {
     return <LoadingState type="error" />;
   }
 
-  if (youtubeVideos === undefined) {
+  if (youtubeVideos === undefined || gmailThreads === undefined) {
     return <LoadingState type="content" />;
   }
 
-  // Create a special set of items that directly includes YouTube videos
+  // Create arrays of platform-specific items
   const youtubeItemsArray = youtubeVideos && Array.isArray(youtubeVideos) ? youtubeVideos : [];
+  const gmailItemsArray = gmailThreads && Array.isArray(gmailThreads) ? gmailThreads : [];
   
-  // Log YouTube items before filtering
+  // Log platform items for debugging
   console.log('Direct YouTube items available:', youtubeItemsArray.length, youtubeItemsArray);
+  console.log('Direct Gmail items available:', gmailItemsArray.length, gmailItemsArray);
   
-  // Apply normal filtering for non-YouTube content
-  const filteredContent = selectedPlatform === 'youtube' 
-    ? [...youtubeItemsArray] // If YouTube tab selected, directly use YouTube items 
-    : sortAndFilterContent(
-        combinedContent,
-        selectedPlatform,
-        selectedEmailType,
-        sortBy,
-        timeRange
-      );
+  // Apply filtering based on selected platform
+  let filteredContent: AnyContentItem[] = [];
   
-  // Final display items - ensure YouTube items are always included when YouTube tab is selected
-  const displayItems = selectedPlatform === 'youtube' 
-    ? filteredContent 
-    : selectedPlatform === 'all' 
-      ? [...filteredContent, ...youtubeItemsArray] // Include YouTube items when 'all' is selected
-      : filteredContent;
+  if (selectedPlatform === 'youtube') {
+    // If YouTube tab selected, directly use YouTube items
+    filteredContent = [...youtubeItemsArray];
+  } else if (selectedPlatform === 'gmail') {
+    // If Gmail tab selected, directly use Gmail items
+    filteredContent = [...gmailItemsArray];
+  } else {
+    // Otherwise, use combined content with sorting and filtering
+    filteredContent = sortAndFilterContent(
+      combinedContent,
+      selectedPlatform,
+      selectedEmailType,
+      sortBy,
+      timeRange
+    );
+  }
+  
+  // Final display items
+  const displayItems = filteredContent;
   
   // Log the final items to be displayed
   console.log('Final displayItems:', displayItems.length, 

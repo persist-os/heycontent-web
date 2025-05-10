@@ -60,6 +60,8 @@ export const storeGmailMessage = mutation({
     email: v.string(),
     messageId: v.string(),
     threadId: v.string(),
+    from: v.optional(v.string()),
+    subject: v.optional(v.string()),
     snippet: v.string(),
     historyId: v.optional(v.string()),
     internalDate: v.optional(v.number()),
@@ -69,46 +71,49 @@ export const storeGmailMessage = mutation({
   },
   handler: async (ctx, args) => {
     try {
-      const timestamp = Date.now();
+      const now = Date.now();
       
       // Check if the message already exists
       const existingMessage = await ctx.db
-        .query("gmailData")
-        .withIndex("by_resource_id", (q) => q.eq("resourceId", args.messageId))
+        .query("gmailMessages")
+        .withIndex("by_messageId", (q) => q.eq("messageId", args.messageId))
         .filter((q) => 
           q.eq(q.field("userId"), args.userId) && 
-          q.eq(q.field("email"), args.email) &&
-          q.eq(q.field("resourceType"), "message")
+          q.eq(q.field("email"), args.email)
         )
         .first();
 
       if (existingMessage) {
         // Update existing message
         await ctx.db.patch(existingMessage._id, {
+          from: args.from,
+          subject: args.subject,
           snippet: args.snippet,
           historyId: args.historyId,
-          internalDate: args.internalDate,
+          internalDate: args.internalDate ? args.internalDate.toString() : undefined,
           labelIds: args.labelIds,
           data: args.payload,
           sizeEstimate: args.sizeEstimate,
-          timestamp,
+          updatedAt: now,
         });
         return { status: "updated", messageId: existingMessage._id };
       } else {
         // Insert new message
-        const messageId = await ctx.db.insert("gmailData", {
+        const messageId = await ctx.db.insert("gmailMessages", {
           userId: args.userId,
           email: args.email,
-          resourceType: "message",
-          resourceId: args.messageId,
+          messageId: args.messageId,
           threadId: args.threadId,
+          from: args.from,
+          subject: args.subject,
           snippet: args.snippet,
           historyId: args.historyId,
-          internalDate: args.internalDate,
+          internalDate: args.internalDate ? args.internalDate.toString() : undefined,
           labelIds: args.labelIds,
           data: args.payload,
           sizeEstimate: args.sizeEstimate,
-          timestamp,
+          createdAt: now,
+          updatedAt: now,
         });
         return { status: "created", messageId };
       }
@@ -125,55 +130,62 @@ export const storeGmailThread = mutation({
     userId: v.string(),
     email: v.string(),
     threadId: v.string(),
-    snippet: v.string(),
+    snippet: v.optional(v.string()),
     historyId: v.optional(v.string()),
-    messages: v.array(v.string()),
+    labelIds: v.optional(v.array(v.string())),
+    message_count: v.optional(v.number()),
+    messages: v.optional(v.array(v.object({
+      id: v.string(),
+      from: v.optional(v.string()),
+      subject: v.optional(v.string()),
+      snippet: v.optional(v.string()),
+      label_ids: v.optional(v.array(v.string())),
+    }))),
     threadData: v.optional(v.any()),
   },
   handler: async (ctx, args) => {
     try {
-      const timestamp = Date.now();
+      const now = Date.now();
       
       // Check if the thread already exists
       const existingThread = await ctx.db
-        .query("gmailData")
-        .withIndex("by_resource_id", (q) => q.eq("resourceId", args.threadId))
+        .query("gmailThreads")
+        .withIndex("by_threadId", (q) => q.eq("threadId", args.threadId))
         .filter((q) => 
           q.eq(q.field("userId"), args.userId) && 
-          q.eq(q.field("email"), args.email) &&
-          q.eq(q.field("resourceType"), "thread")
+          q.eq(q.field("email"), args.email)
         )
         .first();
 
-      // Prepare the thread data object
-      const data = args.threadData || {
-        messages: args.messages,
-        snippet: args.snippet,
-        historyId: args.historyId,
-      };
+      // Prepare data object
+      const data = args.threadData || {};
 
       if (existingThread) {
         // Update existing thread
         await ctx.db.patch(existingThread._id, {
           snippet: args.snippet,
           historyId: args.historyId,
+          labelIds: args.labelIds,
+          message_count: args.message_count,
           messages: args.messages,
           data,
-          timestamp,
+          updatedAt: now,
         });
         return { status: "updated", threadId: existingThread._id };
       } else {
         // Insert new thread
-        const threadId = await ctx.db.insert("gmailData", {
+        const threadId = await ctx.db.insert("gmailThreads", {
           userId: args.userId,
           email: args.email,
-          resourceType: "thread",
-          resourceId: args.threadId,
+          threadId: args.threadId,
           snippet: args.snippet,
           historyId: args.historyId,
+          labelIds: args.labelIds,
+          message_count: args.message_count,
           messages: args.messages,
           data,
-          timestamp,
+          createdAt: now,
+          updatedAt: now,
         });
         return { status: "created", threadId };
       }
@@ -194,23 +206,40 @@ export const disconnectGmail = mutation({
     const { userId, email } = args;
 
     try {
-      // Delete Gmail data (accounts, messages, and threads)
-      let gmailData;
+      let totalDeleted = 0;
       
-      if (email) {
-        // Delete only data for the specified email
-        gmailData = await ctx.db
-          .query("gmailData")
-          .withIndex("by_email", (q) => q.eq("userId", userId).eq("email", email))
-          .collect();
-      } else {
-        // Delete all data for this user
-        gmailData = await ctx.db
-          .query("gmailData")
-          .withIndex("by_user", (q) => q.eq("userId", userId))
-          .collect();
+      // Define the collections to clean up
+      const collections = ['gmailAccounts', 'gmailThreads', 'gmailMessages', 'gmailHistory'];
+      
+      // Delete data from each collection
+      for (const collection of collections) {
+        let items;
+        if (email) {
+          // Delete only data for the specified email
+          items = await ctx.db
+            .query(collection as any)
+            .withIndex("by_email", (q) => q.eq("email", email))
+            .filter(q => q.eq(q.field("userId"), userId))
+            .collect();
+        } else {
+          // Delete all data for this user
+          items = await ctx.db
+            .query(collection as any)
+            .withIndex("by_userId", (q) => q.eq("userId", userId))
+            .collect();
+        }
         
-        // If no specific email is provided, also delete tokens
+        // Delete the items
+        const batchSize = 100;
+        for (let i = 0; i < items.length; i += batchSize) {
+          const batch = items.slice(i, i + batchSize);
+          await Promise.all(batch.map(item => ctx.db.delete(item._id)));
+          totalDeleted += batch.length;
+        }
+      }
+      
+      // If no specific email is provided, also delete tokens
+      if (!email) {
         const tokens = await ctx.db
           .query("gmailTokens")
           .withIndex("by_userId", (q) => q.eq("userId", userId))
@@ -218,17 +247,13 @@ export const disconnectGmail = mutation({
 
         for (const token of tokens) {
           await ctx.db.delete(token._id);
+          totalDeleted++;
         }
-      }
-      
-      // Delete all collected data items
-      for (const data of gmailData) {
-        await ctx.db.delete(data._id);
       }
 
       return { 
         success: true, 
-        itemsDeleted: gmailData.length 
+        itemsDeleted: totalDeleted 
       };
     } catch (error) {
       console.error('Error disconnecting Gmail:', error);
@@ -245,6 +270,8 @@ export const storeBatchGmailMessages = mutation({
     messages: v.array(v.object({
       messageId: v.string(),
       threadId: v.string(),
+      from: v.optional(v.string()),
+      subject: v.optional(v.string()),
       snippet: v.string(),
       historyId: v.optional(v.string()),
       internalDate: v.optional(v.number()),
@@ -255,48 +282,51 @@ export const storeBatchGmailMessages = mutation({
   },
   handler: async (ctx, args) => {
     try {
-      const timestamp = Date.now();
+      const now = Date.now();
       const results = [];
       
       for (const message of args.messages) {
         // Check if the message already exists
         const existingMessage = await ctx.db
-          .query("gmailData")
-          .withIndex("by_resource_id", (q) => q.eq("resourceId", message.messageId))
+          .query("gmailMessages")
+          .withIndex("by_messageId", (q) => q.eq("messageId", message.messageId))
           .filter((q) => 
             q.eq(q.field("userId"), args.userId) && 
-            q.eq(q.field("email"), args.email) &&
-            q.eq(q.field("resourceType"), "message")
+            q.eq(q.field("email"), args.email)
           )
           .first();
 
         if (existingMessage) {
           // Update existing message
           await ctx.db.patch(existingMessage._id, {
+            from: message.from,
+            subject: message.subject,
             snippet: message.snippet,
             historyId: message.historyId,
-            internalDate: message.internalDate,
+            internalDate: message.internalDate ? message.internalDate.toString() : undefined,
             labelIds: message.labelIds,
             data: message.payload,
             sizeEstimate: message.sizeEstimate,
-            timestamp,
+            updatedAt: now,
           });
           results.push({ messageId: message.messageId, status: "updated" });
         } else {
           // Insert new message
-          await ctx.db.insert("gmailData", {
+          await ctx.db.insert("gmailMessages", {
             userId: args.userId,
             email: args.email,
-            resourceType: "message",
-            resourceId: message.messageId,
+            messageId: message.messageId,
             threadId: message.threadId,
+            from: message.from,
+            subject: message.subject,
             snippet: message.snippet,
             historyId: message.historyId,
-            internalDate: message.internalDate,
+            internalDate: message.internalDate ? message.internalDate.toString() : undefined,
             labelIds: message.labelIds,
             data: message.payload,
             sizeEstimate: message.sizeEstimate,
-            timestamp,
+            createdAt: now,
+            updatedAt: now,
           });
           results.push({ messageId: message.messageId, status: "created" });
         }
@@ -320,11 +350,12 @@ export const storeGmailFullProfile = mutation({
   },
   handler: async (ctx, args) => {
     try {
-      const timestamp = Date.now();
+      const now = Date.now();
       const { userId, account, messages, threads } = args;
       if (!account || !account.email) {
         throw new Error("Account and email are required");
       }
+      
       // Extract fields from account
       const email = account.email;
       const profile = {
@@ -334,175 +365,238 @@ export const storeGmailFullProfile = mutation({
         historyId: account.historyId,
         labelsTotal: account.labelsTotal,
       };
-      const profileData = account;
+
       // Check if the account already exists
       const existingAccount = await ctx.db
-        .query("gmailData")
-        .withIndex("by_resource_id", (q) => q.eq("resourceId", email))
-        .filter((q) => 
-          q.eq(q.field("userId"), userId) && 
-          q.eq(q.field("resourceType"), "account")
-        )
+        .query("gmailAccounts")
+        .withIndex("by_email", (q) => q.eq("email", email))
+        .filter(q => q.eq(q.field("userId"), userId))
         .first();
+        
       if (existingAccount) {
         // Update existing account
         await ctx.db.patch(existingAccount._id, {
-          data: profileData,
           messagesTotal: profile.messagesTotal,
           threadsTotal: profile.threadsTotal,
           historyId: profile.historyId,
           labelsTotal: profile.labelsTotal,
-          timestamp,
+          data: account,
+          updatedAt: now,
         });
-        // Store messages and threads if provided
+        
+        // Store messages if provided
         if (Array.isArray(messages)) {
           for (const msg of messages) {
-            const resourceId = msg.id || msg.messageId;
-            if (!resourceId) {
-              console.warn(`Skipping message with undefined resourceId: ${JSON.stringify(msg)}`);
+            const messageId = msg.id || msg.messageId;
+            if (!messageId) {
+              console.warn(`Skipping message with undefined messageId: ${JSON.stringify(msg)}`);
               continue;
             }
+            
+            const threadId = msg.threadId;
+            const from = msg.payload?.headers?.find((h: any) => h.name.toLowerCase() === 'from')?.value;
+            const subject = msg.payload?.headers?.find((h: any) => h.name.toLowerCase() === 'subject')?.value;
+            const snippet = msg.snippet || '';
+            
             const existingMsg = await ctx.db
-              .query("gmailData")
-              .withIndex("by_resource_id", (q) => q.eq("resourceId", resourceId))
-              .filter((q) => 
+              .query("gmailMessages")
+              .withIndex("by_messageId", (q) => q.eq("messageId", messageId))
+              .filter(q => 
                 q.eq(q.field("userId"), userId) && 
-                q.eq(q.field("email"), email) &&
-                q.eq(q.field("resourceType"), "message")
+                q.eq(q.field("email"), email)
               )
               .first();
             
             if (existingMsg) {
               // Update existing message
               await ctx.db.patch(existingMsg._id, {
+                from,
+                subject,
+                snippet,
                 data: msg,
-                timestamp,
+                updatedAt: now,
               });
             } else {
               // Insert new message
-              await ctx.db.insert("gmailData", {
+              await ctx.db.insert("gmailMessages", {
                 userId,
                 email,
-                resourceType: "message",
-                resourceId,
+                messageId,
+                threadId,
+                from,
+                subject,
+                snippet,
+                labelIds: msg.labelIds,
+                historyId: msg.historyId,
+                internalDate: msg.internalDate ? msg.internalDate.toString() : undefined,
+                sizeEstimate: msg.sizeEstimate,
                 data: msg,
-                timestamp,
+                createdAt: now,
+                updatedAt: now,
               });
             }
           }
         }
+        
+        // Store threads if provided
         if (Array.isArray(threads)) {
           for (const thread of threads) {
-            const resourceId = thread.id || thread.threadId;
+            // Check for threadId in multiple possible locations
+            const threadId = thread.id || thread.threadId || thread.data?.thread_id || thread.resourceId;
+            if (!threadId) {
+              console.warn(`Skipping thread with undefined threadId: ${JSON.stringify(thread)}`);
+              continue;
+            }
+            
+            // Extract messages from the thread if available
+            const threadMessages = thread.messages || [];
+            const message_count = threadMessages.length;
+            
+            // Map the messages to the correct format
+            const formattedMessages = threadMessages.map((m: any) => {
+              const from = m.payload?.headers?.find((h: any) => h.name.toLowerCase() === 'from')?.value;
+              const subject = m.payload?.headers?.find((h: any) => h.name.toLowerCase() === 'subject')?.value;
+              
+              return {
+                id: m.id,
+                from,
+                subject,
+                snippet: m.snippet,
+                label_ids: m.labelIds
+              };
+            });
+            
             const existingThread = await ctx.db
-              .query("gmailData")
-              .withIndex("by_resource_id", (q) => q.eq("resourceId", resourceId))
-              .filter((q) => 
+              .query("gmailThreads")
+              .withIndex("by_threadId", (q) => q.eq("threadId", threadId))
+              .filter(q => 
                 q.eq(q.field("userId"), userId) && 
-                q.eq(q.field("email"), email) &&
-                q.eq(q.field("resourceType"), "thread")
+                q.eq(q.field("email"), email)
               )
               .first();
             
             if (existingThread) {
               // Update existing thread
               await ctx.db.patch(existingThread._id, {
+                snippet: thread.snippet,
+                historyId: thread.historyId,
+                labelIds: thread.labelIds,
+                message_count,
+                messages: formattedMessages,
                 data: thread,
-                timestamp,
+                updatedAt: now,
               });
             } else {
               // Insert new thread
-              await ctx.db.insert("gmailData", {
+              await ctx.db.insert("gmailThreads", {
                 userId,
                 email,
-                resourceType: "thread",
-                resourceId,
+                threadId,
+                snippet: thread.snippet,
+                historyId: thread.historyId,
+                labelIds: thread.labelIds,
+                message_count,
+                messages: formattedMessages,
                 data: thread,
-                timestamp,
+                createdAt: now,
+                updatedAt: now,
               });
             }
           }
         }
+        
         return { status: "updated", accountId: existingAccount._id };
       } else {
         // Insert new account
-        const accountId = await ctx.db.insert("gmailData", {
+        const accountId = await ctx.db.insert("gmailAccounts", {
           userId,
           email,
-          resourceType: "account",
-          resourceId: email, // Use the email as the resource ID for accounts
-          data: profileData,
+          historyId: profile.historyId,
           messagesTotal: profile.messagesTotal,
           threadsTotal: profile.threadsTotal,
-          historyId: profile.historyId,
           labelsTotal: profile.labelsTotal,
-          timestamp,
+          data: account,
+          createdAt: now,
+          updatedAt: now,
         });
-        // Store messages and threads if provided
+        
+        // Store messages and threads if provided (reusing same code as above)
         if (Array.isArray(messages)) {
           for (const msg of messages) {
-            const resourceId = msg.id || msg.messageId;
-            const existingMsg = await ctx.db
-              .query("gmailData")
-              .withIndex("by_resource_id", (q) => q.eq("resourceId", resourceId))
-              .filter((q) => 
-                q.eq(q.field("userId"), userId) && 
-                q.eq(q.field("email"), email) &&
-                q.eq(q.field("resourceType"), "message")
-              )
-              .first();
-            
-            if (existingMsg) {
-              // Update existing message
-              await ctx.db.patch(existingMsg._id, {
-                data: msg,
-                timestamp,
-              });
-            } else {
-              // Insert new message
-              await ctx.db.insert("gmailData", {
-                userId,
-                email,
-                resourceType: "message",
-                resourceId,
-                data: msg,
-                timestamp,
-              });
+            const messageId = msg.id || msg.messageId;
+            if (!messageId) {
+              console.warn(`Skipping message with undefined messageId: ${JSON.stringify(msg)}`);
+              continue;
             }
+            
+            const threadId = msg.threadId;
+            const from = msg.payload?.headers?.find((h: any) => h.name.toLowerCase() === 'from')?.value;
+            const subject = msg.payload?.headers?.find((h: any) => h.name.toLowerCase() === 'subject')?.value;
+            const snippet = msg.snippet || '';
+            
+            // No need to check for existing message since this is a new account
+            await ctx.db.insert("gmailMessages", {
+              userId,
+              email,
+              messageId,
+              threadId,
+              from,
+              subject,
+              snippet,
+              labelIds: msg.labelIds,
+              historyId: msg.historyId,
+              internalDate: msg.internalDate ? msg.internalDate.toString() : undefined,
+              sizeEstimate: msg.sizeEstimate,
+              data: msg,
+              createdAt: now,
+              updatedAt: now,
+            });
           }
         }
+        
         if (Array.isArray(threads)) {
           for (const thread of threads) {
-            const resourceId = thread.id || thread.threadId;
-            const existingThread = await ctx.db
-              .query("gmailData")
-              .withIndex("by_resource_id", (q) => q.eq("resourceId", resourceId))
-              .filter((q) => 
-                q.eq(q.field("userId"), userId) && 
-                q.eq(q.field("email"), email) &&
-                q.eq(q.field("resourceType"), "thread")
-              )
-              .first();
-            
-            if (existingThread) {
-              // Update existing thread
-              await ctx.db.patch(existingThread._id, {
-                data: thread,
-                timestamp,
-              });
-            } else {
-              // Insert new thread
-              await ctx.db.insert("gmailData", {
-                userId,
-                email,
-                resourceType: "thread",
-                resourceId,
-                data: thread,
-                timestamp,
-              });
+            const threadId = thread.id || thread.threadId;
+            if (!threadId) {
+              console.warn(`Skipping thread with undefined threadId: ${JSON.stringify(thread)}`);
+              continue;
             }
+            
+            // Extract messages from the thread if available
+            const threadMessages = thread.messages || [];
+            const message_count = threadMessages.length;
+            
+            // Map the messages to the correct format
+            const formattedMessages = threadMessages.map((m: any) => {
+              const from = m.payload?.headers?.find((h: any) => h.name.toLowerCase() === 'from')?.value;
+              const subject = m.payload?.headers?.find((h: any) => h.name.toLowerCase() === 'subject')?.value;
+              
+              return {
+                id: m.id,
+                from,
+                subject,
+                snippet: m.snippet,
+                label_ids: m.labelIds
+              };
+            });
+            
+            // No need to check for existing thread since this is a new account
+            await ctx.db.insert("gmailThreads", {
+              userId,
+              email,
+              threadId,
+              snippet: thread.snippet,
+              historyId: thread.historyId,
+              labelIds: thread.labelIds,
+              message_count,
+              messages: formattedMessages,
+              data: thread,
+              createdAt: now,
+              updatedAt: now,
+            });
           }
         }
+        
         return { status: "created", accountId };
       }
     } catch (error) {
@@ -526,16 +620,13 @@ export const saveProfileData = mutation({
   },
   handler: async (ctx, args) => {
     try {
-      const timestamp = Date.now();
+      const now = Date.now();
       
       // Check if the account already exists
       const existingAccount = await ctx.db
-        .query("gmailData")
-        .withIndex("by_resource_id", (q) => q.eq("resourceId", args.email))
-        .filter((q) => 
-          q.eq(q.field("userId"), args.userId) && 
-          q.eq(q.field("resourceType"), "account")
-        )
+        .query("gmailAccounts")
+        .withIndex("by_email", (q) => q.eq("email", args.email))
+        .filter(q => q.eq(q.field("userId"), args.userId))
         .first();
 
       if (existingAccount) {
@@ -545,16 +636,14 @@ export const saveProfileData = mutation({
           threadsTotal: args.profileData.threadsTotal,
           historyId: args.profileData.historyId,
           labelsTotal: args.profileData.labelsTotal,
-          timestamp,
+          updatedAt: now,
         });
         return { status: "updated", accountId: existingAccount._id };
       } else {
         // Create a new account entry if it does not exist
-        const accountId = await ctx.db.insert("gmailData", {
+        const accountId = await ctx.db.insert("gmailAccounts", {
           userId: args.userId,
-          email: args.email, // required for schema
-          resourceId: args.email, // for accounts, resourceId is the email
-          resourceType: "account",
+          email: args.email,
           messagesTotal: args.profileData.messagesTotal,
           threadsTotal: args.profileData.threadsTotal,
           historyId: args.profileData.historyId,
@@ -565,7 +654,8 @@ export const saveProfileData = mutation({
             historyId: args.profileData.historyId,
             labelsTotal: args.profileData.labelsTotal,
           },
-          timestamp,
+          createdAt: now,
+          updatedAt: now,
         });
         return { status: "created", accountId };
       }

@@ -328,7 +328,21 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
 
         {/* Footer */}
         <div className="px-6 py-4 border-t dark:border-gray-800 flex items-center justify-end gap-3 flex-shrink-0">
-          <Button onClick={() => onDiscussContent(selectedContent)} className="bg-heycontent-light-yellow hover:bg-heycontent-yellow/90 text-black">
+          <Button 
+            onClick={() => {
+              // Include analysis in the content item if it exists
+              if (aiAnalysis) {
+                const contentWithAnalysis = {
+                  ...selectedContent,
+                  aiAnalysis: aiAnalysis
+                };
+                onDiscussContent(contentWithAnalysis);
+              } else {
+                onDiscussContent(selectedContent);
+              }
+            }} 
+            className="bg-heycontent-light-yellow hover:bg-heycontent-yellow/90 text-black"
+          >
             <MessageSquare className="w-4 h-4 mr-2" />
             Discuss with Content
           </Button>
