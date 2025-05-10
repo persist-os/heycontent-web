@@ -230,9 +230,11 @@ export const disconnectGmail = mutation({
         }
         
         // Delete the items
-        for (const item of items) {
-          await ctx.db.delete(item._id);
-          totalDeleted++;
+        const batchSize = 100;
+        for (let i = 0; i < items.length; i += batchSize) {
+          const batch = items.slice(i, i + batchSize);
+          await Promise.all(batch.map(item => ctx.db.delete(item._id)));
+          totalDeleted += batch.length;
         }
       }
       
