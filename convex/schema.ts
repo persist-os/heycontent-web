@@ -387,4 +387,61 @@ export default defineSchema({
   .index("by_resource_id", ["resourceId"])
   .index("by_user_resource", ["userId", "resourceType"])
   .index("by_timestamp", ["timestamp"]),
+
+  // Instagram Accounts
+  instagramAccounts: defineTable({
+    userId: v.string(),
+    username: v.string(),
+    profileData: v.object({
+      id: v.string(),
+      username: v.string(),
+      full_name: v.string(),
+      profile_picture_url: v.string(),
+      biography: v.optional(v.string()),
+      followers_count: v.optional(v.number()),
+      following_count: v.optional(v.number()),
+      media_count: v.optional(v.number()),
+      is_private: v.boolean(),
+      is_verified: v.boolean()
+    }),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_userId", ["userId"])
+  .index("by_username", ["username"]),
+
+  // Instagram Posts
+  instagramPosts: defineTable({
+    accountId: v.string(),
+    userId: v.string(),
+    postId: v.string(),
+    data: v.object({
+      id: v.string(),
+      caption: v.string(),
+      media_type: v.union(
+        v.literal("IMAGE"),
+        v.literal("VIDEO"),
+        v.literal("CAROUSEL_ALBUM")
+      ),
+      media_url: v.string(),
+      permalink: v.string(),
+      username: v.string(),
+      timestamp: v.number(),
+      like_count: v.optional(v.number()),
+      comment_count: v.optional(v.number()),
+      thumbnail_url: v.optional(v.string()),
+      children: v.optional(v.array(v.object({
+        id: v.string(),
+        media_url: v.string(),
+        media_type: v.string()
+      })))
+    }),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_accountId", ["accountId"])
+  .index("by_userId", ["userId"])
+  .index("by_postId", ["postId"])
+  .index("by_timestamp", ["data.timestamp"]),
+
 });

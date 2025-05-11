@@ -86,8 +86,8 @@ export async function GET() {
     console.log('Profile: Getting user information');
 
     // Get token from Authorization header or cookie
-    const authHeader = headers().get('Authorization');
-    const cookieToken = cookies().get('firebase-auth-token')?.value;
+    const authHeader = (await headers()).get('Authorization');
+    const cookieToken = (await cookies()).get('firebase-auth-token')?.value;
 
     // Use token from Authorization header if available, otherwise use cookie
     let token = null;
@@ -132,11 +132,11 @@ export async function PUT(req: Request) {
     console.log('Profile PUT: Getting server session');
 
     // Log all cookies for debugging
-    const allCookies = cookies().getAll();
+    const allCookies = (await cookies()).getAll();
     console.log('Profile PUT: All cookies:', allCookies.map(c => c.name));
 
     // Log auth header if present
-    const authHeader = headers().get('Authorization');
+    const authHeader = (await headers()).get('Authorization');
     console.log('Profile PUT: Authorization header present:', !!authHeader);
 
     const session = await getServerSession();
