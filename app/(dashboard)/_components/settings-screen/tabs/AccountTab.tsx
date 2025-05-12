@@ -16,6 +16,9 @@ const MAX_VISION_LENGTH = 500
 interface AccountFormData {
   name: string;
   email: string;
+  username: string;
+  referralCode: string;
+  referredBy: string;
   currentPersona: string;
   futureVision: string;
 }
@@ -61,12 +64,13 @@ async function handleProfileUpdate(
         futureVision: formData.futureVision
       });
       
-      // Update user data (name)
+      // Update user data (name, username)
       if (email) {
         await updateUser({
           userId,
           name: formData.name,
           email,
+          username: formData.username,
           // Pass image if it exists in the current user object
           image: auth?.currentUser?.photoURL || undefined
         });
@@ -119,7 +123,10 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
       setFormData(prev => ({
         ...prev,
         name: userData?.name || '',
-        email: userData?.email || ''
+        email: userData?.email || '',
+        username: userData?.username || '',
+        referralCode: userData?.referralCode || '',
+        referredBy: userData?.referredBy || ''
       }));
     }
   }, [userData, setFormData]);
@@ -188,6 +195,59 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
                   className="w-full mt-1 p-2 border rounded-lg text-base"
                   placeholder="your@email.com"
                   value={formData.email}
+                  disabled
+                />
+              </div>
+              <div>
+                <label htmlFor="username" className="text-sm font-medium">Username</label>
+                <input
+                  id="username"
+                  name="username"
+                  type="text"
+                  className="w-full mt-1 p-2 border rounded-lg text-base"
+                  placeholder="Your username"
+                  value={formData.username}
+                  onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
+                  disabled={!isEditMode}
+                />
+              </div>
+              <div>
+                <label htmlFor="referralCode" className="text-sm font-medium">Your Referral Code</label>
+                <div className="relative">
+                  <input
+                    id="referralCode"
+                    name="referralCode"
+                    type="text"
+                    className="w-full mt-1 p-2 border rounded-lg text-base pr-16"
+                    value={formData.referralCode}
+                    disabled
+                  />
+                  {formData.referralCode && (
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="absolute right-1 top-1 h-8 px-2"
+                      onClick={() => {
+                        navigator.clipboard.writeText(formData.referralCode);
+                        // You could add a toast notification here
+                      }}
+                    >
+                      Copy
+                    </Button>
+                  )}
+                </div>
+                {formData.referralCode && (
+                  <p className="text-xs text-gray-500 mt-1">Share this code with friends to invite them</p>
+                )}
+              </div>
+              <div>
+                <label htmlFor="referredBy" className="text-sm font-medium">Referred By</label>
+                <input
+                  id="referredBy"
+                  name="referredBy"
+                  type="text"
+                  className="w-full mt-1 p-2 border rounded-lg text-base"
+                  value={formData.referredBy}
                   disabled
                 />
               </div>

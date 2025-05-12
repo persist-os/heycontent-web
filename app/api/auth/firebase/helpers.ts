@@ -27,15 +27,26 @@ export const logger = {
 };
 
 export async function updateOrCreateConvexUser(userId: string, name: string, email: string, image: string, username: string, referredBy: string) {
+  // Log the values we're trying to save to help with debugging
+  logger.debug('Saving user data to Convex', {
+    userId,
+    name,
+    email: email || 'not provided',
+    hasImage: !!image,
+    username: username || 'not provided',
+    referredBy: referredBy || 'not provided'
+  });
+  
   await fetchMutation(api.userMutations.create_user, {
     name,
     email,
     image,
     username,
     referredBy,
-    userId
+    userId,
+    // referralCode is generated in the mutation, don't need to pass it
+    referralCode: undefined
   })
-
 }
 
 export function mapAuthErrorCodeToMessage(code: string): string {

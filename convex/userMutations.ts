@@ -2,14 +2,20 @@ import { mutation } from "./_generated/server";
 import { v } from "convex/values";
 
 function generateReferralCode(username: string, name: string) {
-    const base = (username || name || 'user')
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '') // remove special chars
-      .slice(0, 12); // limit length for readability
-  
-    const suffix = Math.random().toString(36).slice(2, 6); // 4-char alphanumeric
-  
-    return `${base}${suffix}`;
+    // Extract a clean name component (max 8 chars for better readability)
+    const nameBase = (name || username || 'user')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '') // remove special chars (note: using A-Z since string is uppercase)
+      .slice(0, 8);
+
+    // Add an alphabet part (random capital letter A-Z)
+    const alphabetPart = String.fromCharCode(Math.floor(Math.random() * 26) + 65);
+
+    // Add a short numeric segment for variety (100-999)
+    const numericPart = 100 + Math.floor(Math.random() * 900);
+ 
+    // Combine into a referral code
+    return `${nameBase}${alphabetPart}${numericPart}`;
   }
   
 

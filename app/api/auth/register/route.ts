@@ -50,13 +50,23 @@ export async function POST(request: Request) {
           processingTime: Date.now() - registrationStartTime
         });
         // Always use body values for Convex
+        // Log the fields we're receiving for better debugging
+        logger.debug('Registration fields received', {
+          requestId,
+          email, 
+          name, 
+          username: username || 'not provided',
+          referredBy: referredBy || 'not provided'
+        });
+
+        // Make sure all fields are properly passed to Convex
         await updateOrCreateConvexUser(
           userRecord.uid,
           name,
           userRecord.email || email,
           '', // image: not provided at registration, can be set later
-          username,
-          referredBy || ''
+          username || '', // Ensure we pass empty string if undefined
+          referredBy || '' // Ensure we pass empty string if undefined
         );
         return NextResponse.json({
           success: true,

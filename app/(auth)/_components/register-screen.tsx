@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { Eye, EyeOff, Mail } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { useQuery } from "convex/react";
 
@@ -57,6 +58,8 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
     if (checkReferralCode.valid) {
       setError(null);
       setReferralCodeValid(true);
+      // Ensure referredBy is properly set to the validated code
+      setReferredBy(code);
       return true;
     } else {
       setError("Invalid referral code");
@@ -184,7 +187,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
                   setReferralCodeValid(false); // Reset validation when code changes
                 }}
                 // Using Convex real-time queries instead of onBlur validation
-                className={`w-full border rounded px-3 py-2 ${referralCodeValid ? 'border-green-500' : referredBy ? 'border-red-300' : ''}`}
+                className={`w-full border rounded px-3 py-2 ${referralCodeValid ? 'border-green-500' : ''}`}
                 placeholder="Enter your referral code"
                 required
               />
@@ -202,7 +205,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
                   required
                 />
                 <span className="absolute right-2 top-2 text-gray-400">
-                  {/* Use lucide-react Mail icon if available */}
+                  <Mail size={18} />
                 </span>
               </div>
             </div>
@@ -222,7 +225,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
                   onClick={() => setShowPassword(!showPassword)}
                   tabIndex={-1}
                 >
-                  {showPassword ? '🙈' : '👁️'}
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>

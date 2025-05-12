@@ -18,7 +18,6 @@ export default defineSchema({
   .index("by_userId", ["userId"])
   .index("by_email", ["email"])
   .index("by_username", ["username"]),
-  
 
   personas: defineTable({
     name: v.string(),

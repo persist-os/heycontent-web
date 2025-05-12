@@ -23,6 +23,9 @@ const SettingsScreen = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    username: '',
+    referralCode: '',
+    referredBy: '',
     currentPersona: '',
     futureVision: ''
   })
