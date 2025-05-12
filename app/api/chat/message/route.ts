@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { extractAuthInfo } from '@/app/lib/api-helpers-server';
 
 import dotenv from 'dotenv';
 
@@ -17,18 +18,13 @@ export async function POST(request: Request) {
   });
 
   try {
-    // Get API key from Authorization header
+    // Get API key and user ID from Authorization header
     const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const { apiKey, userId } = extractAuthInfo(authHeader);
+    
+    if (!apiKey) {
       console.warn(`[${requestId}] Authentication failed: No Authorization header or invalid format`);
       return NextResponse.json({ error: 'Unauthorized - Missing or invalid Authorization header' }, { status: 401 });
-    }
-    
-    // Extract the API key from the Authorization header
-    const apiKey = authHeader.substring(7); // Remove 'Bearer ' prefix
-    if (!apiKey) {
-      console.warn(`[${requestId}] Authentication failed: No API key found`);
-      return NextResponse.json({ error: 'Unauthorized - Missing API key' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -40,11 +36,7 @@ export async function POST(request: Request) {
     }
 
     // Always extract user_id from API key, never from client
-    let user_id: string | undefined = undefined;
-    const apiKeyParts = apiKey.split('_');
-    if (apiKeyParts.length >= 2) {
-      user_id = apiKeyParts[1];
-    }
+    const user_id = userId;
     if (!user_id) {
       console.warn(`[${requestId}] Authentication failed: Could not determine user_id from API key`);
       return NextResponse.json({ error: 'Unauthorized - Invalid API key format or missing user_id' }, { status: 401 });

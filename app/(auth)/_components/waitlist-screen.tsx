@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, AlertCircle, RefreshCcw } from 'lucide-react';
-import { getApiKey } from '@/app/(dashboard)/_components/chat/utils/api-utils';
+import { getApiKey } from '@/app/lib/api-helpers';
 
 interface WaitlistScreenProps {
   onComplete?: (apiKey: string) => void;

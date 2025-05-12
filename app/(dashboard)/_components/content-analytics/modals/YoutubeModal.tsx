@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { getApiKey, getCurrentUserId } from '@/app/(dashboard)/_components/chat/utils/api-utils';
+import { getCurrentUserId, getApiKey } from '@/app/lib/api-helpers';
 import { Card } from '@/src/components/ui/card';
 import { X, MessageSquare, Youtube, Sparkles, Bot, ExternalLink } from 'lucide-react';
 import { YouTubeContentItem } from '../types';

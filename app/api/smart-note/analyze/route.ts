@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { extractAuthInfo } from '@/app/lib/api-helpers-server';
 
 import dotenv from 'dotenv';
 
@@ -33,30 +33,55 @@ export async function POST(request: Request) {
   });
 
   try {
-    const token = cookies().get('firebase-auth-token')?.value;
-    if (!token) {
-      console.warn(`[${requestId}] Authentication failed: No token found`);
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Get API key and user ID from Authorization header
+    const authHeader = request.headers.get('Authorization');
+    const { apiKey, userId } = extractAuthInfo(authHeader);
+    
+    if (!apiKey) {
+      console.warn(`[${requestId}] Authentication failed: No Authorization header or invalid format`);
+      return NextResponse.json({ error: 'Unauthorized - Missing or invalid Authorization header' }, { status: 401 });
     }
+    
+    // Always extract user_id from API key, never from client
+    const user_id = userId;
+    if (!user_id) {
+      console.warn(`[${requestId}] Authentication failed: Could not determine user_id from API key`);
+      return NextResponse.json({ error: 'Unauthorized - Invalid API key format or missing user_id' }, { status: 401 });
+    }
+    console.debug(`[${requestId}] Extracted user_id from API key:`, user_id);
 
     const body = await request.json();
+    console.log('Request body:', body);
     const { content_note } = body;
 
     if (!content_note) {
       console.warn(`[${requestId}] Invalid request: Missing content_note`);
-      return NextResponse.json({ error: 'Content note is required' }, { status: 400 });
+      return NextResponse.json({ 
+        error: 'Content note is required',
+        status: 400 
+      }, { status: 400 });
+    }
+    
+    // Check for empty or whitespace-only content
+    if (typeof content_note === 'string' && !content_note.trim()) {
+      console.warn(`[${requestId}] Invalid request: Empty content_note`);
+      return NextResponse.json({ 
+        error: 'Note content cannot be empty',
+        status: 400 
+      }, { status: 400 });
     }
 
     // Log the request details
     console.info(`[${requestId}] Processing smart note analysis`, {
       content_length: content_note?.length,
-      has_token: !!token
+      has_api_key: !!apiKey
     });
 
-    // Log the token format for debugging (first 10 chars only for security)
-    console.info(`[${requestId}] Using token format:`, {
-      tokenPrefix: token.substring(0, 10) + '...',
-      tokenLength: token.length
+    // Log the API key format for debugging (first 10 chars only for security)
+    console.info(`[${requestId}] Using API key format:`, {
+      apiKeyPrefix: apiKey.substring(0, 10) + '...',
+      apiKeyLength: apiKey.length,
+      userId: user_id
     });
 
     // Log the request to the backend
@@ -70,10 +95,11 @@ export async function POST(request: Request) {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        content_note
+        content_note,
+        user_id
       })
     });
 
