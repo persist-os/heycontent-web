@@ -37,8 +37,11 @@ export const create_user = mutation({
       .withIndex("by_email", (q) => q.eq("email", args.email))
       .first();
 
-    // Generate referral code based on username and name
-    const referralCode = generateReferralCode(args.username, args.name);
+    let referralCode = args.referralCode;
+    if (!args.referralCode) {
+      // Generate referral code based on username and name
+      referralCode = generateReferralCode(args.username, args.name);
+    }
 
     if (existing) {
       // Update user with all fields
@@ -48,7 +51,6 @@ export const create_user = mutation({
         image: args.image,
         userId: args.userId,
         username: args.username,
-        referralCode: referralCode,
         referredBy: args.referredBy,
         updatedAt: now,
       });

@@ -7,15 +7,15 @@ import { getApiKey } from '@/app/lib/api-helpers';
 interface WaitlistScreenProps {
   onComplete?: (apiKey: string) => void;
   initialCount?: number;
-  minWaitTime?: number; // minimum wait time in ms
-  apiKeyGenerationTime?: number; // simulated API key generation time in ms
+  minWaitTime?: number; 
+  apiKeyGenerationTime?: number; 
 }
 
 const WaitlistScreen: React.FC<WaitlistScreenProps> = ({
   onComplete,
-  initialCount = 23, // Start with more people for a more satisfying countdown
-  minWaitTime = 1500, // minimum 15 seconds of wait time
-  apiKeyGenerationTime = 3000, // 30 seconds by default
+  initialCount = 23, 
+  minWaitTime = 1500, 
+  apiKeyGenerationTime = 3000, 
 }) => {
   const router = useRouter();
   const [peopleAhead, setPeopleAhead] = useState<number>(initialCount);
