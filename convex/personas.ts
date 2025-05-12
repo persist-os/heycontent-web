@@ -8,26 +8,39 @@ export const getPersona = query({
     userId: v.string(),
   },
   handler: async (ctx, args) => {
-    const { userId } = args;
+    try {
+      const { userId } = args;
 
-    const persona = await ctx.db
-      .query("personas")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .filter((q) => q.eq(q.field("isActive"), true))
-      .first();
+      const persona = await ctx.db
+        .query("personas")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .filter((q) => q.eq(q.field("isActive"), true))
+        .first();
 
-    if (!persona) {
-      throw new Error("Persona not found");
+      if (!persona) {
+        return null;
+      }
+
+      // Defensive: fallback to empty string if fields are missing or malformed
+      const currentPersonaDesc = persona.currentPersona?.description ?? '';
+      const futureVisionDesc = persona.futureVision?.description ?? '';
+      const personaData = {
+        userId: persona.userId ?? '',
+        name: persona.name ?? '',
+        currentPersona: currentPersonaDesc,
+        futureVision: futureVisionDesc,
+      };
+
+      return personaData;
+    } catch (error) {
+      // Always return a safe object if anything goes wrong
+      return {
+        userId: '',
+        name: '',
+        currentPersona: '',
+        futureVision: '',
+      };
     }
-
-    const personaData = {
-      userId: persona.userId,
-      name: persona.name,
-      currentPersona: persona.currentPersona.description,
-      futureVision: persona.futureVision.description,
-    };
-
-    return personaData;
   },
 });
 

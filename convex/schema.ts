@@ -9,9 +9,15 @@ export default defineSchema({
     email: v.string(),
     image: v.optional(v.string()),
     userId: v.string(),
+    username: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    referralCode: v.optional(v.string()),
+    referredBy: v.optional(v.string()),
   })
   .index("by_userId", ["userId"])
-  .index("by_email", ["email"]),
+  .index("by_email", ["email"])
+  .index("by_username", ["username"]),
   
 
   personas: defineTable({

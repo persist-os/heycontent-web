@@ -90,10 +90,17 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
   const [isEditMode, setIsEditMode] = React.useState(false);
   
   // Properly fetch persona data using the useQuery hook at component level
-  const personaData = useQuery(api.personas.getPersona, { userId: auth?.currentUser?.uid || '' });
-  
-  // Fetch user data to get current values
-  const userData = useQuery(api.users.getUserById, { userId: auth?.currentUser?.uid || '' });
+  const userId = auth?.currentUser?.uid;
+
+  // Only run the queries if userId is available
+  const personaData = useQuery(
+    api.personas.getPersona,
+    userId ? { userId } : "skip"
+  );
+  const userData = useQuery(
+    api.userQueries.getUserById,
+    userId ? { userId } : "skip"
+  );
   
   // Update form data when persona data and user data load
   useEffect(() => {
@@ -117,7 +124,12 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
     }
   }, [userData, setFormData]);
   const updatePersona = useMutation(api.personas.createPersona);
-  const updateUser = useMutation(api.users.update);
+  const updateUser = useMutation(api.userMutations.create_user);
+  // Show loading if userId is not yet loaded
+  if (!userId) {
+    return <div className="flex justify-center items-center min-h-[200px]">Loading user info...</div>;
+  }
+
   return (
     <div className="grid gap-4 sm:gap-6 max-w-full">
       <Card>

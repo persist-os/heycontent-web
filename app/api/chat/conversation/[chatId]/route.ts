@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { getBearerToken, getUserIdFromApiKey } from '../../utils';
 import { fetchQuery } from 'convex/nextjs';
 import { api } from '@/convex/_generated/api';
-import { Id } from '@/convex/_generated/dataModel';
 
 export async function GET(
   request: Request,
@@ -29,7 +28,7 @@ export async function GET(
     }
 
     // Use the direct getConversation query for better performance
-    const conversation = await fetchQuery(api.chat.getConversation, { 
+    const conversation = await fetchQuery(api.chatQueries.getConversation, { 
       userId,
       conversationId: params.chatId
     });
@@ -39,11 +38,12 @@ export async function GET(
       return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
     }
 
+
     // Format the conversation for the frontend
     const formattedConversation = {
       id: conversation._id,
       title: conversation.title || 'Untitled Chat',
-      messages: conversation.messages.map((msg, index) => ({
+      messages: conversation.messages.map((msg: any, index: any) => ({
         id: index,
         content: msg.content,
         chat_response: msg.content,

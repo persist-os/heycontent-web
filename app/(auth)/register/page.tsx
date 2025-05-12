@@ -1,19 +1,16 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { AuthScreen } from '../_components/auth-screen'
-import { toast } from 'react-hot-toast'
+import { useRouter } from 'next/navigation';
+import { toast } from 'react-hot-toast';
+import RegisterScreen from '../_components/register-screen';
 
 export default function RegisterPage() {
-  const router = useRouter()
+  const router = useRouter();
 
   const onRegisterSuccess = (apiKey: string) => {
     router.push('/chat');
     toast.success('Registration successful! Welcome to HeyContent.');
   };
 
-  return <AuthScreen 
-    isLogin={false} 
-    onSuccess={onRegisterSuccess}
-  />
-} 
+  return <RegisterScreen onSuccess={onRegisterSuccess} />;
+}
