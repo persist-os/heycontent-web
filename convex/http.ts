@@ -69,6 +69,32 @@ app.get("/api/users/:id/personas", async (c) => {
   return c.json(persona);
 });
 
+// Conversations
+app.post("/api/users/:id/create_conversation", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { title, messages } = await c.req.json();
+  const result = await ctx.runMutation(api.chatMutations.createConversation, {
+    userId,
+    title,
+    messages,
+  });
+  return c.json(result);
+});
+
+// Add message to conversation
+app.post("/api/users/:id/add_message_to_conversation", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { conversationId, message } = await c.req.json();
+  const result = await ctx.runMutation(api.chatMutations.addMessageToConversation, {
+    userId,
+    conversationId,
+    message,
+  });
+  return c.json(result);
+});
+
 // API KEY ROUTES
 
 // Insert API key

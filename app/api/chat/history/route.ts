@@ -15,10 +15,17 @@ export async function GET(request: Request) {
   });
 
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('firebase-auth-token')?.value;
+    // Try to get token from Authorization header first, then cookie
+    let token: string | undefined | null = undefined;
+    const authHeader = request.headers.get('Authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      const cookieStore = await cookies();
+      token = cookieStore.get('firebase-auth-token')?.value;
+    }
     if (!token) {
-      console.warn(`[${requestId}] Authentication failed: No token found`);
+      console.warn(`[${requestId}] Authentication failed: No token found in header or cookie`);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -30,7 +37,7 @@ export async function GET(request: Request) {
     }
 
     // Fetch conversations from Convex
-    const conversations = await fetchQuery(api.chat.getHistory, {
+    const conversations = await fetchQuery(api.chatQueries.getHistory, {
       userId,
       limit
     });

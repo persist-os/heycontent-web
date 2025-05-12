@@ -21,19 +21,32 @@ export async function sendChatMessage(
     throw new Error('You are not authenticated. Please log in again.');
   }
 
+  // Always set is_first_message to true when isFirstMessage is true
+  // This ensures the first message is ALWAYS properly flagged
+  const isFirstMessageBool = isFirstMessage;
+  
   const requestBody: any = {
     query: content,
-    is_first_message: isFirstMessage
+    is_first_message: isFirstMessageBool
   };
 
-  // Only include session_id for subsequent messages
-  if (!isFirstMessage && sessionId) {
+  // If this is the first message, explicitly set session_id to null in the request
+  if (isFirstMessageBool) {
+    requestBody.session_id = null;
+  } else if (sessionId) {
     requestBody.session_id = sessionId;
   }
 
   // Do NOT include user_id in the request body; backend extracts it from API key
 
-  console.log('Sending chat message:', requestBody);
+  console.log('Sending chat message with details:', {
+    query_length: content.length,
+    is_first_message_original: isFirstMessage,
+    is_first_message_sent: isFirstMessageBool,
+    session_id: requestBody.session_id,
+    has_session_id: !!requestBody.session_id
+  });
+  console.log('Full request body:', JSON.stringify(requestBody));
   console.log('Sending Authorization header:', apiKey);
 
   const response = await fetch('/api/chat/message', {
@@ -70,9 +83,5 @@ export async function loadConversation(id: string) {
   }
 }
 
-/**
- * Generate a fallback session ID when the backend doesn't provide one
- */
-export function generateLocalSessionId(): string {
-  return `local-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
-}
+// We no longer generate local session IDs
+// All session IDs should come from the backend
