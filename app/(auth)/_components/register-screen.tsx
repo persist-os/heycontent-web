@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { api } from "@/convex/_generated/api";
+import { useQuery } from "convex/react";
 
 import WaitlistScreen from "./waitlist-screen";
 
@@ -26,12 +28,55 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [referralCodeValid, setReferralCodeValid] = useState(false);
+  const [validatingCode, setValidatingCode] = useState(false);
+  
+  // Use the Convex query to check referral code
+  const checkReferralCode = useQuery(api.userQueries.checkReferralCode, 
+    referredBy ? { referralCode: referredBy } : "skip"
+  );
+
+  // Function to validate referral code
+  const validateReferralCode = (code: string) => {
+    if (!code) {
+      setError("Referral code is required");
+      setReferralCodeValid(false);
+      return false;
+    }
+    
+    if (checkReferralCode === undefined) {
+      // Still loading
+      return false;
+    }
+    
+    if (checkReferralCode === null) {
+      // Query skipped
+      return false;
+    }
+    
+    if (checkReferralCode.valid) {
+      setError(null);
+      setReferralCodeValid(true);
+      return true;
+    } else {
+      setError("Invalid referral code");
+      setReferralCodeValid(false);
+      return false;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     localStorage.removeItem('apiKey');
     e.preventDefault();
     setError(null);
     setIsLoading(true);
+    
+    // Validate referral code first
+    const isCodeValid = validateReferralCode(referredBy);
+    if (!isCodeValid) {
+      setIsLoading(false);
+      return;
+    }
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
@@ -130,14 +175,21 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Referral Code (optional)</label>
+              <label className="block text-sm font-medium mb-1">Referral Code</label>
               <input
                 type="text"
                 value={referredBy}
-                onChange={e => setReferredBy(e.target.value)}
-                className="w-full border rounded px-3 py-2"
-                placeholder="Enter code if you have one"
+                onChange={e => {
+                  setReferredBy(e.target.value);
+                  setReferralCodeValid(false); // Reset validation when code changes
+                }}
+                // Using Convex real-time queries instead of onBlur validation
+                className={`w-full border rounded px-3 py-2 ${referralCodeValid ? 'border-green-500' : referredBy ? 'border-red-300' : ''}`}
+                placeholder="Enter your referral code"
+                required
               />
+              {checkReferralCode === undefined && referredBy && <div className="text-sm text-gray-500 mt-1">Validating code...</div>}
+              {referralCodeValid && <div className="text-sm text-green-500 mt-1">Referral code valid!</div>}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Email</label>
