@@ -119,8 +119,17 @@ export async function getApiKey(): Promise<string | null> {
 export function getCurrentUserId(): string | null {
   if (auth && auth.currentUser) {
     return auth.currentUser.uid;
+  } else {
+    // get it from localStorage
+    const apiKey = localStorage.getItem('apiKey');
+    if (apiKey) {
+      const keyParts = apiKey.split('_');
+      if (keyParts.length >= 3) {
+        return keyParts[1];
+      }
+    }
+    return null;
   }
-  return null;
 }
 
 /**

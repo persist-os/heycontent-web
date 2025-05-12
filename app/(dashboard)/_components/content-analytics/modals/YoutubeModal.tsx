@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { getApiKey } from '@/app/(dashboard)/_components/chat/utils/api-utils';
+import { getApiKey, getCurrentUserId } from '@/app/(dashboard)/_components/chat/utils/api-utils';
 import { Card } from '@/src/components/ui/card';
 import { X, MessageSquare, Youtube, Sparkles, Bot, ExternalLink } from 'lucide-react';
 import { YouTubeContentItem } from '../types';
@@ -31,25 +31,10 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
   
   // Extract user ID from the API key on component mount
   useEffect(() => {
-    const extractUserIdFromApiKey = async () => {
-      try {
-        // First get the API key
-        const apiKey = await getApiKey();
-        if (!apiKey) return null;
-        
-        // Extract userId from the API key (format: heycontent_<userId>_...)
-        const keyParts = apiKey.split('_');
-        if (keyParts.length >= 3) {
-          const extractedUserId = keyParts[1];
-          console.log('YoutubeModal - Extracted User ID from API key:', extractedUserId);
-          setUserId(extractedUserId);
-        }
-      } catch (error) {
-        console.error('Error extracting user ID from API key:', error);
-      }
-    };
-    
-    extractUserIdFromApiKey();
+    const userId = getCurrentUserId();
+    if (userId) {
+      setUserId(userId);
+    }
   }, []);
   
   // Add logging to help debug

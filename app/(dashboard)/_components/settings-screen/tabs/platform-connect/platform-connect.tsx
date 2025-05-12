@@ -5,11 +5,11 @@ import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useAuth } from '@/app/context/auth-context';
 import { SocialPlatform } from '@/app/types/social-platforms';
-import { PLATFORMS } from './platform-connect/platforms';
-import { YouTubePlatformCard } from './platform-connect/YouTubePlatformCard';
-import { GmailPlatformCard } from './platform-connect/GmailPlatformCard';
-import { InstagramPlatformCard } from './platform-connect/InstagramPlatformCard';
-import { isError, getAccountDetails, ConnectedAccount } from './platform-connect/platform-utils';
+import { PLATFORMS } from './platforms';
+import { YouTubePlatformCard } from './YouTubePlatformCard';
+import { GmailPlatformCard } from './GmailPlatformCard';
+import { InstagramPlatformCard } from './InstagramPlatformCard';
+import { isError, getAccountDetails, ConnectedAccount } from './platform-utils';
 
 export function PlatformConnect() {
   const { user } = useAuth();

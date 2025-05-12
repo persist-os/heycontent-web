@@ -16,21 +16,18 @@ export default defineSchema({
 
   personas: defineTable({
     name: v.string(),
-    creatorId: v.string(),
-    currentState: v.object({
+    userId: v.string(),
+    currentPersona: v.object({
       description: v.string()
     }),
-    currentActivities: v.object({
-      description: v.string()
-    }),
-    aspirations: v.object({
+    futureVision: v.object({
       description: v.string()
     }),
     isActive: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
-  .index("by_user", ["creatorId"])
+  .index("by_userId", ["userId"])
   .index("by_active", ["isActive"]),
   
   // Chat conversations

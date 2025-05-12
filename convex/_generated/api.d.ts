@@ -25,6 +25,7 @@ import type * as instagramMutations from "../instagramMutations.js";
 import type * as instagramQueries from "../instagramQueries.js";
 import type * as internal_ from "../internal.js";
 import type * as notes from "../notes.js";
+import type * as personaQueries from "../personaQueries.js";
 import type * as personas from "../personas.js";
 import type * as rateLimiting from "../rateLimiting.js";
 import type * as users from "../users.js";
@@ -52,6 +53,7 @@ declare const fullApi: ApiFromModules<{
   instagramQueries: typeof instagramQueries;
   internal: typeof internal_;
   notes: typeof notes;
+  personaQueries: typeof personaQueries;
   personas: typeof personas;
   rateLimiting: typeof rateLimiting;
   users: typeof users;

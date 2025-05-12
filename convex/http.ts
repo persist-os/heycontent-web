@@ -61,6 +61,14 @@ app.patch("/api/users/:id", async (c) => {
   return c.json({ success: true });
 });
 
+// Access a persona
+app.get("/api/users/:id/personas", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const persona = await ctx.runQuery(api.personas.getPersona, { userId });
+  return c.json(persona);
+});
+
 // API KEY ROUTES
 
 // Insert API key

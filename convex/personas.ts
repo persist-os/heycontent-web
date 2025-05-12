@@ -12,11 +12,22 @@ export const getPersona = query({
 
     const persona = await ctx.db
       .query("personas")
-      .withIndex("by_user", (q) => q.eq("creatorId", userId))
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
       .filter((q) => q.eq(q.field("isActive"), true))
       .first();
 
-    return persona || null;
+    if (!persona) {
+      throw new Error("Persona not found");
+    }
+
+    const personaData = {
+      userId: persona.userId,
+      name: persona.name,
+      currentPersona: persona.currentPersona.description,
+      futureVision: persona.futureVision.description,
+    };
+
+    return personaData;
   },
 });
 
@@ -24,22 +35,31 @@ export const getPersona = query({
 export const createPersona = mutation({
   args: {
     userId: v.string(),
+    preferredName: v.string(),
     currentPersona: v.string(),
     futureVision: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId, currentPersona, futureVision } = args;
-    
+    const { userId, preferredName, currentPersona, futureVision } = args;
+
+    // Delete all previous personas for this user
+    const allPersonas = await ctx.db
+      .query("personas")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect();
+
+    for (const persona of allPersonas) {
+      await ctx.db.delete(persona._id);
+    }
+
+    // Create new persona
     return await ctx.db.insert("personas", {
-      name: currentPersona,
-      creatorId: userId,
-      currentState: {
+      name: preferredName,
+      userId: userId,
+      currentPersona: {
         description: currentPersona
       },
-      currentActivities: {
-        description: currentPersona
-      },
-      aspirations: {
+      futureVision: {
         description: futureVision || currentPersona
       },
       isActive: true,
@@ -62,50 +82,3 @@ export const deactivatePersona = mutation({
     });
   },
 });
-
-// Mutation to update a persona (deactivates old one and creates new one)
-export const updatePersona = mutation({
-  args: {
-    userId: v.string(),
-    currentPersona: v.string(),
-    futureVision: v.optional(v.string()),
-  },
-  handler: async (ctx, args): Promise<Id<"personas">> => {
-    const { userId, currentPersona, futureVision } = args;
-
-    // Deactivate old personas
-    const oldPersonas = await ctx.db
-      .query("personas")
-      .withIndex("by_user", (q) => q.eq("creatorId", userId))
-      .filter((q) => q.eq(q.field("isActive"), true))
-      .first();
-
-    if (oldPersonas) {
-      await ctx.db.patch(oldPersonas._id, {
-        isActive: false,
-        updatedAt: Date.now(),
-      });
-    }
-
-    // Create new active persona
-    return await ctx.db.insert("personas", {
-      name: currentPersona,
-      creatorId: userId,
-      currentState: {
-        description: currentPersona
-      },
-      currentActivities: {
-        description: currentPersona
-      },
-      aspirations: {
-        description: futureVision || currentPersona
-      },
-      isActive: true,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    });
-  },
-});
-
-// Note: We'll need to create a separate file for the query function
-// This will be in convex/personas.query.ts 
