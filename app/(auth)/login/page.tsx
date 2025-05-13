@@ -1,7 +1,7 @@
 'use client'
 
-import { AuthScreen } from '../_components/auth-screen'
+import LoginScreen from '../_components/login-screen';
 
 export default function LoginPage() {
-  return <AuthScreen isLogin={true} />
-} 
+  return <LoginScreen />;
+}

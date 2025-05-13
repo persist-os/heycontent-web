@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { extractAuthInfo } from '@/app/lib/api-helpers-server';
 
 import dotenv from 'dotenv';
 
@@ -17,18 +18,13 @@ export async function POST(request: Request) {
   });
 
   try {
-    // Get API key from Authorization header
+    // Get API key and user ID from Authorization header
     const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const { apiKey, userId } = extractAuthInfo(authHeader);
+    
+    if (!apiKey) {
       console.warn(`[${requestId}] Authentication failed: No Authorization header or invalid format`);
       return NextResponse.json({ error: 'Unauthorized - Missing or invalid Authorization header' }, { status: 401 });
-    }
-    
-    // Extract the API key from the Authorization header
-    const apiKey = authHeader.substring(7); // Remove 'Bearer ' prefix
-    if (!apiKey) {
-      console.warn(`[${requestId}] Authentication failed: No API key found`);
-      return NextResponse.json({ error: 'Unauthorized - Missing API key' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -40,21 +36,19 @@ export async function POST(request: Request) {
     }
 
     // Always extract user_id from API key, never from client
-    let user_id: string | undefined = undefined;
-    const apiKeyParts = apiKey.split('_');
-    if (apiKeyParts.length >= 2) {
-      user_id = apiKeyParts[1];
-    }
+    const user_id = userId;
     if (!user_id) {
       console.warn(`[${requestId}] Authentication failed: Could not determine user_id from API key`);
       return NextResponse.json({ error: 'Unauthorized - Invalid API key format or missing user_id' }, { status: 401 });
     }
     console.debug(`[${requestId}] Extracted user_id from API key:`, user_id);
 
-    // Log the request details
+    // Log the request details with more explicit information about is_first_message
     console.info(`[${requestId}] Processing chat message`, {
       session_id: session_id || 'null',
       is_first_message: !!is_first_message,
+      is_first_message_raw: is_first_message,
+      is_first_message_type: typeof is_first_message,
       query_length: query?.length,
       has_api_key: !!apiKey,
       user_id: user_id
@@ -213,32 +207,46 @@ export async function POST(request: Request) {
     // Parse embedded JSON in response field if needed
     if (!chat_response && typeof data.response === 'string') {
       try {
-        // Remove markdown code block if present
-        let respStr = data.response.trim();
-        if (respStr.startsWith('```json')) {
-          respStr = respStr.slice(7);
-        }
-        if (respStr.endsWith('```')) {
-          respStr = respStr.slice(0, -3);
+        // First, check if we already have a chat_response in the data
+        if (data.chat_response) {
+          chat_response = data.chat_response;
+        } else {
+          // Use the response field as the chat_response
+          chat_response = data.response;
         }
         
-        // Try to parse the response as JSON
-        try {
-          const parsed = JSON.parse(respStr);
-          chat_response = parsed.chat_response || '';
-          if (Array.isArray(parsed.suggestions)) {
-            suggestions = parsed.suggestions;
+        // If we have suggestions in the data, use those
+        if (Array.isArray(data.suggestions)) {
+          suggestions = data.suggestions;
+        }
+        
+        // If we don't have a chat_response yet, try to parse the response as JSON
+        if (!chat_response) {
+          // Remove markdown code block if present
+          let respStr = data.response.trim();
+          if (respStr.startsWith('```json')) {
+            respStr = respStr.slice(7);
           }
-          // Successfully parsed JSON response
-        } catch (err) {
-          // Always handle non-JSON responses gracefully
-          console.error(`[${requestId}] Response is not valid JSON, treating as plain text.`, {
-            error: err,
-            response: respStr
-          });
-          // Use the plain text response directly instead of showing an error message
-          chat_response = respStr;
-          suggestions = [];
+          if (respStr.endsWith('```')) {
+            respStr = respStr.slice(0, -3);
+          }
+          
+          try {
+            const parsed = JSON.parse(respStr);
+            chat_response = parsed.chat_response || parsed.response || '';
+            if (Array.isArray(parsed.suggestions)) {
+              suggestions = parsed.suggestions;
+            }
+            // Successfully parsed JSON response
+          } catch (err) {
+            // Always handle non-JSON responses gracefully
+            console.error(`[${requestId}] Response is not valid JSON, treating as plain text.`, {
+              error: err,
+              response: respStr
+            });
+            // Use the plain text response directly instead of showing an error message
+            chat_response = respStr;
+          }
         }
       } catch (parseErr) {
         console.error(`[${requestId}] Error processing backend response string`, parseErr);

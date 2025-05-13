@@ -84,16 +84,26 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId }) => {
   // Handle new chat: this is the ONLY way to start a truly fresh conversation.
   // Clears all chat state and ensures the next message will start a new backend session/conversation.
   const handleNewChat = () => {
-    resetChat(); // UI/scroll resets, if any
-    setMessages([]); // Clear all messages
-    handleClearReference && handleClearReference(); // Clear referenced message if supported
+    // UI resets
+    resetChat();
+    setMessages([]);
+    handleClearReference && handleClearReference();
     
-    // Use the new initSession function to create a proper UUID for the new session
-    // This ensures each new chat gets a unique UUID-based session ID
-    initSession(); // Replaces setSessionId(null)
+    // CRITICAL: Reset state for a new chat session
+    console.log('Initializing new chat session...');
     
-    console.log('Started new chat with fresh session ID');
-    // Add any additional per-conversation state resets here if needed
+    // Important: Force sessionId to null
+    window.localStorage.removeItem('chatSessionId'); // Also clear from storage if present
+    chatState.setSessionId(null);
+    
+    // Important: Set isFirstMessage to true
+    chatState.setIsFirstMessage(true);
+    
+    console.log('Started new chat with fresh state:', {
+      sessionId: null,
+      isFirstMessage: true,
+      messagesCount: 0
+    });
   };
 
   // Authentication effect

@@ -1,0 +1,68 @@
+import { query } from "./_generated/server";
+import { v } from "convex/values";
+
+export const list = query({
+  handler: async ({ db }) => {
+    return await db.query("users").collect();
+  },
+});
+
+export const getUserDetails = query({
+    args: { email: v.string() },
+    handler: async ({ db }, { email }) => {
+      const user = await db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", email))
+        .first();
+      
+      if (!user) return null;
+      
+      return {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        image: user.image,
+        userId: user.userId,
+        username: user.username || '',
+        referralCode: user.referralCode || '',
+        referredBy: user.referredBy || '',
+        createdAt: new Date(user._creationTime).toISOString()
+      };
+    },
+  });
+  
+  export const checkReferralCode = query({
+  args: { referralCode: v.string() },
+  handler: async ({ db }, { referralCode }) => {
+    const user = await db
+      .query("users")
+      .withIndex("by_username") // use any index, we filter below
+      .filter((q) => q.eq(q.field("referralCode"), referralCode))
+      .first();
+    if (user) {
+      return { valid: true, userId: user.userId };
+    } else {
+      return { valid: false };
+    }
+  },
+});
+
+export const getUserByEmail = query({
+    args: { email: v.string() },
+    handler: async (ctx, args) => {
+      return await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", args.email))
+        .first()
+    }
+  })
+  
+  export const getUserById = query({
+    args: { userId: v.string() },
+    handler: async (ctx, args) => {
+      return await ctx.db
+        .query("users")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .first()
+    }
+  }) 

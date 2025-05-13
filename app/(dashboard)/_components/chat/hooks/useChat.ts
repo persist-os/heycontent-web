@@ -13,16 +13,28 @@ export const useChat = (
     setSessionId,
     messages,
     setMessages,
-    setConversationSaved,
     isLoading,
     setIsLoading,
     error,
-    setError
+    setError,
+    isFirstMessage,
+    setIsFirstMessage
   } = chatState
   const [referencedMessage, setReferencedMessage] = useState<Message | null>(null)
 
   const handleSendMessage = useCallback(async (content: string) => {
     if (!content || typeof content !== 'string' || !content.trim()) return;
+
+    // Determine if this is the first message by checking sessionId directly
+    const isFirstMessage = !sessionId;
+    const backendSessionId = isFirstMessage ? null : sessionId;
+
+    // Log current state to debug the issue
+    console.log('Current chat state before sending message:', {
+      isFirstMessage,
+      sessionId,
+      messagesCount: messages.length
+    });
 
     const newMessage: Message = {
       id: uuidv4() as string,
@@ -54,15 +66,10 @@ export const useChat = (
         }
       ]);
 
-      // Mark conversation as unsaved ONLY after user message is added
-      setConversationSaved(false);
 
-      // Always send the first message with sessionId=null and isFirstMessage=true
-      // When starting a new chat, ensure sessionId is null so backend creates a new conversation
-      const isFirstMessage = sessionId === null;
-      const backendSessionId = isFirstMessage ? null : sessionId;
+      console.log('Sending message with isFirstMessage:', isFirstMessage, 'backendSessionId:', backendSessionId);
 
-      // Send message to the backend
+      // Send message to the backend - pass isFirstMessage to ensure it's correctly flagged
       const data = await sendChatMessage(content, isFirstMessage, backendSessionId);
 
       // Update messages with the response
@@ -77,6 +84,8 @@ export const useChat = (
           suggestions: data.suggestions || []
         }];
       });
+
+
 
       // Only update sessionId from backend (never generate a local one for persistence)
       // Only set sessionId if we don't already have a valid one
@@ -99,7 +108,7 @@ export const useChat = (
     } finally {
       setIsLoading(false)
     }
-  }, [referencedMessage, sessionId, messages.length, setMessages, setSessionId, setConversationSaved, setIsLoading, setError])
+  }, [referencedMessage, sessionId, messages.length, setMessages, setSessionId, setIsLoading, setError])
 
   const handleMessageReference = useCallback((message: Message) => {
     setReferencedMessage(message)

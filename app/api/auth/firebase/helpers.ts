@@ -1,4 +1,6 @@
 import { api } from "@/convex/_generated/api";
+import { create_user } from "@/convex/userMutations";
+import { fetchQuery, fetchMutation, fetchAction } from "convex/nextjs";
 
 export const logger = {
   info: (message: string, context: Record<string, any> = {}) => {
@@ -24,54 +26,27 @@ export const logger = {
   },
 };
 
-export async function ensureConvexUser(convex: any, user: { uid: string; displayName?: string; email?: string; photoURL?: string }, requestId: string) {
-  // Ensures user exists in Convex, creates if not
-  try {
-    if (!user.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) {
-      logger.warn("Invalid or missing email for user", { requestId, userId: user.uid, email: user.email });
-      throw new Error("Invalid or missing email address");
-    }
-    const convexUser = await convex.query(api.users.getUserByEmail, { email: user.email });
-    if (!convexUser) {
-      logger.info("User not found in Convex, creating user...", { requestId, userId: user.uid });
-      const convexStartTime = Date.now();
-      await convex.action(api.auth.createUser, {
-        userId: user.uid,
-        name: user.displayName || "Unknown User",
-        email: user.email || "",
-        image: user.photoURL || "",
-      });
-      logger.info("User created in Convex", {
-        requestId,
-        userId: user.uid,
-        processingTime: Date.now() - convexStartTime,
-      });
-    }
-  } catch (convexError) {
-    logger.error("Error with Convex user operation", convexError, { requestId, userId: user.uid });
-    throw new Error("Convex user operation failed: " + (convexError as Error).message);
-  }
-}
-
-export async function updateConvexUser(convex: any, decodedToken: any, convexUser: any, requestId: string) {
-  // Updates user info in Convex
-  try {
-    logger.info("User found in Convex, updating user information...", { requestId, userId: decodedToken.uid });
-    const updateStartTime = Date.now();
-    await convex.action(api.auth.updateUser, {
-      userId: decodedToken.uid,
-      name: decodedToken.name || convexUser.name || "Unknown User",
-      email: decodedToken.email || convexUser.email || "",
-      image: decodedToken.picture || convexUser.image || "",
-    });
-    logger.info("User updated in Convex", {
-      requestId,
-      userId: decodedToken.uid,
-      processingTime: Date.now() - updateStartTime,
-    });
-  } catch (convexError) {
-    logger.error("Error updating Convex user", convexError, { requestId, userId: decodedToken.uid });
-  }
+export async function updateOrCreateConvexUser(userId: string, name: string, email: string, image: string, username: string, referredBy: string) {
+  // Log the values we're trying to save to help with debugging
+  logger.debug('Saving user data to Convex', {
+    userId,
+    name,
+    email: email || 'not provided',
+    hasImage: !!image,
+    username: username || 'not provided',
+    referredBy: referredBy || 'not provided'
+  });
+  
+  await fetchMutation(api.userMutations.create_user, {
+    name,
+    email,
+    image,
+    username,
+    referredBy,
+    userId,
+    // referralCode is generated in the mutation, don't need to pass it
+    referralCode: undefined
+  })
 }
 
 export function mapAuthErrorCodeToMessage(code: string): string {

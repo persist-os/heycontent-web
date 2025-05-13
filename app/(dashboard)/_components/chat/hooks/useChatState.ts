@@ -6,31 +6,31 @@ export type ChatStateReturnType = {
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   sessionId: string | null;
   setSessionId: (id: string | null) => void;
-  conversationSaved: boolean;
-  setConversationSaved: React.Dispatch<React.SetStateAction<boolean>>;
   isLoading: boolean;
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
   error: string | null;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
+  isFirstMessage: boolean;
+  setIsFirstMessage: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export const useChatState = (): ChatStateReturnType => {
   const [messages, setMessages] = useState<Message[]>([])
   const [sessionId, setSessionId] = useState<string | null>(null)
-  const [conversationSaved, setConversationSaved] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isFirstMessage, setIsFirstMessage] = useState(true) // Initialize to true for new chats
 
   return {
     messages,
     setMessages,
     sessionId,
     setSessionId,
-    conversationSaved,
-    setConversationSaved,
     isLoading,
     setIsLoading,
     error,
-    setError
-  }
+    setError,
+    isFirstMessage,
+    setIsFirstMessage
+    }
 } 

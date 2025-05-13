@@ -5,123 +5,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
-
-/**
- * Get API key from localStorage or request a new one
- */
-export async function getApiKey(): Promise<string | null> {
-  try {
-    // First try to get the API key from localStorage
-    const storedApiKey = localStorage.getItem('apiKey');
-    let needsRefresh = false;
-    if (storedApiKey) {
-      const apiKey = JSON.parse(storedApiKey);
-      // Check for invalid/temporary key
-      const isValid = (typeof apiKey === 'string' && !apiKey.endsWith('_temporary'));
-      // Check if the key matches the current user
-      let userMatches = false;
-      let keyUserId = null, firebaseUserId = null;
-      if (isValid && auth && auth.currentUser) {
-        // Extract userId from the API key (assuming format: heycontent_<userId>_...)
-        const keyParts = apiKey.split('_');
-        if (keyParts.length >= 3) {
-          keyUserId = keyParts[1];
-          firebaseUserId = auth.currentUser.uid;
-          userMatches = keyUserId === firebaseUserId;
-        }
-      }
-      console.log('[getApiKey] Firebase user:', firebaseUserId, '| API key:', apiKey, '| Extracted user from key:', keyUserId, '| Match:', userMatches);
-      if (!isValid || !userMatches) {
-        console.warn('API key in localStorage is invalid or does not match current user. Removing and refreshing...');
-        localStorage.removeItem('apiKey');
-        needsRefresh = true;
-      } else {
-        // Valid key found for current user
-        console.log('Retrieved API key from localStorage for current user');
-        return apiKey;
-      }
-    } else {
-      needsRefresh = true;
-    }
-
-    // If no valid API key and we have a Firebase user, request one from the backend
-    if (needsRefresh && auth && auth.currentUser) {
-      const userId = auth.currentUser.uid;
-      console.log('No valid API key found, requesting one for user:', userId);
-      try {
-        // Get a fresh Firebase ID token
-        const idToken = await auth.currentUser.getIdToken(true);
-        console.log('Got Firebase ID token, sending to backend to create API key...');
-        // Request an API key via our API proxy to avoid CSP issues
-        const response = await fetch('/api/auth/key', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${idToken}`
-          },
-          body: JSON.stringify({
-            idToken,
-            userId: userId,
-            action: 'refresh'
-          }),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          let apiKeyValue = data.apiKey;
-          // Accept key from data.data.key if present (backend returns this structure)
-          if (!apiKeyValue && data.data && typeof data.data.key === 'string') {
-            apiKeyValue = data.data.key;
-          }
-          // Log the full backend response for debugging
-          console.log('[getApiKey] Full backend response:', data);
-          // Log the userId we requested and the key returned
-          console.log('[getApiKey] Requested API key for Firebase user:', userId, '| API key received from backend:', apiKeyValue);
-          if (typeof apiKeyValue === 'string' && apiKeyValue.startsWith('heycontent_') && !apiKeyValue.endsWith('_temporary')) {
-            localStorage.setItem('apiKey', JSON.stringify(apiKeyValue));
-            console.log('API key saved to localStorage:', apiKeyValue);
-            // Log what is now in localStorage
-            console.log('API key in localStorage after save:', localStorage.getItem('apiKey'));
-            return apiKeyValue;
-          } else {
-            console.warn('Received invalid or temporary API key from backend:', apiKeyValue);
-            localStorage.removeItem('apiKey');
-            return null;
-          }
-        } else {
-          const errorData = await response.json();
-          console.warn('Failed to get API key from backend:', errorData);
-          return null;
-        }
-      } catch (apiError) {
-        console.error('Error requesting API key from backend:', apiError);
-        return null;
-      }
-      // No API key available if backend fails
-      return null;
-    }
-    
-    // If we get here, it means needsRefresh is true but no auth/currentUser is available
-    console.log('No valid API key and no authenticated user to request one');
-    return null;
-  } catch (error) {
-    console.error('Error getting API key:', error);
-    throw new Error('No valid API key available. Please contact support.');
-  }
-}
-
-
-
-
-/**
- * Get the current user ID from Firebase Auth
- */
-export function getCurrentUserId(): string | null {
-  if (auth && auth.currentUser) {
-    return auth.currentUser.uid;
-  }
-  return null;
-}
+import { getApiKey } from '@/app/lib/api-helpers';
 
 /**
  * Send a chat message to the API
@@ -137,19 +21,32 @@ export async function sendChatMessage(
     throw new Error('You are not authenticated. Please log in again.');
   }
 
+  // Always set is_first_message to true when isFirstMessage is true
+  // This ensures the first message is ALWAYS properly flagged
+  const isFirstMessageBool = isFirstMessage;
+  
   const requestBody: any = {
     query: content,
-    is_first_message: isFirstMessage
+    is_first_message: isFirstMessageBool
   };
 
-  // Only include session_id for subsequent messages
-  if (!isFirstMessage && sessionId) {
+  // If this is the first message, explicitly set session_id to null in the request
+  if (isFirstMessageBool) {
+    requestBody.session_id = null;
+  } else if (sessionId) {
     requestBody.session_id = sessionId;
   }
 
   // Do NOT include user_id in the request body; backend extracts it from API key
 
-  console.log('Sending chat message:', requestBody);
+  console.log('Sending chat message with details:', {
+    query_length: content.length,
+    is_first_message_original: isFirstMessage,
+    is_first_message_sent: isFirstMessageBool,
+    session_id: requestBody.session_id,
+    has_session_id: !!requestBody.session_id
+  });
+  console.log('Full request body:', JSON.stringify(requestBody));
   console.log('Sending Authorization header:', apiKey);
 
   const response = await fetch('/api/chat/message', {
@@ -186,9 +83,5 @@ export async function loadConversation(id: string) {
   }
 }
 
-/**
- * Generate a fallback session ID when the backend doesn't provide one
- */
-export function generateLocalSessionId(): string {
-  return `local-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
-}
+// We no longer generate local session IDs
+// All session IDs should come from the backend

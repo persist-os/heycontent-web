@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
 import { adminAuth } from '@/app/lib/firebase-admin'
 import { proxyApiKeyRequest } from '../utils/apiKeyProxy';
-import { api } from "@/convex/_generated/api"
-import { fetchQuery, fetchMutation, fetchAction } from "convex/nextjs";
-import { logger, ensureConvexUser, updateConvexUser, mapAuthErrorCodeToMessage, redactToken } from './helpers';
+import { logger, updateOrCreateConvexUser, mapAuthErrorCodeToMessage, redactToken } from './helpers';
+import { fetchQuery } from 'convex/nextjs';
+import { api } from '@/convex/_generated/api';
 
 export async function POST(request: Request) {
   const requestId = `auth-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
@@ -20,122 +20,8 @@ export async function POST(request: Request) {
       clientIp: request.headers.get('x-forwarded-for') || 'unknown'
     });
 
-    const { email, password, action, idToken } = body
+    const { email, password, action, idToken, name, username, referredBy } = body
 
-    if (action === 'login') {
-      logger.info('Attempting login', { requestId, email })
-      const loginStartTime = Date.now();
-      try {
-        // First verify the user exists and is not disabled
-        const userRecord = await adminAuth.getUserByEmail(email)
-        // Create a custom token for the user
-        const customToken = await adminAuth.createCustomToken(userRecord.uid);
-        logger.debug('Firebase custom token generated for user', { 
-          requestId, 
-          tokenPreview: redactToken(customToken),
-          tokenLength: customToken?.length
-        });
-        logger.info('Login successful', { 
-          requestId, 
-          email: userRecord.email,
-          userId: userRecord.uid,
-          processingTime: Date.now() - loginStartTime
-        });
-        await ensureConvexUser({
-  query: (fn: any, args: any) => fetchQuery(fn, args),
-  action: (fn: any, args: any) => fetchAction(fn, args)
-}, userRecord, requestId);
-        return NextResponse.json({
-          success: true,
-          redirect: '/chat',
-          customToken,
-          message: 'Use this customToken with Firebase Auth client SDK to sign in, then send your ID token to the backend for API requests.'
-        });
-      } catch (error: any) {
-        const errorCode = error.code || 'unknown';
-        logger.warn('Login failed', { 
-          requestId, 
-          email, 
-          errorCode,
-          errorMessage: error.message,
-          processingTime: Date.now() - loginStartTime
-        });
-        
-        if (errorCode === 'auth/user-not-found') {
-          return NextResponse.json(
-            { error: 'No account found with this email' },
-            { status: 400 }
-          )
-        }
-        if (errorCode === 'auth/wrong-password') {
-          return NextResponse.json(
-            { error: 'Incorrect password' },
-            { status: 400 }
-          );
-        }
-        
-        // Send appropriate error response based on error type
-        const statusCode = error.code?.includes('auth/') ? 400 : 500;
-        const errorMessage = statusCode === 400 ? (error.message || 'Authentication failed') : 'Internal server error';
-        
-        logger.error('Unexpected login error', error, { requestId, email });
-        return NextResponse.json(
-          { error: errorMessage },
-          { status: statusCode }
-        )
-      }
-    } else if (action === 'register') {
-      logger.info('Attempting registration', { requestId, email })
-      const registrationStartTime = Date.now();
-      try {
-        const userRecord = await adminAuth.createUser({
-          email,
-          password,
-        })
-        // Create a custom token for the user
-        const customToken = await adminAuth.createCustomToken(userRecord.uid)
-        logger.debug('Firebase custom token generated for new user', { 
-          requestId, 
-          tokenPreview: redactToken(customToken),
-          tokenLength: customToken?.length
-        });
-        logger.info('Registration successful', { 
-          requestId, 
-          email: userRecord.email,
-          userId: userRecord.uid,
-          processingTime: Date.now() - registrationStartTime
-        });
-        await ensureConvexUser({
-  query: (fn: any, args: any) => fetchQuery(fn, args),
-  action: (fn: any, args: any) => fetchAction(fn, args)
-}, userRecord, requestId);
-        return NextResponse.json({
-          success: true,
-          redirect: '/chat',
-          customToken,
-          message: 'Use this customToken with Firebase Auth client SDK to sign in, then send your ID token to the backend for API requests.'
-        });
-      } catch (error: any) {
-        const errorCode = error.code || 'unknown';
-        logger.warn('Registration failed', { 
-          requestId, 
-          email, 
-          errorCode,
-          errorMessage: error.message,
-          processingTime: Date.now() - registrationStartTime
-        });
-        
-        if (errorCode === 'auth/email-already-in-use') {
-          return NextResponse.json(
-            { error: 'An account with this email already exists' },
-            { status: 400 }
-          )
-        }
-        
-        logger.error('Unexpected registration error', error, { requestId, email });
-        throw error
-      }
-    } else if (action === 'google' || action === 'refresh' || action === 'getApiKey') {
       logger.info('Processing token-based auth', { requestId, action });
       const tokenAuthStartTime = Date.now();
       if (!idToken) {
@@ -158,19 +44,14 @@ export async function POST(request: Request) {
         provider: decodedToken.firebase?.sign_in_provider
       });
       logger.info('Firebase token verified successfully', { requestId, userId: decodedToken.uid, provider: decodedToken.firebase?.sign_in_provider });
-      // Ensure user exists or update in Convex
-      const convexUser = await fetchQuery(api.users.getUserById, { userId: decodedToken.uid });
-      if (!convexUser) {
-        await ensureConvexUser({
-          query: (fn: any, args: any) => fetchQuery(fn, args),
-          action: (fn: any, args: any) => fetchAction(fn, args)
-        }, { uid: decodedToken.uid, displayName: decodedToken.name, email: decodedToken.email, photoURL: decodedToken.picture }, requestId);
-      } else {
-        await updateConvexUser({
-          query: (fn: any, args: any) => fetchQuery(fn, args),
-          action: (fn: any, args: any) => fetchAction(fn, args)
-        }, decodedToken, convexUser, requestId);
-      }
+      await updateOrCreateConvexUser(
+  decodedToken.uid,
+  decodedToken.name || name || '',
+  decodedToken.email || email,
+  decodedToken.picture || '',
+  username || '',
+  referredBy || ''
+);
       // Call the /api/auth/key route to get an API key for this user
       let apiKeyData = null;
       try {
@@ -196,10 +77,7 @@ export async function POST(request: Request) {
         maxAge: 60 * 60 * 24 * 7 // 1 week
       });
       return response;
-    } else {
-      logger.warn('Invalid action provided', { requestId, action })
-      return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
-    }
+    
   } catch (err: any) {
     logger.error('Authentication request failed', err, {
       requestId,

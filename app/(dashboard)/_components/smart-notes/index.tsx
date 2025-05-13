@@ -81,6 +81,15 @@ export default function SmartNotes() {
 
   const activeNote = notes.find(note => note._id === activeNoteId);
 
+  const handleSave = async () => {
+    if (!activeNote) return;
+    try {
+      await updateNote(activeNote._id, { content: activeNote.content });
+    } catch (error) {
+      console.error('Failed to save note:', error);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -97,7 +106,7 @@ export default function SmartNotes() {
           <NoteArea
             note={activeNote}
             onUpdate={(noteId, updates) => updateNote(noteId, updates)}
-            onSave={() => activeNote && updateNote(activeNote._id, {})}
+            onSave={handleSave}
             onToggleShortcuts={() => setShowShortcuts(!showShortcuts)}
             onRequestAIInsights={requestAIInsights}
             onBack={() => {

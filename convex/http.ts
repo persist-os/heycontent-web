@@ -14,7 +14,7 @@ app.use("*", cors());
 // List all users
 app.get("/api/users", async (c) => {
   const ctx = c.env;
-  const users = await ctx.runQuery(api.users.list, {});
+  const users = await ctx.runQuery(api.userQueries.list, {});
   return c.json(users);
 });
 
@@ -22,7 +22,7 @@ app.get("/api/users", async (c) => {
 app.get("/api/users/:id", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  const user = await ctx.runQuery(api.users.get, { userId });
+  const user = await ctx.runQuery(api.userQueries.getUserById, { userId });
   return c.json(user);
 });
 
@@ -30,35 +30,43 @@ app.get("/api/users/:id", async (c) => {
 app.get("/api/users/email/:email", async (c) => {
   const ctx = c.env;
   const email = c.req.param("email");
-  const user = await ctx.runQuery(api.users.getUserByEmail, { email });
+  const user = await ctx.runQuery(api.userQueries.getUserByEmail, { email });
   return c.json(user);
 });
 
-// Create new user
-app.post("/api/users", async (c) => {
+
+// Access a persona
+app.get("/api/users/:id/personas", async (c) => {
   const ctx = c.env;
-  const { name, email, image, userId } = await c.req.json();
-  const result = await ctx.runMutation(api.users.create, {
-    name,
-    email,
-    image,
+  const userId = c.req.param("id");
+  const persona = await ctx.runQuery(api.personas.getPersona, { userId });
+  return c.json(persona);
+});
+
+// Conversations
+app.post("/api/users/:id/create_conversation", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { title, messages } = await c.req.json();
+  const result = await ctx.runMutation(api.chatMutations.createConversation, {
     userId,
+    title,
+    messages,
   });
   return c.json(result);
 });
 
-// Update user
-app.patch("/api/users/:id", async (c) => {
+// Add message to conversation
+app.post("/api/users/:id/add_message_to_conversation", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  const { name, email, image } = await c.req.json();
-  await ctx.runAction(api.auth.updateUser, {
-    name,
-    email,
-    image,
+  const { conversationId, message } = await c.req.json();
+  const result = await ctx.runMutation(api.chatMutations.addMessageToConversation, {
     userId,
+    conversationId,
+    message,
   });
-  return c.json({ success: true });
+  return c.json(result);
 });
 
 // API KEY ROUTES

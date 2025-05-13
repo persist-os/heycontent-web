@@ -9,16 +9,33 @@ interface NoteHeaderProps {
   onRequestAIInsights: (noteId: string, note: Note) => Promise<void>;
   onBack: () => void;
   isMobile: boolean;
+  currentContent?: string; // Add current content prop
 }
 
-export function NoteHeader({ note, onUpdate, onSave, onRequestAIInsights, onBack, isMobile }: NoteHeaderProps) {
+export function NoteHeader({ note, onUpdate, onSave, onRequestAIInsights, onBack, isMobile, currentContent }: NoteHeaderProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const handleRequestInsights = async () => {
     if (isAnalyzing) return;
     try {
       setIsAnalyzing(true);
-      await onRequestAIInsights(note.id, note);
+      // Ensure we're using the latest note data with current content
+      if (note && note._id) {
+        // Create a new note object with the current content if available
+        const noteWithCurrentContent = currentContent !== undefined
+          ? { ...note, content: currentContent }
+          : note;
+        
+        console.log('Requesting AI insights with note:', {
+          noteId: note._id,
+          hasCurrentContent: currentContent !== undefined,
+          contentLength: noteWithCurrentContent.content?.length || 0
+        });
+        
+        await onRequestAIInsights(note._id, noteWithCurrentContent);
+      } else {
+        console.error('Cannot request AI insights: Invalid note or note ID');
+      }
     } catch (error) {
       console.error('Failed to request AI insights:', error);
     } finally {
@@ -43,7 +60,7 @@ export function NoteHeader({ note, onUpdate, onSave, onRequestAIInsights, onBack
           value={note.title}
           onChange={(e) => {
             const newTitle = e.target.value;
-            onUpdate(note.id, { title: newTitle });
+            onUpdate(note._id, { title: newTitle });
           }}
           className="text-2xl font-semibold bg-transparent border-none focus:outline-none w-full"
           placeholder="Untitled Note"

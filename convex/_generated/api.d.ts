@@ -16,8 +16,8 @@ import type {
 import type * as apiKeys from "../apiKeys.js";
 import type * as apiKeysMutations from "../apiKeysMutations.js";
 import type * as apiKeysQueries from "../apiKeysQueries.js";
-import type * as auth from "../auth.js";
-import type * as chat from "../chat.js";
+import type * as chatMutations from "../chatMutations.js";
+import type * as chatQueries from "../chatQueries.js";
 import type * as gmailMutations from "../gmailMutations.js";
 import type * as gmailQueries from "../gmailQueries.js";
 import type * as http from "../http.js";
@@ -25,9 +25,11 @@ import type * as instagramMutations from "../instagramMutations.js";
 import type * as instagramQueries from "../instagramQueries.js";
 import type * as internal_ from "../internal.js";
 import type * as notes from "../notes.js";
+import type * as personaQueries from "../personaQueries.js";
 import type * as personas from "../personas.js";
 import type * as rateLimiting from "../rateLimiting.js";
-import type * as users from "../users.js";
+import type * as userMutations from "../userMutations.js";
+import type * as userQueries from "../userQueries.js";
 import type * as youtubeMutations from "../youtubeMutations.js";
 import type * as youtubeQueries from "../youtubeQueries.js";
 
@@ -43,8 +45,8 @@ declare const fullApi: ApiFromModules<{
   apiKeys: typeof apiKeys;
   apiKeysMutations: typeof apiKeysMutations;
   apiKeysQueries: typeof apiKeysQueries;
-  auth: typeof auth;
-  chat: typeof chat;
+  chatMutations: typeof chatMutations;
+  chatQueries: typeof chatQueries;
   gmailMutations: typeof gmailMutations;
   gmailQueries: typeof gmailQueries;
   http: typeof http;
@@ -52,9 +54,11 @@ declare const fullApi: ApiFromModules<{
   instagramQueries: typeof instagramQueries;
   internal: typeof internal_;
   notes: typeof notes;
+  personaQueries: typeof personaQueries;
   personas: typeof personas;
   rateLimiting: typeof rateLimiting;
-  users: typeof users;
+  userMutations: typeof userMutations;
+  userQueries: typeof userQueries;
   youtubeMutations: typeof youtubeMutations;
   youtubeQueries: typeof youtubeQueries;
 }>;
