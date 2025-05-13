@@ -109,16 +109,12 @@ export class ShortcutManager {
           return false;
 
         case '@': // Mentions
-          event.preventDefault();
-          event.stopPropagation();
           this.handlers.onMention?.();
-          return true;
+          return false;
 
         case '#': // Tags
-          event.preventDefault();
-          event.stopPropagation();
           this.handlers.onTag?.();
-          return true;
+          return false;
       }
     }
 

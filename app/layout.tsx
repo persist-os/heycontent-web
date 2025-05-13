@@ -5,6 +5,7 @@ import './globals.css'
 import { Providers } from './providers'
 import { headers } from 'next/headers'
 import { Toaster } from 'react-hot-toast'
+import { CommandPaletteProvider } from './context/CommandPaletteProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -34,7 +35,9 @@ export default async function RootLayout({
       </head>
       <body className={inter.className} suppressHydrationWarning>
         <Providers>
-          {children}
+          <CommandPaletteProvider>
+            {children}
+          </CommandPaletteProvider>
         </Providers>
         <Toaster />
       </body>

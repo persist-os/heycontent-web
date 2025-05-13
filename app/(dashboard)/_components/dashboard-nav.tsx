@@ -10,7 +10,7 @@ import { useSidebar } from '@/app/context/sidebar-context'
 import {
   Brain, Users, MessageSquare, Settings,
   Briefcase, ChevronLeft, Clock, Star, FileText,
-  ChevronRight, LogOut
+  ChevronRight, LogOut, BarChart3, Video
 } from 'lucide-react'
 
 // Add type for recent chats
@@ -28,6 +28,20 @@ const navItems = [
     icon: Logo,
     href: '/chat',
     color: 'text-black'
+  },
+  {
+    id: 'studio',
+    label: 'Content Studio',
+    icon: Video,
+    href: '/studio',
+    color: 'text-red-500'
+  },
+  {
+    id: 'content',
+    label: 'Content Analytics',
+    icon: BarChart3,
+    href: '/content',
+    color: 'text-blue-500'
   },
   {
     id: 'ai-insights',

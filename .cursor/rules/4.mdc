@@ -1,0 +1,54 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+HeyContent Waitlist Overview
+Objective:
+Create a buzzworthy, shareable waitlist experience for HeyContent that builds anticipation, encourages referrals, and rewards early adopters with a personalized Creator Identity Card.
+
+🛠️ What We’re Building
+1. A Smart, Social Waitlist System
+
+Users sign up with their email and answer 3–5 fun, branded onboarding questions (e.g., their content type, vibe, goals).
+
+They’re then placed in a queue and told they’ll be emailed once it’s their turn.
+
+They can wait or move up the line by inviting others or sharing their card.
+
+2. A Personalized Creator Identity Card
+
+Once signed up (and optionally queued), users receive a digital card they can save and share.
+
+The card includes:
+
+Their first name or creator name
+
+A fun, AI-generated title (e.g., “Momentum Builder,” “Creative Alchemist”)
+
+A branded HeyContent logo instead of the Arc leaf
+
+A “Join Date” stamp for that collectible feel
+
+A unique invite code or share link (with tracking)
+
+Optional card variant if they invite friends
+
+3. Viral Growth Incentive
+
+Each user gets 3 invites to give away.
+
+Referring others can bump their place in the line or unlock special editions of their card (like animated backgrounds, gold borders, etc.).
+
+We reward early participation and sharing, not just speed.
+
+🧠 Creative & Technical Notes
+Design should feel clean, playful, and creator-focused (think Arc meets Spotify Wrapped with a sprinkle of Duolingo energy).
+
+The HeyContent logo replaces the Arc icon and anchors the visual identity.
+
+We should be able to generate cards dynamically with user data (e.g., name, title, join date, referral code).
+
+Share actions (Twitter, Instagram Story, LinkedIn, etc.) should be optimized with OG tags for previews.
+
+Email delivery (e.g., via Resend or SendGrid) will send them their card once they join or reach the front.

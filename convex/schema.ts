@@ -157,7 +157,12 @@ export default defineSchema({
         v.literal("conversation"),
         v.literal("idea"),
         v.literal("url"),
-        v.literal("date")
+        v.literal("date"),
+        v.literal("screen"),
+        v.literal("component"),
+        v.literal("section"),
+        v.literal("feature"),
+        v.literal("workflow")
       ),
       content: v.string(),
       isLoading: v.optional(v.boolean()),
@@ -178,4 +183,99 @@ export default defineSchema({
     scope: v.optional(v.string()),
   })
   .index("by_user_platform", ["userId", "platform"]),
+
+  subscriptionPlans: defineTable({
+    name: v.string(),
+    price: v.number(),
+    interval: v.union(v.literal("month"), v.literal("year")),
+    features: v.array(v.string()),
+    stripePriceId: v.string(),
+    stripeProductId: v.string(),
+    isActive: v.boolean(),
+    isPerSeat: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_active", ["isActive"])
+  .index("by_stripe", ["stripePriceId"]),
+
+  userSubscriptions: defineTable({
+    userId: v.string(),
+    planId: v.string(),
+    status: v.union(
+      v.literal("active"),
+      v.literal("canceled"),
+      v.literal("past_due"),
+      v.literal("trialing")
+    ),
+    stripeSubscriptionId: v.optional(v.string()),
+    stripeCustomerId: v.optional(v.string()),
+    currentPeriodStart: v.number(),
+    currentPeriodEnd: v.number(),
+    cancelAtPeriodEnd: v.boolean(),
+    teamId: v.optional(v.string()),
+    trialEndDate: v.optional(v.number()),
+    quantity: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_status", ["status"])
+  .index("by_stripe", ["stripeSubscriptionId"]),
+
+  paymentMethods: defineTable({
+    userId: v.string(),
+    stripePaymentMethodId: v.string(),
+    type: v.string(),
+    last4: v.string(),
+    brand: v.string(),
+    expMonth: v.number(),
+    expYear: v.number(),
+    isDefault: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_stripe", ["stripePaymentMethodId"]),
+
+  usage: defineTable({
+    userId: v.string(),
+    month: v.string(),
+    completions: v.number(),
+    fastRequests: v.number(),
+    slowRequests: v.number(),
+    overageCharges: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_user_month", ["userId", "month"]),
+
+  sessions: defineTable({
+    userId: v.string(),
+    type: v.union(v.literal("desktop"), v.literal("web")),
+    createdAt: v.number(),
+    lastActive: v.number(),
+    revoked: v.boolean(),
+  })
+  .index("by_user", ["userId"]),
+
+  usageEvents: defineTable({
+    userId: v.string(),
+    timestamp: v.number(),
+    model: v.string(),
+    status: v.string(),
+    qty: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_timestamp", ["timestamp"]),
+
+  ubpSettings: defineTable({
+    userId: v.string(),
+    enabled: v.boolean(),
+    premiumEnabled: v.boolean(),
+    monthlyLimit: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_user", ["userId"]),
 });

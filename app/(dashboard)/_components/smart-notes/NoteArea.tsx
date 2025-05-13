@@ -119,6 +119,11 @@ export function NoteArea({
     }
   }, [note._id, note.content]);
 
+  // Add debug logging for initial render
+  useEffect(() => {
+    console.log('NoteArea mounted with note:', note);
+  }, [note]);
+
   const insertText = (text: string) => {
     if (!textAreaRef.current || !content) return;
 
@@ -182,17 +187,90 @@ export function NoteArea({
     onUpdate(note._id, { content: newContent });
   };
 
-  const updateMenuPosition = () => {
-    if (!textAreaRef.current) return;
-
-    const { top, left } = getCursorCoordinates(textAreaRef.current, textAreaRef.current.selectionStart || 0);
-    setMenuPosition({ top, left });
-  };
-
-  const handleContentChange = (newContent: string) => {
+  const handleContentChange = async (newContent: string) => {
+    console.log('Content changing to:', newContent);
     setContent(newContent);
-    onUpdate(note._id, { content: newContent });
+    
+    try {
+      // Update the note content with proper updates wrapper
+      const updatedNote = await onUpdate(note._id, {
+        updates: {
+          content: newContent,
+          updatedAt: Date.now()
+        }
+      });
+      console.log('Note updated successfully:', updatedNote);
+      
+      // Save to local storage as backup
+      saveToLocal(note._id, { content: newContent });
+    } catch (error) {
+      console.error('Failed to update note:', error);
+    }
   };
+
+  // Update menu position when content changes
+  const updateMenuPosition = () => {
+    if (textAreaRef.current) {
+      const cursorPos = textAreaRef.current.selectionStart || 0;
+      const coords = getCursorCoordinates(textAreaRef.current, cursorPos);
+      setMenuPosition(coords);
+    }
+  };
+
+  // Handle key down events
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    console.log('Key pressed:', e.key);
+    
+    if (shortcutManager.current) {
+      const handled = shortcutManager.current.handleKeyDown(e as any);
+      if (!handled) {
+        if (e.key === '@') {
+          console.log('@ key pressed, showing mentions menu');
+          insertText('@');
+          setShowMentions(true);
+          updateMenuPosition();
+        } else if (e.key === '#') {
+          console.log('# key pressed, showing tags menu');
+          insertText('#');
+          setShowTags(true);
+          updateMenuPosition();
+        } else if (e.key === '/') {
+          console.log('/ key pressed, showing commands menu');
+          insertText('/');
+          setShowCommands(true);
+          updateMenuPosition();
+        } else if (e.key === 'Backspace') {
+          // Check if we're deleting a special character
+          if (textAreaRef.current) {
+            const cursorPos = textAreaRef.current.selectionStart;
+            const charBeforeCursor = content.charAt(cursorPos - 1);
+            if (charBeforeCursor === '@' || charBeforeCursor === '#' || charBeforeCursor === '/') {
+              console.log('Special character deleted, closing menus');
+              setShowCommands(false);
+              setShowMentions(false);
+              setShowTags(false);
+            }
+          }
+        }
+      }
+    }
+  };
+
+  // Add click outside handler
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (textAreaRef.current && !textAreaRef.current.contains(event.target as Node)) {
+        setShowCommands(false);
+        setShowMentions(false);
+        setShowTags(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleCommand = (command: Command) => {
     if (command.type === 'format') {
@@ -205,14 +283,11 @@ export function NoteArea({
     setShowCommands(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (shortcutManager.current) {
-      shortcutManager.current.handleKeyDown(e as any);
-    }
-  };
-
   return (
-    <div className="flex flex-col h-full">
+    <div 
+      className="flex flex-col h-full note-container"
+      data-note={JSON.stringify(note)}
+    >
       <NoteHeader
         note={note}
         onUpdate={(updates) => onUpdate(note._id, updates)}

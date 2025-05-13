@@ -9,7 +9,7 @@ import {
   Bell, Globe, Users,
   Sliders,
   Download, Database,
-  LogOut, Bug} from 'lucide-react'
+  LogOut, Bug, CreditCard, CheckCircle2} from 'lucide-react'
 import { signOut, updateProfile } from 'firebase/auth'
 import { auth } from '@/app/lib/firebase'
 import { Badge } from "@/src/components/ui/badge"
@@ -18,6 +18,7 @@ import { toast } from "react-hot-toast"
 import { PlatformConnect } from './platform-connect'
 import { fetchWithAuth } from '@/app/lib/api-helpers'
 import DebugTab from './debug-tab'
+import SubscriptionOverview from './subscription-overview'
 
 const MAX_PERSONA_LENGTH = 500  // Enough for detailed description but not too long
 const MAX_VISION_LENGTH = 500
@@ -185,22 +186,10 @@ const SettingsScreen = () => {
 
   return (
     <div className="h-full min-h-screen bg-background">
-      <div className="container max-w-6xl mx-auto py-4 sm:py-6 px-3 sm:px-6 space-y-4 sm:space-y-6">
-        {isFirstTimeSetup && (
-          <div className="mb-4 sm:mb-6 bg-purple-50 p-3 sm:p-4 rounded-lg">
-            <h2 className="text-base sm:text-lg font-semibold mb-2">Welcome to HeyContent! 🎉</h2>
-            <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">Intelligent Relationship and Insight System</p>
-            <ol className="list-decimal list-inside space-y-1 sm:space-y-2 text-sm sm:text-base text-gray-600">
-              <li>Complete your profile information</li>
-              <li>Connect your social media accounts</li>
-              <li>Set up your notification preferences</li>
-              <li>Configure Chat With Content settings</li>
-            </ol>
-          </div>
-        )}
-
-        <div className="flex justify-between items-center -mt-2">
-          <div className="w-[100px] sm:w-auto"></div>
+      {/* Fixed Header */}
+      <div className="shrink-0 px-6 py-4 bg-white dark:bg-gray-900">
+        <div className="flex justify-between items-center">
+          <div className="w-[100px] sm:w-[24px]"></div>
           <div className="flex-1 flex justify-center sm:justify-start">
             <div className="text-center sm:text-left">
               <h1 className="text-base font-medium text-black dark:text-white">Settings</h1>
@@ -218,6 +207,21 @@ const SettingsScreen = () => {
             </Button>
           </div>
         </div>
+      </div>
+
+      <div className="container max-w-6xl mx-auto py-4 sm:py-6 px-3 sm:px-6 space-y-4 sm:space-y-6">
+        {isFirstTimeSetup && (
+          <div className="mb-4 sm:mb-6 bg-purple-50 p-3 sm:p-4 rounded-lg">
+            <h2 className="text-base sm:text-lg font-semibold mb-2">Welcome to HeyContent! 🎉</h2>
+            <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">Intelligent Relationship and Insight System</p>
+            <ol className="list-decimal list-inside space-y-1 sm:space-y-2 text-sm sm:text-base text-gray-600">
+              <li>Complete your profile information</li>
+              <li>Connect your social media accounts</li>
+              <li>Set up your notification preferences</li>
+              <li>Configure Chat With Content settings</li>
+            </ol>
+          </div>
+        )}
 
         <Tabs defaultValue="account" className="space-y-4 sm:space-y-6">
           <div className="overflow-x-auto pb-2 -mx-3 sm:mx-0">
@@ -225,6 +229,10 @@ const SettingsScreen = () => {
               <TabsTrigger value="account" className="flex-1 sm:flex-none">
                 <Users className="w-4 h-4 mr-2" />
                 <span className="hidden sm:inline">Account</span>
+              </TabsTrigger>
+              <TabsTrigger value="subscription" className="flex-1 sm:flex-none">
+                <CreditCard className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Subscription</span>
               </TabsTrigger>
               <TabsTrigger value="notifications" className="flex-1 sm:flex-none">
                 <Bell className="w-4 h-4 mr-2" />
@@ -387,6 +395,11 @@ const SettingsScreen = () => {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Subscription Settings */}
+          <TabsContent value="subscription">
+            <SubscriptionOverview />
           </TabsContent>
 
           {/* Notifications */}

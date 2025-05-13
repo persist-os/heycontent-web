@@ -1,7 +1,17 @@
 import { Id } from "@/convex/_generated/dataModel";
 
 export type NoteType = 'ai_insight' | 'conversation' | 'idea' | 'url' | 'date';
-export type ReferenceType = 'ai_insight' | 'conversation' | 'idea' | 'url' | 'date';
+export type ReferenceType = 
+  | 'ai_insight' 
+  | 'conversation' 
+  | 'idea' 
+  | 'url' 
+  | 'date'
+  | 'screen'
+  | 'component'
+  | 'section'
+  | 'feature'
+  | 'workflow';
 
 export interface Note {
   _id: Id<"notes">;
