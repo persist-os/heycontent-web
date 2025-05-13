@@ -22,15 +22,40 @@ export const InstagramCardPlaceholder: React.FC = () => (
 
 export const InstagramCard: React.FC<InstagramCardProps> = ({ item, onDiscussContent, onViewDetailedAnalytics }) => {
   const { content, metrics, publishedAt } = item;
+  console.log("InstagramCard");
+  console.log(content);
+  const [imgSrc, setImgSrc] = React.useState(content.mediaUrl || content.thumbnailUrl || '');
+  const fallbackImg = '/no-image.png'; // Place this file in your public directory
+
+  const handleImgError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    if (imgSrc !== fallbackImg) {
+      setImgSrc(fallbackImg);
+    }
+  };
+
   return (
     <Card key={item.id} className="overflow-hidden border-2 border-pink-500 dark:border-pink-400 shadow-lg">
       <div className="relative aspect-video bg-gradient-to-br from-pink-100 via-purple-100 to-yellow-100 flex items-center justify-center">
-        {content.mediaUrl || content.thumbnailUrl ? (
-          <img
-            src={content.mediaUrl || content.thumbnailUrl}
-            alt={content.text || 'Instagram Post'}
-            className="w-full h-full object-cover"
-          />
+        {imgSrc ? (
+          content.permalink ? (
+            <a href={content.permalink} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
+              <img
+                src={imgSrc}
+                alt={content.text || 'Instagram Post'}
+                className="w-full h-full object-cover"
+                style={{ aspectRatio: '16/9', objectFit: 'cover', borderRadius: '0.5rem' }}
+                onError={handleImgError}
+              />
+            </a>
+          ) : (
+            <img
+              src={imgSrc}
+              alt={content.text || 'Instagram Post'}
+              className="w-full h-full object-cover"
+              style={{ aspectRatio: '16/9', objectFit: 'cover', borderRadius: '0.5rem' }}
+              onError={handleImgError}
+            />
+          )
         ) : (
           <Instagram className="w-16 h-16 text-pink-400 opacity-40" />
         )}

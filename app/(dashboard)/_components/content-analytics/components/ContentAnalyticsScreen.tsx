@@ -85,34 +85,81 @@ export function ContentAnalyticsScreen() {
     !authLoading && firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
   );
 
+  // Fetch Instagram posts from Convex
+  const instagramPosts = useQuery(
+    api.instagramQueries.getAllInstagramPosts,
+    !authLoading && firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
+  );
+
   // Console log data for debugging
   useEffect(() => {
     console.log('YouTube Videos from Convex:', youtubeVideos);
     console.log('Gmail Threads from Convex:', gmailThreads);
-  }, [youtubeVideos, gmailThreads]);
+    console.log('Instagram Posts from Convex:', instagramPosts);
+  }, [youtubeVideos, gmailThreads, instagramPosts]);
   
+  // Combine all real content items from all platforms
   const allContentItems: AnyContentItem[] | undefined | null = useMemo(() => {
-    // Combine actual fetched data from all sources
     const items: AnyContentItem[] = [];
-    
-    // Add YouTube videos if available - using direct assignment rather than spread
+    // Add YouTube videos
     if (youtubeVideos && Array.isArray(youtubeVideos) && youtubeVideos.length > 0) {
-      // Log each YouTube item for debugging
-      console.log(`Found ${youtubeVideos.length} real YouTube videos`);
       items.push(...youtubeVideos);
-    } else {
-      console.log('No YouTube videos found or data is not an array:', youtubeVideos);
     }
-    
-    // We'll add other platform data here as they become available
-    // For now, we're only using real YouTube data
-    
+    // Add Gmail threads
+    if (gmailThreads && Array.isArray(gmailThreads) && gmailThreads.length > 0) {
+      items.push(...gmailThreads);
+    }
+    // Add Instagram posts, mapping to InstagramContentItem
+    if (instagramPosts && Array.isArray(instagramPosts) && instagramPosts.length > 0) {
+      const mappedInstagram = instagramPosts.map((post: any): InstagramContentItem => {
+        // For carousels, use the first IMAGE child's media_url if present, else first child's media_url, else post.data.media_url
+        let mediaUrl = post.data.media_url;
+        if (
+          post.data.media_type === 'CAROUSEL_ALBUM' ||
+          post.data.media_type === 'carousel'
+        ) {
+          if (
+            post.data.children &&
+            Array.isArray(post.data.children) &&
+            post.data.children.length > 0
+          ) {
+            // Prefer first IMAGE child
+            const imageChild = post.data.children.find((child: any) => child.media_type === 'IMAGE');
+            if (imageChild && imageChild.media_url) {
+              mediaUrl = imageChild.media_url;
+            } else if (post.data.children[0].media_url) {
+              mediaUrl = post.data.children[0].media_url;
+            }
+          } else {
+            mediaUrl = post.data.media_url;
+          }
+        }
+        return {
+          id: post._id,
+          platform: 'instagram',
+          publishedAt: post.data.timestamp ? new Date(post.data.timestamp).toISOString() : '',
+          content: {
+            text: post.data.caption,
+            mediaUrl,
+            mediaType: post.data.media_type === 'IMAGE' ? 'image' : post.data.media_type === 'VIDEO' ? 'video' : 'carousel',
+            thumbnailUrl: post.data.thumbnail_url,
+            permalink: post.data.permalink,
+          },
+          metrics: {
+            impressions: undefined, // Not available in schema
+            reach: undefined, // Not available in schema
+            likes: post.data.like_count ?? 0,
+            comments: post.data.comment_count ?? 0,
+            shares: undefined, // Not available in schema
+          }
+        };
+      });
+      items.push(...mappedInstagram);
+    }
     return items;
-  }, [youtubeVideos]); // Update when any data source changes
+  }, [youtubeVideos, gmailThreads, instagramPosts]);
   
-  // Mock data for other platforms - will replace with real data later
-  const mockInstagramItem = getMockInstagramItem('1');
-  const mockGmailItems = getMockGmailItems(10);
+  // Remove mockInstagramItem and mockGmailItems
 
   const combinedContent = useMemo(() => {
     // Start with an empty array
@@ -142,12 +189,10 @@ export function ContentAnalyticsScreen() {
       }
     }
     
-    // Always add mock Instagram data for now
-    combinedItems.push(getMockInstagramItem('mock-insta'));
-    
+    // No more mock Instagram data; use real data from allContentItems
     console.log('Final combined content items:', combinedItems.length);
     return combinedItems;
-  }, [youtubeVideos, gmailThreads]);
+  }, [youtubeVideos, gmailThreads, instagramPosts, allContentItems]);
 
   // Navigate to chat with content context
   const discussContent = (item: AnyContentItem) => {
@@ -194,22 +239,26 @@ export function ContentAnalyticsScreen() {
   // Create arrays of platform-specific items
   const youtubeItemsArray = youtubeVideos && Array.isArray(youtubeVideos) ? youtubeVideos : [];
   const gmailItemsArray = gmailThreads && Array.isArray(gmailThreads) ? gmailThreads : [];
-  
+  const instagramItemsArray = allContentItems && Array.isArray(allContentItems)
+    ? allContentItems.filter(item => item.platform === 'instagram')
+    : [];
+
   // Log platform items for debugging
   console.log('Direct YouTube items available:', youtubeItemsArray.length, youtubeItemsArray);
   console.log('Direct Gmail items available:', gmailItemsArray.length, gmailItemsArray);
-  
+  console.log('Direct Instagram items available:', instagramItemsArray.length, instagramItemsArray);
+
   // Apply filtering based on selected platform
   let filteredContent: AnyContentItem[] = [];
-  
+
   if (selectedPlatform === 'youtube') {
-    // If YouTube tab selected, directly use YouTube items
     filteredContent = [...youtubeItemsArray];
   } else if (selectedPlatform === 'gmail') {
-    // If Gmail tab selected, directly use Gmail items
     filteredContent = [...gmailItemsArray];
+  } else if (selectedPlatform === 'instagram') {
+    filteredContent = [...instagramItemsArray];
   } else {
-    // Otherwise, use combined content with sorting and filtering
+    // 'all' tab or fallback: use combined content with sorting and filtering
     filteredContent = sortAndFilterContent(
       combinedContent,
       selectedPlatform,

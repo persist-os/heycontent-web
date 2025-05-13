@@ -1,27 +1,83 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 
-// Get Instagram data for a user
-export const getInstagramData = query({
+// Get a single Instagram post by userId and postId
+export const getInstagramPost = query({
+  args: { userId: v.string(), postId: v.string() },
+  handler: async (ctx, args) => {
+    const post = await ctx.db
+      .query("instagramPosts")
+      .withIndex("by_postId", q => q.eq("postId", args.postId))
+      .filter(q => q.eq(q.field("userId"), args.userId))
+      .first();
+    return post;
+  },
+});
+
+// Get all Instagram posts for a user
+export const getAllInstagramPosts = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
-    try {
-      const instagramData = await ctx.db
-        .query("instagramData")
-        .filter((q) => q.eq(q.field("userId"), args.userId))
-        .order("desc")
-        .first();
+    const posts = await ctx.db
+      .query("instagramPosts")
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
+      .order("desc")
+      .collect();
+    return posts;
+  },
+});
 
-      if (!instagramData) {
-        return null;
-      }
-      return {
-        ...instagramData,
-      };
-    } catch (error) {
-      console.error('Error getting Instagram data:', error);
-      throw new Error(`Failed to get Instagram data: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+// Get all Instagram posts for an accountId
+export const getInstagramPostsByAccount = query({
+  args: { accountId: v.string() },
+  handler: async (ctx, args) => {
+    const posts = await ctx.db
+      .query("instagramPosts")
+      .withIndex("by_accountId", q => q.eq("accountId", args.accountId))
+      .order("desc")
+      .collect();
+    return posts;
+  },
+});
+
+// Get all Instagram posts for a user within a time range
+export const getInstagramPostsByTimeRange = query({
+  args: { userId: v.string(), start: v.number(), end: v.number() },
+  handler: async (ctx, args) => {
+    const posts = await ctx.db
+      .query("instagramPosts")
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
+      .filter(q => q.gte(q.field("data.timestamp"), args.start))
+      .filter(q => q.lte(q.field("data.timestamp"), args.end))
+      .order("desc")
+      .collect();
+    return posts;
+  },
+});
+
+// Get the latest Instagram post for a user
+export const getLatestInstagramPost = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const post = await ctx.db
+      .query("instagramPosts")
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
+      .order("desc")
+      .first();
+    return post;
+  },
+});
+
+// Get posts by username
+export const getInstagramPostsByUsername = query({
+  args: { username: v.string() },
+  handler: async (ctx, args) => {
+    const posts = await ctx.db
+      .query("instagramPosts")
+      .filter(q => q.eq(q.field("data.username"), args.username))
+      .order("desc")
+      .collect();
+    return posts;
   },
 });
 
@@ -42,85 +98,3 @@ export const getInstagramTokens = query({
   },
 });
 
-// Get profile data
-export const getProfileData = query({
-  args: { userId: v.string() },
-  handler: async (ctx, args) => {
-    const data = await ctx.db
-      .query("instagramData")
-      .withIndex("by_user_resource", (q) =>
-        q.eq("userId", args.userId).eq("resourceType", "profile")
-      )
-      .order("desc")
-      .first();
-
-    return data;
-  },
-});
-
-// Get post data
-export const getPostData = query({
-  args: { userId: v.string(), postId: v.string() },
-  handler: async (ctx, args) => {
-    const data = await ctx.db
-      .query("instagramData")
-      .withIndex("by_user_resource", (q) =>
-        q.eq("userId", args.userId).eq("resourceType", "post")
-      )
-      .filter((q) => q.eq(q.field("data.id"), args.postId))
-      .order("desc")
-      .first();
-
-    return data;
-  },
-});
-
-// Get story data
-export const getStoryData = query({
-  args: { userId: v.string(), storyId: v.string() },
-  handler: async (ctx, args) => {
-    const data = await ctx.db
-      .query("instagramData")
-      .withIndex("by_user_resource", (q) =>
-        q.eq("userId", args.userId).eq("resourceType", "story")
-      )
-      .filter((q) => q.eq(q.field("data.id"), args.storyId))
-      .order("desc")
-      .first();
-
-    return data;
-  },
-});
-
-// Get reel data
-export const getReelData = query({
-  args: { userId: v.string(), reelId: v.string() },
-  handler: async (ctx, args) => {
-    const data = await ctx.db
-      .query("instagramData")
-      .withIndex("by_user_resource", (q) =>
-        q.eq("userId", args.userId).eq("resourceType", "reel")
-      )
-      .filter((q) => q.eq(q.field("data.id"), args.reelId))
-      .order("desc")
-      .first();
-
-    return data;
-  },
-});
-
-// Get all posts for a user
-export const getAllPosts = query({
-  args: { userId: v.string() },
-  handler: async (ctx, args) => {
-    const posts = await ctx.db
-      .query("instagramData")
-      .withIndex("by_user_resource", (q) =>
-        q.eq("userId", args.userId).eq("resourceType", "post")
-      )
-      .order("desc")
-      .collect();
-
-    return posts;
-  },
-});
