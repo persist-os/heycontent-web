@@ -22,25 +22,38 @@ export const InstagramCardPlaceholder: React.FC = () => (
 
 export const InstagramCard: React.FC<InstagramCardProps> = ({ item, onDiscussContent, onViewDetailedAnalytics }) => {
   const { content, metrics, publishedAt } = item;
-  console.log("InstagramCard");
-  console.log(content);
-  const [imgSrc, setImgSrc] = React.useState(content.mediaUrl || content.thumbnailUrl || '');
-  const fallbackImg = '/no-image.png'; // Place this file in your public directory
+  // @ts-ignore: allow children on content for carousel support
+  const children = (item as any)?.children || (item as any)?.content?.children || [];
+  const isCarousel = content.mediaType === 'carousel' && Array.isArray(children) && children.length > 0;
+  const fallbackImg = '/no-image.png';
 
   const handleImgError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    if (imgSrc !== fallbackImg) {
-      setImgSrc(fallbackImg);
+    if (e.currentTarget.src !== window.location.origin + fallbackImg) {
+      e.currentTarget.src = fallbackImg;
     }
   };
 
   return (
     <Card key={item.id} className="overflow-hidden border-2 border-pink-500 dark:border-pink-400 shadow-lg">
       <div className="relative aspect-video bg-gradient-to-br from-pink-100 via-purple-100 to-yellow-100 flex items-center justify-center">
-        {imgSrc ? (
+        {isCarousel ? (
+          <div className="flex flex-row gap-2 overflow-x-auto w-full h-full">
+            {children.filter((c: any) => c.media_type === 'IMAGE').map((child: any, idx: number) => (
+              <img
+                key={child.id || idx}
+                src={child.media_url}
+                alt={content.text || `Instagram Carousel Image ${idx + 1}`}
+                className="object-cover rounded-lg"
+                style={{ width: '100%', maxWidth: 220, height: '100%', aspectRatio: '16/9', objectFit: 'cover' }}
+                onError={handleImgError}
+              />
+            ))}
+          </div>
+        ) : (
           content.permalink ? (
             <a href={content.permalink} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
               <img
-                src={imgSrc}
+                src={content.mediaUrl || content.thumbnailUrl || fallbackImg}
                 alt={content.text || 'Instagram Post'}
                 className="w-full h-full object-cover"
                 style={{ aspectRatio: '16/9', objectFit: 'cover', borderRadius: '0.5rem' }}
@@ -49,16 +62,15 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, onDiscussCon
             </a>
           ) : (
             <img
-              src={imgSrc}
+              src={content.mediaUrl || content.thumbnailUrl || fallbackImg}
               alt={content.text || 'Instagram Post'}
               className="w-full h-full object-cover"
               style={{ aspectRatio: '16/9', objectFit: 'cover', borderRadius: '0.5rem' }}
               onError={handleImgError}
             />
           )
-        ) : (
-          <Instagram className="w-16 h-16 text-pink-400 opacity-40" />
         )}
+
         <div className="absolute bottom-2 left-2 bg-white/80 dark:bg-black/60 rounded px-2 py-1 text-xs font-medium capitalize">
           {content.mediaType}
         </div>

@@ -166,6 +166,7 @@ export const storeReelData = mutation({
 export const storeProfileData = mutation({
   args: {
     userId: v.string(),
+    accountId: v.any(),
     username: v.string(),
     profileData: v.object({
       id: v.string(),
@@ -180,7 +181,7 @@ export const storeProfileData = mutation({
     updatedAt: v.number(),
   },
   handler: async (ctx, args) => {
-    const { userId, username, profileData, createdAt, updatedAt } = args;
+    const { userId, accountId, username, profileData, createdAt, updatedAt } = args;
     try {
       // Check if account already exists
       const existingAccount = await ctx.db
@@ -190,6 +191,7 @@ export const storeProfileData = mutation({
       if (existingAccount) {
         await ctx.db.patch(existingAccount._id, {
           username,
+          accountId,
           profileData,
           updatedAt,
         });
@@ -197,6 +199,7 @@ export const storeProfileData = mutation({
       } else {
         const id = await ctx.db.insert("instagramAccounts", {
           userId,
+          accountId,
           username,
           profileData,
           createdAt,
@@ -215,6 +218,7 @@ export const storeProfileData = mutation({
 export const updateInstagramToken = mutation({
   args: {
     userId: v.string(),
+    accountId: v.any(),
     accessToken: v.string(),
     refreshToken: v.string(),
     expiresAt: v.number(),
@@ -228,6 +232,7 @@ export const updateInstagramToken = mutation({
       .first();
     if (existing) {
       await ctx.db.patch(existing._id, {
+        accountId: args.accountId,
         accessToken: args.accessToken,
         refreshToken: args.refreshToken,
         expiryDate: args.expiresAt,
@@ -236,6 +241,7 @@ export const updateInstagramToken = mutation({
       });
     } else {
       await ctx.db.insert("instagramTokens", {
+        accountId: args.accountId,
         userId: args.userId,
         accessToken: args.accessToken,
         refreshToken: args.refreshToken,

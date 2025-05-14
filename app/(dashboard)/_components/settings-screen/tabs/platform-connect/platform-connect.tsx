@@ -18,7 +18,7 @@ export function PlatformConnect() {
   // Refetch on successful connection and clean up the URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('success') === 'youtube_connected') {
+    if (urlParams.get('success') === 'youtube_connected' || urlParams.get('success') === 'instagram_connected') {
       setRefetchKey(k => k + 1);
       // Remove the query param from the URL for clean UX
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -27,6 +27,8 @@ export function PlatformConnect() {
 
   // Use Convex queries for all platform data
   const youtubeData = user?.uid ? useQuery(api.youtubeQueries.getYouTubeChannelData, { userId: user.uid }) : undefined;
+  const instagramData = user?.uid ? useQuery(api.instagramQueries.getInstagramAccount, { userId: user.uid }) : undefined;
+  const gmailAccounts = user?.uid ? useQuery(api.gmailQueries.getGmailAccounts, { userId: user.uid }) : undefined;
 
   // All hooks must be declared at the top, before any return
   const [connecting, setConnecting] = useState<SocialPlatform | null>(null);
@@ -55,6 +57,40 @@ export function PlatformConnect() {
         });
       }
 
+      // Add Instagram accounts from Convex
+      if (instagramData && !isError(instagramData) && instagramData !== null) {
+        // If multiple accounts, use the first one for now (we can improve this later)
+        const instagramAccount = instagramData;
+        accounts.push({
+          platform: 'instagram',
+          username: instagramAccount.username || 'Instagram Account',
+          metadata: {
+            followers: instagramAccount.profileData.followers_count || '0',
+            following: instagramAccount.profileData.follows_count || '0',
+            posts: instagramAccount.profileData.media_count || '0'
+          },
+          updatedAt: instagramAccount.updatedAt || Date.now(),
+          isActive: true
+        });
+      }
+
+      // Add Gmail accounts from Convex
+      if (gmailAccounts && !isError(gmailAccounts) && gmailAccounts.length > 0) {
+        // Use the first Gmail account for now (can support multiple later)
+        const gmailAccount = gmailAccounts[0];
+        accounts.push({
+          platform: 'gmail',
+          username: gmailAccount.email || 'Gmail Account',
+          metadata: {
+            emails: gmailAccount.messagesTotal || 0,
+            labels: gmailAccount.labelsTotal || 0,
+            threads: gmailAccount.threadsTotal || 0
+          },
+          updatedAt: gmailAccount.updatedAt || Date.now(),
+          isActive: true
+        });
+      }
+
       setConnectedAccounts(accounts);
     } catch (error) {
       console.error('Error fetching connected platforms:', error);
@@ -69,7 +105,7 @@ export function PlatformConnect() {
   // Update connected accounts when data changes
   useEffect(() => {
     fetchConnectedPlatforms();
-  }, [youtubeData]);
+  }, [youtubeData, instagramData, gmailAccounts]);
 
   // URL error handling effect
   useEffect(() => {
@@ -85,11 +121,14 @@ export function PlatformConnect() {
   }, []);
 
   // Early error/fallback handling (AFTER all hooks)
-  if (youtubeData === undefined) {
+  if (youtubeData === undefined || instagramData === undefined) {
     return <div className="flex items-center justify-center h-40">Loading platform data...</div>;
   }
   if (isError(youtubeData)) {
     return <div className="text-red-500 p-4">Failed to load YouTube data: {youtubeData.error}</div>;
+  }
+  if (isError(instagramData)) {
+    return <div className="text-red-500 p-4">Failed to load Instagram data: {instagramData.error}</div>;
   }
 
   const handleDisconnect = async (platform: SocialPlatform) => {
@@ -182,8 +221,7 @@ export function PlatformConnect() {
                 disconnecting={isDisconnecting}
                 showInstagramOptions={showInstagramOptions}
                 setShowInstagramOptions={setShowInstagramOptions}
-                // The handleConnect prop is intentionally set to a no-op function to disable the broken connect logic for Instagram.
-                handleConnect={() => {}}
+                handleConnect={() => setConnecting('instagram')}
                 handleDisconnect={() => handleDisconnect('instagram')}
               />
             );

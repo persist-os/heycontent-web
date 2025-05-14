@@ -98,21 +98,55 @@ export function ContentAnalyticsScreen() {
     console.log('Instagram Posts from Convex:', instagramPosts);
   }, [youtubeVideos, gmailThreads, instagramPosts]);
   
-  // Combine all real content items from all platforms
-  const allContentItems: AnyContentItem[] | undefined | null = useMemo(() => {
-    const items: AnyContentItem[] = [];
-    // Add YouTube videos
-    if (youtubeVideos && Array.isArray(youtubeVideos) && youtubeVideos.length > 0) {
-      items.push(...youtubeVideos);
+  // Map YouTube items
+  const mappedYouTubeItems: YouTubeContentItem[] = useMemo(() => {
+    if (youtubeVideos && Array.isArray(youtubeVideos)) {
+      return youtubeVideos.map((video: any) => ({
+        id: video._id || video.id,
+        platform: 'youtube',
+        publishedAt: video.publishedAt || video.published_at || '',
+        content: {
+          title: video.title || video.content?.title || '',
+          description: video.description || video.content?.description || '',
+          thumbnailUrl: video.thumbnailUrl || video.content?.thumbnailUrl || '',
+          videoUrl: video.videoUrl || video.content?.videoUrl || '',
+        },
+        metrics: {
+          views: video.metrics?.views ?? video.views ?? 0,
+          likes: video.metrics?.likes ?? video.likes ?? 0,
+          comments: video.metrics?.comments ?? video.comments ?? 0,
+          shares: video.metrics?.shares ?? video.shares ?? 0,
+        },
+        aiAnalysis: video.aiAnalysis || null,
+      }));
     }
-    // Add Gmail threads
-    if (gmailThreads && Array.isArray(gmailThreads) && gmailThreads.length > 0) {
-      items.push(...gmailThreads);
+    return [];
+  }, [youtubeVideos]);
+
+  // Map Gmail items
+  const mappedGmailItems: GmailContentItem[] = useMemo(() => {
+    if (gmailThreads && Array.isArray(gmailThreads)) {
+      return gmailThreads.map((thread: any) => ({
+        id: thread._id || thread.id,
+        platform: 'gmail',
+        publishedAt: thread.publishedAt || thread.published_at || '',
+        content: {
+          subject: thread.subject || thread.content?.subject || '',
+          snippet: thread.snippet || thread.content?.snippet || '',
+          threadId: thread.threadId || thread.content?.threadId || '',
+          historyId: thread.historyId || thread.content?.historyId || '',
+          emailType: thread.emailType || thread.content?.emailType || 'all', // default to 'all' if missing
+        },
+        metrics: thread.metrics && typeof thread.metrics === 'object' ? thread.metrics : {},
+      }));
     }
-    // Add Instagram posts, mapping to InstagramContentItem
-    if (instagramPosts && Array.isArray(instagramPosts) && instagramPosts.length > 0) {
-      const mappedInstagram = instagramPosts.map((post: any): InstagramContentItem => {
-        // For carousels, use the first IMAGE child's media_url if present, else first child's media_url, else post.data.media_url
+    return [];
+  }, [gmailThreads]);
+
+  // Map Instagram items
+  const mappedInstagramItems: InstagramContentItem[] = useMemo(() => {
+    if (instagramPosts && Array.isArray(instagramPosts)) {
+      return instagramPosts.map((post: any): InstagramContentItem => {
         let mediaUrl = post.data.media_url;
         if (
           post.data.media_type === 'CAROUSEL_ALBUM' ||
@@ -123,7 +157,6 @@ export function ContentAnalyticsScreen() {
             Array.isArray(post.data.children) &&
             post.data.children.length > 0
           ) {
-            // Prefer first IMAGE child
             const imageChild = post.data.children.find((child: any) => child.media_type === 'IMAGE');
             if (imageChild && imageChild.media_url) {
               mediaUrl = imageChild.media_url;
@@ -134,6 +167,7 @@ export function ContentAnalyticsScreen() {
             mediaUrl = post.data.media_url;
           }
         }
+        // Remove 'children' property if not in InstagramContentDetails type
         return {
           id: post._id,
           platform: 'instagram',
@@ -144,6 +178,7 @@ export function ContentAnalyticsScreen() {
             mediaType: post.data.media_type === 'IMAGE' ? 'image' : post.data.media_type === 'VIDEO' ? 'video' : 'carousel',
             thumbnailUrl: post.data.thumbnail_url,
             permalink: post.data.permalink,
+            // children: post.data.children || [] // REMOVE if not in type
           },
           metrics: {
             impressions: undefined, // Not available in schema
@@ -151,48 +186,23 @@ export function ContentAnalyticsScreen() {
             likes: post.data.like_count ?? 0,
             comments: post.data.comment_count ?? 0,
             shares: undefined, // Not available in schema
-          }
+          },
+
         };
       });
-      items.push(...mappedInstagram);
     }
-    return items;
-  }, [youtubeVideos, gmailThreads, instagramPosts]);
-  
-  // Remove mockInstagramItem and mockGmailItems
+    return [];
+  }, [instagramPosts]);
 
-  const combinedContent = useMemo(() => {
-    // Start with an empty array
-    const combinedItems: AnyContentItem[] = [];
-    
-    // IMPORTANT: Directly use YouTube videos from the query if available
-    if (youtubeVideos && Array.isArray(youtubeVideos) && youtubeVideos.length > 0) {
-      console.log('Adding real YouTube videos to combinedContent:', youtubeVideos.length);
-      combinedItems.push(...youtubeVideos);
-    } else {
-      // Only add mock YouTube data if we don't have real data AND we're not still loading
-      if (youtubeVideos !== undefined) {
-        console.log('Adding mock YouTube data as fallback');
-        combinedItems.push(getMockYouTubeItem('mock-yt-fallback'));
-      }
-    }
-    
-    // Add real Gmail data if available
-    if (gmailThreads && Array.isArray(gmailThreads) && gmailThreads.length > 0) {
-      console.log('Adding real Gmail threads to combinedContent:', gmailThreads.length);
-      combinedItems.push(...gmailThreads);
-    } else {
-      // Only add mock Gmail data if we don't have real data AND we're not still loading
-      if (gmailThreads !== undefined) {
-        console.log('Adding mock Gmail data as fallback');
-        combinedItems.push(...getMockGmailItems(2));
-      }
-    }
-    
-    // No more mock Instagram data; use real data from allContentItems
-    console.log('Final combined content items:', combinedItems.length);
-    return combinedItems;
-  }, [youtubeVideos, gmailThreads, instagramPosts, allContentItems]);
+  // Combine all mapped items for the All tab
+  const allContentItems: AnyContentItem[] = useMemo(() => {
+    return [
+      ...mappedYouTubeItems,
+      ...mappedGmailItems,
+      ...mappedInstagramItems
+    ];
+  }, [mappedYouTubeItems, mappedGmailItems, mappedInstagramItems]);
+
 
   // Navigate to chat with content context
   const discussContent = (item: AnyContentItem) => {
@@ -236,45 +246,31 @@ export function ContentAnalyticsScreen() {
     return <LoadingState type="content" />;
   }
 
-  // Create arrays of platform-specific items
-  const youtubeItemsArray = youtubeVideos && Array.isArray(youtubeVideos) ? youtubeVideos : [];
-  const gmailItemsArray = gmailThreads && Array.isArray(gmailThreads) ? gmailThreads : [];
-  const instagramItemsArray = allContentItems && Array.isArray(allContentItems)
-    ? allContentItems.filter(item => item.platform === 'instagram')
-    : [];
-
-  // Log platform items for debugging
-  console.log('Direct YouTube items available:', youtubeItemsArray.length, youtubeItemsArray);
-  console.log('Direct Gmail items available:', gmailItemsArray.length, gmailItemsArray);
-  console.log('Direct Instagram items available:', instagramItemsArray.length, instagramItemsArray);
+  // Platform-specific arrays using mapped items
+  const youtubeItemsArray = mappedYouTubeItems;
+  const gmailItemsArray = mappedGmailItems;
+  const instagramItemsArray = mappedInstagramItems;
 
   // Apply filtering based on selected platform
   let filteredContent: AnyContentItem[] = [];
-
   if (selectedPlatform === 'youtube') {
-    filteredContent = [...youtubeItemsArray];
+    filteredContent = youtubeItemsArray;
   } else if (selectedPlatform === 'gmail') {
-    filteredContent = [...gmailItemsArray];
+    filteredContent = gmailItemsArray;
   } else if (selectedPlatform === 'instagram') {
-    filteredContent = [...instagramItemsArray];
+    filteredContent = instagramItemsArray;
   } else {
-    // 'all' tab or fallback: use combined content with sorting and filtering
+    // 'all' tab or fallback: use all real content items with sorting and filtering
     filteredContent = sortAndFilterContent(
-      combinedContent,
+      allContentItems,
       selectedPlatform,
       selectedEmailType,
       sortBy,
       timeRange
     );
   }
-  
   // Final display items
   const displayItems = filteredContent;
-  
-  // Log the final items to be displayed
-  console.log('Final displayItems:', displayItems.length, 
-    selectedPlatform, 
-    displayItems.map(item => item.platform));
 
 
   return (

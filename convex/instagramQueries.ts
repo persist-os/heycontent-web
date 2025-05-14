@@ -1,6 +1,18 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 
+// Get all Instagram accounts for a user
+export const getInstagramAccount = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const accounts = await ctx.db
+      .query("instagramAccounts")
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
+      .first();
+    return accounts;
+  },
+});
+
 // Get a single Instagram post by userId and postId
 export const getInstagramPost = query({
   args: { userId: v.string(), postId: v.string() },

@@ -239,8 +239,10 @@ export function filterContent(
   emailTypeFilter: EmailTypeFilter,
   timeRange: TimeRange
 ): AnyContentItem[] {
+  // Make sure 'all' is part of TimeRange type
+
   const now = new Date();
-  let cutoffDate = new Date();
+  let cutoffDate: Date | null = new Date();
 
   switch (timeRange) {
     case '7d':
@@ -252,11 +254,16 @@ export function filterContent(
     case '90d':
       cutoffDate.setDate(now.getDate() - 90);
       break;
-    // Potentially handle 'all' or default if needed, though 'all' is usually handled by not filtering
+    case 'all':
+    default:
+      cutoffDate = null;
+      break;
   }
 
   // Set time to start of the day for consistent comparison
-  cutoffDate.setHours(0, 0, 0, 0);
+  if (cutoffDate) {
+    cutoffDate.setHours(0, 0, 0, 0);
+  }
 
   return items.filter(item => {
     // Platform filter
@@ -269,9 +276,12 @@ export function filterContent(
     }
 
     // Time range filter
-    const itemDate = new Date(item.publishedAt);
-    // Ensure itemDate is valid before comparison
-    const timeMatch = !isNaN(itemDate.getTime()) && itemDate >= cutoffDate;
+    let timeMatch = true;
+    if (cutoffDate) {
+      const itemDate = new Date(item.publishedAt);
+      // If publishedAt is missing or invalid, include the item
+      timeMatch = !item.publishedAt || isNaN(itemDate.getTime()) || itemDate >= cutoffDate;
+    }
 
     return platformMatch && emailTypeMatch && timeMatch;
   });

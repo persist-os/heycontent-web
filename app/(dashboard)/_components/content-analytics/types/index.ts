@@ -90,7 +90,7 @@ export type AnyContentItem = InstagramContentItem | YouTubeContentItem | GmailCo
 export type PlatformType = 'instagram' | 'youtube' | 'gmail' | 'all';
 
 // Filters and Sort Options (Keep as is for now)
-export type TimeRange = '7d' | '30d' | '90d';
+export type TimeRange = '7d' | '30d' | '90d' | 'all';
 // Updated Sort Options based on refined metrics
 export type SortOption = 'date' | 'views' | 'likes' | 'comments' | 'replies' | 'openRate' | 'reach' | 'impressions' | 'watchTimeMinutes' | 'clickRate';
 // FilterType removed - Use PlatformFilterType and EmailTypeFilter

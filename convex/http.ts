@@ -222,7 +222,6 @@ app.post("/api/users/:id/gmail/account", async (c) => {
     return c.json({ 
       success: true,
       status: result.status,
-      accountId: result.accountId
     });
   } catch (error) {
     console.error("Failed to store Gmail account data:", error);
@@ -373,71 +372,6 @@ app.post("/api/users/:id/youtube/channel", async (c) => {
 
 // INSTAGRAM ROUTES
 
-// Unified Instagram data handler
-app.post("/api/users/:id/instagram/data", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  let payload;
-  try {
-    payload = await c.req.json();
-  } catch (e) {
-    return c.json({ success: false, error: "Invalid JSON payload" }, 400);
-  }
-
-  const { type, ...rest } = payload;
-  if (!type) {
-    return c.json({ success: false, error: "Missing 'type' field in payload" }, 400);
-  }
-
-  try {
-    let result;
-    switch (type) {
-      case "post": {
-        const { data } = rest;
-        if (!data) {
-          return c.json({ success: false, error: "Missing post data or id" }, 400);
-        }
-        result = await ctx.runMutation(api.instagramMutations.storePostData, {
-          userId,
-          postId: data.id || "",
-          postData: data,
-        });
-        break;
-      }
-      case "story": {
-        const { data } = rest;
-        if (!data || !data.id) {
-          return c.json({ success: false, error: "Missing story data or id" }, 400);
-        }
-        result = await ctx.runMutation(api.instagramMutations.storeStoryData, {
-          userId,
-          storyId: data.id,
-          storyData: data,
-        });
-        break;
-      }
-      case "reel": {
-        const { data } = rest;
-        if (!data || !data.id) {
-          return c.json({ success: false, error: "Missing reel data or id" }, 400);
-        }
-        result = await ctx.runMutation(api.instagramMutations.storeReelData, {
-          userId,
-          reelId: data.id,
-          reelData: data,
-        });
-        break;
-      }
-      default:
-        return c.json({ success: false, error: `Unknown type: ${type}` }, 400);
-    }
-    return c.json({ success: true, result });
-  } catch (error) {
-    console.error(`Failed to store Instagram data for type ${type}:`, error);
-    return c.json({ success: false, error: error instanceof Error ? error.message : "Unknown error" }, 500);
-  }
-});
-
 // Instagram data deletion request URL
 app.post("/instagram/:id/delete", async (c) => {
   const ctx = c.env;
@@ -478,7 +412,7 @@ app.get("/api/users/:id/instagram/tokens", async (c) => {
 app.post("/api/users/:id/instagram/token", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  const { accessToken, refreshToken, expiresAt, scope } = await c.req.json();
+  const { accountId, accessToken, refreshToken, expiresAt, scope } = await c.req.json();
 
   // Ensure scope is an array of strings
   const scopeArray = Array.isArray(scope)
@@ -490,6 +424,7 @@ app.post("/api/users/:id/instagram/token", async (c) => {
   try {
     await ctx.runMutation(api.instagramMutations.updateInstagramToken, {
       userId,
+      accountId,
       accessToken,
       refreshToken,
       expiresAt,
@@ -538,16 +473,17 @@ app.post("/api/users/:id/instagram/posts/bulk", async (c) => {
 app.post("/api/users/:id/instagram/profile", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  const { username, profileData, createdAt, updatedAt } = await c.req.json();
+  const { username, accountId, profileData, createdAt, updatedAt } = await c.req.json();
 
   // Validate required fields
-  if (!profileData || !profileData.id || !username) {
-    return c.json({ success: false, error: "profileData.id and username are required" }, 400);
+  if (!profileData || !profileData.id || !username || !accountId) {
+    return c.json({ success: false, error: "profileData.id, accountId, and username are required" }, 400);
   }
 
   try {
     const result = await ctx.runMutation(api.instagramMutations.storeProfileData, {
       userId,
+      accountId,
       username,
       profileData,
       createdAt: createdAt ?? Date.now(),

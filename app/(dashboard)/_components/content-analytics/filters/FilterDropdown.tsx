@@ -60,6 +60,16 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
           >
             Last 90 days
           </button>
+          <button
+            onClick={() => onTimeRangeChange('all')}
+            className={`px-3 py-1 rounded-lg text-sm ${
+              timeRange === 'all'
+                ? 'bg-heycontent-yellow text-black'
+                : 'bg-heycontent-light-yellow text-text-dark'
+            }`}
+          >
+            All time
+          </button>
         </div>
       </div>
 
