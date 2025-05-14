@@ -11,10 +11,8 @@ interface YouTubeCardProps {
 }
 
 export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent, onViewDetailedAnalytics }) => {
-  // Extract data with null checks
-  const content = item?.content || {};
-  const metrics = item?.metrics || {};
-  const publishedAt = item?.publishedAt || new Date().toISOString();
+  // Extract data with type safety
+  const { content, metrics, publishedAt = new Date().toISOString() } = item;
   
   // Create a direct thumbnail URL - using either our data or constructing from video ID
   let thumbnailUrl = '';

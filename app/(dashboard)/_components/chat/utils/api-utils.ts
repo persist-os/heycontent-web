@@ -1,4 +1,3 @@
-import { auth } from '@/app/lib/firebase';
 import { ChatResponseData } from '../types';
 
 import dotenv from 'dotenv';

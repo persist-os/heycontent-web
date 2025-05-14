@@ -1,7 +1,6 @@
 'use client'
 
 import React from 'react'
-import { Card } from '@/src/components/ui/card'
 import { ArrowRight, Brain, Target, ChartBar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'

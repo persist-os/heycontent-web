@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from '@/src/components/ui/card';
-import { MessageSquare, TrendingUp, BarChart3, Instagram, Eye, Users } from 'lucide-react';
+import { BarChart3, Instagram, Eye, Users } from 'lucide-react';
 
 import { InstagramContentItem } from '../types';
 

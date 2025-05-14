@@ -51,6 +51,7 @@ export interface YouTubeContentItem extends BaseContentItem {
   platform: 'youtube';
   content: YouTubeContentDetails;
   metrics: YouTubeMetrics;
+  analysis?: string;
 }
 
 // Gmail Email
