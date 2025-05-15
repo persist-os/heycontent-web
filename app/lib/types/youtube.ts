@@ -2,6 +2,21 @@ import { YOUTUBE_CONFIG } from '../config/youtube';
 
 export type ValidSentiment = 'positive' | 'negative' | 'neutral';
 
+export interface YoutubeMetrics {
+  views: number;
+  likes: number;
+  dislikes: number;
+  comments: number;
+}
+
+interface YouTubeMetadata {
+  channelId: string;
+  subscribers?: string;
+  videos?: string;
+  views?: string;
+}
+
+
 export interface CommentAnalysis {
   sentiment: ValidSentiment;
   topics: string[];

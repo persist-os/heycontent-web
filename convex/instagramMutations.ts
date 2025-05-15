@@ -1,6 +1,7 @@
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
-import { MutationCtx } from "./_generated/server";
+import { mutation, action } from "./_generated/server";
+import { MutationCtx, ActionCtx } from "./_generated/server";
+import { api } from "./_generated/api";
 
 // Store Instagram post data
 export const storePostData = mutation({
@@ -11,39 +12,42 @@ export const storePostData = mutation({
   },
   handler: async (ctx, args) => {
     const { userId, postId, postData } = args;
-    const timestamp = Date.now();
+    const now = Date.now();
+    // accountId is not present in args, so set as empty string or adapt if available
+    const accountId = postData.accountId || "";
 
     try {
       // Check if post already exists
       const existingPost = await ctx.db
-        .query("instagramData")
-        .withIndex("by_user_resource", (q) => 
-          q.eq("userId", userId).eq("resourceType", "post")
-        )
-        .filter((q) => q.eq(q.field("data.id"), postId))
+        .query("instagramPosts")
+        .withIndex("by_postId", (q) => q.eq("postId", postId))
         .first();
 
       if (existingPost) {
         // Update existing post
         await ctx.db.patch(existingPost._id, {
+          accountId,
+          userId,
+          postId,
           data: {
             id: postId,
             ...postData,
           },
-          timestamp,
+          updatedAt: now,
         });
         return { status: "updated", postId: existingPost._id };
       } else {
         // Insert new post
-        const id = await ctx.db.insert("instagramData", {
+        const id = await ctx.db.insert("instagramPosts", {
+          accountId,
           userId,
-          resourceType: "post",
-          resourceId: postId,
+          postId,
           data: {
             id: postId,
             ...postData,
           },
-          timestamp,
+          createdAt: now,
+          updatedAt: now,
         });
         return { status: "created", postId: id };
       }
@@ -162,67 +166,50 @@ export const storeReelData = mutation({
 export const storeProfileData = mutation({
   args: {
     userId: v.string(),
-    profileId: v.string(),
+    accountId: v.any(),
     username: v.string(),
-    fullName: v.string(),
-    biography: v.string(),
-    profilePicture: v.string(),
-    statistics: v.object({
-      followerCount: v.string(),
-      followingCount: v.string(),
-      postCount: v.string()
+    profileData: v.object({
+      id: v.string(),
+      username: v.string(),
+      account_type: v.any(),
+      profile_picture_url: v.any(),
+      followers_count: v.any(),
+      follows_count: v.any(),
+      media_count: v.any(),
     }),
-    updatedAt: v.number()
+    createdAt: v.number(),
+    updatedAt: v.number(),
   },
   handler: async (ctx, args) => {
-    const { userId, profileId, username, fullName, biography, profilePicture, statistics, updatedAt } = args;
-
+    const { userId, accountId, username, profileData, createdAt, updatedAt } = args;
     try {
-      // Check if profile already exists
-      const existingProfile = await ctx.db
-        .query("instagramData")
-        .withIndex("by_user_resource", (q) => 
-          q.eq("userId", userId).eq("resourceType", "profile")
-        )
+      // Check if account already exists
+      const existingAccount = await ctx.db
+        .query("instagramAccounts")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
         .first();
-
-      const profileData = {
-        id: profileId,
-        username,
-        fullName,
-        biography,
-        profilePicture,
-        statistics
-      };
-
-      if (existingProfile) {
-        // Update existing profile
-        await ctx.db.patch(existingProfile._id, {
-          data: profileData,
-          resourceId: profileId,
-          timestamp: updatedAt,
-          followerCount: Number(statistics.followerCount),
-          followingCount: Number(statistics.followingCount),
-          postCount: Number(statistics.postCount)
+      if (existingAccount) {
+        await ctx.db.patch(existingAccount._id, {
+          username,
+          accountId,
+          profileData,
+          updatedAt,
         });
-        return { status: "updated", profileId: existingProfile._id };
+        return { status: "updated", accountId: existingAccount._id };
       } else {
-        // Insert new profile
-        const id = await ctx.db.insert("instagramData", {
+        const id = await ctx.db.insert("instagramAccounts", {
           userId,
-          resourceType: "profile",
-          resourceId: profileId,
-          data: profileData,
-          timestamp: updatedAt,
-          followerCount: Number(statistics.followerCount),
-          followingCount: Number(statistics.followingCount),
-          postCount: Number(statistics.postCount)
+          accountId,
+          username,
+          profileData,
+          createdAt,
+          updatedAt,
         });
-        return { status: "created", profileId: id };
+        return { status: "created", accountId: id };
       }
     } catch (error) {
-      console.error(`Error storing profile data for ${profileId}:`, error);
-      throw new Error(`Failed to store profile data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error(`Error storing Instagram account for user ${userId}:`, error);
+      throw new Error(`Failed to store Instagram account: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
 });
@@ -231,6 +218,7 @@ export const storeProfileData = mutation({
 export const updateInstagramToken = mutation({
   args: {
     userId: v.string(),
+    accountId: v.any(),
     accessToken: v.string(),
     refreshToken: v.string(),
     expiresAt: v.number(),
@@ -244,6 +232,7 @@ export const updateInstagramToken = mutation({
       .first();
     if (existing) {
       await ctx.db.patch(existing._id, {
+        accountId: args.accountId,
         accessToken: args.accessToken,
         refreshToken: args.refreshToken,
         expiryDate: args.expiresAt,
@@ -252,6 +241,7 @@ export const updateInstagramToken = mutation({
       });
     } else {
       await ctx.db.insert("instagramTokens", {
+        accountId: args.accountId,
         userId: args.userId,
         accessToken: args.accessToken,
         refreshToken: args.refreshToken,

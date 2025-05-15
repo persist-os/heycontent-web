@@ -52,7 +52,7 @@ export async function GET(request: Request) {
         id: index,
         content: msg.content,
         role: msg.role,
-        timestamp: new Date(msg.timestamp).toISOString()
+        timestamp: new Date().toISOString()
       }))
     }));
 

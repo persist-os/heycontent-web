@@ -1,5 +1,4 @@
-import { Brain, Target, TrendingUp, Users, Clock, Edit3, 
-  Zap, Globe, Camera, Video, MessageCircle, Star } from 'lucide-react'
+import { Clock, Video } from 'lucide-react'
 
 export const mockAIInsightsData = {
   insights: [
