@@ -1,4 +1,3 @@
-import { Message } from '@/app/types/chat';
 import { ComponentType } from 'react';
 
 export interface ChatResponseData {

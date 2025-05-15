@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-// Define types based on your Prisma schema
+// Define types based on your schema
 interface Message {
   id: string
   content: string

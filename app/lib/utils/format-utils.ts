@@ -1,5 +1,4 @@
-import { 
-  EmailMessage, 
+import {  
   EmailAnalysis, 
   ExpertResponse,
   BusinessContext,
@@ -10,9 +9,6 @@ import {
 } from '../types/email';
 
 import {
-  DetailedTopicTrend,
-  DetailedInteraction,
-  DetailedDecisionPoint,
   convertToDetailedTrends,
   convertToDetailedInteractions,
   convertToDetailedDecisionPoints,

@@ -42,7 +42,7 @@ export default defineSchema({
     messages: v.array(v.object({
       content: v.string(),
       role: v.string(),
-      timestamp: v.number(),
+      timestamp: v.optional(v.number()),
     })),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -189,7 +189,7 @@ export default defineSchema({
     userId: v.string(),
     email: v.string(),
     historyId: v.string(),
-    timestamp: v.number(),
+    timestamp: v.optional(v.number()),
     data: v.optional(v.any()), // History data from Gmail API
     createdAt: v.number(),
   })
@@ -366,6 +366,7 @@ export default defineSchema({
   // Instagram Tokens
   instagramTokens: defineTable({
     userId: v.string(),
+    accountId: v.any(),
     accessToken: v.string(),
     refreshToken: v.string(),
     expiryDate: v.number(),
@@ -384,7 +385,7 @@ export default defineSchema({
     ),
     resourceId: v.string(),
     data: v.any(),
-    timestamp: v.number(),
+    timestamp: v.optional(v.number()),
     followerCount: v.optional(v.number()),
     followingCount: v.optional(v.number()),
     postCount: v.optional(v.number()),
@@ -398,18 +399,16 @@ export default defineSchema({
   // Instagram Accounts
   instagramAccounts: defineTable({
     userId: v.string(),
+    accountId: v.any(),    
     username: v.string(),
     profileData: v.object({
       id: v.string(),
       username: v.string(),
-      full_name: v.string(),
-      profile_picture_url: v.string(),
-      biography: v.optional(v.string()),
-      followers_count: v.optional(v.number()),
-      following_count: v.optional(v.number()),
-      media_count: v.optional(v.number()),
-      is_private: v.boolean(),
-      is_verified: v.boolean()
+      account_type: v.any(),
+      profile_picture_url: v.any(),
+      followers_count: v.any(),
+      follows_count: v.any(),
+      media_count: v.any(),
     }),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -419,7 +418,7 @@ export default defineSchema({
 
   // Instagram Posts
   instagramPosts: defineTable({
-    accountId: v.string(),
+    accountId: v.any(),
     userId: v.string(),
     postId: v.string(),
     data: v.object({
@@ -430,13 +429,14 @@ export default defineSchema({
         v.literal("VIDEO"),
         v.literal("CAROUSEL_ALBUM")
       ),
+      like_count: v.optional(v.number()),
       media_url: v.string(),
       permalink: v.string(),
       username: v.string(),
-      timestamp: v.number(),
-      like_count: v.optional(v.number()),
+      timestamp: v.optional(v.number()),
       comment_count: v.optional(v.number()),
       thumbnail_url: v.optional(v.string()),
+      comments: v.optional(v.any()),
       children: v.optional(v.array(v.object({
         id: v.string(),
         media_url: v.string(),

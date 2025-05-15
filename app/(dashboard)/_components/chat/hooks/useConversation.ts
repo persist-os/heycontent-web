@@ -1,8 +1,6 @@
 import { useState, useCallback } from 'react'
-import { Message } from '@/app/types/chat'
 import { loadConversation } from '../utils/api-utils'
 import { ChatStateReturnType } from './useChatState'
-import { v4 as uuidv4 } from 'uuid'
 
 export interface ConversationReturnType {
   loading: boolean;
