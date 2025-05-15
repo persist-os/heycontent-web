@@ -14,21 +14,29 @@ export interface InteractiveResponse {
 }
 
 export interface Message {
-  id: number;
+  id: string;
   content: string;
   role: 'user' | 'assistant' | 'system';
   timestamp: string;
   referencedMessage?: {
-    id: number;
+    id: string;
     content: string;
   };
-  status?: 'typing' | 'sent' | 'delivered' | 'read';
+  status?: 'typing' | 'sent' | 'delivered' | 'read' | 'failed';
   chat_response: string;
   suggestions?: any[];
   metadata?: {
     suggestions?: any[];
     [key: string]: any;
   };
+  relatedInsights?: {
+    type: string;
+    summary: string;
+  }[];
+  followUpQuestions?: {
+    question: string;
+    choices: string[];
+  }[];
 }
 
 export interface ChatHistory {

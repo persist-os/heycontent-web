@@ -12,6 +12,11 @@ export default function AuthTestPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Check if Firebase is initialized
+    if (!auth) {
+      setError('Firebase not initialized');
+      return;
+    }
     // Check if user is logged in
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       setUser(user);
@@ -39,6 +44,10 @@ export default function AuthTestPage() {
     try {
       // Test the auth endpoint
       const response = await fetchWithAuth('/api/auth/test');
+      if(!response) {
+        throw new Error()
+       }
+      
       const data = await response.json();
 
       setTestResult({
@@ -61,6 +70,9 @@ export default function AuthTestPage() {
     try {
       // Test the profile endpoint
       const response = await fetchWithAuth('/api/user/profile');
+      if(!response) {
+        throw new Error()
+       }
       const data = await response.json();
 
       setTestResult({
@@ -75,36 +87,18 @@ export default function AuthTestPage() {
     }
   };
 
-  const testSocialPlatforms = async () => {
-    setLoading(true);
-    setError(null);
-    setTestResult(null);
-
-    try {
-      // Test the social platforms endpoint
-      const response = await fetchWithAuth('/api/social/connected-platforms');
-      const data = await response.json();
-
-      setTestResult({
-        status: response.status,
-        data
-      });
-    } catch (err) {
-      console.error('Social platforms test error:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const testDebug = async () => {
     setLoading(true);
     setError(null);
     setTestResult(null);
 
+
     try {
       // Test the debug endpoint
       const response = await fetchWithAuth('/api/debug');
+      if(!response) {
+       throw new Error()
+      }
       const data = await response.json();
 
       setTestResult({
@@ -158,14 +152,6 @@ export default function AuthTestPage() {
           className="px-4 py-2 bg-green-500 text-white rounded disabled:opacity-50"
         >
           Test Profile Endpoint
-        </button>
-
-        <button
-          onClick={testSocialPlatforms}
-          disabled={loading || !user}
-          className="px-4 py-2 bg-purple-500 text-white rounded disabled:opacity-50"
-        >
-          Test Social Platforms
         </button>
 
         <button

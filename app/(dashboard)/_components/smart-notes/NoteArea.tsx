@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Note, NoteUpdate } from './hooks/useNotes';
+import { Note, NoteUpdate } from './types';
 import { ShortcutManager } from './keyboard-shortcuts';
 import { CommandMenu, type Command } from './CommandMenu';
 import { saveToLocal, getCursorCoordinates, applyFormat } from './utils/note-utils';
@@ -29,6 +29,12 @@ export function NoteArea({
   isMobile
 }: NoteAreaProps) {
   const [content, setContent] = useState(note.content || '');
+
+  // Keep content in sync with note prop
+  useEffect(() => {
+    setContent(note.content || '');
+  }, [note.content]);
+
   const [cursorPosition, setCursorPosition] = useState<number | null>(null);
   const [showCommands, setShowCommands] = useState(false);
   const [showMentions, setShowMentions] = useState(false);
@@ -44,7 +50,15 @@ export function NoteArea({
   const shortcutManager = useRef<ShortcutManager>(
     new ShortcutManager({
       onSave,
-      onQuickCapture: () => onRequestAIInsights(note._id, note),
+      onQuickCapture: () => {
+        if (!note?._id) {
+          console.error('Cannot request AI insights: note or note._id is undefined');
+          return;
+        }
+        // Create a new note object with the current content
+        const currentNote = { ...note, content };
+        onRequestAIInsights(note._id, currentNote);
+      },
       onCommandMenu: () => {
         if (textAreaRef.current) {
           const cursorPos = textAreaRef.current.selectionStart;
@@ -194,10 +208,8 @@ export function NoteArea({
     try {
       // Update the note content with proper updates wrapper
       const updatedNote = await onUpdate(note._id, {
-        updates: {
-          content: newContent,
-          updatedAt: Date.now()
-        }
+        content: newContent,
+        updatedAt: Date.now()
       });
       console.log('Note updated successfully:', updatedNote);
       
@@ -290,11 +302,12 @@ export function NoteArea({
     >
       <NoteHeader
         note={note}
-        onUpdate={(updates) => onUpdate(note._id, updates)}
+        onUpdate={onUpdate}
         onSave={onSave}
         onBack={onBack}
         isMobile={isMobile}
         onRequestAIInsights={onRequestAIInsights}
+        currentContent={content}
       />
       <div className="flex-1 overflow-auto p-4">
         <textarea

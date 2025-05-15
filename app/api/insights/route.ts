@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { ConvexHttpClient } from "convex/browser";
+import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
+import { getUserIdFromToken } from '@/app/lib/getUserIdFromToken';
 
 export async function GET(req: Request) {
   try {
@@ -10,17 +11,14 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Initialize Convex client
-    const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL || '');
-
     // Get the user ID from the token
-    const userId = await convex.query(api.queries.getUserIdFromToken, { token });
+    const userId = await getUserIdFromToken(token);
     if (!userId) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
     // Get insights from Convex
-    const insights = await convex.query(api.notes.getAIInsights, { userId });
+    const insights = await fetchQuery(api.notes.getAIInsights, { userId });
 
     return NextResponse.json(insights);
   } catch (error) {

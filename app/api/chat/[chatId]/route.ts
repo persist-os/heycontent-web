@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { ConvexHttpClient } from 'convex/browser';
 import { api } from '@/convex/_generated/api';
+import { getUserIdFromToken } from '@/app/lib/getUserIdFromToken';
 
 export async function DELETE(
   request: Request,
@@ -24,8 +25,8 @@ export async function DELETE(
     // Initialize Convex client
     const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL || '');
 
-    // Get the user ID from the token
-    const userId = await convex.query(api.queries.getUserIdFromToken, { token });
+    // Get the user ID from the token using local utility
+    const userId = await getUserIdFromToken(token);
     if (!userId) {
       console.warn(`[${requestId}] Invalid token: Could not get user ID`);
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });

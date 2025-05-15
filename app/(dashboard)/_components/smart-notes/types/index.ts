@@ -40,6 +40,7 @@ export interface NoteUpdate {
   type?: NoteType;
   tags?: string[];
   references?: Reference[];
+  updatedAt?: number;
 }
 
 export interface Command {

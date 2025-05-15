@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { ConvexHttpClient } from 'convex/browser';
+import { getBearerToken, getUserIdFromApiKey } from '../../utils';
+import { fetchQuery } from 'convex/nextjs';
 import { api } from '@/convex/_generated/api';
 
 export async function GET(
@@ -15,41 +15,35 @@ export async function GET(
   });
 
   try {
-    const token = cookies().get('firebase-auth-token')?.value;
-    if (!token) {
-      console.warn(`[${requestId}] Authentication failed: No token found`);
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // API key authentication and userId extraction using utils
+    const apiKey = getBearerToken(request);
+    if (!apiKey) {
+      console.warn(`[${requestId}] Authentication failed: No Authorization header or invalid format`);
+      return NextResponse.json({ error: 'Unauthorized - Missing or invalid Authorization header' }, { status: 401 });
     }
-
-    // Initialize Convex client
-    const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL || '');
-
-    // Get the user ID from the token
-    const userId = await convex.query(api.queries.getUserIdFromToken, { token });
+    const userId = getUserIdFromApiKey(apiKey);
     if (!userId) {
-      console.warn(`[${requestId}] Invalid token: Could not get user ID`);
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+      console.warn(`[${requestId}] Invalid API key: Could not get user ID`);
+      return NextResponse.json({ error: 'Invalid API key' }, { status: 401 });
     }
 
-    // We need to add a function to get a specific conversation by ID
-    // For now, we'll fetch all conversations and filter on the client side
-    const conversations = await convex.query(api.chat.getHistory, { 
-      userId
+    // Use the direct getConversation query for better performance
+    const conversation = await fetchQuery(api.chatQueries.getConversation, { 
+      userId,
+      conversationId: params.chatId
     });
-
-    // Find the specific conversation
-    const conversation = conversations.find(conv => conv._id === params.chatId);
     
     if (!conversation) {
       console.warn(`[${requestId}] Conversation not found: ${params.chatId}`);
       return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
     }
 
+
     // Format the conversation for the frontend
     const formattedConversation = {
       id: conversation._id,
       title: conversation.title || 'Untitled Chat',
-      messages: conversation.messages.map((msg, index) => ({
+      messages: conversation.messages.map((msg: any, index: any) => ({
         id: index,
         content: msg.content,
         chat_response: msg.content,
@@ -61,7 +55,9 @@ export async function GET(
       starred: conversation.starred || false
     };
 
-    console.log(`[${requestId}] Successfully fetched conversation ${params.chatId}`);
+    console.log(`[${requestId}] Successfully fetched conversation ${params.chatId}`, {
+      messageCount: formattedConversation.messages.length
+    });
 
     return NextResponse.json({
       conversation: formattedConversation,

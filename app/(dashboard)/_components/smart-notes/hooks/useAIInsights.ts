@@ -1,10 +1,41 @@
 import { Note, NoteUpdate } from '../types';
 import { formatAnalysisToMarkdown } from '../utils/format-utils';
+import { getApiKey } from '@/app/lib/api-helpers';
 
 export function useAIInsights(updateNote: (noteId: string, updates: NoteUpdate) => Promise<Note>) {
-  const requestAIInsights = async (noteId: string, note: Note) => {
+  const requestAIInsights = async (noteId: string | undefined, note: Note | undefined) => {
+    // Add detailed logging to understand what's happening
+    console.log('requestAIInsights called with:', { 
+      noteId, 
+      noteExists: !!note,
+      noteContent: note?.content,
+      noteContentLength: note?.content?.length,
+      noteContentType: note?.content ? typeof note.content : 'undefined'
+    });
+    
     if (!note || !noteId) {
       console.error('Invalid note or noteId:', { noteId, note });
+      return;
+    }
+
+    // Ensure we have a valid content string
+    const noteContent = note.content || '';
+    console.log('Note content after normalization:', { 
+      noteContent, 
+      length: noteContent.length, 
+      trimmedLength: noteContent.trim().length,
+      firstFewChars: noteContent.substring(0, 20)
+    });
+    
+    // Check if note content is empty or whitespace
+    if (!noteContent.trim()) {
+      console.warn('Cannot analyze empty note');
+      const errorReference = {
+        type: 'ai_insight' as const,
+        content: 'Cannot analyze an empty note. Please add some content first.'
+      };
+      const updatedReferences = [...(note.references || []).filter(ref => !('isLoading' in ref)), errorReference];
+      await updateNote(noteId, { references: updatedReferences });
       return;
     }
 
@@ -15,8 +46,13 @@ export function useAIInsights(updateNote: (noteId: string, updates: NoteUpdate) 
       isLoading: true
     };
 
+    const apiKey = await getApiKey();
+    if (!apiKey) {
+      throw new Error('You are not authenticated. Please log in again.');
+    }
+
     // Add the loading insight to the note's references
-    const referencesWithLoading = [...(note.references || []), loadingInsight];
+    const referencesWithLoading = [...(note.references || []).filter(ref => !('isLoading' in ref)), loadingInsight];
     await updateNote(noteId, { references: referencesWithLoading });
 
     try {
@@ -25,8 +61,9 @@ export function useAIInsights(updateNote: (noteId: string, updates: NoteUpdate) 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({ content_note: note.content }),
+        body: JSON.stringify({ content_note: noteContent }),
       });
 
       if (!response.ok) {
@@ -97,5 +134,14 @@ export function useAIInsights(updateNote: (noteId: string, updates: NoteUpdate) 
     }
   };
 
-  return { requestAIInsights };
+  return { 
+    requestAIInsights: async (noteId: string | undefined, note: Note | undefined) => {
+      try {
+        await requestAIInsights(noteId, note);
+      } catch (error) {
+        console.error('Error in requestAIInsights:', error);
+        throw error; // Re-throw to allow caller to handle if needed
+      }
+    } 
+  };
 }

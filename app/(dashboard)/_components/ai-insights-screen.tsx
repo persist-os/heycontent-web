@@ -44,19 +44,19 @@ interface AIActionableInsight {
   id: string | number;
   type: 'partnership' | 'content' | 'platform';
   opportunity: {
-    title: string;
-    description: string;
-    impact: string;
-    timing: string;
-    confidence: number;
+      title: string;
+      description: string;
+      impact: string;
+      timing: string;
+      confidence: number;
   };
   action: {
-    steps: string[];
-    timeToImplement: string;
-    expectedOutcome: string;
-    requirements: string[];
-    type?: string;
-    priority?: 'high' | 'medium' | 'low';
+      steps: string[];
+      timeToImplement: string;
+      expectedOutcome: string;
+      requirements: string[];
+      type?: string;
+      priority?: 'high' | 'medium' | 'low';
   };
   context: ExtendedInsightContext;
 }
@@ -79,20 +79,21 @@ interface APIInsightResponse {
   confidence: number;
   source?: string;
   action?: {
-    steps: string[];
-    timeToImplement: string;
-    requirements: string[];
-    type?: string;
-    priority?: 'high' | 'medium' | 'low';
+      steps: string[];
+      timeToImplement: string;
+      requirements: string[];
+      type?: string;
+      priority?: 'high' | 'medium' | 'low';
   };
   data?: {
-    emails?: InsightEmail[];
-    videos?: InsightVideo[];
-    sourceDetails?: string[];
-    data?: string[];
-    engagementPotential?: string;
+      emails?: InsightEmail[];
+      videos?: InsightVideo[];
+      sourceDetails?: string[];
+      data?: string[];
+      engagementPotential?: string;
   };
 }
+
 
 const CACHE_VERSION = 1;
 const QUOTA_COOLDOWN = 30 * 60 * 1000; // 30 minutes

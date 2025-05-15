@@ -3,14 +3,15 @@
 import { MessageBubble } from './message-bubble'
 import { useState } from 'react'
 import type { Message } from '@/app/types'
-import type { InteractiveOption } from '@/app/lib/chat/interactive-response'
+import type { InteractiveOption } from './interactive-response'
 
 // Mock message that reflects our actual codebase
 const mockMessage: Message = {
-  id: 1,
+  id: '1',
   content: "Here's an analysis of your recent content performance. Your engagement rates have increased by 15% compared to last month, and we're seeing strong growth in your audience demographics.",
   role: 'assistant',
   timestamp: new Date().toISOString(),
+  chat_response: "Here's an analysis of your recent content performance. Your engagement rates have increased by 15% compared to last month, and we're seeing strong growth in your audience demographics.",
   relatedInsights: [
     {
       type: 'Performance',
@@ -21,34 +22,8 @@ const mockMessage: Message = {
       summary: 'New demographic segment showing high engagement'
     }
   ],
-  interactiveResponse: {
-    options: [
-      {
-        text: "Show detailed metrics",
-        type: "detail",
-        action: "show_metrics"
-      },
-      {
-        text: "View content insights",
-        type: "detail",
-        action: "view_content_insights"
-      },
-      {
-        text: "View audience insights",
-        type: "detail",
-        action: "view_audience_insights"
-      },
-      {
-        text: "Personalize recommendations",
-        type: "action",
-        action: "personalize"
-      },
-      {
-        text: "Tell me more",
-        type: "suggestion"
-      }
-    ],
-    followUp: {
+  followUpQuestions: [
+    {
       question: "Which metrics would you like to explore?",
       choices: [
         "Audience growth",
@@ -57,12 +32,15 @@ const mockMessage: Message = {
         "Platform metrics"
       ]
     },
-    contextualSuggestions: [
-      "Compare with previous period",
-      "Show performance breakdown",
-      "View top-performing content"
-    ]
-  },
+    {
+      question: "Would you like to explore any specific aspect further?",
+      choices: [
+        "Metrics",
+        "Content",
+        "Audience"
+      ]
+    }
+  ],
   metadata: {
     suggestions: [
       {
@@ -90,7 +68,7 @@ export function MessagePreview() {
     console.log('Follow-up choice clicked:', choice)
   }
 
-  const handleReferenceClick = (messageId: number) => {
+  const handleReferenceClick = (messageId: string) => {
     console.log('Reference clicked for message:', messageId)
   }
 

@@ -58,4 +58,13 @@ logs
 .cache
 .temp
 
+
+# Gmail API Integration files to ignore
+GMAIL_API_INTEGRATION_CHECKLIST.md
+__tests__/gmail/
+
+# Test artifacts
+JEST_MOCKING_ATTEMPTS.md
+
 firebase_key.json
+

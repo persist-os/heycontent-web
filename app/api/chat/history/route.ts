@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { ConvexHttpClient } from 'convex/browser';
+import { fetchQuery } from 'convex/nextjs';
 import { api } from '@/convex/_generated/api';
+import { getUserIdFromToken } from '@/app/lib/getUserIdFromToken';
 
 export async function GET(request: Request) {
   const requestId = Math.random().toString(36).substring(7);
@@ -14,24 +15,29 @@ export async function GET(request: Request) {
   });
 
   try {
-    const token = cookies().get('firebase-auth-token')?.value;
+    // Try to get token from Authorization header first, then cookie
+    let token: string | undefined | null = undefined;
+    const authHeader = request.headers.get('Authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      const cookieStore = await cookies();
+      token = cookieStore.get('firebase-auth-token')?.value;
+    }
     if (!token) {
-      console.warn(`[${requestId}] Authentication failed: No token found`);
+      console.warn(`[${requestId}] Authentication failed: No token found in header or cookie`);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Initialize Convex client
-    const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL || '');
-
-    // Get the user ID from the token
-    const userId = await convex.query(api.queries.getUserIdFromToken, { token });
+    // Get the user ID from the token using local utility
+    const userId = await getUserIdFromToken(token);
     if (!userId) {
       console.warn(`[${requestId}] Invalid token: Could not get user ID`);
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
     // Fetch conversations from Convex
-    const conversations = await convex.query(api.chat.getHistory, {
+    const conversations = await fetchQuery(api.chatQueries.getHistory, {
       userId,
       limit
     });

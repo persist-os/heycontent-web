@@ -1,232 +1,91 @@
 import { NextResponse } from 'next/server'
 import { adminAuth } from '@/app/lib/firebase-admin'
-import { cookies } from 'next/headers'
-import { ConvexHttpClient } from "convex/browser"
-import { api } from "@/convex/_generated/api"
-
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
+import { proxyApiKeyRequest } from '../utils/apiKeyProxy';
+import { logger, updateOrCreateConvexUser, mapAuthErrorCodeToMessage, redactToken } from './helpers';
+import { fetchQuery } from 'convex/nextjs';
+import { api } from '@/convex/_generated/api';
 
 export async function POST(request: Request) {
+  const requestId = `auth-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+  
   try {
     const body = await request.json()
-    console.log('Auth request body:', { ...body, password: body.password ? '[REDACTED]' : undefined })
+    logger.info('Processing authentication request', { 
+      requestId, 
+      action: body.action, 
+      email: body.email,
+      hasPassword: !!body.password,
+      hasIdToken: !!body.idToken,
+      userAgent: request.headers.get('user-agent'),
+      clientIp: request.headers.get('x-forwarded-for') || 'unknown'
+    });
 
-    const { email, password, action, idToken } = body
+    const { email, password, action, idToken, name, username, referredBy } = body
 
-    if (action === 'login') {
-      console.log('Attempting login for:', email)
-      try {
-        // First verify the user exists and is not disabled
-        const userRecord = await adminAuth.getUserByEmail(email)
-        
-        // Create a custom token for the user
-        const customToken = await adminAuth.createCustomToken(userRecord.uid)
-        
-        console.log('Login successful, setting token for user:', userRecord.email)
-
-        // Ensure user exists in Convex
-        try {
-          const convexUser = await convex.query(api.users.getUserById, { userId: userRecord.uid })
-
-          if (!convexUser) {
-            console.log('User not found in Convex, creating user...')
-            await convex.action(api.auth.createUser, {
-              userId: userRecord.uid,
-              name: userRecord.displayName || 'Unknown User',
-              email: userRecord.email || '',
-              image: userRecord.photoURL || ''
-            })
-            console.log('User created in Convex')
-          }
-        } catch (convexError) {
-          console.error('Error with Convex user:', convexError)
-        }
-
-        const response = NextResponse.json({
-          success: true,
-          redirect: '/chat',
-          customToken
-        })
-
-        // Set the Firebase auth token cookie
-        response.cookies.set('firebase-auth-token', customToken, {
-          httpOnly: false,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          path: '/',
-          maxAge: 60 * 60 * 24 * 7 // 1 week
-        })
-
-        return response
-      } catch (error: any) {
-        if (error.code === 'auth/user-not-found') {
-          return NextResponse.json(
-            { error: 'No account found with this email' },
-            { status: 400 }
-          )
-        }
-        if (error.code === 'auth/wrong-password') {
-          return NextResponse.json(
-            { error: 'Incorrect password' },
-            { status: 400 }
-          )
-        }
-        console.error('Login error:', error)
-        return NextResponse.json(
-          { error: 'Authentication failed' },
-          { status: 400 }
-        )
-      }
-    } else if (action === 'register') {
-      console.log('Attempting registration for:', email)
-      try {
-        const userRecord = await adminAuth.createUser({
-          email,
-          password,
-          emailVerified: true // Set email as verified by default
-        })
-
-        // Create a custom token for the user
-        const customToken = await adminAuth.createCustomToken(userRecord.uid)
-        
-        console.log('Login successful, setting token for user:', userRecord.email)
-
-        // Ensure user exists in Convex
-        try {
-          const convexUser = await convex.query(api.users.getUserById, { userId: userRecord.uid })
-
-          if (!convexUser) {
-            console.log('User not found in Convex, creating user...')
-            await convex.action(api.auth.createUser, {
-              userId: userRecord.uid,
-              name: userRecord.displayName || 'Unknown User',
-              email: userRecord.email || '',
-              image: userRecord.photoURL || ''
-            })
-            console.log('User created in Convex')
-          }
-        } catch (convexError) {
-          console.error('Error with Convex user:', convexError)
-        }
-
-        const response = NextResponse.json({
-          success: true,
-          redirect: '/chat',
-          customToken
-        })
-
-        // Set the Firebase auth token cookie
-        response.cookies.set('firebase-auth-token', customToken, {
-          httpOnly: false,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          path: '/',
-          maxAge: 60 * 60 * 24 * 7 // 1 week
-        })
-
-        return response
-      } catch (error: any) {
-        if (error.code === 'auth/email-already-in-use') {
-          return NextResponse.json(
-            { error: 'An account with this email already exists' },
-            { status: 400 }
-          )
-        }
-        throw error
-      }
-    } else if (action === 'google' || action === 'refresh') {
+      logger.info('Processing token-based auth', { requestId, action });
+      const tokenAuthStartTime = Date.now();
       if (!idToken) {
-        console.log('No ID token provided for action:', action)
-        return NextResponse.json(
-          { error: 'No ID token provided' },
-          { status: 400 }
-        )
+        logger.warn('No ID token provided', { requestId, action });
+        return NextResponse.json({ error: 'No ID token provided' }, { status: 400 });
       }
-
-      console.log('Setting token for action:', action)
-
+      logger.info('Processing token for authentication', { requestId, action, tokenLength: idToken.length });
+      logger.debug('Received ID token from client', { requestId, tokenPreview: redactToken(idToken), tokenLength: idToken.length });
       // Verify the token with Firebase Admin
-      const decodedToken = await adminAuth.verifyIdToken(idToken)
-      console.log('Token verified successfully for user:', decodedToken.uid)
-
-      // Ensure user exists in Convex
+      const decodedToken = await adminAuth.verifyIdToken(idToken);
+      logger.info('Token successfully verified', {
+        requestId,
+        uid: decodedToken.uid,
+        email: decodedToken.email,
+        emailVerified: decodedToken.email_verified,
+        authTime: new Date(decodedToken.auth_time * 1000).toISOString(),
+        issuedAt: new Date(decodedToken.iat * 1000).toISOString(),
+        verificationTime: Date.now() - tokenAuthStartTime,
+        expiresAt: new Date(decodedToken.exp * 1000).toISOString(),
+        provider: decodedToken.firebase?.sign_in_provider
+      });
+      logger.info('Firebase token verified successfully', { requestId, userId: decodedToken.uid, provider: decodedToken.firebase?.sign_in_provider });
+      await updateOrCreateConvexUser(
+  decodedToken.uid,
+  decodedToken.name || name || '',
+  decodedToken.email || email,
+  decodedToken.picture || '',
+  username || '',
+  referredBy || ''
+);
+      // Call the /api/auth/key route to get an API key for this user
+      let apiKeyData = null;
       try {
-        const convexUser = await convex.query(api.users.getUserById, { userId: decodedToken.uid })
-
-        if (!convexUser) {
-          console.log('User not found in Convex, creating user...')
-          await convex.action(api.auth.createUser, {
-            userId: decodedToken.uid,
-            name: decodedToken.name || 'Unknown User',
-            email: decodedToken.email || '',
-            image: decodedToken.picture || ''
-          })
-          console.log('User created in Convex')
-        } else {
-          console.log('User found in Convex, updating user information...')
-          await convex.action(api.auth.updateUser, {
-            userId: decodedToken.uid,
-            name: decodedToken.name || convexUser.name || 'Unknown User',
-            email: decodedToken.email || convexUser.email || '',
-            image: decodedToken.picture || convexUser.image || ''
-          })
-          console.log('User updated in Convex')
-        }
-      } catch (convexError) {
-        console.error('Error with Convex user:', convexError)
-        // Continue even if Convex operations fail
+        apiKeyData = await proxyApiKeyRequest({ idToken, userId: decodedToken.uid });
+      } catch (apiKeyError: any) {
+        let errorMsg = typeof apiKeyError === 'object' && apiKeyError !== null && 'message' in apiKeyError
+          ? (apiKeyError as any).message
+          : String(apiKeyError);
+        apiKeyData = { error: 'Exception fetching API key', details: errorMsg };
       }
-
+      // Always redirect to /chat on success
       const response = NextResponse.json({
         success: true,
-        redirect: action === 'refresh' ? undefined : '/chat'
-      })
-
-      // Set the Firebase auth token cookie
+        redirect: '/chat',
+        apiKey: apiKeyData?.apiKey,
+        apiKeyData
+      });
       response.cookies.set('firebase-auth-token', idToken, {
         httpOnly: false,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
         maxAge: 60 * 60 * 24 * 7 // 1 week
-      })
-
-      return response
-    } else {
-      console.log('Invalid action provided:', action)
-      return NextResponse.json(
-        { error: 'Invalid action' },
-        { status: 400 }
-      )
-    }
+      });
+      return response;
+    
   } catch (err: any) {
-    console.error('Auth error:', err)
-    let errorMessage = 'Something went wrong'
-
-    switch (err.code) {
-      case 'auth/invalid-email':
-        errorMessage = 'Invalid email address'
-        break
-      case 'auth/user-disabled':
-        errorMessage = 'This account has been disabled'
-        break
-      case 'auth/user-not-found':
-        errorMessage = 'No account found with this email'
-        break
-      case 'auth/wrong-password':
-        errorMessage = 'Incorrect password'
-        break
-      case 'auth/email-already-in-use':
-        errorMessage = 'An account with this email already exists'
-        break
-      case 'auth/weak-password':
-        errorMessage = 'Password is too weak'
-        break
-    }
-
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 400 }
-    )
+    logger.error('Authentication request failed', err, {
+      requestId,
+      errorCode: err.code || 'unknown',
+      path: request.url,
+      method: request.method
+    });
+    const errorMessage = mapAuthErrorCodeToMessage(err.code);
+    return NextResponse.json({ error: errorMessage }, { status: 400 });
   }
 }

@@ -21,6 +21,7 @@ export default function DebugTab() {
   const [convexResult, setConvexResult] = useState<any>(null)
 
   useEffect(() => {
+    if (!auth) return;
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user)
       if (user) {
@@ -140,42 +141,6 @@ export default function DebugTab() {
       }
     } catch (err) {
       console.error('Session test error:', err)
-      setError(err instanceof Error ? err.message : 'Unknown error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const fixSession = async () => {
-    setLoading(true)
-    setError(null)
-    setSessionResult(null)
-    setTestResult(null)
-
-    try {
-      const response = await fetch('/api/auth/fix-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ token })
-      })
-
-      const data = await response.json()
-      setSessionResult({
-        status: response.status,
-        data
-      })
-
-      // Reload the page if session was successfully fixed
-      if (data.success) {
-        setTimeout(() => {
-          window.location.reload()
-        }, 1500)
-      }
-    } catch (err) {
-      console.error('Session fix error:', err)
       setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
       setLoading(false)
@@ -473,15 +438,6 @@ export default function DebugTab() {
                     variant="outline"
                   >
                     {loading ? 'Testing...' : 'Test Session'}
-                  </Button>
-
-                  <Button
-                    onClick={fixSession}
-                    disabled={loading || !user}
-                    className="w-full"
-                    variant="destructive"
-                  >
-                    {loading ? 'Fixing...' : 'Force Fix Session'}
                   </Button>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
