@@ -218,13 +218,13 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId }) => {
                       onOptionClick={handleOptionClick}
                       onFollowUpClick={handleFollowUpClick}
                     />
-                    {message.role === 'assistant' && message.metadata?.suggestions && (
+                    {message.role === 'assistant' && message.suggestions && (
                       <div className="mt-3 flex flex-wrap gap-2 pl-12">
-                        {message.metadata.suggestions.map((suggestion, index) => (
+                        {message.suggestions.map((suggestion, index) => (
                           <SuggestionChip
                             key={index}
                             suggestion={suggestion}
-                            onClick={() => handleSuggestionClick(suggestion)}
+                            onClick={() => handleSuggestionClick(suggestion, handleSendMessage)}
                           />
                         ))}
                       </div>
