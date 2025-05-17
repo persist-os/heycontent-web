@@ -14,6 +14,9 @@ export default defineSchema({
     updatedAt: v.number(),
     referralCode: v.optional(v.string()),
     referredBy: v.optional(v.string()),
+    stripeCustomerId: v.optional(v.string()),
+    stripeSubscriptionId: v.optional(v.string()),
+    
   })
   .index("by_userId", ["userId"])
   .index("by_email", ["email"])

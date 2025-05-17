@@ -504,6 +504,214 @@ app.post("/api/users/:id/instagram/profile", async (c) => {
   }
 });
 
+// SUBSCRIPTION ENDPOINTS
+
+// Get user's subscription
+app.get("/api/users/:id/stripe/subscription", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  
+  try {
+    const subscription = await ctx.runQuery(api.subscriptionQueries.getUserSubscription, { userId });
+    return c.json(subscription);
+  } catch (error) {
+    console.error("Failed to get subscription:", error);
+    return c.json({ success: false, error: "Failed to retrieve subscription" }, 500);
+  }
+});
+
+// Get subscription plans
+app.get("/api/stripe/plans", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    const plans = await ctx.runQuery(api.subscriptionQueries.getPlans, {});
+    return c.json(plans);
+  } catch (error) {
+    console.error("Failed to get plans:", error);
+    return c.json({ success: false, error: "Failed to retrieve plans" }, 500);
+  }
+});
+
+// Save customer
+app.post("/api/users/:id/stripe/customer", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { stripeCustomerId } = await c.req.json();
+  
+  if (!stripeCustomerId) {
+    return c.json({ success: false, error: "Missing Stripe customer ID" }, 400);
+  }
+  
+  try {
+    // Update user with Stripe customer ID
+    await ctx.runMutation(api.userMutations.updateUser, {
+      userId,
+      updates: { stripeCustomerId }
+    });
+    
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Failed to save customer:", error);
+    return c.json({ success: false, error: "Failed to save customer" }, 500);
+  }
+});
+
+// Get customer
+app.get("/api/users/:id/stripe/customer", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  
+  try {
+    const user = await ctx.runQuery(api.subscriptionQueries.getUser, { userId });
+    return c.json({ stripeCustomerId: user?.stripeCustomerId });
+  } catch (error) {
+    console.error("Failed to get customer:", error);
+    return c.json({ success: false, error: "Failed to retrieve customer" }, 500);
+  }
+});
+
+// Save subscription
+app.post("/api/users/:id/stripe/subscription", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { 
+    planId, 
+    status, 
+    stripeSubscriptionId, 
+    stripeCustomerId,
+    currentPeriodStart,
+    currentPeriodEnd,
+    cancelAtPeriodEnd
+  } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.subscriptionQueries.saveSubscription, {
+      userId,
+      planId,
+      status,
+      stripeSubscriptionId,
+      stripeCustomerId,
+      currentPeriodStart,
+      currentPeriodEnd,
+      cancelAtPeriodEnd
+    });
+    
+    return c.json({ success: true, subscriptionId: result });
+  } catch (error) {
+    console.error("Failed to save subscription:", error);
+    return c.json({ success: false, error: "Failed to save subscription" }, 500);
+  }
+});
+
+// Update subscription
+app.patch("/api/stripe/subscriptions/:id", async (c) => {
+  const ctx = c.env;
+  const subscriptionId = c.req.param("id");
+  const data = await c.req.json();
+  
+  try {
+    // Get subscription by Stripe ID
+    const subscription = await ctx.runQuery(api.subscriptionQueries.getSubscriptionByStripeId, {
+      stripeSubscriptionId: subscriptionId
+    });
+    
+    if (!subscription) {
+      return c.json({ success: false, error: "Subscription not found" }, 404);
+    }
+    
+    // Update subscription
+    if (data.quantity !== undefined) {
+      await ctx.runMutation(api.subscriptionQueries.updateSubscriptionQuantity, {
+        subscriptionId: subscription._id,
+        quantity: data.quantity
+      });
+    }
+    
+    if (data.cancelAtPeriodEnd !== undefined) {
+      await ctx.runMutation(api.subscriptionQueries.updateSubscription, {
+        subscriptionId: subscription._id,
+        cancelAtPeriodEnd: data.cancelAtPeriodEnd
+      });
+    }
+    
+    // Update other fields if needed
+    if (data.status || data.currentPeriodStart || data.currentPeriodEnd) {
+      const updates: {
+        status?: "active" | "canceled" | "past_due" | "trialing";
+        currentPeriodStart?: number;
+        currentPeriodEnd?: number;
+      } = {};
+      
+      if (data.status) updates.status = data.status as "active" | "canceled" | "past_due" | "trialing";
+      if (data.currentPeriodStart) updates.currentPeriodStart = data.currentPeriodStart;
+      if (data.currentPeriodEnd) updates.currentPeriodEnd = data.currentPeriodEnd;
+      
+      await ctx.runMutation(api.subscriptionQueries.updateSubscriptionDetails, {
+        subscriptionId: subscription._id,
+        updates
+      });
+    }
+    
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Failed to update subscription:", error);
+    return c.json({ success: false, error: "Failed to update subscription" }, 500);
+  }
+});
+
+// Get user ID from subscription
+app.get("/api/stripe/subscriptions/:id/user", async (c) => {
+  const ctx = c.env;
+  const subscriptionId = c.req.param("id");
+  
+  try {
+    const subscription = await ctx.runQuery(api.subscriptionQueries.getSubscriptionByStripeId, {
+      stripeSubscriptionId: subscriptionId
+    });
+    
+    if (!subscription) {
+      return c.json({ success: false, error: "Subscription not found" }, 404);
+    }
+    
+    return c.json({ userId: subscription.userId });
+  } catch (error) {
+    console.error("Failed to get user from subscription:", error);
+    return c.json({ success: false, error: "Failed to retrieve user" }, 500);
+  }
+});
+
+// Get subscription item
+app.get("/api/users/:id/stripe/subscription/item", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const meterName = c.req.query("meterName");
+  
+  if (!meterName) {
+    return c.json({ success: false, error: "Missing meter name" }, 400);
+  }
+  
+  try {
+    const subscription = await ctx.runQuery(api.subscriptionQueries.getUserSubscription, { userId });
+    
+    if (!subscription || !subscription.items) {
+      return c.json({ success: false, error: "Subscription or items not found" }, 404);
+    }
+    
+    // Find the item with the matching meter name
+    const item = subscription.items.find(item => item.meterName === meterName);
+    
+    if (!item) {
+      return c.json({ success: false, error: "Subscription item not found" }, 404);
+    }
+    
+    return c.json({ subscriptionItemId: item.stripeItemId });
+  } catch (error) {
+    console.error("Failed to get subscription item:", error);
+    return c.json({ success: false, error: "Failed to retrieve subscription item" }, 500);
+  }
+});
+
 // RATE LIMITING ENDPOINTS
 
 // Get rate limit data

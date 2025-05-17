@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
 
 // Query to get all active subscription plans
 export const getPlans = query({
@@ -52,7 +53,7 @@ export const getPaymentMethods = query({
 
 // Internal queries
 export const getPlanById = query({
-  args: { planId: v.string() },
+  args: { planId: v.id("subscriptionPlans") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.planId);
   },
@@ -102,16 +103,23 @@ export const saveSubscription = mutation({
   args: {
     userId: v.string(),
     planId: v.string(),
-    status: v.string(),
+    status: v.union(
+      v.literal("active"),
+      v.literal("canceled"),
+      v.literal("past_due"),
+      v.literal("trialing")
+    ),
     stripeSubscriptionId: v.string(),
     stripeCustomerId: v.string(),
     currentPeriodStart: v.number(),
     currentPeriodEnd: v.number(),
     cancelAtPeriodEnd: v.boolean(),
+    quantity: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("userSubscriptions", {
       ...args,
+      quantity: args.quantity || 1, // Default to 1 if not provided
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -161,5 +169,35 @@ export const updateSubscriptionQuantity = mutation({
       quantity: args.quantity,
       updatedAt: Date.now(),
     });
+  },
+});
+
+// Get subscription by Stripe subscription ID
+export const getSubscriptionByStripeId = query({
+  args: { stripeSubscriptionId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("userSubscriptions")
+      .filter((q) => q.eq(q.field("stripeSubscriptionId"), args.stripeSubscriptionId))
+      .first();
+  },
+});
+
+// Update subscription details
+export const updateSubscriptionDetails = mutation({
+  args: {
+    subscriptionId: v.id("userSubscriptions"),
+    updates: v.object({
+      status: v.optional(v.union(v.literal("active"), v.literal("canceled"), v.literal("past_due"), v.literal("trialing"))),
+      currentPeriodStart: v.optional(v.number()),
+      currentPeriodEnd: v.optional(v.number()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const updates = {
+      ...args.updates,
+      updatedAt: Date.now(),
+    };
+    await ctx.db.patch(args.subscriptionId, updates);
   },
 }); 

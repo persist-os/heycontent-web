@@ -1,21 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/src/components/ui/button';
 
 const PLANS = [
   {
-    name: "Lite",
-    monthlyPrice: 10,
-    requests: 100,
-    features: ["100 requests included", "Basic support"],
+    name: "Basic",
+    monthlyPrice: 15,
+    requests: 2000,
+    features: ["2,000 fast requests included", "Unlimited slow requests", "Basic support"],
   },
   {
     name: "Pro",
     monthlyPrice: 25,
-    requests: 500,
-    features: ["500 requests included", "Priority support", "Advanced analytics"],
+    requests: 5000,
+    features: ["5,000 fast requests included", "Unlimited slow requests", "Priority support", "Advanced analytics"],
   },
 ];
 
@@ -30,6 +30,9 @@ export default function UpgradeModal({ open, onClose, onSelectPlan }: { open: bo
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Choose Your Plan</DialogTitle>
+          <DialogDescription>
+            Select a plan that best fits your needs
+          </DialogDescription>
         </DialogHeader>
         <div className="flex justify-center gap-4 mb-4">
           <Button
@@ -40,8 +43,7 @@ export default function UpgradeModal({ open, onClose, onSelectPlan }: { open: bo
           </Button>
           <Button
             variant={billingInterval === "year" ? "default" : "outline"}
-            onClick={() => selectedPlan === "Pro" && setBillingInterval("year")}
-            disabled={selectedPlan !== "Pro"}
+            onClick={() => setBillingInterval("year")}
           >
             Annually <span className="ml-1 text-green-600 font-semibold">(Save 16%)</span>
           </Button>

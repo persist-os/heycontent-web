@@ -66,9 +66,43 @@ export default function SubscriptionOverview() {
 
   const handleUpgrade = () => setShowUpgradeModal(true);
   const handleCloseUpgrade = () => setShowUpgradeModal(false);
-  const handleSelectPlan = (plan: string, interval: "month" | "year") => {
-    // TODO: Add backend logic to upgrade plan
-    setShowUpgradeModal(false);
+  const createPaymentLink = useMutation(convexApi.subscriptionActions.createPaymentLink);
+  const [processingSubscription, setProcessingSubscription] = useState(false);
+  
+  // Query all plans
+  const allPlans = useQuery(convexApi.subscriptionQueries.getPlans) || [];
+  
+  const handleSelectPlan = async (plan: string, interval: "month" | "year") => {
+    try {
+      setProcessingSubscription(true);
+      console.log(`Creating payment link for plan: ${plan}, interval: ${interval}`);
+      
+      // Use the Convex action to create a payment link
+      // Pass the plan name directly - the backend will map it to the correct price ID
+      const result = await createPaymentLink({
+        userId,
+        planId: plan, // Pass the plan name directly
+        successUrl: `${window.location.origin}/settings?subscription=success`,
+        cancelUrl: `${window.location.origin}/settings?subscription=canceled`,
+      });
+      
+      console.log('Payment link created:', result);
+      
+      // Redirect to Stripe Checkout
+      if (result?.url) {
+        window.location.href = result.url;
+      } else {
+        throw new Error("Failed to create payment link");
+      }
+      
+    } catch (error) {
+      console.error("Error creating payment link:", error);
+      // Show error to user in UI
+      alert(`Subscription error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setProcessingSubscription(false);
+      setShowUpgradeModal(false);
+    }
   };
 
   return (
