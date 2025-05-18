@@ -72,6 +72,9 @@ export const useChat = (
       // Send message to the backend - pass isFirstMessage to ensure it's correctly flagged
       const data = await sendChatMessage(content, isFirstMessage, backendSessionId);
 
+      // Log the response to check structure
+      console.log('API response:', data);
+      
       // Update messages with the response
       setMessages(prev => {
         const withoutTyping = prev.filter(msg => msg.status !== 'typing');

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Message } from '@/app/types/chat'
-import { AmbientInsight } from '../types'
+import { AmbientInsight, SuggestedAction } from '../types'
 
 export const useUIEffects = (
   messages: Message[],
@@ -40,11 +40,12 @@ export const useUIEffects = (
     onSendMessage(message)
   }, [])
 
-  const handleSuggestionClick = useCallback((suggestion: { description: string }) => {
-    if (inputRef.current) {
-      inputRef.current.value = suggestion.description
-      inputRef.current.focus()
-    }
+  const handleSuggestionClick = useCallback((suggestion: string | SuggestedAction, onSendMessage: (message: string) => void) => {
+    const message = typeof suggestion === 'string' 
+      ? suggestion 
+      : suggestion.description;
+    
+    onSendMessage(message);
   }, [])
 
   const handleRefresh = useCallback(async () => {
