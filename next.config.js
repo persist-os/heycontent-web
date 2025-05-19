@@ -54,7 +54,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' blob: data: *.ytimg.com *.youtube.com",
               "font-src 'self'",
-              "connect-src 'self' wss://*.convex.cloud https://*.convex.cloud http://localhost:9099 https://*.firebaseio.com https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com",
+              "connect-src 'self' wss://*.convex.cloud https://*.convex.cloud http://localhost:9099 https://*.firebaseio.com https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com http://localhost:8000 https://backend.hicontent.co",
               "frame-ancestors 'self'"
             ].join('; ')
           }

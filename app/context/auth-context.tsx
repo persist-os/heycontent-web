@@ -6,12 +6,14 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
+  getToken: () => Promise<string>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  error: null
+  error: null,
+  getToken: async () => { throw new Error('AuthContext not initialized'); }
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -57,11 +59,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.location.href = path;
   };
 
+  // getToken returns the Firebase ID token for the current user
+  const getToken = async () => {
+    if (!user) throw new Error('User not authenticated');
+    return await user.getIdToken();
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, error }}>
+    <AuthContext.Provider value={{ user, loading, error, getToken }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export const useAuth = () => useContext(AuthContext);
+export function useAuth() {
+  return useContext(AuthContext);
+}

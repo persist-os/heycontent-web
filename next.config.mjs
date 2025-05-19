@@ -27,7 +27,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' blob: data: https://*.googleusercontent.com",
               "font-src 'self'",
-              "connect-src 'self' wss://*.convex.cloud https://*.convex.cloud http://localhost:9099 https://*.firebaseio.com https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://accounts.google.com",
+              "connect-src 'self' wss://*.convex.cloud https://*.convex.cloud http://localhost:8000 http://localhost:9099 https://*.firebaseio.com https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://accounts.google.com https://backend.hicontent.co",
               "frame-ancestors 'self'",
               "frame-src 'self' https://accounts.google.com https://apis.google.com"
             ].join('; ')
@@ -44,15 +44,18 @@ const nextConfig = {
       config.resolve.fallback = {}
     }
 
-    // Handle Node.js built-in modules
-    config.resolve.fallback.fs = false
-    config.resolve.fallback.path = false
-    config.resolve.fallback.crypto = false
-    config.resolve.fallback.stream = false
-    config.resolve.fallback.util = false
-    config.resolve.fallback.dns = false
-    config.resolve.fallback.tty = false
-    config.resolve.fallback.bcrypt = false  // Disable bcrypt in webpack
+      // Handle Node.js built-in modules
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      path: false,
+      crypto: false,
+      stream: false,
+      util: false,
+      dns: false,
+      tty: false,
+      bcrypt: false  // Disable bcrypt in webpack
+    };
     
     return config
   },

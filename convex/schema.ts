@@ -14,12 +14,51 @@ export default defineSchema({
     updatedAt: v.number(),
     referralCode: v.optional(v.string()),
     referredBy: v.optional(v.string()),
+    
+    // Stripe integration
     stripeCustomerId: v.optional(v.string()),
     stripeSubscriptionId: v.optional(v.string()),
     
+    // Subscription state
+    subscription: v.optional(v.object({
+      status: v.union(
+        v.literal("active"),
+        v.literal("trialing"),
+        v.literal("past_due"),
+        v.literal("canceled"),
+        v.literal("unpaid")
+      ),
+      plan: v.union(v.literal("basic_monthly"), v.literal("pro_monthly"), v.literal("basic_yearly"), v.literal("pro_yearly")),
+      priceId: v.string(),
+      currentPeriodEnd: v.number(),
+      cancelAtPeriodEnd: v.boolean(),
+      includedRequests: v.number(),
+      usedRequests: v.number(),
+      subscriptionItemId: v.optional(v.string()), // For metered billing
+      lastSyncedAt: v.optional(v.number())
+    })),
+    
+    // Payment method info (minimal, just for display)
+    paymentMethod: v.optional(v.object({
+      brand: v.string(),
+      last4: v.string(),
+      expMonth: v.number(),
+      expYear: v.number()
+    })),
+    
+    // Usage tracking for current billing period
+    usage: v.optional(v.object({
+      periodStart: v.number(),
+      periodEnd: v.number(),
+      totalRequests: v.number(),
+      includedRequests: v.number(),
+      overageRequests: v.number(),
+      lastUpdated: v.number()
+    }))
   })
   .index("by_userId", ["userId"])
   .index("by_email", ["email"])
+  .index("by_stripeCustomerId", ["stripeCustomerId"])
   .index("by_username", ["username"]),
 
   personas: defineTable({
@@ -455,71 +494,22 @@ export default defineSchema({
   .index("by_timestamp", ["data.timestamp"]),
 
 
-  subscriptionPlans: defineTable({
-    name: v.string(),
-    price: v.number(),
-    interval: v.union(v.literal("month"), v.literal("year")),
-    features: v.array(v.string()),
-    stripePriceId: v.string(),
-    stripeProductId: v.string(),
-    isActive: v.boolean(),
-    isPerSeat: v.boolean(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_active", ["isActive"])
-  .index("by_stripe", ["stripePriceId"]),
+  // Subscription plans are now managed in Stripe
+  // and cached in memory or environment variables
 
-  userSubscriptions: defineTable({
+  // Historical usage records
+  usageHistory: defineTable({
     userId: v.string(),
-    planId: v.string(),
-    status: v.union(
-      v.literal("active"),
-      v.literal("canceled"),
-      v.literal("past_due"),
-      v.literal("trialing")
-    ),
-    stripeSubscriptionId: v.optional(v.string()),
-    stripeCustomerId: v.optional(v.string()),
-    currentPeriodStart: v.number(),
-    currentPeriodEnd: v.number(),
-    cancelAtPeriodEnd: v.boolean(),
-    teamId: v.optional(v.string()),
-    trialEndDate: v.optional(v.number()),
-    quantity: v.number(),
+    periodStart: v.number(),
+    periodEnd: v.number(),
+    totalRequests: v.number(),
+    includedRequests: v.number(),
+    overageRequests: v.number(),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
   .index("by_user", ["userId"])
-  .index("by_status", ["status"])
-  .index("by_stripe", ["stripeSubscriptionId"]),
-
-  paymentMethods: defineTable({
-    userId: v.string(),
-    stripePaymentMethodId: v.string(),
-    type: v.string(),
-    last4: v.string(),
-    brand: v.string(),
-    expMonth: v.number(),
-    expYear: v.number(),
-    isDefault: v.boolean(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_user", ["userId"])
-  .index("by_stripe", ["stripePaymentMethodId"]),
-
-  usage: defineTable({
-    userId: v.string(),
-    month: v.string(),
-    completions: v.number(),
-    fastRequests: v.number(),
-    slowRequests: v.number(),
-    overageCharges: v.number(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_user_month", ["userId", "month"]),
+  .index("by_period", ["periodStart", "periodEnd"]),
 
   sessions: defineTable({
     userId: v.string(),

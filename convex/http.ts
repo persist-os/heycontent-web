@@ -22,7 +22,7 @@ app.get("/api/users", async (c) => {
 app.get("/api/users/:id", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  const user = await ctx.runQuery(api.userQueries.getUserById, { userId });
+  const user = await ctx.runQuery(api.userQueries.getUser, { userId });
   return c.json(user);
 });
 
@@ -520,19 +520,6 @@ app.get("/api/users/:id/stripe/subscription", async (c) => {
   }
 });
 
-// Get subscription plans
-app.get("/api/stripe/plans", async (c) => {
-  const ctx = c.env;
-  
-  try {
-    const plans = await ctx.runQuery(api.subscriptionQueries.getPlans, {});
-    return c.json(plans);
-  } catch (error) {
-    console.error("Failed to get plans:", error);
-    return c.json({ success: false, error: "Failed to retrieve plans" }, 500);
-  }
-});
-
 // Save customer
 app.post("/api/users/:id/stripe/customer", async (c) => {
   const ctx = c.env;
@@ -563,7 +550,7 @@ app.get("/api/users/:id/stripe/customer", async (c) => {
   const userId = c.req.param("id");
   
   try {
-    const user = await ctx.runQuery(api.subscriptionQueries.getUser, { userId });
+    const user = await ctx.runQuery(api.userQueries.getUser, { userId });
     return c.json({ stripeCustomerId: user?.stripeCustomerId });
   } catch (error) {
     console.error("Failed to get customer:", error);
@@ -577,7 +564,9 @@ app.post("/api/users/:id/stripe/subscription", async (c) => {
   const userId = c.req.param("id");
   const { 
     planId, 
+    priceId,
     status, 
+    includedRequests,
     stripeSubscriptionId, 
     stripeCustomerId,
     currentPeriodStart,
@@ -589,7 +578,9 @@ app.post("/api/users/:id/stripe/subscription", async (c) => {
     const result = await ctx.runMutation(api.subscriptionQueries.saveSubscription, {
       userId,
       planId,
+      priceId,
       status,
+      includedRequests,
       stripeSubscriptionId,
       stripeCustomerId,
       currentPeriodStart,
@@ -612,8 +603,8 @@ app.patch("/api/stripe/subscriptions/:id", async (c) => {
   
   try {
     // Get subscription by Stripe ID
-    const subscription = await ctx.runQuery(api.subscriptionQueries.getSubscriptionByStripeId, {
-      stripeSubscriptionId: subscriptionId
+    const subscription = await ctx.runQuery(api.userQueries.getUserByStripeCustomerId, {
+      stripeCustomerId: subscriptionId
     });
     
     if (!subscription) {
@@ -657,27 +648,6 @@ app.patch("/api/stripe/subscriptions/:id", async (c) => {
   } catch (error) {
     console.error("Failed to update subscription:", error);
     return c.json({ success: false, error: "Failed to update subscription" }, 500);
-  }
-});
-
-// Get user ID from subscription
-app.get("/api/stripe/subscriptions/:id/user", async (c) => {
-  const ctx = c.env;
-  const subscriptionId = c.req.param("id");
-  
-  try {
-    const subscription = await ctx.runQuery(api.subscriptionQueries.getSubscriptionByStripeId, {
-      stripeSubscriptionId: subscriptionId
-    });
-    
-    if (!subscription) {
-      return c.json({ success: false, error: "Subscription not found" }, 404);
-    }
-    
-    return c.json({ userId: subscription.userId });
-  } catch (error) {
-    console.error("Failed to get user from subscription:", error);
-    return c.json({ success: false, error: "Failed to retrieve user" }, 500);
   }
 });
 
