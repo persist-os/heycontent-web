@@ -25,6 +25,16 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
   const [analysisTimestamp, setAnalysisTimestamp] = useState<number | null>(null);
   const [isStoredAnalysis, setIsStoredAnalysis] = useState(false);
   
+  // Type for the stored analysis data
+  type StoredAnalysis = {
+    _id: string;
+    videoId: string;
+    userId: string;
+    analysis: any;
+    updatedAt?: number;
+    _creationTime?: number;
+  };
+  
   // We need to extract the user ID from the API key
   const [userId, setUserId] = useState<string | null>(null);
   const videoId = selectedContent.id;
@@ -44,13 +54,13 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
   }, [userId, videoId]);
   
   // Only query if we have both userId and videoId
-  const storedAnalysis = useQuery(
+  const storedAnalysisQuery = useQuery(
     api.youtubeQueries.getVideoAnalysis, 
     userId && videoId ? {
       userId: userId,
       videoId: videoId
     } : 'skip'
-  );
+  ) as StoredAnalysis | null;
   
   // This effect runs when the userId gets set from the API key
   useEffect(() => {
@@ -59,46 +69,68 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
   
   // Log the query result for debugging
   useEffect(() => {
-    console.log('YoutubeModal - Convex Analysis Query Result:', storedAnalysis);
-  }, [storedAnalysis]);
+    console.log('YoutubeModal - Convex Analysis Query Result:', storedAnalysisQuery);
+  }, [storedAnalysisQuery]);
   
   // Only retrieve analysis, don't store it
 
-  // Load stored analysis when component mounts or when storedAnalysis changes
+  // Load stored analysis when component mounts or when storedAnalysisQuery changes
   useEffect(() => {
     // Skip if still loading or if we don't have a valid result
-    if (loading || !storedAnalysis) return;
+    if (loading || !storedAnalysisQuery) return;
     
-    console.log('YoutubeModal - Processing stored analysis:', storedAnalysis);
+    console.log('YoutubeModal - Processing stored analysis:', storedAnalysisQuery);
     
-    if (storedAnalysis) {
-      console.log('YoutubeModal - Analysis object:', storedAnalysis);
+    if (storedAnalysisQuery) {
+      console.log('YoutubeModal - Analysis object:', storedAnalysisQuery);
       
-      if (storedAnalysis.analysis) {
-        console.log('YoutubeModal - Analysis data:', storedAnalysis.analysis);
+      if (storedAnalysisQuery.analysis) {
+        console.log('YoutubeModal - Analysis data:', storedAnalysisQuery.analysis);
         
         // Format the analysis for display
         let formattedAnalysis = `AI Analysis for "${selectedContent.content.title}":\n\n`;
         
         // Add the actual analysis content
-        const analysisData = storedAnalysis.analysis;
+        const analysisData = storedAnalysisQuery.analysis;
         
-        if (analysisData.aiAnalysis) {
+        // Handle different analysis data formats
+        if (typeof analysisData === 'string') {
+          // If it's already a string, use it as is
+          formattedAnalysis += analysisData;
+        } else if (analysisData.aiAnalysis) {
+          // Handle the case where analysis has an aiAnalysis field
           formattedAnalysis += typeof analysisData.aiAnalysis === 'string' 
             ? analysisData.aiAnalysis 
             : JSON.stringify(analysisData.aiAnalysis, null, 2);
+        } else if (analysisData.content || analysisData.summary) {
+          // Handle the case where analysis has content or summary fields
+          if (analysisData.content) {
+            formattedAnalysis += typeof analysisData.content === 'string' 
+              ? analysisData.content 
+              : JSON.stringify(analysisData.content, null, 2);
+          }
+          if (analysisData.summary) {
+            formattedAnalysis += '\n\n' + (typeof analysisData.summary === 'string' 
+              ? analysisData.summary 
+              : JSON.stringify(analysisData.summary, null, 2));
+          }
         } else {
+          // Default case: stringify the entire analysis object
           formattedAnalysis += JSON.stringify(analysisData, null, 2);
         }
         
         console.log('YoutubeModal - Formatted Analysis:', formattedAnalysis);
         
         setAiAnalysis(formattedAnalysis);
-        setAnalysisTimestamp(storedAnalysis.updatedAt);
+        
+        // Handle the updatedAt timestamp, which could be a number or a string
+        const timestamp = storedAnalysisQuery.updatedAt || storedAnalysisQuery._creationTime || Date.now();
+        setAnalysisTimestamp(typeof timestamp === 'number' ? timestamp : new Date(timestamp).getTime());
+        
         setIsStoredAnalysis(true);
       }
     }
-  }, [storedAnalysis, selectedContent, loading]);
+  }, [storedAnalysisQuery, selectedContent, loading]);
 
   const requestAiAnalysis = async () => {
     setLoading(true);

@@ -211,32 +211,22 @@ export const getVideoAnalysis = query({
     const { userId, videoId } = args;
     
     try {
-      // First try the standard approach
-      let analysis = await ctx.db
-        .query("youtubeAnalysis")
+      // Find the video with the given videoId and userId
+      const video = await ctx.db
+        .query("youtubeVideos")
         .withIndex("by_videoId", (q) => q.eq("videoId", videoId))
         .filter((q) => q.eq("userId", userId))
         .first();
       
-      if (analysis) {
-        console.log(`Found analysis with exact match`);
-        return analysis;
-      }
-      
-      // If nothing found, try just by videoId to see if anything exists
-      const allMatchingVideos = await ctx.db
-        .query("youtubeAnalysis")
-        .withIndex("by_videoId", (q) => q.eq("videoId", videoId))
-        .collect();
-      
-      if (allMatchingVideos.length > 0) {
-        console.log(`Found ${allMatchingVideos.length} analyses with videoId=${videoId} but userId mismatch.`);
-        console.log(`Database has these userIds: ${allMatchingVideos.map(a => a.userId).join(', ')}`);
-        console.log(`We are looking for userId: ${userId}`);
-        
-        // If any analysis exists for this video, just return the first one for now
-        // This is a temporary workaround until we figure out the userId issue
-        return allMatchingVideos[0];
+      if (video && video.analysis) {
+        console.log(`Found video with analysis for videoId=${videoId}`);
+        return {
+          _id: video._id,
+          videoId: video.videoId,
+          userId: video.userId,
+          analysis: video.analysis,
+          updatedAt: video.updatedAt || video._creationTime
+        };
       }
       
       console.log(`No analysis found for videoId=${videoId}`);
