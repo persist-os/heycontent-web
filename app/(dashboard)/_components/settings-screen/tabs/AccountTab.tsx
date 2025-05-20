@@ -102,7 +102,7 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
     userId ? { userId } : "skip"
   );
   const userData = useQuery(
-    api.userQueries.getUserById,
+    api.userQueries.getUser,
     userId ? { userId } : "skip"
   );
   

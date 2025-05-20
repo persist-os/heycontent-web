@@ -57,7 +57,7 @@ export const getUserByEmail = query({
     }
   })
   
-  export const getUserById = query({
+  export const getUser = query({
     args: { userId: v.string() },
     handler: async (ctx, args) => {
       return await ctx.db

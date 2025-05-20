@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/src/components/ui/card';
 import { X, MessageSquare, Instagram, Sparkles, Bot, ExternalLink } from 'lucide-react';
+import { getApiKey } from '@/app/lib/api-helpers';
 import { InstagramContentItem } from '../types';
 import { getMetricsDisplay } from '../utils';
 import { Button } from '@/src/components/ui/button';
@@ -19,13 +20,125 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [apiKeyLoaded, setApiKeyLoaded] = useState(false);
+
+  useEffect(() => {
+    const fetchApiKey = async () => {
+      const key = await getApiKey();
+      setApiKey(key);
+      setApiKeyLoaded(true);
+    };
+    fetchApiKey();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', fetchApiKey);
+      return () => window.removeEventListener('focus', fetchApiKey);
+    }
+  }, []);
 
   const requestAiAnalysis = async () => {
+    if (!apiKeyLoaded) {
+      setError('Loading API key...');
+      return;
+    }
     setLoading(true);
-    // Simulate API call - TODO: Replace with actual API call
-    await new Promise(resolve => setTimeout(resolve, 1200));
-    setAiAnalysis(`AI Analysis for Instagram Post:\n- Reach (${selectedContent.metrics.reach?.toLocaleString() || 'N/A'}) is high, good visibility.\n- Engagement (Likes: ${selectedContent.metrics.likes}, Comments: ${selectedContent.metrics.comments}) is solid.\n- Consider using more interactive stories to boost engagement further.`);
-    setLoading(false);
+    try {
+      if (!apiKey) {
+        throw new Error('API key not found. Please log in again.');
+      }
+      // Log the API key format for debugging (full key for now)
+      console.debug('API key format:', apiKey);
+
+      // Get the post URL or ID
+      const postUrl = selectedContent.content.permalink || selectedContent.id;
+      if (!postUrl) {
+        throw new Error('Invalid Instagram post URL or ID');
+      }
+
+      // Call our API endpoint
+      const apiUrl = `${window.location.origin}/api/social/instagram/analyze`;
+      console.log('Making API request to:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          post_url: postUrl
+        })
+      });
+
+      // Read the response data once
+      const responseData = await response.json();
+      console.log('Backend analysis response:', responseData);
+      
+      // Then check if the response was OK
+      if (!response.ok) {
+        throw new Error(responseData.error || `Failed to analyze post: ${response.status} ${response.statusText}`);
+      }
+      
+      // Format the analysis for display
+      let formattedAnalysis = `AI Analysis for Instagram Post`;
+      
+      // Extract analysis from the response
+      const analysis = responseData.analysis;
+      
+      if (analysis) {
+        // Extract the most relevant parts of the analysis
+        if (analysis.content_summary) {
+          formattedAnalysis += '\n\n📝 Content Summary:\n' + analysis.content_summary;
+        }
+        
+        if (analysis.performance_analysis) {
+          formattedAnalysis += '\n\n📊 Performance Analysis:\n' + analysis.performance_analysis;
+        }
+        
+        if (analysis.audience_insights) {
+          formattedAnalysis += '\n\n👥 Audience Insights:\n' + analysis.audience_insights;
+        }
+        
+        if (analysis.recommendations) {
+          formattedAnalysis += '\n\n💡 Recommendations:\n' + analysis.recommendations;
+        }
+        
+        // If none of the specific fields are available, show the full analysis
+        if (!analysis.content_summary && !analysis.performance_analysis && 
+            !analysis.audience_insights && !analysis.recommendations) {
+          formattedAnalysis += '\n\n' + JSON.stringify(analysis, null, 2);
+        }
+      } else {
+        // If no specific analysis format, show the raw data
+        formattedAnalysis += '\n\n' + JSON.stringify(responseData, null, 2);
+      }
+      
+      // Add metrics summary if not already included in the analysis
+      if (selectedContent.metrics) {
+        formattedAnalysis += '\n\nMetrics Summary:';
+        if (selectedContent.metrics.reach) {
+          formattedAnalysis += `\n- Reach: ${selectedContent.metrics.reach.toLocaleString()}`;
+        }
+        if (selectedContent.metrics.impressions) {
+          formattedAnalysis += `\n- Impressions: ${selectedContent.metrics.impressions.toLocaleString()}`;
+        }
+        if (selectedContent.metrics.likes) {
+          formattedAnalysis += `\n- Likes: ${selectedContent.metrics.likes.toLocaleString()}`;
+        }
+        if (selectedContent.metrics.comments) {
+          formattedAnalysis += `\n- Comments: ${selectedContent.metrics.comments.toLocaleString()}`;
+        }
+      }
+      
+      setAiAnalysis(formattedAnalysis);
+    } catch (error: any) {
+      console.error('Error analyzing Instagram post:', error);
+      setAiAnalysis(`Error: ${error.message || 'Failed to analyze post. Please try again.'}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const mediaUrl = selectedContent.content.mediaUrl || selectedContent.content.thumbnailUrl;
