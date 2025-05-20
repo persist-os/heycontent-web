@@ -22,7 +22,7 @@ app.get("/api/users", async (c) => {
 app.get("/api/users/:id", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  const user = await ctx.runQuery(api.userQueries.getUserById, { userId });
+  const user = await ctx.runQuery(api.userQueries.getUser, { userId });
   return c.json(user);
 });
 
