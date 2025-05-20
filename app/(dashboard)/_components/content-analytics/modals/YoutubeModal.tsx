@@ -119,7 +119,7 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
       const videoUrl = `https://youtu.be/${videoId}`;
       
       // Call our API endpoint - use the current window location origin to handle port changes
-      const apiUrl = `${window.location.origin}/api/youtube/analyze`;
+      const apiUrl = `${window.location.origin}/api/social/youtube/analyze`;
       console.log('Making API request to:', apiUrl);
       
       const response = await fetch(apiUrl, {
