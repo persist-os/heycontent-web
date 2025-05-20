@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/src/components/ui/card';
 import { X, MessageSquare, Instagram, Sparkles, Bot, ExternalLink } from 'lucide-react';
+import { getApiKey } from '@/app/lib/api-helpers';
 import { InstagramContentItem } from '../types';
 import { getMetricsDisplay } from '../utils';
 import { Button } from '@/src/components/ui/button';
@@ -19,18 +20,36 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [apiKeyLoaded, setApiKeyLoaded] = useState(false);
+
+  useEffect(() => {
+    const fetchApiKey = async () => {
+      const key = await getApiKey();
+      setApiKey(key);
+      setApiKeyLoaded(true);
+    };
+    fetchApiKey();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', fetchApiKey);
+      return () => window.removeEventListener('focus', fetchApiKey);
+    }
+  }, []);
 
   const requestAiAnalysis = async () => {
+    if (!apiKeyLoaded) {
+      setError('Loading API key...');
+      return;
+    }
     setLoading(true);
     try {
-      // Get API key from localStorage
-      const apiKey = typeof window !== 'undefined' ? localStorage.getItem('apiKey') : null;
       if (!apiKey) {
         throw new Error('API key not found. Please log in again.');
       }
-      
-      // Log the API key format for debugging (only first few chars)
-      console.debug('API key format:', apiKey.substring(0, 5) + '...');
+      // Log the API key format for debugging (full key for now)
+      console.debug('API key format:', apiKey);
 
       // Get the post URL or ID
       const postUrl = selectedContent.content.permalink || selectedContent.id;
