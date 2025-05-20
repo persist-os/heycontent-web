@@ -401,7 +401,8 @@ export const disconnectInstagram = mutation({
     try {
       const results = {
         dataDeleted: 0,
-        tokensDeleted: 0
+        tokensDeleted: 0,
+        accountsDeleted: 0
       };
       
       // Delete all Instagram data for the user using the by_user index
@@ -430,7 +431,20 @@ export const disconnectInstagram = mutation({
         results.tokensDeleted++;
       }
 
-      console.log(`Successfully disconnected Instagram for user ${userId}. Deleted ${results.dataDeleted} data records and ${results.tokensDeleted} tokens.`);
+      // Delete Instagram accounts
+      const accounts = await ctx.db
+        .query("instagramAccounts")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .collect();
+
+      console.log(`Found ${accounts.length} Instagram accounts to delete for user ${userId}`);
+      
+      for (const account of accounts) {
+        await ctx.db.delete(account._id);
+        results.accountsDeleted++;
+      }
+
+      console.log(`Successfully disconnected Instagram for user ${userId}. Deleted ${results.dataDeleted} data records, ${results.tokensDeleted} tokens, and ${results.accountsDeleted} accounts.`);
       
       return { 
         success: true,
