@@ -15,6 +15,11 @@ export interface Note {
   type?: NoteType;
   tags: string[];
   references: Reference[];
+  platform?: string;
+  goal?: string;
+  fields?: any;
+  noteContent?: string;
+  analysis?: any;
 }
 
 export interface Reference {
@@ -30,6 +35,11 @@ export interface NoteUpdate {
   type?: NoteType;
   tags?: string[];
   references?: Reference[];
+  platform?: string;
+  goal?: string;
+  fields?: any;
+  noteContent?: string;
+  analysis?: any;
 }
 
 export interface Command {

@@ -3,6 +3,14 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  notesAnalyses: defineTable({
+    noteId: v.string(),
+    platform: v.string(),
+    output: v.optional(v.any()),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+  .index("by_noteId", ["noteId"]),
   // User Info
   users: defineTable({
     name: v.string(),
@@ -335,7 +343,8 @@ export default defineSchema({
         })),
       }))),
     })),
-    
+    // Optional AI analysis field (for compatibility with prod data)
+    analysis: v.optional(v.any()),
     // Timestamps
     createdAt: v.optional(v.float64()),
     updatedAt: v.optional(v.float64()),

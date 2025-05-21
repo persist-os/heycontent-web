@@ -19,98 +19,58 @@ const referenceType = v.union(
   v.literal("date")
 );
 
-export const getNotes = query({
-  args: {
-    userId: v.string(),
-    type: v.optional(noteType),
-    important: v.optional(v.boolean()),
-  },
+export const getNotesByUser = query({
+  args: { userId: v.string() },
   handler: async (ctx, args) => {
-    let query = ctx.db
+    return await ctx.db
       .query("notes")
-      .filter((q) => q.eq(q.field("userId"), args.userId));
-
-    if (args.type) {
-      query = query.filter((q) => q.eq(q.field("type"), args.type));
-    }
-
-    if (args.important !== undefined) {
-      query = query.filter((q) => q.eq(q.field("important"), args.important));
-    }
-
-    const notes = await query.order("desc").collect();
-    return notes;
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
   },
 });
 
 export const createNote = mutation({
   args: {
     userId: v.string(),
-    title: v.string(),
     content: v.string(),
-    important: v.boolean(),
-    type: v.optional(noteType),
-    tags: v.optional(v.array(v.string())),
-    references: v.optional(v.array(v.object({
-      type: referenceType,
-      content: v.string(),
-      isLoading: v.optional(v.boolean()),
-    }))),
+    platform: v.string(),
+    templateInput: v.optional(v.any()),
+    createdAt: v.number(),
+    analysisId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const now = Date.now();
-    const noteId = await ctx.db.insert("notes", {
-      ...args,
-      type: args.type || "idea",
-      tags: args.tags || [],
-      references: args.references || [],
-      createdAt: now,
-      updatedAt: now,
-    });
-
+    // Fill in required fields from schema with defaults if not present
+    const noteToInsert = {
+      userId: args.userId,
+      content: args.content,
+      createdAt: args.createdAt,
+      updatedAt: args.createdAt,
+      title: "Untitled Note",
+      important: false,
+      tags: [],
+      references: [],
+      type: undefined
+    };
+    const noteId = await ctx.db.insert("notes", noteToInsert);
     return noteId;
   },
 });
 
 export const updateNote = mutation({
   args: {
-    noteId: v.string(),
-    userId: v.string(),
+    noteId: v.id("notes"),
     updates: v.object({
-      title: v.optional(v.string()),
       content: v.optional(v.string()),
-      important: v.optional(v.boolean()),
-      type: v.optional(noteType),
-      tags: v.optional(v.array(v.string())),
-      references: v.optional(v.array(v.object({
-        type: referenceType,
-        content: v.string(),
-        isLoading: v.optional(v.boolean()),
-      }))),
-      updatedAt: v.optional(v.number()),
+      platform: v.optional(v.string()),
+      templateInput: v.optional(v.any()),
+      analysisId: v.optional(v.string()),
     }),
   },
   handler: async (ctx, args) => {
-    const note = await ctx.db
-      .query("notes")
-      .filter((q) =>
-        q.eq(q.field("_id"), args.noteId) &&
-        q.eq(q.field("userId"), args.userId)
-      )
-      .first();
-
-    if (!note) {
-      throw new Error("Note not found or unauthorized");
-    }
-
-    // Always update the updatedAt timestamp
-    const updates = {
-      ...args.updates,
-      updatedAt: args.updates.updatedAt || Date.now()
-    };
-
-    await ctx.db.patch(note._id, updates);
-    return { ...note, ...updates };
+    await ctx.db.patch(args.noteId, args.updates);
+    // Fetch and return the updated note
+    const updatedNote = await ctx.db.get(args.noteId);
+    return updatedNote;
   },
 });
 
