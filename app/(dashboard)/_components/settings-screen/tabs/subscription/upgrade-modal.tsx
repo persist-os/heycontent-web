@@ -16,15 +16,23 @@ const calculateAnnualPrice = (monthlyPrice: number): number => {
   return Math.round(annualPrice * 0.83); // 17% off
 };
 
-interface Plan {
-  name: string;
+interface IntervalPlan {
   price_id: string;
   product_id: string;
-  amount: number;
   currency: string;
   interval: string;
+  amount: number;
+  included_requests: number;
+  overage: number;
   features: string[];
 }
+
+interface BackendPlan {
+  name: string;
+  monthly?: IntervalPlan;
+  yearly?: IntervalPlan;
+}
+
 
 export default function UpgradeModal({ 
   open, 
@@ -38,7 +46,7 @@ export default function UpgradeModal({
   const { user } = useAuth();
   const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("monthly");
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [plans, setPlans] = useState<Record<string, Plan> | null>(null);
+  const [plans, setPlans] = useState<Record<string, BackendPlan> | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Fetch plans from our new API
@@ -84,46 +92,22 @@ export default function UpgradeModal({
     }).format(price);
   };
 
-  // Fallback plans in case API call fails
-  const fallbackPlans = {
-    "basic": {
-      name: "Basic",
-      price_id: "price_1RPSD8HUK9gLy34mXfLOgdgB",
-      product_id: "prod_SK69e1FboMpPN6",
-      amount: 1500, // $15/month
-      currency: "usd",
-      interval: "month",
-      features: [
-        "1,000 API requests included",
-        "Pay-as-you-go after limit",
-        "Email support"
-      ]
-    },
-    "pro": {
-      name: "Pro",
-      price_id: "price_1RPSDCHUK9gLy34mNjjBT53L",
-      product_id: "prod_SK69CRqOckPpNm",
-      amount: 2500, // $25/month
-      currency: "usd",
-      interval: "month",
-      features: [
-        "5,000 API requests included",
-        "Pay-as-you-go after limit",
-        "Priority email support",
-        "Advanced analytics dashboard"
-      ]
-    }
+  // Normalize backend plans for the selected interval
+  const getPlanArray = () => {
+    if (!plans) return [];
+    return Object.entries(plans)
+      .map(([id, plan]: [string, BackendPlan]) => {
+        const intervalPlan = plan[billingInterval];
+        if (!intervalPlan) return null;
+        return {
+          id,
+          name: plan.name,
+          ...intervalPlan
+        };
+      })
+      .filter(Boolean);
   };
-
-  const displayPlans = plans || fallbackPlans;
-  const planArray = Object.entries(displayPlans).map(([id, plan]) => ({
-    id,
-    ...plan,
-    // Convert amount from cents to dollars
-    displayAmount: plan.amount / 100,
-    // Calculate annual price if needed
-    annualAmount: calculateAnnualPrice(plan.amount / 100)
-  }));
+  const planArray = getPlanArray();
 
   const handleSelectPlan = async (planId: string) => {
     setSelectedPlan(planId);
@@ -131,31 +115,13 @@ export default function UpgradeModal({
     // Find the selected plan
     const selectedPlanData = planArray.find(plan => plan.id === planId);
     
-    if (!selectedPlanData || !plans) {
-      console.error('Selected plan not found or plans data not loaded');
+    if (!selectedPlanData) {
+      console.error('Selected plan not found');
       return;
     }
     
-    // Get the correct price ID based on the billing interval
-    const planKey = `${planId}_${billingInterval}`;
-    let priceId = '';
-    
-    // Map the plan ID and interval to the correct Stripe price ID
-    if (planId === 'basic') {
-      priceId = billingInterval === 'monthly' 
-        ? 'price_1RQBV6HUK9gLy34mb2C8iEEo' // Basic Monthly
-        : 'price_1RQC9DHUK9gLy34mhxT9KX5v'; // Basic Yearly
-    } else if (planId === 'pro') {
-      priceId = billingInterval === 'monthly'
-        ? 'price_1RQBUHHUK9gLy34mIA9wgROw' // Pro Monthly
-        : 'price_1RQC8dHUK9gLy34meYG89caI'; // Pro Yearly
-    } else {
-      // Fallback to using the plan's price_id directly if it exists
-      priceId = selectedPlanData.price_id;
-    }
-    
-    console.log(`Selecting plan: ${planId}, interval: ${billingInterval}, using priceId: ${priceId}`);
-    
+    // Use the price_id from the selected interval plan
+    const priceId = selectedPlanData.price_id;
     if (!priceId) {
       console.error('No valid price ID found for selected plan');
       return;
@@ -197,11 +163,10 @@ export default function UpgradeModal({
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {planArray.map(plan => {
-              const price = billingInterval === "yearly" ? plan.annualAmount : plan.displayAmount;
               const intervalLabel = billingInterval === "yearly" ? "/year" : "/month";
-              const includedRequests = plan.id === "basic" ? 1000 : 5000;
-              const pricePerRequest = (price / includedRequests).toFixed(4);
-              
+              const displayedPrice = plan.amount;
+              const includedRequests = plan.included_requests;
+              const overagePrice = plan.overage;
               return (
                 <div
                   key={plan.id}
@@ -216,13 +181,13 @@ export default function UpgradeModal({
                   <div className="flex-1">
                     <h3 className="font-bold text-xl mb-2">{plan.name}</h3>
                     <div className="mb-4">
-                      <span className="text-3xl font-bold">{formatPrice(price)}</span>
+                      <span className="text-3xl font-bold">${displayedPrice}</span>
                       <span className="text-gray-500 text-lg"> {intervalLabel}</span>
                     </div>
                     <div className="text-sm text-gray-500 mb-4">
                       {includedRequests.toLocaleString()} API requests included
                       <br />
-                      (${pricePerRequest}/request)
+                      <span className="italic">${overagePrice.toFixed(3)} per additional request</span>
                     </div>
                     <ul className="space-y-2 mb-6">
                       {plan.features.map((feature, i) => (

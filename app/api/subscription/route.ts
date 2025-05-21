@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { extractAuthInfo } from '@/app/lib/api-helpers-server';
-import { createPaymentLink } from '@/app/lib/subscription-api';
+import { createCheckoutSession } from '@/app/lib/subscription-api';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -28,12 +28,14 @@ export async function POST(request: Request) {
     // Parse request body
     const body = await request.json();
     const userId = body.userId || authUserId;
+    const email = body.email || '';
+    const name = body.name || '';
     const planId = body.planId;
     const successUrl = body.successUrl;
     const cancelUrl = body.cancelUrl;
 
     // Validate required fields
-    if (!userId || !planId || !successUrl || !cancelUrl) {
+    if (!userId || !planId || !successUrl || !cancelUrl || !email || !name) {
       console.error(`[${requestId}] Invalid subscription request: missing required fields`);
       return NextResponse.json(
         { error: 'Missing required fields' },
@@ -41,11 +43,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Call our subscription API utility to create a payment link
+    // Call our subscription API utility to create a checkout session
     try {
-      const paymentUrl = await createPaymentLink(
+      const paymentUrl = await createCheckoutSession(
         apiKey,
         userId,
+        email,
+        name,
         planId,
         successUrl,
         cancelUrl
@@ -61,12 +65,12 @@ export async function POST(request: Request) {
 
       return NextResponse.json({ url: paymentUrl });
     } catch (apiError) {
-      console.error(`[${requestId}] Payment link creation failed`, {
+      console.error(`[${requestId}] Checkout session creation failed`, {
         error: apiError instanceof Error ? apiError.message : 'Unknown API error'
       });
       
       return NextResponse.json(
-        { error: apiError instanceof Error ? apiError.message : 'Failed to create payment link' },
+        { error: apiError instanceof Error ? apiError.message : 'Failed to create checkout session' },
         { status: 400 }
       );
     }

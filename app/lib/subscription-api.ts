@@ -2,7 +2,7 @@
  * Subscription API utility functions
  * 
  * This module provides utility functions for interacting with the backend subscription API.
- * It handles all subscription-related API calls, including creating payment links,
+ * It handles all subscription-related API calls, including creating checkout sessions,
  * managing subscriptions, and checking subscription status.
  */
 
@@ -145,28 +145,32 @@ export async function createCustomer(
 }
 
 /**
- * Creates a payment link for a subscription
+ * Creates a checkout session for a subscription
  * 
  * @param apiKey - The API key for authentication
  * @param userId - The user ID
  * @param planId - The plan ID or price ID
  * @param successUrl - The URL to redirect to on successful payment
  * @param cancelUrl - The URL to redirect to if payment is cancelled
- * @returns The payment link URL
+ * @returns The checkout session URL
  */
-export async function createPaymentLink(
+export async function createCheckoutSession(
   apiKey: string,
   userId: string,
+  email: string,
+  name: string,
   planId: string,
   successUrl: string,
   cancelUrl: string
 ): Promise<string> {
   const { response, data } = await callSubscriptionAPI(
-    '/subscription/payment-link',
+    '/subscription/checkout-session',
     'POST',
     apiKey,
     {
       user_id: userId,
+      email,
+      name,
       price_id: planId,
       success_url: successUrl,
       cancel_url: cancelUrl
@@ -174,7 +178,7 @@ export async function createPaymentLink(
   );
   
   if (!response.ok) {
-    throw new Error(data?.error || 'Failed to create payment link');
+    throw new Error(data?.error || 'Failed to create checkout session');
   }
   
   // Extract URL from the response data structure

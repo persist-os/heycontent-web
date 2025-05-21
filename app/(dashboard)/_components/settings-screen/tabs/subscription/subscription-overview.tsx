@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { getSubscriptionPlans, getSubscriptionStatus, createPaymentLink, createCustomer } from '@/app/lib/subscription-api';
+import { getSubscriptionPlans, getSubscriptionStatus, createCheckoutSession, createCustomer } from '@/app/lib/subscription-api';
+import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
+
+const stripePromise = loadStripe("pk_test_51RP51sHUK9gLy34mXbAmM88KLjBiw8ZMYAi4jRr8GOL4GBgrZGUe7tyXhkuRqyKntft3YCMizK129wBKZTtGSZ0p000BxQ2j3c"); // Replace with your publishable key
+
 import { UsageAndBillingCard } from './cards/UsageAndBillingCard';
 import { OverageControlsCard } from './cards/OverageControlsCard';
 import { AccountSubscriptionCard } from './cards/AccountSubscriptionCard';
@@ -104,8 +109,11 @@ export default function SubscriptionOverview() {
     fetchData();
   }, [user?.uid]);
 
+  // Store client secret for embedded checkout
+  const [checkoutClientSecret, setCheckoutClientSecret] = useState(null);
+
   // Function to handle plan selection from UpgradeModal
-  const handleSelectPlan = async (planId: string) => {
+  const handleSelectPlan = async (planId) => {
     if (!userId || !user) {
       setError('User not authenticated.');
       return;
@@ -118,7 +126,6 @@ export default function SubscriptionOverview() {
       }
 
       // First, ensure the user has a Stripe customer
-      // This will either create a new customer or retrieve an existing one
       try {
         console.log('Creating/retrieving Stripe customer...');
         await createCustomer(
@@ -128,39 +135,35 @@ export default function SubscriptionOverview() {
           user.displayName || ''
         );
         console.log('Stripe customer created/retrieved successfully');
-      } catch (customerErr: any) {
-        // If this fails with a 409 Conflict, it means the customer already exists, which is fine
-        // Otherwise, it's an actual error
+      } catch (customerErr) {
         if (!customerErr.message?.includes('already exists')) {
           throw new Error(`Failed to create Stripe customer: ${customerErr.message}`);
         }
       }
 
-      // Now create the payment link
-      console.log('Creating payment link...');
-      const paymentUrl = await createPaymentLink(
+      // Now create the checkout session
+      console.log('Creating checkout session...');
+      const clientSecret = await createCheckoutSession(
         apiKey,
         userId,
+        user.email || '',
+        user.displayName || '',
         planId,
         `${window.location.origin}/settings?subscription=success`,
         `${window.location.origin}/settings?subscription=canceled`
       );
-
-      if (paymentUrl) {
-        console.log('Payment link created successfully, redirecting...');
-        window.location.href = paymentUrl;
-      } else {
-        throw new Error('Failed to create payment link.');
-      }
-    } catch (err: any) {
+      setCheckoutClientSecret(clientSecret);
+      console.log('Checkout session created successfully');
+      
+    } catch (err) {
       console.error('Error in subscription process:', err);
       setError(err.message || 'An unexpected error occurred during the subscription process.');
-      // Keep the modal open to show the error
       setShowUpgradeModal(true);
     } finally {
       setProcessingSubscription(false);
     }
   };
+
 
   // Handlers for modals (all business logic should be in card components)
   const handleOpenUpgradeModal = () => setShowUpgradeModal(true);
@@ -176,6 +179,21 @@ export default function SubscriptionOverview() {
 
   return (
     <div className="space-y-6">
+      {checkoutClientSecret && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.7)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ position: 'relative', background: '#fff', padding: 24, borderRadius: 8, width: '100%', maxWidth: 480 }}>
+            <button style={{ position: 'absolute', top: 8, right: 8, zIndex: 10 }} onClick={() => setCheckoutClientSecret(null)}>
+              Close
+            </button>
+            <EmbeddedCheckoutProvider
+              stripe={stripePromise}
+              options={{ clientSecret: checkoutClientSecret }}
+            >
+              <EmbeddedCheckout />
+            </EmbeddedCheckoutProvider>
+          </div>
+        </div>
+      )}
       <UsageAndBillingCard usage={{
         fastRequests: currentSubscription?.usedFastRequests || 0,
         slowRequests: currentSubscription?.usedSlowRequests || 0
@@ -199,9 +217,8 @@ export default function SubscriptionOverview() {
         />
         <ActiveSessionsCard
           sessions={sessions}
-          revokeSession={(sessionId: string) => {
+          revokeSession={(sessionId) => {
             // TODO: Implement session revocation logic
-            // Example: setSessions(sessions => sessions.map(s => s._id === sessionId ? { ...s, revoked: true } : s));
           }}
         />
       </div>
@@ -219,7 +236,7 @@ export default function SubscriptionOverview() {
       <UpgradeModal
         open={showUpgradeModal}
         onClose={handleCloseUpgradeModal}
-        onSelectPlan={handleSelectPlan} // Use the new handler
+        onSelectPlan={handleSelectPlan}
       />
     </div>
   );
