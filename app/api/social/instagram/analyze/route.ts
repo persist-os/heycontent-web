@@ -40,89 +40,72 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized - Missing or invalid Authorization header' }, { status: 401 });
     }
     
-    // Extract the API key from the Authorization header
-    let apiKey = authHeader.substring(7); // Remove 'Bearer ' prefix
-    if (!apiKey) {
-      console.warn(`[${requestId}] Authentication failed: No API key found`);
-      return NextResponse.json({ error: 'Unauthorized - Missing API key' }, { status: 401 });
-    }
-    
-    // Remove any quotes from the API key
-    apiKey = apiKey.replace(/"/g, '');
+    // Extract the API key
+    let apiKey = authHeader.substring(7).replace(/"/g, '');
     console.log(`[${requestId}] Cleaned API KEY:`, apiKey);
 
     const body = await request.json();
-    const { post_url, content } = body;
+    const { post_url } = body;
 
     if (!post_url) {
       console.warn(`[${requestId}] Invalid request: Missing post_url`);
       return NextResponse.json({ error: 'post_url is required' }, { status: 400 });
     }
     
-    // Extract post ID from the URL or use directly if it's already an ID
+    // Extract post ID
     const post_id = extractPostId(post_url);
     if (!post_id) {
       console.warn(`[${requestId}] Invalid request: Could not extract post ID from URL`);
       return NextResponse.json({ error: 'Invalid Instagram post URL' }, { status: 400 });
     }
 
-    // Extract user ID from the cleaned API key (format: heycontent_USER_ID_HASH)
+    // Extract user ID from API key
     const apiKeyParts = apiKey.split('_');
-    
-    // Get the user ID (second part of the key)
-    let user_id: string;
-    if (apiKeyParts.length >= 2 && apiKeyParts[0] === 'heycontent') {
-      user_id = apiKeyParts[1];
-      console.log(`[${requestId}] Extracted user_id: ${user_id}`);
-    } else {
-      console.warn(`[${requestId}] Could not extract user_id from API key, using default`);
-      user_id = "default_user_id";
-    }
+    let user_id = apiKeyParts.length >= 2 && apiKeyParts[0] === 'heycontent' ? apiKeyParts[1] : "default_user_id";
+    console.log(`[${requestId}] Extracted user_id: ${user_id}`);
 
-    // Log the request details
+    // Log request details
     console.info(`[${requestId}] Processing Instagram post analysis`, {
-      post_url: post_url,
-      post_id: post_id,
+      post_url,
+      post_id,
       has_api_key: !!apiKey,
-      user_id: user_id
+      user_id
     });
 
-    // Prepare the request to the backend
+    // Prepare the backend request
+    const backendUrl = `${BACKEND_URL}/api/v1/instagram/analyze?post_id=${post_id}`;
     console.debug(`[${requestId}] Sending request to backend`, {
-      url: `${BACKEND_URL}/api/v1/instagram/analyze`,
+      url: backendUrl,
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': `Bearer ${apiKey}` // Using cleaned API key
-      },
-      body: {
-        user_id, // Using correctly extracted user_id
-        post_id
+        'Authorization': `Bearer ${apiKey}`
       }
     });
 
+    const requestBody = {
+      user_id: user_id
+    };
+
     // Fetch from backend with retry logic
     const maxRetries = 3;
-    const backoffTimes = [500, 1000, 2000]; // ms
-    let response: Response | null = null;
-    let lastError: any = null;
+    const backoffTimes = [500, 1000, 2000];
+    let response = null;
+    let lastError = null;
     
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      response = await fetch(`${BACKEND_URL}/api/v1/instagram/analyze`, {
+      response = await fetch(backendUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'Authorization': `Bearer ${apiKey}` // Using cleaned API key
+          'Authorization': `Bearer ${apiKey}`
         },
-        body: JSON.stringify({
-          user_id, // Using correctly extracted user_id
-          post_id
-        })
+        body: JSON.stringify(requestBody)
       });
       
       if (response.status !== 500 && response.status !== 429) {
-        break; // Success or other error, don't retry
+        break;
       }
       
       lastError = `Backend responded with status ${response.status}`;
@@ -137,10 +120,9 @@ export async function POST(request: Request) {
       throw new Error(lastError || 'Backend unavailable after retries');
     }
 
-    // Log backend response headers and status
+    // Log backend response
     console.debug(`[${requestId}] Backend response status`, response.status, response.statusText);
 
-    // Process the response
     if (!response.ok) {
       console.error(`[${requestId}] Backend API error with status: ${response.status}`);
       return NextResponse.json({ 
@@ -156,7 +138,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(data);
-  } catch (error: any) {
+  } catch (error) {
     console.error(`[${requestId}] Error processing Instagram analysis:`, error);
     return NextResponse.json({ 
       error: `An error occurred: ${error.message || 'Unknown error'}` 
