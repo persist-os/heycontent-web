@@ -55,7 +55,6 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
   
   // Only query if we have both userId and videoId
   const storedAnalysisQuery = useQuery(
-    // clean up video id
     api.youtubeQueries.getVideoAnalysis, 
     userId && videoId ? {
       userId: userId,
