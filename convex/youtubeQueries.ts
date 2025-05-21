@@ -209,17 +209,17 @@ export const getVideoAnalysis = query({
   },
   handler: async (ctx, args) => {
     const { userId, videoId } = args;
-    
     try {
+      console.log('[getVideoAnalysis] Querying for videoId:', videoId, 'userId:', userId);
       // Find the video with the given videoId and userId
       const video = await ctx.db
         .query("youtubeVideos")
         .withIndex("by_videoId", (q) => q.eq("videoId", videoId))
-        .filter((q) => q.eq("userId", userId))
+        .filter((q) => q.eq(q.field("userId"), userId))
         .first();
-      
-      if (video && video.analysis) {
-        console.log(`Found video with analysis for videoId=${videoId}`);
+      console.log('[getVideoAnalysis] Video object found:', JSON.stringify(video));
+      if (video && Object.prototype.hasOwnProperty.call(video, 'analysis')) {
+        console.log(`[getVideoAnalysis] Returning analysis for videoId=${videoId}`);
         return {
           _id: video._id,
           videoId: video.videoId,
@@ -228,8 +228,11 @@ export const getVideoAnalysis = query({
           updatedAt: video.updatedAt || video._creationTime
         };
       }
-      
-      console.log(`No analysis found for videoId=${videoId}`);
+      if (video) {
+        console.log(`[getVideoAnalysis] Video found but no analysis field for videoId=${videoId}`);
+      } else {
+        console.log(`[getVideoAnalysis] No video found for videoId=${videoId} and userId=${userId}`);
+      }
       return null;
     } catch (error) {
       console.error('Error retrieving video analysis:', error);
