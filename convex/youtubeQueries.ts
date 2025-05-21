@@ -217,7 +217,11 @@ export const getVideoAnalysis = query({
         .withIndex("by_videoId", (q) => q.eq("videoId", videoId))
         .filter((q) => q.eq(q.field("userId"), userId))
         .first();
-      console.log('[getVideoAnalysis] Video object found:', JSON.stringify(video));
+      console.log('[getVideoAnalysis] Video object found:', {
+        videoId: video.videoId,
+        userId: video.userId,
+        _id: video._id,
+      });
       if (video && Object.prototype.hasOwnProperty.call(video, 'analysis')) {
         console.log(`[getVideoAnalysis] Returning analysis for videoId=${videoId}`);
         return {
