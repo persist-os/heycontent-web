@@ -35,16 +35,14 @@ export async function GET(request: Request) {
       // Helper function to get plan name from plan type
       function getPlanName(planType: string): string {
         switch (planType) {
-          case 'basic_monthly':
+          case 'monthly_basic':
             return 'Basic Monthly';
-          case 'pro_monthly':
+          case 'monthly_pro':
             return 'Pro Monthly';
-          case 'basic_yearly':
+          case 'yearly_basic':
             return 'Basic Yearly';
-          case 'pro_yearly':
+          case 'yearly_pro':
             return 'Pro Yearly';
-          default:
-            return 'Free Plan';
         }
       }
       
@@ -106,9 +104,9 @@ export async function GET(request: Request) {
             // Map any non-standard values to standard ones
             const mappedData = {
               ...rawData,
-              // Map 'inactive' to 'canceled', 'free' to 'basic_monthly'
+              // Map 'inactive' to 'canceled', 'free' to 'monthly_basic'
               status: rawData.status === 'inactive' ? 'canceled' : rawData.status,
-              plan_type: rawData.plan_type === 'free' ? 'basic_monthly' : rawData.plan_type
+              plan_type: rawData.plan_type === 'free' ? 'monthly_basic' : rawData.plan_type
             };
             
             console.log(`[${requestId}] Mapped subscription status`, {
@@ -131,7 +129,7 @@ export async function GET(request: Request) {
             error: errorMessage,
             is_subscribed: false,
             status: 'canceled',
-            plan_type: 'basic_monthly'
+            plan_type: 'monthly_basic'
           },
           { status: 200 } // Return 200 to the frontend even though there was an error
         );
@@ -148,7 +146,7 @@ export async function GET(request: Request) {
           error: 'Failed to process subscription status',
           is_subscribed: false,
           status: 'canceled',
-          plan_type: 'basic_monthly'
+          plan_type: 'monthly_basic'
         },
         { status: 200 } // Return 200 to the frontend
       );

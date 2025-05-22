@@ -34,6 +34,26 @@ app.get("/api/users/email/:email", async (c) => {
   return c.json(user);
 });
 
+// NEW LOOKUP ROUTES
+app.get("/api/users/lookup/customer/:customerId", async (c) => {
+  const ctx = c.env;
+  const customerId = c.req.param("customerId");
+  const user = await ctx.runQuery(api.userQueries.getUserByStripeCustomerId, { stripeCustomerId: customerId });
+  if (user && user.userId) {
+    return c.json({ userId: user.userId.toString() });
+  }
+  return c.json({ userId: null, message: "User not found or userId field missing for the given Stripe Customer ID" }, 404); 
+});
+
+app.get("/api/users/lookup/subscription/:subscriptionId", async (c) => {
+  const ctx = c.env;
+  const subscriptionId = c.req.param("subscriptionId");
+  const subscription = await ctx.runQuery(api.userQueries.getUserByStripeSubscriptionId, { stripeSubscriptionId: subscriptionId });
+  if (subscription && subscription.userId) {
+    return c.json({ userId: subscription.userId.toString() });
+  }
+  return c.json({ userId: null, message: "User not found for the given Stripe Subscription ID" }, 404); 
+});
 
 // Access a persona
 app.get("/api/users/:id/personas", async (c) => {
@@ -433,7 +453,6 @@ app.post("/api/users/:id/instagram/token", async (c) => {
     return c.json({ success: false, error: "Failed to store Instagram token" }, 500);
   }
 });
-
 
 // Store Instagram posts in bulk
 app.post("/api/users/:id/instagram/posts/bulk", async (c) => {

@@ -4,8 +4,8 @@ import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 // Types for subscription status
-type SubscriptionStatus = "active" | "trialing" | "past_due" | "canceled" | "unpaid";
-type PlanType = "basic_monthly" | "pro_monthly" | "basic_yearly" | "pro_yearly";
+type SubscriptionStatus = "active" | "past_due" | "canceled" | "unpaid" | "dev" | "tester";
+type PlanType = "monthly_basic" | "monthly_pro" | "yearly_basic" | "yearly_pro";
 
 // Query to get user's current subscription
 export const getCurrentSubscription = query({
@@ -82,28 +82,46 @@ export const updateUser = mutation({
 export const saveSubscription = mutation({
   args: {
     userId: v.string(),
-    planId: v.string(),
+    planId: v.string(), // e.g., basic_monthly, pro_yearly
     priceId: v.string(),
     status: v.union(
       v.literal("active"),
-      v.literal("trialing"),
       v.literal("past_due"),
       v.literal("canceled"),
-      v.literal("unpaid")
+      v.literal("unpaid"),
+      v.literal("dev"),
+      v.literal("tester")
     ),
     stripeSubscriptionId: v.string(),
     stripeCustomerId: v.string(),
     includedRequests: v.number(),
-    currentPeriodStart: v.number(),
+    currentPeriodStart: v.number(), // Added for completeness
     currentPeriodEnd: v.number(),
-    cancelAtPeriodEnd: v.boolean()
+    cancelAtPeriodEnd: v.boolean(),
+    subscriptionItemId: v.optional(v.string()) // Optional, for metered billing
   },
   handler: async (ctx, args) => {
+    console.log(`[saveSubscription] Attempting to find user with userId (from args): "${args.userId}"`);
+
     const user = await ctx.db
       .query("users")
-      .filter((q) => q.eq(q.field("userId"), args.userId))
-      .first();
-    if (!user) throw new Error("User not found");
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .unique();
+
+    if (!user) {
+      console.error(`[saveSubscription] User NOT FOUND with userId: "${args.userId}".`);
+      
+      const anyUser = await ctx.db.query("users").first();
+      if (anyUser) {
+        console.log(`[saveSubscription] Debug: At least one user exists. First user's userId: "${anyUser.userId}", _id: "${anyUser._id.toString()}"`);
+      } else {
+        console.log("[saveSubscription] Debug: No users found in the 'users' table at all.");
+      }
+      throw new Error("User not found");
+    }
+
+    console.log(`[saveSubscription] User FOUND: _id: "${user._id.toString()}", userId field: "${user.userId}"`);
+
     const updates = {
       stripeSubscriptionId: args.stripeSubscriptionId,
       stripeCustomerId: args.stripeCustomerId,
@@ -111,16 +129,18 @@ export const saveSubscription = mutation({
         status: args.status,
         plan: args.planId as PlanType,
         priceId: args.priceId,
+        currentPeriodStart: args.currentPeriodStart, // Ensure this is used
         currentPeriodEnd: args.currentPeriodEnd,
         cancelAtPeriodEnd: args.cancelAtPeriodEnd,
         includedRequests: args.includedRequests,
-        usedRequests: 0,
-        lastSyncedAt: Date.now()
+        usedRequests: user.subscription?.usedRequests ?? 0, // Preserve used requests
+        lastSyncedAt: Date.now(),
+        subscriptionItemId: args.subscriptionItemId // Store if provided
       },
       updatedAt: Date.now()
     };
     await ctx.db.patch(user._id, updates);
-    return user._id;
+    return { success: true, userId: user._id.toString() }; // Return success object and userId
   },
 });
 
@@ -175,10 +195,11 @@ export const updateSubscriptionDetails = mutation({
     updates: v.object({
       status: v.optional(v.union(
         v.literal("active"),
-        v.literal("trialing"),
         v.literal("past_due"),
         v.literal("canceled"),
-        v.literal("unpaid")
+        v.literal("unpaid"),
+        v.literal("dev"),
+        v.literal("tester")
       )),
       currentPeriodStart: v.optional(v.number()),
       currentPeriodEnd: v.optional(v.number())
@@ -187,6 +208,12 @@ export const updateSubscriptionDetails = mutation({
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.subscriptionId);
     if (!user || !user.subscription) throw new Error("Subscription not found");
+    // Ensure the status is one of the allowed values
+    const status = args.updates.status;
+    if (status && !['active', 'past_due', 'canceled', 'unpaid', 'dev', 'tester'].includes(status)) {
+      throw new Error(`Invalid subscription status: ${status}`);
+    }
+
     const updates = {
       subscription: {
         ...user.subscription,
@@ -199,7 +226,6 @@ export const updateSubscriptionDetails = mutation({
     return true;
   },
 });
-
 
 // Get user by Stripe customer ID
 export const getUserByStripeCustomerId = query({

@@ -23,12 +23,19 @@ export default defineSchema({
     subscription: v.optional(v.object({
       status: v.union(
         v.literal("active"),
-        v.literal("trialing"),
         v.literal("past_due"),
         v.literal("canceled"),
-        v.literal("unpaid")
+        v.literal("unpaid"),
+        v.literal("dev"),
+        v.literal("tester"),
       ),
-      plan: v.union(v.literal("basic_monthly"), v.literal("pro_monthly"), v.literal("basic_yearly"), v.literal("pro_yearly")),
+      // Plan type with interval
+      plan: v.union(
+        v.literal("monthly_basic"),
+        v.literal("monthly_pro"),
+        v.literal("yearly_basic"),
+        v.literal("yearly_pro")
+      ),
       priceId: v.string(),
       currentPeriodEnd: v.number(),
       cancelAtPeriodEnd: v.boolean(),

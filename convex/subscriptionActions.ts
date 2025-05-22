@@ -10,10 +10,11 @@ export const updateSubscriptionDetails = mutation({
     updates: v.object({
       status: v.optional(v.union(
         v.literal("active"),
-        v.literal("trialing"),
         v.literal("past_due"),
         v.literal("canceled"),
-        v.literal("unpaid")
+        v.literal("unpaid"),
+        v.literal("dev"),
+        v.literal("tester")
       )),
       currentPeriodStart: v.optional(v.number()),
       currentPeriodEnd: v.optional(v.number()),
@@ -70,7 +71,7 @@ export const updateSubscriptionFromStripe = mutation({
       
       // Map backend field names to Convex field names
       const updates: {
-        status?: "active" | "canceled" | "past_due" | "trialing";
+        status?: "active" | "past_due" | "canceled" | "unpaid" | "dev" | "tester";
         currentPeriodStart?: number;
         currentPeriodEnd?: number;
         cancelAtPeriodEnd?: boolean;
@@ -80,7 +81,7 @@ export const updateSubscriptionFromStripe = mutation({
         // Map status values if needed
         let status = args.data.status;
         if (status === 'inactive') status = 'canceled';
-        updates.status = status as "active" | "canceled" | "past_due" | "trialing";
+        updates.status = status as "active" | "past_due" | "canceled" | "unpaid" | "dev" | "tester";
       }
       
       if (args.data.current_period_start) {
@@ -152,7 +153,7 @@ export const handleSubscriptionUpdate = query({
       
       // Map backend field names to Convex field names
       const updates: {
-        status?: "active" | "canceled" | "past_due" | "trialing";
+        status?: "active" | "canceled" | "past_due" | "dev" | "tester";
         currentPeriodStart?: number;
         currentPeriodEnd?: number;
         cancelAtPeriodEnd?: boolean;
@@ -162,7 +163,7 @@ export const handleSubscriptionUpdate = query({
         // Map status values if needed
         let status = args.data.status;
         if (status === 'inactive') status = 'canceled';
-        updates.status = status as "active" | "canceled" | "past_due" | "trialing";
+        updates.status = status as "active" | "canceled" | "past_due" | "dev" | "tester";
       }
       
       if (args.data.current_period_start) {
