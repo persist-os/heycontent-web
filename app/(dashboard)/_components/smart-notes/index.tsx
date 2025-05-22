@@ -83,9 +83,9 @@ export default function SmartNotes() {
       // You might want to adapt this to send all wizardData to backend
       const noteId = await createNote({
         platform: wizardData.platform,
-        goal: wizardData.goal,
-        fields: wizardData.fields,
-        noteContent: wizardData.noteContent || '',
+        category: wizardData.category,
+        topic: wizardData.topic,
+        content: wizardData.description || '',
         analysis: wizardData.analysis || null,
       });
       if (noteId) {

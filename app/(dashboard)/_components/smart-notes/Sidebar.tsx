@@ -35,7 +35,7 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
       return (
         note.title.toLowerCase().includes(query) ||
         note.content.toLowerCase().includes(query) ||
-        note.tags.some(tag => tag.toLowerCase().includes(query))
+        (note.tags ?? []).some(tag => tag.toLowerCase().includes(query))
       );
     }
 

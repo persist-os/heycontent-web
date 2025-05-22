@@ -262,7 +262,8 @@ export default defineSchema({
     videoId: v.string(), // Required - this is the YouTube video ID
     id: v.optional(v.string()), // For internal IDs if different from videoId
     url: v.optional(v.string()), // Full YouTube URL
-    analysis: v.optional(v.any()), // Store analysis data directly with the video
+    // Optional AI analysis field (for compatibility with prod data and to store analysis data directly with the video)
+    analysis: v.optional(v.any()),
     
     // Video metadata from YouTube API
     snippet: v.optional(v.object({
@@ -350,13 +351,15 @@ export default defineSchema({
     })),
     // Optional AI analysis field (for compatibility with prod data)
     analysis: v.optional(v.any()),
+    // Store channelId redundantly for indexing
+    channelId: v.optional(v.string()),
     // Timestamps
     createdAt: v.optional(v.float64()),
     updatedAt: v.optional(v.float64()),
   })
   .index("by_userId", ["userId"])
   .index("by_videoId", ["videoId"])
-  .index("by_channelId", ["snippet.channel.id"])
+  .index("by_channelId", ["channelId"])
   .index("by_publishedAt", ["snippet.published_at"])
   .index("by_views", ["statistics.views"])
   .index("by_likes", ["statistics.likes"]),

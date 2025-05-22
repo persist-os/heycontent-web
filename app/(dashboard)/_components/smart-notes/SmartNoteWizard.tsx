@@ -206,7 +206,8 @@ const SmartNoteWizard: React.FC<SmartNoteWizardProps> = ({ onComplete, onCancel 
       
       // Call onComplete with all form data + generated analysis
       if (onComplete) {
-        onComplete({ ...formData, analysis });
+        const { description, ...rest } = formData;
+        onComplete({ ...rest, noteContent: description, analysis });
       }
     } catch (err) {
       setError('Something went wrong while generating your analysis.');

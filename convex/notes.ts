@@ -37,17 +37,20 @@ export const createNote = mutation({
     content: v.string(),
     platform: v.string(),
     templateInput: v.optional(v.any()),
-    createdAt: v.number(),
     analysisId: v.optional(v.string()),
     type: v.optional(noteType), // <-- Accept type argument
   },
   handler: async (ctx, args) => {
     // Fill in required fields from schema with defaults if not present
+    const now = Date.now();
     const noteToInsert = {
       userId: args.userId,
       content: args.content,
-      createdAt: args.createdAt,
-      updatedAt: args.createdAt,
+      platform: args.platform,
+      templateInput: args.templateInput,
+      analysisId: args.analysisId,
+      createdAt: now,
+      updatedAt: now,
       title: "Untitled Note",
       important: false,
       tags: [],
@@ -62,6 +65,7 @@ export const createNote = mutation({
 export const updateNote = mutation({
   args: {
     noteId: v.id("notes"),
+    userId: v.string(),
     updates: v.object({
       content: v.optional(v.string()),
       platform: v.optional(v.string()),
@@ -70,7 +74,20 @@ export const updateNote = mutation({
     }),
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.noteId, args.updates);
+    // Ownership check
+    const note = await ctx.db.get(args.noteId);
+    if (!note) {
+      throw new Error("Note not found");
+    }
+    if (note.userId !== args.userId) {
+      throw new Error("Unauthorized: You do not own this note.");
+    }
+    // Always update updatedAt
+    const updatesWithTimestamp = {
+      ...args.updates,
+      updatedAt: Date.now(),
+    };
+    await ctx.db.patch(args.noteId, updatesWithTimestamp);
     // Fetch and return the updated note
     const updatedNote = await ctx.db.get(args.noteId);
     return updatedNote;

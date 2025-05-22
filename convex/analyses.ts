@@ -11,6 +11,11 @@ export const createNoteAnalysis = mutation({
     createdAt: v.number(),
   },
   handler: async (ctx, args) => {
+    // Check if the referenced note exists
+    const note = await ctx.db.get(args.noteId);
+    if (!note) {
+      throw new Error(`Cannot create analysis: note with id ${args.noteId} does not exist.`);
+    }
     const noteAnalysisId = await ctx.db.insert("notesAnalyses", args);
     return noteAnalysisId;
   },
