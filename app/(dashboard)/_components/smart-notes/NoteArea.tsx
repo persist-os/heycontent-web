@@ -19,6 +19,13 @@ interface NoteAreaProps {
   isMobile: boolean;
 }
 
+/****
+ * Renders the main note editing interface, providing content editing, formatting, command menus, and AI insights integration.
+ *
+ * Integrates keyboard shortcuts, debounced content updates, tag extraction, and local storage backup to enhance the note editing experience. Supports command, mention, and tag menus, as well as AI-powered insights and references.
+ *
+ * @remark Debounces note content updates to the backend by 300ms and saves a backup to local storage on each change.
+ */
 export function NoteArea({
   note,
   onUpdate,
