@@ -45,18 +45,11 @@ export async function POST(request: Request) {
     console.log(`[${requestId}] Cleaned API KEY:`, apiKey);
 
     const body = await request.json();
-    const { post_url } = body;
+    const { post_id } = body;
 
-    if (!post_url) {
-      console.warn(`[${requestId}] Invalid request: Missing post_url`);
-      return NextResponse.json({ error: 'post_url is required' }, { status: 400 });
-    }
-    
-    // Extract post ID
-    const post_id = extractPostId(post_url);
     if (!post_id) {
-      console.warn(`[${requestId}] Invalid request: Could not extract post ID from URL`);
-      return NextResponse.json({ error: 'Invalid Instagram post URL' }, { status: 400 });
+      console.warn(`[${requestId}] Invalid request: Missing post_id`);
+      return NextResponse.json({ error: 'post_id is required' }, { status: 400 });
     }
 
     // Extract user ID from API key
@@ -66,14 +59,13 @@ export async function POST(request: Request) {
 
     // Log request details
     console.info(`[${requestId}] Processing Instagram post analysis`, {
-      post_url,
       post_id,
       has_api_key: !!apiKey,
       user_id
     });
 
     // Prepare the backend request
-    const backendUrl = `${BACKEND_URL}/api/v1/instagram/analyze?post_id=${post_id}`;
+    const backendUrl = `${BACKEND_URL}/api/v1/instagram/analyze`;
     console.debug(`[${requestId}] Sending request to backend`, {
       url: backendUrl,
       headers: {
@@ -84,6 +76,7 @@ export async function POST(request: Request) {
     });
 
     const requestBody = {
+      post_id: post_id,
       user_id: user_id
     };
 
@@ -101,7 +94,7 @@ export async function POST(request: Request) {
           'Accept': 'application/json',
           'Authorization': `Bearer ${apiKey}`
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
       });
       
       if (response.status !== 500 && response.status !== 429) {

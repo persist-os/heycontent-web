@@ -169,7 +169,7 @@ export function ContentAnalyticsScreen() {
         }
         // Remove 'children' property if not in InstagramContentDetails type
         return {
-          id: post._id,
+          id: post.data.id,
           platform: 'instagram',
           publishedAt: post.data.timestamp ? new Date(post.data.timestamp).toISOString() : '',
           content: {
@@ -178,7 +178,6 @@ export function ContentAnalyticsScreen() {
             mediaType: post.data.media_type === 'IMAGE' ? 'image' : post.data.media_type === 'VIDEO' ? 'video' : 'carousel',
             thumbnailUrl: post.data.thumbnail_url,
             permalink: post.data.permalink,
-            // children: post.data.children || [] // REMOVE if not in type
           },
           metrics: {
             impressions: undefined, // Not available in schema
@@ -187,7 +186,6 @@ export function ContentAnalyticsScreen() {
             comments: post.data.comment_count ?? 0,
             shares: undefined, // Not available in schema
           },
-
         };
       });
     }
@@ -356,6 +354,7 @@ export function ContentAnalyticsScreen() {
                         <InstagramCard
                           key={item.id}
                           item={item as InstagramContentItem}
+                          userId={firebaseUser?.uid || ''}
                           onDiscussContent={() => discussContent(item)}
                           onViewDetailedAnalytics={() => setSelectedContent(item)}
                         />
@@ -413,6 +412,7 @@ export function ContentAnalyticsScreen() {
           {selectedContent.platform === 'instagram' && (
             <InstagramModal
               selectedContent={selectedContent as InstagramContentItem}
+              userId={firebaseUser?.uid || ''}
               onClose={() => setSelectedContent(null)}
               onDiscussContent={() => discussContent(selectedContent)}
             />

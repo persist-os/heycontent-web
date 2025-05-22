@@ -8,12 +8,14 @@ import { Button } from '@/src/components/ui/button';
 
 interface InstagramModalProps {
   selectedContent: InstagramContentItem;
+  userId: string;
   onClose: () => void;
   onDiscussContent: (item: InstagramContentItem) => void;
 }
 
 export const InstagramModal: React.FC<InstagramModalProps> = ({
   selectedContent,
+  userId,
   onClose,
   onDiscussContent
 }) => {
@@ -51,10 +53,10 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
       // Log the API key format for debugging (full key for now)
       console.debug('API key format:', apiKey);
 
-      // Get the post URL or ID
-      const postUrl = selectedContent.content.permalink || selectedContent.id;
-      if (!postUrl) {
-        throw new Error('Invalid Instagram post URL or ID');
+      // Get the post ID from the selected content
+      const postId = selectedContent.id;
+      if (!postId) {
+        throw new Error('Invalid Instagram post ID');
       }
 
       // Call our API endpoint
@@ -68,7 +70,8 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
           'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          post_url: postUrl
+          user_id: userId,
+          post_id: postId
         })
       });
 

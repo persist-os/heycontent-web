@@ -5,15 +5,28 @@ import { v } from "convex/values";
 export default defineSchema({
   // User Info
   users: defineTable({
-    name: v.string(),
-    email: v.string(),
-    image: v.optional(v.string()),
     userId: v.string(),
+    email: v.string(),
+    name: v.string(),
     username: v.optional(v.string()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
+    image: v.optional(v.string()),
     referralCode: v.optional(v.string()),
     referredBy: v.optional(v.string()),
+    stripeCustomerId: v.optional(v.string()),
+    stripeSubscriptionId: v.optional(v.string()),
+    subscription: v.optional(v.object({
+      status: v.string(),
+      plan: v.string(),
+      priceId: v.string(),
+      currentPeriodStart: v.number(),
+      currentPeriodEnd: v.number(),
+      cancelAtPeriodEnd: v.boolean(),
+      includedRequests: v.number(),
+      usedRequests: v.number(),
+      lastSyncedAt: v.number()
+    })),
+    createdAt: v.number(),
+    updatedAt: v.number(),
   })
   .index("by_userId", ["userId"])
   .index("by_email", ["email"])
@@ -435,6 +448,7 @@ export default defineSchema({
   .index("by_accountId", ["accountId"])
   .index("by_userId", ["userId"])
   .index("by_postId", ["postId"])
+  .index("by_userId_postId", ["userId", "postId"])
   .index("by_timestamp", ["data.timestamp"]),
 
 });
