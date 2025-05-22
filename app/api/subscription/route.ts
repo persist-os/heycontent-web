@@ -31,11 +31,8 @@ export async function POST(request: Request) {
     const email = body.email || '';
     const name = body.name || '';
     const planId = body.planId;
-    const successUrl = body.successUrl;
-    const cancelUrl = body.cancelUrl;
-
     // Validate required fields
-    if (!userId || !planId || !successUrl || !cancelUrl || !email || !name) {
+    if (!userId || !planId || !email || !name) {
       console.error(`[${requestId}] Invalid subscription request: missing required fields`);
       return NextResponse.json(
         { error: 'Missing required fields' },
@@ -45,14 +42,12 @@ export async function POST(request: Request) {
 
     // Call our subscription API utility to create a checkout session
     try {
-      const paymentUrl = await createCheckoutSession(
+      const session = await createCheckoutSession(
         apiKey,
         userId,
         email,
         name,
-        planId,
-        successUrl,
-        cancelUrl
+        planId
       );
 
       // Success
@@ -60,10 +55,10 @@ export async function POST(request: Request) {
         timestamp: new Date().toISOString(),
         userId,
         planId,
-        url: paymentUrl
+        session
       });
 
-      return NextResponse.json({ url: paymentUrl });
+      return NextResponse.json(session);
     } catch (apiError) {
       console.error(`[${requestId}] Checkout session creation failed`, {
         error: apiError instanceof Error ? apiError.message : 'Unknown API error'

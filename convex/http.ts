@@ -142,10 +142,7 @@ app.delete("/api/api-keys/delete", async (c) => {
   if (!key_id) {
     return c.json({ success: false, error: "Missing key_id" }, 400);
   }
-
   try {
-    // key_id is expected to be a string representation of the Convex _id
-    // deleteByStringId will find the key by its _id string and delete it
     await ctx.runAction(api.apiKeys.deleteByStringId, { keyIdStr: key_id });
     return c.json({ success: true });
   } catch (error) {
@@ -598,50 +595,19 @@ app.post("/api/users/:id/stripe/subscription", async (c) => {
 // Update subscription
 app.patch("/api/stripe/subscriptions/:id", async (c) => {
   const ctx = c.env;
-  const subscriptionId = c.req.param("id");
+  const stripeSubscriptionId = c.req.param("id");
   const data = await c.req.json();
   
   try {
-    // Get subscription by Stripe ID
-    const subscription = await ctx.runQuery(api.userQueries.getUserByStripeCustomerId, {
-      stripeCustomerId: subscriptionId
+    // Use the dedicated subscription actions module to handle the update
+    const result = await ctx.runMutation(api.subscriptionActions.updateSubscriptionFromStripe, {
+      stripeSubscriptionId,
+      data
     });
     
-    if (!subscription) {
-      return c.json({ success: false, error: "Subscription not found" }, 404);
-    }
-    
-    // Update subscription
-    if (data.quantity !== undefined) {
-      await ctx.runMutation(api.subscriptionQueries.updateSubscriptionQuantity, {
-        subscriptionId: subscription._id,
-        quantity: data.quantity
-      });
-    }
-    
-    if (data.cancelAtPeriodEnd !== undefined) {
-      await ctx.runMutation(api.subscriptionQueries.updateSubscription, {
-        subscriptionId: subscription._id,
-        cancelAtPeriodEnd: data.cancelAtPeriodEnd
-      });
-    }
-    
-    // Update other fields if needed
-    if (data.status || data.currentPeriodStart || data.currentPeriodEnd) {
-      const updates: {
-        status?: "active" | "canceled" | "past_due" | "trialing";
-        currentPeriodStart?: number;
-        currentPeriodEnd?: number;
-      } = {};
-      
-      if (data.status) updates.status = data.status as "active" | "canceled" | "past_due" | "trialing";
-      if (data.currentPeriodStart) updates.currentPeriodStart = data.currentPeriodStart;
-      if (data.currentPeriodEnd) updates.currentPeriodEnd = data.currentPeriodEnd;
-      
-      await ctx.runMutation(api.subscriptionQueries.updateSubscriptionDetails, {
-        subscriptionId: subscription._id,
-        updates
-      });
+    if (!result.success) {
+      console.error(`Failed to update subscription: ${result.error}`);
+      return c.json({ success: false, error: result.error }, 404);
     }
     
     return c.json({ success: true });

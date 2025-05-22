@@ -1,11 +1,8 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { getSubscriptionPlans, getSubscriptionStatus, createCheckoutSession, createCustomer } from '@/app/lib/subscription-api';
-import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js';
-import { loadStripe } from '@stripe/stripe-js';
-
-const stripePromise = loadStripe("pk_test_51RP51sHUK9gLy34mXbAmM88KLjBiw8ZMYAi4jRr8GOL4GBgrZGUe7tyXhkuRqyKntft3YCMizK129wBKZTtGSZ0p000BxQ2j3c"); // Replace with your publishable key
+import { getSubscriptionPlans, getSubscriptionStatus } from '@/app/lib/subscription-api';
+import { CheckoutForm } from './stripe-checkout';
 
 import { UsageAndBillingCard } from './cards/UsageAndBillingCard';
 import { OverageControlsCard } from './cards/OverageControlsCard';
@@ -19,8 +16,12 @@ import { getApiKey } from '@/app/lib/api-helpers';
 
 
 export default function SubscriptionOverview() {
+  console.log('SubscriptionOverview component rendering');
+  
   const { user } = useAuth();
   const userId = user?.uid || '';
+  
+  console.log('User in SubscriptionOverview:', user ? { uid: user.uid, email: user.email } : 'No user');
 
   // API data state
   const [plans, setPlans] = useState<any[]>([]);
@@ -55,47 +56,47 @@ export default function SubscriptionOverview() {
         } catch (e) {
           plansData = null;
         }
-        // fallback plans if API fails
-        const fallbackPlans = [
-          {
-            _id: 'basic',
-            name: 'Basic',
-            price: 15,
-            includedRequests: 1000,
-            features: [
-              '1,000 requests/month',
-              'Standard support',
-              'Basic templates'
-            ],
-            isActive: true,
-            interval: 'month',
-            stripePriceId: 'price_1RPSD8HUK9gLy34mXfLOgdgB',
-            stripeProductId: 'prod_SK69e1FboMpPN6'
-          },
-          {
-            _id: 'pro',
-            name: 'Pro',
-            price: 25,
-            includedRequests: 5000,
-            features: [
-              '5,000 requests/month',
-              'Priority support',
-              'All templates',
-              'API access'
-            ],
-            isActive: true,
-            interval: 'month',
-            stripePriceId: 'price_1RPSDCHUK9gLy34mNjjBT53L',
-            stripeProductId: 'prod_SK69CRqOckPpNm',
-            isPerSeat: true
-          }
-        ];
-        setPlans(plansData ? Object.values(plansData) : fallbackPlans);
+        setPlans(plansData ? Object.values(plansData) : []);
         // Fetch subscription status
         let status = null;
         try {
-          status = await getSubscriptionStatus(apiKey, user.uid);
+          console.log('Fetching subscription status for user:', user.uid);
+          console.log('Using API key:', apiKey ? `${apiKey.substring(0, 10)}...` : 'none');
+          
+          // Use the Next.js API route instead of calling backend directly
+          const statusUrl = `/api/subscription/status`;
+          console.log('Fetching from URL:', statusUrl);
+          
+          const response = await fetch(statusUrl, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            }
+          });
+          
+          console.log('Status response received:', {
+            status: response.status,
+            ok: response.ok,
+            statusText: response.statusText
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to fetch subscription status: ${response.status} ${response.statusText}`);
+          }
+          
+          const responseText = await response.text();
+          console.log('Response text:', responseText.substring(0, 100) + (responseText.length > 100 ? '...' : ''));
+          
+          try {
+            status = JSON.parse(responseText);
+            console.log('Parsed status:', status);
+          } catch (parseError) {
+            console.error('Error parsing JSON response:', parseError);
+            throw new Error('Invalid JSON in subscription status response');
+          }
         } catch (e) {
+          console.error('Error fetching subscription status:', e);
           status = null;
         }
         setCurrentSubscription(status);
@@ -109,60 +110,64 @@ export default function SubscriptionOverview() {
     fetchData();
   }, [user?.uid]);
 
-  // Store client secret for embedded checkout
-  const [checkoutClientSecret, setCheckoutClientSecret] = useState(null);
+  // Checkout state
+  const [showCheckout, setShowCheckout] = useState<boolean>(false);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
 
   // Function to handle plan selection from UpgradeModal
-  const handleSelectPlan = async (planId) => {
-    if (!userId || !user) {
-      setError('User not authenticated.');
-      return;
-    }
-    setProcessingSubscription(true);
+  const handleSelectPlan = (planId: string): void => {
+    console.log('Selected plan ID:', planId);
+    setSelectedPlanId(planId);
+    setShowCheckout(true);
+    setShowUpgradeModal(false);
+  };
+  
+  // Handle checkout success
+  const handleCheckoutSuccess = () => {
+    setShowCheckout(false);
+    // Refresh subscription data
+    fetchData();
+  };
+  
+  // Handle checkout cancel
+  const handleCheckoutCancel = () => {
+    setShowCheckout(false);
+  };
+  
+  // Fetch subscription data
+  const fetchData = async () => {
+    if (!user?.uid) return;
+    setLoading(true);
     try {
       const apiKey = await getApiKey();
       if (!apiKey) {
-        throw new Error('API key not found. Please log in again.');
+        throw new Error('No API key found. Please log in again.');
       }
-
-      // First, ensure the user has a Stripe customer
-      try {
-        console.log('Creating/retrieving Stripe customer...');
-        await createCustomer(
-          apiKey,
-          userId,
-          user.email || '',
-          user.displayName || ''
-        );
-        console.log('Stripe customer created/retrieved successfully');
-      } catch (customerErr) {
-        if (!customerErr.message?.includes('already exists')) {
-          throw new Error(`Failed to create Stripe customer: ${customerErr.message}`);
-        }
-      }
-
-      // Now create the checkout session
-      console.log('Creating checkout session...');
-      const clientSecret = await createCheckoutSession(
-        apiKey,
-        userId,
-        user.email || '',
-        user.displayName || '',
-        planId,
-        `${window.location.origin}/settings?subscription=success`,
-        `${window.location.origin}/settings?subscription=canceled`
-      );
-      setCheckoutClientSecret(clientSecret);
-      console.log('Checkout session created successfully');
       
-    } catch (err) {
-      console.error('Error in subscription process:', err);
-      setError(err.message || 'An unexpected error occurred during the subscription process.');
-      setShowUpgradeModal(true);
+      // Fetch plans
+      let plansData = null;
+      try {
+        plansData = await getSubscriptionPlans(apiKey);
+      } catch (e) {
+        plansData = null;
+      }
+      setPlans(plansData ? Object.values(plansData) : []);
+      
+      // Fetch subscription status
+      let status = null;
+      try {
+        status = await getSubscriptionStatus(apiKey, user.uid);
+      } catch (e) {
+        status = null;
+      }
+      setCurrentSubscription(status);
+    } catch (e: any) {
+      setError(e.message || 'Failed to load subscription data');
     } finally {
-      setProcessingSubscription(false);
+      setLoading(false);
     }
   };
+
 
 
   // Handlers for modals (all business logic should be in card components)
@@ -179,18 +184,32 @@ export default function SubscriptionOverview() {
 
   return (
     <div className="space-y-6">
-      {checkoutClientSecret && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.7)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ position: 'relative', background: '#fff', padding: 24, borderRadius: 8, width: '100%', maxWidth: 480 }}>
-            <button style={{ position: 'absolute', top: 8, right: 8, zIndex: 10 }} onClick={() => setCheckoutClientSecret(null)}>
-              Close
-            </button>
-            <EmbeddedCheckoutProvider
-              stripe={stripePromise}
-              options={{ clientSecret: checkoutClientSecret }}
-            >
-              <EmbeddedCheckout />
-            </EmbeddedCheckoutProvider>
+      {/* Checkout Modal */}
+      {showCheckout && selectedPlanId && (
+        <div className="fixed inset-0 bg-black/70 z-[9999] flex items-center justify-center overflow-y-auto p-4">
+          <div className="relative bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-md md:max-w-lg">
+            <div className="absolute top-4 right-4 z-10">
+              <button 
+                onClick={() => setShowCheckout(false)}
+                className="rounded-full bg-gray-100 dark:bg-gray-800 p-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                aria-label="Close checkout"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold mb-1">Complete your subscription</h3>
+                <p className="text-sm text-gray-500">Enter your payment details to subscribe</p>
+              </div>
+              <CheckoutForm 
+                planId={selectedPlanId} 
+                onSuccess={handleCheckoutSuccess}
+                onCancel={handleCheckoutCancel}
+              />
+            </div>
           </div>
         </div>
       )}

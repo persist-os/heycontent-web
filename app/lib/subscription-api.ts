@@ -150,9 +150,21 @@ export async function createCustomer(
  * @param apiKey - The API key for authentication
  * @param userId - The user ID
  * @param planId - The plan ID or price ID
- * @param successUrl - The URL to redirect to on successful payment
- * @param cancelUrl - The URL to redirect to if payment is cancelled
- * @returns The checkout session URL
+ * @returns The checkout redirect URL
+ */
+export interface CheckoutSessionResponse {
+  client_secret: string;
+  session_id: string;
+  [key: string]: any;
+}
+
+/**
+ * Creates a checkout session for a subscription
+ * 
+ * @param apiKey - The API key for authentication
+ * @param userId - The user ID
+ * @param planId - The plan ID or price ID
+ * @returns The checkout session response object
  */
 export async function createCheckoutSession(
   apiKey: string,
@@ -160,35 +172,29 @@ export async function createCheckoutSession(
   email: string,
   name: string,
   planId: string,
-  successUrl: string,
-  cancelUrl: string
-): Promise<string> {
-  const { response, data } = await callSubscriptionAPI(
-    '/subscription/checkout-session',
-    'POST',
-    apiKey,
-    {
-      user_id: userId,
-      email,
-      name,
-      price_id: planId,
-      success_url: successUrl,
-      cancel_url: cancelUrl
+): Promise<CheckoutSessionResponse> {
+  try {
+    const { response, data } = await callSubscriptionAPI(
+      '/subscription/checkout-session',
+      'POST',
+      apiKey,
+      {
+        user_id: userId,
+        email,
+        name,
+        price_id: planId,
+      }
+    );
+    
+    if (!response.ok) {
+      throw new Error(data?.error || 'Failed to create checkout session');
     }
-  );
-  
-  if (!response.ok) {
-    throw new Error(data?.error || 'Failed to create checkout session');
+    // Return the parsed backend response directly
+    return data;
+  } catch (error) {
+    console.error('Error creating checkout session:', error);
+    throw error;
   }
-  
-  // Extract URL from the response data structure
-  const paymentUrl = data?.data?.url || data?.url;
-  
-  if (!paymentUrl) {
-    throw new Error('Invalid response from payment service');
-  }
-  
-  return paymentUrl;
 }
 
 /**

@@ -29,6 +29,7 @@ import type * as personaQueries from "../personaQueries.js";
 import type * as personas from "../personas.js";
 import type * as rateLimiting from "../rateLimiting.js";
 import type * as sessions from "../sessions.js";
+import type * as subscriptionActions from "../subscriptionActions.js";
 import type * as subscriptionQueries from "../subscriptionQueries.js";
 import type * as ubpSettings from "../ubpSettings.js";
 import type * as usageEvents from "../usageEvents.js";
@@ -62,6 +63,7 @@ declare const fullApi: ApiFromModules<{
   personas: typeof personas;
   rateLimiting: typeof rateLimiting;
   sessions: typeof sessions;
+  subscriptionActions: typeof subscriptionActions;
   subscriptionQueries: typeof subscriptionQueries;
   ubpSettings: typeof ubpSettings;
   usageEvents: typeof usageEvents;

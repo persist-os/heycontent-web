@@ -76,4 +76,14 @@ export const getUserByStripeCustomerId = query({
       .first()
   }
 })
+
+export const getUserByStripeSubscriptionId = query({
+  args: { stripeSubscriptionId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("stripeSubscriptionId"), args.stripeSubscriptionId))
+      .first()
+  }
+})
   

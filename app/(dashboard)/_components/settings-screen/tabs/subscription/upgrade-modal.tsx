@@ -37,11 +37,11 @@ interface BackendPlan {
 export default function UpgradeModal({ 
   open, 
   onClose, 
-  onSelectPlan 
+  onSelectPlan
 }: { 
   open: boolean; 
   onClose: () => void; 
-  onSelectPlan: (planId: string) => Promise<void>;
+  onSelectPlan: (planId: string) => void;
 }) {
   const { user } = useAuth();
   const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("monthly");
@@ -126,8 +126,17 @@ export default function UpgradeModal({
       console.error('No valid price ID found for selected plan');
       return;
     }
-    
-    await onSelectPlan(priceId);
+    setLoading(true);
+    try {
+      // Call the parent's select plan handler
+      onSelectPlan(priceId);
+      
+      // The modal will be closed by the parent component
+    } catch (error) {
+      console.error('Error selecting plan:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -208,18 +217,28 @@ export default function UpgradeModal({
                   <Button
                     variant={selectedPlan === plan.id ? "default" : "outline"}
                     className="w-full mt-auto"
+                    disabled={loading}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleSelectPlan(plan.id);
                     }}
                   >
-                    {selectedPlan === plan.id ? "Selected" : "Select Plan"}
+                    {loading && selectedPlan === plan.id ? (
+                      <span className="flex items-center">
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" /> Processing...
+                      </span>
+                    ) : selectedPlan === plan.id ? (
+                      "Selected"
+                    ) : (
+                      "Select Plan"
+                    )}
                   </Button>
                 </div>
               );
             })}
           </div>
         )}
+
         
         <DialogFooter className="mt-4">
           <div className="text-sm text-gray-500 text-center w-full">
