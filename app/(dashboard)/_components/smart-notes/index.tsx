@@ -43,7 +43,7 @@ export default function SmartNotes() {
   const [showWizard, setShowWizard] = useState(false);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(true); // Make sidebar visible by default
   
   const { notes, isLoading, createNote, updateNote, deleteNote } = useNotes();
   const { requestAIInsights } = useAIInsights(updateNote);
@@ -54,8 +54,27 @@ export default function SmartNotes() {
     setIsViewingNote(!showSidebar);
   }, [showSidebar, setIsViewingNote]);
 
-  const handleCreateNote = () => {
-    setShowWizard(true);
+  const handleCreateNote = async (options?: { type?: string; skipWizard?: boolean }) => {
+    // If skipWizard is true, create a note directly without showing the wizard
+    if (options?.skipWizard) {
+      try {
+        // Create an empty note with the specified type (e.g., 'brainstorm')
+        const noteId = await createNote({
+          title: `Brainstorm ${new Date().toLocaleDateString()}`,
+          content: '',
+          type: options.type as any, // Type is specified in options
+        });
+        if (noteId) {
+          setActiveNoteId(noteId);
+          setShowSidebar(false);
+        }
+      } catch (error: any) {
+        console.error('Failed to create brainstorm note:', error);
+      }
+    } else {
+      // Show the wizard for normal note creation
+      setShowWizard(true);
+    }
   };
 
   // Called when the wizard is completed
@@ -149,7 +168,9 @@ export default function SmartNotes() {
               isMobile={!showSidebar}
             />
           ) : notes.length === 0 ? (
-            <EmptyState onCreateNote={handleCreateNote} />
+            <div className="flex-1 flex flex-col items-center justify-center text-gray-500 p-8 relative">
+              <EmptyState onCreateNote={handleCreateNote} />
+            </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-gray-500 p-8 relative">
               {!showSidebar && (

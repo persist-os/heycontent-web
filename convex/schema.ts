@@ -70,7 +70,8 @@ export default defineSchema({
       v.literal("conversation"),
       v.literal("idea"),
       v.literal("url"),
-      v.literal("date")
+      v.literal("date"),
+      v.literal("brainstorm")
     )),
     tags: v.array(v.string()),
     references: v.array(v.object({

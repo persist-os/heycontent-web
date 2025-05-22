@@ -8,7 +8,8 @@ const noteType = v.union(
   v.literal("conversation"),
   v.literal("idea"),
   v.literal("url"),
-  v.literal("date")
+  v.literal("date"),
+  v.literal("brainstorm")
 );
 
 const referenceType = v.union(
@@ -16,7 +17,8 @@ const referenceType = v.union(
   v.literal("conversation"),
   v.literal("idea"),
   v.literal("url"),
-  v.literal("date")
+  v.literal("date"),
+  v.literal("brainstorm")
 );
 
 export const getNotesByUser = query({
@@ -37,6 +39,7 @@ export const createNote = mutation({
     templateInput: v.optional(v.any()),
     createdAt: v.number(),
     analysisId: v.optional(v.string()),
+    type: v.optional(noteType), // <-- Accept type argument
   },
   handler: async (ctx, args) => {
     // Fill in required fields from schema with defaults if not present
@@ -49,7 +52,7 @@ export const createNote = mutation({
       important: false,
       tags: [],
       references: [],
-      type: undefined
+      type: args.type, // <-- Set type from argument
     };
     const noteId = await ctx.db.insert("notes", noteToInsert);
     return noteId;

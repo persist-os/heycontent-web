@@ -260,8 +260,18 @@ const SmartNoteWizard: React.FC<SmartNoteWizardProps> = ({ onComplete, onCancel 
             {/* Instagram Card */}
             <div 
               style={{
-                ...formStyles.platformCard,
-                ...(formData.platform === 'instagram' ? formStyles.platformCardSelected : {})
+                padding: formStyles.platformCard.padding,
+                borderRadius: formStyles.platformCard.borderRadius,
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderColor: formData.platform === 'instagram' ? '#7c3aed' : '#e5e7eb',
+                cursor: formStyles.platformCard.cursor,
+                transition: formStyles.platformCard.transition,
+                display: formStyles.platformCard.display,
+                alignItems: formStyles.platformCard.alignItems,
+                gap: formStyles.platformCard.gap,
+                marginBottom: formStyles.platformCard.marginBottom,
+                backgroundColor: formData.platform === 'instagram' ? '#f5f3ff' : undefined,
               }}
               onClick={() => handlePlatformSelect('instagram')}
             >

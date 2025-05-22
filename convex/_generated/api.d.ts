@@ -13,6 +13,7 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as analyses from "../analyses.js";
 import type * as apiKeys from "../apiKeys.js";
 import type * as apiKeysMutations from "../apiKeysMutations.js";
 import type * as apiKeysQueries from "../apiKeysQueries.js";
@@ -42,6 +43,7 @@ import type * as youtubeQueries from "../youtubeQueries.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  analyses: typeof analyses;
   apiKeys: typeof apiKeys;
   apiKeysMutations: typeof apiKeysMutations;
   apiKeysQueries: typeof apiKeysQueries;

@@ -6,13 +6,13 @@ interface SidebarProps {
   notes: Note[];
   activeNoteId: string | null;
   onNoteSelect: (id: string) => void;
-  onCreateNote: () => void;
+  onCreateNote: (options?: { type?: string; skipWizard?: boolean }) => void;
   onDeleteNote: (id: string) => void;
   onHideSidebar: () => void;
 }
 
 export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDeleteNote, onHideSidebar }: SidebarProps) {
-  const [selectedSection, setSelectedSection] = useState<'all' | 'important' | 'recent' | 'ideas'>('all');
+  const [selectedSection, setSelectedSection] = useState<'all' | 'important' | 'brainstorm' | 'ideas'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'title' | 'importance'>('date');
   const [showSortOptions, setShowSortOptions] = useState(false);
@@ -24,7 +24,8 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
       selectedSection === 'all' ? true :
       selectedSection === 'important' ? note.important :
       selectedSection === 'ideas' ? note.type === 'idea' :
-      true; // recent section - we'll just sort by date
+      selectedSection === 'brainstorm' ? note.type === 'brainstorm' :
+      true; // fallback
 
     // Then apply search filter if there's a query
     if (!sectionMatches) return false;
@@ -56,8 +57,16 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
   });
 
   const handleCreateNote = async () => {
-    onHideSidebar();
-    onCreateNote();
+    // If we're in the brainstorm section, create a brainstorm note directly
+    if (selectedSection === 'brainstorm') {
+      onHideSidebar();
+      // Pass signal to parent to create an empty brainstorm note
+      onCreateNote({ type: 'brainstorm', skipWizard: true });
+    } else {
+      // Regular note creation flow with wizard
+      onHideSidebar();
+      onCreateNote();
+    }
   };
 
   return (
@@ -122,6 +131,14 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
           }`}
         >
           Ideas
+        </button>
+        <button
+          onClick={() => setSelectedSection('brainstorm')}
+          className={`flex-1 py-2 text-sm font-medium text-center ${
+            selectedSection === 'brainstorm' ? 'text-green-600 border-b-2 border-green-500' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Brainstorm
         </button>
       </div>
 
