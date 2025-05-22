@@ -309,7 +309,14 @@ export async function getSubscriptionPlans(
     throw new Error(data?.error || 'Failed to get subscription plans');
   }
   
-  return data;
+  // The backend wraps the plans in a data property
+  if (data.success && data.data) {
+    console.log('Plans data received:', data.data);
+    return data.data;
+  }
+  
+  console.error('Unexpected plans response format:', data);
+  throw new Error('Invalid plans data format received from server');
 }
 
 /**
