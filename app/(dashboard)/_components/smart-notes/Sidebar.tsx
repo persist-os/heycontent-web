@@ -11,6 +11,21 @@ interface SidebarProps {
   onHideSidebar: () => void;
 }
 
+/**
+ * Renders a sidebar for managing and organizing notes with filtering, searching, and sorting capabilities.
+ *
+ * The sidebar allows users to filter notes by section (all, important, ideas, brainstorm), search notes by title, content, or tags, and sort notes by date, title, or importance. Users can select, create, or delete notes, and hide the sidebar. The UI adapts to the current state, displaying relevant actions and messages based on available notes and filters.
+ *
+ * @param notes - The list of notes to display and manage.
+ * @param activeNoteId - The ID of the currently selected note.
+ * @param onNoteSelect - Callback invoked when a note is selected.
+ * @param onCreateNote - Callback invoked to create a new note. If the "brainstorm" section is active, a brainstorm note is created directly and the wizard is skipped.
+ * @param onDeleteNote - Callback invoked to delete a note by its ID.
+ * @param onHideSidebar - Callback invoked to hide the sidebar.
+ *
+ * @remark
+ * When the "brainstorm" section is selected, creating a note will immediately create a brainstorm note and bypass the creation wizard.
+ */
 export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDeleteNote, onHideSidebar }: SidebarProps) {
   const [selectedSection, setSelectedSection] = useState<'all' | 'important' | 'brainstorm' | 'ideas'>('all');
   const [searchQuery, setSearchQuery] = useState('');
