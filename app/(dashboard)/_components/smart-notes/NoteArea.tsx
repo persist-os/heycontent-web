@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Note, NoteUpdate } from './types';
 import { ShortcutManager } from './keyboard-shortcuts';
 import { CommandMenu, type Command } from './CommandMenu';
@@ -196,6 +196,39 @@ export function NoteArea({
     onUpdate(note._id, { content: newContent });
   };
 
+  // Create a debounced version of onUpdate using useRef
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const debouncedUpdate = useCallback((noteId: string, updates: NoteUpdate) => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    debounceTimerRef.current = setTimeout(async () => {
+      try {
+        const updatedNote = await onUpdate(noteId, updates);
+        console.log('Note updated successfully:', updatedNote);
+      } catch (error) {
+        console.error('Failed to update note:', error);
+      }
+    }, 300);
+  }, [onUpdate]);
+
+  const handleContentChange = (newContent: string) => {
+    console.log('Content changing to:', newContent);
+    setContent(newContent);
+    
+    // Save to local storage as backup immediately
+    saveToLocal(note._id, { content: newContent });
+    
+    // Debounce the API update
+    debouncedUpdate(note._id, {
+      content: newContent,
+      updatedAt: Date.now()
+    });
+  };
+
+  // Update menu position when content changes
   const updateMenuPosition = () => {
     if (!textAreaRef.current) return;
 
