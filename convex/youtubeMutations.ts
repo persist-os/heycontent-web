@@ -138,10 +138,10 @@ export const update_youtube_token = mutation({
   },
 });
 
-// Store video analysis data
+// Store video analysis data directly in youtubeVideos table
 export const storeVideoAnalysis = mutation({
   args: {
-    userId: v.string(),
+    userId: v.string(), // Accept userId for compatibility/auditing
     videoId: v.string(),
     analysisData: v.any(),
   },
@@ -149,38 +149,23 @@ export const storeVideoAnalysis = mutation({
     const { userId, videoId, analysisData } = args;
     const now = Date.now();
 
-    try {
-      // Check if analysis already exists
-      const existingAnalysis = await ctx.db
-        .query("youtubeAnalysis")
-        .withIndex("by_videoId", (q) => q.eq("videoId", videoId))
-        .filter((q) => q.eq("userId", userId))
-        .first();
+    // Always find the video by videoId only (do not filter by userId)
+    const video = await ctx.db
+      .query("youtubeVideos")
+      .withIndex("by_videoId", (q) => q.eq("videoId", videoId))
+      .first();
 
-      if (existingAnalysis) {
-        // Update existing analysis
-        await ctx.db.patch(existingAnalysis._id, {
-          analysis: analysisData,
-          updatedAt: now,
-        });
-        console.log(`Updated analysis for video ${videoId} by user ${userId}`);
-        return { success: true, status: "updated" };
-      } else {
-        // Insert new analysis
-        await ctx.db.insert("youtubeAnalysis", {
-          userId,
-          videoId,
-          analysis: analysisData,
-          createdAt: now,
-          updatedAt: now,
-        });
-        console.log(`Stored new analysis for video ${videoId} by user ${userId}`);
-        return { success: true, status: "created" };
-      }
-    } catch (error) {
-      console.error('Error storing video analysis:', error);
-      throw new Error(`Failed to store video analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    if (!video) {
+      throw new Error(`No video found with videoId: ${videoId}`);
     }
+
+    await ctx.db.patch(video._id, {
+      analysis: analysisData,
+      updatedAt: now,
+    });
+
+    // Optionally, you can log or audit userId here if needed
+    return { success: true, status: "updated", videoId: video._id };
   },
 });
 
@@ -252,7 +237,7 @@ export const storeYoutubeFullProfile = mutation({
 });
 
 
-// Clean up YouTube data when disconnecting
+  // Clean up YouTube data when disconnecting
 export const disconnectYouTube = mutation({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
@@ -275,12 +260,12 @@ export const disconnectYouTube = mutation({
         results.dataDeleted++;
       }
 
-      // Delete all YouTube video data for the user
+      // Delete all YouTube video data for the user (including analysis)
       const youtubeVideos = await ctx.db
         .query("youtubeVideos")
         .withIndex("by_userId", (q) => q.eq("userId", userId))
         .collect();
-      console.log(`Found ${youtubeVideos.length} YouTube video records to delete for user ${userId}`);
+      console.log(`Found ${youtubeVideos.length} YouTube video records (including analyses) to delete for user ${userId}`);
       for (const video of youtubeVideos) {
         await ctx.db.delete(video._id);
         results.dataDeleted++;

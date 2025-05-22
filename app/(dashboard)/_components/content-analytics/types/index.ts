@@ -51,7 +51,8 @@ export interface YouTubeContentItem extends BaseContentItem {
   platform: 'youtube';
   content: YouTubeContentDetails;
   metrics: YouTubeMetrics;
-  analysis?: string;
+  analysis?: any; // Analysis data can be any type since it's stored as JSON
+  aiAnalysis?: string; // For backward compatibility with existing code
 }
 
 // Gmail Email

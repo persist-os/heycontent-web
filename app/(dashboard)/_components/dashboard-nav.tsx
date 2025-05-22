@@ -34,7 +34,7 @@ const navItems = [
     id: 'content-analytics',
     label: 'Content Analytics',
     icon: BarChart3,
-    href: '/content-analytics',
+    href: '/content',
     color: 'text-yellow-500'
   },
   {
