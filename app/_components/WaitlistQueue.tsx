@@ -146,21 +146,21 @@ export const WaitlistQueue = ({ position, queueId, onQueueComplete }: WaitlistQu
   const [invitesLeft, setInvitesLeft] = useState(3);
   const [colorSchemeIndex, setColorSchemeIndex] = useState(0);
   
-  useEffect(() => {
-    if (stage === 'queue') {
-      const interval = setInterval(() => {
-        if (currentPosition > 0) {
-          setCurrentPosition(prev => prev - 1);
-        } else {
-          setStage('card');
-          onQueueComplete?.();
-          clearInterval(interval);
-        }
-      }, 3000);
-
-      return () => clearInterval(interval);
-    }
-  }, [currentPosition, onQueueComplete, stage]);
+useEffect(() => {
+  if (stage !== 'queue') return;
+  const interval = setInterval(() => {
+    setCurrentPosition(prev => {
+      if (prev <= 1) {
+        clearInterval(interval);
+        setStage('card');
+        onQueueComplete?.();
+        return 0;
+      }
+      return prev - 1;
+    });
+  }, 3000);
+  return () => clearInterval(interval);
+}, [stage, onQueueComplete]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -341,34 +341,20 @@ export const WaitlistQueue = ({ position, queueId, onQueueComplete }: WaitlistQu
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleShare('twitter');
-                      }}
-                      className="w-full text-white p-4 rounded-xl 
-                        flex items-center justify-center gap-2 transition-all duration-300"
-                      style={{ 
-                        backgroundColor: currentScheme.primary,
-                        ':hover': { backgroundColor: currentScheme.primary + 'dd' }
-                      }}
-                    >
-                      <Twitter className="w-5 h-5" />
-                      <span>Share on Twitter</span>
-                    </button>
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
                         handleShare('copy');
                       }}
                       className="w-full border-2 p-4 rounded-xl 
                         flex items-center justify-center gap-2 transition-all duration-300
-                        hover:text-white"
+                        hover:text-white hover:bg-opacity-100"
                       style={{ 
                         borderColor: currentScheme.primary,
-                        color: currentScheme.primary,
-                        ':hover': { 
-                          backgroundColor: currentScheme.primary,
-                          color: 'white'
-                        }
+                        color: currentScheme.primary
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = currentScheme.primary;
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
                       }}
                     >
                       {copied ? (

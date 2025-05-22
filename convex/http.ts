@@ -547,6 +547,19 @@ app.post("/api/users/:id/stripe/customer", async (c) => {
   }
   
   try {
+    // Check if any user already has this Stripe customer ID
+    const existingUser = await ctx.runQuery(api.userQueries.getUserByStripeCustomerId, {
+      stripeCustomerId
+    });
+    
+    // If a user with this Stripe customer ID exists and it's not the current user
+    if (existingUser && existingUser.userId !== userId) {
+      return c.json({
+        success: false,
+        error: "This Stripe customer ID is already associated with another user"
+      }, 409); // 409 Conflict status code
+    }
+    
     // Update user with Stripe customer ID
     await ctx.runMutation(api.userMutations.updateUser, {
       userId,
