@@ -7,13 +7,15 @@ interface AccountSubscriptionCardProps {
   currentSubscription: any;
   handleUpgrade: () => void;
   handleOpenQuantityModal: () => void;
+  handleManageSubscription: () => void;
 }
 
 export const AccountSubscriptionCard: React.FC<AccountSubscriptionCardProps> = ({
   user,
   currentSubscription,
   handleUpgrade,
-  handleOpenQuantityModal
+  handleOpenQuantityModal,
+  handleManageSubscription
 }) => (
   <Card>
     <CardHeader>
@@ -28,7 +30,7 @@ export const AccountSubscriptionCard: React.FC<AccountSubscriptionCardProps> = (
       </div>
       <div className="flex gap-2 mt-2">
         <Button size="sm" onClick={handleUpgrade}>Upgrade</Button>
-        <Button size="sm" variant="outline">Manage Subscription</Button>
+        <Button size="sm" variant="outline" onClick={handleManageSubscription}>Manage Subscription</Button>
         <Button size="sm" variant="outline" onClick={handleOpenQuantityModal}>Change # of Requests</Button>
       </div>
     </CardContent>

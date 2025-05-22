@@ -45,12 +45,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ planId, onSuccess, o
 
   return (
     <div className="min-h-[400px] bg-white dark:bg-gray-900 rounded-lg shadow-lg p-4">
-      {loading && (
-        <div className="flex justify-center items-center h-40">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <span className="ml-3 text-gray-600 dark:text-gray-300">Preparing checkout...</span>
-        </div>
-      )}
       
       {error && (
         <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-md">

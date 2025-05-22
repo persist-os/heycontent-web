@@ -106,7 +106,7 @@ export async function GET(request: Request) {
               ...rawData,
               // Map 'inactive' to 'canceled', 'free' to 'monthly_basic'
               status: rawData.status === 'inactive' ? 'canceled' : rawData.status,
-              plan_type: rawData.plan_type === 'free' ? 'monthly_basic' : rawData.plan_type
+              plan_type: rawData.plan_type === 'monthly_basic' ? 'monthly_basic' : rawData.plan_type
             };
             
             console.log(`[${requestId}] Mapped subscription status`, {

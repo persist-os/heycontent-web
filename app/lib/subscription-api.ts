@@ -49,6 +49,16 @@ export interface PaymentLinkResponse {
   };
 }
 
+export interface PortalSessionResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+  data?: {
+    url: string;
+    session_id: string;
+  };
+}
+
 export interface UsageSummary {
   success: boolean;
   total_usage: number;
@@ -406,15 +416,58 @@ export async function checkRateLimit(
   apiKey: string,
   userId: string
 ): Promise<any> {
-  const { response, data } = await callSubscriptionAPI(
-    `/subscription/rate-limit/${userId}`,
-    'GET',
-    apiKey
-  );
-  
-  if (!response.ok) {
-    throw new Error(data?.error || 'Failed to check rate limit');
+  try {
+    const { response, data } = await callSubscriptionAPI(
+      `/subscription/rate-limit?user_id=${userId}`,
+      'GET',
+      apiKey
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to check rate limit: ${data.error || response.statusText}`);
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error checking rate limit:', error);
+    throw error;
   }
-  
-  return data;
+}
+
+/**
+ * Creates a customer portal session for managing subscriptions
+ * 
+ * @param apiKey - The API key for authentication
+ * @param userId - The user ID
+ * @param email - The user's email
+ * @param returnUrl - Optional URL to redirect to after the portal session
+ * @returns The portal session response with URL to redirect to
+ */
+export async function createCustomerPortalSession(
+  apiKey: string,
+  userId: string,
+  email: string,
+  returnUrl?: string
+): Promise<PortalSessionResponse> {
+  try {
+    const { response, data } = await callSubscriptionAPI(
+      '/subscription/portal-session',
+      'POST',
+      apiKey,
+      {
+        user_id: userId,
+        email: email,
+        return_url: returnUrl
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to create portal session: ${data.error || response.statusText}`);
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error creating customer portal session:', error);
+    throw error;
+  }
 }

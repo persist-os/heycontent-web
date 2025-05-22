@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { getSubscriptionPlans, getSubscriptionStatus } from '@/app/lib/subscription-api';
+import { getSubscriptionPlans, getSubscriptionStatus, createCustomerPortalSession } from '@/app/lib/subscription-api';
 import { CheckoutForm } from './stripe-checkout';
 
 import { UsageAndBillingCard } from './cards/UsageAndBillingCard';
@@ -37,6 +37,7 @@ export default function SubscriptionOverview() {
   const [pendingQuantity, setPendingQuantity] = useState(1);
   const [processingSubscription, setProcessingSubscription] = useState(false);
   const [updatingQuantity, setUpdatingQuantity] = useState(false);
+  const [redirectingToPortal, setRedirectingToPortal] = useState(false);
 
   // Fetch plans and subscription status from API
   useEffect(() => {
@@ -132,6 +133,36 @@ export default function SubscriptionOverview() {
   // Handle checkout cancel
   const handleCheckoutCancel = () => {
     setShowCheckout(false);
+  };
+  
+  // Handle manage subscription (redirect to Stripe Customer Portal)
+  const handleManageSubscription = async () => {
+    if (!user?.uid) return;
+    setRedirectingToPortal(true);
+    try {
+      const apiKey = await getApiKey();
+      if (!apiKey) {
+        throw new Error('No API key found. Please log in again.');
+      }
+      
+      // Get the current URL to use as return URL
+      const returnUrl = window.location.href;
+      
+      // Create a customer portal session
+      const response = await createCustomerPortalSession(apiKey, user.uid, user.email, returnUrl);
+      
+      if (response.success && response.data?.url) {
+        // Redirect to the portal URL
+        window.location.href = response.data.url;
+      } else {
+        throw new Error(response.error || 'Failed to create portal session');
+      }
+    } catch (error: any) {
+      console.error('Error creating portal session:', error);
+      setError(error.message || 'Failed to open subscription management portal');
+    } finally {
+      setRedirectingToPortal(false);
+    }
   };
   
   // Fetch subscription data
@@ -233,6 +264,7 @@ export default function SubscriptionOverview() {
           currentSubscription={currentSubscription}
           handleUpgrade={handleOpenUpgradeModal}
           handleOpenQuantityModal={() => handleOpenQuantityModal(currentSubscription?.quantity || 1)}
+          handleManageSubscription={handleManageSubscription}
         />
         <ActiveSessionsCard
           sessions={sessions}
