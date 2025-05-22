@@ -19,6 +19,24 @@ interface NoteAreaProps {
   isMobile: boolean;
 }
 
+/**
+ * Renders a rich text note editing interface with support for keyboard shortcuts, command menus, tagging, AI insights, and local persistence.
+ *
+ * Integrates note content editing, tag extraction, command and mention menus, AI insights requests, and keyboard shortcut management within a single component. Automatically syncs content with the provided note, saves changes to local storage, and debounces updates to the backend.
+ *
+ * @param note - The note object to display and edit.
+ * @param onUpdate - Callback to update the note with new content or metadata.
+ * @param onSave - Callback to save the note.
+ * @param onToggleShortcuts - Handler to toggle the keyboard shortcuts overlay.
+ * @param onRequestAIInsights - Handler to request AI-generated insights for the note.
+ * @param onBack - Handler to navigate back from the note editor.
+ * @param isMobile - Indicates if the editor is rendered on a mobile device.
+ *
+ * @returns The rendered note editing interface.
+ *
+ * @remark
+ * Note content changes are debounced before triggering backend updates, but are saved to local storage immediately for persistence.
+ */
 export function NoteArea({
   note,
   onUpdate,

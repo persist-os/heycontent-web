@@ -11,6 +11,13 @@ import { useAIInsights } from './hooks/useAIInsights';
 import { FileText, Plus, Lightbulb, ArrowLeft } from 'lucide-react';
 import { useSidebar } from '@/app/context/sidebar-context';
 
+/**
+ * Displays an empty state UI encouraging the user to create their first note.
+ *
+ * Renders an icon, a message, a button to initiate note creation, and a tip about keyboard shortcuts.
+ *
+ * @param onCreateNote - Callback invoked when the "Create Your First Note" button is clicked.
+ */
 function EmptyState({ onCreateNote }: { onCreateNote: () => void }) {
   // Show the wizard instead of the button if needed
   return (
@@ -39,6 +46,11 @@ function EmptyState({ onCreateNote }: { onCreateNote: () => void }) {
   );
 }
 
+/**
+ * Displays the main SmartNotes interface, managing note creation (with optional wizard), editing, deletion, AI insights, sidebar navigation, and keyboard shortcut help.
+ *
+ * Renders the note-taking workspace with a sidebar for note selection and management, a modal wizard for guided note creation, and overlays for keyboard shortcuts and loading states. Handles all state transitions and asynchronous operations related to notes and UI overlays.
+ */
 export default function SmartNotes() {
   const [showWizard, setShowWizard] = useState(false);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);

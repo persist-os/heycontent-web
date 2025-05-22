@@ -4,6 +4,15 @@ import { useAuth } from "@/app/context/auth-context";
 import { Note, NoteUpdate } from "../types";
 import { Id } from "@/convex/_generated/dataModel";
 
+/**
+ * Provides note management operations for the authenticated user.
+ *
+ * Returns the user's notes, loading state, and methods to create, update, and delete notes. Throws an error if called when no user is logged in.
+ *
+ * @returns An object containing the user's notes array, loading status, and note manipulation methods.
+ *
+ * @throws {Error} If any note operation is called without a logged-in user.
+ */
 export function useNotes() {
   const { user } = useAuth();
 
