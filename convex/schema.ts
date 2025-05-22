@@ -37,6 +37,7 @@ export default defineSchema({
         v.literal("yearly_pro")
       ),
       priceId: v.string(),
+      currentPeriodStart: v.number(),
       currentPeriodEnd: v.number(),
       cancelAtPeriodEnd: v.boolean(),
       includedRequests: v.number(),

@@ -82,7 +82,7 @@ export const updateUser = mutation({
 export const saveSubscription = mutation({
   args: {
     userId: v.string(),
-    planId: v.string(), // e.g., basic_monthly, pro_yearly
+    planId: v.string(), 
     priceId: v.string(),
     status: v.union(
       v.literal("active"),
