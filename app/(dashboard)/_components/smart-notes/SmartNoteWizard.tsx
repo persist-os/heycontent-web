@@ -64,6 +64,38 @@ const SmartNoteWizard: React.FC<SmartNoteWizardProps> = ({ onComplete, onCancel 
         value: 'shorts',
         description: 'Vertical short-form video' 
       }
+    ],
+    gmail: [
+      { 
+        label: 'Newsletter', 
+        value: 'newsletter',
+        description: 'Email campaign for updates, content, or announcements' 
+      },
+      { 
+        label: 'Brand Pitch', 
+        value: 'brand_pitch',
+        description: 'Email proposing a collab or sponsorship to a brand' 
+      },
+      { 
+        label: 'Outreach', 
+        value: 'outreach',
+        description: 'Personalized message to build a relationship or network' 
+      },
+      { 
+        label: 'Exclusive Drop', 
+        value: 'exclusive_drop',
+        description: 'Special offer or content sent to a targeted list' 
+      },
+      { 
+        label: 'Automated Response', 
+        value: 'automated_response',
+        description: 'Pre-written reply triggered by a specific action' 
+      },
+      { 
+        label: 'Drip Sequence', 
+        value: 'drip_sequence',
+        description: 'Multi-step campaign sent over days/weeks' 
+      }
     ]
   };
 
@@ -146,6 +178,64 @@ const SmartNoteWizard: React.FC<SmartNoteWizardProps> = ({ onComplete, onCancel 
               'Develop a tutorial for beginners',
               'Review trending products in your industry',
               'Share your process or methodology'
+            ];
+        }
+      } else if (formData.platform === 'gmail') {
+        switch (formData.contentType) {
+          case 'newsletter':
+            newSuggestions = [
+              'Monthly industry updates and insights',
+              'Curated content roundup with your commentary',
+              'Product feature announcements with use cases',
+              'Event recap with key takeaways'
+            ];
+            break;
+          case 'brand_pitch':
+            newSuggestions = [
+              'Proposal for co-marketing campaign',
+              'Sponsorship opportunity for upcoming content',
+              'Product integration or feature showcase',
+              'Affiliate partnership proposal'
+            ];
+            break;
+          case 'outreach':
+            newSuggestions = [
+              'Connection request with mutual interests',
+              'Interview or podcast guest invitation',
+              'Speaking engagement or event participation',
+              'Request for expert opinion or quote'
+            ];
+            break;
+          case 'exclusive_drop':
+            newSuggestions = [
+              'Early access to new product or feature',
+              'Limited-time discount or special offer',
+              'VIP event invitation for loyal customers',
+              'Exclusive content or resource for subscribers'
+            ];
+            break;
+          case 'automated_response':
+            newSuggestions = [
+              'Welcome sequence for new subscribers',
+              'Thank you message after purchase',
+              'Follow-up email after service completion',
+              'Feedback request with satisfaction survey'
+            ];
+            break;
+          case 'drip_sequence':
+            newSuggestions = [
+              'Educational course delivered over multiple emails',
+              'Onboarding sequence for new users',
+              'Lead nurture campaign with value-add content',
+              'Product launch buildup with teasers'
+            ];
+            break;
+          default:
+            newSuggestions = [
+              'Personalized message with clear value proposition',
+              'Follow-up email with additional resources',
+              'Targeted campaign based on user behavior',
+              'Educational content with actionable tips'
             ];
         }
       }
@@ -305,6 +395,26 @@ const SmartNoteWizard: React.FC<SmartNoteWizardProps> = ({ onComplete, onCancel 
               <div style={formStyles.platformText}>
                 <div style={formStyles.platformTitle}>YouTube</div>
                 <div style={formStyles.platformDesc}>Create content for YouTube</div>
+              </div>
+            </div>
+
+            {/* Gmail Card */}
+            <div 
+              style={{
+                ...formStyles.platformCard,
+                ...(formData.platform === 'gmail' ? formStyles.platformCardSelected : {})
+              }}
+              onClick={() => handlePlatformSelect('gmail')}
+            >
+              <div style={{ 
+                ...formStyles.platformIcon,
+                backgroundColor: '#4285F4',
+              }}>
+                ✉️
+              </div>
+              <div style={formStyles.platformText}>
+                <div style={formStyles.platformTitle}>Gmail</div>
+                <div style={formStyles.platformDesc}>Create email campaigns and outreach</div>
               </div>
             </div>
           </div>

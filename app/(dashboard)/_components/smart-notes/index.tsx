@@ -6,6 +6,7 @@ import { Sidebar } from './Sidebar';
 import { NoteArea } from './NoteArea';
 import { ShortcutsHelp } from './ShortcutsHelp';
 import { useNotes } from './hooks/useNotes';
+import type { NoteType } from './types';
 import { Note } from './types';
 import { useAIInsights } from './hooks/useAIInsights';
 import { FileText, Plus, Lightbulb, ArrowLeft } from 'lucide-react';
@@ -54,7 +55,7 @@ export default function SmartNotes() {
     setIsViewingNote(!showSidebar);
   }, [showSidebar, setIsViewingNote]);
 
-  const handleCreateNote = async (options?: { type?: string; skipWizard?: boolean }) => {
+  const handleCreateNote = async (options: { type?: NoteType; skipWizard?: boolean } = {}) => {
     // If skipWizard is true, create a note directly without showing the wizard
     if (options?.skipWizard) {
       try {
@@ -62,7 +63,7 @@ export default function SmartNotes() {
         const noteId = await createNote({
           title: `Brainstorm ${new Date().toLocaleDateString()}`,
           content: '',
-          type: options.type as any, // Type is specified in options
+          type: options.type,
         });
         if (noteId) {
           setActiveNoteId(noteId);
@@ -77,14 +78,21 @@ export default function SmartNotes() {
     }
   };
 
+  // Type for wizard data returned from the wizard
+  interface WizardData {
+    platform: string;
+    category: string;
+    topic: string;
+    description: string;
+    analysis?: any;
+  }
+
   // Called when the wizard is completed
-  const handleWizardComplete = async (wizardData: any) => {
+  const handleWizardComplete = async (wizardData: WizardData) => {
     try {
       // You might want to adapt this to send all wizardData to backend
       const noteId = await createNote({
         platform: wizardData.platform,
-        category: wizardData.category,
-        topic: wizardData.topic,
         content: wizardData.description || '',
         analysis: wizardData.analysis || null,
       });
@@ -96,7 +104,7 @@ export default function SmartNotes() {
       }
     } catch (error: any) {
       console.error('Failed to create note:', error);
-      if (error.message && error.message.includes('log in')) {
+      if (error?.message && error.message.includes('log in')) {
         return;
       }
     }
@@ -191,7 +199,7 @@ export default function SmartNotes() {
               </p>
               <div className="flex flex-col items-center gap-4">
                 <button
-                  onClick={handleCreateNote}
+                  onClick={() => handleCreateNote()}
                   className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
                 >
                   <Plus className="w-4 h-4" />

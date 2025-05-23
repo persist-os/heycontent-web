@@ -33,6 +33,7 @@ export function useNotes() {
     // The API expects noteId and updates directly, not wrapped in another object
     return await updateNoteMutation({
       noteId: noteId as Id<"notes">,
+      userId: user.uid,
       updates: {
         content: updates.content,
         platform: updates.platform,
