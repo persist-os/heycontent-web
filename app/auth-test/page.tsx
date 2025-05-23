@@ -62,31 +62,6 @@ export default function AuthTestPage() {
     }
   };
 
-  const testProfile = async () => {
-    setLoading(true);
-    setError(null);
-    setTestResult(null);
-
-    try {
-      // Test the profile endpoint
-      const response = await fetchWithAuth('/api/user/profile');
-      if(!response) {
-        throw new Error()
-       }
-      const data = await response.json();
-
-      setTestResult({
-        status: response.status,
-        data
-      });
-    } catch (err) {
-      console.error('Profile test error:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const testDebug = async () => {
     setLoading(true);
     setError(null);
@@ -144,14 +119,6 @@ export default function AuthTestPage() {
           className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50"
         >
           Test Auth Endpoint
-        </button>
-
-        <button
-          onClick={testProfile}
-          disabled={loading || !user}
-          className="px-4 py-2 bg-green-500 text-white rounded disabled:opacity-50"
-        >
-          Test Profile Endpoint
         </button>
 
         <button

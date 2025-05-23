@@ -40,7 +40,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Call our subscription API utility to create a checkout session
+    // Call API utility to create a checkout session
     try {
       const session = await createCheckoutSession(
         apiKey,

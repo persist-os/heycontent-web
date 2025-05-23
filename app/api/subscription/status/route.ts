@@ -97,8 +97,8 @@ export async function GET(request: Request) {
             if (!response.ok) {
               throw new Error(`Backend returned ${response.status}`);
             }
-            
-            // Get the raw data
+          
+            // Get raw data
             const rawData = await response.json();
             
             // Map any non-standard values to standard ones

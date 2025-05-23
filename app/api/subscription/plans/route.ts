@@ -30,7 +30,7 @@ export async function GET(request: Request) {
       );
     }
 
-    // Get subscription plans using our API utility
+    // Get subscription plans using API utility
     try {
       const plans = await getSubscriptionPlans(apiKey);
       

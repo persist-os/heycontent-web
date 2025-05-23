@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 
 
 interface LoginScreenProps {
@@ -187,7 +188,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
                 onClick={() => setShowPassword(!showPassword)}
                 tabIndex={-1}
               >
-                {showPassword ? '🙈' : '👁️'}
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
