@@ -49,8 +49,10 @@ export function useNotes() {
   const deleteNote = async (noteId: Id<"notes"> | string) => {
     if (!user?.uid) throw new Error("User must be logged in");
     
+    // api.notes.deleteNote now expects noteId as type Id<"notes">
+    // Convex client handles string to Id conversion; cast for TypeScript.
     return await deleteNoteMutation({
-      noteId: noteId.toString(), // Convert to string as the API expects
+      noteId: noteId as Id<"notes">,
       userId: user.uid,
     });
   };
