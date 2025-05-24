@@ -19,7 +19,7 @@ export function useNotes() {
       userId: user.uid,
       content: note.content || "",
       platform: note.platform || "web", // Add default platform if not provided
-      createdAt: Date.now(), // Add current timestamp
+
       type: note.type, // Pass the note type (e.g. brainstorm)
       // Don't need templateInput for brainstorm notes
     });
@@ -37,7 +37,11 @@ export function useNotes() {
       updates: {
         content: updates.content,
         platform: updates.platform,
-        // Include only the fields that the API accepts
+        title: updates.title,
+        important: updates.important,
+        type: updates.type,
+        tags: updates.tags,
+        // Include all fields that might be updated
       },
     });
   };

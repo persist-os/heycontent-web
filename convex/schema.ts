@@ -68,6 +68,7 @@ export default defineSchema({
     title: v.string(),
     content: v.string(),
     important: v.boolean(),
+    platform: v.optional(v.string()), // Added to support platform-specific notes
     type: v.optional(v.union(
       v.literal("ai_insight"),
       v.literal("conversation"),
@@ -349,8 +350,7 @@ export default defineSchema({
         })),
       }))),
     })),
-    // Optional AI analysis field (for compatibility with prod data)
-    analysis: v.optional(v.any()),
+
     // Store channelId redundantly for indexing
     channelId: v.optional(v.string()),
     // Timestamps

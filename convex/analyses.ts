@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 
 // Create a new noteAnalysis
 export const createNoteAnalysis = mutation({
@@ -12,7 +13,7 @@ export const createNoteAnalysis = mutation({
   },
   handler: async (ctx, args) => {
     // Check if the referenced note exists
-    const note = await ctx.db.get(args.noteId);
+    const note = await ctx.db.get(args.noteId as Id<"notes">);
     if (!note) {
       throw new Error(`Cannot create analysis: note with id ${args.noteId} does not exist.`);
     }

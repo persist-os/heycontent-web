@@ -223,8 +223,7 @@ export function NoteArea({
     
     // Debounce the API update
     debouncedUpdate(note._id, {
-      content: newContent,
-      updatedAt: Date.now()
+      content: newContent
     });
   };
 
@@ -236,12 +235,6 @@ export function NoteArea({
     setMenuPosition({ top, left });
   };
 
-  const handleContentChange = (newContent: string) => {
-    setContent(newContent);
-    if (note?._id) {
-      onUpdate(note._id, { content: newContent });
-    }
-  };
 
   const handleCommand = (command: Command) => {
     if (command.type === 'format') {

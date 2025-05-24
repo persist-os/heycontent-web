@@ -81,9 +81,10 @@ export default function SmartNotes() {
   // Type for wizard data returned from the wizard
   interface WizardData {
     platform: string;
+    contentType: string;
     category: string;
     topic: string;
-    description: string;
+    noteContent: string;
     analysis?: any;
   }
 
@@ -93,7 +94,7 @@ export default function SmartNotes() {
       // You might want to adapt this to send all wizardData to backend
       const noteId = await createNote({
         platform: wizardData.platform,
-        content: wizardData.description || '',
+        content: wizardData.noteContent || '',
         analysis: wizardData.analysis || null,
       });
       if (noteId) {

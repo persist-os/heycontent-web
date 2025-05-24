@@ -89,6 +89,9 @@ const formStyles: { [key: string]: React.CSSProperties } = {
     marginBottom: '6px',
   },
   platformCardSelected: {
+    // Use borderWidth and borderStyle from parent, only change color
+    borderWidth: '1px',
+    borderStyle: 'solid',
     borderColor: '#7c3aed',
     backgroundColor: '#f5f3ff',
   },

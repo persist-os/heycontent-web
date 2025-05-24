@@ -71,6 +71,10 @@ export const updateNote = mutation({
       platform: v.optional(v.string()),
       templateInput: v.optional(v.any()),
       analysisId: v.optional(v.string()),
+      title: v.optional(v.string()),
+      important: v.optional(v.boolean()),
+      type: v.optional(noteType),
+      tags: v.optional(v.array(v.string())),
     }),
   },
   handler: async (ctx, args) => {
