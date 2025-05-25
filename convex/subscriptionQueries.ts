@@ -101,7 +101,10 @@ export const saveSubscription = mutation({
     subscriptionItemId: v.optional(v.string()) // Optional, for metered billing
   },
   handler: async (ctx, args) => {
-    console.log(`[saveSubscription] Attempting to find user with userId (from args): "${args.userId}"`);
+    // Only log sensitive info in non-production environments to avoid leaking PII
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[saveSubscription] Attempting to find user with userId (from args): "${args.userId}"`);
+    }
 
     const user = await ctx.db
       .query("users")
@@ -109,18 +112,26 @@ export const saveSubscription = mutation({
       .unique();
 
     if (!user) {
-      console.error(`[saveSubscription] User NOT FOUND with userId: "${args.userId}".`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.error(`[saveSubscription] User NOT FOUND with userId: "${args.userId}".`);
+      }
       
       const anyUser = await ctx.db.query("users").first();
       if (anyUser) {
-        console.log(`[saveSubscription] Debug: At least one user exists. First user's userId: "${anyUser.userId}", _id: "${anyUser._id.toString()}"`);
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`[saveSubscription] Debug: At least one user exists. First user's userId: "${anyUser.userId}", _id: "${anyUser._id.toString()}"`);
+        }
       } else {
-        console.log("[saveSubscription] Debug: No users found in the 'users' table at all.");
+        if (process.env.NODE_ENV !== 'production') {
+          console.log("[saveSubscription] Debug: No users found in the 'users' table at all.");
+        }
       }
       throw new Error("User not found");
     }
 
-    console.log(`[saveSubscription] User FOUND: _id: "${user._id.toString()}", userId field: "${user.userId}"`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[saveSubscription] User FOUND: _id: "${user._id.toString()}", userId field: "${user.userId}"`);
+    }
 
     const updates = {
       stripeSubscriptionId: args.stripeSubscriptionId,

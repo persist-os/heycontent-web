@@ -190,4 +190,14 @@ const formStyles: { [key: string]: React.CSSProperties } = {
   }
 };
 
+// Inject @keyframes spin if not already present
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+  if (!document.getElementById('smart-note-wizard-spin-keyframes')) {
+    const style = document.createElement('style');
+    style.id = 'smart-note-wizard-spin-keyframes';
+    style.innerHTML = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
+    document.head.appendChild(style);
+  }
+}
+
 export { formStyles };

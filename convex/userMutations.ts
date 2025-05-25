@@ -74,7 +74,7 @@ export const create_user = mutation({
 });
 
 
-export const updateUser = mutation({
+export const updateUserStripeData = mutation({
   args: {
     userId: v.string(),
     updates: v.object({

@@ -85,7 +85,7 @@ export function useCommandPaletteState() {
         command.onSearch(cmdInput || '');
         break;
       case 'quick_ask':
-        router.push(`/chat?ask=${encodeURIComponent(command.question)}`);
+        router.push(`/dashboard/chat?ask=${encodeURIComponent(command.question)}`);
         break;
     }
     addToHistory(command, cmdInput);

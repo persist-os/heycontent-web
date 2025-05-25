@@ -46,6 +46,7 @@ export const OverageControlsCard: React.FC<OverageControlsCardProps> = ({
           className="border rounded px-2 py-1 w-20"
           value={monthlyLimit}
           onChange={e => setMonthlyLimit(Number(e.target.value))}
+          aria-label="Monthly overage spending limit"
         />
         <Button size="sm" onClick={handleSaveUbp} disabled={saving}>
           {saving ? "Saving..." : "Save"}

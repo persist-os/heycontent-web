@@ -41,6 +41,7 @@ export function HeroSection() {
             
             {/* Mobile Menu Button */}
             <button 
+              aria-label="Toggle menu"
               className="sm:hidden p-2 rounded-lg hover:bg-gray-100"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
@@ -119,7 +120,7 @@ export function HeroSection() {
           What's Next? Ask Content.
         </h1>
 
-        <div onClick={() => router.push('/login')} 
+        <div onClick={() => router.push('/auth/login')} 
              className="w-full relative cursor-pointer group">
           <input
             type="text"

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { AtSign, Hash } from 'lucide-react';
 import { CommandMenu, type Command } from '../CommandMenu';
 import type { Note } from '../types';
+import styles from './CommandMenus.module.css';
 
 interface CommandMenusProps {
   showCommands: boolean;
@@ -63,39 +64,19 @@ export function CommandMenus({
         <button
           key={option.id}
           onClick={async () => {
-            console.log('Mention option clicked:', option);
-            
             const start = textAreaRef.current?.selectionStart || 0;
             const textContent = textAreaRef.current?.value || '';
-            
-            // Create the mention text
             const mentionText = `@${option.id}`;
-            
-            // Update the content with the mention
             const newContent = textContent.substring(0, start - 1) + mentionText + ' ' + textContent.substring(start);
-            
-            // Create a new reference
             const newReference = {
               type: option.id as Note['references'][0]['type'],
               content: option.label,
               isLoading: false
             };
-            
-            console.log('Creating new reference:', newReference);
-            
             try {
-              // Get the current note's references
               const currentNote = textAreaRef.current?.closest('.note-container')?.getAttribute('data-note');
-              console.log('Current note data:', currentNote);
-              
               const currentReferences = currentNote ? JSON.parse(currentNote).references || [] : [];
-              console.log('Current references:', currentReferences);
-              
-              // Add the new reference
               const updatedReferences = [...currentReferences, newReference];
-              console.log('Updated references:', updatedReferences);
-              
-              // Update both content and references with proper updates wrapper
               await onUpdate(noteId, {
                 updates: {
                   content: newContent,
@@ -103,13 +84,9 @@ export function CommandMenus({
                   updatedAt: Date.now()
                 }
               });
-              
-              console.log('Note updated successfully');
-              
-              // Close the menu
               onCloseCommands();
             } catch (error) {
-              console.error('Failed to update note with mention:', error);
+              // Optionally handle error
             }
           }}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-50 text-left text-sm group"
@@ -168,6 +145,21 @@ export function CommandMenus({
     return descriptions[tag] || '';
   };
 
+  // Refs for dynamic positioning
+  const mentionsRef = useRef<HTMLDivElement>(null);
+  const tagsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (mentionsRef.current) {
+      mentionsRef.current.style.setProperty('--command-menu-top', `${menuPosition.top}px`);
+      mentionsRef.current.style.setProperty('--command-menu-left', `${menuPosition.left}px`);
+    }
+    if (tagsRef.current) {
+      tagsRef.current.style.setProperty('--command-menu-top', `${menuPosition.top}px`);
+      tagsRef.current.style.setProperty('--command-menu-left', `${menuPosition.left}px`);
+    }
+  }, [menuPosition]);
+
   return (
     <>
       {showCommands && (
@@ -181,11 +173,8 @@ export function CommandMenus({
 
       {showMentions && (
         <div
-          className="fixed bg-white rounded-lg shadow-lg border border-gray-200 z-50 w-64"
-          style={{
-            top: menuPosition.top,
-            left: menuPosition.left
-          }}
+          ref={mentionsRef}
+          className={`fixed bg-white rounded-lg shadow-lg border border-gray-200 z-50 w-64 ${styles['command-menu-position']}`}
         >
           <MentionsMenu />
         </div>
@@ -193,11 +182,8 @@ export function CommandMenus({
 
       {showTags && (
         <div
-          className="fixed bg-white rounded-lg shadow-lg border border-gray-200 z-50 w-64"
-          style={{
-            top: menuPosition.top,
-            left: menuPosition.left
-          }}
+          ref={tagsRef}
+          className={`fixed bg-white rounded-lg shadow-lg border border-gray-200 z-50 w-64 ${styles['command-menu-position']}`}
         >
           <TagsMenu />
         </div>

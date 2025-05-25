@@ -131,7 +131,8 @@ export default defineSchema({
         v.literal("conversation"),
         v.literal("idea"),
         v.literal("url"),
-        v.literal("date")
+        v.literal("date"),
+        v.literal("brainstorm")
       ),
       content: v.string(),
       isLoading: v.optional(v.boolean()),

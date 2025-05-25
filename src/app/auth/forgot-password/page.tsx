@@ -58,7 +58,7 @@ export default function ForgotPasswordPage() {
                 If an account exists with that email, you'll receive a reset link shortly.
               </p>
               <Link 
-                href="/login"
+                href="/auth/login"
                 className="text-blue-500 hover:underline block"
               >
                 Back to login
@@ -94,7 +94,7 @@ export default function ForgotPasswordPage() {
               </button>
 
               <Link 
-                href="/login"
+                href="/auth/login"
                 className="text-blue-500 hover:underline block text-center text-sm"
               >
                 Back to login

@@ -17,6 +17,7 @@ interface User {
 interface SubscriptionPlan {
   name?: string;
   price?: number;
+  interval?: string;
   [key: string]: any; // Allow for additional plan properties
 }
 
@@ -84,7 +85,13 @@ export const AccountSubscriptionCard: React.FC<AccountSubscriptionCardProps> = (
         <span className="font-semibold">Plan:</span> {currentSubscription?.plan?.name || 'Not subscribed'}
         {currentSubscription?.plan?.price !== undefined && (
           <span className="ml-2 text-gray-500">
-            ${currentSubscription.plan.price}/month
+            ${currentSubscription.plan.price}
+            {(() => {
+              const interval = currentSubscription.plan.interval;
+              if (interval === 'year' || interval === 'yearly') return '/year';
+              if (interval === 'month' || interval === 'monthly') return '/month';
+              return '/month';
+            })()}
           </span>
         )}
       </div>

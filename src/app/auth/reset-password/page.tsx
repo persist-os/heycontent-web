@@ -17,7 +17,7 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     if (!token) {
-      router.push('/login')
+      router.push('/auth/login')
     }
   }, [token, router])
 
@@ -36,7 +36,7 @@ export default function ResetPasswordPage() {
       })
 
       if (response.ok) {
-        router.push('/login?reset=success')
+        router.push('/auth/login?reset=success')
       } else {
         const data = await response.json()
         throw new Error(data.error || 'Failed to reset password')
@@ -102,7 +102,7 @@ export default function ResetPasswordPage() {
             </button>
 
             <Link 
-              href="/login"
+              href="/auth/login"
               className="text-blue-500 hover:underline block text-center text-sm"
             >
               Back to login

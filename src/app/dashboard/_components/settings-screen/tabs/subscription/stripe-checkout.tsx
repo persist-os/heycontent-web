@@ -24,7 +24,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ planId, onSuccess, o
     return () => { isMountedRef.current = false; };
   }, []);
 
-  // Handle URL parameters for success/cancel
+  // Handle URL parameters for success/cancel (no cleanup here)
   useEffect(() => {
     const queryString = window.location.search;
     const urlParams = new URLSearchParams(queryString);
@@ -34,13 +34,16 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ planId, onSuccess, o
     } else if (subscriptionStatus === 'canceled') {
       onCancel?.();
     }
-    // Clean up embedded checkout on unmount
+  }, [onSuccess, onCancel]);
+
+  // Cleanup embedded checkout on unmount only
+  useEffect(() => {
     return () => {
       const checkoutDiv = document.getElementById('checkout');
       if (checkoutDiv) checkoutDiv.innerHTML = '';
       checkoutMountedRef.current = false;
     };
-  }, [onSuccess, onCancel]);
+  }, []);
 
   return (
     <div className="min-h-[400px] bg-white dark:bg-gray-900 rounded-lg shadow-lg p-4">

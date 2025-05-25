@@ -753,7 +753,7 @@ app.post("/api/users/:id/stripe/customer", async (c) => {
     }
     
     // Update user with Stripe customer ID
-    await ctx.runMutation(api.userMutations.updateUser, {
+    await ctx.runMutation(api.userMutations.updateUserStripeData, {
       userId,
       updates: { stripeCustomerId }
     });
@@ -800,7 +800,7 @@ app.post("/api/users/:id/stripe/customer/update", async (c) => {
   }
 
   try {
-    await ctx.runMutation(api.userMutations.updateUser, {
+    await ctx.runMutation(api.userMutations.updateUserStripeData, {
       userId,
       updates
     });

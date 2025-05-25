@@ -121,12 +121,7 @@ export default function CheckoutCard({ planId, onClose }: Props) {
       )}
       <div 
         id="checkout" 
-        className="max-h-[80vh] overflow-auto rounded-lg shadow-lg relative"
-        style={{
-          minHeight: '400px',
-          maxWidth: '450px',
-          margin: '0 auto'
-        }}
+        className="min-h-[400px] max-w-[450px] mx-auto max-h-[80vh] overflow-auto rounded-lg shadow-lg relative"
       >
         {clientSecret && (
           <EmbeddedCheckoutProvider

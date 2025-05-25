@@ -158,8 +158,9 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
           <form onSubmit={handleSubmit} className="space-y-4 bg-white shadow-lg rounded-xl p-4 sm:p-8">
             <h2 className="text-2xl font-bold mb-4 text-center">Register</h2>
             <div>
-              <label className="block text-sm font-medium mb-1">Name</label>
+              <label htmlFor="name" className="block text-sm font-medium mb-1">Name</label>
               <input
+                id="name"
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
@@ -168,8 +169,9 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Username</label>
+              <label htmlFor="username" className="block text-sm font-medium mb-1">Username</label>
               <input
+                id="username"
                 type="text"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
@@ -195,9 +197,10 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
               {referralCodeValid && <div className="text-sm text-green-500 mt-1">Referral code valid!</div>}
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Email</label>
+              <label htmlFor="email" className="block text-sm font-medium mb-1">Email</label>
               <div className="relative">
                 <input
+                  id="email"
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
@@ -210,9 +213,10 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Password</label>
+              <label htmlFor="password" className="block text-sm font-medium mb-1">Password</label>
               <div className="relative">
                 <input
+                  id="password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}

@@ -127,15 +127,16 @@ export default function SubscriptionOverview() {
             });
             if (matchedPlan) {
               planPrice = matchedPlan.amount || matchedPlan.price || matchedPlan.amount_cents / 100;
+              mappedSubscription = {
+                ...status,
+                plan: {
+                  name: status.plan_name,
+                  price: planPrice,
+                  interval: matchedPlan.interval
+                }
+              };
             }
           }
-          mappedSubscription = {
-            ...status,
-            plan: {
-              name: status.plan_name,
-              price: planPrice
-            }
-          };
         }
         setCurrentSubscription(mappedSubscription);
         // TODO: Fetch sessions and usageEvents from backend endpoints

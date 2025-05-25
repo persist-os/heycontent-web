@@ -17,7 +17,7 @@ export default function DashboardLayout({
 
   useEffect(() => {
     if (!loading && !user) {
-      window.location.href = '/login'
+      window.location.href = '/auth/login'
     }
   }, [user, loading])
 
