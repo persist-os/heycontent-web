@@ -312,6 +312,7 @@ export default defineSchema({
     id: v.optional(v.string()), // For internal IDs if different from videoId
     url: v.optional(v.string()), // Full YouTube URL
     analysis: v.optional(v.any()),
+    analysis: v.optional(v.any()), // Store analysis data directly with the video
     
     // Video metadata from YouTube API
     snippet: v.optional(v.object({
@@ -409,16 +410,6 @@ export default defineSchema({
   .index("by_views", ["statistics.views"])
   .index("by_likes", ["statistics.likes"]),
 
-
-  youtubeAnalysis: defineTable({
-    userId: v.string(),
-    videoId: v.string(),
-    analysis: v.any(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_videoId", ["videoId"]),
 
   // Instagram Tokens
   instagramTokens: defineTable({

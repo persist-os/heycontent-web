@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { fetchWithAuth } from '@/app/lib/api-helpers';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useAuth } from '@/app/context/auth-context';
 import { SocialPlatform } from '@/app/types/social-platforms';
@@ -36,6 +36,9 @@ export function PlatformConnect() {
   const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInstagramOptions, setShowInstagramOptions] = useState(false);
+  
+  // Convex mutations
+  const disconnectInstagramMutation = useMutation(api.instagramMutations.disconnectInstagram);
 
   // Define fetchConnectedPlatforms before using it in any hooks
   const fetchConnectedPlatforms = async () => {
@@ -131,19 +134,32 @@ export function PlatformConnect() {
     return <div className="text-red-500 p-4">Failed to load Instagram data: {instagramData.error}</div>;
   }
 
+  // Handle disconnecting a platform
+
   const handleDisconnect = async (platform: SocialPlatform) => {
     try {
       setDisconnecting(platform);
-      const response = await fetchWithAuth('/api/social/disconnect', {
-        method: 'POST',
-        body: JSON.stringify({ platform })
-      });
-      if (!response) {
-        throw new Error('No response from server');
+      
+      if (platform === 'instagram' && user?.uid) {
+        // Use Convex mutation directly for Instagram
+        const result = await disconnectInstagramMutation({ userId: user.uid });
+        if (!result.success) {
+          throw new Error('Failed to disconnect Instagram');
+        }
+      } else {
+        // Use HTTP endpoint for other platforms
+        const response = await fetchWithAuth('/api/social/disconnect', {
+          method: 'POST',
+          body: JSON.stringify({ platform })
+        });
+        if (!response) {
+          throw new Error('No response from server');
+        }
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
       }
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      
       // Refresh the connected platforms list
       await fetchConnectedPlatforms();
       toast.success(`Successfully disconnected ${platform}`);
