@@ -1,10 +1,6 @@
-<<<<<<< HEAD:src/app/dashboard/_components/content-analytics/modals/InstagramModal.tsx
-import React, { useState } from 'react';
-import { Card } from '@/components/ui/card';
-=======
 import React, { useState, useEffect } from 'react';
-import { Card } from '@/src/components/ui/card';
->>>>>>> origin/main:app/(dashboard)/_components/content-analytics/modals/InstagramModal.tsx
+import { Card } from '@/components/ui/card';
+
 import { X, MessageSquare, Instagram, Sparkles, Bot, ExternalLink } from 'lucide-react';
 import { getApiKey } from '@/app/lib/api-helpers';
 import { InstagramContentItem } from '../types';
