@@ -3,6 +3,14 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  notesAnalyses: defineTable({
+    noteId: v.string(),
+    platform: v.string(),
+    output: v.optional(v.any()),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+  .index("by_noteId", ["noteId"]),
   // User Info
   users: defineTable({
     name: v.string(),
@@ -107,12 +115,14 @@ export default defineSchema({
     title: v.string(),
     content: v.string(),
     important: v.boolean(),
+    platform: v.optional(v.string()), // Added to support platform-specific notes
     type: v.optional(v.union(
       v.literal("ai_insight"),
       v.literal("conversation"),
       v.literal("idea"),
       v.literal("url"),
-      v.literal("date")
+      v.literal("date"),
+      v.literal("brainstorm")
     )),
     tags: v.array(v.string()),
     references: v.array(v.object({
@@ -121,12 +131,7 @@ export default defineSchema({
         v.literal("conversation"),
         v.literal("idea"),
         v.literal("url"),
-        v.literal("date"),
-        v.literal("screen"),
-        v.literal("component"),
-        v.literal("section"),
-        v.literal("feature"),
-        v.literal("workflow")
+        v.literal("date")
       ),
       content: v.string(),
       isLoading: v.optional(v.boolean()),
@@ -137,6 +142,7 @@ export default defineSchema({
   .index("by_user", ["userId"])
   .index("by_creation", ["createdAt"])
   .index("by_type", ["type"]),
+
 
   // API Keys
   api_keys: defineTable({

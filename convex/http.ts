@@ -3,6 +3,7 @@ import { HonoWithConvex, HttpRouterWithHono } from "convex-helpers/server/hono";
 import { ActionCtx } from "./_generated/server";
 import { api } from "./_generated/api";
 import { cors } from "hono/cors";
+import { Id } from "./_generated/dataModel";
 
 const app: HonoWithConvex<ActionCtx> = new Hono();
 
@@ -170,6 +171,197 @@ app.delete("/api/api-keys/delete", async (c) => {
     return c.json({ success: false, error: "Failed to delete API key" }, 500);
   }
 });
+
+
+// NOTES ROUTES
+app.post("/api/notes/create", async (c) => {
+  const ctx = c.env;
+  try {
+    const { userId, content, platform, templateInput, analysisId, type } = await c.req.json();
+
+    // Basic validation for required fields
+    if (!userId || !content || !platform) {
+      return c.json({ error: "Missing required fields: userId, content, or platform" }, 400);
+    }
+
+    const noteId = await ctx.runMutation(api.notes.createNote, {
+      userId,
+      content,
+      platform,
+      templateInput,
+      analysisId,
+      type,
+    });
+    return c.json({ success: true, noteId }, 201); // 201 Created
+  } catch (error: any) {
+    console.error("Failed to create note:", error);
+    // Check if the error is a ConvexError with data
+    if (error.data) {
+        return c.json({ success: false, error: "Failed to create note", details: error.data }, 500);
+    }
+    return c.json({ success: false, error: "Failed to create note", message: error.message || "Internal Server Error" }, 500);
+  }
+});
+
+app.get("/api/notes/:noteId", async (c) => {
+  const ctx = c.env;
+  const noteId = c.req.param("noteId");
+  const userId = c.req.query("userId"); // Get userId from query parameter
+
+  if (!userId) {
+    return c.json({ error: "Missing required query parameter: userId" }, 400);
+  }
+  if (!noteId) {
+    return c.json({ error: "Missing noteId in path" }, 400);
+  }
+
+  try {
+    const note = await ctx.runQuery(api.notes.getNote, { noteId, userId });
+    if (note) {
+      return c.json({ success: true, note });
+    } else {
+      return c.json({ success: false, error: "Note not found or unauthorized" }, 404);
+    }
+  } catch (error: any) {
+    console.error("Failed to get note:", error);
+    if (error.data) {
+        return c.json({ success: false, error: "Failed to get note", details: error.data }, 500);
+    }
+    return c.json({ success: false, error: "Failed to get note", message: error.message || "Internal Server Error" }, 500);
+  }
+});
+
+app.get("/api/users/:userId/notes", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("userId");
+
+  if (!userId) {
+    return c.json({ error: "Missing userId in path" }, 400);
+  }
+
+  try {
+    const notes = await ctx.runQuery(api.notes.getNotesByUser, { userId });
+    return c.json({ success: true, notes }); 
+  } catch (error: any) {
+    console.error("Failed to get notes by user:", error);
+    if (error.data) {
+        return c.json({ success: false, error: "Failed to get notes by user", details: error.data }, 500);
+    }
+    return c.json({ success: false, error: "Failed to get notes by user", message: error.message || "Internal Server Error" }, 500);
+  }
+});
+
+app.patch("/api/notes/:noteId", async (c) => {
+  const ctx = c.env;
+  const noteId = c.req.param("noteId"); // noteId from path
+  
+  try {
+    const { userId, updates } = await c.req.json(); // userId and updates from body
+
+    if (!userId) {
+      return c.json({ error: "Missing required field in body: userId" }, 400);
+    }
+    if (!updates || typeof updates !== 'object' || Object.keys(updates).length === 0) {
+      return c.json({ error: "Missing or empty 'updates' object in request body" }, 400);
+    }
+
+    const updatedNote = await ctx.runMutation(api.notes.updateNote, {
+      noteId: noteId as Id<"notes">, // Cast string from path to Id<"notes">
+      userId,
+      updates,
+    });
+    
+    return c.json({ success: true, note: updatedNote });
+
+  } catch (error: any) {
+    console.error("Failed to update note:", error);
+    if (error.message) {
+        if (error.message.includes("Note not found")) {
+            return c.json({ success: false, error: "Note not found" }, 404);
+        }
+        if (error.message.includes("Unauthorized")) {
+            return c.json({ success: false, error: "Unauthorized to update this note" }, 403);
+        }
+    }
+    if (error.data) { 
+        return c.json({ success: false, error: "Failed to update note", details: error.data }, 500);
+    }
+    return c.json({ success: false, error: "Failed to update note", message: error.message || "Internal Server Error" }, 500);
+  }
+});
+
+app.delete("/api/notes/:noteId", async (c) => {
+  const ctx = c.env;
+  const noteIdStr = c.req.param("noteId");
+  
+  try {
+    const { userId } = await c.req.json(); 
+
+    if (!userId) {
+      return c.json({ error: "Missing required field in body: userId" }, 400);
+    }
+
+    // Run the delete mutation (api.notes.deleteNote now expects noteId as v.id("notes"))
+    // Convex handles string to Id conversion, but we cast for TypeScript type safety.
+    const deleteResult = await ctx.runMutation(api.notes.deleteNote, {
+      noteId: noteIdStr as Id<"notes">,
+      userId,
+    });
+    
+    if (!deleteResult || !deleteResult.success) {
+      return c.json({ success: false, error: "Mutation reported failure to delete note" }, 500);
+    }
+
+    // Verification Step: Attempt to fetch the note to confirm deletion
+    // (api.notes.getNote expects noteId as string)
+    const stillExists = await ctx.runQuery(api.notes.getNote, { 
+      noteId: noteIdStr, 
+      userId // Pass userId, as getNote might require it for auth, though for a deleted note it should be null regardless
+    });
+
+    if (stillExists) {
+      console.error(`CRITICAL_VERIFICATION_FAILURE: Note ${noteIdStr} still found after supposed deletion.`);
+      return c.json({ success: false, error: "Note still found after deletion attempt, verification failed" }, 500);
+    }
+
+    // If we reach here, delete was successful and verification passed
+    return c.json({ success: true, message: "Note deleted successfully and verified" });
+
+  } catch (error: any) {
+    console.error("Failed to delete note or verify deletion:", error);
+    // Check if the error is from the initial delete attempt (e.g., note didn't exist)
+    if (error.message && error.message.includes("Note not found or unauthorized")) {
+        return c.json({ success: false, error: "Note not found or unauthorized to delete" }, 404);
+    }
+    // Generic error handling
+    if (error.data) {
+        return c.json({ success: false, error: "Failed to delete note", details: error.data }, 500);
+    }
+    return c.json({ success: false, error: "Failed to delete note", message: error.message || "Internal Server Error" }, 500);
+  }
+});
+
+// ANALYSES ROUTES
+app.get("/api/notes/:noteId/analyses", async (c) => {
+  const ctx = c.env;
+  const noteId = c.req.param("noteId");
+
+  if (!noteId) {
+    return c.json({ error: "Missing noteId in path" }, 400);
+  }
+
+  try {
+    const analyses = await ctx.runQuery(api.analyses.getAnalysesByNote, { noteId });
+    return c.json({ success: true, analyses });
+  } catch (error: any) {
+    console.error("Failed to get analyses for note:", error);
+    if (error.data) {
+        return c.json({ success: false, error: "Failed to get analyses for note", details: error.data }, 500);
+    }
+    return c.json({ success: false, error: "Failed to get analyses for note", message: error.message || "Internal Server Error" }, 500);
+  }
+});
+
 
 // GMAIL ROUTES
 
@@ -662,18 +854,39 @@ app.get("/api/users/:id/stripe/subscription/item", async (c) => {
   try {
     const subscription = await ctx.runQuery(api.subscriptionQueries.getUserSubscription, { userId });
     
-    if (!subscription || !subscription.items) {
-      return c.json({ success: false, error: "Subscription or items not found" }, 404);
+    if (!subscription) {
+      return c.json({ success: false, error: "Subscription not found" }, 404);
     }
     
-    // Find the item with the matching meter name
-    const item = subscription.items.find(item => item.meterName === meterName);
-    
-    if (!item) {
-      return c.json({ success: false, error: "Subscription item not found" }, 404);
+    // Check if subscription has items array (new structure)
+    if (subscription.items && Array.isArray(subscription.items)) {
+      // Find the item with the matching meter name
+      const item = subscription.items.find(item => item.meterName === meterName);
+      
+      if (!item) {
+        return c.json({ success: false, error: "Subscription item not found" }, 404);
+      }
+      
+      return c.json({ subscriptionItemId: item.stripeItemId });
     }
     
-    return c.json({ subscriptionItemId: item.stripeItemId });
+    // Fallback for subscriptions without items array (legacy structure)
+    // For the dual pricing model, generate subscription item IDs based on pattern
+    const stripeSubscriptionId = subscription.stripeSubscriptionId;
+    
+    if (!stripeSubscriptionId) {
+      return c.json({ success: false, error: "No Stripe subscription ID found" }, 404);
+    }
+    
+    // For API requests meter, return the metered component item ID
+    if (meterName === "api_requests") {
+      const meteredItemId = `si_metered_${stripeSubscriptionId}`;
+      return c.json({ subscriptionItemId: meteredItemId });
+    }
+    
+    // For other meters, we might need different handling
+    return c.json({ success: false, error: `Unsupported meter name: ${meterName}` }, 400);
+    
   } catch (error) {
     console.error("Failed to get subscription item:", error);
     return c.json({ success: false, error: "Failed to retrieve subscription item" }, 500);

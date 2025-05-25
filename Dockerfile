@@ -1,46 +1,66 @@
-# ---- Build Stage ----
-FROM node:18-alpine AS builder
-
-# Set working directory
+# Stage 1: Build the Next.js app
+FROM --platform=linux/amd64 node:18-alpine AS builder
 WORKDIR /app
 
-# Install dependencies (npm ci if lockfile is present)
-COPY package.json package-lock.json ./
-RUN npm ci
+# Set platform args
+ARG TARGETARCH
+ARG TARGETOS
 
-# Copy all files (including convex/ and app/)
+# Install build dependencies
+RUN apk add --no-cache libc6-compat
+
+# Install dependencies
+COPY package.json package-lock.json* ./
+RUN npm ci --legacy-peer-deps
+
+# Copy public assets including fonts
+COPY public ./public
+
+# Copy source code (exclude node_modules and .next for better caching)
 COPY . .
 
-# Build Next.js app
+# Set environment to production for build
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Build the application with network access disabled to prevent external font fetching
 RUN npm run build
 
-# ---- Production Stage ----
+# Stage 2: Production image
 FROM node:18-alpine AS runner
-
 WORKDIR /app
 
-# Install production dependencies only
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+# Set production environment
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=8080
 
-# Copy built app and other necessary files from builder
-COPY --from=builder /app/.next ./.next
+# Install production dependencies
+RUN apk add --no-cache libc6-compat
+
+# Copy the standalone directory
+COPY --from=builder /app/.next/standalone ./
+
+# Copy static files
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/next.config.js ./next.config.js
-COPY --from=builder /app/next.config.mjs ./next.config.mjs
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/app ./app
-COPY --from=builder /app/convex ./convex
-COPY --from=builder /app/src ./src
-COPY --from=builder /app/middleware.ts ./middleware.ts
-COPY --from=builder /app/.env.example ./.env.example
 
-# Expose port 8080 for Cloud Run
+# Copy .next files necessary for standalone mode
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/.next/server ./.next/server
+
+# Copy necessary configuration files
+COPY --from=builder /app/next.config.js ./
+COPY --from=builder /app/src/middleware.ts ./
+
+# Ensure the server.js is executable
+RUN chmod +x /app/server.js
+
+# Expose the port the app runs on
 EXPOSE 8080
 
-# Set environment variable for Next.js to use port 8080
-ENV PORT 8080
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/api/health || exit 1
 
-# Start the Next.js app
-CMD ["npm", "start", "--", "-p", "8080"]
+# Start the server
+CMD ["node", "server.js"]
