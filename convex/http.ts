@@ -769,13 +769,45 @@ app.post("/api/users/:id/stripe/customer", async (c) => {
 app.get("/api/users/:id/stripe/customer", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  
+
   try {
     const user = await ctx.runQuery(api.userQueries.getUser, { userId });
-    return c.json({ stripeCustomerId: user?.stripeCustomerId });
+    console.log("Fetched user for customer lookup:", user);
+    if (!user) {
+      return c.json({ success: false, error: "User not found" }, 404);
+    }
+    if (!user.stripeCustomerId) {
+      return c.json({ stripeCustomerId: null });
+    }
+    return c.json({ stripeCustomerId: user.stripeCustomerId });
   } catch (error) {
     console.error("Failed to get customer:", error);
     return c.json({ success: false, error: "Failed to retrieve customer" }, 500);
+  }
+});
+
+// Update Stripe customer details (email, name, default_payment_method, etc)
+app.post("/api/users/:id/stripe/customer/update", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const updates = await c.req.json();
+
+  if (!userId) {
+    return c.json({ success: false, error: "Missing user ID" }, 400);
+  }
+  if (!updates || typeof updates !== "object") {
+    return c.json({ success: false, error: "Missing or invalid update data" }, 400);
+  }
+
+  try {
+    await ctx.runMutation(api.userMutations.updateUser, {
+      userId,
+      updates
+    });
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Failed to update Stripe customer:", error);
+    return c.json({ success: false, error: "Failed to update Stripe customer" }, 500);
   }
 });
 
@@ -892,6 +924,8 @@ app.get("/api/users/:id/stripe/subscription/item", async (c) => {
     return c.json({ success: false, error: "Failed to retrieve subscription item" }, 500);
   }
 });
+
+
 
 // RATE LIMITING ENDPOINTS
 
