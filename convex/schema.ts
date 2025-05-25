@@ -312,7 +312,6 @@ export default defineSchema({
     id: v.optional(v.string()), // For internal IDs if different from videoId
     url: v.optional(v.string()), // Full YouTube URL
     analysis: v.optional(v.any()),
-    analysis: v.optional(v.any()), // Store analysis data directly with the video
     
     // Video metadata from YouTube API
     snippet: v.optional(v.object({
