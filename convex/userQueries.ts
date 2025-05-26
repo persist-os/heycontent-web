@@ -56,13 +56,34 @@ export const getUserByEmail = query({
         .first()
     }
   })
+
+export const getUser = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("users")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first()
+  }
+})
+
+export const getUserByStripeCustomerId = query({
+  args: { stripeCustomerId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("users")
+      .withIndex("by_stripeCustomerId", (q) => q.eq("stripeCustomerId", args.stripeCustomerId))
+      .first()
+  }
+})
+
+export const getUserByStripeSubscriptionId = query({
+  args: { stripeSubscriptionId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("stripeSubscriptionId"), args.stripeSubscriptionId))
+      .first()
+  }
+})
   
-  export const getUser = query({
-    args: { userId: v.string() },
-    handler: async (ctx, args) => {
-      return await ctx.db
-        .query("users")
-        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-        .first()
-    }
-  }) 

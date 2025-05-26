@@ -3,6 +3,14 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  notesAnalyses: defineTable({
+    noteId: v.string(),
+    platform: v.string(),
+    output: v.optional(v.any()),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+  .index("by_noteId", ["noteId"]),
   // User Info
   users: defineTable({
     name: v.string(),
@@ -14,9 +22,59 @@ export default defineSchema({
     updatedAt: v.number(),
     referralCode: v.optional(v.string()),
     referredBy: v.optional(v.string()),
+    
+    // Stripe integration
+    stripeCustomerId: v.optional(v.string()),
+    stripeSubscriptionId: v.optional(v.string()),
+    
+    // Subscription state
+    subscription: v.optional(v.object({
+      status: v.union(
+        v.literal("active"),
+        v.literal("past_due"),
+        v.literal("canceled"),
+        v.literal("unpaid"),
+        v.literal("dev"),
+        v.literal("tester"),
+      ),
+      // Plan type with interval
+      plan: v.union(
+        v.literal("monthly_basic"),
+        v.literal("monthly_pro"),
+        v.literal("yearly_basic"),
+        v.literal("yearly_pro")
+      ),
+      priceId: v.string(),
+      currentPeriodStart: v.number(),
+      currentPeriodEnd: v.number(),
+      cancelAtPeriodEnd: v.boolean(),
+      includedRequests: v.number(),
+      usedRequests: v.number(),
+      subscriptionItemId: v.optional(v.string()), // For metered billing
+      lastSyncedAt: v.optional(v.number())
+    })),
+    
+    // Payment method info (minimal, just for display)
+    paymentMethod: v.optional(v.object({
+      brand: v.string(),
+      last4: v.string(),
+      expMonth: v.number(),
+      expYear: v.number()
+    })),
+    
+    // Usage tracking for current billing period
+    usage: v.optional(v.object({
+      periodStart: v.number(),
+      periodEnd: v.number(),
+      totalRequests: v.number(),
+      includedRequests: v.number(),
+      overageRequests: v.number(),
+      lastUpdated: v.number()
+    }))
   })
   .index("by_userId", ["userId"])
   .index("by_email", ["email"])
+  .index("by_stripeCustomerId", ["stripeCustomerId"])
   .index("by_username", ["username"]),
 
   personas: defineTable({
@@ -57,12 +115,14 @@ export default defineSchema({
     title: v.string(),
     content: v.string(),
     important: v.boolean(),
+    platform: v.optional(v.string()), // Added to support platform-specific notes
     type: v.optional(v.union(
       v.literal("ai_insight"),
       v.literal("conversation"),
       v.literal("idea"),
       v.literal("url"),
-      v.literal("date")
+      v.literal("date"),
+      v.literal("brainstorm")
     )),
     tags: v.array(v.string()),
     references: v.array(v.object({
@@ -71,7 +131,8 @@ export default defineSchema({
         v.literal("conversation"),
         v.literal("idea"),
         v.literal("url"),
-        v.literal("date")
+        v.literal("date"),
+        v.literal("brainstorm")
       ),
       content: v.string(),
       isLoading: v.optional(v.boolean()),
@@ -82,6 +143,7 @@ export default defineSchema({
   .index("by_user", ["userId"])
   .index("by_creation", ["createdAt"])
   .index("by_type", ["type"]),
+
 
   // API Keys
   api_keys: defineTable({
@@ -250,7 +312,7 @@ export default defineSchema({
     videoId: v.string(), // Required - this is the YouTube video ID
     id: v.optional(v.string()), // For internal IDs if different from videoId
     url: v.optional(v.string()), // Full YouTube URL
-    analysis: v.optional(v.any()), // Store analysis data directly with the video
+    analysis: v.optional(v.any()),
     
     // Video metadata from YouTube API
     snippet: v.optional(v.object({
@@ -258,15 +320,15 @@ export default defineSchema({
       description: v.optional(v.string()),
       published_at: v.optional(v.string()),
       channel: v.optional(v.object({
-        id: v.optional(v.string()),
-        title: v.optional(v.string()),
+        id: v.optional(v.union(v.string(), v.null())),
+        title: v.optional(v.union(v.string(), v.null())),
       })),
       thumbnails: v.optional(v.object({
-        default: v.optional(v.string()),
-        medium: v.optional(v.string()),
-        high: v.optional(v.string()),
-        standard: v.optional(v.string()),
-        maxres: v.optional(v.string()),
+        default: v.optional(v.union(v.string(), v.null())),
+        medium: v.optional(v.union(v.string(), v.null())),
+        high: v.optional(v.union(v.string(), v.null())),
+        standard: v.optional(v.union(v.string(), v.null())),
+        maxres: v.optional(v.union(v.string(), v.null())),
       })),
       tags: v.optional(v.array(v.string())),
     })),
@@ -437,4 +499,50 @@ export default defineSchema({
   .index("by_postId", ["postId"])
   .index("by_timestamp", ["data.timestamp"]),
 
+
+  // Subscription plans are now managed in Stripe
+  // and cached in memory or environment variables
+
+  // Historical usage records
+  usageHistory: defineTable({
+    userId: v.string(),
+    periodStart: v.number(),
+    periodEnd: v.number(),
+    totalRequests: v.number(),
+    includedRequests: v.number(),
+    overageRequests: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_period", ["periodStart", "periodEnd"]),
+
+  sessions: defineTable({
+    userId: v.string(),
+    type: v.union(v.literal("desktop"), v.literal("web")),
+    createdAt: v.number(),
+    lastActive: v.number(),
+    revoked: v.boolean(),
+  })
+  .index("by_user", ["userId"]),
+
+  usageEvents: defineTable({
+    userId: v.string(),
+    timestamp: v.number(),
+    model: v.string(),
+    status: v.string(),
+    qty: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_timestamp", ["timestamp"]),
+
+  ubpSettings: defineTable({
+    userId: v.string(),
+    enabled: v.boolean(),
+    premiumEnabled: v.boolean(),
+    monthlyLimit: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_user", ["userId"]),
 });

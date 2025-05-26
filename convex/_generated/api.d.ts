@@ -13,6 +13,7 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as analyses from "../analyses.js";
 import type * as apiKeys from "../apiKeys.js";
 import type * as apiKeysMutations from "../apiKeysMutations.js";
 import type * as apiKeysQueries from "../apiKeysQueries.js";
@@ -28,6 +29,11 @@ import type * as notes from "../notes.js";
 import type * as personaQueries from "../personaQueries.js";
 import type * as personas from "../personas.js";
 import type * as rateLimiting from "../rateLimiting.js";
+import type * as sessions from "../sessions.js";
+import type * as subscriptionActions from "../subscriptionActions.js";
+import type * as subscriptionQueries from "../subscriptionQueries.js";
+import type * as ubpSettings from "../ubpSettings.js";
+import type * as usageEvents from "../usageEvents.js";
 import type * as userMutations from "../userMutations.js";
 import type * as userQueries from "../userQueries.js";
 import type * as youtubeMutations from "../youtubeMutations.js";
@@ -42,6 +48,7 @@ import type * as youtubeQueries from "../youtubeQueries.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  analyses: typeof analyses;
   apiKeys: typeof apiKeys;
   apiKeysMutations: typeof apiKeysMutations;
   apiKeysQueries: typeof apiKeysQueries;
@@ -57,6 +64,11 @@ declare const fullApi: ApiFromModules<{
   personaQueries: typeof personaQueries;
   personas: typeof personas;
   rateLimiting: typeof rateLimiting;
+  sessions: typeof sessions;
+  subscriptionActions: typeof subscriptionActions;
+  subscriptionQueries: typeof subscriptionQueries;
+  ubpSettings: typeof ubpSettings;
+  usageEvents: typeof usageEvents;
   userMutations: typeof userMutations;
   userQueries: typeof userQueries;
   youtubeMutations: typeof youtubeMutations;

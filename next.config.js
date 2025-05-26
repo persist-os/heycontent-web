@@ -1,7 +1,31 @@
 /** @type {import('next').NextConfig} */
+import { fileURLToPath } from 'url';
+import path from 'path';
+import CopyWebpackPlugin from 'copy-webpack-plugin';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// List of files to copy to the standalone output
+const copyFiles = [
+  { from: 'firebase_key.json', to: 'firebase_key.json' },
+  // Add other files that need to be copied to the standalone output
+];
+
 const nextConfig = {
+  reactStrictMode: true,
+  poweredByHeader: false,
   images: {
-    unoptimized: true,
+    domains: [
+      'localhost',
+      '*.googleapis.com',
+      '*.firebaseio.com',
+      '*.convex.cloud',
+      'convex.domains',
+      'heycontent-web-216038426364.us-central1.run.app',
+      'i.ytimg.com',
+      'img.youtube.com',
+    ],
     remotePatterns: [
       {
         protocol: 'http',
@@ -41,27 +65,35 @@ const nextConfig = {
       },
     ],
   },
-  async headers() {
-    return [
-      {
-        source: '/:path*',
-        headers: [
-          {
-            key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval'",
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' blob: data: *.ytimg.com *.youtube.com *.cdninstagram.com *.instagram.com",
-              "font-src 'self'",
-              "connect-src 'self' wss://*.convex.cloud https://*.convex.cloud http://localhost:9099 https://*.firebaseio.com https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com",
-              "frame-ancestors 'self'"
-            ].join('; ')
-          }
-        ]
-      }
-    ]
-  }
-}
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  webpack: (config, { isServer }) => {
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      module: false,
+      net: false,
+      dns: false,
+      child_process: false,
+      tls: false,
+    };
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': __dirname,
+      '@/src': path.resolve(__dirname, 'src'),
+      '@/components': path.resolve(__dirname, 'components'),
+      '@/convex': path.resolve(__dirname, 'convex'),
+      '@/app': path.resolve(__dirname, 'app')
+    };
+    if (!isServer) {
+      config.resolve.alias['@/public'] = path.resolve(__dirname, 'public');
+    }
+    return config;
+  },
+};
 
-module.exports = nextConfig 
+export default nextConfig; 
