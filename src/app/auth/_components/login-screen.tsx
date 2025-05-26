@@ -166,6 +166,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
                 onChange={e => setEmail(e.target.value)}
                 className="w-full border rounded px-3 py-2 pr-10"
                 required
+                placeholder="Enter your email"
+                title="Email address"
               />
               <span className="absolute right-2 top-2 text-gray-400">
                 {/* Use lucide-react Mail icon if available */}
@@ -181,6 +183,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
                 onChange={e => setPassword(e.target.value)}
                 className="w-full border rounded px-3 py-2 pr-10"
                 required
+                placeholder="Enter your password"
+                title="Password"
               />
               <button
                 type="button"

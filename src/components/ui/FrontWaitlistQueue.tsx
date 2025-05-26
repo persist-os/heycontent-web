@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo } from './logo';
 import { Share2, Copy, Check, Twitter, Dice6 } from 'lucide-react';
 import Tilt from 'react-parallax-tilt';
+import { COLOR_SCHEMES } from '@/data/colorSchemes';
 
 interface FrontWaitlistQueueProps {
   position: number;
@@ -12,155 +13,112 @@ interface FrontWaitlistQueueProps {
   onQueueComplete?: () => void;
 }
 
-// Add color schemes
-const COLOR_SCHEMES = [
-  {
-    primary: '#7E3AF2',
-    gradient: {
-      from: 'purple-200/50',
-      via: 'blue-200/50',
-      to: 'emerald-200/50',
-      glow: 'rgba(126,58,242,0.4)'
-    },
-    title: 'Creative Pioneer'
-  },
-  {
-    primary: '#F43F5E',
-    gradient: {
-      from: 'red-200/50',
-      via: 'orange-200/50',
-      to: 'yellow-200/50',
-      glow: 'rgba(244,63,94,0.4)'
-    },
-    title: 'Digital Innovator'
-  },
-  {
-    primary: '#0EA5E9',
-    gradient: {
-      from: 'blue-200/50',
-      via: 'cyan-200/50',
-      to: 'teal-200/50',
-      glow: 'rgba(14,165,233,0.4)'
-    },
-    title: 'Content Architect'
-  },
-  {
-    primary: '#10B981',
-    gradient: {
-      from: 'emerald-200/50',
-      via: 'green-200/50',
-      to: 'teal-200/50',
-      glow: 'rgba(16,185,129,0.4)'
-    },
-    title: 'Vision Creator'
-  },
-  {
-    primary: '#8B5CF6',
-    gradient: {
-      from: 'violet-200/50',
-      via: 'purple-200/50',
-      to: 'fuchsia-200/50',
-      glow: 'rgba(139,92,246,0.4)'
-    },
-    title: 'Design Alchemist'
-  },
-  {
-    primary: '#EC4899',
-    gradient: {
-      from: 'pink-200/50',
-      via: 'rose-200/50',
-      to: 'red-200/50',
-      glow: 'rgba(236,72,153,0.4)'
-    },
-    title: 'Future Shaper'
-  },
-  {
-    primary: '#06B6D4',
-    gradient: {
-      from: 'cyan-200/50',
-      via: 'sky-200/50',
-      to: 'blue-200/50',
-      glow: 'rgba(6,182,212,0.4)'
-    },
-    title: 'Tech Visionary'
-  },
-  {
-    primary: '#FB923C',
-    gradient: {
-      from: 'orange-200/50',
-      via: 'amber-200/50',
-      to: 'yellow-200/50',
-      glow: 'rgba(251,146,60,0.4)'
-    },
-    title: 'Brand Catalyst'
-  },
-  {
-    primary: '#6366F1',
-    gradient: {
-      from: 'indigo-200/50',
-      via: 'blue-200/50',
-      to: 'violet-200/50',
-      glow: 'rgba(99,102,241,0.4)'
-    },
-    title: 'Digital Maven'
-  },
-  {
-    primary: '#14B8A6',
-    gradient: {
-      from: 'teal-200/50',
-      via: 'emerald-200/50',
-      to: 'cyan-200/50',
-      glow: 'rgba(20,184,166,0.4)'
-    },
-    title: 'Innovation Lead'
-  },
-  {
-    primary: '#F59E0B',
-    gradient: {
-      from: 'amber-200/50',
-      via: 'yellow-200/50',
-      to: 'orange-200/50',
-      glow: 'rgba(245,158,11,0.4)'
-    },
-    title: 'Content Master'
-  },
-  {
-    primary: '#4F46E5',
-    gradient: {
-      from: 'indigo-200/50',
-      via: 'purple-200/50',
-      to: 'blue-200/50',
-      glow: 'rgba(79,70,229,0.4)'
-    },
-    title: 'Digital Pioneer'
-  }
-];
-
 export const FrontWaitlistQueue = ({ position, queueId, onQueueComplete }: FrontWaitlistQueueProps) => {
   const [stage, setStage] = useState<'register' | 'queue' | 'card'>('register');
-  const [currentPosition, setCurrentPosition] = useState(position);
+  const [currentPosition, setCurrentPosition] = useState(Math.floor(Math.random() * (57 - 51 + 1)) + 51);
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [copied, setCopied] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
   const [invitesLeft, setInvitesLeft] = useState(3);
   const [colorSchemeIndex, setColorSchemeIndex] = useState(0);
-  
-  useEffect(() => {
-    if (stage === 'queue') {
-      const interval = setInterval(() => {
-        if (currentPosition > 0) {
-          setCurrentPosition(prev => prev - 1);
-        } else {
+  const [progress, setProgress] = useState(0);
+  const decrementTimers = useRef<NodeJS.Timeout[]>([]);
+  const initialCount = useRef(currentPosition);
+
+  // Function to calculate if we should hang on this number
+  const shouldHang = (number: number) => {
+    // Hang on prime numbers between 51-57 (53)
+    if (number === 53) return true;
+    // Hang on numbers divisible by 3
+    if (number % 3 === 0) return true;
+    // Random chance to hang (20%)
+    return Math.random() < 0.2;
+  };
+
+  // Helper to generate milestone numbers for the countdown
+  function generateMilestones(start: number, steps: number) {
+    const milestones = [start];
+    let current = start;
+    for (let i = 1; i < steps - 1; i++) {
+      // Decrement by a random value, but ensure we reach 1 at the end
+      const remaining = steps - i;
+      const minNext = Math.max(1, current - Math.ceil((current - 1) / remaining) - 1);
+      const maxNext = Math.max(1, current - 1 - (remaining - 1));
+      const next = Math.max(1, Math.floor(Math.random() * (current - minNext + 1)) + minNext);
+      current = Math.max(1, Math.min(next, maxNext));
+      milestones.push(current);
+    }
+    milestones[milestones.length - 1] = 1; // Ensure last is 1
+    return milestones;
+  }
+
+  // Helper to generate intervals that sum to a total duration, with some longer 'hangs'
+  function generateIntervals(count: number, totalDuration: number) {
+    const base = Math.floor(totalDuration / count);
+    const intervals = Array(count).fill(base);
+    const hangIndices = [];
+    for (let i = 0; i < count; i++) {
+      if (Math.random() < 0.18 || i === Math.floor(count / 2)) hangIndices.push(i);
+    }
+    let extra = Math.floor(totalDuration * 0.25); // up to 25% of time is for hangs
+    for (const idx of hangIndices) {
+      const add = Math.floor(Math.random() * (extra / hangIndices.length));
+      intervals[idx] += add;
+      extra -= add;
+    }
+    let i = 0;
+    while (extra > 0) {
+      intervals[i % count]++;
+      extra--;
+      i++;
+    }
+    for (let i = 0; i < count; i++) {
+      if (!hangIndices.includes(i)) {
+        const jitter = Math.floor(Math.random() * 40) - 20;
+        intervals[i] = Math.max(30, intervals[i] + jitter);
+      }
+    }
+    return intervals;
+  }
+
+  // Function to handle the countdown logic
+  const startCountdown = () => {
+    decrementTimers.current.forEach(timer => clearTimeout(timer));
+    decrementTimers.current = [];
+    const start = Math.floor(Math.random() * (57 - 51 + 1)) + 51;
+    const steps = Math.floor(Math.random() * 2) + 7; // 7 or 8 steps
+    const milestones = generateMilestones(start, steps);
+    initialCount.current = start;
+    setCurrentPosition(milestones[0]);
+    setProgress(0); // Ensure bar starts empty
+    const totalDuration = Math.floor(Math.random() * 1000) + 7000; // 7000-8000ms
+    const intervals = generateIntervals(milestones.length - 1, totalDuration);
+    let acc = 0;
+    for (let i = 1; i < milestones.length; i++) {
+      acc += intervals[i - 1];
+      const value = milestones[i];
+      const progressValue = (i / (milestones.length - 1)) * 100;
+      const timer = setTimeout(() => {
+        setCurrentPosition(value);
+        setProgress(progressValue);
+        if (value === 1) {
           setStage('card');
           onQueueComplete?.();
-          clearInterval(interval);
         }
-      }, 3000);
-
-      return () => clearInterval(interval);
+      }, acc);
+      decrementTimers.current.push(timer);
     }
-  }, [currentPosition, onQueueComplete, stage]);
+  };
+
+  useEffect(() => {
+    if (stage === 'queue') {
+      startCountdown();
+    }
+    return () => {
+      decrementTimers.current.forEach(timer => clearTimeout(timer));
+    };
+  }, [stage]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,7 +129,7 @@ export const FrontWaitlistQueue = ({ position, queueId, onQueueComplete }: Front
 
   const handleCopyInviteLink = async () => {
     try {
-      await navigator.clipboard.writeText(`Join me on HeyContent! Use my invite code: ${queueId}`);
+      await navigator.clipboard.writeText('Join me on HeyContent! https://www.heycontent.co/');
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -181,7 +139,7 @@ export const FrontWaitlistQueue = ({ position, queueId, onQueueComplete }: Front
 
   const handleShare = async (platform: 'twitter' | 'copy') => {
     if (platform === 'twitter') {
-      const text = encodeURIComponent(`🚀 Just joined the @HeyContent waitlist! Join me in revolutionizing content creation. Use my invite code: ${queueId}`);
+      const text = encodeURIComponent('🚀 Just joined the @HeyContent waitlist! Join me in revolutionizing content creation: https://www.heycontent.co/');
       window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
     } else {
       handleCopyInviteLink();
@@ -244,6 +202,7 @@ export const FrontWaitlistQueue = ({ position, queueId, onQueueComplete }: Front
             onClick={handleColorChange}
             className="absolute -right-12 top-4 p-2 rounded-full bg-white shadow-lg hover:shadow-xl transition-all duration-300 group"
             style={{ color: currentScheme.primary }}
+            aria-label="Change card color scheme"
           >
             <Dice6 className="w-6 h-6 transform group-hover:rotate-180 transition-transform duration-500" />
           </button>
@@ -334,7 +293,7 @@ export const FrontWaitlistQueue = ({ position, queueId, onQueueComplete }: Front
                 <div className="relative h-full flex flex-col justify-between" style={{ color: currentScheme.primary }}>
                   <div className="text-center">
                     <h3 className="text-2xl font-semibold mb-4">Share Your Card</h3>
-                    <p className="text-sm opacity-90 mb-6">Invite friends to move up in the queue!</p>
+                    <p className="text-sm opacity-90 mb-6">Support us by sharing your card with your friends!</p>
                   </div>
 
                   <div className="space-y-4">
@@ -375,12 +334,6 @@ export const FrontWaitlistQueue = ({ position, queueId, onQueueComplete }: Front
                         </>
                       )}
                     </button>
-
-                    <div className="text-center">
-                      <p className="text-sm">
-                        {invitesLeft} invite{invitesLeft !== 1 ? 's' : ''} remaining
-                      </p>
-                    </div>
                   </div>
 
                   <p className="text-center text-sm opacity-75 mt-4">
