@@ -1,7 +1,5 @@
 import { initializeApp, cert, getApps, App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
-import * as fs from 'fs';
-import * as path from 'path';
 
 // Initialize Firebase Admin SDK
 let adminApp: App | null = null;
@@ -10,20 +8,19 @@ if (getApps().length === 0) {
   try {
     console.log('Initializing Firebase Admin SDK...');
     
-    // Detect the path to the service account key
-    const defaultLocalPath = path.join(process.cwd(), 'firebase_key.json');
-    const serviceAccountPath = process.env.FIREBASE_KEY_PATH || defaultLocalPath;
-    console.log('Looking for service account at:', serviceAccountPath);
-
-    // Check if the file exists
-    if (!fs.existsSync(serviceAccountPath)) {
-      throw new Error(`Firebase service account key not found at ${serviceAccountPath}.\n` +
-        'Set the FIREBASE_KEY_PATH env var to the mounted secret path in Cloud Run, or place firebase_key.json in project root for local dev.');
+    // Use the raw JSON from the environment variable
+    const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+    if (!serviceAccountJson) {
+      throw new Error(
+        'FIREBASE_SERVICE_ACCOUNT_JSON env var not set. Please provide the full service account JSON as an environment variable.'
+      );
     }
-
-    // Read the service account key file
-    const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-    console.log('Service account loaded successfully from:', serviceAccountPath);
+    let serviceAccount;
+    try {
+      serviceAccount = JSON.parse(serviceAccountJson);
+    } catch (e) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON.');
+    }
 
     // Log the service account details (excluding private key)
     console.log('Firebase Admin Config:', {
