@@ -824,7 +824,8 @@ app.post("/api/users/:id/stripe/subscription", async (c) => {
     stripeCustomerId,
     currentPeriodStart,
     currentPeriodEnd,
-    cancelAtPeriodEnd
+    cancelAtPeriodEnd,
+    canceledAt
   } = await c.req.json();
   
   try {
@@ -838,7 +839,8 @@ app.post("/api/users/:id/stripe/subscription", async (c) => {
       stripeCustomerId,
       currentPeriodStart,
       currentPeriodEnd,
-      cancelAtPeriodEnd
+      cancelAtPeriodEnd,
+      canceledAt
     });
     
     return c.json({ success: true, subscriptionId: result });
