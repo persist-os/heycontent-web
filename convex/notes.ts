@@ -9,7 +9,8 @@ const noteType = v.union(
   v.literal("idea"),
   v.literal("url"),
   v.literal("date"),
-  v.literal("brainstorm")
+  v.literal("brainstorm"),
+  v.literal("click")
 );
 
 const referenceType = v.union(
@@ -18,7 +19,8 @@ const referenceType = v.union(
   v.literal("idea"),
   v.literal("url"),
   v.literal("date"),
-  v.literal("brainstorm")
+  v.literal("brainstorm"),
+  v.literal("click")
 );
 
 export const getNotesByUser = query({

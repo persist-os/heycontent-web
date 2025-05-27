@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Note, NoteUpdate } from './types';
 import { ShortcutManager } from './keyboard-shortcuts';
 import { CommandMenu, type Command } from './CommandMenu';
+import type { PlatformKey } from './types/platformPrompts';
 import { saveToLocal, getCursorCoordinates, applyFormat } from './utils/note-utils';
 import { NoteHeader } from './components/NoteHeader';
 import { NoteReferences } from './components/NoteReferences';
@@ -36,6 +37,7 @@ export function NoteArea({
   }, [note.content]);
 
   const [cursorPosition, setCursorPosition] = useState<number | null>(null);
+  // The command (slash) menu is only shown when the user types `/` at the start of a line
   const [showCommands, setShowCommands] = useState(false);
   const [showMentions, setShowMentions] = useState(false);
   const [showTags, setShowTags] = useState(false);

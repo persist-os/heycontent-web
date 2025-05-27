@@ -69,7 +69,6 @@ export default defineSchema({
       overageRequests: v.number(),
       lastUpdated: v.number()
     }))
->>>>>>> d6928e4c3c070afdbf131b9573af3af3e6a0ce1c
   })
   .index("by_userId", ["userId"])
   .index("by_email", ["email"])
@@ -121,7 +120,8 @@ export default defineSchema({
       v.literal("idea"),
       v.literal("url"),
       v.literal("date"),
-      v.literal("brainstorm")
+      v.literal("brainstorm"),
+      v.literal("click")
     )),
     tags: v.array(v.string()),
     references: v.array(v.object({
@@ -131,7 +131,8 @@ export default defineSchema({
         v.literal("idea"),
         v.literal("url"),
         v.literal("date"),
-        v.literal("brainstorm")
+        v.literal("brainstorm"),
+        v.literal("click")
       ),
       content: v.string(),
       isLoading: v.optional(v.boolean()),

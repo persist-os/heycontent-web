@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Hash, Star, Calendar, Image, LinkIcon, Lightbulb, MessageSquare, Type, ListOrdered, List } from 'lucide-react';
+import { platformPrompts, PlatformKey } from './types/platformPrompts';
 
 export interface Command {
   icon: any;
@@ -132,20 +133,29 @@ interface CommandMenuProps {
   position?: { top: number; left: number };
 }
 
-export function CommandMenu({ onSelect, onClose, searchTerm = '', position }: CommandMenuProps) {
+export function CommandMenu({ onSelect, onClose, searchTerm = '', position, platform }: CommandMenuProps & { platform: PlatformKey }) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [filteredCommands, setFilteredCommands] = useState(commands);
+  const [filteredCommands, setFilteredCommands] = useState<any[]>([]);
 
-  // Filter commands based on search term
+  // Build commands from platformPrompts
   useEffect(() => {
-    const filtered = commands.filter(cmd => 
+    const postTypePrompts = platformPrompts[platform] || [];
+    const platformCommands = postTypePrompts.map(prompt => ({
+      icon: Lightbulb, // You can customize icons per type if desired
+      label: prompt.key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      action: prompt.key,
+      preview: prompt.description,
+      type: 'block',
+      template: '', // You can add templates if you want to insert something
+    }));
+    const filtered = platformCommands.filter(cmd =>
       cmd.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
       cmd.action.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredCommands(filtered);
     setSelectedIndex(0);
-  }, [searchTerm]);
+  }, [searchTerm, platform]);
 
   // Handle keyboard navigation and scroll into view
   useEffect(() => {
