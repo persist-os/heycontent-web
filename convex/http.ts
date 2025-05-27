@@ -4,6 +4,7 @@ import { ActionCtx } from "./_generated/server";
 import { api } from "./_generated/api";
 import { cors } from "hono/cors";
 import { Id } from "./_generated/dataModel";
+import * as usageEventsApi from "./usageEvents";
 
 const app: HonoWithConvex<ActionCtx> = new Hono();
 
@@ -974,6 +975,55 @@ app.post("/addRateLimitRequest", async (c) => {
     console.error("Failed to store rate limit request:", error);
     return c.json({ success: false, error: "Failed to store rate limit request" }, 500);
   }
+});
+
+// USAGE EVENTS ROUTES
+
+// Log a usage event
+app.post("/api/users/:id/usage/log", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { timestamp, model, status, qty } = await c.req.json();
+  if (!userId || !timestamp || !model || !status || typeof qty !== "number") {
+    return c.json({ success: false, error: "Missing required fields" }, 400);
+  }
+  // Log the event
+  await ctx.runMutation(api.usageEvents.logUsageEvent, {
+    userId,
+    timestamp,
+    model,
+    status,
+    qty,
+  });
+  // Update user's usage field
+  await ctx.runMutation(api.usageEvents.updateUserUsage, { userId, qty });
+  return c.json({ success: true });
+});
+
+// Get usage summary for a user
+app.get("/api/users/:id/usage/summary", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  if (!userId) return c.json({ success: false, error: "Missing userId" }, 400);
+  const summary = await ctx.runQuery(api.usageEvents.getUsageSummary, { userId });
+  return c.json({ success: true, ...summary });
+});
+
+// Reset usage for a new period (admin/cron)
+app.post("/api/users/:id/usage/reset", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { periodStart, periodEnd, includedRequests } = await c.req.json();
+  if (!userId || !periodStart || !periodEnd || typeof includedRequests !== "number") {
+    return c.json({ success: false, error: "Missing required fields" }, 400);
+  }
+  const result = await ctx.runMutation(api.usageEvents.resetUsageForPeriod, {
+    userId,
+    periodStart,
+    periodEnd,
+    includedRequests,
+  });
+  return c.json(result);
 });
 
 const router = new HttpRouterWithHono(app);

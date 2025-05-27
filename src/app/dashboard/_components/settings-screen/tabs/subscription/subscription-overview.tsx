@@ -7,27 +7,25 @@ import { CheckoutForm } from './stripe-checkout';
 import { UsageAndBillingCard } from './cards/UsageAndBillingCard';
 import { OverageControlsCard } from './cards/OverageControlsCard';
 import { AccountSubscriptionCard } from './cards/AccountSubscriptionCard';
-import { ActiveSessionsCard } from './cards/ActiveSessionsCard';
 import { RecentUsageEventsCard } from './cards/RecentUsageEventsCard';
 import { QuantityChangeDialog } from './cards/QuantityChangeDialog';
 import UpgradeModal from './upgrade-modal';
 import { useAuth } from "@/app/context/auth-context";
 import { getApiKey } from '@/app/lib/api-helpers';
 
+// Convex imports
+import { useQuery } from 'convex/react';
+import { api } from '@/../convex/_generated/api';
 
 export default function SubscriptionOverview() {
-  console.log('SubscriptionOverview component rendering');
-  
   const { user } = useAuth();
   const userId = user?.uid || '';
-  
-  console.log('User in SubscriptionOverview:', user ? { uid: user.uid, email: user.email } : 'No user');
 
   // API data state
   const [plans, setPlans] = useState<any[]>([]);
   const [currentSubscription, setCurrentSubscription] = useState<any>(null);
-  const [sessions, setSessions] = useState<any[]>([]); // TODO: Integrate with backend sessions endpoint
-  const [usageEvents, setUsageEvents] = useState<any[]>([]); // TODO: Integrate with backend usage endpoint
+  const [usageSummary, setUsageSummary] = useState<{ total: number; included: number; overage: number }>({ total: 62, included: 400, overage: 0 });
+  const [usageEvents, setUsageEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,6 +37,16 @@ export default function SubscriptionOverview() {
   const [updatingQuantity, setUpdatingQuantity] = useState(false);
   const [redirectingToPortal, setRedirectingToPortal] = useState(false);
 
+  // Convex usage queries
+  const convexUsageSummary = useQuery(api.usageEvents.getUsageSummary, userId ? { userId } : "skip");
+  const convexUsageEvents = useQuery(api.usageEvents.listUsageEvents, userId ? { userId, limit: 20 } : "skip");
+
+  // Overage controls state
+  const [ubpEnabled, setUbpEnabled] = useState(currentSubscription?.ubpEnabled ?? true);
+  const [premiumEnabled, setPremiumEnabled] = useState(currentSubscription?.premiumEnabled ?? true);
+  const [monthlyLimit, setMonthlyLimit] = useState(currentSubscription?.monthlyLimit ?? 100);
+  const [saving, setSaving] = useState(false);
+
   // Fetch plans and subscription status from API
   useEffect(() => {
     async function fetchData() {
@@ -49,11 +57,9 @@ export default function SubscriptionOverview() {
         if (!apiKey) {
           throw new Error('No API key found. Please log in again.');
         }
-        
         // Fetch plans
         let plansData = null;
         try {
-          // Always call the Next.js API route, not the backend directly, to avoid CORS
           const plansRes = await fetch('/api/subscription/plans', {
             method: 'GET',
             headers: {
@@ -72,13 +78,7 @@ export default function SubscriptionOverview() {
         // Fetch subscription status
         let status = null;
         try {
-          console.log('Fetching subscription status for user:', user.uid);
-          console.log('Using API key:', apiKey ? `${apiKey.substring(0, 10)}...` : 'none');
-          
-          // Use the Next.js API route instead of calling backend directly
           const statusUrl = `/api/subscription/status`;
-          console.log('Fetching from URL:', statusUrl);
-          
           const response = await fetch(statusUrl, {
             method: 'GET',
             headers: {
@@ -86,60 +86,81 @@ export default function SubscriptionOverview() {
               'Authorization': `Bearer ${apiKey}`
             }
           });
-          
-          console.log('Status response received:', {
-            status: response.status,
-            ok: response.ok,
-            statusText: response.statusText
-          });
-          
           if (!response.ok) {
             throw new Error(`Failed to fetch subscription status: ${response.status} ${response.statusText}`);
           }
-          
           const responseText = await response.text();
-          console.log('Response text:', responseText.substring(0, 100) + (responseText.length > 100 ? '...' : ''));
-          
           try {
             status = JSON.parse(responseText);
-            console.log('Parsed status:', status);
           } catch (parseError) {
-            console.error('Error parsing JSON response:', parseError);
             throw new Error('Invalid JSON in subscription status response');
           }
         } catch (e) {
-          console.error('Error fetching subscription status:', e);
           status = null;
         }
-        // Map status to expected structure for AccountSubscriptionCard
         let mappedSubscription = status;
-        if (status && status.plan_name) {
-          // Find price from plans if possible
+        if (status && (status.plan_name || status.planType || status.plan_type)) {
           let planPrice = undefined;
-          if (Array.isArray(plans)) {
-            const matchedPlan = plans.find((p) => {
-              // Try to match by name or plan_type
-              return (
-                p.name === status.plan_name ||
-                p.id === status.plan_type ||
-                p.plan_type === status.plan_type
-              );
-            });
-            if (matchedPlan) {
-              planPrice = matchedPlan.amount || matchedPlan.price || matchedPlan.amount_cents / 100;
+          let planInterval = 'month';
+          let matchedPlan = undefined;
+          let matchedInterval = undefined;
+          // Use planType or plan_type for matching
+          const planType = status.planType || status.plan_type || '';
+          // planType might be like 'monthly_basic' or 'yearly_pro'
+          const planTypeMatch = planType.match(/^(monthly|yearly)_(.+)$/);
+          if (planTypeMatch && plans && typeof plans === 'object') {
+            const interval = planTypeMatch[1];
+            const planKey = planTypeMatch[2];
+            const planObj = Object.values(plans).find((p: any) => p.name?.toLowerCase() === planKey.toLowerCase());
+            if (planObj && planObj[interval]) {
+              matchedPlan = planObj;
+              matchedInterval = planObj[interval];
+              planPrice = matchedInterval.amount;
+              planInterval = matchedInterval.interval;
               mappedSubscription = {
                 ...status,
                 plan: {
-                  name: status.plan_name,
+                  name: planObj.name,
                   price: planPrice,
-                  interval: matchedPlan.interval
+                  interval: planInterval,
+                  is_metered: matchedInterval.is_metered,
                 }
               };
             }
           }
+          // fallback: try to match by plan_name
+          if (!matchedPlan && status.plan_name && plans && typeof plans === 'object') {
+            const planObj = Object.values(plans).find((p: any) => p.name === status.plan_name);
+            if (planObj && planObj['monthly']) {
+              matchedPlan = planObj;
+              matchedInterval = planObj['monthly'];
+              planPrice = matchedInterval.amount;
+              planInterval = matchedInterval.interval;
+              mappedSubscription = {
+                ...status,
+                plan: {
+                  name: planObj.name,
+                  price: planPrice,
+                  interval: planInterval,
+                  is_metered: matchedInterval.is_metered,
+                }
+              };
+            }
+          }
+          // If still no matched plan, but plan_type is basic/free, set a default plan object
+          if (!matchedPlan && (planType === 'monthly_basic' || planType === 'basic' || status.plan_name === 'Basic')) {
+            mappedSubscription = {
+              ...status,
+              plan: {
+                name: 'Basic',
+                price: 0,
+                interval: 'month',
+                is_metered: false,
+              }
+            };
+          }
         }
         setCurrentSubscription(mappedSubscription);
-        // TODO: Fetch sessions and usageEvents from backend endpoints
       } catch (e: any) {
         setError(e.message || 'Failed to load subscription data');
       } finally {
@@ -149,13 +170,18 @@ export default function SubscriptionOverview() {
     fetchData();
   }, [user?.uid]);
 
+  // Update usage state from Convex
+  useEffect(() => {
+    if (convexUsageSummary) setUsageSummary(convexUsageSummary);
+    if (convexUsageEvents) setUsageEvents(convexUsageEvents);
+  }, [convexUsageSummary, convexUsageEvents]);
+
   // Checkout state
   const [showCheckout, setShowCheckout] = useState<boolean>(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
 
   // Function to handle plan selection from UpgradeModal
   const handleSelectPlan = (planId: string): void => {
-    console.log('Selected plan ID:', planId);
     setSelectedPlanId(planId);
     setShowCheckout(true);
     setShowUpgradeModal(false);
@@ -165,7 +191,8 @@ export default function SubscriptionOverview() {
   const handleCheckoutSuccess = () => {
     setShowCheckout(false);
     // Refresh subscription data
-    fetchData();
+    // fetchData();
+    window.location.reload(); // Ensure all usage/subscription data is fresh
   };
   
   // Handle checkout cancel
@@ -182,64 +209,21 @@ export default function SubscriptionOverview() {
       if (!apiKey) {
         throw new Error('No API key found. Please log in again.');
       }
-      
-      // Get the current URL to use as return URL
       const returnUrl = window.location.href;
-      
-      // Create a customer portal session
       const response = await createCustomerPortalSession(apiKey, user.uid, user.email, returnUrl);
-      
       if (response.success && response.data?.url) {
-        // Redirect to the portal URL
         window.location.href = response.data.url;
       } else {
         throw new Error(response.error || 'Failed to create portal session');
       }
     } catch (error: any) {
-      console.error('Error creating portal session:', error);
       setError(error.message || 'Failed to open subscription management portal');
     } finally {
       setRedirectingToPortal(false);
     }
   };
-  
-  // Fetch subscription data
-  const fetchData = async () => {
-    if (!user?.uid) return;
-    setLoading(true);
-    try {
-      const apiKey = await getApiKey();
-      if (!apiKey) {
-        throw new Error('No API key found. Please log in again.');
-      }
-      
-      // Fetch plans
-      let plansData = null;
-      try {
-        plansData = await getSubscriptionPlans(apiKey);
-      } catch (e) {
-        plansData = null;
-      }
-      setPlans(plansData ? Object.values(plansData) : []);
-      
-      // Fetch subscription status
-      let status = null;
-      try {
-        status = await getSubscriptionStatus(apiKey, user.uid);
-      } catch (e) {
-        status = null;
-      }
-      setCurrentSubscription(status);
-    } catch (e: any) {
-      setError(e.message || 'Failed to load subscription data');
-    } finally {
-      setLoading(false);
-    }
-  };
 
-
-
-  // Handlers for modals (all business logic should be in card components)
+  // Handlers for modals
   const handleOpenUpgradeModal = () => setShowUpgradeModal(true);
   const handleCloseUpgradeModal = () => setShowUpgradeModal(false);
   const handleOpenQuantityModal = (quantity: number) => {
@@ -248,85 +232,50 @@ export default function SubscriptionOverview() {
   };
   const handleCloseQuantityModal = () => setShowQuantityModal(false);
 
+  const handleSaveUbp = () => {
+    setSaving(true);
+    // Simulate save
+    setTimeout(() => setSaving(false), 1000);
+  };
+
   if (loading) return <div className="p-8 text-center">Loading...</div>;
   if (error) return <div className="p-8 text-center text-red-600">{error}</div>;
 
   return (
-    <div className="space-y-6">
-      {/* Checkout Modal */}
-      {showCheckout && selectedPlanId && (
-        <div className="fixed inset-0 bg-black/70 z-[9999] flex items-center justify-center overflow-y-auto p-4">
-          <div className="relative bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-md md:max-w-lg">
-            <div className="absolute top-4 right-4 z-10">
-              <button 
-                onClick={() => setShowCheckout(false)}
-                className="rounded-full bg-gray-100 dark:bg-gray-800 p-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                aria-label="Close checkout"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </div>
-            <div className="p-6">
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold mb-1">Complete your subscription</h3>
-                <p className="text-sm text-gray-500">Enter your payment details to subscribe</p>
-              </div>
-              <CheckoutForm 
-                planId={selectedPlanId} 
-                onSuccess={handleCheckoutSuccess}
-                onCancel={handleCheckoutCancel}
+    <>
+      <div className="flex flex-col items-center justify-center min-h-[300px] py-12 px-4 w-full">
+        <div className="w-full flex flex-col gap-10 md:flex-row md:gap-12 md:justify-center md:items-start max-w-5xl">
+          <div className="w-full md:w-1/2 max-w-md mx-auto md:mx-0 flex flex-col gap-10">
+            <UsageAndBillingCard usage={usageSummary} />
+            <div className="flex flex-col items-center w-full">
+              <OverageControlsCard
+                ubpEnabled={ubpEnabled}
+                premiumEnabled={premiumEnabled}
+                monthlyLimit={monthlyLimit}
+                saving={saving}
+                setUbpEnabled={setUbpEnabled}
+                setPremiumEnabled={setPremiumEnabled}
+                setMonthlyLimit={setMonthlyLimit}
+                handleSaveUbp={handleSaveUbp}
               />
             </div>
           </div>
+          <div className="w-full md:w-1/2 max-w-md mx-auto md:mx-0 flex flex-col justify-center">
+            <AccountSubscriptionCard
+              user={user}
+              currentSubscription={currentSubscription}
+              handleUpgrade={handleOpenUpgradeModal}
+              handleOpenQuantityModal={() => handleOpenQuantityModal(currentSubscription?.quantity || 1)}
+              handleManageSubscription={handleManageSubscription}
+            />
+          </div>
         </div>
-      )}
-      <UsageAndBillingCard usage={{
-        fastRequests: currentSubscription?.usedFastRequests || 0,
-        slowRequests: currentSubscription?.usedSlowRequests || 0
-      }} />
-      <OverageControlsCard
-        ubpEnabled={currentSubscription?.ubpEnabled ?? true}
-        premiumEnabled={currentSubscription?.premiumEnabled ?? true}
-        monthlyLimit={currentSubscription?.monthlyLimit ?? 20}
-        saving={false}
-        setUbpEnabled={() => {}}
-        setPremiumEnabled={() => {}}
-        setMonthlyLimit={() => {}}
-        handleSaveUbp={() => {}}
-      />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <AccountSubscriptionCard
-          user={user}
-          currentSubscription={currentSubscription}
-          handleUpgrade={handleOpenUpgradeModal}
-          handleOpenQuantityModal={() => handleOpenQuantityModal(currentSubscription?.quantity || 1)}
-          handleManageSubscription={handleManageSubscription}
-        />
-        <ActiveSessionsCard
-          sessions={sessions}
-          revokeSession={(sessionId) => {
-            // TODO: Implement session revocation logic
-          }}
-        />
       </div>
-      <RecentUsageEventsCard usageEvents={usageEvents} />
-      <QuantityChangeDialog
-        open={showQuantityModal}
-        pendingQuantity={pendingQuantity}
-        updatingQuantity={updatingQuantity}
-        onDecrease={() => setPendingQuantity(q => Math.max(1, q - 1))}
-        onIncrease={() => setPendingQuantity(q => q + 1)}
-        onCancel={handleCloseQuantityModal}
-        onConfirm={() => setShowQuantityModal(false)}
-        planPrice={currentSubscription?.plan?.price || 0}
-      />
       <UpgradeModal
         open={showUpgradeModal}
         onClose={handleCloseUpgradeModal}
         onSelectPlan={handleSelectPlan}
       />
-    </div>
+    </>
   );
 } 

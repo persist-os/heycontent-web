@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+function isLocalhost(request: NextRequest) {
+  const host = request.headers.get('host') || '';
+  return host.startsWith('localhost') || host.startsWith('127.0.0.1');
+}
+
 export function middleware(request: NextRequest) {
   const token = request.cookies.get('firebase-auth-token')?.value;
   const { pathname } = request.nextUrl;
@@ -19,8 +24,36 @@ export function middleware(request: NextRequest) {
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
 
   // If it's a public route, allow access
+  const local = isLocalhost(request);
+
+  const connectSrc = [
+    "'self'",
+    "https://js.stripe.com",
+    "https://api.stripe.com",
+    "https://r.stripe.com",
+    "https://identitytoolkit.googleapis.com",
+    "https://va.vercel-scripts.com",
+    "https://securetoken.googleapis.com",
+    "wss://benevolent-basilisk-784.convex.cloud",
+    "https://benevolent-basilisk-784.convex.cloud",
+    "https://backend.hicontent.co",
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
+  ];
+ 
+  const CSP = [
+    "default-src 'self'",
+    `connect-src ${connectSrc.join(' ')}`,
+    `script-src 'self' 'unsafe-inline'${local ? " 'unsafe-eval'" : ''} https://js.stripe.com https://va.vercel-scripts.com`,
+    "frame-src https://js.stripe.com",
+    "img-src 'self' data: https://*",
+    "style-src 'self' 'unsafe-inline'",
+  ].join('; ');
+
   if (isPublicRoute) {
-    return NextResponse.next();
+    const response = NextResponse.next();
+    response.headers.set('Content-Security-Policy', CSP);
+    return response;
   }
 
   // If no token and not a public route, redirect to login
@@ -29,7 +62,9 @@ export function middleware(request: NextRequest) {
   }
 
   // If we have a token, allow access
-  return NextResponse.next();
+  const response = NextResponse.next();
+  response.headers.set('Content-Security-Policy', CSP);
+  return response;
 }
 
 export const config = {

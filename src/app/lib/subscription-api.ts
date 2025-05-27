@@ -96,7 +96,14 @@ async function callSubscriptionAPI(endpoint: string, method: string, apiKey: str
       body: body ? JSON.stringify(body) : undefined
     });
     
-    const responseData = await response.json();
+    let responseData;
+    try {
+      responseData = await response.json();
+    } catch {
+      // If not JSON, try to get text
+      const text = await response.text();
+      responseData = { error: text || 'Unknown error' };
+    }
     
     if (!response.ok) {
       console.error(`[${requestId}] Subscription API error:`, {

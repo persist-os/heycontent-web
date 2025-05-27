@@ -32,7 +32,6 @@ import type * as rateLimiting from "../rateLimiting.js";
 import type * as sessions from "../sessions.js";
 import type * as subscriptionActions from "../subscriptionActions.js";
 import type * as subscriptionQueries from "../subscriptionQueries.js";
-import type * as ubpSettings from "../ubpSettings.js";
 import type * as usageEvents from "../usageEvents.js";
 import type * as userMutations from "../userMutations.js";
 import type * as userQueries from "../userQueries.js";
@@ -67,7 +66,6 @@ declare const fullApi: ApiFromModules<{
   sessions: typeof sessions;
   subscriptionActions: typeof subscriptionActions;
   subscriptionQueries: typeof subscriptionQueries;
-  ubpSettings: typeof ubpSettings;
   usageEvents: typeof usageEvents;
   userMutations: typeof userMutations;
   userQueries: typeof userQueries;
