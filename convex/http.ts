@@ -42,6 +42,26 @@ app.get("/api/users/email/:email", async (c) => {
   return c.json(user);
 });
 
+// NEW LOOKUP ROUTES
+app.get("/api/users/lookup/customer/:customerId", async (c) => {
+  const ctx = c.env;
+  const customerId = c.req.param("customerId");
+  const user = await ctx.runQuery(api.userQueries.getUserByStripeCustomerId, { stripeCustomerId: customerId });
+  if (user && user.userId) {
+    return c.json({ userId: user.userId.toString() });
+  }
+  return c.json({ userId: null, message: "User not found or userId field missing for the given Stripe Customer ID" }, 404); 
+});
+
+app.get("/api/users/lookup/subscription/:subscriptionId", async (c) => {
+  const ctx = c.env;
+  const subscriptionId = c.req.param("subscriptionId");
+  const subscription = await ctx.runQuery(api.userQueries.getUserByStripeSubscriptionId, { stripeSubscriptionId: subscriptionId });
+  if (subscription && subscription.userId) {
+    return c.json({ userId: subscription.userId.toString() });
+  }
+  return c.json({ userId: null, message: "User not found for the given Stripe Subscription ID" }, 404); 
+});
 
 // Access a persona
 app.get("/api/users/:id/personas", async (c) => {
@@ -150,10 +170,7 @@ app.delete("/api/api-keys/delete", async (c) => {
   if (!key_id) {
     return c.json({ success: false, error: "Missing key_id" }, 400);
   }
-
   try {
-    // key_id is expected to be a string representation of the Convex _id
-    // deleteByStringId will find the key by its _id string and delete it
     await ctx.runAction(api.apiKeys.deleteByStringId, { keyIdStr: key_id });
     return c.json({ success: true });
   } catch (error) {
@@ -350,6 +367,9 @@ app.get("/api/notes/:noteId/analyses", async (c) => {
     return c.json({ success: false, error: "Failed to get analyses for note", message: error.message || "Internal Server Error" }, 500);
   }
 });
+
+
+
 
 // GMAIL ROUTES
 
@@ -634,7 +654,6 @@ app.post("/api/users/:id/instagram/token", async (c) => {
   }
 });
 
-
 // Store Instagram posts in bulk
 app.post("/api/users/:id/instagram/posts/bulk", async (c) => {
   const ctx = c.env;
@@ -700,6 +719,221 @@ app.post("/api/users/:id/instagram/profile", async (c) => {
     }, 500);
   }
 });
+
+// SUBSCRIPTION ENDPOINTS
+
+// Get user's subscription
+app.get("/api/users/:id/stripe/subscription", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  
+  try {
+    const subscription = await ctx.runQuery(api.subscriptionQueries.getUserSubscription, { userId });
+    return c.json(subscription);
+  } catch (error) {
+    console.error("Failed to get subscription:", error);
+    return c.json({ success: false, error: "Failed to retrieve subscription" }, 500);
+  }
+});
+
+// Save customer
+app.post("/api/users/:id/stripe/customer", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { stripeCustomerId } = await c.req.json();
+  
+  if (!stripeCustomerId) {
+    return c.json({ success: false, error: "Missing Stripe customer ID" }, 400);
+  }
+  
+  try {
+    // Check if any user already has this Stripe customer ID
+    const existingUser = await ctx.runQuery(api.userQueries.getUserByStripeCustomerId, {
+      stripeCustomerId
+    });
+    
+    // If a user with this Stripe customer ID exists and it's not the current user
+    if (existingUser && existingUser.userId !== userId) {
+      return c.json({
+        success: false,
+        error: "This Stripe customer ID is already associated with another user"
+      }, 409); // 409 Conflict status code
+    }
+    
+    // Update user with Stripe customer ID
+    await ctx.runMutation(api.userMutations.updateUserStripeData, {
+      userId,
+      updates: { stripeCustomerId }
+    });
+    
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Failed to save customer:", error);
+    return c.json({ success: false, error: "Failed to save customer" }, 500);
+  }
+});
+
+// Get customer
+app.get("/api/users/:id/stripe/customer", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+
+  try {
+    const user = await ctx.runQuery(api.userQueries.getUser, { userId });
+    console.log("Fetched user for customer lookup:", user);
+    if (!user) {
+      return c.json({ success: false, error: "User not found" }, 404);
+    }
+    if (!user.stripeCustomerId) {
+      return c.json({ stripeCustomerId: null });
+    }
+    return c.json({ stripeCustomerId: user.stripeCustomerId });
+  } catch (error) {
+    console.error("Failed to get customer:", error);
+    return c.json({ success: false, error: "Failed to retrieve customer" }, 500);
+  }
+});
+
+// Update Stripe customer details (email, name, default_payment_method, etc)
+app.post("/api/users/:id/stripe/customer/update", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const updates = await c.req.json();
+
+  if (!userId) {
+    return c.json({ success: false, error: "Missing user ID" }, 400);
+  }
+  if (!updates || typeof updates !== "object") {
+    return c.json({ success: false, error: "Missing or invalid update data" }, 400);
+  }
+
+  try {
+    await ctx.runMutation(api.userMutations.updateUserStripeData, {
+      userId,
+      updates
+    });
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Failed to update Stripe customer:", error);
+    return c.json({ success: false, error: "Failed to update Stripe customer" }, 500);
+  }
+});
+
+// Save subscription
+app.post("/api/users/:id/stripe/subscription", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { 
+    planId, 
+    priceId,
+    status, 
+    includedRequests,
+    stripeSubscriptionId, 
+    stripeCustomerId,
+    currentPeriodStart,
+    currentPeriodEnd,
+    cancelAtPeriodEnd
+  } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.subscriptionQueries.saveSubscription, {
+      userId,
+      planId,
+      priceId,
+      status,
+      includedRequests,
+      stripeSubscriptionId,
+      stripeCustomerId,
+      currentPeriodStart,
+      currentPeriodEnd,
+      cancelAtPeriodEnd
+    });
+    
+    return c.json({ success: true, subscriptionId: result });
+  } catch (error) {
+    console.error("Failed to save subscription:", error);
+    return c.json({ success: false, error: "Failed to save subscription" }, 500);
+  }
+});
+
+// Update subscription
+app.patch("/api/stripe/subscriptions/:id", async (c) => {
+  const ctx = c.env;
+  const stripeSubscriptionId = c.req.param("id");
+  const data = await c.req.json();
+  
+  try {
+    // Use the dedicated subscription actions module to handle the update
+    const result = await ctx.runMutation(api.subscriptionActions.updateSubscriptionFromStripe, {
+      stripeSubscriptionId,
+      data
+    });
+    
+    if (!result.success) {
+      console.error(`Failed to update subscription: ${result.error}`);
+      return c.json({ success: false, error: result.error }, 404);
+    }
+    
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Failed to update subscription:", error);
+    return c.json({ success: false, error: "Failed to update subscription" }, 500);
+  }
+});
+
+// Get subscription item
+app.get("/api/users/:id/stripe/subscription/item", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const meterName = c.req.query("meterName");
+  
+  if (!meterName) {
+    return c.json({ success: false, error: "Missing meter name" }, 400);
+  }
+  
+  try {
+    const subscription = await ctx.runQuery(api.subscriptionQueries.getUserSubscription, { userId });
+    
+    if (!subscription) {
+      return c.json({ success: false, error: "Subscription not found" }, 404);
+    }
+    
+    // Check if subscription has items array (new structure)
+    if (subscription.items && Array.isArray(subscription.items)) {
+      // Find the item with the matching meter name
+      const item = subscription.items.find(item => item.meterName === meterName);
+      
+      if (!item) {
+        return c.json({ success: false, error: "Subscription item not found" }, 404);
+      }
+      
+      return c.json({ subscriptionItemId: item.stripeItemId });
+    }
+    
+    // Fallback for subscriptions without items array (legacy structure)
+    // For the dual pricing model, generate subscription item IDs based on pattern
+    const stripeSubscriptionId = subscription.stripeSubscriptionId;
+    
+    if (!stripeSubscriptionId) {
+      return c.json({ success: false, error: "No Stripe subscription ID found" }, 404);
+    }
+    
+    // For API requests meter, return the metered component item ID
+    if (meterName === "api_requests") {
+      const meteredItemId = `si_metered_${stripeSubscriptionId}`;
+      return c.json({ subscriptionItemId: meteredItemId });
+    }
+    
+    // For other meters, we might need different handling
+    return c.json({ success: false, error: `Unsupported meter name: ${meterName}` }, 400);
+    
+  } catch (error) {
+    console.error("Failed to get subscription item:", error);
+    return c.json({ success: false, error: "Failed to retrieve subscription item" }, 500);
+  }
+});
+
+
 
 // RATE LIMITING ENDPOINTS
 

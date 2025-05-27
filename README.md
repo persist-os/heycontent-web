@@ -125,3 +125,4 @@ The application interacts with:
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run start` - Start production server
+- `node .next/standalone/server.js` - Start standalone server

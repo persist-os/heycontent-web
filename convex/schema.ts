@@ -22,12 +22,58 @@ export default defineSchema({
     updatedAt: v.number(),
     referralCode: v.optional(v.string()),
     referredBy: v.optional(v.string()),
+    // Stripe integration
     stripeCustomerId: v.optional(v.string()),
     stripeSubscriptionId: v.optional(v.string()),
-    subscription: v.optional(v.any()), // You can use v.object({...}) for stricter validation if needed
+    // Subscription state
+    subscription: v.optional(v.object({
+      status: v.union(
+        v.literal("active"),
+        v.literal("past_due"),
+        v.literal("canceled"),
+        v.literal("unpaid"),
+        v.literal("incomplete"),
+        v.literal("incomplete_expired"),
+        v.literal("trialing"),
+        v.literal("paused"),
+        v.literal("deleted"),
+        v.literal("unknown"),
+      ),
+      cancel_at: v.optional(v.number()),
+      cancel_at_period_end: v.optional(v.boolean()),
+      canceled_at: v.optional(v.number()),
+      current_period_end: v.optional(v.number()),
+      current_period_start: v.optional(v.number()),
+      customer: v.optional(v.string()),
+      items: v.optional(v.any()),
+      plan: v.optional(v.any()),
+      quantity: v.optional(v.number()),
+      start_date: v.optional(v.number()),
+      trial_start: v.optional(v.number()),
+      trial_end: v.optional(v.number()),
+    })),
+    // Payment method info (minimal, just for display)
+    paymentMethod: v.optional(v.object({
+      brand: v.string(),
+      last4: v.string(),
+      expMonth: v.number(),
+      expYear: v.number()
+    })),
+    
+    // Usage tracking for current billing period
+    usage: v.optional(v.object({
+      periodStart: v.number(),
+      periodEnd: v.number(),
+      totalRequests: v.number(),
+      includedRequests: v.number(),
+      overageRequests: v.number(),
+      lastUpdated: v.number()
+    }))
+>>>>>>> d6928e4c3c070afdbf131b9573af3af3e6a0ce1c
   })
   .index("by_userId", ["userId"])
   .index("by_email", ["email"])
+  .index("by_stripeCustomerId", ["stripeCustomerId"])
   .index("by_username", ["username"]),
 
   personas: defineTable({
@@ -84,7 +130,8 @@ export default defineSchema({
         v.literal("conversation"),
         v.literal("idea"),
         v.literal("url"),
-        v.literal("date")
+        v.literal("date"),
+        v.literal("brainstorm")
       ),
       content: v.string(),
       isLoading: v.optional(v.boolean()),
@@ -95,6 +142,7 @@ export default defineSchema({
   .index("by_user", ["userId"])
   .index("by_creation", ["createdAt"])
   .index("by_type", ["type"]),
+
 
   // API Keys
   api_keys: defineTable({
@@ -272,15 +320,15 @@ export default defineSchema({
       description: v.optional(v.string()),
       published_at: v.optional(v.string()),
       channel: v.optional(v.object({
-        id: v.optional(v.string()),
-        title: v.optional(v.string()),
+        id: v.optional(v.union(v.string(), v.null())),
+        title: v.optional(v.union(v.string(), v.null())),
       })),
       thumbnails: v.optional(v.object({
-        default: v.optional(v.string()),
-        medium: v.optional(v.string()),
-        high: v.optional(v.string()),
-        standard: v.optional(v.string()),
-        maxres: v.optional(v.string()),
+        default: v.optional(v.union(v.string(), v.null())),
+        medium: v.optional(v.union(v.string(), v.null())),
+        high: v.optional(v.union(v.string(), v.null())),
+        standard: v.optional(v.union(v.string(), v.null())),
+        maxres: v.optional(v.union(v.string(), v.null())),
       })),
       tags: v.optional(v.array(v.string())),
     })),
@@ -453,4 +501,50 @@ export default defineSchema({
   .index("by_postId", ["postId"])
   .index("by_timestamp", ["data.timestamp"]),
 
+
+  // Subscription plans are now managed in Stripe
+  // and cached in memory or environment variables
+
+  // Historical usage records
+  usageHistory: defineTable({
+    userId: v.string(),
+    periodStart: v.number(),
+    periodEnd: v.number(),
+    totalRequests: v.number(),
+    includedRequests: v.number(),
+    overageRequests: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_period", ["periodStart", "periodEnd"]),
+
+  sessions: defineTable({
+    userId: v.string(),
+    type: v.union(v.literal("desktop"), v.literal("web")),
+    createdAt: v.number(),
+    lastActive: v.number(),
+    revoked: v.boolean(),
+  })
+  .index("by_user", ["userId"]),
+
+  usageEvents: defineTable({
+    userId: v.string(),
+    timestamp: v.number(),
+    model: v.string(),
+    status: v.string(),
+    qty: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_timestamp", ["timestamp"]),
+
+  ubpSettings: defineTable({
+    userId: v.string(),
+    enabled: v.boolean(),
+    premiumEnabled: v.boolean(),
+    monthlyLimit: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_user", ["userId"]),
 });
