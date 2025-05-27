@@ -70,58 +70,81 @@ export const AccountSubscriptionCard: React.FC<AccountSubscriptionCardProps> = (
   handleUpgrade,
   handleOpenQuantityModal,
   handleManageSubscription,
-}) => (
-  <Card>
-    <CardHeader>
-      <CardTitle>Account & Subscription</CardTitle>
-    </CardHeader>
-    <CardContent className="space-y-2">
-      {/* User Information Section */}
-      <div className="font-medium">{user?.displayName || 'No name provided'}</div>
-      <div className="text-sm text-gray-500">{user?.email || 'No email provided'}</div>
-      
-      {/* Subscription Plan Information */}
-      <div className="mt-2">
-        <span className="font-semibold">Plan:</span> {currentSubscription?.plan?.name || 'Not subscribed'}
-        {currentSubscription?.plan?.price !== undefined && (
-          <span className="ml-2 text-gray-500">
-            ${currentSubscription.plan.price}
-            {(() => {
-              const interval = currentSubscription.plan.interval;
-              if (interval === 'year' || interval === 'yearly') return '/year';
-              if (interval === 'month' || interval === 'monthly') return '/month';
-              return '/month';
-            })()}
-          </span>
-        )}
-      </div>
-      
-      {/* Action Buttons */}
-      <div className="flex flex-wrap gap-2 mt-2">
-        <Button 
-          size="sm" 
-          onClick={handleUpgrade}
-          aria-label="Upgrade subscription plan"
-        >
-          Upgrade
-        </Button>
-        <Button 
-          size="sm" 
-          variant="outline" 
-          onClick={handleManageSubscription}
-          aria-label="Manage subscription settings"
-        >
-          Manage Subscription
-        </Button>
-        <Button 
-          size="sm" 
-          variant="outline" 
-          onClick={handleOpenQuantityModal}
-          aria-label="Change number of requests"
-        >
-          Change # of Requests
-        </Button>
-      </div>
-    </CardContent>
-  </Card>
-);
+}) => {
+  // Determine plan and subscription status
+  const plan = currentSubscription?.plan;
+  const isSubscribed = !!plan && !!plan.name;
+  const isMetered = plan?.is_metered;
+  // For demo: assume 'Pro' is highest plan
+  const isOnHighestPlan = plan?.name === 'Pro';
+
+  return (
+    <Card className="w-full p-4 sm:p-6 rounded-xl shadow-md bg-white dark:bg-gray-900">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg sm:text-xl font-bold">Account & Subscription</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {/* User Information Section */}
+        <div className="font-medium text-base sm:text-lg">{user?.displayName || 'No name provided'}</div>
+        <div className="text-sm text-gray-500 break-all">{user?.email || 'No email provided'}</div>
+        {/* Subscription Plan Information */}
+        <div className="mt-2 text-base">
+          <span className="font-semibold">Plan:</span>{' '}
+          {isSubscribed ? (
+            <>
+              {plan.name}
+              {plan.price !== undefined && (
+                <span className="ml-2 text-gray-500">
+                  {typeof plan.price === 'number'
+                    ? `$${plan.price.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                    : plan.price}
+                  {(() => {
+                    const interval = plan.interval;
+                    if (interval === 'year' || interval === 'yearly') return '/year';
+                    if (interval === 'month' || interval === 'monthly') return '/month';
+                    return '';
+                  })()}
+                </span>
+              )}
+            </>
+          ) : (
+            'Not subscribed'
+          )}
+        </div>
+        {/* Action Buttons */}
+        <div className="flex flex-wrap gap-2 mt-4">
+          {!isOnHighestPlan && (
+            <Button
+              size="lg"
+              className="min-w-[120px]"
+              onClick={handleUpgrade}
+              aria-label="Upgrade subscription plan"
+            >
+              Upgrade
+            </Button>
+          )}
+          <Button
+            size="lg"
+            variant="outline"
+            className="min-w-[120px]"
+            onClick={handleManageSubscription}
+            aria-label="Manage subscription settings"
+          >
+            Manage Subscription
+          </Button>
+          {isMetered && (
+            <Button
+              size="lg"
+              variant="outline"
+              className="min-w-[160px]"
+              onClick={handleOpenQuantityModal}
+              aria-label="Change number of requests"
+            >
+              Change # of Requests
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
