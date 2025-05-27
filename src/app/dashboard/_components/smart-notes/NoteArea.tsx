@@ -150,6 +150,7 @@ export function NoteArea({
       updateMenuPosition();
 
       if (text === '/') {
+        console.log('Slash detected, showing commands menu with platform:', note.platform || 'instagram');
         setShowCommands(true);
         setShowMentions(false);
         setShowTags(false);
@@ -298,6 +299,7 @@ export function NoteArea({
         textAreaRef={textAreaRef}
         onUpdate={onUpdate}
         noteId={note._id}
+        platform={(note.platform as PlatformKey) || 'instagram'}
       />
       <FullAnalysisModal
         showFullAnalysis={showFullAnalysis}

@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { AtSign, Hash } from 'lucide-react';
 import { CommandMenu, type Command } from '../CommandMenu';
 import type { Note } from '../types';
+import { PlatformKey } from '../types/platformPrompts';
 import styles from './CommandMenus.module.css';
 
 interface CommandMenusProps {
@@ -15,6 +16,7 @@ interface CommandMenusProps {
   textAreaRef: React.RefObject<HTMLTextAreaElement>;
   onUpdate: (noteId: string, updates: any) => void;
   noteId: string;
+  platform: PlatformKey;
 }
 
 export function CommandMenus({
@@ -27,7 +29,8 @@ export function CommandMenus({
   onCloseCommands,
   textAreaRef,
   onUpdate,
-  noteId
+  noteId,
+  platform
 }: CommandMenusProps) {
   const mentionOptions = [
     { id: 'conversation', label: 'Conversation', description: 'Reference a chat or discussion' },
@@ -160,15 +163,36 @@ export function CommandMenus({
     }
   }, [menuPosition]);
 
+  // Debug log when component renders
+  useEffect(() => {
+    if (showCommands) {
+      console.log('CommandMenus - showCommands is TRUE', { platform, menuPosition });
+    }
+  }, [showCommands, platform, menuPosition]);
+
   return (
     <>
       {showCommands && (
-        <CommandMenu
-          onSelect={onCommandSelect}
-          onClose={onCloseCommands}
-          searchTerm={searchTerm}
-          position={menuPosition}
-        />
+        <div
+          className={`${styles['command-menu-position']} fixed z-50 w-80 max-h-[400px] overflow-y-auto bg-white rounded-lg shadow-xl border border-gray-200`}
+          style={{
+            top: menuPosition.top,
+            left: menuPosition.left,
+          }}
+        >
+          <div className="p-2 bg-purple-50 border-b border-gray-200">
+            <div className="text-sm font-medium text-purple-800">
+              {platform.charAt(0).toUpperCase() + platform.slice(1)} prompts
+            </div>
+          </div>
+          <CommandMenu 
+            onSelect={onCommandSelect} 
+            onClose={onCloseCommands} 
+            searchTerm={searchTerm} 
+            position={menuPosition}
+            platform={platform}
+          />
+        </div>
       )}
 
       {showMentions && (

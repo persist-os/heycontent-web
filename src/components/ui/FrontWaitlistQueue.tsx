@@ -1,11 +1,6 @@
 'use client';
 
-<<<<<<< Updated upstream
 import React, { useEffect, useState, useRef } from 'react';
-=======
-console.log('[FrontWaitlistQueue] Module loaded');
-import React, { useEffect, useState } from 'react';
->>>>>>> Stashed changes
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo } from './logo';
 import { Share2, Copy, Check, Twitter, Dice6 } from 'lucide-react';

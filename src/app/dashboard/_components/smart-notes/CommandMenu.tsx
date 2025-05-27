@@ -140,7 +140,9 @@ export function CommandMenu({ onSelect, onClose, searchTerm = '', position, plat
 
   // Build commands from platformPrompts
   useEffect(() => {
+    console.log('[CommandMenu] Received platform:', platform);
     const postTypePrompts = platformPrompts[platform] || [];
+    console.log('[CommandMenu] Loaded postTypePrompts:', postTypePrompts);
     const platformCommands = postTypePrompts.map(prompt => ({
       icon: Lightbulb, // You can customize icons per type if desired
       label: prompt.key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
@@ -153,6 +155,7 @@ export function CommandMenu({ onSelect, onClose, searchTerm = '', position, plat
       cmd.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
       cmd.action.toLowerCase().includes(searchTerm.toLowerCase())
     );
+    console.log('[CommandMenu] Filtered commands:', filtered);
     setFilteredCommands(filtered);
     setSelectedIndex(0);
   }, [searchTerm, platform]);
@@ -250,6 +253,7 @@ export function CommandMenu({ onSelect, onClose, searchTerm = '', position, plat
     };
   };
 
+  console.log('[CommandMenu] Rendering with filteredCommands:', filteredCommands);
   return (
     <div 
       ref={menuRef}
