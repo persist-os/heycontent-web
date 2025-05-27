@@ -36,6 +36,8 @@ export default defineSchema({
         v.literal("unpaid"),
         v.literal("dev"),
         v.literal("tester"),
+        v.literal("incomplete"),
+        v.literal("incomplete_expired"),
       ),
       // Plan type with interval
       plan: v.union(
@@ -51,7 +53,8 @@ export default defineSchema({
       includedRequests: v.number(),
       usedRequests: v.number(),
       subscriptionItemId: v.optional(v.string()), // For metered billing
-      lastSyncedAt: v.optional(v.number())
+      lastSyncedAt: v.optional(v.number()),
+      canceledAt: v.optional(v.number()),
     })),
     
     // Payment method info (minimal, just for display)

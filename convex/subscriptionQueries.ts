@@ -4,7 +4,7 @@ import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 // Types for subscription status
-type SubscriptionStatus = "active" | "past_due" | "canceled" | "unpaid" | "dev" | "tester";
+type SubscriptionStatus = "active" | "past_due" | "canceled" | "unpaid" | "dev" | "tester" | "incomplete" | "incomplete_expired";
 type PlanType = "monthly_basic" | "monthly_pro" | "yearly_basic" | "yearly_pro";
 
 // Query to get user's current subscription
@@ -90,7 +90,9 @@ export const saveSubscription = mutation({
       v.literal("canceled"),
       v.literal("unpaid"),
       v.literal("dev"),
-      v.literal("tester")
+      v.literal("tester"),
+      v.literal("incomplete"),
+      v.literal("incomplete_expired")
     ),
     stripeSubscriptionId: v.string(),
     stripeCustomerId: v.string(),
@@ -98,7 +100,8 @@ export const saveSubscription = mutation({
     currentPeriodStart: v.number(), // Added for completeness
     currentPeriodEnd: v.number(),
     cancelAtPeriodEnd: v.boolean(),
-    subscriptionItemId: v.optional(v.string()) // Optional, for metered billing
+    subscriptionItemId: v.optional(v.string()), // Optional, for metered billing
+    canceledAt: v.optional(v.number()), // New: optional canceledAt
   },
   handler: async (ctx, args) => {
     // Only log sensitive info in non-production environments to avoid leaking PII
@@ -146,7 +149,8 @@ export const saveSubscription = mutation({
         includedRequests: args.includedRequests,
         usedRequests: user.subscription?.usedRequests ?? 0, // Preserve used requests
         lastSyncedAt: Date.now(),
-        subscriptionItemId: args.subscriptionItemId // Store if provided
+        subscriptionItemId: args.subscriptionItemId, // Store if provided
+        canceledAt: args.canceledAt ?? (["canceled", "incomplete_expired"].includes(args.status) ? Date.now() : undefined)
       },
       updatedAt: Date.now()
     };
@@ -210,10 +214,13 @@ export const updateSubscriptionDetails = mutation({
         v.literal("canceled"),
         v.literal("unpaid"),
         v.literal("dev"),
-        v.literal("tester")
+        v.literal("tester"),
+        v.literal("incomplete"),
+        v.literal("incomplete_expired")
       )),
       currentPeriodStart: v.optional(v.number()),
-      currentPeriodEnd: v.optional(v.number())
+      currentPeriodEnd: v.optional(v.number()),
+      canceledAt: v.optional(v.number()),
     })
   },
   handler: async (ctx, args) => {
@@ -221,7 +228,7 @@ export const updateSubscriptionDetails = mutation({
     if (!user || !user.subscription) throw new Error("Subscription not found");
     // Ensure the status is one of the allowed values
     const status = args.updates.status;
-    if (status && !['active', 'past_due', 'canceled', 'unpaid', 'dev', 'tester'].includes(status)) {
+    if (status && !['active', 'past_due', 'canceled', 'unpaid', 'dev', 'tester', 'incomplete', 'incomplete_expired'].includes(status)) {
       throw new Error(`Invalid subscription status: ${status}`);
     }
 
@@ -229,6 +236,8 @@ export const updateSubscriptionDetails = mutation({
       subscription: {
         ...user.subscription,
         ...args.updates,
+        // If status is being set to canceled/incomplete_expired and canceledAt is not set, set it now
+        canceledAt: args.updates.canceledAt ?? ((status && ["canceled", "incomplete_expired"].includes(status)) ? Date.now() : user.subscription.canceledAt),
         lastSyncedAt: Date.now()
       },
       updatedAt: Date.now()
@@ -259,7 +268,9 @@ export const updateUserSubscription = mutation({
         v.literal("trialing"),
         v.literal("past_due"),
         v.literal("canceled"),
-        v.literal("unpaid")
+        v.literal("unpaid"),
+        v.literal("incomplete"),
+        v.literal("incomplete_expired")
       ),
       plan: v.union(v.literal("basic"), v.literal("pro")),
       priceId: v.string(),
@@ -269,7 +280,8 @@ export const updateUserSubscription = mutation({
       includedRequests: v.number(),
       usedRequests: v.number(),
       subscriptionItemId: v.optional(v.string()),
-      lastSyncedAt: v.optional(v.number())
+      lastSyncedAt: v.optional(v.number()),
+      canceledAt: v.optional(v.number()),
     })),
     paymentMethod: v.optional(v.object({
       brand: v.string(),
@@ -297,9 +309,9 @@ export const updateUserSubscription = mutation({
         ...(user.subscription || {}),
         ...args.subscription,
         lastSyncedAt: Date.now(),
+        canceledAt: args.subscription.canceledAt ?? ((["canceled", "incomplete_expired"].includes(args.subscription.status)) ? Date.now() : (user.subscription?.canceledAt ?? undefined)),
       };
     }
-
 
     if (args.paymentMethod) {
       updates.paymentMethod = args.paymentMethod;
