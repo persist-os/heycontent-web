@@ -15,8 +15,8 @@ export const RecentUsageEventsCard: React.FC<RecentUsageEventsCardProps> = ({ us
         <table className="min-w-full text-xs">
           <thead>
             <tr className="text-left text-gray-500">
-              <th className="py-2 px-2">Date</th>
-              <th className="py-2 px-2">Model</th>
+              <th className="py-2 px-2">UTC Time</th>
+              <th className="py-2 px-2">Type</th>
               <th className="py-2 px-2">Status</th>
               <th className="py-2 px-2">Qty</th>
             </tr>
@@ -27,7 +27,18 @@ export const RecentUsageEventsCard: React.FC<RecentUsageEventsCardProps> = ({ us
             )}
             {usageEvents.map((event: any) => (
               <tr key={event._id} className="border-b last:border-0">
-                <td className="py-2 px-2">{new Date(event.timestamp).toLocaleString()}</td>
+                <td className="py-2 px-2">{
+                  (() => {
+                    let ts = event.timestamp;
+                    if (typeof ts === 'number' && ts < 1e12) ts = ts * 1000;
+                    const date = new Date(ts);
+                    // Format in UTC
+                    const utcString = date.toISOString().replace('T', ' ').replace('Z', ' UTC');
+                    return (
+                      <div>{utcString}</div>
+                    );
+                  })()
+                }</td>
                 <td className="py-2 px-2">{event.model}</td>
                 <td className="py-2 px-2">{event.status}</td>
                 <td className="py-2 px-2">{event.qty}</td>
