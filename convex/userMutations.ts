@@ -1,5 +1,6 @@
-import { mutation } from "./_generated/server";
+import { mutation, action } from "./_generated/server";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
 
 function generateReferralCode(username: string, name: string) {
     // Extract a clean name component (max 8 chars for better readability)
@@ -98,5 +99,55 @@ export const updateUserStripeData = mutation({
       updatedAt: Date.now(),
     });
     return { success: true, userId: user._id };
+  },
+});
+
+// Delete all user data
+export const deleteUserAndData = mutation({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const { userId } = args;
+    let summary: Record<string, any> = {};
+    // 1. Delete from all Convex tables that have userId
+    const tables = [
+      { name: "users", index: "by_userId" },
+      { name: "personas", index: "by_userId" },
+      { name: "conversations", index: "by_user" },
+      { name: "notes", index: "by_user" },
+      { name: "api_keys", index: "user_id" },
+      { name: "rate_limits", index: "by_user_resource" },
+      { name: "gmailTokens", index: "by_userId" },
+      { name: "gmailAccounts", index: "by_userId" },
+      { name: "gmailThreads", index: "by_userId" },
+      { name: "gmailMessages", index: "by_userId" },
+      { name: "gmailHistory", index: "by_userId" },
+      { name: "youtubeTokens", index: "by_userId" },
+      { name: "youtubeChannels", index: "by_userId" },
+      { name: "youtubeVideos", index: "by_userId" },
+      { name: "instagramTokens", index: "by_userId" },
+      { name: "instagramData", index: "by_user" },
+      { name: "instagramAccounts", index: "by_userId" },
+      { name: "instagramPosts", index: "by_userId" },
+      { name: "usageHistory", index: "by_user" },
+      { name: "sessions", index: "by_user" },
+      { name: "usageEvents", index: "by_user" },
+      { name: "ubpSettings", index: "by_user" },
+    ];
+    for (const table of tables) {
+      let deleted = 0;
+      let items;
+      try {
+        items = await ctx.runQuery(api[`${table.name}Queries`] ? api[`${table.name}Queries`][`listByUserId`] : api[`${table.name}Queries`]?.list, { userId });
+      } catch {
+        items = await ctx.runQuery(api[`${table.name}Queries`] ? api[`${table.name}Queries`][`listByUserId`] : api[`${table.name}Queries`]?.list, { userId });
+      }
+      if (!items) continue;
+      for (const item of items) {
+        await ctx.runMutation(api[`${table.name}Mutations`] ? api[`${table.name}Mutations`][`delete`] : api[`${table.name}Mutations`]?.delete, { id: item._id });
+        deleted++;
+      }
+      summary[table.name] = deleted;
+    }
+    return summary;
   },
 });

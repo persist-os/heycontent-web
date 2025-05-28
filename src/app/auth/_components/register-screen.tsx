@@ -3,9 +3,12 @@
 import React, { useState } from "react";
 import { Eye, EyeOff, Mail } from "lucide-react";
 import { api } from "@/convex/_generated/api";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
+import { useRouter } from "next/navigation";
+import { useAuth } from '@/app/context/auth-context';
 
 import WaitlistScreen from "./waitlist-screen";
+import UpgradeModal from "@/app/dashboard/_components/settings-screen/tabs/subscription/upgrade-modal";
 
 interface RegisterScreenProps {
   onSuccess?: (apiKey: string) => void;
@@ -14,10 +17,14 @@ interface RegisterScreenProps {
 const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
   const [showWaitlist, setShowWaitlist] = useState(false);
   const [finalApiKey, setFinalApiKey] = useState<string | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const router = useRouter();
+  const { user } = useAuth();
+  const createPersona = useMutation(api.personas.createPersona);
 
   // Handle registration success
   const handleRegisterSuccess = () => {
-    setShowWaitlist(true);
+    router.push('/auth/register/persona');
   };
 
   // Registration form state
@@ -31,6 +38,11 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [referralCodeValid, setReferralCodeValid] = useState(false);
   const [validatingCode, setValidatingCode] = useState(false);
+  const [currentPersona, setCurrentPersona] = useState("");
+  const [futureVision, setFutureVision] = useState("");
+  const [personaLoading, setPersonaLoading] = useState(false);
+  const [personaSuccess, setPersonaSuccess] = useState<string | null>(null);
+  const [personaError, setPersonaError] = useState<string | null>(null);
   
   // Use the Convex query to check referral code
   const checkReferralCode = useQuery(api.userQueries.checkReferralCode, 
@@ -65,6 +77,27 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
       setError("Invalid referral code");
       setReferralCodeValid(false);
       return false;
+    }
+  };
+
+  const handleSavePersona = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPersonaLoading(true);
+    setPersonaSuccess(null);
+    setPersonaError(null);
+    try {
+      if (!user) throw new Error("You must be logged in to save your persona.");
+      await createPersona({
+        userId: user.uid,
+        preferredName: name,
+        currentPersona,
+        futureVision,
+      });
+      setPersonaSuccess("Persona saved!");
+    } catch (err: any) {
+      setPersonaError(err.message || "Failed to save persona.");
+    } finally {
+      setPersonaLoading(false);
     }
   };
 
@@ -149,12 +182,32 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
   const handleWaitlistComplete = (apiKey: string) => {
     setFinalApiKey(apiKey);
     if (onSuccess) onSuccess(apiKey);
+    router.push("/dashboard/chat");
+  };
+
+  const handleUpgradeSuccess = () => {
+    setShowUpgradeModal(false);
+    setShowWaitlist(true);
+  };
+
+  const handleUpgradeClose = () => {
+    // Prevent closing modal without completing checkout
+    // Optionally, show a warning or keep modal open
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100">
       <div className="w-full max-w-md">
-        {!showWaitlist ? (
+        {showUpgradeModal && (
+          <UpgradeModal
+            open={showUpgradeModal}
+            onClose={handleUpgradeClose}
+            onSelectPlan={() => {}}
+            // The modal itself handles checkout and success
+            // We'll rely on the modal to call handleUpgradeSuccess on success
+          />
+        )}
+        {!showWaitlist && !showUpgradeModal ? (
           <form onSubmit={handleSubmit} className="space-y-4 bg-white shadow-lg rounded-xl p-4 sm:p-8">
             <h2 className="text-2xl font-bold mb-4 text-center">Register</h2>
             <div>
@@ -247,7 +300,8 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
               </a>
             </div>
           </form>
-        ) : (
+        ) : null}
+        {showWaitlist && !showUpgradeModal && (
           <WaitlistScreen onComplete={handleWaitlistComplete} />
         )}
       </div>

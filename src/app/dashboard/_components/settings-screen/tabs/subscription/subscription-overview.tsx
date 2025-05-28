@@ -244,29 +244,30 @@ export default function SubscriptionOverview() {
   return (
     <>
       <div className="flex flex-col items-center justify-center min-h-[300px] py-12 px-4 w-full">
-        <div className="w-full flex flex-col gap-10 md:flex-row md:gap-12 md:justify-center md:items-start max-w-5xl">
-          <div className="w-full md:w-1/2 max-w-md mx-auto md:mx-0 flex flex-col gap-10">
+        <div className="w-full flex flex-col md:flex-row md:gap-12 md:justify-center md:items-start max-w-5xl gap-6">
+          {/* Left Column: Usage and Events */}
+          <div className="w-full md:w-2/3 max-w-xl mx-auto md:mx-0 flex flex-col gap-6">
             <UsageAndBillingCard usage={usageSummary} />
-            <div className="flex flex-col items-center w-full">
-              <OverageControlsCard
-                ubpEnabled={ubpEnabled}
-                premiumEnabled={premiumEnabled}
-                monthlyLimit={monthlyLimit}
-                saving={saving}
-                setUbpEnabled={setUbpEnabled}
-                setPremiumEnabled={setPremiumEnabled}
-                setMonthlyLimit={setMonthlyLimit}
-                handleSaveUbp={handleSaveUbp}
-              />
-            </div>
+            <RecentUsageEventsCard usageEvents={usageEvents} />
           </div>
-          <div className="w-full md:w-1/2 max-w-md mx-auto md:mx-0 flex flex-col justify-center">
+          {/* Right Column: Account and Controls */}
+          <div className="w-full md:w-1/3 max-w-md mx-auto md:mx-0 flex flex-col gap-6">
             <AccountSubscriptionCard
               user={user}
               currentSubscription={currentSubscription}
               handleUpgrade={handleOpenUpgradeModal}
               handleOpenQuantityModal={() => handleOpenQuantityModal(currentSubscription?.quantity || 1)}
               handleManageSubscription={handleManageSubscription}
+            />
+            <OverageControlsCard
+              ubpEnabled={ubpEnabled}
+              premiumEnabled={premiumEnabled}
+              monthlyLimit={monthlyLimit}
+              saving={saving}
+              setUbpEnabled={setUbpEnabled}
+              setPremiumEnabled={setPremiumEnabled}
+              setMonthlyLimit={setMonthlyLimit}
+              handleSaveUbp={handleSaveUbp}
             />
           </div>
         </div>
@@ -276,6 +277,13 @@ export default function SubscriptionOverview() {
         onClose={handleCloseUpgradeModal}
         onSelectPlan={handleSelectPlan}
       />
+      {showCheckout && selectedPlanId && (
+        <CheckoutForm
+          planId={selectedPlanId}
+          onSuccess={handleCheckoutSuccess}
+          onCancel={handleCheckoutCancel}
+        />
+      )}
     </>
   );
 } 
