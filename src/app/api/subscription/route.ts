@@ -47,7 +47,8 @@ export async function POST(request: Request) {
         userId,
         email,
         name,
-        planId
+        planId,
+        body.returnUrl
       );
 
       // Success

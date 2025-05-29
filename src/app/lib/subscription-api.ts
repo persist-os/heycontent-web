@@ -167,7 +167,8 @@ export async function createCustomer(
  * @param apiKey - The API key for authentication
  * @param userId - The user ID
  * @param planId - The plan ID or price ID
- * @returns The checkout redirect URL
+ * @param returnUrl - Optional URL to redirect to after the payment
+ * @returns The checkout session response object
  */
 export interface CheckoutSessionResponse {
   client_secret: string;
@@ -181,6 +182,7 @@ export interface CheckoutSessionResponse {
  * @param apiKey - The API key for authentication
  * @param userId - The user ID
  * @param planId - The plan ID or price ID
+ * @param returnUrl - Optional URL to redirect to after the payment
  * @returns The checkout session response object
  */
 export async function createCheckoutSession(
@@ -189,6 +191,7 @@ export async function createCheckoutSession(
   email: string,
   name: string,
   planId: string,
+  returnUrl?: string,
 ): Promise<CheckoutSessionResponse> {
   try {
     const { response, data } = await callSubscriptionAPI(
@@ -200,6 +203,7 @@ export async function createCheckoutSession(
         email,
         name,
         price_id: planId,
+        ...(returnUrl ? { return_url: returnUrl } : {}),
       }
     );
     

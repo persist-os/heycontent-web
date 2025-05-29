@@ -209,7 +209,7 @@ export default function SubscriptionOverview() {
       if (!apiKey) {
         throw new Error('No API key found. Please log in again.');
       }
-      const returnUrl = window.location.href;
+      const returnUrl = window.location.origin + '/settings';
       const response = await createCustomerPortalSession(apiKey, user.uid, user.email, returnUrl);
       if (response.success && response.data?.url) {
         window.location.href = response.data.url;
@@ -276,6 +276,7 @@ export default function SubscriptionOverview() {
         open={showUpgradeModal}
         onClose={handleCloseUpgradeModal}
         onSelectPlan={handleSelectPlan}
+        context="settings"
       />
       {showCheckout && selectedPlanId && (
         <CheckoutForm

@@ -38,11 +38,13 @@ interface BackendPlan {
 export default function UpgradeModal({ 
   open, 
   onClose, 
-  onSelectPlan
+  onSelectPlan,
+  context = 'settings',
 }: { 
   open: boolean; 
   onClose: () => void; 
   onSelectPlan: (planId: string) => void;
+  context?: 'registration' | 'settings';
 }) {
   const { user } = useAuth();
   const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("monthly");
@@ -179,10 +181,17 @@ export default function UpgradeModal({
 
   const handleCheckoutSuccess = () => {
     setShowCheckout(false);
+    const planId = selectedPlanId;
     setSelectedPlanId(null);
-    onClose();
-    // Optionally, call onSelectPlan(selectedPlanId) or notify parent
-    // window.location.reload(); // Or trigger parent refresh
+    if (planId) {
+      if (context === 'registration') {
+        onSelectPlan(planId);
+      } else {
+        onClose();
+      }
+    } else {
+      onClose();
+    }
   };
 
   const handleCheckoutCancel = () => {
@@ -206,6 +215,14 @@ export default function UpgradeModal({
               planId={selectedPlanId}
               onSuccess={handleCheckoutSuccess}
               onCancel={handleCheckoutCancel}
+              returnUrl={(() => {
+                if (typeof window === 'undefined') return undefined;
+                if (context === 'registration') {
+                  return window.location.origin + '/auth/register?step=waitlist';
+                } else {
+                  return window.location.origin + '/settings';
+                }
+              })()}
             />
             <Button
               variant="outline"
