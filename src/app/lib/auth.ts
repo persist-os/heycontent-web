@@ -1,6 +1,4 @@
-import { getFirebaseAuth } from '@/app/lib/firebase'
-import { getAuth, onAuthStateChanged } from 'firebase/auth'
-import { getServerSession } from './server-auth'
+import { onAuthStateChanged } from 'firebase/auth';
 
 interface AuthResponse {
   user: {
@@ -12,16 +10,15 @@ interface AuthResponse {
 }
 
 // Check if we're on the client side
-const isClient = typeof window !== 'undefined';
-
 export async function auth(): Promise<AuthResponse | null> {
-  // For server-side, use the server-auth module
-  if (!isClient) {
+  if (typeof window === 'undefined') {
+    // Server-side: dynamically import to avoid loading client code
+    const { getServerSession } = await import('./server-auth');
     return getServerSession();
   }
-
-  // For client-side, use the Firebase Auth SDK
-  const firebaseAuthInstance = getAuth();
+  // Client-side: dynamically import Firebase code
+  const { getFirebaseAuth } = await import('@/app/lib/firebase');
+  const firebaseAuthInstance = getFirebaseAuth();
 
   // Wait for auth state to be determined
   return new Promise((resolve) => {

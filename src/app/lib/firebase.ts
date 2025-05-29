@@ -14,48 +14,28 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase only on client side
-let app: FirebaseApp | undefined;
-let auth: Auth | undefined;
 
-if (isClient) {
-  try {
-    // Initialize Firebase if it hasn't been initialized yet
-    if (!getApps().length) {
-      app = initializeApp(firebaseConfig);
-      console.log('Firebase initialized successfully');
-    } else {
-      app = getApp();
-    }
-
-    // Initialize auth
-    if (app) {
-      auth = getAuth(app);
-      setPersistence(auth, browserLocalPersistence)
-        .catch((error) => {
-          console.error('Error setting auth persistence:', error);
-        });
-    }
-  } catch (error) {
-    console.error('Firebase initialization error:', error);
-  }
-}
 
 // Export initialized instances
-export { app, auth };
+// Removed direct exports of app and auth. Use getter functions only.
 
 // Export a function to get the auth instance
-export const getFirebaseAuth = () => {
-  if (!auth) {
-    throw new Error('Firebase Auth not initialized');
+export function getFirebaseApp(): FirebaseApp {
+  if (typeof window === 'undefined') throw new Error('Cannot use Firebase App on the server');
+  if (!getApps().length) {
+    return initializeApp(firebaseConfig);
   }
-  return auth;
-};
+  return getApp();
+}
 
-// Export a function to get the app instance
-export const getFirebaseApp = () => {
-  if (!app) {
-    throw new Error('Firebase App not initialized');
-  }
-  return app;
-};
+export function getFirebaseAuth(): Auth {
+  if (typeof window === 'undefined') throw new Error('Cannot use Firebase Auth on the server');
+  const app = getFirebaseApp();
+  const auth = getAuth(app);
+  setPersistence(auth, browserLocalPersistence).catch((error) => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error setting auth persistence:', error);
+    }
+  });
+  return auth;
+}

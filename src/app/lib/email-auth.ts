@@ -1,4 +1,5 @@
-import { getAuth, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from 'firebase/auth';
+import { sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from 'firebase/auth';
+import { getFirebaseAuth } from '@/app/lib/firebase';
 
 // Action code settings for the email link
 const actionCodeSettings = {
@@ -14,7 +15,7 @@ const actionCodeSettings = {
  */
 export const sendEmailLink = async (email: string) => {
   try {
-    const auth = getAuth();
+    const auth = getFirebaseAuth();
     await sendSignInLinkToEmail(auth, email, actionCodeSettings);
     
     // Save the email locally so we can use it later
@@ -36,7 +37,7 @@ export const sendEmailLink = async (email: string) => {
  */
 export const completeEmailSignIn = async (email: string, url: string) => {
   try {
-    const auth = getAuth();
+    const auth = getFirebaseAuth();
     
     // Sign in the user directly without verification
     const result = await signInWithEmailLink(auth, email, url);
@@ -59,7 +60,7 @@ export const completeEmailSignIn = async (email: string, url: string) => {
 export const isEmailLink = () => {
   if (typeof window === 'undefined') return false;
   
-  const auth = getAuth();
+  const auth = getFirebaseAuth();
   return isSignInWithEmailLink(auth, window.location.href);
 };
 

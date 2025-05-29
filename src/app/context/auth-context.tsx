@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/app/lib/firebase';
 
 interface AuthContextType {
   user: User | null;
@@ -29,29 +28,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (!auth) {
-      setError('Firebase auth not initialized');
-      setLoading(false);
-      return;
-    }
+    let unsubscribe: (() => void) | undefined;
+    let isMounted = true;
+    (async () => {
+      try {
+        const { getFirebaseAuth } = await import('@/app/lib/firebase');
+        const auth = getFirebaseAuth();
+        unsubscribe = onAuthStateChanged(auth, (user) => {
+          if (!isMounted) return;
+          if (isRedirecting.current) return;
 
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (user) => {
-        if (isRedirecting.current) return;
-
-        setUser(user);
-        setLoading(false);
-        setError(null);
-      },
-      (error) => {
-        console.error('Auth state error:', error);
-        setError(error.message);
-        setLoading(false);
+          setUser(user);
+          setLoading(false);
+          setError(null);
+        }, (error) => {
+          if (!isMounted) return;
+          console.error('Auth state error:', error);
+          setError(error.message);
+          setLoading(false);
+        });
+      } catch (e) {
+        if (isMounted) {
+          setError('Firebase auth not initialized');
+          setLoading(false);
+        }
       }
-    );
-
-    return () => unsubscribe();
+    })();
+    return () => {
+      isMounted = false;
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   const safeRedirect = (path: string) => {

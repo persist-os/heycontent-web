@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/app/lib/firebase'
+import { getFirebaseAuth } from '@/app/lib/firebase'
 import { signOut } from 'firebase/auth'
 
 export async function POST() {

@@ -36,8 +36,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
         throw new Error(data.error);
       }
       if (data.customToken) {
-        const { getAuth, signInWithCustomToken } = await import('firebase/auth');
-        const auth = getAuth();
+        const { signInWithCustomToken } = await import('firebase/auth');
+        const { getFirebaseAuth } = await import('@/app/lib/firebase');
+        const auth = getFirebaseAuth();
         try {
           console.log('About to sign in with custom token...');
           await signInWithCustomToken(auth, data.customToken);

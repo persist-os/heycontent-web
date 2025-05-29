@@ -25,7 +25,7 @@ export const platformPrompts: Record<PlatformKey, PlatformPrompt[]> = {
     { key: 'premiere', description: 'Scheduled video launch with live chat feature' },
     { key: 'community_post', description: 'Non-video updates: polls, images, or text posts' },
     { key: 'story', description: 'Temporary mobile-only short content (for eligible creators)' },
-    { key: 'podcast', description: 'Video/audio podcast uploaded to YouTube’s podcast tab' },
+    { key: 'podcast', description: 'Video/audio podcast uploaded to YouTube\'s podcast tab' },
   ],
   gmail: [
     { key: 'newsletter', description: 'Email campaign for updates, content, or announcements' },

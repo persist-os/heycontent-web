@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { auth } from '@/app/lib/firebase'
+import { getFirebaseAuth } from '@/app/lib/firebase' // Only call inside useEffect or event handlers
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { Logo } from '@/components/ui/logo'
 import { useSidebar } from '@/app/context/sidebar-context'
@@ -92,6 +92,7 @@ export function DashboardNav() {
   }, [isExpanded, setIsExpanded])
 
   useEffect(() => {
+    const auth = getFirebaseAuth();
     if (!auth) {
       console.error('Firebase auth not initialized')
       return

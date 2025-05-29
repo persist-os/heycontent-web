@@ -13,7 +13,7 @@ import AIPreferencesTab from './tabs/AIPreferencesTab'
 import DataTab from './tabs/DataTab'
 import { handleSignOut } from './utils'
 import SubscriptionOverview from './tabs/subscription/subscription-overview'
-import { auth } from '@/app/lib/firebase'
+import { getFirebaseAuth } from '@/app/lib/firebase' // Only call inside useEffect or event handlers
 
 const SettingsScreen = () => {
   const router = useRouter()
@@ -35,8 +35,8 @@ const SettingsScreen = () => {
     setIsFirstTimeSetup(window.location.search.includes('newUser=true'))
   }, [])
 
-
   useEffect(() => {
+    const auth = getFirebaseAuth();
     const currentUser = auth?.currentUser;
     if (currentUser) {
       setFormData(prev => ({

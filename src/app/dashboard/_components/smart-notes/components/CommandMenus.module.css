@@ -1,4 +1,16 @@
 .command-menu-position {
   top: var(--command-menu-top, 0px);
   left: var(--command-menu-left, 0px);
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

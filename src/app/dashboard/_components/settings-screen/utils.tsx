@@ -1,6 +1,5 @@
 // File: components/settings/utils.ts
 import { signOut, updateProfile } from 'firebase/auth'
-import { auth } from '@/app/lib/firebase'
 import { fetchWithAuth } from '@/app/lib/api-helpers'
 import { toast } from 'react-hot-toast'
 import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime'
@@ -24,12 +23,12 @@ export const handleSignOut = async (router: AppRouterInstance) => {
     const data = await response.json()
     if (!response.ok) throw new Error(data.details || data.error || 'Failed to logout')
 
-    if (auth) {
-      try {
-        await signOut(auth)
-      } catch (firebaseError) {
-        console.warn('Firebase signOut error:', firebaseError)
-      }
+    try {
+      const { getFirebaseAuth } = await import('@/app/lib/firebase');
+      const auth = getFirebaseAuth();
+      await signOut(auth);
+    } catch (firebaseError) {
+      console.warn('Firebase signOut error:', firebaseError);
     }
 
     router.push('/auth/login')
@@ -43,11 +42,13 @@ export const handleSignOut = async (router: AppRouterInstance) => {
 export const handleResendVerification = async (setIsResending: (val: boolean) => void) => {
   setIsResending(true)
   try {
-    if (!auth) throw new Error('Auth not initialized')
+    const { getFirebaseAuth } = await import('@/app/lib/firebase');
+    const auth = getFirebaseAuth();
+    if (!auth) throw new Error('Auth not initialized');
     const response = await fetchWithAuth('/api/auth/verify-email', {
       method: 'POST',
       body: JSON.stringify({ email: auth.currentUser?.email }),
-    })
+    });
     if (!response) throw new Error('Failed to resend verification email')
     if (!response.ok) {
       const data = await response.json()

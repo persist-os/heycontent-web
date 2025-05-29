@@ -9,6 +9,7 @@ import { NoteReferences } from './components/NoteReferences';
 import { CommandMenus } from './components/CommandMenus';
 import { FullAnalysisModal } from './components/FullAnalysisModal';
 import { Keyboard } from 'lucide-react';
+import IdeasPanel from './IdeasPanel';
 
 interface NoteAreaProps {
   note: Note;
@@ -39,6 +40,7 @@ export function NoteArea({
   const [cursorPosition, setCursorPosition] = useState<number | null>(null);
   // The command (slash) menu is only shown when the user types `/` at the start of a line
   const [showCommands, setShowCommands] = useState(false);
+  const [commandMenuKey, setCommandMenuKey] = useState(0);
   const [showMentions, setShowMentions] = useState(false);
   const [showTags, setShowTags] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
@@ -136,7 +138,7 @@ export function NoteArea({
   }, [note._id, note.content]);
 
   const insertText = (text: string) => {
-    if (!textAreaRef.current || !content) return;
+    if (!textAreaRef.current) return;
 
     const start = textAreaRef.current.selectionStart || 0;
     const end = textAreaRef.current.selectionEnd || 0;
@@ -147,24 +149,31 @@ export function NoteArea({
     if (text === '#' || text === '@' || text === '/') {
       newText = text;
       newCursorPosition = start + 1;
-      updateMenuPosition();
-
-      if (text === '/') {
-        console.log('Slash detected, showing commands menu with platform:', note.platform || 'instagram');
-        setShowCommands(true);
-        setShowMentions(false);
-        setShowTags(false);
-      }
-      if (text === '@') {
-        setShowMentions(true);
-        setShowCommands(false);
-        setShowTags(false);
-      }
-      if (text === '#') {
-        setShowTags(true);
-        setShowCommands(false);
-        setShowMentions(false);
-      }
+      
+      // Update menu position before showing the menu
+      setTimeout(() => {
+        updateMenuPosition();
+        
+        if (text === '/') {
+          console.log('Slash detected, showing commands menu with platform:', note.platform || 'instagram');
+          setSearchTerm('');
+          setShowCommands(true);
+          setShowMentions(false);
+          setShowTags(false);
+        }
+        if (text === '@') {
+          setSearchTerm('');
+          setShowMentions(true);
+          setShowCommands(false);
+          setShowTags(false);
+        }
+        if (text === '#') {
+          setSearchTerm('');
+          setShowTags(true);
+          setShowCommands(false);
+          setShowMentions(false);
+        }
+      }, 0);
     } else if (selectedText) {
       newText = text;
       newCursorPosition = start + text.length;
@@ -221,6 +230,33 @@ export function NoteArea({
     console.log('Content changing to:', newContent);
     setContent(newContent);
     
+    // Check for slash commands
+    if (textAreaRef.current) {
+      const cursorPos = textAreaRef.current.selectionStart;
+      const lineStart = newContent.lastIndexOf('\n', cursorPos - 1) + 1;
+      const lineContent = newContent.substring(lineStart, cursorPos);
+      
+      // If the user just typed a slash at the beginning of a line
+      if (lineContent === '/') {
+        console.log('Slash command detected at beginning of line');
+        updateMenuPosition();
+        setSearchTerm('');
+        setShowCommands(true);
+        setShowMentions(false);
+        setShowTags(false);
+      } 
+      // If the user is typing after a slash, update the search term
+      else if (lineContent.startsWith('/')) {
+        const searchTerm = lineContent.substring(1);
+        console.log('Updating slash command search term:', searchTerm);
+        setSearchTerm(searchTerm);
+      }
+      // If the user deleted the slash, hide the commands menu
+      else if (showCommands && !lineContent.includes('/')) {
+        setShowCommands(false);
+      }
+    }
+    
     // Save to local storage as backup immediately
     saveToLocal(note._id, { content: newContent });
     
@@ -234,8 +270,15 @@ export function NoteArea({
   const updateMenuPosition = () => {
     if (!textAreaRef.current) return;
 
+    // Get cursor coordinates
     const { top, left } = getCursorCoordinates(textAreaRef.current, textAreaRef.current.selectionStart || 0);
-    setMenuPosition({ top, left });
+    
+    // Add a small offset to position the menu below the cursor
+    const menuTop = top + 20;
+    const menuLeft = Math.max(10, left);
+    
+    console.log('Menu position updated:', { top: menuTop, left: menuLeft });
+    setMenuPosition({ top: menuTop, left: menuLeft });
   };
 
 
@@ -267,46 +310,42 @@ export function NoteArea({
         onRequestAIInsights={onRequestAIInsights}
         currentContent={content}
       />
-      <div className="flex-1 overflow-auto p-4">
-        <textarea
-          ref={textAreaRef}
-          className="w-full h-full resize-none outline-none bg-transparent"
-          value={content}
-          onChange={(e) => handleContentChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type / for commands, @ to reference content, # to add tags"
-          aria-label="Note content"
-        />
-      </div>
-      <NoteReferences
-        references={references}
-        selectedInsight={selectedInsight}
-        setSelectedInsight={setSelectedInsight}
-        setShowFullAnalysis={setShowFullAnalysis}
-      />
-      <CommandMenus
-        showCommands={showCommands}
-        showMentions={showMentions}
-        showTags={showTags}
-        menuPosition={menuPosition}
-        searchTerm={searchTerm}
-        onCommandSelect={handleCommand}
-        onCloseCommands={() => {
-          setShowCommands(false);
-          setShowMentions(false);
-          setShowTags(false);
-        }}
-        textAreaRef={textAreaRef}
-        onUpdate={onUpdate}
+      {/* AI Content Ideas Panel (commented for future use)
+      <IdeasPanel
         noteId={note._id}
-        platform={(note.platform as PlatformKey) || 'instagram'}
+        userId={note.userId}
+        platform={note.platform}
+        mode="note"
+        limit={5}
       />
+      */}
+      <textarea
+        ref={textAreaRef}
+        value={content}
+        onChange={e => handleContentChange(e.target.value)}
+        onKeyDown={handleKeyDown}
+        className="flex-1 w-full resize-none p-3 text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-300 bg-white"
+        placeholder="Type your note here..."
+        rows={10}
+      />
+      {showCommands && (
+        <CommandMenu
+          key={commandMenuKey}
+          onSelect={handleCommand}
+          onClose={() => setShowCommands(false)}
+          searchTerm={searchTerm}
+          position={menuPosition}
+        />
+      )}
+
+      {/* FullAnalysisModal (commented for future use)
       <FullAnalysisModal
         showFullAnalysis={showFullAnalysis}
         setShowFullAnalysis={setShowFullAnalysis}
         selectedInsight={selectedInsight}
         references={references}
       />
+      */}
       <button
         onClick={onToggleShortcuts}
         className="fixed bottom-4 left-4 p-2 bg-white/80 backdrop-blur-sm rounded-full shadow-lg border border-gray-200 hover:bg-white transition-colors"

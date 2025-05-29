@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react'
-import { auth } from '@/app/lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import { MessageBubble } from './message-bubble'
@@ -108,32 +107,37 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId }) => {
 
   // Authentication effect
   useEffect(() => {
-    if (!auth) {
-      console.error('Firebase auth not initialized')
-      return
-    }
-
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user)
-      if (!user) {
-        setLoading(false)
-        return
+    let unsubscribe: (() => void) | undefined;
+    let isMounted = true;
+    (async () => {
+      try {
+        const { getFirebaseAuth } = await import('@/app/lib/firebase');
+        const auth = getFirebaseAuth();
+        unsubscribe = onAuthStateChanged(auth, async (user) => {
+          if (!isMounted) return;
+          setUser(user);
+          if (!user) {
+            setLoading(false);
+            return;
+          }
+          if (chatId) {
+            // If we have a chat ID, we'll load the conversation in a separate effect
+          } else {
+            chatState.setSessionId(null);
+          }
+          setLoading(false);
+        });
+      } catch (e) {
+        if (isMounted) {
+          console.error('Firebase auth not initialized');
+        }
       }
-      
-      if (chatId) {
-        // If we have a chat ID, we'll load the conversation in a separate effect
-      } else {
-        // For a new chat, sessionId will be null initially
-        // and will be set after the first message is sent
-        chatState.setSessionId(null)
-      }
-      setLoading(false)
-    })
-
+    })();
     return () => {
-      unsubscribe()
-    }
-  }, [chatId, chatState.setSessionId])
+      isMounted = false;
+      if (unsubscribe) unsubscribe();
+    };
+  }, [chatId, chatState.setSessionId]);
 
   // Load conversation when user and chatId are available
   useEffect(() => {

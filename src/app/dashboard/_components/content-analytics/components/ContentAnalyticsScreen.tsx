@@ -6,7 +6,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { getAuth, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { FirebaseApp } from 'firebase/app';
-import { app, getFirebaseApp, getFirebaseAuth } from '@/app/lib/firebase';
+import { getFirebaseApp, getFirebaseAuth } from '@/app/lib/firebase'; // Only call these inside functions or useEffect
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // Import components

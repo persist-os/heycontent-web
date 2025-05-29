@@ -1,6 +1,6 @@
 'use client';
 
-import { auth } from '@/app/lib/firebase';
+import { getFirebaseAuth } from '@/app/lib/firebase';
 
 import dotenv from 'dotenv';
 
@@ -10,6 +10,7 @@ dotenv.config();
  * Get API key from localStorage or request a new one
  */
 export async function getApiKey(): Promise<string | null> {
+  const auth = getFirebaseAuth();
   try {
     // First try to get the API key from localStorage
     const storedApiKey = localStorage.getItem('apiKey');
@@ -109,13 +110,11 @@ export async function getApiKey(): Promise<string | null> {
   }
 }
 
-
-
-
 /**
  * Get the current user ID from Firebase Auth
  */
 export function getCurrentUserId(): string | null {
+  const auth = getFirebaseAuth();
   if (auth && auth.currentUser) {
     return auth.currentUser.uid;
   } else {
@@ -137,6 +136,7 @@ export function getCurrentUserId(): string | null {
  * Automatically adds the Firebase ID token to the request headers
  */
 export async function fetchWithAuth(url: string, options: RequestInit = {}) {
+  const auth = getFirebaseAuth();
   if (!auth) return;
   try {
     // Get the current user
@@ -179,4 +179,91 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
     console.error('Error in fetchWithAuth:', error);
     throw error;
   }
+}
+// --- SMART NOTE API HELPERS ---
+
+export interface AnalyzeSmartNoteRequest {
+  noteId: string;
+  platform: string;
+  userId: string;
+}
+export interface AnalyzeSmartNoteResponse {
+  success: boolean;
+  analysisId: string;
+  data: { ideas: string[] };
+}
+
+export interface GenerateIdeasRequest {
+  userId: string;
+  limit?: number;
+}
+export interface GenerateIdeasResponse {
+  ideas: string[];
+}
+
+export interface ExecuteIdeaRequest {
+  userId: string;
+  idea: string;
+  note: string;
+  context?: Record<string, any>;
+}
+export interface ExecuteIdeaResponse {
+  result: string;
+}
+
+export async function fetchWithApiKey(url: string, options: RequestInit = {}): Promise<Response> {
+  const apiKey = await getApiKey();
+  if (!apiKey) throw new Error('No API key found. Please log in again.');
+  const headers = {
+    ...(options.headers || {}),
+    'Authorization': `Bearer ${apiKey}`,
+    'Content-Type': 'application/json',
+  };
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  });
+  return response;
+}
+
+export async function analyzeSmartNote(
+  req: AnalyzeSmartNoteRequest
+): Promise<AnalyzeSmartNoteResponse> {
+  const response = await fetchWithApiKey('/api/v1/smart-note/analyze', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err?.detail || err?.message || 'Failed to analyze note');
+  }
+  return response.json();
+}
+
+export async function generateSmartNoteIdeas(
+  req: GenerateIdeasRequest
+): Promise<GenerateIdeasResponse> {
+  const response = await fetchWithApiKey('/api/v1/smart-note/ideas/', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err?.detail || err?.message || 'Failed to generate ideas');
+  }
+  return response.json();
+}
+
+export async function executeSmartNoteIdea(
+  req: ExecuteIdeaRequest
+): Promise<ExecuteIdeaResponse> {
+  const response = await fetchWithApiKey('/api/v1/smart-note/ideas/execute', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err?.detail || err?.message || 'Failed to execute idea');
+  }
+  return response.json();
 }

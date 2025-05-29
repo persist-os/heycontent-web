@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
-import { auth } from '@/app/lib/firebase'
+import { getFirebaseAuth } from '@/app/lib/firebase' // Only call inside useEffect or event handlers
 import { handleResendVerification } from '../utils'
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
@@ -66,6 +66,7 @@ async function handleProfileUpdate(
       
       // Update user data (name, username)
       if (email) {
+        const auth = getFirebaseAuth();
         await updateUser({
           userId,
           name: formData.name,
@@ -94,7 +95,10 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
   const [isEditMode, setIsEditMode] = React.useState(false);
   
   // Properly fetch persona data using the useQuery hook at component level
-  const userId = auth?.currentUser?.uid;
+  const userId = React.useMemo(() => {
+    const auth = getFirebaseAuth();
+    return auth?.currentUser?.uid;
+  }, []);
 
   // Only run the queries if userId is available
   const personaData = useQuery(
@@ -152,7 +156,10 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
                 />
               </div>
             </div>
-            {auth?.currentUser ? (
+            {React.useMemo(() => {
+              const auth = getFirebaseAuth();
+              return auth?.currentUser;
+            }, []) ? (
               <Badge variant="success">Verified</Badge>
             ) : (
               <div className="flex items-center gap-2">
@@ -171,7 +178,10 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-        <form onSubmit={(e) => handleProfileUpdate(e, formData, setIsUpdating, setFormData, updatePersona, updateUser, auth?.currentUser?.uid, auth?.currentUser?.email || undefined)}>
+        <form onSubmit={(e) => handleProfileUpdate(e, formData, setIsUpdating, setFormData, updatePersona, updateUser, userId, React.useMemo(() => {
+          const auth = getFirebaseAuth();
+          return auth?.currentUser?.email;
+        }, []))}>
             <div className="grid grid-cols-1 gap-4">
               <div>
                 <label htmlFor="name" className="text-sm font-medium">Name</label>

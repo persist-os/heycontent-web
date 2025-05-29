@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { AtSign, Hash } from 'lucide-react';
+import { AtSign, Hash, Instagram, Youtube, Mail } from 'lucide-react';
 import { CommandMenu, type Command } from '../CommandMenu';
 import type { Note } from '../types';
 import { PlatformKey } from '../types/platformPrompts';
@@ -174,16 +174,28 @@ export function CommandMenus({
     <>
       {showCommands && (
         <div
-          className={`${styles['command-menu-position']} fixed z-50 w-80 max-h-[400px] overflow-y-auto bg-white rounded-lg shadow-xl border border-gray-200`}
+          className={`${styles['command-menu-position']} fixed z-50 w-80 max-h-[400px] overflow-y-auto bg-white rounded-lg shadow-xl border border-gray-200 animate-fadeIn`}
           style={{
             top: menuPosition.top,
             left: menuPosition.left,
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
           }}
         >
-          <div className="p-2 bg-purple-50 border-b border-gray-200">
-            <div className="text-sm font-medium text-purple-800">
-              {platform.charAt(0).toUpperCase() + platform.slice(1)} prompts
+          <div className="p-3 bg-gradient-to-r from-purple-50 to-purple-100 border-b border-gray-200 flex items-center justify-between">
+            <div className="text-sm font-medium text-purple-800 flex items-center gap-2">
+              {(platform === 'instagram' || !['youtube', 'gmail'].includes(platform)) && <Instagram size={16} className="text-purple-700" />}
+              {platform === 'youtube' && <Youtube size={16} className="text-red-600" />}
+              {platform === 'gmail' && <Mail size={16} className="text-blue-600" />}
+              <span>
+                {(['instagram', 'youtube', 'gmail'].includes(platform) 
+                  ? platform 
+                  : 'instagram').charAt(0).toUpperCase() + 
+                  (['instagram', 'youtube', 'gmail'].includes(platform) 
+                    ? platform 
+                    : 'instagram').slice(1)} Content Types
+              </span>
             </div>
+            <div className="text-xs text-gray-500">Type to filter</div>
           </div>
           <CommandMenu 
             onSelect={onCommandSelect} 
