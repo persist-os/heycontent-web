@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Note, NoteUpdate } from './types';
 import { ShortcutManager } from './keyboard-shortcuts';
 import { CommandMenu, type Command } from './CommandMenu';
+import { executeSmartNoteIdea } from '@/app/lib/api-helpers';
 import type { PlatformKey } from './types/platformPrompts';
 import { saveToLocal, getCursorCoordinates, applyFormat } from './utils/note-utils';
 import { NoteHeader } from './components/NoteHeader';
@@ -282,16 +283,48 @@ export function NoteArea({
   };
 
 
-  const handleCommand = (command: Command) => {
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const handleCommand = async (command: Command) => {
     if (command.type === 'format') {
       handleFormat(command.shortcut || '', command.shortcut || '');
     } else if (command.type === 'block' && command.template) {
-      insertText(command.template);
+      // If this is an AI prompt, expand it using the backend
+      if (command.metadata?.type === 'idea') {
+        setAiLoading(true);
+        try {
+          const res = await executeSmartNoteIdea({
+            userId: note.userId,
+            idea: command.template,
+            note: content,
+            context: {
+              platform: note.platform,
+              postType: note.postType || 'default',
+            }
+          });
+          // Insert the generated content at the cursor position
+          if (textAreaRef.current) {
+            const start = textAreaRef.current.selectionStart || 0;
+            const end = textAreaRef.current.selectionEnd || 0;
+            const newContent = content.substring(0, start) + res.result + content.substring(end);
+            setContent(newContent);
+            setCursorPosition(start + res.result.length);
+            onUpdate(note._id, { content: newContent });
+          }
+        } catch (err) {
+          alert('Failed to expand prompt: ' + (err instanceof Error ? err.message : 'Unknown error'));
+        } finally {
+          setAiLoading(false);
+        }
+      } else {
+        insertText(command.template);
+      }
     } else if (command.type === 'metadata' && command.metadata) {
       onUpdate(note._id, { [command.metadata.type || '']: command.metadata.value });
     }
     setShowCommands(false);
   };
+
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (shortcutManager.current) {
@@ -319,6 +352,11 @@ export function NoteArea({
         limit={5}
       />
       */}
+      {aiLoading && (
+        <div className="absolute z-50 flex items-center justify-center w-full h-full bg-white bg-opacity-70" style={{top:0,left:0}}>
+          <span className="text-lg font-medium text-primary-600">Generating with AI...</span>
+        </div>
+      )}
       <textarea
         ref={textAreaRef}
         value={content}
@@ -327,6 +365,7 @@ export function NoteArea({
         className="flex-1 w-full resize-none p-3 text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-300 bg-white"
         placeholder="Type your note here..."
         rows={10}
+        disabled={aiLoading}
       />
       {showCommands && (
         <CommandMenu

@@ -5,6 +5,7 @@ import {
   MessageCircle, Newspaper, Briefcase, Network, Gift, Bot, Clock, ArrowLeft, ChevronRight
 } from 'lucide-react';
 import { platformPrompts, PlatformKey } from './types/platformPrompts';
+import { fetchPlatformPrompts } from '@/app/lib/api-helpers';
 
 export interface Command {
   icon: any;
@@ -208,6 +209,11 @@ ${description}
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
   
+  // State for dynamic prompts
+  const [prompts, setPrompts] = useState<{ file: string; content: string }[]>([]);
+  const [promptsLoading, setPromptsLoading] = useState(false);
+  const [promptsError, setPromptsError] = useState<string | null>(null);
+
   // Build commands based on the current step in the flow
   useEffect(() => {
     console.log('[CommandMenu] Current step:', currentStep);
@@ -278,78 +284,83 @@ ${description}
       setFilteredCommands(filteredPostTypes);
       setSelectedIndex(0);
     } else if (currentStep === 'aiPrompts' && selectedPlatform && selectedPostType) {
-      // If we're at the AI prompts step, generate AI content ideas
-      const platformData = selectedPlatform ? platformPrompts[selectedPlatform] : undefined;
-      const postTypeData = platformData?.find(p => p.key === selectedPostType);
-      
-      if (!platformData || !postTypeData) {
-        console.error(`[CommandMenu] No data found for platform: ${selectedPlatform} or post type: ${selectedPostType}`);
-        return;
-      }
-      
-      // Generate 3-5 AI content ideas
-      const aiPromptCommands: Command[] = [
-        {
-          icon: Lightbulb,
-          label: `${postTypeData.description} Idea 1`,
-          action: 'ai_idea_1',
-          preview: `AI-generated idea for ${postTypeData.description}`,
-          type: 'block',
-          template: generateTemplate(selectedPlatform, selectedPostType, postTypeData.description),
-          metadata: { type: 'idea', value: true },
-        },
-        {
-          icon: Lightbulb,
-          label: `${postTypeData.description} Idea 2`,
-          action: 'ai_idea_2',
-          preview: `Another AI-generated idea for ${postTypeData.description}`,
-          type: 'block',
-          template: generateTemplate(selectedPlatform, selectedPostType, postTypeData.description),
-          metadata: { type: 'idea', value: true },
-        },
-        {
-          icon: Lightbulb,
-          label: `${postTypeData.description} Idea 3`,
-          action: 'ai_idea_3',
-          preview: `One more AI-generated idea for ${postTypeData.description}`,
-          type: 'block',
-          template: generateTemplate(selectedPlatform, selectedPostType, postTypeData.description),
-          metadata: { type: 'idea', value: true },
-        },
-        {
-          icon: Lightbulb,
-          label: `${postTypeData.description} Idea 4`,
-          action: 'ai_idea_4',
-          preview: `Fourth AI-generated idea for ${postTypeData.description}`,
-          type: 'block',
-          template: generateTemplate(selectedPlatform, selectedPostType, postTypeData.description),
-          metadata: { type: 'idea', value: true },
-        },
-        {
-          icon: Lightbulb,
-          label: `${postTypeData.description} Idea 5`,
-          action: 'ai_idea_5',
-          preview: `Fifth AI-generated idea for ${postTypeData.description}`,
-          type: 'block',
-          template: generateTemplate(selectedPlatform, selectedPostType, postTypeData.description),
-          metadata: { type: 'idea', value: true },
-        }
-      ];
-      
-      // Filter AI prompts by search term if provided
-      const filteredAiPrompts = searchTerm
-        ? aiPromptCommands.filter(cmd =>
-            cmd.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (cmd.preview && cmd.preview.toLowerCase().includes(searchTerm.toLowerCase()))
-          )
-        : aiPromptCommands;
-      
-      setFilteredCommands(filteredAiPrompts);
-      setSelectedIndex(0);
+      setPromptsLoading(true);
+      setPromptsError(null);
+      fetchPlatformPrompts(selectedPlatform, selectedPostType)
+        .then((data) => {
+          setPrompts(data);
+          setPromptsLoading(false);
+          // Map fetched prompts to Command objects
+          const promptCommands: Command[] = data.map((prompt, i) => ({
+            icon: Lightbulb,
+            label: prompt.file.replace(/\.txt$/, ''),
+            action: `ai_prompt_${i + 1}`,
+            preview: prompt.content.slice(0, 80) + (prompt.content.length > 80 ? '...' : ''),
+            type: 'block',
+            template: prompt.content,
+            metadata: { type: 'idea', value: true },
+          }));
+          // Filter by search term
+          const filteredPrompts = searchTerm
+            ? promptCommands.filter(cmd =>
+                cmd.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (cmd.preview && cmd.preview.toLowerCase().includes(searchTerm.toLowerCase()))
+              )
+            : promptCommands;
+          setFilteredCommands(filteredPrompts);
+          setSelectedIndex(0);
+        })
+        .catch((err) => {
+          setPromptsError('Failed to load prompts');
+          setPromptsLoading(false);
+          // Fallback: show old hardcoded prompts if available
+          const platformData = selectedPlatform ? platformPrompts[selectedPlatform] : undefined;
+          const postTypeData = platformData?.find(p => p.key === selectedPostType);
+          if (platformData && postTypeData) {
+            const aiPromptCommands: Command[] = [
+              {
+                icon: Lightbulb,
+                label: `${postTypeData.description} Idea 1`,
+                action: 'ai_idea_1',
+                preview: `AI-generated idea for ${postTypeData.description}`,
+                type: 'block',
+                template: generateTemplate(selectedPlatform, selectedPostType, postTypeData.description),
+                metadata: { type: 'idea', value: true },
+              }
+            ];
+            setFilteredCommands(aiPromptCommands);
+            setSelectedIndex(0);
+          }
+        });
     }
   }, [currentStep, searchTerm, selectedPlatform, selectedPostType]);
   
   // Render the command menu
+  // Show loading or error states for prompts
+  if (currentStep === 'aiPrompts') {
+    if (promptsLoading) {
+      return (
+        <div className="command-menu-loading" style={{ padding: 24, textAlign: 'center' }}>
+          Loading prompts...
+        </div>
+      );
+    }
+    if (promptsError) {
+      return (
+        <div className="command-menu-error" style={{ padding: 24, color: 'red', textAlign: 'center' }}>
+          {promptsError}
+        </div>
+      );
+    }
+    if (filteredCommands.length === 0) {
+      return (
+        <div className="command-menu-empty" style={{ padding: 24, textAlign: 'center' }}>
+          No prompts found for this platform/post type.
+        </div>
+      );
+    }
+  }
+
   return (
     <div 
       ref={menuRef}

@@ -182,6 +182,19 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
 }
 // --- SMART NOTE API HELPERS ---
 
+/**
+ * Fetch prompt templates for a given platform and post type.
+ * Returns an array of { file, content } objects.
+ */
+export async function fetchPlatformPrompts(platform: string, postType: string = 'default'): Promise<{ file: string, content: string }[]> {
+  const url = `/api/v1/platform-metadata/prompts?platform=${encodeURIComponent(platform)}&postType=${encodeURIComponent(postType)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch prompts: ${res.status}`);
+  const data = await res.json();
+  return data.prompts || [];
+}
+
+
 export interface AnalyzeSmartNoteRequest {
   noteId: string;
   platform: string;

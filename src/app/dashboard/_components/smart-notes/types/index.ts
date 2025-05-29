@@ -16,6 +16,7 @@ export interface Note {
   tags: string[];
   references: Reference[];
   platform?: string;
+  postType?: string;
   goal?: string;
   fields?: any;
   noteContent?: string;
@@ -36,6 +37,7 @@ export interface NoteUpdate {
   tags?: string[];
   references?: Reference[];
   platform?: string;
+  postType?: string;
   goal?: string;
   fields?: any;
   noteContent?: string;
