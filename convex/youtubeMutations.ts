@@ -247,8 +247,49 @@ export const storeYoutubeFullProfile = mutation({
 
 });
 
+// Store channel analysis data
+export const storeChannelAnalysis = mutation({
+  args: {
+    userId: v.string(),
+    channelId: v.string(),
+    analysisData: v.any(),
+  },
+  handler: async (ctx, args) => {
+    const { userId, channelId, analysisData } = args;
+    const now = Date.now();
 
-  // Clean up YouTube data when disconnecting
+    try {
+      // Find the channel by channelId
+      const channel = await ctx.db
+        .query("youtubeChannels")
+        .withIndex("by_channelId", (q) => q.eq("id", channelId))
+        .filter((q) => q.eq(q.field("userId"), userId))
+        .first();
+
+      if (!channel) {
+        throw new Error(`No channel found with channelId: ${channelId}`);
+      }
+
+      // Update the channel with the new analysis
+      await ctx.db.patch(channel._id, {
+        analysis: analysisData,
+        updatedAt: now,
+      });
+
+      return { 
+        success: true, 
+        status: "updated", 
+        channelId: channel._id,
+        timestamp: now 
+      };
+    } catch (error) {
+      console.error(`Error storing channel analysis for ${channelId}:`, error);
+      throw new Error(`Failed to store channel analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Clean up YouTube data when disconnecting
 export const disconnectYouTube = mutation({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
