@@ -69,7 +69,7 @@ export const YouTubeInsightsGrid: React.FC<Props> = ({ userId, channelId }) => {
       }
 
       console.log('Making API request to backend...');
-      const res = await fetch(`${backendUrl}/api/v1/youtube/batch-analyze`, {
+      const res = await fetch(`${backendUrl}/api/v1/youtube/channel-insights`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -77,6 +77,7 @@ export const YouTubeInsightsGrid: React.FC<Props> = ({ userId, channelId }) => {
         },
         body: JSON.stringify({
           user_id: userId,
+          channel_id: channelId,
           max_videos: 10,
           include_captions: true,
           include_comments: true,

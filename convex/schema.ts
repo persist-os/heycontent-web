@@ -277,7 +277,45 @@ export default defineSchema({
     createdAt: v.float64(),
     updatedAt: v.float64(),
     id: v.string(),
-    snippet: v.optional(v.any()), // Make snippet fully flexible to accept any fields
+    snippet: v.optional(
+      v.object({
+        customUrl: v.optional(v.string()),
+        description: v.optional(v.string()),
+        localized: v.optional(
+          v.object({
+            description: v.optional(v.string()),
+            title: v.optional(v.string()),
+          })
+        ),
+        publishedAt: v.optional(v.string()),
+        thumbnails: v.optional(
+          v.object({
+            default: v.optional(
+              v.object({
+                height: v.optional(v.float64()),
+                url: v.optional(v.string()),
+                width: v.optional(v.float64()),
+              })
+            ),
+            high: v.optional(
+              v.object({
+                height: v.optional(v.float64()),
+                url: v.optional(v.string()),
+                width: v.optional(v.float64()),
+              })
+            ),
+            medium: v.optional(
+              v.object({
+                height: v.optional(v.float64()),
+                url: v.optional(v.string()),
+                width: v.optional(v.float64()),
+              })
+            ),
+          })
+        ),
+        title: v.optional(v.string()),
+      })
+    ),
     statistics: v.optional(
       v.object({
         hiddenSubscriberCount: v.optional(v.boolean()),
