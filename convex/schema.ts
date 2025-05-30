@@ -267,6 +267,7 @@ export default defineSchema({
   youtubeChannels: defineTable({
     userId: v.string(),
     id: v.string(),
+    analysis: v.optional(v.any()),
     snippet: v.optional(v.object({
       customUrl: v.optional(v.string()),
       description: v.optional(v.string()),

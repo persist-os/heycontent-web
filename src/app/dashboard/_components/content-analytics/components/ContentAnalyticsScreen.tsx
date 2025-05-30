@@ -20,6 +20,7 @@ import { InstagramModal } from '../modals/InstagramModal';
 import { YoutubeModal } from '../modals/YoutubeModal';
 import { LoadingState } from '../loading/LoadingState';
 import { Header } from '../header/Header';
+import { YouTubeInsightsGrid } from './YouTubeInsightsGrid';
 
 // Import types and utilities
 import { AnyContentItem, TimeRange, SortOption, PlatformType, EmailTypeFilter as TEmailTypeFilter, YouTubeContentItem, InstagramContentItem, GmailContentItem, PlatformFilterType } from '../types';
@@ -42,6 +43,28 @@ export function ContentAnalyticsScreen() {
   const [authLoading, setAuthLoading] = useState(true);
   
   const router = useRouter();
+
+  // Fetch data from Convex
+  const youtubeVideos = useQuery(
+    api.youtubeQueries.listUserYouTubeVideos,
+    !authLoading && firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
+  );
+
+  const gmailThreads = useQuery(
+    api.gmailQueries.listUserGmailThreads,
+    !authLoading && firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
+  );
+
+  const instagramPosts = useQuery(
+    api.instagramQueries.getAllInstagramPosts,
+    !authLoading && firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
+  );
+
+  // Get YouTube channel data
+  const youtubeChannel = useQuery(
+    api.youtubeQueries.getYouTubeChannelData,
+    !authLoading && firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
+  );
 
   // Add Firebase auth listener
   useEffect(() => {
@@ -72,24 +95,6 @@ export function ContentAnalyticsScreen() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [filterRef]);
-
-  // Fetch data from Convex - Use firebaseUser.uid
-  const youtubeVideos = useQuery(
-    api.youtubeQueries.listUserYouTubeVideos,
-    !authLoading && firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
-  );
-
-  // Fetch Gmail threads from Convex
-  const gmailThreads = useQuery(
-    api.gmailQueries.listUserGmailThreads,
-    !authLoading && firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
-  );
-
-  // Fetch Instagram posts from Convex
-  const instagramPosts = useQuery(
-    api.instagramQueries.getAllInstagramPosts,
-    !authLoading && firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
-  );
 
   // Console log data for debugging
   useEffect(() => {
@@ -272,7 +277,6 @@ export function ContentAnalyticsScreen() {
   // Final display items
   const displayItems = filteredContent;
 
-
   return (
     <div className="relative">
       {/* Header */}
@@ -310,12 +314,9 @@ export function ContentAnalyticsScreen() {
             </TabsList>
 
             {/* AI Analysis Section - Show for YouTube */}
-            {selectedPlatform === 'youtube' && (
+            {selectedPlatform === 'youtube' && firebaseUser && youtubeChannel?.id && (
               <div className="mb-6">
-                <div className="p-4 bg-heycontent-light-yellow rounded-lg text-black dark:text-black">
-                  <h3 className="font-semibold mb-2">AI Analysis</h3>
-                  <p className="text-sm">Get actionable insights and recommendations for your YouTube content. (Coming soon)</p>
-                </div>
+                <YouTubeInsightsGrid userId={firebaseUser.uid} channelId={youtubeChannel.id} />
               </div>
             )}
             {selectedPlatform === 'instagram' && (
