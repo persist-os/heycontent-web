@@ -817,7 +817,7 @@ app.post("/api/users/:id/stripe/subscription", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
   const { 
-    planId, 
+    plan, 
     priceId,
     status, 
     includedRequests,
@@ -832,7 +832,7 @@ app.post("/api/users/:id/stripe/subscription", async (c) => {
   try {
     const result = await ctx.runMutation(api.subscriptionQueries.saveSubscription, {
       userId,
-      planId,
+      plan,
       priceId,
       status,
       includedRequests,

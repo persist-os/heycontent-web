@@ -251,7 +251,15 @@ export default function UpgradeModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {planArray.map(plan => {
                 const intervalLabel = billingInterval === "yearly" ? "/year" : "/month";
-                const displayedPrice = plan.amount;
+                let displayedPrice = plan.amount;
+                let originalPrice: number | null = null;
+                let discountPercent: number | null = null;
+                // Only for yearly pro plan, show discount
+                if (billingInterval === "yearly" && plan.id === "pro") {
+                  originalPrice = plan.amount; // Backend returns 300
+                  displayedPrice = 249; // Discounted price
+                  discountPercent = 17;
+                }
                 const includedRequests = plan.included_requests;
                 const overagePrice = plan.overage;
                 return (
@@ -267,9 +275,19 @@ export default function UpgradeModal({
                   >
                     <div className="flex-1">
                       <h3 className="font-bold text-xl mb-2">{plan.name}</h3>
-                      <div className="mb-4">
-                        <span className="text-3xl font-bold">${displayedPrice}</span>
-                        <span className="text-gray-500 text-lg"> {intervalLabel}</span>
+                      <div className="mb-4 flex items-baseline gap-2">
+                        {billingInterval === "yearly" && plan.id === "pro" ? (
+                          <>
+                            <span className="text-xl text-gray-400 line-through">${originalPrice}</span>
+                            <span className="text-3xl font-bold text-primary">${displayedPrice}</span>
+                            <span className="text-gray-500 text-lg"> {intervalLabel}</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-3xl font-bold">${displayedPrice}</span>
+                            <span className="text-gray-500 text-lg"> {intervalLabel}</span>
+                          </>
+                        )}
                       </div>
                       <div className="text-sm text-gray-500 mb-4">
                         {includedRequests.toLocaleString()} API requests included

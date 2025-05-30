@@ -97,6 +97,28 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
     }
   };
 
+  // Restore persona fields from localStorage on mount (only for persona step)
+  useEffect(() => {
+    if (step === 'personas') {
+      const savedPersona = localStorage.getItem('register_currentPersona');
+      const savedVision = localStorage.getItem('register_futureVision');
+      if (savedPersona) setCurrentPersona(savedPersona);
+      if (savedVision) setFutureVision(savedVision);
+    }
+  }, [step]);
+
+  // Persist persona fields to localStorage on change
+  useEffect(() => {
+    if (step === 'personas') {
+      localStorage.setItem('register_currentPersona', currentPersona);
+    }
+  }, [currentPersona, step]);
+  useEffect(() => {
+    if (step === 'personas') {
+      localStorage.setItem('register_futureVision', futureVision);
+    }
+  }, [futureVision, step]);
+
   const handleSavePersona = async (e: React.FormEvent) => {
     e.preventDefault();
     setPersonaLoading(true);
@@ -111,6 +133,11 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
         futureVision,
       });
       setPersonaSuccess("Persona saved!");
+      // Clear localStorage after successful save
+      localStorage.removeItem('register_currentPersona');
+      localStorage.removeItem('register_futureVision');
+      // Advance to next step after successful save
+      setStep('payment');
     } catch (err: any) {
       setPersonaError(err.message || "Failed to save persona.");
     } finally {
@@ -209,6 +236,9 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
   };
 
   const handlePersonaComplete = () => {
+    // Clear localStorage if user skips
+    localStorage.removeItem('register_currentPersona');
+    localStorage.removeItem('register_futureVision');
     setStep('payment');
   };
 
@@ -317,7 +347,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
           </form>
         )}
         {step === 'personas' && (
-          <form onSubmit={e => { e.preventDefault(); handlePersonaComplete(); }} className="space-y-4 bg-white shadow-lg rounded-xl p-4 sm:p-8">
+          <form onSubmit={handleSavePersona} className="space-y-4 bg-white shadow-lg rounded-xl p-4 sm:p-8">
             <h2 className="text-2xl font-bold mb-4 text-center">Your Creator Persona</h2>
             <p className="text-center text-gray-600 mb-4">
               <strong>What is a Persona?</strong> <br />
@@ -385,7 +415,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
             <button
               type="button"
               className="w-full mt-2 bg-gray-200 text-gray-700 py-2 rounded border border-gray-300 hover:bg-gray-100"
-              onClick={() => setStep('payment')}
+              onClick={handlePersonaComplete}
             >
               Skip this and add in settings later
             </button>
