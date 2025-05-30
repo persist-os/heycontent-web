@@ -107,47 +107,124 @@ export const deleteUserAndData = mutation({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
     const { userId } = args;
-    let summary: Record<string, any> = {};
-    // 1. Delete from all Convex tables that have userId
-    const tables = [
-      { name: "users", index: "by_userId" },
-      { name: "personas", index: "by_userId" },
-      { name: "conversations", index: "by_user" },
-      { name: "notes", index: "by_user" },
-      { name: "api_keys", index: "user_id" },
-      { name: "rate_limits", index: "by_user_resource" },
-      { name: "gmailTokens", index: "by_userId" },
-      { name: "gmailAccounts", index: "by_userId" },
-      { name: "gmailThreads", index: "by_userId" },
-      { name: "gmailMessages", index: "by_userId" },
-      { name: "gmailHistory", index: "by_userId" },
-      { name: "youtubeTokens", index: "by_userId" },
-      { name: "youtubeChannels", index: "by_userId" },
-      { name: "youtubeVideos", index: "by_userId" },
-      { name: "instagramTokens", index: "by_userId" },
-      { name: "instagramData", index: "by_user" },
-      { name: "instagramAccounts", index: "by_userId" },
-      { name: "instagramPosts", index: "by_userId" },
-      { name: "usageHistory", index: "by_user" },
-      { name: "sessions", index: "by_user" },
-      { name: "usageEvents", index: "by_user" },
-      { name: "ubpSettings", index: "by_user" },
-    ];
-    for (const table of tables) {
+    let summary: Record<string, any> = { errors: [] };
+    // 1. Validate user exists
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .first();
+    if (!user) throw new Error("User not found");
+    const BATCH_SIZE = 50;
+    // Helper for batch deletion
+    async function batchDelete(table: string, getQuery: () => Promise<any[]>) {
       let deleted = 0;
-      let items;
-      try {
-        items = await ctx.runQuery(api[`${table.name}Queries`] ? api[`${table.name}Queries`][`listByUserId`] : api[`${table.name}Queries`]?.list, { userId });
-      } catch {
-        items = await ctx.runQuery(api[`${table.name}Queries`] ? api[`${table.name}Queries`][`listByUserId`] : api[`${table.name}Queries`]?.list, { userId });
+      let errors: any[] = [];
+      let hasMore = true;
+      while (hasMore) {
+        const items = await getQuery();
+        if (!items || items.length === 0) break;
+        for (const item of items) {
+          try {
+            await ctx.db.delete(item._id);
+            deleted++;
+          } catch (err) {
+            errors.push({ id: item._id, error: String(err) });
+          }
+        }
+        hasMore = items.length === BATCH_SIZE;
       }
-      if (!items) continue;
-      for (const item of items) {
-        await ctx.runMutation(api[`${table.name}Mutations`] ? api[`${table.name}Mutations`][`delete`] : api[`${table.name}Mutations`]?.delete, { id: item._id });
-        deleted++;
-      }
-      summary[table.name] = deleted;
+      summary[table] = { deleted, errors };
+      if (errors.length > 0) summary.errors.push({ table, errors });
     }
+    // Users
+    await batchDelete("users", () =>
+      ctx.db.query("users").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // Personas
+    await batchDelete("personas", () =>
+      ctx.db.query("personas").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // Conversations
+    await batchDelete("conversations", () =>
+      ctx.db.query("conversations").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // Notes
+    await batchDelete("notes", () =>
+      ctx.db.query("notes").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // api_keys (no index)
+    await batchDelete("api_keys", async () => {
+      const all = await ctx.db.query("api_keys").take(BATCH_SIZE * 2);
+      return all.filter((item) => item.user_id === userId).slice(0, BATCH_SIZE);
+    });
+    // rate_limits
+    await batchDelete("rate_limits", () =>
+      ctx.db.query("rate_limits").withIndex("by_user_resource", (q) => q.eq("user_id", userId)).take(BATCH_SIZE)
+    );
+    // gmailTokens
+    await batchDelete("gmailTokens", () =>
+      ctx.db.query("gmailTokens").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // gmailAccounts
+    await batchDelete("gmailAccounts", () =>
+      ctx.db.query("gmailAccounts").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // gmailThreads
+    await batchDelete("gmailThreads", () =>
+      ctx.db.query("gmailThreads").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // gmailMessages
+    await batchDelete("gmailMessages", () =>
+      ctx.db.query("gmailMessages").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // gmailHistory
+    await batchDelete("gmailHistory", () =>
+      ctx.db.query("gmailHistory").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // youtubeTokens
+    await batchDelete("youtubeTokens", () =>
+      ctx.db.query("youtubeTokens").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // youtubeChannels
+    await batchDelete("youtubeChannels", () =>
+      ctx.db.query("youtubeChannels").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // youtubeVideos
+    await batchDelete("youtubeVideos", () =>
+      ctx.db.query("youtubeVideos").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // instagramTokens
+    await batchDelete("instagramTokens", () =>
+      ctx.db.query("instagramTokens").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // instagramData
+    await batchDelete("instagramData", () =>
+      ctx.db.query("instagramData").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // instagramAccounts
+    await batchDelete("instagramAccounts", () =>
+      ctx.db.query("instagramAccounts").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // instagramPosts
+    await batchDelete("instagramPosts", () =>
+      ctx.db.query("instagramPosts").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // usageHistory
+    await batchDelete("usageHistory", () =>
+      ctx.db.query("usageHistory").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // sessions
+    await batchDelete("sessions", () =>
+      ctx.db.query("sessions").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // usageEvents
+    await batchDelete("usageEvents", () =>
+      ctx.db.query("usageEvents").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // ubpSettings
+    await batchDelete("ubpSettings", () =>
+      ctx.db.query("ubpSettings").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
     return summary;
   },
 });

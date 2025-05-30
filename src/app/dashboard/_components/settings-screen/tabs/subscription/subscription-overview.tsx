@@ -22,8 +22,9 @@ export default function SubscriptionOverview() {
   const userId = user?.uid || '';
 
   // API data state
-  const [plans, setPlans] = useState<any[]>([]);
+  const [plans, setPlans] = useState<Record<string, any>>({});
   const [currentSubscription, setCurrentSubscription] = useState<any>(null);
+  const [status, setStatus] = useState<any>(null); // Store status separately
   const [usageSummary, setUsageSummary] = useState<{ total: number; included: number; overage: number }>({ total: 62, included: 400, overage: 0 });
   const [usageEvents, setUsageEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,9 +75,9 @@ export default function SubscriptionOverview() {
         } catch (e) {
           plansData = null;
         }
-        setPlans(plansData ? Object.values(plansData) : []);
+        setPlans((plansData && plansData.data) || {});
         // Fetch subscription status
-        let status = null;
+        let statusObj = null;
         try {
           const statusUrl = `/api/subscription/status`;
           const response = await fetch(statusUrl, {
@@ -91,76 +92,14 @@ export default function SubscriptionOverview() {
           }
           const responseText = await response.text();
           try {
-            status = JSON.parse(responseText);
+            statusObj = JSON.parse(responseText);
           } catch (parseError) {
             throw new Error('Invalid JSON in subscription status response');
           }
         } catch (e) {
-          status = null;
+          statusObj = null;
         }
-        let mappedSubscription = status;
-        if (status && (status.plan_name || status.planType || status.plan_type)) {
-          let planPrice = undefined;
-          let planInterval = 'month';
-          let matchedPlan = undefined;
-          let matchedInterval = undefined;
-          // Use planType or plan_type for matching
-          const planType = status.planType || status.plan_type || '';
-          // planType might be like 'monthly_basic' or 'yearly_pro'
-          const planTypeMatch = planType.match(/^(monthly|yearly)_(.+)$/);
-          if (planTypeMatch && plans && typeof plans === 'object') {
-            const interval = planTypeMatch[1];
-            const planKey = planTypeMatch[2];
-            const planObj = Object.values(plans).find((p: any) => p.name?.toLowerCase() === planKey.toLowerCase());
-            if (planObj && planObj[interval]) {
-              matchedPlan = planObj;
-              matchedInterval = planObj[interval];
-              planPrice = matchedInterval.amount;
-              planInterval = matchedInterval.interval;
-              mappedSubscription = {
-                ...status,
-                plan: {
-                  name: planObj.name,
-                  price: planPrice,
-                  interval: planInterval,
-                  is_metered: matchedInterval.is_metered,
-                }
-              };
-            }
-          }
-          // fallback: try to match by plan_name
-          if (!matchedPlan && status.plan_name && plans && typeof plans === 'object') {
-            const planObj = Object.values(plans).find((p: any) => p.name === status.plan_name);
-            if (planObj && planObj['monthly']) {
-              matchedPlan = planObj;
-              matchedInterval = planObj['monthly'];
-              planPrice = matchedInterval.amount;
-              planInterval = matchedInterval.interval;
-              mappedSubscription = {
-                ...status,
-                plan: {
-                  name: planObj.name,
-                  price: planPrice,
-                  interval: planInterval,
-                  is_metered: matchedInterval.is_metered,
-                }
-              };
-            }
-          }
-          // If still no matched plan, but plan_type is basic/free, set a default plan object
-          if (!matchedPlan && (planType === 'monthly_basic' || planType === 'basic' || status.plan_name === 'Basic')) {
-            mappedSubscription = {
-              ...status,
-              plan: {
-                name: 'Basic',
-                price: 0,
-                interval: 'month',
-                is_metered: false,
-              }
-            };
-          }
-        }
-        setCurrentSubscription(mappedSubscription);
+        setStatus(statusObj);
       } catch (e: any) {
         setError(e.message || 'Failed to load subscription data');
       } finally {
@@ -169,6 +108,78 @@ export default function SubscriptionOverview() {
     }
     fetchData();
   }, [user?.uid]);
+
+  // Map plan using plan_type whenever plans or status changes
+  useEffect(() => {
+    if (!status) return;
+    let mappedSubscription = status;
+    let planIncludedRequests = undefined;
+    if (status && (status.plan_name || status.planType || status.plan_type)) {
+      let planPrice = undefined;
+      let planInterval = 'month';
+      let matchedPlan = undefined;
+      let matchedInterval = undefined;
+      // Use planType or plan_type for matching
+      const planType = status.planType || status.plan_type || '';
+      const planTypeMatch = planType.match(/^(monthly|yearly)_(.+)$/);
+      if (planTypeMatch && plans && typeof plans === 'object') {
+        const interval = planTypeMatch[1];
+        const planKey = planTypeMatch[2].toLowerCase();
+        // Directly access the plan by key
+        const planObj = plans[planKey];
+        if (planObj && planObj[interval]) {
+          matchedPlan = planObj;
+          matchedInterval = planObj[interval];
+          planPrice = matchedInterval.amount;
+          planInterval = matchedInterval.interval;
+          planIncludedRequests = matchedInterval.included_requests;
+          mappedSubscription = {
+            ...status,
+            plan: {
+              name: planType,
+              price: planPrice,
+              interval: planInterval,
+              is_metered: matchedInterval.is_metered,
+            }
+          };
+        }
+      }
+      // fallback: try to match by plan_name (case-insensitive, check both intervals)
+      if (!matchedPlan && status.plan_name && plans && typeof plans === 'object') {
+        const planObj = Object.values(plans as Record<string, any>).find((p: any) => p.name?.toLowerCase() === status.plan_name.toLowerCase());
+        if (planObj) {
+          // Prefer interval from planType if available, else default to monthly
+          const interval = planTypeMatch ? planTypeMatch[1] : 'monthly';
+          const intervalObj = planObj[interval] || planObj['monthly'] || planObj['yearly'];
+          if (intervalObj) {
+            matchedPlan = planObj;
+            matchedInterval = intervalObj;
+            planPrice = matchedInterval.amount;
+            planInterval = matchedInterval.interval;
+            planIncludedRequests = matchedInterval.included_requests;
+            mappedSubscription = {
+              ...status,
+              plan: {
+                name: planObj.name,
+                price: planPrice,
+                interval: planInterval,
+                is_metered: matchedInterval.is_metered,
+              }
+            };
+          }
+        }
+      }
+    }
+    // Always override the plan price with the backend's price field if present
+    if (status && status.price !== undefined && mappedSubscription.plan) {
+      mappedSubscription.plan.price = status.price;
+    }
+    setCurrentSubscription(mappedSubscription);
+    // Update usageSummary.included to match the plan's included_requests if available
+    if (planIncludedRequests !== undefined) {
+      setUsageSummary(prev => ({ ...prev, included: planIncludedRequests }));
+    }
+  }, [plans, status]);
 
   // Update usage state from Convex
   useEffect(() => {

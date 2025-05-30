@@ -35,17 +35,24 @@ export const getUsageSummary = query({
       .query("users")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .first();
-    if (!user || !user.subscription) return { total: 0, included: 0, overage: 0 };
+    // Defensive: handle missing user or missing subscription gracefully
+    if (!user || !user.subscription) {
+      return { total: 0, included: 0, overage: 0 };
+    }
     const { currentPeriodStart, currentPeriodEnd, includedRequests } = user.subscription;
+    // Defensive: handle missing fields
+    const periodStart = typeof currentPeriodStart === "number" ? currentPeriodStart : 0;
+    const periodEnd = typeof currentPeriodEnd === "number" ? currentPeriodEnd : Date.now();
+    const included = typeof includedRequests === "number" ? includedRequests : 0;
     // Sum all usageEvents in the current period
     const events = await ctx.db
       .query("usageEvents")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .collect();
-    const filteredEvents = events.filter((event) => event.timestamp >= currentPeriodStart && event.timestamp < currentPeriodEnd);
+    const filteredEvents = events.filter((event) => event.timestamp >= periodStart && event.timestamp < periodEnd);
     const total = filteredEvents.reduce((sum, e) => sum + (e.qty || 0), 0);
-    const overage = Math.max(0, total - includedRequests);
-    return { total, included: includedRequests, overage };
+    const overage = Math.max(0, total - included);
+    return { total, included, overage };
   },
 });
 
@@ -84,32 +91,35 @@ export const updateUserUsage = mutation({
       .query("users")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .first();
-    if (!user || !user.subscription) return { success: false };
-    const { currentPeriodStart, currentPeriodEnd, includedRequests } = user.subscription;
-    // Get current usage
-    let usage = user.usage || {
-      periodStart: currentPeriodStart,
-      periodEnd: currentPeriodEnd,
-      totalRequests: 0,
-      includedRequests,
-      overageRequests: 0,
-      lastUpdated: Date.now(),
-    };
-    // If period changed, reset
-    if (usage.periodStart !== currentPeriodStart || usage.periodEnd !== currentPeriodEnd) {
-      usage = {
-        periodStart: currentPeriodStart,
-        periodEnd: currentPeriodEnd,
-        totalRequests: 0,
-        includedRequests,
-        overageRequests: 0,
-        lastUpdated: Date.now(),
-      };
+    if (!user) {
+      console.warn("updateUserUsage: User not found", args.userId);
+      return { success: false, error: "User not found" };
     }
-    usage.totalRequests += args.qty;
-    usage.overageRequests = Math.max(0, usage.totalRequests - includedRequests);
-    usage.lastUpdated = Date.now();
-    await ctx.db.patch(user._id, { usage });
-    return { success: true, usage };
+    if (!user.subscription) {
+      console.warn("updateUserUsage: User subscription not found", args.userId);
+      return { success: false, error: "User subscription not found" };
+    }
+    const sub = user.subscription;
+    let used = sub.usedRequests || 0;
+    let quota = sub.includedRequests || 0;
+    let overage = 0;
+    let newUsed = used + args.qty;
+    if (newUsed > quota) {
+      overage = newUsed - quota;
+      newUsed = quota + overage;
+    }
+    // Update the user's subscription usage
+    await ctx.db.patch(user._id, {
+      subscription: {
+        ...sub,
+        usedRequests: newUsed,
+      },
+    });
+    return {
+      success: true,
+      used: newUsed,
+      quota,
+      overage,
+    };
   },
 }); 

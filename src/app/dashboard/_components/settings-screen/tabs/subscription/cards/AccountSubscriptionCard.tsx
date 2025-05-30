@@ -132,17 +132,6 @@ export const AccountSubscriptionCard: React.FC<AccountSubscriptionCardProps> = (
           >
             Manage Subscription
           </Button>
-          {isMetered && (
-            <Button
-              size="lg"
-              variant="outline"
-              className="min-w-[160px]"
-              onClick={handleOpenQuantityModal}
-              aria-label="Change number of requests"
-            >
-              Change # of Requests
-            </Button>
-          )}
         </div>
       </CardContent>
     </Card>
