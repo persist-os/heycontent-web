@@ -32,6 +32,8 @@ export default defineSchema({
         v.literal("past_due"),
         v.literal("canceled"),
         v.literal("unpaid"),
+        v.literal("dev"),
+        v.literal("tester"),
         v.literal("incomplete"),
         v.literal("incomplete_expired"),
         v.literal("trialing"),
@@ -39,18 +41,33 @@ export default defineSchema({
         v.literal("deleted"),
         v.literal("unknown"),
       ),
+      // Plan type with interval
+      plan: v.union(
+        v.literal("monthly_basic"),
+        v.literal("monthly_pro"),
+        v.literal("yearly_basic"),
+        v.literal("yearly_pro")
+      ),
+      priceId: v.string(), // The Stripe price ID for the flat quota
+      meteredPriceId: v.optional(v.string()), // The Stripe price ID for metered overage
+      currentPeriodStart: v.number(),
+      currentPeriodEnd: v.number(),
+      cancelAtPeriodEnd: v.boolean(),
+      includedRequests: v.number(), // Flat quota
+      usedRequests: v.number(), // Usage in current period
+      subscriptionItemId: v.optional(v.string()), // For metered billing
+      lastSyncedAt: v.optional(v.number()),
+      canceledAt: v.optional(v.number()),
+      interval: v.optional(v.union(v.literal("month"), v.literal("year"))),
+      // Legacy/Stripe fields (optional, if still needed)
       cancel_at: v.optional(v.number()),
-      cancel_at_period_end: v.optional(v.boolean()),
-      canceled_at: v.optional(v.number()),
-      current_period_end: v.optional(v.number()),
-      current_period_start: v.optional(v.number()),
       customer: v.optional(v.string()),
       items: v.optional(v.any()),
-      plan: v.optional(v.any()),
       quantity: v.optional(v.number()),
       start_date: v.optional(v.number()),
       trial_start: v.optional(v.number()),
       trial_end: v.optional(v.number()),
+
     })),
     // Payment method info (minimal, just for display)
     paymentMethod: v.optional(v.object({
@@ -266,42 +283,57 @@ export default defineSchema({
 
   youtubeChannels: defineTable({
     userId: v.string(),
+    analysis: v.optional(v.any()),
+    createdAt: v.float64(),
+    updatedAt: v.float64(),
     id: v.string(),
-    snippet: v.optional(v.object({
-      customUrl: v.optional(v.string()),
-      description: v.optional(v.string()),
-      localized: v.optional(v.object({
+    snippet: v.optional(
+      v.object({
+        customUrl: v.optional(v.string()),
         description: v.optional(v.string()),
+        localized: v.optional(
+          v.object({
+            description: v.optional(v.string()),
+            title: v.optional(v.string()),
+          })
+        ),
+        publishedAt: v.optional(v.string()),
+        thumbnails: v.optional(
+          v.object({
+            default: v.optional(
+              v.object({
+                height: v.optional(v.float64()),
+                url: v.optional(v.string()),
+                width: v.optional(v.float64()),
+              })
+            ),
+            high: v.optional(
+              v.object({
+                height: v.optional(v.float64()),
+                url: v.optional(v.string()),
+                width: v.optional(v.float64()),
+              })
+            ),
+            medium: v.optional(
+              v.object({
+                height: v.optional(v.float64()),
+                url: v.optional(v.string()),
+                width: v.optional(v.float64()),
+              })
+            ),
+          })
+        ),
         title: v.optional(v.string()),
-      })),
-      publishedAt: v.optional(v.string()),
-      thumbnails: v.optional(v.object({
-        default: v.optional(v.object({
-          height: v.optional(v.number()),
-          url: v.optional(v.string()),
-          width: v.optional(v.number()),
-        })),
-        high: v.optional(v.object({
-          height: v.optional(v.number()),
-          url: v.optional(v.string()),
-          width: v.optional(v.number()),
-        })),
-        medium: v.optional(v.object({
-          height: v.optional(v.number()),
-          url: v.optional(v.string()),
-          width: v.optional(v.number()),
-        })),
-      })),
-      title: v.optional(v.string()),
-    })),
-    statistics: v.optional(v.object({
-      hiddenSubscriberCount: v.optional(v.boolean()),
-      subscriberCount: v.optional(v.string()),
-      videoCount: v.optional(v.string()),
-      viewCount: v.optional(v.string()),
-    })),
-    createdAt: v.number(),
-    updatedAt: v.number(),
+      })
+    ),
+    statistics: v.optional(
+      v.object({
+        hiddenSubscriberCount: v.optional(v.boolean()),
+        subscriberCount: v.optional(v.string()),
+        videoCount: v.optional(v.string()),
+        viewCount: v.optional(v.string()),
+      })
+    )
   })
   .index("by_userId", ["userId"])
   .index("by_publishedAt", ["snippet.publishedAt"])

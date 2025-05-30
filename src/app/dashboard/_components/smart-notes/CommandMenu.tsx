@@ -138,11 +138,13 @@ ${description}
   const scrollSelectedIntoView = (index: number) => {
     if (!menuRef.current) return;
     
-    const menuElement = menuRef.current;
-    const selectedElement = menuElement.children[0]?.children[index] as HTMLElement;
+const list = menuRef.current?.querySelector(
+  '.command-menu-content ul'
+) as HTMLUListElement | null;
+const selectedElement = list?.children[index] as HTMLElement | null;
     if (!selectedElement) return;
 
-    const menuRect = menuElement.getBoundingClientRect();
+    const menuRect = menuRef.current.getBoundingClientRect();
     const selectedRect = selectedElement.getBoundingClientRect();
 
     if (selectedRect.bottom > menuRect.bottom) {
@@ -160,15 +162,16 @@ ${description}
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
-          setSelectedIndex(i => {
-            const newIndex = (i + 1) % filteredCommands.length;
+setSelectedIndex(i => {
+             if (filteredCommands.length === 0) return 0;
+             const newIndex = (i + 1) % filteredCommands.length;
             scrollSelectedIntoView(newIndex);
-            return newIndex;
-          });
-          break;
+             return newIndex;
+           });
         case 'ArrowUp':
           e.preventDefault();
           setSelectedIndex(i => {
+            if (filteredCommands.length === 0) return 0;
             const newIndex = (i - 1 + filteredCommands.length) % filteredCommands.length;
             scrollSelectedIntoView(newIndex);
             return newIndex;
