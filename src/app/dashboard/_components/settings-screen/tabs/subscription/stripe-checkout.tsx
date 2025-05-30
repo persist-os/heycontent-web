@@ -8,10 +8,11 @@ interface CheckoutFormProps {
   planId: string;
   onSuccess?: () => void;
   onCancel?: () => void;
+  returnUrl?: string;
 }
 
 // Using direct Stripe approach to avoid React integration issues
-export const CheckoutForm: React.FC<CheckoutFormProps> = ({ planId, onSuccess, onCancel }) => {
+export const CheckoutForm: React.FC<CheckoutFormProps> = ({ planId, onSuccess, onCancel, returnUrl }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +61,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ planId, onSuccess, o
           </button>
         </div>
       )}
-      <CheckoutCard planId={planId} />
+      <CheckoutCard planId={planId} returnUrl={returnUrl} />
     </div>
   );
 };
