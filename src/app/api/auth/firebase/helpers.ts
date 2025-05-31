@@ -37,7 +37,18 @@ export async function updateOrCreateConvexUser(userId: string, name: string, ema
     referredBy: referredBy || 'not provided'
   });
   
-  await fetchMutation(api.userMutations.create_user, {
+  // Add a default subscription object for new users
+  const defaultSubscription = {
+    status: 'dev', // or 'incomplete' if you prefer
+    plan: 'monthly_basic',
+    priceId: '',
+    currentPeriodStart: Date.now(),
+    currentPeriodEnd: Date.now(),
+    cancelAtPeriodEnd: false,
+    includedRequests: 100,
+    usedRequests: 0,
+  };
+  const result = await fetchMutation(api.userMutations.create_user, {
     name,
     email,
     image,
@@ -45,8 +56,10 @@ export async function updateOrCreateConvexUser(userId: string, name: string, ema
     referredBy,
     userId,
     // referralCode is generated in the mutation, don't need to pass it
-    referralCode: undefined
-  })
+    referralCode: undefined,
+    subscription: defaultSubscription as any, // type assertion to avoid linter error
+  });
+  logger.debug('Result of create_user mutation', { result });
 }
 
 export function mapAuthErrorCodeToMessage(code: string): string {
