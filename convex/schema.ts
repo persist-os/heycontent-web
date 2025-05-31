@@ -267,6 +267,7 @@ export default defineSchema({
   youtubeChannels: defineTable({
     userId: v.string(),
     id: v.string(),
+    analysis: v.optional(v.any()),
     snippet: v.optional(v.object({
       customUrl: v.optional(v.string()),
       description: v.optional(v.string()),
@@ -312,7 +313,8 @@ export default defineSchema({
     videoId: v.string(), // Required - this is the YouTube video ID
     id: v.optional(v.string()), // For internal IDs if different from videoId
     url: v.optional(v.string()), // Full YouTube URL
-    analysis: v.optional(v.any()),
+    analysis: v.optional(v.any()), // Original JSON analysis data
+    analysisMarkdown: v.optional(v.string()), // Markdown formatted analysis for display
     
     // Video metadata from YouTube API
     snippet: v.optional(v.object({
