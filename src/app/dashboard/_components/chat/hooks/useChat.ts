@@ -18,7 +18,9 @@ export const useChat = (
     error,
     setError,
     isFirstMessage,
-    setIsFirstMessage
+    setIsFirstMessage,
+    contentContext,
+    includeAnalysisInQuery
   } = chatState
   const [referencedMessage, setReferencedMessage] = useState<Message | null>(null)
 
@@ -29,16 +31,28 @@ export const useChat = (
     const isFirstMessage = !sessionId;
     const backendSessionId = isFirstMessage ? null : sessionId;
 
+    // Inject AI analysis into the query if enabled and available
+    let enhancedQuery = content;
+    if (includeAnalysisInQuery && contentContext?.analysis) {
+      enhancedQuery = `Context for user question:\n\n${contentContext.analysis}\n\n Make sure to address user question in your response\n\n---\n\nUser question: ${content}`;
+    }
+
     // Log current state to debug the issue
     console.log('Current chat state before sending message:', {
       isFirstMessage,
       sessionId,
-      messagesCount: messages.length
+      messagesCount: messages.length,
+      hasContentContext: !!contentContext,
+      contentContextPlatform: contentContext?.platform,
+      includeAnalysisInQuery,
+      hasAnalysis: !!contentContext?.analysis,
+      originalQueryLength: content.length,
+      enhancedQueryLength: enhancedQuery.length
     });
 
     const newMessage: Message = {
       id: uuidv4() as string,
-      content,
+      content, // Store the original user message for display
       role: 'user',
       timestamp: new Date().toISOString(),
       referencedMessage: referencedMessage ? {
@@ -69,8 +83,9 @@ export const useChat = (
 
       console.log('Sending message with isFirstMessage:', isFirstMessage, 'backendSessionId:', backendSessionId);
 
-      // Send message to the backend - pass isFirstMessage to ensure it's correctly flagged
-      const data = await sendChatMessage(content, isFirstMessage, backendSessionId);
+      // Send the enhanced query to the backend (with analysis injected if enabled)
+      // Don't send content_context separately anymore since it's injected in the query
+      const data = await sendChatMessage(enhancedQuery, isFirstMessage, backendSessionId, null);
 
       // Log the response to check structure
       console.log('API response:', data);
@@ -111,7 +126,7 @@ export const useChat = (
     } finally {
       setIsLoading(false)
     }
-  }, [referencedMessage, sessionId, messages.length, setMessages, setSessionId, setIsLoading, setError])
+  }, [referencedMessage, sessionId, messages.length, setMessages, setSessionId, setIsLoading, setError, contentContext, includeAnalysisInQuery])
 
   const handleMessageReference = useCallback((message: Message) => {
     setReferencedMessage(message)

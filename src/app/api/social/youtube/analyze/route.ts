@@ -64,7 +64,8 @@ export async function POST(request: Request) {
       },
       body: {
         user_id,
-        video_url
+        video_url,
+        format: 'markdown'
       }
     });
 
@@ -84,7 +85,8 @@ export async function POST(request: Request) {
         },
         body: JSON.stringify({
           user_id,
-          video_url
+          video_url,
+          format: 'markdown'
         })
       });
       

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Send, Loader2, MessageSquare } from 'lucide-react'
+import { Send, Loader2, MessageSquare, Brain } from 'lucide-react'
 import { Message } from '@/app/types'
 
 interface ChatInputProps {
@@ -12,6 +12,9 @@ interface ChatInputProps {
   referencedMessage?: Message | null
   onClearReference?: () => void
   autoFocus?: boolean
+  hasContext?: boolean
+  contextPlatform?: string
+  hasAnalysis?: boolean
 }
 
 const placeholders = [
@@ -21,6 +24,13 @@ const placeholders = [
   "Optimize engagement...",
 ]
 
+const contextPlaceholders = [
+  "Ask about this content's analysis...",
+  "What insights can you share?",
+  "How can I improve this content?",
+  "What trends do you see?",
+]
+
 export function ChatInput({
   onSend,
   isLoading,
@@ -28,23 +38,35 @@ export function ChatInput({
   maxLength = 1000,
   referencedMessage,
   onClearReference,
-  autoFocus = true
+  autoFocus = true,
+  hasContext = false,
+  contextPlatform,
+  hasAnalysis = false
 }: ChatInputProps) {
   const [input, setInput] = useState('')
   const [placeholder, setPlaceholder] = useState(placeholders[0])
   const [showFullReply, setShowFullReply] = useState(false)
   const textAreaRef = useRef<HTMLTextAreaElement>(null)
 
+  // Use context-aware placeholders when analysis is available
+  const activePlaceholders = hasAnalysis ? contextPlaceholders : placeholders
+
   // Rotate placeholders
   useEffect(() => {
     const interval = setInterval(() => {
       setPlaceholder(prev => {
-        const currentIndex = placeholders.indexOf(prev)
-        return placeholders[(currentIndex + 1) % placeholders.length]
+        const currentIndex = activePlaceholders.indexOf(prev)
+        const nextIndex = (currentIndex + 1) % activePlaceholders.length
+        return activePlaceholders[nextIndex] || activePlaceholders[0]
       })
     }, 3000)
     return () => clearInterval(interval)
-  }, [])
+  }, [activePlaceholders])
+
+  // Update placeholder when context changes
+  useEffect(() => {
+    setPlaceholder(activePlaceholders[0])
+  }, [hasAnalysis, activePlaceholders])
 
   // Auto-resize textarea
   useEffect(() => {
@@ -90,6 +112,25 @@ export function ChatInput({
 
   return (
     <form onSubmit={handleSubmit} className="py-2 w-full">
+      {/* Context indicator */}
+      {hasContext && (
+        <div className="w-full mx-auto mb-2">
+          <div className={`flex items-center gap-2 text-xs p-2 rounded-lg border ${
+            hasAnalysis 
+              ? 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-700'
+              : 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-700'
+          }`}>
+            <Brain className="w-4 h-4 flex-shrink-0" />
+            <span>
+              {hasAnalysis 
+                ? `AI analysis for this ${contextPlatform} content will be included as context`
+                : `Discussing ${contextPlatform} content (analysis context disabled)`
+              }
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Referenced message preview - mobile responsive */}
       {referencedMessage && (
         <div className="w-full mx-auto mb-2">

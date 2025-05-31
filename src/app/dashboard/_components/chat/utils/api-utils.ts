@@ -1,4 +1,5 @@
 import { ChatResponseData } from '../types';
+import { ContentContext } from '../types';
 
 import dotenv from 'dotenv';
 
@@ -12,7 +13,8 @@ import { getApiKey } from '@/app/lib/api-helpers';
 export async function sendChatMessage(
   content: string, 
   isFirstMessage: boolean, 
-  sessionId: string | null
+  sessionId: string | null,
+  contentContext?: ContentContext | null
 ): Promise<ChatResponseData> {
   // Get API key - make sure we have one before proceeding
   const apiKey = await getApiKey();
@@ -36,6 +38,20 @@ export async function sendChatMessage(
     requestBody.session_id = sessionId;
   }
 
+  // Include content context if available
+  if (contentContext) {
+    requestBody.content_context = {
+      platform: contentContext.platform,
+      content_id: contentContext.contentId,
+      title: contentContext.title,
+      analysis: contentContext.analysis,
+      thumbnail_url: contentContext.thumbnailUrl,
+      published_at: contentContext.publishedAt,
+      metrics: contentContext.metrics,
+      content: contentContext.content
+    };
+  }
+
   // Do NOT include user_id in the request body; backend extracts it from API key
 
   console.log('Sending chat message with details:', {
@@ -43,7 +59,9 @@ export async function sendChatMessage(
     is_first_message_original: isFirstMessage,
     is_first_message_sent: isFirstMessageBool,
     session_id: requestBody.session_id,
-    has_session_id: !!requestBody.session_id
+    has_session_id: !!requestBody.session_id,
+    has_content_context: !!contentContext,
+    content_context_platform: contentContext?.platform
   });
   console.log('Full request body:', JSON.stringify(requestBody));
   console.log('Sending Authorization header:', apiKey);

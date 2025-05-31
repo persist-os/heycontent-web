@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { query, is_first_message, session_id } = body;
+    const { query, is_first_message, session_id, content_context } = body;
 
     if (!query) {
       console.warn(`[${requestId}] Invalid request: Missing query`);
@@ -52,8 +52,23 @@ export async function POST(request: Request) {
       is_first_message_type: typeof is_first_message,
       query_length: query?.length,
       has_api_key: !!apiKey,
-      user_id: user_id
+      user_id: user_id,
+      has_content_context: !!content_context,
+      content_context_platform: content_context?.platform
     });
+
+    // Prepare the request body for the backend
+    const backendRequestBody: any = {
+      user_id,
+      query,
+      is_first_message: is_first_message === true,
+      session_id: is_first_message === true ? null : (session_id || null)
+    };
+
+    // Include content context if provided
+    if (content_context) {
+      backendRequestBody.content_context = content_context;
+    }
 
     // Log the full request body
     console.debug(`[${requestId}] Sending request to backend`, {
@@ -63,12 +78,7 @@ export async function POST(request: Request) {
         'Accept': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
-      body: {
-        user_id,
-        query,
-        is_first_message: is_first_message === true,
-        session_id: is_first_message === true ? null : (session_id || null)
-      }
+      body: backendRequestBody
     });
 
     // Retry logic with exponential backoff for 500/429 errors
@@ -84,12 +94,7 @@ export async function POST(request: Request) {
           'Accept': 'application/json',
           'Authorization': `Bearer ${apiKey}`
         },
-        body: JSON.stringify({
-          user_id,
-          query,
-          is_first_message: is_first_message === true,
-          session_id: is_first_message === true ? null : (session_id || null)
-        })
+        body: JSON.stringify(backendRequestBody)
       });
       if (response.status !== 500 && response.status !== 429) {
         break; // Success or other error, don't retry

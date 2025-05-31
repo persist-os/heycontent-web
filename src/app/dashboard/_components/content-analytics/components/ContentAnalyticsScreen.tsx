@@ -206,7 +206,7 @@ export function ContentAnalyticsScreen() {
 
   // Navigate to chat with content context
   const discussContent = (item: AnyContentItem) => {
-    // Create a context object with the basic content info
+    // Create a context object with comprehensive content info
     const context = {
       platform: item.platform,
       contentId: item.id,
@@ -217,7 +217,19 @@ export function ContentAnalyticsScreen() {
         ? (item as YouTubeContentItem).content?.title
         : item.platform === 'instagram'
           ? (item as InstagramContentItem).content?.text
-          : (item as GmailContentItem).content?.subject
+          : (item as GmailContentItem).content?.subject,
+      // Include thumbnail URL for visual context
+      thumbnailUrl: item.platform === 'youtube' 
+        ? (item as YouTubeContentItem).content?.thumbnailUrl || `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`
+        : item.platform === 'instagram'
+          ? (item as InstagramContentItem).content?.mediaUrl
+          : undefined,
+      // Include published date
+      publishedAt: item.publishedAt,
+      // Include metrics for context
+      metrics: item.metrics,
+      // Include full content object for additional context
+      content: item.content
     };
     
     console.log('Sending to chat with context:', context);
