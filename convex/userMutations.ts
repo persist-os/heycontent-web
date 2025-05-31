@@ -26,9 +26,11 @@ export const create_user = mutation({
     email: v.string(),
     image: v.optional(v.string()),
     userId: v.string(),
-    username: v.string(),
+    username: v.optional(v.string()),
     referralCode: v.optional(v.string()),
     referredBy: v.optional(v.string()),
+    subscription: v.optional(v.any()),
+
   },
   handler: async ({ db }, args) => {
     const now = Date.now();
@@ -41,7 +43,7 @@ export const create_user = mutation({
     let referralCode = args.referralCode;
     if (!args.referralCode) {
       // Generate referral code based on username and name
-      referralCode = generateReferralCode(args.username, args.name);
+      referralCode = generateReferralCode(args.username ?? '', args.name);
     }
 
     if (existing) {
@@ -51,10 +53,12 @@ export const create_user = mutation({
         email: args.email,
         image: args.image,
         userId: args.userId,
-        username: args.username,
+        username: args.username ?? '',
         referredBy: args.referredBy,
         updatedAt: now,
+        ...(args.subscription ? { subscription: args.subscription } : {}),
       });
+      console.log('[Convex] Updated user', { id: existing._id, email: args.email, subscription: args.subscription });
       return { updated: true, id: existing._id };
     } else {
       // Create new user
@@ -63,12 +67,14 @@ export const create_user = mutation({
         email: args.email,
         image: args.image,
         userId: args.userId,
-        username: args.username,
+        username: args.username ?? '',
         referralCode: referralCode,
         referredBy: args.referredBy,
         createdAt: now,
         updatedAt: now,
+        ...(args.subscription ? { subscription: args.subscription } : {}),
       });
+      console.log('[Convex] Created user', { id, email: args.email, subscription: args.subscription });
       return { created: true, id };
     }
   },

@@ -1,14 +1,10 @@
 import { Hono } from "hono";
 import { HonoWithConvex, HttpRouterWithHono } from "convex-helpers/server/hono";
 import { ActionCtx } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
 import { api } from "./_generated/api";
 import { cors } from "hono/cors";
-<<<<<<< HEAD
-=======
 import { Id } from "./_generated/dataModel";
 import * as usageEventsApi from "./usageEvents";
->>>>>>> 6ad3375601b7664ca9d9a9dd65809907f2dd7884
 
 const app: HonoWithConvex<ActionCtx> = new Hono();
 

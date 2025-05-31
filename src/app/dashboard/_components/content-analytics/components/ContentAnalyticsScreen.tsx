@@ -25,10 +25,16 @@ import { Header } from '../header/Header';
 import { AnyContentItem, TimeRange, SortOption, PlatformType, EmailTypeFilter as TEmailTypeFilter, YouTubeContentItem, InstagramContentItem, GmailContentItem, PlatformFilterType } from '../types';
 import { sortAndFilterContent, getMockGmailItems, getMockInstagramItem, getMockYouTubeItem } from '../utils';
 
-// Define the type for the imported app variable
-const typedApp: FirebaseApp | undefined = app;
-
 export function ContentAnalyticsScreen() {
+  // State management
+  const [typedApp, setTypedApp] = useState<FirebaseApp | undefined>(undefined);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setTypedApp(getFirebaseApp());
+    }
+  }, []);
+
   // State management
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformType>('all');
   const [selectedEmailType, setSelectedEmailType] = useState<TEmailTypeFilter>('all');
@@ -45,19 +51,14 @@ export function ContentAnalyticsScreen() {
 
   // Add Firebase auth listener
   useEffect(() => {
-    // Check if app is initialized before using it
-    if (typedApp) {
-      const auth = getAuth(typedApp);
-      const unsubscribe = onAuthStateChanged(auth, (user) => {
-        setFirebaseUser(user);
-        setAuthLoading(false);
-      });
-      return () => unsubscribe();
-    } else {
-      console.error("Firebase app not initialized.");
+    if (!typedApp) return;
+    const auth = getAuth(typedApp);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setFirebaseUser(user);
       setAuthLoading(false);
-    }
-  }, []);
+    });
+    return () => unsubscribe();
+  }, [typedApp]);
 
   // Handle click outside filter dropdown
   useEffect(() => {

@@ -5,7 +5,7 @@ import { Lock, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { auth } from '@/app/lib/firebase';
+import { getFirebaseAuth } from '@/app/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
@@ -28,6 +28,7 @@ const DataTab = () => {
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    const auth = getFirebaseAuth();
     if (!auth?.currentUser || !auth.currentUser.email) {
       toast.error('No authenticated user.');
       return;
@@ -61,6 +62,7 @@ const DataTab = () => {
   };
 
   const handleDeleteAccount = async () => {
+    const auth = getFirebaseAuth();
     if (!auth?.currentUser) {
       toast.error('No authenticated user.');
       return;

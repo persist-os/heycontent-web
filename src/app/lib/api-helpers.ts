@@ -183,12 +183,57 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
 // --- SMART NOTE API HELPERS ---
 
 /**
+ * Fetches generated prompts for a smart note.
+ * @param params noteId, userId, and platform (all optional except userId)
+ * @returns { prompts: string[] }
+ */
+export async function fetchSmartNotePrompts(params: { noteId?: string; userId: string; platform?: string }) {
+  const response = await fetchWithApiKey(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/smart-note/generate-prompts`, {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
+  if (!response.ok) throw new Error('Failed to fetch prompts');
+  return response.json();
+}
+
+import { useState, useEffect, useCallback } from 'react';
+
+/**
+ * React hook to fetch and manage smart note prompts.
+ */
+export function useSmartNotePrompts({ noteId, userId, platform }: { noteId?: string; userId: string; platform?: string }) {
+  const [prompts, setPrompts] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchPrompts = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await fetchSmartNotePrompts({ noteId, userId, platform });
+      setPrompts(result.prompts || []);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to fetch prompts');
+      setPrompts([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [noteId, userId, platform]);
+
+  useEffect(() => {
+    fetchPrompts();
+  }, [fetchPrompts]);
+
+  return { prompts, loading, error, refetch: fetchPrompts };
+}
+
+/**
  * Fetch prompt templates for a given platform and post type.
  * Returns an array of { file, content } objects.
  */
 export async function fetchPlatformPrompts(platform: string, postType: string = 'default'): Promise<{ file: string, content: string }[]> {
-  const url = `/api/v1/platform-metadata/prompts?platform=${encodeURIComponent(platform)}&postType=${encodeURIComponent(postType)}`;
-  const res = await fetch(url);
+  const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/platform-metadata/prompts?platform=${encodeURIComponent(platform)}&postType=${encodeURIComponent(postType)}`;
+  const res = await fetchWithApiKey(url);
   if (!res.ok) throw new Error(`Failed to fetch prompts: ${res.status}`);
   const data = await res.json();
   return data.prompts || [];

@@ -1,4 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useSmartNotePrompts } from '@/app/lib/api-helpers';
+import ReactMarkdown from 'react-markdown';
+
 import { 
   Hash, Star, Calendar, Image, LinkIcon, Lightbulb, MessageSquare, Type, ListOrdered, List, 
   Instagram, Youtube, Mail, Video, Film, Camera, Tv, Radio, Send, FileText, Users, Bookmark,
@@ -27,6 +30,7 @@ interface CommandMenuProps {
   searchTerm?: string;
   position?: { top: number; left: number };
 }
+// 'aiPrompts' is intentionally included as a valid PromptStep value
 type PromptStep = 'platform' | 'postType' | 'aiPrompts';
 
 export function CommandMenu({ onSelect, onClose, searchTerm = '', position }: CommandMenuProps) {
@@ -286,7 +290,7 @@ setSelectedIndex(i => {
       
       setFilteredCommands(filteredPostTypes);
       setSelectedIndex(0);
-    } else if (currentStep === 'aiPrompts' && selectedPlatform && selectedPostType) {
+    } else if (currentStep === 'aiPrompts' && !!selectedPlatform && !!selectedPostType) {
       setPromptsLoading(true);
       setPromptsError(null);
       fetchPlatformPrompts(selectedPlatform, selectedPostType)
@@ -340,28 +344,43 @@ setSelectedIndex(i => {
   
   // Render the command menu
   // Show loading or error states for prompts
-  if (currentStep === 'aiPrompts') {
-    if (promptsLoading) {
+  // --- AI PROMPTS STEP: Use new API and Markdown rendering ---
+   // Always call useSmartNotePrompts to obey the Rules of Hooks
+    const noteId = undefined; // Set if available in your flow
+    const userId = undefined; // Set from context or props
+    const platform = selectedPlatform;
+    const postType = selectedPostType;
+    const { prompts: aiPrompts, loading: aiPromptsLoading, error: aiPromptsError, refetch: refetchPrompts } = useSmartNotePrompts({ noteId, userId, platform });
+
+    if (currentStep === 'aiPrompts') {
+      if (aiPromptsLoading) {
+        return (
+          <div className="command-menu-loading" style={{ padding: 24, textAlign: 'center' }}>
+            Loading prompts...
+          </div>
+        );
+      }
+      if (aiPromptsError) {
+        return (
+          <div className="command-menu-error" style={{ padding: 24, color: 'red', textAlign: 'center' }}>
+            {aiPromptsError}
+          </div>
+        );
+      }
+      if (!aiPrompts || aiPrompts.length === 0) {
+        return (
+          <div className="command-menu-empty" style={{ padding: 24, textAlign: 'center' }}>
+            No prompts found for this platform/post type.
+          </div>
+        );
+      }
       return (
-        <div className="command-menu-loading" style={{ padding: 24, textAlign: 'center' }}>
-          Loading prompts...
-        </div>
-      );
-    }
-    if (promptsError) {
-      return (
-        <div className="command-menu-error" style={{ padding: 24, color: 'red', textAlign: 'center' }}>
-          {promptsError}
-        </div>
-      );
-    }
-    if (filteredCommands.length === 0) {
-      return (
-        <div className="command-menu-empty" style={{ padding: 24, textAlign: 'center' }}>
-          No prompts found for this platform/post type.
-        </div>
-      );
-    }
+      <div className="command-menu-prompts" style={{ padding: 24 }}>
+        <ReactMarkdown>
+          {prompts.map(p => `- ${p}`).join('\n')}
+        </ReactMarkdown>
+      </div>
+    );
   }
 
   return (
@@ -427,7 +446,7 @@ setSelectedIndex(i => {
                 <div style={{ fontWeight: 500 }}>{command.label}</div>
                 {command.preview && <div style={{ fontSize: '12px', color: '#718096' }}>{command.preview}</div>}
               </div>
-              {currentStep !== 'aiPrompts' && <ChevronRight size={16} style={{ color: '#a0aec0' }} />}
+              {(currentStep as PromptStep) !== 'aiPrompts' && <ChevronRight size={16} style={{ color: '#a0aec0' }} />}
             </li>
           ))}
           
