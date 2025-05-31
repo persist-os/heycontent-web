@@ -96,7 +96,14 @@ async function callSubscriptionAPI(endpoint: string, method: string, apiKey: str
       body: body ? JSON.stringify(body) : undefined
     });
     
-    const responseData = await response.json();
+    let responseData;
+    try {
+      responseData = await response.json();
+    } catch {
+      // If not JSON, try to get text
+      const text = await response.text();
+      responseData = { error: text || 'Unknown error' };
+    }
     
     if (!response.ok) {
       console.error(`[${requestId}] Subscription API error:`, {
@@ -160,7 +167,8 @@ export async function createCustomer(
  * @param apiKey - The API key for authentication
  * @param userId - The user ID
  * @param planId - The plan ID or price ID
- * @returns The checkout redirect URL
+ * @param returnUrl - Optional URL to redirect to after the payment
+ * @returns The checkout session response object
  */
 export interface CheckoutSessionResponse {
   client_secret: string;
@@ -174,6 +182,7 @@ export interface CheckoutSessionResponse {
  * @param apiKey - The API key for authentication
  * @param userId - The user ID
  * @param planId - The plan ID or price ID
+ * @param returnUrl - Optional URL to redirect to after the payment
  * @returns The checkout session response object
  */
 export async function createCheckoutSession(
@@ -182,6 +191,7 @@ export async function createCheckoutSession(
   email: string,
   name: string,
   planId: string,
+  returnUrl?: string,
 ): Promise<CheckoutSessionResponse> {
   try {
     const { response, data } = await callSubscriptionAPI(
@@ -193,6 +203,7 @@ export async function createCheckoutSession(
         email,
         name,
         price_id: planId,
+        ...(returnUrl ? { return_url: returnUrl } : {}),
       }
     );
     

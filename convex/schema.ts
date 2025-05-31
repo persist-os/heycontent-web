@@ -36,6 +36,8 @@ export default defineSchema({
         v.literal("unpaid"),
         v.literal("dev"),
         v.literal("tester"),
+        v.literal("incomplete"),
+        v.literal("incomplete_expired"),
       ),
       // Plan type with interval
       plan: v.union(
@@ -44,14 +46,17 @@ export default defineSchema({
         v.literal("yearly_basic"),
         v.literal("yearly_pro")
       ),
-      priceId: v.string(),
+      priceId: v.string(), // The Stripe price ID for the flat quota
+      meteredPriceId: v.optional(v.string()), // The Stripe price ID for metered overage
       currentPeriodStart: v.number(),
       currentPeriodEnd: v.number(),
       cancelAtPeriodEnd: v.boolean(),
-      includedRequests: v.number(),
-      usedRequests: v.number(),
+      includedRequests: v.number(), // Flat quota
+      usedRequests: v.number(), // Usage in current period
       subscriptionItemId: v.optional(v.string()), // For metered billing
-      lastSyncedAt: v.optional(v.number())
+      lastSyncedAt: v.optional(v.number()),
+      canceledAt: v.optional(v.number()),
+      interval: v.optional(v.union(v.literal("month"), v.literal("year"))),
     })),
     
     // Payment method info (minimal, just for display)
@@ -266,6 +271,9 @@ export default defineSchema({
 
   youtubeChannels: defineTable({
     userId: v.string(),
+    analysis: v.optional(v.any()),
+    createdAt: v.float64(),
+    updatedAt: v.float64(),
     id: v.string(),
     analysis: v.optional(v.any()),
     snippet: v.optional(v.object({
@@ -273,36 +281,49 @@ export default defineSchema({
       description: v.optional(v.string()),
       localized: v.optional(v.object({
         description: v.optional(v.string()),
+        localized: v.optional(
+          v.object({
+            description: v.optional(v.string()),
+            title: v.optional(v.string()),
+          })
+        ),
+        publishedAt: v.optional(v.string()),
+        thumbnails: v.optional(
+          v.object({
+            default: v.optional(
+              v.object({
+                height: v.optional(v.float64()),
+                url: v.optional(v.string()),
+                width: v.optional(v.float64()),
+              })
+            ),
+            high: v.optional(
+              v.object({
+                height: v.optional(v.float64()),
+                url: v.optional(v.string()),
+                width: v.optional(v.float64()),
+              })
+            ),
+            medium: v.optional(
+              v.object({
+                height: v.optional(v.float64()),
+                url: v.optional(v.string()),
+                width: v.optional(v.float64()),
+              })
+            ),
+          })
+        ),
         title: v.optional(v.string()),
-      })),
-      publishedAt: v.optional(v.string()),
-      thumbnails: v.optional(v.object({
-        default: v.optional(v.object({
-          height: v.optional(v.number()),
-          url: v.optional(v.string()),
-          width: v.optional(v.number()),
-        })),
-        high: v.optional(v.object({
-          height: v.optional(v.number()),
-          url: v.optional(v.string()),
-          width: v.optional(v.number()),
-        })),
-        medium: v.optional(v.object({
-          height: v.optional(v.number()),
-          url: v.optional(v.string()),
-          width: v.optional(v.number()),
-        })),
-      })),
-      title: v.optional(v.string()),
-    })),
-    statistics: v.optional(v.object({
-      hiddenSubscriberCount: v.optional(v.boolean()),
-      subscriberCount: v.optional(v.string()),
-      videoCount: v.optional(v.string()),
-      viewCount: v.optional(v.string()),
-    })),
-    createdAt: v.number(),
-    updatedAt: v.number(),
+      })
+    ),
+    statistics: v.optional(
+      v.object({
+        hiddenSubscriberCount: v.optional(v.boolean()),
+        subscriberCount: v.optional(v.string()),
+        videoCount: v.optional(v.string()),
+        viewCount: v.optional(v.string()),
+      })
+    )
   })
   .index("by_userId", ["userId"])
   .index("by_publishedAt", ["snippet.publishedAt"])

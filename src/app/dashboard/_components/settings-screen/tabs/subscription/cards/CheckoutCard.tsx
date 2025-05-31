@@ -16,9 +16,10 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
 interface Props {
   planId: string
   onClose?: () => void
+  returnUrl?: string
 }
 
-export default function CheckoutCard({ planId, onClose }: Props) {
+export default function CheckoutCard({ planId, onClose, returnUrl }: Props) {
   const { user } = useAuth()
   const [apiKey, setApiKey] = useState(null)
   const [clientSecret, setClientSecret] = useState(null)
@@ -56,6 +57,7 @@ export default function CheckoutCard({ planId, onClose }: Props) {
             userId: user.uid,
             email: user.email,
             name: user.displayName,
+            ...(returnUrl ? { returnUrl } : {})
           })
         })
         const data = await response.json()
@@ -78,7 +80,7 @@ export default function CheckoutCard({ planId, onClose }: Props) {
       }
     }
     fetchClientSecret()
-  }, [planId, user, apiKey])
+  }, [planId, user, apiKey, returnUrl])
 
   // No need for checkout ready state detection anymore
 
