@@ -226,7 +226,7 @@ export const getVideoAnalysis = query({
         videoId: video.videoId,
         userId: video.userId,
         _id: video._id,
-        hasAnalysissMarkdown: !!video.analysisMarkdown,
+        hasAnalysisMarkdown: !!video.analysisMarkdown,
         hasAnalysis: !!video.analysis,
       });
       if (video.analysisMarkdown || video.analysis) {
