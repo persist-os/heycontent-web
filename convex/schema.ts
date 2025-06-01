@@ -66,21 +66,12 @@ export default defineSchema({
       expMonth: v.number(),
       expYear: v.number()
     })),
-    
-    // Usage tracking for current billing period
-    usage: v.optional(v.object({
-      periodStart: v.number(),
-      periodEnd: v.number(),
-      totalRequests: v.number(),
-      includedRequests: v.number(),
-      overageRequests: v.number(),
-      lastUpdated: v.number()
-    }))
   })
   .index("by_userId", ["userId"])
   .index("by_email", ["email"])
   .index("by_stripeCustomerId", ["stripeCustomerId"])
-  .index("by_username", ["username"]),
+  .index("by_username", ["username"])
+  .index("by_referralCode", ["referralCode"]),
 
   personas: defineTable({
     name: v.string(),
@@ -422,6 +413,8 @@ export default defineSchema({
       }))),
     })),
     
+    // Add analysisMarkdown for AI-generated markdown analysis
+    analysisMarkdown: v.optional(v.string()),
     // Timestamps
     createdAt: v.optional(v.float64()),
     updatedAt: v.optional(v.float64()),

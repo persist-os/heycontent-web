@@ -41,9 +41,6 @@ if (isClient) {
   }
 }
 
-// Export initialized instances
-export { app, auth };
-
 // Export a function to get the auth instance
 export const getFirebaseAuth = () => {
   if (!auth) {

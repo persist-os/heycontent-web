@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Mail } from 'lucide-react'
 import Link from 'next/link'
+import { sendPasswordResetEmail } from 'firebase/auth'
+import { getFirebaseAuth } from '@/app/lib/firebase'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
@@ -19,22 +21,19 @@ export default function ForgotPasswordPage() {
     setIsLoading(true)
     
     try {
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      })
-
-      if (response.ok) {
-        setSuccess(true)
-      } else {
-        const data = await response.json()
-        throw new Error(data.error || 'Something went wrong')
+      const { sendPasswordResetEmail } = await import('firebase/auth')
+      let auth;
+      try {
+        auth = getFirebaseAuth();
+      } catch (e) {
+        setError('Firebase Auth not initialized');
+        setIsLoading(false);
+        return;
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send reset email')
+      await sendPasswordResetEmail(auth, email)
+      setSuccess(true)
+    } catch (err: any) {
+      setError(err.message || 'Failed to send reset email')
     } finally {
       setIsLoading(false)
     }

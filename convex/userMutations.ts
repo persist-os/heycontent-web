@@ -33,6 +33,18 @@ export const create_user = mutation({
   },
   handler: async ({ db }, args) => {
     const now = Date.now();
+    
+    // Debug log the arguments received
+    console.log('[Convex] create_user args:', {
+      name: args.name,
+      email: args.email,
+      userId: args.userId,
+      username: args.username,
+      referredBy: args.referredBy,
+      hasReferredBy: !!args.referredBy,
+      referredByLength: args.referredBy?.length || 0
+    });
+    
     // Check if user exists by email
     const existing = await db
       .query("users")
@@ -47,33 +59,41 @@ export const create_user = mutation({
 
     if (existing) {
       // Update user with all fields
-      await db.patch(existing._id, {
+      const updateData = {
         name: args.name,
         email: args.email,
         image: args.image,
         userId: args.userId,
-        username: args.username ?? '',
-        referredBy: args.referredBy,
         updatedAt: now,
+        ...(args.username !== undefined ? { username: args.username } : {}),
+        ...(args.referredBy !== undefined ? { referredBy: args.referredBy } : {}),
         ...(args.subscription ? { subscription: args.subscription } : {}),
-      });
-      console.log('[Convex] Updated user', { id: existing._id, email: args.email, subscription: args.subscription });
+      };
+      
+      console.log('[Convex] Updating existing user with data:', updateData);
+      
+      await db.patch(existing._id, updateData);
+      console.log('[Convex] Updated user', { id: existing._id, email: args.email, referredBy: args.referredBy });
       return { updated: true, id: existing._id };
     } else {
       // Create new user
-      const id = await db.insert("users", {
+      const newUserData = {
         name: args.name,
         email: args.email,
         image: args.image,
         userId: args.userId,
         username: args.username ?? '',
         referralCode: referralCode,
-        referredBy: args.referredBy,
+        referredBy: args.referredBy ?? '',
         createdAt: now,
         updatedAt: now,
         ...(args.subscription ? { subscription: args.subscription } : {}),
-      });
-      console.log('[Convex] Created user', { id, email: args.email, subscription: args.subscription });
+      };
+      
+      console.log('[Convex] Creating new user with data:', newUserData);
+      
+      const id = await db.insert("users", newUserData);
+      console.log('[Convex] Created user', { id, email: args.email, referredBy: args.referredBy });
       return { created: true, id };
     }
   },
@@ -112,7 +132,7 @@ export const deleteUserAndData = mutation({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
     const { userId } = args;
-    let summary: Record<string, any> = { errors: [] };
+    const summary: Record<string, any> = { errors: [] };
     // 1. Validate user exists
     const user = await ctx.db
       .query("users")
@@ -123,7 +143,7 @@ export const deleteUserAndData = mutation({
     // Helper for batch deletion
     async function batchDelete(table: string, getQuery: () => Promise<any[]>) {
       let deleted = 0;
-      let errors: any[] = [];
+      const errors: any[] = [];
       let hasMore = true;
       while (hasMore) {
         const items = await getQuery();

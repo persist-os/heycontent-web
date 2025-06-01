@@ -34,7 +34,9 @@ export async function updateOrCreateConvexUser(userId: string, name: string, ema
     email: email || 'not provided',
     hasImage: !!image,
     username: username || 'not provided',
-    referredBy: referredBy || 'not provided'
+    referredBy: referredBy || 'not provided',
+    referredByLength: referredBy?.length || 0,
+    referredByType: typeof referredBy
   });
   
   // Add a default subscription object for new users
@@ -48,6 +50,9 @@ export async function updateOrCreateConvexUser(userId: string, name: string, ema
     includedRequests: 100,
     usedRequests: 0,
   };
+  
+  console.log('[Firebase Helper] About to call create_user with referredBy:', referredBy);
+  
   const result = await fetchMutation(api.userMutations.create_user, {
     name,
     email,

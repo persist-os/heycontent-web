@@ -1,21 +1,23 @@
 // File: components/settings/tabs/DataTab.tsx
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Lock, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { auth } from '@/app/lib/firebase';
+import { getFirebaseAuth } from '@/app/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { mapAuthErrorCodeToMessage } from '@/app/api/auth/firebase/helpers';
 import { Input } from '@/components/ui/input';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const DataTab = () => {
   const router = useRouter();
   const deleteUserAndData = useMutation(api.userMutations.deleteUserAndData);
+  const createUser = useMutation(api.userMutations.create_user);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -25,10 +27,29 @@ const DataTab = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [userId, setUserId] = useState<string | undefined>();
+  const [userEmail, setUserEmail] = useState<string | undefined>();
+
+  useEffect(() => {
+    let auth;
+    try {
+      auth = getFirebaseAuth();
+    } catch (e) {
+      auth = null;
+    }
+    if (!auth) return;
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      setUserId(firebaseUser?.uid);
+      setUserEmail(firebaseUser?.email);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth?.currentUser || !auth.currentUser.email) {
+    if (!user || !user.email) {
       toast.error('No authenticated user.');
       return;
     }
@@ -43,10 +64,10 @@ const DataTab = () => {
     setIsChangingPassword(true);
     try {
       // Re-authenticate
-      const credential = EmailAuthProvider.credential(auth.currentUser.email, currentPassword);
-      await reauthenticateWithCredential(auth.currentUser, credential);
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
       // Update password
-      await updatePassword(auth.currentUser, newPassword);
+      await updatePassword(user, newPassword);
       toast.success('Password updated successfully.');
       setCurrentPassword('');
       setNewPassword('');
@@ -61,25 +82,55 @@ const DataTab = () => {
   };
 
   const handleDeleteAccount = async () => {
-    if (!auth?.currentUser) {
+    if (!user) {
       toast.error('No authenticated user.');
       return;
     }
     setIsDeleting(true);
+    let userDeleted = false;
     try {
-      await deleteUserAndData({ userId: auth.currentUser.uid });
-      await auth.currentUser.delete();
+      // Step 1: Delete Firebase user
+      try {
+        await user.delete();
+        userDeleted = true;
+      } catch (error: any) {
+        if (error.code === 'auth/requires-recent-login') {
+          toast.error('Please re-authenticate and try again.');
+        } else {
+          toast.error('Failed to delete Firebase user.');
+        }
+        console.error('Firebase user delete error:', error);
+        return;
+      }
+      // Step 2: Delete Convex user data
+      try {
+        await deleteUserAndData({ userId: user.uid });
+      } catch (error: any) {
+        toast.error('Failed to delete user data. Attempting rollback...');
+        console.error('Convex deleteUserAndData error:', error);
+        // Rollback: re-insert minimal user data
+        try {
+          await createUser({
+            name: user.displayName || 'User',
+            email: user.email || '',
+            userId: user.uid,
+            image: user.photoURL || '',
+            username: user.displayName || '',
+            referralCode: undefined,
+            referredBy: undefined,
+            subscription: undefined,
+          });
+          toast.error('User account deleted, but data could not be fully removed. Please contact support.');
+        } catch (rollbackError) {
+          toast.error('Critical error: User deleted but data rollback failed. Please contact support.');
+          console.error('Rollback error:', rollbackError);
+        }
+        return;
+      }
       toast.success('Account deleted.');
       try { localStorage.clear(); } catch (e) { /* ignore */ }
       try { sessionStorage.clear(); } catch (e) { /* ignore */ }
       router.push('/auth/login');
-    } catch (error: any) {
-      if (error.code === 'auth/requires-recent-login') {
-        toast.error('Please re-authenticate and try again.');
-      } else {
-        toast.error('Failed to delete account.');
-      }
-      console.error('Delete account error:', error);
     } finally {
       setIsDeleting(false);
       setShowDeleteDialog(false);

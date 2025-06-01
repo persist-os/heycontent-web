@@ -98,6 +98,8 @@ export default function HistoryPage() {
                   <button
                     onClick={() => handleDeleteChat(chat.id)}
                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 rounded transition-all"
+                    title="Delete chat"
+                    aria-label="Delete chat"
                   >
                     <Trash2 className="w-4 h-4 text-red-500" />
                   </button>
