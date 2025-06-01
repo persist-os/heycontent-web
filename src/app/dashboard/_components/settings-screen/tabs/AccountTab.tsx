@@ -276,7 +276,13 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
             "transition-all duration-300 ease-in-out",
             isEditMode ? "opacity-100" : "opacity-100"
           )}>
-            <form onSubmit={(e) => handleProfileUpdate(e, formData, setIsUpdating, setFormData, updatePersona, updateUser, userId, userEmail, setIsEditMode, user?.photoURL)}>
+            <form onSubmit={(e) => {
+              if (!isEditMode) {
+                e.preventDefault();
+                return;
+              }
+              handleProfileUpdate(e, formData, setIsUpdating, setFormData, updatePersona, updateUser, userId, userEmail, setIsEditMode, user?.photoURL);
+            }}>
               <div className="grid grid-cols-1 gap-4">
                 <ProfileFields formData={formData} setFormData={setFormData} isEditMode={isEditMode} />
                 <ReferralFields formData={formData} referrerName={referrerName} referrerLoading={referrerLoading} />
