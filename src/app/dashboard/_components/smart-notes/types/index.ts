@@ -4,7 +4,7 @@ export type NoteType = 'ai_insight' | 'conversation' | 'idea' | 'url' | 'date' |
 export type ReferenceType = 'ai_insight' | 'conversation' | 'idea' | 'url' | 'date' | 'brainstorm' | 'click';
 
 export interface Note {
-  _id: Id<"notes">;
+  _id: string | Id<"notes">; // Accept both Convex and backend IDs
   _creationTime: number;
   userId: string;
   title: string;
@@ -21,6 +21,8 @@ export interface Note {
   fields?: any;
   noteContent?: string;
   analysis?: any;
+  templateInput?: any;
+  analysisId?: string;
 }
 
 export interface Reference {

@@ -182,6 +182,36 @@ app.delete("/api/api-keys/delete", async (c) => {
 
 // NOTES ROUTES
 
+// CREATE NOTE ENDPOINT
+app.post("/api/notes", async (c) => {
+  const ctx = c.env;
+  try {
+    const body = await c.req.json();
+    const { userId, content, platform, type, templateInput, analysisId, title, important, tags } = body;
+    if (!userId || !content || !platform) {
+      return c.json({ error: "Missing required fields: userId, content, platform" }, 400);
+    }
+    const note = await ctx.runMutation(api.notes.createNote, {
+      userId,
+      content,
+      platform,
+      type,
+      templateInput,
+      analysisId,
+      title,
+      important,
+      tags,
+    });
+    return c.json({ success: true, note }, 201);
+  } catch (error: any) {
+    console.error("Failed to create note:", error);
+    if (error.data) {
+      return c.json({ success: false, error: "Failed to create note", details: error.data }, 500);
+    }
+    return c.json({ success: false, error: "Failed to create note", message: error.message || "Internal Server Error" }, 500);
+  }
+});
+
 app.get("/api/notes/:noteId", async (c) => {
   const ctx = c.env;
   const noteId = c.req.param("noteId");

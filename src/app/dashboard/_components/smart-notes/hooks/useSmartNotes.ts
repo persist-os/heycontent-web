@@ -54,8 +54,9 @@ export function useSmartNotes(userId: string | undefined) {
   }, [userId]);
 
   // Save note with smart capabilities
+  // Save a new note (no ID or local ID)
   const saveNote = useCallback(async (
-    content: string, 
+    content: string,
     options: {
       platform?: string;
       metadata?: {
@@ -73,14 +74,32 @@ export function useSmartNotes(userId: string | undefined) {
       if (!apiKey) {
         return { success: false, error: 'No API key available' };
       }
-
+      // Provide default placeholders if content or platform are missing
+      const safeContent = content && content.trim() ? content : 'Write your note here...';
+      const safePlatform = options.platform && options.platform.trim() ? options.platform : 'web';
+      if (!content || !content.trim()) {
+        console.warn('No note content provided, using default placeholder for save.');
+      }
+      if (!options.platform || !options.platform.trim()) {
+        console.warn('No platform provided for save, using default platform \'web\'.');
+      }
+      // Log actual values being sent to backend
+      console.log('[saveNote] About to save note:', {
+        content,
+        safeContent,
+        platform: options.platform,
+        safePlatform,
+        type: options.metadata?.type,
+        analysisId: options.analysisResult?.analysisId
+      });
+      // Prepare payload as expected by backend
       const payload = {
-        content: (typeof content === 'string') ? content : '',
-        platform: options.platform || 'general',
-        metadata: options.metadata || {},
-        analysisResult: options.analysisResult || {}
+        content: safeContent,
+        platform: safePlatform,
+        type: options.metadata?.type || 'note',
+        templateInput: options.metadata?.templateInput || null,
+        analysisId: options.analysisResult?.analysisId || null
       };
-
       const response = await fetch('/api/smart-note/save', {
         method: 'POST',
         headers: {
@@ -89,42 +108,79 @@ export function useSmartNotes(userId: string | undefined) {
         },
         body: JSON.stringify(payload),
       });
-
       const data = await response.json();
-      
-      if (response.ok && data.success) {
-        // After saving, fetch the latest notes to ensure the new note is present
-        try {
-          const updatedNotesResponse = await fetch("/api/smart-note/user", {
-            headers: {
-              'Authorization': `Bearer ${apiKey}`,
-              'Content-Type': 'application/json',
-            },
-          });
-          if (updatedNotesResponse.ok) {
-            const updatedNotes = await updatedNotesResponse.json();
-            setNotes(Array.isArray(updatedNotes.data) ? updatedNotes.data : []);
-          }
-        } catch (fetchError) {
-          console.error('Failed to fetch updated notes after save:', fetchError);
-        }
-        return { success: true, noteId: data.noteId };
+      if (response.ok && data.success && data.data && data.data._id) {
+        // Insert the new note into local state
+        setNotes(prev => [{ ...data.data }, ...prev.filter(n => n._id !== data.data._id)]);
+        return { success: true, noteId: data.data._id };
       } else {
-        return { 
-          success: false, 
-          error: data.error || data.message || 'Failed to save note' 
+        return {
+          success: false,
+          error: data.error || data.message || 'Failed to save note',
         };
       }
     } catch (error) {
       console.error('Error saving note:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Network error occurred' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Network error occurred',
       };
     } finally {
       setIsSaving(false);
     }
   }, []);
+
+  // Update existing note by Convex ID
+  // NoteUpdate type must include: content, platform, type, templateInput, analysisId
+  // IMPORTANT: During analysis, updateNote should ONLY be used to update references (AI insights),
+  // NOT to update note content, platform, or trigger any save.
+  const updateNote = useCallback(async (
+    noteId: string,
+    updateFields: Partial<Pick<Note, 'content' | 'platform' | 'type' | 'templateInput' | 'analysisId' | 'references' | 'title'>>
+  ): Promise<Note | null> => {
+    if (!userId || !noteId) return null;
+    // If noteId is a local temp ID, do NOT save as a side effect of analysis
+    if (noteId.startsWith('local_')) {
+      // Only allow updating references (AI insights) for local notes during analysis
+      if (Object.keys(updateFields).every(key => key === 'references' || key === 'title')) {
+        // Update local note in memory only (not persisted)
+        setNotes(prev => prev.map(n => n._id === noteId ? { ...n, ...updateFields } : n));
+        return { ...(notes.find(n => n._id === noteId) || {}), ...updateFields } as Note;
+      }
+      // Prevent accidental save or update of content/platform during analysis
+      console.warn('Prevented save/update of content/platform for local note during analysis.');
+      return null;
+    }
+    // For persisted notes, only allow update of references/title during analysis
+    if (Object.keys(updateFields).every(key => key === 'references' || key === 'title')) {
+      // Perform backend update for references/title
+      try {
+        const apiKey = await getApiKey();
+        if (!apiKey) return null;
+        const payload = { ...updateFields };
+        const response = await fetch(`/api/smart-note/update/${noteId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify(payload),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setNotes(prev => prev.map(n => n._id === noteId ? { ...n, ...updateFields } : n));
+          return { ...(notes.find(n => n._id === noteId) || {}), ...updateFields } as Note;
+        }
+        return null;
+      } catch (error) {
+        console.error('Error updating note references/title:', error);
+        return null;
+      }
+    }
+    // Prevent accidental save or update of content/platform during analysis
+    console.warn('Prevented save/update of content/platform for persisted note during analysis.');
+    return null;
+  }, [userId, notes]);
 
   // Analyze note content
   const analyzeNote = useCallback(async (
@@ -227,44 +283,6 @@ export function useSmartNotes(userId: string | undefined) {
     }
   }, []);
 
-  // Update existing note
-  const updateNote = useCallback(async (noteId: string, updates: NoteUpdate): Promise<Note | null> => {
-    if (!userId || !noteId) return null;
-    
-    try {
-      const apiKey = await getApiKey();
-      if (!apiKey) return null;
-
-      const response = await fetch(`/api/smart-note/${noteId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({ update_fields: updates }),
-      });
-
-      if (response.ok) {
-        const updatedNotesResponse = await fetch("/api/smart-note/user", {
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        if (updatedNotesResponse.ok) {
-          const updatedNotes = await updatedNotesResponse.json();
-          setNotes(Array.isArray(updatedNotes.data) ? updatedNotes.data : []);
-          // Return the updated note
-          return (Array.isArray(updatedNotes.data) ? updatedNotes.data : []).find((n: Note) => n._id === noteId) || null;
-        }
-      }
-      return null;
-    } catch (error) {
-      console.error('Error updating note:', error);
-      return null;
-    }
-  }, [userId]);
 
   // Delete note
   const deleteNote = useCallback(async (noteId: string): Promise<boolean> => {
