@@ -181,34 +181,6 @@ app.delete("/api/api-keys/delete", async (c) => {
 });
 
 // NOTES ROUTES
-app.post("/api/notes/create", async (c) => {
-  const ctx = c.env;
-  try {
-    const { userId, content, platform, templateInput, analysisId, type } = await c.req.json();
-
-    // Basic validation for required fields
-    if (!userId || !content || !platform) {
-      return c.json({ error: "Missing required fields: userId, content, or platform" }, 400);
-    }
-
-    const noteId = await ctx.runMutation(api.notes.createNote, {
-      userId,
-      content,
-      platform,
-      templateInput,
-      analysisId,
-      type,
-    });
-    return c.json({ success: true, noteId }, 201); // 201 Created
-  } catch (error: any) {
-    console.error("Failed to create note:", error);
-    // Check if the error is a ConvexError with data
-    if (error.data) {
-        return c.json({ success: false, error: "Failed to create note", details: error.data }, 500);
-    }
-    return c.json({ success: false, error: "Failed to create note", message: error.message || "Internal Server Error" }, 500);
-  }
-});
 
 app.get("/api/notes/:noteId", async (c) => {
   const ctx = c.env;
@@ -369,8 +341,116 @@ app.get("/api/notes/:noteId/analyses", async (c) => {
   }
 });
 
+// Create a new analysis
+app.post("/api/analyses/create", async (c) => {
+  const ctx = c.env;
+  try {
+    const { noteId, platform, output, error } = await c.req.json();
 
+    if (!noteId || !platform) {
+      return c.json({ error: "Missing required fields: noteId and platform" }, 400);
+    }
 
+    const analysisId = await ctx.runMutation(api.analyses.createNoteAnalysis, {
+      noteId,
+      platform,
+      output: output || {},
+      error: error || null,
+      createdAt: Date.now(),
+    });
+    
+    return c.json({ success: true, analysisId }, 201);
+  } catch (error: any) {
+    console.error("Failed to create analysis:", error);
+    if (error.data) {
+        return c.json({ success: false, error: "Failed to create analysis", details: error.data }, 500);
+    }
+    return c.json({ success: false, error: "Failed to create analysis", message: error.message || "Internal Server Error" }, 500);
+  }
+});
+
+// Get analyses by user
+app.get("/api/analyses/by-user/:userId", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("userId");
+  const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : undefined;
+
+  if (!userId) {
+    return c.json({ error: "Missing userId in path" }, 400);
+  }
+
+  try {
+    const analyses = await ctx.runQuery(api.analyses.getAnalysesByUser, { userId, limit });
+    return c.json({ success: true, data: analyses });
+  } catch (error: any) {
+    console.error("Failed to get analyses by user:", error);
+    if (error.data) {
+        return c.json({ success: false, error: "Failed to get analyses by user", details: error.data }, 500);
+    }
+    return c.json({ success: false, error: "Failed to get analyses by user", message: error.message || "Internal Server Error" }, 500);
+  }
+});
+
+// Get analyses by user and platform
+app.get("/api/analyses/by-user-platform", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.query("userId");
+  const platform = c.req.query("platform");
+  const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : undefined;
+
+  if (!userId || !platform) {
+    return c.json({ error: "Missing required query parameters: userId and platform" }, 400);
+  }
+
+  try {
+    const analyses = await ctx.runQuery(api.analyses.getAnalysesByUserPlatform, { 
+      userId, 
+      platform, 
+      limit 
+    });
+    return c.json({ success: true, data: analyses });
+  } catch (error: any) {
+    console.error("Failed to get analyses by user and platform:", error);
+    if (error.data) {
+        return c.json({ success: false, error: "Failed to get analyses by user and platform", details: error.data }, 500);
+    }
+    return c.json({ success: false, error: "Failed to get analyses by user and platform", message: error.message || "Internal Server Error" }, 500);
+  }
+});
+
+// Link analysis to note  
+app.post("/api/notes/:noteId/link-analysis", async (c) => {
+  const ctx = c.env;
+  const noteId = c.req.param("noteId");
+  
+  try {
+    const { analysisId, userId } = await c.req.json();
+
+    if (!analysisId || !userId) {
+      return c.json({ error: "Missing required fields: analysisId and userId" }, 400);
+    }
+
+    const result = await ctx.runMutation(api.analyses.linkAnalysisToNote, {
+      noteId,
+      analysisId,
+      userId,
+    });
+    
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Failed to link analysis to note:", error);
+    if (error.message && error.message.includes("Note not found")) {
+        return c.json({ success: false, error: "Note not found" }, 404);
+    }
+    if (error.message && error.message.includes("Unauthorized")) {
+        return c.json({ success: false, error: "Unauthorized to link analysis to this note" }, 403);
+    }
+    if (error.data) {
+        return c.json({ success: false, error: "Failed to link analysis to note", details: error.data }, 500);
+    }
+    return c.json({ success: false, error: "Failed to link analysis to note", message: error.message || "Internal Server Error" }, 500);
+  }
+});
 
 // GMAIL ROUTES
 
@@ -935,8 +1015,6 @@ app.get("/api/users/:id/stripe/subscription/item", async (c) => {
     return c.json({ success: false, error: "Failed to retrieve subscription item" }, 500);
   }
 });
-
-
 
 // RATE LIMITING ENDPOINTS
 

@@ -33,37 +33,6 @@ export const getNotesByUser = query({
   },
 });
 
-export const createNote = mutation({
-  args: {
-    userId: v.string(),
-    content: v.string(),
-    platform: v.string(),
-    templateInput: v.optional(v.any()),
-    analysisId: v.optional(v.string()),
-    type: v.optional(noteType), // <-- Accept type argument
-  },
-  handler: async (ctx, args) => {
-    // Fill in required fields from schema with defaults if not present
-    const now = Date.now();
-    const noteToInsert = {
-      userId: args.userId,
-      content: args.content,
-      platform: args.platform,
-      templateInput: args.templateInput,
-      analysisId: args.analysisId,
-      createdAt: now,
-      updatedAt: now,
-      title: "Untitled Note",
-      important: false,
-      tags: [],
-      references: [],
-      type: args.type, // <-- Set type from argument
-    };
-    const noteId = await ctx.db.insert("notes", noteToInsert);
-    return noteId;
-  },
-});
-
 export const updateNote = mutation({
   args: {
     noteId: v.id("notes"),

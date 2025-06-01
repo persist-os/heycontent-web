@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react'
-<<<<<<< HEAD
-=======
 import { getFirebaseAuth } from '@/app/lib/firebase'
->>>>>>> dc27aec84c6b547859451d75f2df78a7b1adf6a7
 import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import { MessageBubble } from './message-bubble'
@@ -154,34 +151,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Authentication effect
   useEffect(() => {
-<<<<<<< HEAD
-    let unsubscribe: (() => void) | undefined;
-    let isMounted = true;
-    (async () => {
-      try {
-        const { getFirebaseAuth } = await import('@/app/lib/firebase');
-        const auth = getFirebaseAuth();
-        unsubscribe = onAuthStateChanged(auth, async (user) => {
-          if (!isMounted) return;
-          setUser(user);
-          if (!user) {
-            setLoading(false);
-            return;
-          }
-          if (chatId) {
-            // If we have a chat ID, we'll load the conversation in a separate effect
-          } else {
-            chatState.setSessionId(null);
-          }
-          setLoading(false);
-        });
-      } catch (e) {
-        if (isMounted) {
-          console.error('Firebase auth not initialized');
-        }
-      }
-    })();
-=======
     let auth
     try {
       auth = getFirebaseAuth()
@@ -209,9 +178,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       }
       setLoading(false)
     })
->>>>>>> dc27aec84c6b547859451d75f2df78a7b1adf6a7
     return () => {
-      isMounted = false;
       if (unsubscribe) unsubscribe();
     };
   }, [chatId, chatState.setSessionId]);

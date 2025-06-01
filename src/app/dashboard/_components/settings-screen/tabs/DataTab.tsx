@@ -49,12 +49,7 @@ const DataTab = () => {
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-<<<<<<< HEAD
-    const auth = getFirebaseAuth();
-    if (!auth?.currentUser || !auth.currentUser.email) {
-=======
     if (!user || !user.email) {
->>>>>>> dc27aec84c6b547859451d75f2df78a7b1adf6a7
       toast.error('No authenticated user.');
       return;
     }
@@ -87,12 +82,7 @@ const DataTab = () => {
   };
 
   const handleDeleteAccount = async () => {
-<<<<<<< HEAD
-    const auth = getFirebaseAuth();
-    if (!auth?.currentUser) {
-=======
     if (!user) {
->>>>>>> dc27aec84c6b547859451d75f2df78a7b1adf6a7
       toast.error('No authenticated user.');
       return;
     }

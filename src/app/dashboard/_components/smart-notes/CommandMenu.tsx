@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { platformPrompts, PlatformKey } from './types/platformPrompts';
 import { fetchPlatformPrompts } from '@/app/lib/api-helpers';
+import styles from './components/CommandMenus.module.css';
 
 export interface Command {
   icon: any;
@@ -404,36 +405,26 @@ setSelectedIndex(i => {
   return (
     <div 
       ref={menuRef}
-      className="command-menu"
-      style={{
-        position: 'absolute',
-        top: position?.top || 0,
-        left: position?.left || 0,
-        maxHeight: '400px',
-        width: '320px',
-        backgroundColor: 'white',
-        border: '1px solid #e2e8f0',
-        borderRadius: '8px',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-        overflow: 'hidden',
-        zIndex: 50,
-      }}
+      className={styles.commandMenu}
+      style={{ position: 'absolute', top: position?.top || 0, left: position?.left || 0 }}
     >
-      <div className="command-menu-header" style={{ padding: '12px 16px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className={styles.commandMenuHeader}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {currentStep !== 'platform' && (
             <button 
               onClick={handleBack}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
+              title="Back"
+              className={styles.iconBtn}
             >
               <ArrowLeft size={16} />
             </button>
           )}
-          <span style={{ fontWeight: 600 }}>{stepTitle}</span>
+          <span className={styles.stepTitle}>{stepTitle}</span>
         </div>
         <button 
           onClick={() => onClose?.()}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
+          title="Close"
+          className={styles.iconBtn}
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -441,35 +432,29 @@ setSelectedIndex(i => {
         </button>
       </div>
       
-      <div className="command-menu-content" style={{ overflow: 'auto', maxHeight: '352px' }}>
+      <div className={styles.commandMenuContent}>
         <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
           {filteredCommands.map((command, index) => (
             <li 
               key={command.action}
               onClick={() => handleSelect(command)}
-              style={{
-                padding: '8px 16px',
-                cursor: 'pointer',
-                backgroundColor: index === selectedIndex ? '#f7fafc' : 'transparent',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                borderLeft: index === selectedIndex ? '2px solid #3182ce' : '2px solid transparent',
-              }}
+              className={
+                `${styles.commandMenuItem} ${index === selectedIndex ? styles.selected : ''}`
+              }
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px', height: '24px' }}>
                 {React.createElement(command.icon, { size: 18 })}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 500 }}>{command.label}</div>
-                {command.preview && <div style={{ fontSize: '12px', color: '#718096' }}>{command.preview}</div>}
+                <div className={styles.commandLabel}>{command.label}</div>
+                {command.preview && <div className={styles.commandPreview}>{command.preview}</div>}
               </div>
-              {(currentStep as PromptStep) !== 'aiPrompts' && <ChevronRight size={16} style={{ color: '#a0aec0' }} />}
+              {(currentStep as PromptStep) !== 'aiPrompts' && <ChevronRight size={16} className={styles.chevronIcon} />}
             </li>
           ))}
           
           {filteredCommands.length === 0 && (
-            <li style={{ padding: '16px', textAlign: 'center', color: '#718096' }}>
+            <li className={styles.noOptions}>
               No matching options found
             </li>
           )}

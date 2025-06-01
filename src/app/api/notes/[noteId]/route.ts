@@ -1,49 +1,19 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { fetchMutation, fetchQuery } from 'convex/nextjs';
-import { api } from "@/convex/_generated/api";
-import { getUserIdFromToken } from '@/app/lib/getUserIdFromToken';
+import { getApiKey } from '@/app/lib/api-helpers';
 
-export async function GET(
-  _req: Request,
-  { params }: { params: { noteId: string } }
-) {
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+export async function GET(_req: Request, { params }: { params: { noteId: string } }) {
   try {
-    const token = (await cookies()).get('firebase-auth-token')?.value;
-    if (!token) {
+    const apiKey = await getApiKey();
+    if (!apiKey) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    // Get the user ID from the token
-    const userId = await getUserIdFromToken(token);
-    if (!userId) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    // Get the note using Convex query
-    const note = await fetchQuery(api.notes.getNote, {
-      noteId: params.noteId,
-      userId
+    const backendRes = await fetch(`${BACKEND_URL}/api/v1/smart-note/${params.noteId}`, {
+      headers: { 'Authorization': `Bearer ${apiKey}` }
     });
-
-    if (!note) {
-      return NextResponse.json({ error: 'Note not found' }, { status: 404 });
-    }
-
-    // Format the note to match the expected Note interface
-    const formattedNote = {
-      id: params.noteId,
-      title: note.title || 'Untitled Note',
-      content: note.content || '',
-      createdAt: new Date(note.createdAt),
-      updatedAt: new Date(note.updatedAt),
-      important: note.important || false,
-      type: note.type || 'idea',
-      tags: note.tags || [],
-      references: note.references || []
-    };
-
-    return NextResponse.json(formattedNote);
+    const data = await backendRes.json();
+    return NextResponse.json(data, { status: backendRes.status });
   } catch (error: any) {
     console.error('[NOTE_GET]', error);
     return NextResponse.json(
@@ -53,54 +23,30 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  req: Request,
-  { params }: { params: { noteId: string } }
-) {
+export async function PUT(req: Request, { params }: { params: { noteId: string } }) {
   try {
-    const token = (await cookies()).get('firebase-auth-token')?.value;
-    if (!token) {
+    const apiKey = await getApiKey();
+    if (!apiKey) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    // Get the user ID from the token
-    const userId = await getUserIdFromToken(token);
-    if (!userId) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    let json: any = {};
+    try {
+      json = await req.json();
+    } catch (e) {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
-
-    const json = await req.json();
-    const { title, content, important, type, tags, references } = json;
-
-    // Update the note using Convex mutation
-    const note = await fetchMutation(api.notes.updateNote, {
-      noteId: params.noteId,
-      userId,
-      updates: {
-        ...(title !== undefined && { title }),
-        ...(content !== undefined && { content }),
-        ...(important !== undefined && { important }),
-        ...(type !== undefined && { type }),
-        ...(tags !== undefined && { tags }),
-        ...(references !== undefined && { references }),
-        updatedAt: Date.now()
-      }
+    // Remove userId from the payload if present
+    delete json.userId;
+    const backendRes = await fetch(`${BACKEND_URL}/api/v1/smart-note/${params.noteId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(json)
     });
-
-    // Format the note to match the expected Note interface
-    const formattedNote = {
-      id: params.noteId,
-      title: note.title || 'Untitled Note',
-      content: note.content || '',
-      createdAt: new Date(note.createdAt),
-      updatedAt: new Date(note.updatedAt),
-      important: note.important || false,
-      type: note.type || 'idea',
-      tags: note.tags || [],
-      references: note.references || []
-    };
-
-    return NextResponse.json(formattedNote);
+    const data = await backendRes.json();
+    return NextResponse.json(data, { status: backendRes.status });
   } catch (error: any) {
     console.error('[NOTE_PUT]', error);
     return NextResponse.json(
@@ -110,29 +56,18 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  _req: Request,
-  { params }: { params: { noteId: string } }
-) {
+export async function DELETE(_req: Request, { params }: { params: { noteId: string } }) {
   try {
-    const token = (await cookies()).get('firebase-auth-token')?.value;
-    if (!token) {
+    const apiKey = await getApiKey();
+    if (!apiKey) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    // Get the user ID from the token
-    const userId = await getUserIdFromToken(token);
-    if (!userId) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    // Delete the note using Convex mutation
-    await fetchMutation(api.notes.deleteNote, {
-      noteId: params.noteId,
-      userId
+    const backendRes = await fetch(`${BACKEND_URL}/api/v1/smart-note/${params.noteId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${apiKey}` }
     });
-
-    return NextResponse.json({ success: true });
+    const data = await backendRes.json();
+    return NextResponse.json(data, { status: backendRes.status });
   } catch (error: any) {
     console.error('[NOTE_DELETE]', error);
     return NextResponse.json(
