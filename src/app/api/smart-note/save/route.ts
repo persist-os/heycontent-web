@@ -24,8 +24,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized - Missing or invalid Authorization header' }, { status: 401 });
     }
 
+    // Log incoming request details
+    console.info(`[${requestId}] Incoming save request`, {
+      method: request.method,
+      url: request.url,
+      headers: {
+        'content-type': request.headers.get('content-type'),
+        'authorization': authHeader ? '[REDACTED]' : undefined,
+      }
+    });
+
     const body = await request.json();
-    console.log('Request body:', body);
+    console.info(`[${requestId}] Incoming request body`, body);
     const { content, platform, type, templateInput, analysisId } = body;
 
     // Prepare payload for backend (do NOT send userId)
@@ -35,8 +45,12 @@ export async function POST(request: Request) {
     if (analysisId !== undefined) payload.analysisId = analysisId;
 
     // Log the backend request
-    console.info(`[${requestId}] Sending request to backend API`, {
+    console.info(`[${requestId}] Proxying to backend API`, {
       url: `${BACKEND_URL}/api/v1/smart-note/save`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': apiKey ? `${apiKey.slice(0, 8)}...[REDACTED]` : undefined,
+      },
       payload: payload
     });
 

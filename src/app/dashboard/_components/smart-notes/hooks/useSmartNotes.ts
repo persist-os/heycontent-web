@@ -95,13 +95,19 @@ export function useSmartNotes(userId: string | undefined) {
         analysisId: options.analysisResult?.analysisId
       });
       // Prepare payload as expected by backend
-      const payload = {
+      const allowedTypes = [
+        'ai_insight', 'conversation', 'idea', 'url', 'date', 'brainstorm', 'click'];
+      const type = options.metadata?.type;
+      const payload: Record<string, any> = {
         content: safeContent,
         platform: safePlatform,
-        type: options.metadata?.type || 'note',
-        templateInput: options.metadata?.templateInput || null,
-        analysisId: options.analysisResult?.analysisId || null
-      };
+      templateInput: options.metadata?.templateInput || null,
+      analysisId: options.analysisResult?.analysisId || null
+    };
+    if (type && allowedTypes.includes(type)) {
+      payload.type = type;
+    }
+    // If type is not provided, or is invalid, omit it from payload.
       const response = await fetch('/api/smart-note/save', {
         method: 'POST',
         headers: {

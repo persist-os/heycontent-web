@@ -72,7 +72,7 @@ export default function SmartNotes() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true); // Make sidebar visible by default
   const [notes, setNotes] = useState<any[]>([]); // Local notes state for creation only
-  const { updateNote, deleteNote } = useSmartNotes(userId); // Only use backend for update/delete
+  const { updateNote, deleteNote, saveNote } = useSmartNotes(userId); // Only use backend for update/delete
   const { requestAIInsights } = useAIInsights(updateNote);
   const { setIsViewingNote } = useSidebar();
   const router = useRouter();
@@ -125,22 +125,31 @@ export default function SmartNotes() {
   const activeNote = notes.find(note => note._id === activeNoteId);
 
   const handleSave = async () => {
-    if (!activeNote) return;
-    try {
-      // Update local state first so UI reflects changes immediately
-      setNotes(prev =>
-        prev.map(note =>
-          note._id === activeNote._id
-            ? { ...note, content: activeNote.content }
-            : note
-        )
-      );
-      // Then update remote (if applicable)
-      await updateNote(activeNote._id, { content: activeNote.content }, true);
-    } catch (error) {
-      console.error('Failed to save note:', error);
-    }
-  };
+  if (!activeNote) return;
+  try {
+    // Update local state first so UI reflects changes immediately
+    setNotes(prev =>
+      prev.map(note =>
+        note._id === activeNote._id
+          ? { ...note, content: activeNote.content }
+          : note
+      )
+    );
+    // Always POST to /api/smart-note/save for saving (new or existing)
+    await saveNote(activeNote.content, {
+      platform: activeNote.platform,
+      metadata: {
+        type: activeNote.type,
+        templateInput: activeNote.templateInput,
+      },
+      analysisResult: {
+        analysisId: activeNote.analysisId,
+      },
+    });
+  } catch (error) {
+    console.error('Failed to save note:', error);
+  }
+};
 
   return (
     <div className="flex h-screen bg-white/70 backdrop-blur-sm rounded-3xl overflow-hidden">
