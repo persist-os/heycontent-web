@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/app/lib/firebase';
+import { getFirebaseAuth } from '@/app/lib/firebase';
 
 interface AuthContextType {
   user: User | null;
@@ -29,28 +29,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (!auth) {
+    let unsubscribe = () => {};
+    try {
+      const auth = getFirebaseAuth();
+      unsubscribe = onAuthStateChanged(
+        auth,
+        (user) => {
+          if (isRedirecting.current) return;
+          setUser(user);
+          setLoading(false);
+          setError(null);
+        },
+        (error) => {
+          console.error('Auth state error:', error);
+          setError(error.message);
+          setLoading(false);
+        }
+      );
+    } catch (e) {
       setError('Firebase auth not initialized');
       setLoading(false);
-      return;
     }
-
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (user) => {
-        if (isRedirecting.current) return;
-
-        setUser(user);
-        setLoading(false);
-        setError(null);
-      },
-      (error) => {
-        console.error('Auth state error:', error);
-        setError(error.message);
-        setLoading(false);
-      }
-    );
-
     return () => unsubscribe();
   }, []);
 

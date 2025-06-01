@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { auth } from '@/app/lib/firebase'
+import { getFirebaseAuth } from '@/app/lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 
 export default function TestAuthPage() {
@@ -10,16 +10,22 @@ export default function TestAuthPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user)
-      setLoading(false)
-    }, (error) => {
-      console.error('Auth state error:', error)
-      setError(error.message)
-      setLoading(false)
-    })
-
-    return () => unsubscribe()
+    let unsubscribe = () => {};
+    try {
+      const auth = getFirebaseAuth();
+      unsubscribe = onAuthStateChanged(auth, (user) => {
+        setUser(user)
+        setLoading(false)
+      }, (error) => {
+        console.error('Auth state error:', error)
+        setError(error.message)
+        setLoading(false)
+      })
+    } catch (e) {
+      setError('Firebase Auth not initialized');
+      setLoading(false);
+    }
+    return () => unsubscribe();
   }, [])
 
   const testGmailAuth = async () => {

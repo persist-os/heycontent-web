@@ -6,7 +6,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { getAuth, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { FirebaseApp } from 'firebase/app';
-import { app, getFirebaseApp, getFirebaseAuth } from '@/app/lib/firebase';
+import { getFirebaseAuth } from '@/app/lib/firebase';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // Import components
@@ -25,9 +25,6 @@ import { Header } from '../header/Header';
 import { AnyContentItem, TimeRange, SortOption, PlatformType, EmailTypeFilter as TEmailTypeFilter, YouTubeContentItem, InstagramContentItem, GmailContentItem, PlatformFilterType } from '../types';
 import { sortAndFilterContent, getMockGmailItems, getMockInstagramItem, getMockYouTubeItem } from '../utils';
 
-// Define the type for the imported app variable
-const typedApp: FirebaseApp | undefined = app;
-
 export function ContentAnalyticsScreen() {
   // State management
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformType>('all');
@@ -39,24 +36,32 @@ export function ContentAnalyticsScreen() {
   const [filterType, setFilterType] = useState<PlatformFilterType>('all');
   const [selectedContent, setSelectedContent] = useState<AnyContentItem | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [userId, setUserId] = useState<string | undefined>();
+  const [userEmail, setUserEmail] = useState<string | undefined>();
   const [authLoading, setAuthLoading] = useState(true);
   
   const router = useRouter();
 
   // Add Firebase auth listener
   useEffect(() => {
-    // Check if app is initialized before using it
-    if (typedApp) {
-      const auth = getAuth(typedApp);
-      const unsubscribe = onAuthStateChanged(auth, (user) => {
-        setFirebaseUser(user);
-        setAuthLoading(false);
-      });
-      return () => unsubscribe();
-    } else {
-      console.error("Firebase app not initialized.");
-      setAuthLoading(false);
+    let auth;
+    try {
+      auth = getFirebaseAuth();
+    } catch (e) {
+      auth = null;
     }
+    if (!auth) {
+      console.error("Firebase auth not initialized.");
+      setAuthLoading(false);
+      return;
+    }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setFirebaseUser(user);
+      setUserId(user?.uid);
+      setUserEmail(user?.email);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
   // Handle click outside filter dropdown
@@ -76,19 +81,19 @@ export function ContentAnalyticsScreen() {
   // Fetch data from Convex - Use firebaseUser.uid
   const youtubeVideos = useQuery(
     api.youtubeQueries.listUserYouTubeVideos,
-    !authLoading && firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
+    !authLoading && userId ? { userId } : "skip"
   );
 
   // Fetch Gmail threads from Convex
   const gmailThreads = useQuery(
     api.gmailQueries.listUserGmailThreads,
-    !authLoading && firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
+    !authLoading && userId ? { userId } : "skip"
   );
 
   // Fetch Instagram posts from Convex
   const instagramPosts = useQuery(
     api.instagramQueries.getAllInstagramPosts,
-    !authLoading && firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
+    !authLoading && userId ? { userId } : "skip"
   );
 
   // Console log data for debugging

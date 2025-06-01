@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { auth } from '@/app/lib/firebase'
+import { getFirebaseAuth } from '@/app/lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -21,7 +21,14 @@ export default function DebugTab() {
   const [convexResult, setConvexResult] = useState<any>(null)
 
   useEffect(() => {
+    let auth;
+    try {
+      auth = getFirebaseAuth();
+    } catch (e) {
+      auth = null;
+    }
     if (!auth) return;
+    const user = auth.currentUser;
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user)
       if (user) {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { auth } from '@/app/lib/firebase'
+import { getFirebaseAuth } from '@/app/lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import { MessageBubble } from './message-bubble'
@@ -26,6 +26,8 @@ import { useUIEffects } from './hooks/useUIEffects'
 const ChatContainer: React.FC<ChatScreenProps> = ({ chatId }) => {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
+  const [userId, setUserId] = useState<string | undefined>()
+  const [userEmail, setUserEmail] = useState<string | undefined>()
   const { isExpanded } = useSidebar()
 
   // Initialize shared state
@@ -87,8 +89,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId }) => {
     // UI resets
     resetChat();
     setMessages([]);
-    handleClearReference && handleClearReference();
-    
+    if (handleClearReference) {
+      handleClearReference();
+    }
     // CRITICAL: Reset state for a new chat session
     console.log('Initializing new chat session...');
     
@@ -108,18 +111,24 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId }) => {
 
   // Authentication effect
   useEffect(() => {
+    let auth
+    try {
+      auth = getFirebaseAuth()
+    } catch (e) {
+      auth = null
+    }
     if (!auth) {
       console.error('Firebase auth not initialized')
       return
     }
-
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user)
-      if (!user) {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser)
+      setUserId(firebaseUser?.uid)
+      setUserEmail(firebaseUser?.email)
+      if (!firebaseUser) {
         setLoading(false)
         return
       }
-      
       if (chatId) {
         // If we have a chat ID, we'll load the conversation in a separate effect
       } else {
@@ -129,7 +138,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId }) => {
       }
       setLoading(false)
     })
-
     return () => {
       unsubscribe()
     }

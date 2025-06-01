@@ -1,13 +1,14 @@
 // File: app/(dashboard)/_components/settings-screen/tabs/AccountTab.tsx
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
-import { auth } from '@/app/lib/firebase'
+import { getFirebaseAuth } from '@/app/lib/firebase'
 import { handleResendVerification } from '../utils'
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const MAX_PERSONA_LENGTH = 500
 const MAX_VISION_LENGTH = 500
@@ -72,7 +73,7 @@ async function handleProfileUpdate(
           email,
           username: formData.username,
           // Pass image if it exists in the current user object
-          image: auth?.currentUser?.photoURL || undefined
+          image: undefined
         });
       }
       
@@ -94,8 +95,23 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
   const [isEditMode, setIsEditMode] = React.useState(false);
   
   // Properly fetch persona data using the useQuery hook at component level
-  const userId = auth?.currentUser?.uid;
-
+  const [userId, setUserId] = useState<string | undefined>()
+  const [userEmail, setUserEmail] = useState<string | undefined>()
+  useEffect(() => {
+    let auth
+    try {
+      auth = getFirebaseAuth()
+    } catch (e) {
+      auth = null
+    }
+    if (!auth) return
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUserId(firebaseUser?.uid)
+      setUserEmail(firebaseUser?.email)
+    })
+    return () => unsubscribe()
+  }, [])
+  
   // Only run the queries if userId is available
   const personaData = useQuery(
     api.personas.getPersona,
@@ -152,7 +168,7 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
                 />
               </div>
             </div>
-            {auth?.currentUser ? (
+            {userEmail ? (
               <Badge variant="success">Verified</Badge>
             ) : (
               <div className="flex items-center gap-2">
@@ -171,7 +187,7 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-        <form onSubmit={(e) => handleProfileUpdate(e, formData, setIsUpdating, setFormData, updatePersona, updateUser, auth?.currentUser?.uid, auth?.currentUser?.email || undefined)}>
+        <form onSubmit={(e) => handleProfileUpdate(e, formData, setIsUpdating, setFormData, updatePersona, updateUser, userId, userEmail)}>
             <div className="grid grid-cols-1 gap-4">
               <div>
                 <label htmlFor="name" className="text-sm font-medium">Name</label>

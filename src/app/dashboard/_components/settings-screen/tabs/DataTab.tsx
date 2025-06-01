@@ -1,17 +1,18 @@
 // File: components/settings/tabs/DataTab.tsx
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Lock, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { auth } from '@/app/lib/firebase';
+import { getFirebaseAuth } from '@/app/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { mapAuthErrorCodeToMessage } from '@/app/api/auth/firebase/helpers';
 import { Input } from '@/components/ui/input';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const DataTab = () => {
   const router = useRouter();
@@ -25,10 +26,29 @@ const DataTab = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [userId, setUserId] = useState<string | undefined>();
+  const [userEmail, setUserEmail] = useState<string | undefined>();
+
+  useEffect(() => {
+    let auth;
+    try {
+      auth = getFirebaseAuth();
+    } catch (e) {
+      auth = null;
+    }
+    if (!auth) return;
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      setUserId(firebaseUser?.uid);
+      setUserEmail(firebaseUser?.email);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth?.currentUser || !auth.currentUser.email) {
+    if (!user || !user.email) {
       toast.error('No authenticated user.');
       return;
     }
@@ -43,10 +63,10 @@ const DataTab = () => {
     setIsChangingPassword(true);
     try {
       // Re-authenticate
-      const credential = EmailAuthProvider.credential(auth.currentUser.email, currentPassword);
-      await reauthenticateWithCredential(auth.currentUser, credential);
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
       // Update password
-      await updatePassword(auth.currentUser, newPassword);
+      await updatePassword(user, newPassword);
       toast.success('Password updated successfully.');
       setCurrentPassword('');
       setNewPassword('');
@@ -61,14 +81,14 @@ const DataTab = () => {
   };
 
   const handleDeleteAccount = async () => {
-    if (!auth?.currentUser) {
+    if (!user) {
       toast.error('No authenticated user.');
       return;
     }
     setIsDeleting(true);
     try {
-      await deleteUserAndData({ userId: auth.currentUser.uid });
-      await auth.currentUser.delete();
+      await deleteUserAndData({ userId: user.uid });
+      await user.delete();
       toast.success('Account deleted.');
       try { localStorage.clear(); } catch (e) { /* ignore */ }
       try { sessionStorage.clear(); } catch (e) { /* ignore */ }

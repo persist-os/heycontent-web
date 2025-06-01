@@ -9,6 +9,7 @@ import { useAuth } from '@/app/context/auth-context';
 
 import WaitlistScreen from "./waitlist-screen";
 import UpgradeModal from "@/app/dashboard/_components/settings-screen/tabs/subscription/upgrade-modal";
+import { getFirebaseAuth } from '@/app/lib/firebase';
 
 interface RegisterScreenProps {
   onSuccess?: (apiKey: string) => void;
@@ -150,7 +151,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
-    
     // Validate referral code first
     const isCodeValid = validateReferralCode(referredBy);
     if (!isCodeValid) {
@@ -158,64 +158,66 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
       return;
     }
     try {
-      const response = await fetch('/api/auth/register', {
+      // Use Firebase Auth to register the user
+      const { createUserWithEmailAndPassword, updateProfile } = await import('firebase/auth');
+      let auth;
+      try {
+        auth = getFirebaseAuth();
+      } catch (e) {
+        setError('Firebase Auth not initialized');
+        setIsLoading(false);
+        return;
+      }
+      let userCredential;
+      try {
+        userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      } catch (err: any) {
+        setError('Registration failed: ' + (err.message || err.code));
+        setIsLoading(false);
+        return;
+      }
+      const user = userCredential.user;
+      if (!user) {
+        setError('Registration failed: No user returned.');
+        setIsLoading(false);
+        return;
+      }
+      // Optionally update displayName
+      try {
+        await updateProfile(user, { displayName: name });
+      } catch (err) {
+        // Not fatal, but you can log or show a warning
+      }
+      // Get ID token
+      let idToken: string;
+      try {
+        idToken = await user.getIdToken(true);
+      } catch (err: any) {
+        setError('Failed to get Firebase ID token: ' + (err.message || err.code));
+        setIsLoading(false);
+        return;
+      }
+      // Send ID token and user info to backend
+      const apiKeyResponse = await fetch('/api/auth/firebase', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email,
-          password,
+          idToken,
           name,
           username,
           referredBy,
+          action: 'register',
         }),
       });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error);
+      const apiKeyData = await apiKeyResponse.json();
+      if (apiKeyResponse.ok && apiKeyData.apiKey) {
+        localStorage.setItem('apiKey', JSON.stringify(apiKeyData.apiKey));
+        handleRegisterSuccess();
+      } else {
+        setError(apiKeyData.error || 'Failed to get API key');
+        setIsLoading(false);
+        return;
       }
-      if (data.customToken) {
-        const { getAuth, signInWithCustomToken } = await import('firebase/auth');
-        const auth = getAuth();
-        try {
-          await signInWithCustomToken(auth, data.customToken);
-        } catch (err: any) {
-          setError('Firebase sign-in with custom token failed: ' + (err.message || err.code));
-          setIsLoading(false);
-          return;
-        }
-        let idToken: string | undefined;
-        try {
-          idToken = await auth.currentUser?.getIdToken(true);
-        } catch (err: any) {
-          setError('Failed to get Firebase ID token: ' + (err.message || err.code));
-          setIsLoading(false);
-          return;
-        }
-        if (idToken) {
-          const apiKeyResponse = await fetch('/api/auth/firebase', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              idToken,
-              action: 'getApiKey'
-            }),
-          });
-          const apiKeyData = await apiKeyResponse.json();
-          if (apiKeyResponse.ok && apiKeyData.apiKey) {
-            localStorage.setItem('apiKey', JSON.stringify(apiKeyData.apiKey));
-          } else if (!apiKeyResponse.ok) {
-            setError(apiKeyData.error || 'Failed to get API key');
-            setIsLoading(false);
-            return;
-          }
-        }
-      }
-      if (data.apiKey) {
-        localStorage.setItem('apiKey', JSON.stringify(data.apiKey));
-      }
-      handleRegisterSuccess();
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {
