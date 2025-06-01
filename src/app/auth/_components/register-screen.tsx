@@ -20,7 +20,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
   const [name, setName] = useState(""); // Need to track name for persona step
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const router = useRouter();
-  const { user } = useAuth();
+  const { firebaseUser } = useAuth();
   
   const [step, setStep] = useState<'register' | 'personas' | 'payment' | 'waitlist' | 'chat'>('register');
 

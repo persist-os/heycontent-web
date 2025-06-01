@@ -12,7 +12,7 @@ import { InstagramPlatformCard } from './InstagramPlatformCard';
 import { isError, getAccountDetails, ConnectedAccount } from './platform-utils';
 
 export function PlatformConnect() {
-  const { user } = useAuth();
+  const { firebaseUser } = useAuth();
   const [refetchKey, setRefetchKey] = useState(0);
 
   // Refetch on successful connection and clean up the URL
@@ -26,9 +26,9 @@ export function PlatformConnect() {
   }, []);
 
   // Use Convex queries for all platform data
-  const youtubeData = user?.uid ? useQuery(api.youtubeQueries.getYouTubeChannelData, { userId: user.uid }) : undefined;
-  const instagramData = user?.uid ? useQuery(api.instagramQueries.getInstagramAccount, { userId: user.uid }) : undefined;
-  const gmailAccounts = user?.uid ? useQuery(api.gmailQueries.getGmailAccounts, { userId: user.uid }) : undefined;
+  const youtubeData = firebaseUser?.uid ? useQuery(api.youtubeQueries.getYouTubeChannelData, { userId: firebaseUser.uid }) : undefined;
+  const instagramData = firebaseUser?.uid ? useQuery(api.instagramQueries.getInstagramAccount, { userId: firebaseUser.uid }) : undefined;
+  const gmailAccounts = firebaseUser?.uid ? useQuery(api.gmailQueries.getGmailAccounts, { userId: firebaseUser.uid }) : undefined;
 
   // All hooks must be declared at the top, before any return
   const [connecting, setConnecting] = useState<SocialPlatform | null>(null);
@@ -140,9 +140,9 @@ export function PlatformConnect() {
     try {
       setDisconnecting(platform);
       
-      if (platform === 'instagram' && user?.uid) {
+      if (platform === 'instagram' && firebaseUser?.uid) {
         // Use Convex mutation directly for Instagram
-        const result = await disconnectInstagramMutation({ userId: user.uid });
+        const result = await disconnectInstagramMutation({ userId: firebaseUser.uid });
         if (!result.success) {
           throw new Error('Failed to disconnect Instagram');
         }
@@ -210,7 +210,7 @@ export function PlatformConnect() {
                 disconnecting={isDisconnecting}
                 handleConnect={() => {}}
                 handleDisconnect={() => handleDisconnect('youtube')}
-                userId={user?.uid || ''}
+                userId={firebaseUser?.uid || ''}
               />
             );
           }
@@ -223,7 +223,7 @@ export function PlatformConnect() {
                 disconnecting={isDisconnecting}
                 handleConnect={() => {}}
                 handleDisconnect={() => handleDisconnect('gmail')}
-                userId={user?.uid || ''}
+                userId={firebaseUser?.uid || ''}
               />
             );
           }
@@ -231,7 +231,7 @@ export function PlatformConnect() {
             return (
               <InstagramPlatformCard
                 key={platform.id}
-                userId={user?.uid || ''}
+                userId={firebaseUser?.uid || ''}
                 account={account}
                 connecting={isConnecting}
                 disconnecting={isDisconnecting}

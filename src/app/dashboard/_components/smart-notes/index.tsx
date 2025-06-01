@@ -66,8 +66,8 @@ function SelectNotePrompt({ onCreateNote }: { onCreateNote: () => void }) {
 }
 
 export default function SmartNotes() {
-  const { user } = useAuth();
-  const userId = user?.uid;
+  const { firebaseUser } = useAuth();
+  const userId = firebaseUser?.uid;
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true); // Make sidebar visible by default

@@ -44,7 +44,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
-    "convex": "^1.23.0",
+    "convex": "^1.24.6",
     "convex-helpers": "^0.1.79",
     "critters": "^0.0.23",
     "date-fns": "^4.1.0",

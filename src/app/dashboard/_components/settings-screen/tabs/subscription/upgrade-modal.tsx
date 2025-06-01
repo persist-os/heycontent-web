@@ -46,7 +46,7 @@ export default function UpgradeModal({
   onSelectPlan: (planId: string) => void;
   context?: 'registration' | 'settings';
 }) {
-  const { user } = useAuth();
+  const { firebaseUser } = useAuth();
   const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("monthly");
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [plans, setPlans] = useState<Record<string, BackendPlan> | null>(null);
