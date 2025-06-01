@@ -188,7 +188,8 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
  * @returns { prompts: string[] }
  */
 export async function fetchSmartNotePrompts(params: { noteId?: string; userId: string; platform?: string }) {
-  const response = await fetchWithApiKey(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/smart-note/generate-prompts`, {
+  const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, '');
+  const response = await fetchWithApiKey(`${baseUrl}/api/v1/smart-note/generate-prompts`, {
     method: 'POST',
     body: JSON.stringify(params),
   });
@@ -199,33 +200,41 @@ export async function fetchSmartNotePrompts(params: { noteId?: string; userId: s
 import { useState, useEffect, useCallback } from 'react';
 
 /**
- * React hook to fetch and manage smart note prompts.
+ * React hook to fetch and manage smart note AI-generated ideas (hybrid: notes + analyses).
  */
-export function useSmartNotePrompts({ noteId, userId, platform }: { noteId?: string; userId: string; platform?: string }) {
-  const [prompts, setPrompts] = useState<string[]>([]);
+export function useSmartNoteIdeas({ userId, platform, limit = 5 }: { userId?: string; platform?: string; limit?: number }) {
+  const [ideas, setIdeas] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPrompts = useCallback(async () => {
+  const fetchIdeas = useCallback(async () => {
+    if (!userId || !platform) return; // Only fetch if both are present
     setLoading(true);
     setError(null);
     try {
-      const result = await fetchSmartNotePrompts({ noteId, userId, platform });
-      setPrompts(result.prompts || []);
+      const result = await generateSmartNoteIdeas({ userId, platform, limit });
+      setIdeas(result.ideas || []);
     } catch (err: any) {
-      setError(err?.message || 'Failed to fetch prompts');
-      setPrompts([]);
+      setError(err?.message || 'Failed to fetch ideas');
+      setIdeas([]);
     } finally {
       setLoading(false);
     }
-  }, [noteId, userId, platform]);
+  }, [userId, platform, limit]);
 
   useEffect(() => {
-    fetchPrompts();
-  }, [fetchPrompts]);
+    fetchIdeas();
+  }, [fetchIdeas]);
 
-  return { prompts, loading, error, refetch: fetchPrompts };
+  return { ideas, loading, error, refetch: fetchIdeas };
 }
+
+/**
+ * Example UI rendering:
+ * {prompts.map((p, i) => (
+ *   <div key={i}>{typeof p === 'string' ? p : JSON.stringify(p)}</div>
+ * ))}
+ */
 
 /**
  * Fetch prompt templates for a given platform and post type.
@@ -253,6 +262,7 @@ export interface AnalyzeSmartNoteResponse {
 
 export interface GenerateIdeasRequest {
   userId: string;
+  platform: string;
   limit?: number;
 }
 export interface GenerateIdeasResponse {
@@ -287,7 +297,7 @@ export async function fetchWithApiKey(url: string, options: RequestInit = {}): P
 export async function analyzeSmartNote(
   req: AnalyzeSmartNoteRequest
 ): Promise<AnalyzeSmartNoteResponse> {
-  const response = await fetchWithApiKey('/api/v1/smart-note/analyze', {
+  const response = await fetchWithApiKey(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/smart-note/analyze`, {
     method: 'POST',
     body: JSON.stringify(req),
   });
@@ -301,7 +311,7 @@ export async function analyzeSmartNote(
 export async function generateSmartNoteIdeas(
   req: GenerateIdeasRequest
 ): Promise<GenerateIdeasResponse> {
-  const response = await fetchWithApiKey('/api/v1/smart-note/ideas/', {
+  const response = await fetchWithApiKey(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/smart-note/ideas/`, {
     method: 'POST',
     body: JSON.stringify(req),
   });
@@ -315,7 +325,7 @@ export async function generateSmartNoteIdeas(
 export async function executeSmartNoteIdea(
   req: ExecuteIdeaRequest
 ): Promise<ExecuteIdeaResponse> {
-  const response = await fetchWithApiKey('/api/v1/smart-note/ideas/execute', {
+  const response = await fetchWithApiKey(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/smart-note/ideas/execute`, {
     method: 'POST',
     body: JSON.stringify(req),
   });

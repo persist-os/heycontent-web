@@ -67,7 +67,6 @@ export default defineSchema({
       start_date: v.optional(v.number()),
       trial_start: v.optional(v.number()),
       trial_end: v.optional(v.number()),
-
     })),
     // Payment method info (minimal, just for display)
     paymentMethod: v.optional(v.object({
@@ -437,6 +436,7 @@ export default defineSchema({
     // Timestamps
     createdAt: v.optional(v.float64()),
     updatedAt: v.optional(v.float64()),
+    analysisMarkdown: v.optional(v.string()),
   })
   .index("by_userId", ["userId"])
   .index("by_videoId", ["videoId"])

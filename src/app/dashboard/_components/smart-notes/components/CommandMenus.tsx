@@ -202,7 +202,7 @@ export function CommandMenus({
             onClose={onCloseCommands} 
             searchTerm={searchTerm} 
             position={menuPosition}
-            platform={platform}
+            noteId={noteId}
           />
         </div>
       )}

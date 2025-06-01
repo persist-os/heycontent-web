@@ -11,6 +11,7 @@ import { Note } from './types/index';
 import { useAIInsights } from './hooks/useAIInsights';
 import { FileText, Plus, Lightbulb, ArrowLeft } from 'lucide-react';
 import { useSidebar } from '@/app/context/sidebar-context';
+import { useAuth } from '@/app/context/auth-context';
 
 function EmptyState({ onCreateNote }: { onCreateNote: () => void }) {
   return (
@@ -67,11 +68,13 @@ function SelectNotePrompt({ onCreateNote }: { onCreateNote: () => void }) {
 }
 
 export default function SmartNotes() {
+  const { user } = useAuth();
+  const userId = user?.uid;
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true); // Make sidebar visible by default
   
-  const { notes, isLoading, createNote, updateNote, deleteNote } = useNotes();
+  const { notes, isLoading, createNote, updateNote, deleteNote } = useNotes(userId);
   const { requestAIInsights } = useAIInsights(updateNote);
   const { setIsViewingNote } = useSidebar();
 
@@ -134,8 +137,7 @@ export default function SmartNotes() {
         <div className="text-gray-500">Loading notes...</div>
       </div>
     );
-}
-
+  }
 
   return (
     <div className="flex h-screen bg-white/70 backdrop-blur-sm rounded-3xl overflow-hidden">

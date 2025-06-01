@@ -374,6 +374,8 @@ export function NoteArea({
           onClose={() => setShowCommands(false)}
           searchTerm={searchTerm}
           position={menuPosition}
+          noteId={note._id}
+          userId={note.userId}
         />
       )}
 

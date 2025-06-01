@@ -1,5 +1,5 @@
 import React from 'react';
-import { useSmartNotePrompts } from '@/app/lib/api-helpers';
+import { useSmartNoteIdeas } from '@/app/lib/api-helpers';
 import ReactMarkdown from 'react-markdown';
 
 interface IdeasPanelProps {
@@ -11,7 +11,7 @@ interface IdeasPanelProps {
 }
 
 const IdeasPanel: React.FC<IdeasPanelProps> = ({ noteId, userId, platform }) => {
-  const { prompts, loading, error, refetch } = useSmartNotePrompts({ noteId, userId, platform });
+  const { ideas, loading, error, refetch } = useSmartNoteIdeas({ userId, platform });
 
   return (
     <div className="ideas-panel">
@@ -24,16 +24,18 @@ const IdeasPanel: React.FC<IdeasPanelProps> = ({ noteId, userId, platform }) => 
       {error && <div className="ideas-error" style={{ color: 'red', margin: '8px 0' }}>{error}</div>}
       {loading ? (
         <div style={{ color: '#888', marginTop: 16 }}>Loading prompts...</div>
-      ) : prompts.length > 0 ? (
-        <ReactMarkdown>
-          {prompts.map(p => `- ${p}`).join('\n')}
-        </ReactMarkdown>
+      ) : ideas.length > 0 ? (
+        <div>
+          {ideas.map((p, i) => (
+            <div key={i}>{typeof p === 'string' ? p : JSON.stringify(p)}</div>
+          ))}
+        </div>
       ) : (
         !error && <div style={{ color: '#888', marginTop: 16 }}>No prompts yet.</div>
       )}
     </div>
   );
 };
-};
+
 
 export default IdeasPanel;

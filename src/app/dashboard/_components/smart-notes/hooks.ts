@@ -37,8 +37,8 @@ export function useSmartNoteIdeas({
       if (mode === 'note' && noteId && platform) {
         result = await analyzeSmartNote({ noteId, platform, userId });
         setIdeas(result.data.ideas);
-      } else if (mode === 'user') {
-        result = await generateSmartNoteIdeas({ userId, limit });
+      } else if (mode === 'user' && platform) {
+        result = await generateSmartNoteIdeas({ userId, platform, limit });
         setIdeas(result.ideas);
       } else {
         setIdeas([]);

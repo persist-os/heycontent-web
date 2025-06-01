@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useSmartNotePrompts } from '@/app/lib/api-helpers';
+import { useSmartNoteIdeas } from '@/app/lib/api-helpers';
 import ReactMarkdown from 'react-markdown';
+import { useAuth } from '@/app/context/auth-context';
 
 import { 
   Hash, Star, Calendar, Image, LinkIcon, Lightbulb, MessageSquare, Type, ListOrdered, List, 
@@ -29,11 +30,16 @@ interface CommandMenuProps {
   onClose?: () => void;
   searchTerm?: string;
   position?: { top: number; left: number };
+  userId?: string;
+  noteId?: string;
 }
 // 'aiPrompts' is intentionally included as a valid PromptStep value
 type PromptStep = 'platform' | 'postType' | 'aiPrompts';
 
-export function CommandMenu({ onSelect, onClose, searchTerm = '', position }: CommandMenuProps) {
+export function CommandMenu({ onSelect, onClose, searchTerm = '', position, userId: propUserId, noteId: propNoteId }: CommandMenuProps) {
+  const { user } = useAuth();
+  const userId = propUserId || user?.uid;
+  const noteId = propNoteId;
   // Reset state to initial step when menu mounts
   useEffect(() => {
     setCurrentStep('platform');
@@ -346,13 +352,25 @@ setSelectedIndex(i => {
   // Show loading or error states for prompts
   // --- AI PROMPTS STEP: Use new API and Markdown rendering ---
    // Always call useSmartNotePrompts to obey the Rules of Hooks
-    const noteId = undefined; // Set if available in your flow
-    const userId = undefined; // Set from context or props
     const platform = selectedPlatform;
     const postType = selectedPostType;
-    const { prompts: aiPrompts, loading: aiPromptsLoading, error: aiPromptsError, refetch: refetchPrompts } = useSmartNotePrompts({ noteId, userId, platform });
+    const { ideas: aiPrompts, loading: aiPromptsLoading, error: aiPromptsError, refetch: refetchPrompts } = useSmartNoteIdeas({ userId, platform });
 
     if (currentStep === 'aiPrompts') {
+      if (!userId) {
+        return (
+          <div className="command-menu-error" style={{ padding: 24, color: 'red', textAlign: 'center' }}>
+            Please log in to see AI-generated ideas.
+          </div>
+        );
+      }
+      if (!platform) {
+        return (
+          <div className="command-menu-error" style={{ padding: 24, color: 'red', textAlign: 'center' }}>
+            Please select a platform to see AI-generated ideas.
+          </div>
+        );
+      }
       if (aiPromptsLoading) {
         return (
           <div className="command-menu-loading" style={{ padding: 24, textAlign: 'center' }}>
@@ -370,18 +388,18 @@ setSelectedIndex(i => {
       if (!aiPrompts || aiPrompts.length === 0) {
         return (
           <div className="command-menu-empty" style={{ padding: 24, textAlign: 'center' }}>
-            No prompts found for this platform/post type.
+            No AI-generated ideas found for this platform.
           </div>
         );
       }
       return (
-      <div className="command-menu-prompts" style={{ padding: 24 }}>
-        <ReactMarkdown>
-          {prompts.map(p => `- ${p}`).join('\n')}
-        </ReactMarkdown>
-      </div>
-    );
-  }
+        <div className="command-menu-prompts" style={{ padding: 24 }}>
+          {aiPrompts.map((p, i) => (
+            <div key={i}>{typeof p === 'string' ? p : JSON.stringify(p)}</div>
+          ))}
+        </div>
+      );
+    }
 
   return (
     <div 

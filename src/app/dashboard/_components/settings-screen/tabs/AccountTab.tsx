@@ -1,5 +1,5 @@
 // File: app/(dashboard)/_components/settings-screen/tabs/AccountTab.tsx
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -8,6 +8,7 @@ import { getFirebaseAuth } from '@/app/lib/firebase' // Only call inside useEffe
 import { handleResendVerification } from '../utils'
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { User, onAuthStateChanged } from 'firebase/auth';
 
 const MAX_PERSONA_LENGTH = 500
 const MAX_VISION_LENGTH = 500
@@ -93,12 +94,20 @@ async function handleProfileUpdate(
 const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResending, setIsResending, showPersonaFields, setShowPersonaFields }: AccountTabProps) => {
   // Add state for edit mode
   const [isEditMode, setIsEditMode] = React.useState(false);
-  
-  // Properly fetch persona data using the useQuery hook at component level
-  const userId = React.useMemo(() => {
+
+  // State for Firebase user
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+
+  useEffect(() => {
     const auth = getFirebaseAuth();
-    return auth?.currentUser?.uid;
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setFirebaseUser(user);
+    });
+    return () => unsubscribe();
   }, []);
+
+  // Properly fetch persona data using the useQuery hook at component level
+  const userId = firebaseUser?.uid;
 
   // Only run the queries if userId is available
   const personaData = useQuery(
@@ -156,10 +165,7 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
                 />
               </div>
             </div>
-            {React.useMemo(() => {
-              const auth = getFirebaseAuth();
-              return auth?.currentUser;
-            }, []) ? (
+            {firebaseUser ? (
               <Badge variant="success">Verified</Badge>
             ) : (
               <div className="flex items-center gap-2">
@@ -178,10 +184,7 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-        <form onSubmit={(e) => handleProfileUpdate(e, formData, setIsUpdating, setFormData, updatePersona, updateUser, userId, React.useMemo(() => {
-          const auth = getFirebaseAuth();
-          return auth?.currentUser?.email;
-        }, []))}>
+        <form onSubmit={(e) => handleProfileUpdate(e, formData, setIsUpdating, setFormData, updatePersona, updateUser, userId, formData.email)}>
             <div className="grid grid-cols-1 gap-4">
               <div>
                 <label htmlFor="name" className="text-sm font-medium">Name</label>
