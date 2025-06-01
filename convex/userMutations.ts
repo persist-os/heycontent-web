@@ -64,9 +64,9 @@ export const create_user = mutation({
         email: args.email,
         image: args.image,
         userId: args.userId,
-        username: args.username ?? '',
-        referredBy: args.referredBy ?? '',
         updatedAt: now,
+        ...(args.username !== undefined ? { username: args.username } : {}),
+        ...(args.referredBy !== undefined ? { referredBy: args.referredBy } : {}),
         ...(args.subscription ? { subscription: args.subscription } : {}),
       };
       
