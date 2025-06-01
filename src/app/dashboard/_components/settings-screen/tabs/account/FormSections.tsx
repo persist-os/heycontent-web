@@ -6,8 +6,44 @@ import { cn } from '@/lib/utils';
 const MAX_PERSONA_LENGTH = 500;
 const MAX_VISION_LENGTH = 500;
 
+// Explicit interfaces for props
+export interface ProfileFieldsProps {
+  formData: {
+    name: string;
+    email: string;
+    username: string;
+    referralCode: string;
+    referredBy: string;
+    currentPersona: string;
+    futureVision: string;
+    image?: string;
+  };
+  setFormData: React.Dispatch<React.SetStateAction<any>>;
+  isEditMode: boolean;
+}
+
+export interface ReferralFieldsProps {
+  formData: {
+    referralCode: string;
+    referredBy: string;
+  };
+  referrerName?: string;
+  referrerLoading?: boolean;
+}
+
+export interface PersonaFieldsProps {
+  formData: {
+    currentPersona: string;
+    futureVision: string;
+  };
+  setFormData: React.Dispatch<React.SetStateAction<any>>;
+  isEditMode: boolean;
+  showPersonaFields: boolean;
+  setShowPersonaFields: (val: boolean) => void;
+}
+
 // Profile fields section
-export const ProfileFields = ({ formData, setFormData, isEditMode }: any) => (
+export const ProfileFields = ({ formData, setFormData, isEditMode }: ProfileFieldsProps) => (
   <>
     {/* Name Field */}
     {isEditMode ? (
@@ -49,7 +85,7 @@ export const ProfileFields = ({ formData, setFormData, isEditMode }: any) => (
 );
 
 // Referral fields section
-export const ReferralFields = ({ formData, referrerName, referrerLoading }: any) => (
+export const ReferralFields = ({ formData, referrerName = '', referrerLoading = false }: ReferralFieldsProps) => (
   <>
     {/* Referral Code (always read-only with copy) */}
     <ReadOnlyField 
@@ -61,19 +97,13 @@ export const ReferralFields = ({ formData, referrerName, referrerLoading }: any)
     {/* Referred By (always read-only) */}
     <ReadOnlyField 
       label="Referred By" 
-      value={
-        referrerLoading
-          ? 'Loading...'
-          : referrerName
-            ? referrerName
-            : ''
-      }
+      value={referrerLoading ? 'Loading...' : referrerName ? referrerName : ''}
     />
   </>
 );
 
 // Persona fields section
-export const PersonaFields = ({ formData, setFormData, isEditMode, showPersonaFields, setShowPersonaFields }: any) => (
+export const PersonaFields = ({ formData, setFormData, isEditMode, showPersonaFields, setShowPersonaFields }: PersonaFieldsProps) => (
   <div className="mt-6 space-y-4">
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
       <div>
@@ -98,19 +128,12 @@ export const PersonaFields = ({ formData, setFormData, isEditMode, showPersonaFi
         {/* Current Persona */}
         {isEditMode ? (
           <div>
-            <div className="flex justify-between items-center">
-              <label className="text-sm font-medium">Current Persona</label>
-              <span className="text-sm text-gray-500">{formData.currentPersona.length}/{MAX_PERSONA_LENGTH}</span>
-            </div>
+            <label className="text-sm font-medium">Current Persona</label>
             <textarea
               className="w-full mt-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg resize-y min-h-[100px] text-base bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               placeholder="Describe who you are today..."
               value={formData.currentPersona}
-              onChange={(e) => {
-                if (e.target.value.length <= MAX_PERSONA_LENGTH) {
-                  setFormData((prev: any) => ({ ...prev, currentPersona: e.target.value }))
-                }
-              }}
+              onChange={(e) => setFormData((prev: any) => ({ ...prev, currentPersona: e.target.value }))}
               maxLength={MAX_PERSONA_LENGTH}
             />
           </div>
@@ -124,19 +147,12 @@ export const PersonaFields = ({ formData, setFormData, isEditMode, showPersonaFi
         {/* Future Vision */}
         {isEditMode ? (
           <div>
-            <div className="flex justify-between items-center">
-              <label className="text-sm font-medium">Future Vision</label>
-              <span className="text-sm text-gray-500">{formData.futureVision.length}/{MAX_VISION_LENGTH}</span>
-            </div>
+            <label className="text-sm font-medium">Future Vision</label>
             <textarea
               className="w-full mt-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg resize-y min-h-[100px] text-base bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               placeholder="Describe your goals and aspirations..."
               value={formData.futureVision}
-              onChange={(e) => {
-                if (e.target.value.length <= MAX_VISION_LENGTH) {
-                  setFormData((prev: any) => ({ ...prev, futureVision: e.target.value }))
-                }
-              }}
+              onChange={(e) => setFormData((prev: any) => ({ ...prev, futureVision: e.target.value }))}
               maxLength={MAX_VISION_LENGTH}
             />
           </div>
