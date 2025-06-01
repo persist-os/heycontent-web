@@ -705,6 +705,29 @@ app.post("/api/users/:id/youtube/channel", async (c) => {
   }
 });
 
+// Get stored videos for a channel
+app.get("/api/users/:id/youtube/channels/:channelId/videos", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const channelId = c.req.param("channelId");
+  const { limit } = c.req.query();
+  
+  try {
+    const videos = await ctx.runQuery(api.youtubeQueries.getVideosByChannel, {
+      userId,
+      channelId,
+      limit: limit ? parseInt(limit) : undefined
+    });
+    return c.json({ success: true, data: videos });
+  } catch (error) {
+    console.error("Failed to get stored videos:", error);
+    return c.json({ 
+      success: false, 
+      error: `Failed to get stored videos: ${error instanceof Error ? error.message : 'Unknown error'}`
+    }, 500);
+  }
+});
+
 // INSTAGRAM ROUTES
 
 // Instagram data deletion request URL

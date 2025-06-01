@@ -328,3 +328,30 @@ export const getChannelAnalysis = query({
     }
   },
 });
+
+// Get all video analyses for a user
+export const getVideoAnalyses = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    try {
+      const videos = await ctx.db
+        .query("youtubeVideos")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .filter((q) => q.neq(q.field("analysis"), null))
+        .order("desc")
+        .collect();
+
+      // Transform videos to include only necessary analysis data
+      return videos.map(video => ({
+        id: video.videoId,
+        title: video.snippet?.title || 'Untitled Video',
+        publishedAt: video.snippet?.published_at || video.createdAt,
+        analysis: video.analysis,
+        statistics: video.statistics || {}
+      }));
+    } catch (error) {
+      console.error('Error getting video analyses:', error);
+      throw new Error(`Failed to get video analyses: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
