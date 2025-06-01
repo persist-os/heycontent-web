@@ -4,9 +4,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { getAuth, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { FirebaseApp } from 'firebase/app';
-import { getFirebaseApp, getFirebaseAuth } from '@/app/lib/firebase';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // Import components
@@ -18,22 +15,19 @@ import { EmailTypeFilter } from '../filters/EmailTypeFilter';
 import { GmailModal } from '../modals/GmailModal';
 import { InstagramModal } from '../modals/InstagramModal';
 import { YoutubeModal } from '../modals/YoutubeModal';
-import { LoadingState } from '../loading/LoadingState';
 import { Header } from '../header/Header';
+import ErrorState from './ErrorState';
 
 // Import types and utilities
 import { AnyContentItem, TimeRange, SortOption, PlatformType, EmailTypeFilter as TEmailTypeFilter, YouTubeContentItem, InstagramContentItem, GmailContentItem, PlatformFilterType } from '../types';
-import { sortAndFilterContent, getMockGmailItems, getMockInstagramItem, getMockYouTubeItem } from '../utils';
+import { sortAndFilterContent } from '../utils';
+import { useAuth } from '@/app/context/auth-context';
 
 export function ContentAnalyticsScreen() {
-  // State management
-  const [typedApp, setTypedApp] = useState<FirebaseApp | undefined>(undefined);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setTypedApp(getFirebaseApp());
-    }
-  }, []);
+  // Auth context (the correct way)
+  const { firebaseUser, authLoading } = useAuth();
+  const userId = firebaseUser?.uid;
+  const router = useRouter();
 
   // State management
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformType>('all');
@@ -44,68 +38,33 @@ export function ContentAnalyticsScreen() {
   const [sortBy, setSortBy] = useState<SortOption>('date');
   const [filterType, setFilterType] = useState<PlatformFilterType>('all');
   const [selectedContent, setSelectedContent] = useState<AnyContentItem | null>(null);
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-  const [userId, setUserId] = useState<string | undefined>();
-  const [userEmail, setUserEmail] = useState<string | undefined>();
-  const [authLoading, setAuthLoading] = useState(true);
-  
-  const router = useRouter();
 
-  // Add Firebase auth listener
-  useEffect(() => {
-    // Check if app is initialized before using it
-    if (typedApp) {
-      const auth = getAuth(typedApp);
-      const unsubscribe = onAuthStateChanged(auth, (user) => {
-        setFirebaseUser(user);
-        setAuthLoading(false);
-      });
-      return () => unsubscribe();
-    } else {
-      console.error("Firebase app not initialized.");
-      setAuthLoading(false);
-    }
-  }, []);
+  // Debug logs
+  console.log('[Debug] firebaseUser:', firebaseUser);
+  console.log('[Debug] userId:', userId);
+  console.log('[Debug] authLoading:', authLoading);
 
-  // Handle click outside filter dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (filterRef && !filterRef.contains(event.target as Node)) {
-        setIsFilterOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [filterRef]);
-
-  // Fetch data from Convex - Use firebaseUser.uid
+  // Convex queries (never skip, just allow undefined)
   const youtubeVideos = useQuery(
     api.youtubeQueries.listUserYouTubeVideos,
-    !authLoading && userId ? { userId } : "skip"
+    userId ? { userId } : undefined
   );
-
-  // Fetch Gmail threads from Convex
   const gmailThreads = useQuery(
     api.gmailQueries.listUserGmailThreads,
-    !authLoading && userId ? { userId } : "skip"
+    userId ? { userId } : undefined
   );
-
-  // Fetch Instagram posts from Convex
   const instagramPosts = useQuery(
     api.instagramQueries.getAllInstagramPosts,
-    !authLoading && userId ? { userId } : "skip"
+    userId ? { userId } : undefined
   );
 
   // Console log data for debugging
   useEffect(() => {
-    console.log('YouTube Videos from Convex:', youtubeVideos);
-    console.log('Gmail Threads from Convex:', gmailThreads);
-    console.log('Instagram Posts from Convex:', instagramPosts);
+    console.log('[Debug] YouTube Videos:', youtubeVideos);
+    console.log('[Debug] Gmail Threads:', gmailThreads);
+    console.log('[Debug] Instagram Posts:', instagramPosts);
   }, [youtubeVideos, gmailThreads, instagramPosts]);
-  
+
   // Map YouTube items
   const mappedYouTubeItems: YouTubeContentItem[] = useMemo(() => {
     if (youtubeVideos && Array.isArray(youtubeVideos)) {
@@ -253,17 +212,17 @@ export function ContentAnalyticsScreen() {
     setIsFilterOpen(false);
   };
 
-  // Render loading state if needed
-  if (authLoading) {
-    return <LoadingState type="auth" />
-  }
+  // Show a small spinner if auth is loading, but never gate the whole screen
+  // Optionally, you can show a subtle spinner in the header or avatar area
 
+  // Show error state if not logged in
   if (!firebaseUser) {
-    return <LoadingState type="error" />;
+    return <ErrorState message="Please log in to view your content." />;
   }
 
+  // Show error state if data failed to load
   if (youtubeVideos === undefined || gmailThreads === undefined) {
-    return <LoadingState type="content" />;
+    return <ErrorState message="We couldn’t load your content. Try again later." />;
   }
 
   // Platform-specific arrays using mapped items

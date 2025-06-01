@@ -20,7 +20,7 @@ interface Props {
 }
 
 export default function CheckoutCard({ planId, onClose, returnUrl }: Props) {
-  const { user } = useAuth()
+  const { firebaseUser } = useAuth()
   const [apiKey, setApiKey] = useState(null)
   const [clientSecret, setClientSecret] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -44,7 +44,7 @@ export default function CheckoutCard({ planId, onClose, returnUrl }: Props) {
   // Fetch client secret
   useEffect(() => {
     const fetchClientSecret = async () => {
-      if (!apiKey || !user) return
+      if (!apiKey || !firebaseUser) return
       try {
         const response = await fetch('/api/subscription', {
           method: 'POST',
@@ -54,9 +54,9 @@ export default function CheckoutCard({ planId, onClose, returnUrl }: Props) {
           },
           body: JSON.stringify({
             planId,
-            userId: user.uid,
-            email: user.email,
-            name: user.displayName,
+            userId: firebaseUser?.uid,
+            email: firebaseUser?.email,
+            name: firebaseUser?.displayName,
             ...(returnUrl ? { returnUrl } : {})
           })
         })
@@ -80,7 +80,7 @@ export default function CheckoutCard({ planId, onClose, returnUrl }: Props) {
       }
     }
     fetchClientSecret()
-  }, [planId, user, apiKey, returnUrl])
+  }, [planId, firebaseUser, apiKey, returnUrl])
 
   // No need for checkout ready state detection anymore
 

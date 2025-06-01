@@ -13,7 +13,7 @@ interface CheckoutFormProps {
 
 // Using direct Stripe approach to avoid React integration issues
 export const CheckoutForm: React.FC<CheckoutFormProps> = ({ planId, onSuccess, onCancel, returnUrl }) => {
-  const { user } = useAuth();
+  const { firebaseUser } = useAuth();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const checkoutMountedRef = useRef<boolean>(false);

@@ -4,17 +4,24 @@ import Cookies from 'js-cookie';
 const TOKEN_COOKIE_NAME = 'firebase-auth-token';
 
 export const setFirebaseToken = (token: string) => {
-  // Set cookie with 1 hour expiration
+  // Set both httpOnly (SSR) and client-accessible cookies for maximum compatibility
   Cookies.set(TOKEN_COOKIE_NAME, token, {
-    expires: 1/24, // 1 hour
+    expires: 1 / 24, // 1 hour
     path: '/',
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production'
+    secure: process.env.NODE_ENV === 'production',
   });
+  // Optionally, set via document.cookie for SSR (if needed)
+  if (typeof document !== 'undefined') {
+    document.cookie = `${TOKEN_COOKIE_NAME}=${token}; path=/; max-age=${60 * 60}; SameSite=Lax; secure=${process.env.NODE_ENV === 'production'}`;
+  }
 };
 
 export const removeFirebaseToken = () => {
   Cookies.remove(TOKEN_COOKIE_NAME, { path: '/' });
+  if (typeof document !== 'undefined') {
+    document.cookie = `${TOKEN_COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax; secure=${process.env.NODE_ENV === 'production'}`;
+  }
 };
 
 export const getFirebaseToken = (): string | undefined => {

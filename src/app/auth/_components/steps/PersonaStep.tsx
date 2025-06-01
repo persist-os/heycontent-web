@@ -10,7 +10,7 @@ interface PersonaStepProps {
 }
 
 const PersonaStep: React.FC<PersonaStepProps> = ({ name, onComplete, onSkip }) => {
-  const { user } = useAuth();
+  const { firebaseUser } = useAuth();
   const createPersona = useMutation(api.personas.createPersona);
   
   const [currentPersona, setCurrentPersona] = useState("");
@@ -43,10 +43,10 @@ const PersonaStep: React.FC<PersonaStepProps> = ({ name, onComplete, onSkip }) =
     setPersonaError(null);
     
     try {
-      if (!user) throw new Error("You must be logged in to save your persona.");
+      if (!firebaseUser) throw new Error("You must be logged in to save your persona.");
       
       await createPersona({
-        userId: user.uid,
+        userId: firebaseUser.uid,
         preferredName: name,
         currentPersona,
         futureVision,
@@ -66,7 +66,7 @@ const PersonaStep: React.FC<PersonaStepProps> = ({ name, onComplete, onSkip }) =
   };
 
   const handleSkip = () => {
-    // Clear localStorage if user skips
+    // Clear localStorage if firebaseUser skips
     localStorage.removeItem('register_currentPersona');
     localStorage.removeItem('register_futureVision');
     onSkip();

@@ -91,7 +91,7 @@ async function handleProfileUpdate(
 }
 
 const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResending, setIsResending, showPersonaFields, setShowPersonaFields }: AccountTabProps) => {
-  const { user } = useAuth();
+  const { firebaseUser } = useAuth();
   // Add state for edit mode
   const [isEditMode, setIsEditMode] = React.useState(false);
   const [originalFormData, setOriginalFormData] = React.useState<AccountFormData>(formData);
@@ -150,7 +150,7 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
         username: userData?.username || '',
         referralCode: userData?.referralCode || '',
         referredBy: prev.referredBy || userData?.referredBy || '',
-        image: userData?.image || user?.photoURL || ''
+        image: userData?.image || firebaseUser?.photoURL || ''
       }));
       setOriginalFormData(prev => ({
         ...prev,
@@ -159,10 +159,10 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
         username: userData?.username || '',
         referralCode: userData?.referralCode || '',
         referredBy: prev.referredBy || userData?.referredBy || '',
-        image: userData?.image || user?.photoURL || ''
+        image: userData?.image || firebaseUser?.photoURL || ''
       }));
     }
-  }, [userData, user?.photoURL, setFormData]);
+  }, [userData, firebaseUser?.photoURL, setFormData]);
   
   const updatePersona = useMutation(api.personas.createPersona);
   const updateUser = useMutation(api.userMutations.create_user);
@@ -258,7 +258,7 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
                     </Button>
                     <Button
                       size="sm"
-                      onClick={(e) => handleProfileUpdate(e, formData, setIsUpdating, setFormData, updatePersona, updateUser, userId, userEmail, setIsEditMode, user?.photoURL)}
+                      onClick={(e) => handleProfileUpdate(e, formData, setIsUpdating, setFormData, updatePersona, updateUser, userId, userEmail, setIsEditMode, firebaseUser?.photoURL)}
                       disabled={isUpdating}
                       className="flex items-center gap-2"
                     >
@@ -282,7 +282,7 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
                 e.preventDefault();
                 return;
               }
-              handleProfileUpdate(e, formData, setIsUpdating, setFormData, updatePersona, updateUser, userId, userEmail, setIsEditMode, user?.photoURL);
+              handleProfileUpdate(e, formData, setIsUpdating, setFormData, updatePersona, updateUser, userId, userEmail, setIsEditMode, firebaseUser?.photoURL);
             }}>
               <div className="grid grid-cols-1 gap-4">
                 <ProfileFields formData={formData} setFormData={setFormData} isEditMode={isEditMode} />
