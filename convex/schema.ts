@@ -70,7 +70,8 @@ export default defineSchema({
   .index("by_userId", ["userId"])
   .index("by_email", ["email"])
   .index("by_stripeCustomerId", ["stripeCustomerId"])
-  .index("by_username", ["username"]),
+  .index("by_username", ["username"])
+  .index("by_referralCode", ["referralCode"]),
 
   personas: defineTable({
     name: v.string(),

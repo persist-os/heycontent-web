@@ -20,10 +20,10 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess }) => {
   const {
     referralCode,
     referredByName,
+    referredById,
     referralCodeValid,
     error: referralError,
     checkReferralCode,
-    validateReferralCode,
     handleReferralCodeChange,
   } = useReferralValidation();
 
@@ -33,11 +33,20 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess }) => {
     setError(null);
     setIsLoading(true);
 
-    // Validate referral code first
-    const isCodeValid = validateReferralCode(referralCode);
-    if (!isCodeValid) {
+    // Username must not be empty or whitespace
+    if (!username.trim()) {
+      setError('Username is required.');
       setIsLoading(false);
       return;
+    }
+
+    // If a referral code is present, it must be valid and referredById must not be blank
+    if (referralCode) {
+      if (!referralCodeValid || !referredById) {
+        setError('Please enter a valid referral code.');
+        setIsLoading(false);
+        return;
+      }
     }
 
     try {
@@ -86,16 +95,19 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess }) => {
       }
 
       // Send ID token and user info to backend
+      const payload: any = {
+        idToken,
+        name,
+        action: 'register',
+      };
+      if (username && username.trim()) (payload as any).username = username.trim();
+      if (referralCode && referralCodeValid && referredById) (payload as any).referredBy = referredById;
+      console.log('[Registration] About to send to API:', payload);
+      
       const apiKeyResponse = await fetch('/api/auth/firebase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          idToken,
-          name,
-          username,
-          referredBy: referredByName,
-          action: 'register',
-        }),
+        body: JSON.stringify(payload),
       });
 
       const apiKeyData = await apiKeyResponse.json();
@@ -225,7 +237,11 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess }) => {
       <button
         type="submit"
         className="w-full bg-blue-600 text-white py-2 rounded disabled:opacity-50"
-        disabled={isLoading || !isPasswordValid}
+        disabled={
+          isLoading ||
+          !isPasswordValid ||
+          (referralCode && (!referralCodeValid || !referredById || checkReferralCode === undefined))
+        }
       >
         {isLoading ? 'Loading...' : 'Register'}
       </button>

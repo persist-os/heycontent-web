@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 
 export const useReferralValidation = () => {
   const [referralCode, setReferralCode] = useState("");
   const [referredByName, setReferredByName] = useState("");
+  const [referredById, setReferredById] = useState("");
   const [referralCodeValid, setReferralCodeValid] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -14,38 +15,40 @@ export const useReferralValidation = () => {
     referralCode ? { referralCode: referralCode } : "skip"
   );
 
-  // Function to validate referral code
-  const validateReferralCode = (code: string) => {
-    if (!code) {
-      setError("Referral code is required");
+  useEffect(() => {
+    if (!referralCode) {
       setReferralCodeValid(false);
+      setReferredById("");
       setReferredByName("");
-      return false;
+      setError(null);
+      return;
     }
-    
     if (checkReferralCode === undefined) {
       // Still loading
-      return false;
+      return;
     }
-    
     if (checkReferralCode === null) {
       // Query skipped
-      return false;
-    }
-    
-    if (checkReferralCode.valid) {
-      setError(null);
-      setReferralCodeValid(true);
-      // Set the referrer's name for the referredBy field
-      setReferredByName(checkReferralCode.referrerName || checkReferralCode.referrerUsername || checkReferralCode.referrerEmail);
-      return true;
-    } else {
-      setError("Invalid referral code");
       setReferralCodeValid(false);
+      setReferredById("");
       setReferredByName("");
-      return false;
+      setError(null);
+      return;
     }
-  };
+    if (checkReferralCode.valid) {
+      setReferralCodeValid(true);
+      setReferredById(checkReferralCode.userId || "");
+      setReferredByName(checkReferralCode.referrerName || checkReferralCode.referrerUsername || checkReferralCode.referrerEmail);
+      setError(null);
+    } else {
+      setReferralCodeValid(false);
+      setReferredById("");
+      setReferredByName("");
+      setError("Invalid referral code");
+    }
+    // For debugging: log when the query returns
+    // console.log('Convex checkReferralCode result:', checkReferralCode);
+  }, [referralCode, checkReferralCode]);
 
   const handleReferralCodeChange = (code: string) => {
     setReferralCode(code);
@@ -56,10 +59,10 @@ export const useReferralValidation = () => {
   return {
     referralCode,
     referredByName,
+    referredById,
     referralCodeValid,
     error,
     checkReferralCode,
-    validateReferralCode,
     handleReferralCodeChange,
   };
 }; 

@@ -11,6 +11,8 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { Edit2, Save, X, Copy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/app/context/auth-context'
+import { ReadOnlyField, ReadOnlyTextArea } from './account/ReadOnlyField'
+import { ProfileFields, ReferralFields, PersonaFields } from './account/FormSections'
 
 const MAX_PERSONA_LENGTH = 500
 const MAX_VISION_LENGTH = 500
@@ -37,60 +39,6 @@ interface AccountTabProps {
   showPersonaFields: boolean;
   setShowPersonaFields: (val: boolean) => void;
 }
-
-// Component for read-only field display
-const ReadOnlyField: React.FC<{
-  label: string;
-  value: string;
-  showCopy?: boolean;
-  copyText?: string;
-  helperText?: string;
-}> = ({ label, value, showCopy = false, copyText, helperText }) => (
-  <div className="space-y-1">
-    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
-    <div className="relative">
-      <div className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-base border-0 min-h-[42px] flex items-center text-gray-900 dark:text-gray-100">
-        {value || <span className="text-gray-400">Not provided</span>}
-      </div>
-      {showCopy && value && (
-        <Button 
-          type="button" 
-          variant="ghost" 
-          size="sm"
-          className="absolute right-1 top-1 h-8 w-8 p-0 hover:bg-gray-200 dark:hover:bg-gray-700"
-          onClick={() => {
-            navigator.clipboard.writeText(copyText || value);
-            // You could add a toast notification here
-          }}
-        >
-          <Copy className="h-3 w-3" />
-        </Button>
-      )}
-    </div>
-    {helperText && (
-      <p className="text-xs text-gray-500 dark:text-gray-400">{helperText}</p>
-    )}
-  </div>
-)
-
-// Component for read-only textarea display
-const ReadOnlyTextArea: React.FC<{
-  label: string;
-  value: string;
-  characterCount?: string;
-}> = ({ label, value, characterCount }) => (
-  <div className="space-y-1">
-    <div className="flex justify-between items-center">
-      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
-      {characterCount && (
-        <span className="text-sm text-gray-500">{characterCount}</span>
-      )}
-    </div>
-    <div className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-base border-0 min-h-[100px] text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
-      {value || <span className="text-gray-400">Not provided</span>}
-    </div>
-  </div>
-)
 
 // Handles profile update form submission
 async function handleProfileUpdate(
@@ -178,32 +126,42 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
   // Update form data when persona data and user data load
   useEffect(() => {
     if (personaData) {
-      const newData = {
-        ...formData,
+      setFormData(prev => ({
+        ...prev,
         currentPersona: personaData?.currentPersona || '',
         futureVision: personaData?.futureVision || ''
-      };
-      setFormData(newData);
-      setOriginalFormData(newData);
+      }));
+      setOriginalFormData(prev => ({
+        ...prev,
+        currentPersona: personaData?.currentPersona || '',
+        futureVision: personaData?.futureVision || ''
+      }));
     }
-  }, [personaData]);
+  }, [personaData, setFormData]);
   
   // Update form data with user information when it loads
   useEffect(() => {
     if (userData) {
-      const newData = {
-        ...formData,
+      setFormData(prev => ({
+        ...prev,
         name: userData?.name || '',
         email: userData?.email || '',
         username: userData?.username || '',
         referralCode: userData?.referralCode || '',
-        referredBy: userData?.referredBy || '',
+        referredBy: prev.referredBy || userData?.referredBy || '',
         image: userData?.image || user?.photoURL || ''
-      };
-      setFormData(newData);
-      setOriginalFormData(newData);
+      }));
+      setOriginalFormData(prev => ({
+        ...prev,
+        name: userData?.name || '',
+        email: userData?.email || '',
+        username: userData?.username || '',
+        referralCode: userData?.referralCode || '',
+        referredBy: prev.referredBy || userData?.referredBy || '',
+        image: userData?.image || user?.photoURL || ''
+      }));
     }
-  }, [userData]);
+  }, [userData, user?.photoURL, setFormData]);
   
   const updatePersona = useMutation(api.personas.createPersona);
   const updateUser = useMutation(api.userMutations.create_user);
@@ -220,6 +178,14 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
     setIsEditMode(false);
   };
   
+  // Always call the referrerQuery hook, passing 'skip' if referredBy is not present
+  const referrerQuery = useQuery(
+    api.userQueries.getUser,
+    formData.referredBy ? { userId: formData.referredBy } : 'skip'
+  );
+  const referrerName = referrerQuery?.name || '';
+  const referrerLoading = !!formData.referredBy && !referrerQuery;
+
   // Show loading if userId is not yet loaded
   if (!userId) {
     return <div className="flex justify-center items-center min-h-[200px]">Loading user info...</div>;
@@ -312,135 +278,9 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
           )}>
             <form onSubmit={(e) => handleProfileUpdate(e, formData, setIsUpdating, setFormData, updatePersona, updateUser, userId, userEmail, setIsEditMode, user?.photoURL)}>
               <div className="grid grid-cols-1 gap-4">
-                {/* Name Field */}
-                {isEditMode ? (
-                  <div>
-                    <label htmlFor="name" className="text-sm font-medium">Name</label>
-                    <input
-                      id="name"
-                      name="name"
-                      type="text"
-                      className="w-full mt-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                      placeholder="Your name"
-                      value={formData.name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    />
-                  </div>
-                ) : (
-                  <ReadOnlyField label="Name" value={formData.name} />
-                )}
-
-                {/* Email Field (always read-only) */}
-                <ReadOnlyField label="Email" value={formData.email} />
-
-                {/* Username Field */}
-                {isEditMode ? (
-                  <div>
-                    <label htmlFor="username" className="text-sm font-medium">Username</label>
-                    <input
-                      id="username"
-                      name="username"
-                      type="text"
-                      className="w-full mt-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                      placeholder="Your username"
-                      value={formData.username}
-                      onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
-                    />
-                  </div>
-                ) : (
-                  <ReadOnlyField label="Username" value={formData.username} />
-                )}
-
-                {/* Referral Code (always read-only with copy) */}
-                <ReadOnlyField 
-                  label="Your Referral Code" 
-                  value={formData.referralCode} 
-                  showCopy={!!formData.referralCode}
-                  helperText={formData.referralCode ? "Share this code with friends to invite them" : undefined}
-                />
-
-                {/* Referred By (always read-only) */}
-                <ReadOnlyField label="Referred By" value={formData.referredBy} />
-              </div>
-
-              {/* AI Persona Section */}
-              <div className="mt-6 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <div>
-                    <h3 className="text-sm font-medium">AI Persona Understanding</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Help Content understand your journey and goals</p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowPersonaFields(!showPersonaFields)}
-                    className="w-full sm:w-auto"
-                  >
-                    {showPersonaFields ? 'Hide' : 'Show'} Persona Fields
-                  </Button>
-                </div>
-
-                {showPersonaFields && (
-                  <div className={cn(
-                    "space-y-4 transition-all duration-300 ease-in-out",
-                    showPersonaFields ? "opacity-100 max-h-none" : "opacity-0 max-h-0 overflow-hidden"
-                  )}>
-                    {/* Current Persona */}
-                    {isEditMode ? (
-                      <div>
-                        <div className="flex justify-between items-center">
-                          <label className="text-sm font-medium">Current Persona</label>
-                          <span className="text-sm text-gray-500">{formData.currentPersona.length}/{MAX_PERSONA_LENGTH}</span>
-                        </div>
-                        <textarea
-                          className="w-full mt-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg resize-y min-h-[100px] text-base bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                          placeholder="Describe who you are today..."
-                          value={formData.currentPersona}
-                          onChange={(e) => {
-                            if (e.target.value.length <= MAX_PERSONA_LENGTH) {
-                              setFormData(prev => ({ ...prev, currentPersona: e.target.value }))
-                            }
-                          }}
-                          maxLength={MAX_PERSONA_LENGTH}
-                        />
-                      </div>
-                    ) : (
-                      <ReadOnlyTextArea 
-                        label="Current Persona" 
-                        value={formData.currentPersona}
-                        characterCount={`${formData.currentPersona.length}/${MAX_PERSONA_LENGTH}`}
-                      />
-                    )}
-
-                    {/* Future Vision */}
-                    {isEditMode ? (
-                      <div>
-                        <div className="flex justify-between items-center">
-                          <label className="text-sm font-medium">Future Vision</label>
-                          <span className="text-sm text-gray-500">{formData.futureVision.length}/{MAX_VISION_LENGTH}</span>
-                        </div>
-                        <textarea
-                          className="w-full mt-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg resize-y min-h-[100px] text-base bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                          placeholder="Describe your goals and aspirations..."
-                          value={formData.futureVision}
-                          onChange={(e) => {
-                            if (e.target.value.length <= MAX_VISION_LENGTH) {
-                              setFormData(prev => ({ ...prev, futureVision: e.target.value }))
-                            }
-                          }}
-                          maxLength={MAX_VISION_LENGTH}
-                        />
-                      </div>
-                    ) : (
-                      <ReadOnlyTextArea 
-                        label="Future Vision" 
-                        value={formData.futureVision}
-                        characterCount={`${formData.futureVision.length}/${MAX_VISION_LENGTH}`}
-                      />
-                    )}
-                  </div>
-                )}
+                <ProfileFields formData={formData} setFormData={setFormData} isEditMode={isEditMode} />
+                <ReferralFields formData={formData} referrerName={referrerName} referrerLoading={referrerLoading} />
+                <PersonaFields formData={formData} setFormData={setFormData} isEditMode={isEditMode} showPersonaFields={showPersonaFields} setShowPersonaFields={setShowPersonaFields} />
               </div>
             </form>
           </div>

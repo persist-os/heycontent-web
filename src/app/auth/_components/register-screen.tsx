@@ -18,6 +18,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
   const [finalApiKey, setFinalApiKey] = useState<string | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [name, setName] = useState(""); // Need to track name for persona step
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
   
@@ -42,6 +43,11 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
   // Handle registration success
   const handleRegisterSuccess = (registeredName: string) => {
     setName(registeredName);
+    setRegistrationSuccess(true);
+  };
+
+  const handleContinueAfterSuccess = () => {
+    setRegistrationSuccess(false);
     setStep('personas');
   };
 
@@ -77,8 +83,20 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
           />
         )}
         
-        {step === 'register' && (
+        {step === 'register' && !registrationSuccess && (
           <RegistrationForm onSuccess={handleRegisterSuccess} />
+        )}
+        {step === 'register' && registrationSuccess && (
+          <div className="bg-white shadow-lg rounded-xl p-8 text-center">
+            <h2 className="text-2xl font-bold mb-4 text-green-600">Registration successful!</h2>
+            <p className="mb-6 text-gray-700">Your account has been created. Click below to continue.</p>
+            <button
+              className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+              onClick={handleContinueAfterSuccess}
+            >
+              Continue
+            </button>
+          </div>
         )}
         
         {step === 'personas' && (

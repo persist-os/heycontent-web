@@ -36,8 +36,7 @@ export const getUserDetails = query({
   handler: async ({ db }, { referralCode }) => {
     const user = await db
       .query("users")
-      .withIndex("by_username") // use any index, we filter below
-      .filter((q) => q.eq(q.field("referralCode"), referralCode))
+      .withIndex("by_referralCode", (q) => q.eq("referralCode", referralCode))
       .first();
     if (user) {
       return { 
