@@ -35,11 +35,11 @@ export async function POST(request: Request) {
     const payload = { platform, limit };
     // Log the request to the backend
     console.info(`[${requestId}] Sending request to backend API`, {
-      url: `${BACKEND_URL}/smart-note/ideas/`,
+      url: `${BACKEND_URL}/smart-note/ideas`,
       platform,
       limit
     });
-    const response = await fetch(`${BACKEND_URL}/smart-note/ideas/`, {
+    const response = await fetch(`${BACKEND_URL}/api/v1/smart-note/ideas/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
         status: response.status,
         statusText: response.statusText,
         error: errorData,
-        url: `${BACKEND_URL}/api/v1/smart-note/ideas/`
+        url: `${BACKEND_URL}/api/v1/smart-note/ideas`
       });
       throw new Error(`Backend API responded with status: ${response.status} (${response.statusText})`);
     }

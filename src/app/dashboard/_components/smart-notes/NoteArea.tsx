@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Note, NoteUpdate } from './types';
 import { ShortcutManager } from './keyboard-shortcuts';
 import { CommandMenu, type Command } from './CommandMenu';
-import { executeSmartNoteIdea } from '@/app/lib/api-helpers';
 import type { PlatformKey } from './types/platformPrompts';
 import { saveToLocal, getCursorCoordinates, applyFormat } from './utils/note-utils';
 import { NoteHeader } from './components/NoteHeader';
@@ -10,7 +9,7 @@ import { NoteReferences } from './components/NoteReferences';
 import { CommandMenus } from './components/CommandMenus';
 import { FullAnalysisModal } from './components/FullAnalysisModal';
 import { Keyboard } from 'lucide-react';
-import IdeasPanel from './IdeasPanel';
+import IdeasPanel from './components/IdeasPanel';
 
 interface NoteAreaProps {
   note: Note;
@@ -289,32 +288,16 @@ export function NoteArea({
     if (command.type === 'format') {
       handleFormat(command.shortcut || '', command.shortcut || '');
     } else if (command.type === 'block' && command.template) {
-      // If this is an AI prompt, expand it using the backend
+      // If this is an AI prompt, handle it here
       if (command.metadata?.type === 'idea') {
-        setAiLoading(true);
-        try {
-          const res = await executeSmartNoteIdea({
-            userId: note.userId,
-            idea: command.template,
-            note: content,
-            context: {
-              platform: note.platform,
-              postType: note.postType || 'default',
-            }
-          });
-          // Insert the generated content at the cursor position
-          if (textAreaRef.current) {
-            const start = textAreaRef.current.selectionStart || 0;
-            const end = textAreaRef.current.selectionEnd || 0;
-            const newContent = content.substring(0, start) + res.result + content.substring(end);
-            setContent(newContent);
-            setCursorPosition(start + res.result.length);
-            onUpdate(note._id, { content: newContent });
-          }
-        } catch (err) {
-          alert('Failed to expand prompt: ' + (err instanceof Error ? err.message : 'Unknown error'));
-        } finally {
-          setAiLoading(false);
+        // Insert the template directly for now
+        if (textAreaRef.current) {
+          const start = textAreaRef.current.selectionStart || 0;
+          const end = textAreaRef.current.selectionEnd || 0;
+          const newContent = content.substring(0, start) + command.template + content.substring(end);
+          setContent(newContent);
+          setCursorPosition(start + command.template.length);
+          onUpdate(note._id, { content: newContent });
         }
       } else {
         insertText(command.template);
@@ -333,60 +316,78 @@ export function NoteArea({
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <NoteHeader
-        note={note}
-        onUpdate={onUpdate}
-        onSave={onSave}
-        onBack={onBack}
-        isMobile={isMobile}
-        onRequestAIInsights={onRequestAIInsights}
-        currentContent={content}
-      />
-      {/* AI Content Ideas Panel (commented for future use)
-      <IdeasPanel
-        noteId={note._id}
-        userId={note.userId}
-        platform={note.platform}
-        mode="note"
-        limit={5}
-      />
-      */}
-      {aiLoading && (
-        <div className="absolute z-50 flex items-center justify-center w-full h-full bg-white bg-opacity-70" style={{top:0,left:0}}>
-          <span className="text-lg font-medium text-primary-600">Generating with AI...</span>
-        </div>
-      )}
-      <textarea
-        ref={textAreaRef}
-        value={content}
-        onChange={e => handleContentChange(e.target.value)}
-        onKeyDown={handleKeyDown}
-        className="flex-1 w-full resize-none p-3 text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-300 bg-white"
-        placeholder="Type your note here..."
-        rows={10}
-        disabled={aiLoading}
-      />
-      {showCommands && (
-        <CommandMenu
-          key={commandMenuKey}
-          onSelect={handleCommand}
-          onClose={() => setShowCommands(false)}
-          searchTerm={searchTerm}
-          position={menuPosition}
-          noteId={note._id}
-          userId={note.userId}
+    <div className="flex flex-col h-full w-full overflow-hidden">
+      {/* Fixed Header */}
+      <div className="flex-shrink-0">
+        <NoteHeader
+          note={note}
+          onUpdate={onUpdate}
+          onSave={onSave}
+          onBack={onBack}
+          isMobile={isMobile}
+          onRequestAIInsights={onRequestAIInsights}
+          currentContent={content}
         />
-      )}
-
-      {/* FullAnalysisModal (commented for future use)
-      <FullAnalysisModal
-        showFullAnalysis={showFullAnalysis}
-        setShowFullAnalysis={setShowFullAnalysis}
-        selectedInsight={selectedInsight}
-        references={references}
-      />
-      */}
+      </div>
+      
+      {/* Scrollable Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden relative">
+        {/* Sticky Ideas Panel */}
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
+          <IdeasPanel
+            noteId={note._id}
+            userId={note.userId}
+            platform={note.platform || 'general'}
+            mode="note"
+            limit={5}
+            onApplyIdea={(ideaContent) => {
+              if (textAreaRef.current) {
+                const start = textAreaRef.current.selectionStart || 0;
+                const end = textAreaRef.current.selectionEnd || 0;
+                const newContent = content.substring(0, start) + ideaContent + content.substring(end);
+                setContent(newContent);
+                setCursorPosition(start + ideaContent.length);
+                onUpdate(note._id, { content: newContent });
+              }
+            }}
+          />
+        </div>
+        
+        {/* Text Area Container with proper scrolling */}
+        <div className="flex-1 overflow-auto p-3 flex flex-col">
+          <textarea
+            ref={textAreaRef}
+            value={content}
+            onChange={e => handleContentChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="flex-1 w-full min-h-[300px] resize-none p-3 text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-300 bg-white"
+            placeholder="Type your note here..."
+            disabled={aiLoading}
+          />
+        </div>
+        
+        {/* AI Loading Overlay */}
+        {aiLoading && (
+          <div className="absolute z-50 flex items-center justify-center w-full h-full bg-white bg-opacity-70" style={{top:0,left:0}}>
+            <span className="text-lg font-medium text-primary-600">Generating with AI...</span>
+          </div>
+        )}
+        
+        {/* Command Menu */}
+        {showCommands && (
+          <CommandMenu
+            key={commandMenuKey}
+            onSelect={handleCommand}
+            onClose={() => setShowCommands(false)}
+            searchTerm={searchTerm}
+            position={menuPosition}
+            noteId={note._id}
+            userId={note.userId}
+          />
+        )}
+      </div>
+      
+      {/* Keyboard Shortcuts Button */}
       <button
         onClick={onToggleShortcuts}
         className="fixed bottom-4 left-4 p-2 bg-white/80 backdrop-blur-sm rounded-full shadow-lg border border-gray-200 hover:bg-white transition-colors"
@@ -397,3 +398,4 @@ export function NoteArea({
     </div>
   );
 }
+    

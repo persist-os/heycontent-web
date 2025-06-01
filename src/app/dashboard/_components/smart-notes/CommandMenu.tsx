@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useSmartNoteIdeas } from '@/app/lib/api-helpers';
+import { useSmartNoteIdeas } from './hooks/useSmartNoteIdeas';
 import ReactMarkdown from 'react-markdown';
 import { useAuth } from '@/app/context/auth-context';
 
@@ -9,7 +9,6 @@ import {
   MessageCircle, Newspaper, Briefcase, Network, Gift, Bot, Clock, ArrowLeft, ChevronRight
 } from 'lucide-react';
 import { platformPrompts, PlatformKey } from './types/platformPrompts';
-import { fetchPlatformPrompts } from '@/app/lib/api-helpers';
 import styles from './components/CommandMenus.module.css';
 
 export interface Command {
@@ -300,52 +299,25 @@ setSelectedIndex(i => {
     } else if (currentStep === 'aiPrompts' && !!selectedPlatform && !!selectedPostType) {
       setPromptsLoading(true);
       setPromptsError(null);
-      fetchPlatformPrompts(selectedPlatform, selectedPostType)
-        .then((data) => {
-          setPrompts(data);
-          setPromptsLoading(false);
-          // Map fetched prompts to Command objects
-          const promptCommands: Command[] = data.map((prompt, i) => ({
+      // Fetch prompts directly or use an existing utility
+      // For now, we'll use a placeholder implementation
+      const platformData = selectedPlatform ? platformPrompts[selectedPlatform] : undefined;
+      const postTypeData = platformData?.find(p => p.key === selectedPostType);
+      if (platformData && postTypeData) {
+        const aiPromptCommands: Command[] = [
+          {
             icon: Lightbulb,
-            label: prompt.file.replace(/\.txt$/, ''),
-            action: `ai_prompt_${i + 1}`,
-            preview: prompt.content.slice(0, 80) + (prompt.content.length > 80 ? '...' : ''),
+            label: `${postTypeData.description} Idea 1`,
+            action: 'ai_idea_1',
+            preview: `AI-generated idea for ${postTypeData.description}`,
             type: 'block',
-            template: prompt.content,
+            template: generateTemplate(selectedPlatform, selectedPostType, postTypeData.description),
             metadata: { type: 'idea', value: true },
-          }));
-          // Filter by search term
-          const filteredPrompts = searchTerm
-            ? promptCommands.filter(cmd =>
-                cmd.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (cmd.preview && cmd.preview.toLowerCase().includes(searchTerm.toLowerCase()))
-              )
-            : promptCommands;
-          setFilteredCommands(filteredPrompts);
-          setSelectedIndex(0);
-        })
-        .catch((err) => {
-          setPromptsError('Failed to load prompts');
-          setPromptsLoading(false);
-          // Fallback: show old hardcoded prompts if available
-          const platformData = selectedPlatform ? platformPrompts[selectedPlatform] : undefined;
-          const postTypeData = platformData?.find(p => p.key === selectedPostType);
-          if (platformData && postTypeData) {
-            const aiPromptCommands: Command[] = [
-              {
-                icon: Lightbulb,
-                label: `${postTypeData.description} Idea 1`,
-                action: 'ai_idea_1',
-                preview: `AI-generated idea for ${postTypeData.description}`,
-                type: 'block',
-                template: generateTemplate(selectedPlatform, selectedPostType, postTypeData.description),
-                metadata: { type: 'idea', value: true },
-              }
-            ];
-            setFilteredCommands(aiPromptCommands);
-            setSelectedIndex(0);
           }
-        });
+        ];
+        setFilteredCommands(aiPromptCommands);
+        setSelectedIndex(0);
+      }
     }
   }, [currentStep, searchTerm, selectedPlatform, selectedPostType]);
   
@@ -355,7 +327,7 @@ setSelectedIndex(i => {
    // Always call useSmartNotePrompts to obey the Rules of Hooks
     const platform = selectedPlatform;
     const postType = selectedPostType;
-    const { ideas: aiPrompts, loading: aiPromptsLoading, error: aiPromptsError, refetch: refetchPrompts } = useSmartNoteIdeas({ userId, platform });
+    const { ideas: aiPrompts, loading: aiPromptsLoading, error: aiPromptsError, refetch: refetchPrompts } = useSmartNoteIdeas({ platform });
 
     if (currentStep === 'aiPrompts') {
       if (!userId) {

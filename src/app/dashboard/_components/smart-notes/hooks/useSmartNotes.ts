@@ -186,7 +186,7 @@ export function useSmartNotes(userId: string | undefined) {
   const analyzeNote = useCallback(async (
     content: string,
     platform: string = 'general'
-  ): Promise<SmartNoteAnalysis> => {
+  ): Promise<{ success: boolean; ideas?: string[]; message?: string }> => {
     if (!content.trim()) {
       return { success: false, message: 'Content cannot be empty' };
     }
@@ -199,29 +199,33 @@ export function useSmartNotes(userId: string | undefined) {
         return { success: false, message: 'No API key available' };
       }
 
-      const response = await fetch('/api/smart-note/analyze', {
+      const response = await fetch('/api/smart-note/ideas', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          content_note: content,
+          platform,
+          limit: 5
         }),
       });
 
       const data = await response.json();
       
-      if (response.ok) {
-        return data;
+      if (response.ok && data.ideas) {
+        return { 
+          success: true, 
+          ideas: data.ideas 
+        };
       } else {
         return { 
           success: false, 
-          message: data.error || data.message || 'Analysis failed' 
+          message: data.error || data.message || 'Failed to generate ideas' 
         };
       }
     } catch (error) {
-      console.error('Error analyzing note:', error);
+      console.error('Error generating ideas:', error);
       return { 
         success: false, 
         message: error instanceof Error ? error.message : 'Network error occurred' 
