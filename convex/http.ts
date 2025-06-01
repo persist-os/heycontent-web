@@ -351,14 +351,18 @@ app.post("/api/analyses/create", async (c) => {
       return c.json({ error: "Missing required fields: noteId and platform" }, 400);
     }
 
-    const analysisId = await ctx.runMutation(api.analyses.createNoteAnalysis, {
+    // Only include 'error' if it is a string
+    const args: any = {
       noteId,
       platform,
       output: output || {},
-      error: error || null,
       createdAt: Date.now(),
-    });
-    
+    };
+    if (typeof error === "string") {
+      args.error = error;
+    }
+
+    const analysisId = await ctx.runMutation(api.analyses.createNoteAnalysis, args);
     return c.json({ success: true, analysisId }, 201);
   } catch (error: any) {
     console.error("Failed to create analysis:", error);
@@ -380,8 +384,10 @@ app.get("/api/analyses/by-user/:userId", async (c) => {
   }
 
   try {
-    const analyses = await ctx.runQuery(api.analyses.getAnalysesByUser, { userId, limit });
-    return c.json({ success: true, data: analyses });
+    const analyses: any = await ctx.runQuery(api.analyses.getAnalysesByUser, { userId, limit });
+    // If Convex returns {success, data}, unwrap, else pass as is
+    let data = Array.isArray(analyses) ? analyses : (analyses.data ?? []);
+    return c.json({ success: true, data });
   } catch (error: any) {
     console.error("Failed to get analyses by user:", error);
     if (error.data) {
@@ -403,12 +409,13 @@ app.get("/api/analyses/by-user-platform", async (c) => {
   }
 
   try {
-    const analyses = await ctx.runQuery(api.analyses.getAnalysesByUserPlatform, { 
+    const analyses: any = await ctx.runQuery(api.analyses.getAnalysesByUserPlatform, { 
       userId, 
       platform, 
       limit 
     });
-    return c.json({ success: true, data: analyses });
+    let data = Array.isArray(analyses) ? analyses : (analyses.data ?? []);
+    return c.json({ success: true, data });
   } catch (error: any) {
     console.error("Failed to get analyses by user and platform:", error);
     if (error.data) {
