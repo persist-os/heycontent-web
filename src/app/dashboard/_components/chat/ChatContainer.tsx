@@ -179,9 +179,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       setLoading(false)
     })
     return () => {
-      unsubscribe()
-    }
-  }, [chatId, chatState.setSessionId])
+      if (unsubscribe) unsubscribe();
+    };
+  }, [chatId, chatState.setSessionId]);
 
   // Load conversation when user and chatId are available
   useEffect(() => {

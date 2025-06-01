@@ -6,7 +6,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { getAuth, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { FirebaseApp } from 'firebase/app';
-import { getFirebaseAuth } from '@/app/lib/firebase';
+import { getFirebaseApp, getFirebaseAuth } from '@/app/lib/firebase';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // Import components
@@ -27,6 +27,15 @@ import { sortAndFilterContent, getMockGmailItems, getMockInstagramItem, getMockY
 
 export function ContentAnalyticsScreen() {
   // State management
+  const [typedApp, setTypedApp] = useState<FirebaseApp | undefined>(undefined);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setTypedApp(getFirebaseApp());
+    }
+  }, []);
+
+  // State management
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformType>('all');
   const [selectedEmailType, setSelectedEmailType] = useState<TEmailTypeFilter>('all');
   const [timeRange, setTimeRange] = useState<TimeRange>('7d');
@@ -44,24 +53,18 @@ export function ContentAnalyticsScreen() {
 
   // Add Firebase auth listener
   useEffect(() => {
-    let auth;
-    try {
-      auth = getFirebaseAuth();
-    } catch (e) {
-      auth = null;
-    }
-    if (!auth) {
-      console.error("Firebase auth not initialized.");
+    // Check if app is initialized before using it
+    if (typedApp) {
+      const auth = getAuth(typedApp);
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setFirebaseUser(user);
+        setAuthLoading(false);
+      });
+      return () => unsubscribe();
+    } else {
+      console.error("Firebase app not initialized.");
       setAuthLoading(false);
-      return;
     }
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setFirebaseUser(user);
-      setUserId(user?.uid);
-      setUserEmail(user?.email);
-      setAuthLoading(false);
-    });
-    return () => unsubscribe();
   }, []);
 
   // Handle click outside filter dropdown

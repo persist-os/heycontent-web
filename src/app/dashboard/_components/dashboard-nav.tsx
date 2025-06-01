@@ -114,7 +114,15 @@ export function DashboardNav() {
     const fetchRecentChats = async () => {
       if (!userId) return
       try {
-        const response = await fetch('/api/chat/history?limit=5')
+        // Get the API key from localStorage or backend
+        const { getApiKey } = await import('@/app/lib/api-helpers');
+        const apiKey = await getApiKey();
+        if (!apiKey) {
+          throw new Error('No API key found. Please log in again.');
+        }
+        const response = await fetch('/api/chat/history?limit=5', {
+          headers: { 'Authorization': `Bearer ${apiKey}` },
+        });
         const data = await response.json()
         if (data.conversations) {
           setRecentChats(data.conversations.map((conv: any) => ({

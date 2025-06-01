@@ -18,8 +18,20 @@ export function useAIInsights(updateNote: (noteId: string, updates: NoteUpdate) 
       return;
     }
 
+    // Provide default placeholders if content or platform are missing
+    const safeContent = note.content && note.content.trim() ? note.content : 'Write your note here...';
+    const safePlatform = note.platform && note.platform.trim() ? note.platform : 'web';
+
+    // Optionally log if we are using defaults
+    if (!note.content || !note.content.trim()) {
+      console.warn('No note content provided, using default placeholder.');
+    }
+    if (!note.platform || !note.platform.trim()) {
+      console.warn('No platform provided, using default platform \'web\'.');
+    }
+
     // Ensure we have a valid content string
-    const noteContent = note.content || '';
+    const noteContent = safeContent;
     console.log('Note content after normalization:', { 
       noteContent, 
       length: noteContent.length, 
@@ -63,7 +75,13 @@ export function useAIInsights(updateNote: (noteId: string, updates: NoteUpdate) 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({ content_note: noteContent }),
+        // Send both noteId and content so backend can always analyze
+        body: JSON.stringify({
+          noteId: noteId,
+          content: noteContent, // always send content
+          platform: note?.platform || 'web',
+          ...(note?.templateInput ? { templateInput: note.templateInput } : {})
+        }),
       });
 
       if (!response.ok) {
@@ -106,6 +124,10 @@ export function useAIInsights(updateNote: (noteId: string, updates: NoteUpdate) 
       // Update the note with new references and possibly a new title
       await updateNote(noteId, updates);
       console.log('AI insights generated successfully');
+
+      // Do NOT trigger save here. Only update the note with the analysis result.
+      // Saving should only happen after the user sees the analysis and clicks Save.
+
     } catch (error) {
       console.error('Failed to generate AI insights:', error);
 

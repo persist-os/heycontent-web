@@ -10,6 +10,7 @@ dotenv.config();
  * Get API key from localStorage or request a new one
  */
 export async function getApiKey(): Promise<string | null> {
+  const auth = getFirebaseAuth();
   try {
     // First try to get the API key from localStorage
     const storedApiKey = localStorage.getItem('apiKey');
@@ -190,4 +191,21 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
     console.error('Error in fetchWithAuth:', error);
     throw error;
   }
+}
+
+
+
+export async function fetchWithApiKey(url: string, options: RequestInit = {}): Promise<Response> {
+  const apiKey = await getApiKey();
+  if (!apiKey) throw new Error('No API key found. Please log in again.');
+  const headers = {
+    ...(options.headers || {}),
+    'Authorization': `Bearer ${apiKey}`,
+    'Content-Type': 'application/json',
+  };
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  });
+  return response;
 }

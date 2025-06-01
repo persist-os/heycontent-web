@@ -69,6 +69,7 @@ async function handleProfileUpdate(
         futureVision: formData.futureVision
       });
       if (email) {
+        const auth = getFirebaseAuth();
         await updateUser({
           userId,
           name: formData.name,

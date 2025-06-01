@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/app/lib/firebase'
+import { getFirebaseAuth } from '@/app/lib/firebase'
 import { signOut } from 'firebase/auth'
 
 export async function POST() {
@@ -23,6 +23,7 @@ export async function POST() {
     response.headers.set('x-signout', 'true')
 
     // Sign out from Firebase last, after we've set up the response
+    const auth = getFirebaseAuth();
     if (auth) {
       try {
         console.log('Attempting Firebase signOut...')

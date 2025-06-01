@@ -1,5 +1,4 @@
 "use client";
-
 import React from 'react';
 import { Brain, MessageSquare, Lightbulb, ExternalLink } from 'lucide-react';
 import type { Note } from '../types/index';

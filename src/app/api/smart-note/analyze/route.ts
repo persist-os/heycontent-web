@@ -52,30 +52,24 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     console.log('Request body:', body);
-    const { content_note } = body;
 
-    if (!content_note) {
-      console.warn(`[${requestId}] Invalid request: Missing content_note`);
-      return NextResponse.json({ 
-        error: 'Content note is required',
-        status: 400 
-      }, { status: 400 });
-    }
-    
-    // Check for empty or whitespace-only content
-    if (typeof content_note === 'string' && !content_note.trim()) {
-      console.warn(`[${requestId}] Invalid request: Empty content_note`);
-      return NextResponse.json({ 
-        error: 'Note content cannot be empty',
-        status: 400 
-      }, { status: 400 });
+    // Forward all relevant fields as-is to backend
+    const backendPayload: Record<string, any> = {};
+    // Only include fields that are present in the request
+    for (const key of ['noteId', 'content', 'platform', 'type', 'templateInput']) {
+      if (body[key] !== undefined) backendPayload[key] = body[key];
     }
 
     // Log the request details
     console.info(`[${requestId}] Processing smart note analysis`, {
-      content_length: content_note?.length,
+      ...backendPayload,
       has_api_key: !!apiKey
     });
+
+    // Compose backend URL using correct API prefix (FastAPI mounts smart_note router at /api/v1)
+    let backendAnalyzeUrl = BACKEND_URL ? BACKEND_URL.replace(/\/$/, '') : '';
+    backendAnalyzeUrl += '/api/v1/smart-note/analyze';
+    // Note: This must match FastAPI's router prefix to avoid 404 errors
 
     // Log the API key format for debugging (first 10 chars only for security)
     console.info(`[${requestId}] Using API key format:`, {
@@ -86,21 +80,18 @@ export async function POST(request: Request) {
 
     // Log the request to the backend
     console.info(`[${requestId}] Sending request to backend API`, {
-      url: `${BACKEND_URL}/api/v1/smart-note/analyze`,
-      contentLength: content_note?.length || 0
+      url: `${backendAnalyzeUrl}`,
+      payloadKeys: Object.keys(backendPayload)
     });
 
-    const response = await fetch(`${BACKEND_URL}/api/v1/smart-note/analyze`, {
+    const response = await fetch(`${backendAnalyzeUrl}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
-      body: JSON.stringify({
-        content_note,
-        user_id
-      })
+      body: JSON.stringify(backendPayload)
     });
 
     if (!response.ok) {

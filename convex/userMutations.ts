@@ -30,6 +30,7 @@ export const create_user = mutation({
     referralCode: v.optional(v.string()),
     referredBy: v.optional(v.string()),
     subscription: v.optional(v.any()),
+
   },
   handler: async ({ db }, args) => {
     const now = Date.now();

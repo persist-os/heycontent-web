@@ -12,6 +12,21 @@ const copyFiles = [
   // Add other files that need to be copied to the standalone output
 ];
 
+const securityHeaders = [
+  {
+    key: "Content-Security-Policy",
+    value: [
+      "default-src 'self';",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com https://www.googletagmanager.com;",
+      "style-src 'self' 'unsafe-inline';",
+      "img-src * blob: data:;",
+      "connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://js.stripe.com https://api.stripe.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://va.vercel-scripts.com https://backend.incontent.co http://127.0.0.1:8000 http://localhost:8000;",
+      "font-src 'self' data:;",
+      "frame-src https://js.stripe.com;",
+    ].join(' ')
+  }
+];
+
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
@@ -96,4 +111,14 @@ const nextConfig = {
   },
 };
 
-export default nextConfig; 
+export default {
+  ...nextConfig,
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: securityHeaders,
+      },
+    ];
+  },
+};
