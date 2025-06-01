@@ -69,13 +69,13 @@ export const resetUsageForPeriod = mutation({
     await ctx.db.patch(
       user._id,
       {
-        usage: {
-          periodStart: args.periodStart,
-          periodEnd: args.periodEnd,
-          totalRequests: 0,
+        subscription: {
+          ...user.subscription,
+          currentPeriodStart: args.periodStart,
+          currentPeriodEnd: args.periodEnd,
           includedRequests: args.includedRequests,
-          overageRequests: 0,
-          lastUpdated: Date.now(),
+          usedRequests: 0,
+          lastSyncedAt: Date.now(),
         },
       }
     );
