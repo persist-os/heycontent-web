@@ -5,27 +5,35 @@ import { api } from '@/convex/_generated/api';
 import { getApiKey } from '@/app/lib/api-helpers';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
+import { InsightCard, InsightCardProps } from '@/app/dashboard/ai-insights/_components/InsightCard';
 
-interface Insight {
-  insight: string;
-  explanation: string;
-}
-
-interface InsightsByCategory {
-  [category: string]: Insight[];
-}
+type InsightCardData = Omit<InsightCardProps, 'expanded' | 'onExpand' | 'onDiscuss'>;
 
 interface Props {
   userId: string;
   channelId: string;
 }
 
+interface InsightData {
+  platform: 'youtube' | 'instagram' | 'gmail';
+  title: string;
+  impact: string;
+  highlightColor?: string;
+  whyNow: string[];
+  actionSteps: string[];
+  expectedOutcome: string;
+  outcomeColor?: string;
+  sourceDetails: string[];
+  relatedItems?: Array<{ label: string; value: string }>;
+  id?: string;
+}
+
 export const YouTubeInsightsGrid: React.FC<Props> = ({ userId, channelId }) => {
-  const [insights, setInsights] = useState<InsightsByCategory>({});
+  const [insights, setInsights] = useState<InsightData[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState<{ [key: string]: boolean }>({});
+  const [expanded, setExpanded] = useState<number | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRIES = 3;
   const MAX_REFRESH_RETRIES = 3;
@@ -43,10 +51,21 @@ export const YouTubeInsightsGrid: React.FC<Props> = ({ userId, channelId }) => {
 
   useEffect(() => {
     if (existingInsights) {
+      console.log('Existing insights from Convex:', existingInsights);
       // Ensure we have valid analysis data
       const analysisData = existingInsights.analysis || {};
-      if (typeof analysisData === 'object' && Object.keys(analysisData).length > 0) {
-        setInsights(analysisData);
+      if (typeof analysisData === 'object') {
+        // Check if we have insights array in the analysis data
+        if (Array.isArray(analysisData.insights)) {
+          setInsights(analysisData.insights as InsightData[]);
+        } else if (analysisData.insights && typeof analysisData.insights === 'object') {
+          // If insights is an object, try to convert it to an array
+          const insightsArray = Object.entries(analysisData.insights).map(([key, value]) => ({
+            ...(value as InsightData),
+            id: key
+          }));
+          setInsights(insightsArray);
+        }
       }
       setLoading(false);
     }
@@ -100,7 +119,14 @@ export const YouTubeInsightsGrid: React.FC<Props> = ({ userId, channelId }) => {
       
       if (data.status === 'success') {
         console.log('Successfully received insights from backend');
-        setInsights(data.data);
+        // Ensure we have an array of insights
+        const insightsArray = Array.isArray(data.data.insights) 
+          ? data.data.insights 
+          : Object.entries(data.data.insights || {}).map(([key, value]) => ({
+              ...(value as InsightData),
+              id: key
+            }));
+        setInsights(insightsArray);
         setRefreshRetryCount(0); // Reset refresh retry count on success
         setQuotaExceeded(false); // Reset quota exceeded state on success
         
@@ -135,11 +161,8 @@ export const YouTubeInsightsGrid: React.FC<Props> = ({ userId, channelId }) => {
     }
   };
 
-  const handleToggle = (category: string, idx: number) => {
-    setExpanded((prev) => ({
-      ...prev,
-      [`${category}-${idx}`]: !prev[`${category}-${idx}`],
-    }));
+  const handleToggle = (index: number) => {
+    setExpanded(expanded === index ? null : index);
   };
 
   if (loading) {
@@ -174,7 +197,7 @@ export const YouTubeInsightsGrid: React.FC<Props> = ({ userId, channelId }) => {
         </div>
       )}
 
-      {!error && (!insights || Object.keys(insights).length === 0) && (
+      {!error && (!insights || insights.length === 0) && (
         <div className="p-4 text-center">
           <div className="mb-4">No AI insights available.</div>
           <Button
@@ -189,34 +212,15 @@ export const YouTubeInsightsGrid: React.FC<Props> = ({ userId, channelId }) => {
         </div>
       )}
 
-      {!error && insights && Object.keys(insights).length > 0 && (
-        <div className="space-y-8">
-          {Object.entries(insights).map(([category, items]) => (
-            <div key={category}>
-              <h4 className="font-bold text-lg mb-4 capitalize">
-                {category.replace(/_/g, ' ')}
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {items.map((item, idx) => (
-                  <Card
-                    key={idx}
-                    className="cursor-pointer transition-shadow border border-gray-200 hover:shadow-lg"
-                    onClick={() => handleToggle(category, idx)}
-                  >
-                    <div className="p-4">
-                      <div className="font-semibold text-base mb-2">
-                        {item.insight}
-                      </div>
-                      {expanded[`${category}-${idx}`] && (
-                        <div className="mt-2 text-sm text-gray-700">
-                          {item.explanation}
-                        </div>
-                      )}
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
+      {!error && insights && insights.length > 0 && (
+        <div className="grid grid-cols-1 gap-6">
+          {insights.map((insight, idx) => (
+            <InsightCard
+              key={idx}
+              {...insight}
+              expanded={expanded === idx}
+              onExpand={() => handleToggle(idx)}
+            />
           ))}
         </div>
       )}

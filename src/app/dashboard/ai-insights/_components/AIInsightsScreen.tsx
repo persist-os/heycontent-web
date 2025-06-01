@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
@@ -9,20 +9,44 @@ import {
   RefreshCw, AlertCircle
 } from 'lucide-react'
 import { InsightCard } from './InsightCard'
-import { sampleInsights } from './sampleInsights'
+import { useQuery } from 'convex/react'
+import { api } from '@/convex/_generated/api'
+import { useAuth } from '@/app/context/auth-context'
 
 export function AIInsightsScreen() {
   // Track expanded card index for each tab
   const [expandedYoutube, setExpandedYoutube] = useState<number | null>(null)
   const [expandedInstagram, setExpandedInstagram] = useState<number | null>(null)
   const [activeTab, setActiveTab] = useState('youtube')
-  // Placeholder for refresh state
-  const [isRefreshing] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const { user } = useAuth()
+
+  // Fetch YouTube channel data
+  const youtubeChannel = useQuery(
+    api.youtubeQueries.getYouTubeChannelData,
+    user ? { userId: user.uid } : "skip"
+  )
+
+  // Fetch YouTube insights
+  const youtubeInsights = useQuery(
+    api.youtubeQueries.getChannelAnalysis,
+    youtubeChannel?.id ? { userId: user?.uid, channelId: youtubeChannel.id } : "skip"
+  )
 
   // Filter insights by platform
-  const youtubeInsights = sampleInsights.filter(i => i.platform === 'youtube')
-  const instagramInsights = sampleInsights.filter(i => i.platform === 'instagram')
+  const youtubeInsightsList = youtubeInsights?.analysis?.insights || []
+  const instagramInsights = [] // TODO: Add Instagram insights when available
   // Gmail tab is empty for now
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      // TODO: Implement refresh logic
+      await new Promise(resolve => setTimeout(resolve, 1000)) // Placeholder
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
 
   return (
     <div className="relative">
@@ -40,11 +64,18 @@ export function AIInsightsScreen() {
           </div>
           <div className="w-[100px] sm:w-auto flex justify-end">
             <button
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500"
-              disabled
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors ${
+                isRefreshing 
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500'
+                  : 'bg-heycontent-light-yellow hover:bg-heycontent-yellow text-black'
+              }`}
             >
-              <RefreshCw className="w-4 h-4" />
-              <span className="hidden sm:inline">Refresh Insights</span>
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">
+                {isRefreshing ? 'Refreshing...' : 'Refresh Insights'}
+              </span>
             </button>
           </div>
         </div>
@@ -70,7 +101,7 @@ export function AIInsightsScreen() {
                     className="flex items-center gap-2"
                   >
                     <Youtube className="w-4 h-4" />
-                    YouTube ({youtubeInsights.length})
+                    YouTube ({youtubeInsightsList.length})
                   </TabsTrigger>
                   <TabsTrigger 
                     value="instagram" 
@@ -89,10 +120,10 @@ export function AIInsightsScreen() {
                 </TabsList>
 
                 <TabsContent value="youtube" className="grid gap-6">
-                  {youtubeInsights.length === 0 && (
+                  {youtubeInsightsList.length === 0 && (
                     <div className="text-center text-gray-400">No YouTube insights available.</div>
                   )}
-                  {youtubeInsights.map((insight, idx) => (
+                  {youtubeInsightsList.map((insight, idx) => (
                     <InsightCard
                       key={idx}
                       {...insight}
