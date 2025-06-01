@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Lightbulb, Star, Brain, Save, Loader2, ArrowLeft } from 'lucide-react';
 import type { Note, NoteType } from '../types/index';
+import toast from 'react-hot-toast';
 
 interface NoteHeaderProps {
   note: Note;
@@ -40,6 +41,18 @@ export function NoteHeader({ note, onUpdate, onSave, onRequestAIInsights, onBack
       console.error('Failed to request AI insights:', error);
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  // Handler for Save button that shows a toast
+  const handleSave = async () => {
+    try {
+      const result = onSave();
+      // Support async or sync onSave
+      await result;
+      toast.success('Note saved!', { duration: 1800, position: 'top-right' });
+    } catch (err) {
+      toast.error('Failed to save note');
     }
   };
 
@@ -91,7 +104,7 @@ export function NoteHeader({ note, onUpdate, onSave, onRequestAIInsights, onBack
         </button>
         <button
           className="w-8 h-8 rounded-full flex items-center justify-center bg-purple-600 text-white hover:bg-purple-700"
-          onClick={onSave}
+          onClick={handleSave}
           title="Save note"
         >
           <Save size={16} />

@@ -31,26 +31,28 @@ export function useSmartNotes(userId: string | undefined) {
     if (!userId) return;
     setIsLoading(true);
     
-    const apiKey = getApiKey();
-    if (!apiKey) {
-      console.error('No API key available');
-      setIsLoading(false);
-      return;
-    }
+    (async () => {
+      const apiKey = await getApiKey();
+      if (!apiKey) {
+        console.error('No API key available');
+        setIsLoading(false);
+        return;
+      }
 
-    fetch("/api/smart-note/user", {
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-    })
-      .then(res => res.json())
-      .then(data => setNotes(Array.isArray(data.data) ? data.data : []))
-      .catch(error => {
-        console.error('Failed to fetch notes:', error);
-        setNotes([]);
+      fetch("/api/smart-note/user", {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
       })
-      .finally(() => setIsLoading(false));
+        .then(res => res.json())
+        .then(data => setNotes(Array.isArray(data.data) ? data.data : []))
+        .catch(error => {
+          console.error('Failed to fetch notes:', error);
+          setNotes([]);
+        })
+        .finally(() => setIsLoading(false));
+    })();
   }, [userId]);
 
   // Save note with smart capabilities
@@ -136,25 +138,27 @@ export function useSmartNotes(userId: string | undefined) {
   // NOT to update note content, platform, or trigger any save.
   const updateNote = useCallback(async (
     noteId: string,
-    updateFields: Partial<Pick<Note, 'content' | 'platform' | 'type' | 'templateInput' | 'analysisId' | 'references' | 'title'>>
+    updateFields: Partial<Pick<Note, 'content' | 'platform' | 'type' | 'templateInput' | 'analysisId' | 'references' | 'title'>>,
+    force: boolean = false
   ): Promise<Note | null> => {
     if (!userId || !noteId) return null;
-    // If noteId is a local temp ID, do NOT save as a side effect of analysis
-    if (noteId.startsWith('local_')) {
-      // Only allow updating references (AI insights) for local notes during analysis
-      if (Object.keys(updateFields).every(key => key === 'references' || key === 'title')) {
-        // Update local note in memory only (not persisted)
-        setNotes(prev => prev.map(n => n._id === noteId ? { ...n, ...updateFields } : n));
-        return { ...(notes.find(n => n._id === noteId) || {}), ...updateFields } as Note;
+    if (!force) {
+      // If noteId is a local temp ID, do NOT save as a side effect of analysis
+      if (noteId.startsWith('local_')) {
+        // Only allow updating references (AI insights) for local notes during analysis
+        if (Object.keys(updateFields).every(key => key === 'references' || key === 'title')) {
+          // Update local note in memory only (not persisted)
+          setNotes(prev => prev.map(n => n._id === noteId ? { ...n, ...updateFields } : n));
+          return { ...(notes.find(n => n._id === noteId) || {}), ...updateFields } as Note;
+        }
+        // Prevent accidental save or update of content/platform during analysis
+        console.warn('Prevented save/update of content/platform for local note during analysis.');
+        return null;
       }
-      // Prevent accidental save or update of content/platform during analysis
-      console.warn('Prevented save/update of content/platform for local note during analysis.');
-      return null;
-    }
-    // For persisted notes, only allow update of references/title during analysis
-    if (Object.keys(updateFields).every(key => key === 'references' || key === 'title')) {
-      // Perform backend update for references/title
-      try {
+      // For persisted notes, only allow update of references/title during analysis
+      if (Object.keys(updateFields).every(key => key === 'references' || key === 'title')) {
+        // Perform backend update for references/title
+        try {
         const apiKey = await getApiKey();
         if (!apiKey) return null;
         const payload = { ...updateFields };
@@ -177,9 +181,34 @@ export function useSmartNotes(userId: string | undefined) {
         return null;
       }
     }
-    // Prevent accidental save or update of content/platform during analysis
+    // Prevent accidental save or update of content/platform for persisted note during analysis.
     console.warn('Prevented save/update of content/platform for persisted note during analysis.');
     return null;
+    }
+    // If force is true, skip all analysis checks and always allow update
+    try {
+      const apiKey = await getApiKey();
+      if (!apiKey) return null;
+      const payload = { ...updateFields };
+      const response = await fetch(`/api/smart-note/update/${noteId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setNotes(prev => prev.map(n => n._id === noteId ? { ...n, ...updateFields } : n));
+        return { ...(notes.find(n => n._id === noteId) || {}), ...updateFields } as Note;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error updating note (forced):', error);
+      return null;
+    }
+  
   }, [userId, notes]);
 
   // Analyze note content

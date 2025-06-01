@@ -136,7 +136,7 @@ export default function SmartNotes() {
         )
       );
       // Then update remote (if applicable)
-      await updateNote(activeNote._id, { content: activeNote.content });
+      await updateNote(activeNote._id, { content: activeNote.content }, true);
     } catch (error) {
       console.error('Failed to save note:', error);
     }
