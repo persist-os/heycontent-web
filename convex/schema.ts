@@ -65,8 +65,6 @@ export default defineSchema({
       items: v.optional(v.any()),
       quantity: v.optional(v.number()),
       start_date: v.optional(v.number()),
-      trial_start: v.optional(v.number()),
-      trial_end: v.optional(v.number()),
     })),
     // Payment method info (minimal, just for display)
     paymentMethod: v.optional(v.object({
