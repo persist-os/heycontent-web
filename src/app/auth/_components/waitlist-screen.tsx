@@ -14,10 +14,21 @@ interface WaitlistScreenProps {
 const WaitlistScreen: React.FC<WaitlistScreenProps> = ({
   onComplete,
   initialCount = 23, 
-  minWaitTime = 1500, 
-  apiKeyGenerationTime = 3000, 
+  minWaitTime: _minWaitTime, // ignore prop, use randomized below
+  apiKeyGenerationTime: _apiKeyGenerationTime, // ignore prop, use randomized below
 }) => {
   const router = useRouter();
+  // Randomize total duration between 10-15 seconds on mount
+  const [randomizedTimes] = useState(() => {
+    const totalMs = Math.floor(10000 + Math.random() * 5000); // 10,000-15,000 ms
+    // Split between countdown and API key gen, but ensure both are at least 3s
+    const minPart = 3000;
+    const countdownMs = Math.floor(minPart + Math.random() * (totalMs - 2 * minPart));
+    const apiKeyMs = totalMs - countdownMs;
+    return { minWaitTime: countdownMs, apiKeyGenerationTime: apiKeyMs };
+  });
+  const minWaitTime = randomizedTimes.minWaitTime;
+  const apiKeyGenerationTime = randomizedTimes.apiKeyGenerationTime;
   const [peopleAhead, setPeopleAhead] = useState<number>(initialCount);
   const [progress, setProgress] = useState<number>(0);
   const [queueId] = useState<string>(`${Math.random().toString(36).substr(2, 8).toUpperCase()}`);

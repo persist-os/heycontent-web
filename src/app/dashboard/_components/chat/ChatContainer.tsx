@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react'
+<<<<<<< HEAD
+=======
+import { getFirebaseAuth } from '@/app/lib/firebase'
+>>>>>>> dc27aec84c6b547859451d75f2df78a7b1adf6a7
 import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import { MessageBubble } from './message-bubble'
 import { ChatInput } from './chat-input'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, Brain } from 'lucide-react'
 import { useSidebar } from '@/app/context/sidebar-context'
 
 // Import types
@@ -12,6 +16,7 @@ import { ChatScreenProps, SuggestedAction } from './types'
 // Import components 
 import { SuggestionChip } from './components/SuggestionChip'
 import { AmbientInsights } from './components/AmbientInsights'
+import { ContextBox } from './components/ContextBox'
 
 // Import data
 import { ambientInsights } from './data/ambient-insights'
@@ -22,9 +27,11 @@ import { useChat } from './hooks/useChat'
 import { useConversation } from './hooks/useConversation'
 import { useUIEffects } from './hooks/useUIEffects'
 
-const ChatContainer: React.FC<ChatScreenProps> = ({ chatId }) => {
+const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery }) => {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
+  const [userId, setUserId] = useState<string | undefined>()
+  const [userEmail, setUserEmail] = useState<string | undefined>()
   const { isExpanded } = useSidebar()
 
   // Initialize shared state
@@ -33,8 +40,26 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId }) => {
     messages,
     setMessages,
     error,
-    isLoading
+    isLoading,
+    contentContext: currentContext,
+    setContentContext,
+    includeAnalysisInQuery,
+    setIncludeAnalysisInQuery
   } = chatState
+
+  // Set content context when component mounts or when contentContext prop changes
+  useEffect(() => {
+    if (contentContext && contentContext !== currentContext) {
+      console.log('Setting content context:', {
+        platform: contentContext.platform,
+        contentId: contentContext.contentId,
+        hasAnalysis: !!contentContext.analysis,
+        analysisLength: contentContext.analysis?.length || 0,
+        title: contentContext.title
+      });
+      setContentContext(contentContext)
+    }
+  }, [contentContext, currentContext, setContentContext])
 
   // Initialize UI effects hook
   const {
@@ -86,8 +111,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId }) => {
     // UI resets
     resetChat();
     setMessages([]);
-    handleClearReference && handleClearReference();
-    
+    if (handleClearReference) {
+      handleClearReference();
+    }
     // CRITICAL: Reset state for a new chat session
     console.log('Initializing new chat session...');
     
@@ -98,15 +124,37 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId }) => {
     // Important: Set isFirstMessage to true
     chatState.setIsFirstMessage(true);
     
+    // Clear content context when starting new chat
+    setContentContext(null);
+    
     console.log('Started new chat with fresh state:', {
       sessionId: null,
       isFirstMessage: true,
-      messagesCount: 0
+      messagesCount: 0,
+      contentContext: null
     });
   };
 
+  // Handle removing context
+  const handleRemoveContext = () => {
+    setContentContext(null);
+    // Update URL to remove context parameter
+    const url = new URL(window.location.href);
+    url.searchParams.delete('contentContext');
+    router.replace(url.pathname + url.search);
+  };
+
+  // Handle initial ask query if provided
+  useEffect(() => {
+    if (askQuery && messages.length === 0 && !isLoading) {
+      // Auto-send the ask query when component mounts
+      handleSendMessage(askQuery);
+    }
+  }, [askQuery, messages.length, isLoading, handleSendMessage]);
+
   // Authentication effect
   useEffect(() => {
+<<<<<<< HEAD
     let unsubscribe: (() => void) | undefined;
     let isMounted = true;
     (async () => {
@@ -133,6 +181,35 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId }) => {
         }
       }
     })();
+=======
+    let auth
+    try {
+      auth = getFirebaseAuth()
+    } catch (e) {
+      auth = null
+    }
+    if (!auth) {
+      console.error('Firebase auth not initialized')
+      return
+    }
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser)
+      setUserId(firebaseUser?.uid)
+      setUserEmail(firebaseUser?.email)
+      if (!firebaseUser) {
+        setLoading(false)
+        return
+      }
+      if (chatId) {
+        // If we have a chat ID, we'll load the conversation in a separate effect
+      } else {
+        // For a new chat, sessionId will be null initially
+        // and will be set after the first message is sent
+        chatState.setSessionId(null)
+      }
+      setLoading(false)
+    })
+>>>>>>> dc27aec84c6b547859451d75f2df78a7b1adf6a7
     return () => {
       isMounted = false;
       if (unsubscribe) unsubscribe();
@@ -160,7 +237,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId }) => {
       <div className="shrink-0 h-14 flex items-center justify-between px-6">
         <div className="w-5" /> {/* Empty div for spacing */}
         <div className="absolute left-1/2 transform -translate-x-1/2">
-          <h1 className="text-base font-medium text-gray-900">Chat With Content</h1>
+          <h1 className="text-base font-medium text-gray-900">
+            Chat With Content
+          </h1>
         </div>
         <div className="flex gap-2">
           <button
@@ -189,13 +268,53 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId }) => {
         </div>
       </div>
 
+      {/* Context Box - shown when context is available */}
+      {currentContext && (
+        <div className="shrink-0 px-6 pb-4">
+          <ContextBox 
+            context={currentContext} 
+            onRemove={handleRemoveContext}
+            includeAnalysisInQuery={includeAnalysisInQuery}
+            onToggleAnalysis={setIncludeAnalysisInQuery}
+          />
+          
+          {/* Context-aware suggestions */}
+          {currentContext.analysis && messages.length === 0 && (
+            <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                <Brain className="w-4 h-4 text-purple-600" />
+                Ask about the analysis
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  "What are the key insights from this analysis?",
+                  "How can I improve based on these findings?",
+                  "What trends do you see in the performance data?",
+                  "What should I focus on next?",
+                  "Summarize the main recommendations"
+                ].map((suggestion, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleSendMessage(suggestion)}
+                    className="px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-purple-200 dark:border-purple-600 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/30 text-gray-700 dark:text-gray-300 transition-colors"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Main chat container */}
       <div className="flex-1 overflow-hidden relative">
         <div 
           ref={chatContainerRef}
           className="h-full overflow-y-auto p-2 sm:p-4 space-y-3 sm:space-y-4 pb-28 sm:pb-32 md:pb-36"
         >
-          {showAmbient && messages.length === 0 ? (
+          {/* Only show ambient insights when there's no context and no messages */}
+          {showAmbient && messages.length === 0 && !currentContext ? (
             <div className="p-6">
               <AmbientInsights 
                 insights={ambientInsights}
@@ -253,7 +372,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId }) => {
 
         {/* Responsive chat input container that respects the dashboard layout */}
         <div className="fixed bottom-0 right-0 left-0 z-10">
-          {showAmbient && messages.length === 0 && (
+          {/* Only show ambient insights at bottom when there's no context and no messages */}
+          {showAmbient && messages.length === 0 && !currentContext && (
             <div className="border-t border-gray-200">
               <div className="max-w-5xl mx-auto px-6 py-2">
                 <div className="flex gap-2 overflow-x-auto scrollbar-none">
@@ -287,6 +407,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId }) => {
                   isLoading={isLoading}
                   referencedMessage={referencedMessage}
                   onClearReference={handleClearReference}
+                  hasContext={!!currentContext}
+                  contextPlatform={currentContext?.platform}
+                  hasAnalysis={!!currentContext?.analysis && includeAnalysisInQuery}
                 />
               </div>
             </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { getFirebaseAuth } from '@/app/lib/firebase' // Only call inside useEffect or event handlers
+import { getFirebaseAuth } from '@/app/lib/firebase'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { Logo } from '@/components/ui/logo'
 import { useSidebar } from '@/app/context/sidebar-context'
@@ -70,6 +70,8 @@ export function DashboardNav() {
   const pathname = usePathname()
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
+  const [userId, setUserId] = useState<string | undefined>()
+  const [userEmail, setUserEmail] = useState<string | undefined>()
   const [recentChats, setRecentChats] = useState<RecentChat[]>([])
   const { isExpanded, setIsExpanded, isViewingNote } = useSidebar()
   const navRef = useRef<HTMLDivElement>(null)
@@ -92,14 +94,17 @@ export function DashboardNav() {
   }, [isExpanded, setIsExpanded])
 
   useEffect(() => {
-    const auth = getFirebaseAuth();
-    if (!auth) {
-      console.error('Firebase auth not initialized')
-      return
+    let auth
+    try {
+      auth = getFirebaseAuth()
+    } catch (e) {
+      auth = null
     }
-
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user)
+    if (!auth) return
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser)
+      setUserId(firebaseUser?.uid)
+      setUserEmail(firebaseUser?.email)
     })
     return () => unsubscribe()
   }, [])
@@ -107,7 +112,7 @@ export function DashboardNav() {
   // Fetch recent chats
   useEffect(() => {
     const fetchRecentChats = async () => {
-      if (!user?.uid) return
+      if (!userId) return
       try {
         const response = await fetch('/api/chat/history?limit=5')
         const data = await response.json()
@@ -125,7 +130,7 @@ export function DashboardNav() {
     }
 
     fetchRecentChats()
-  }, [user?.uid])
+  }, [userId])
 
   return (
       <>

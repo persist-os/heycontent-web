@@ -75,21 +75,12 @@ export default defineSchema({
       expMonth: v.number(),
       expYear: v.number()
     })),
-    
-    // Usage tracking for current billing period
-    usage: v.optional(v.object({
-      periodStart: v.number(),
-      periodEnd: v.number(),
-      totalRequests: v.number(),
-      includedRequests: v.number(),
-      overageRequests: v.number(),
-      lastUpdated: v.number()
-    }))
   })
   .index("by_userId", ["userId"])
   .index("by_email", ["email"])
   .index("by_stripeCustomerId", ["stripeCustomerId"])
-  .index("by_username", ["username"]),
+  .index("by_username", ["username"])
+  .index("by_referralCode", ["referralCode"]),
 
   personas: defineTable({
     name: v.string(),
@@ -286,9 +277,10 @@ export default defineSchema({
     createdAt: v.float64(),
     updatedAt: v.float64(),
     id: v.string(),
-    snippet: v.optional(
-      v.object({
-        customUrl: v.optional(v.string()),
+    snippet: v.optional(v.object({
+      customUrl: v.optional(v.string()),
+      description: v.optional(v.string()),
+      localized: v.optional(v.object({
         description: v.optional(v.string()),
         localized: v.optional(
           v.object({
@@ -323,8 +315,8 @@ export default defineSchema({
           })
         ),
         title: v.optional(v.string()),
-      })
-    ),
+      }))
+    })),
     statistics: v.optional(
       v.object({
         hiddenSubscriberCount: v.optional(v.boolean()),
@@ -335,7 +327,6 @@ export default defineSchema({
     )
   })
   .index("by_userId", ["userId"])
-  .index("by_publishedAt", ["snippet.publishedAt"])
   .index("by_channelId", ["id"]),
 
   youtubeVideos: defineTable({
@@ -343,9 +334,8 @@ export default defineSchema({
     videoId: v.string(), // Required - this is the YouTube video ID
     id: v.optional(v.string()), // For internal IDs if different from videoId
     url: v.optional(v.string()), // Full YouTube URL
-    // Optional AI analysis field (for compatibility with prod data and to store analysis data directly with the video)
-    analysis: v.optional(v.any()),
-    
+    analysis: v.optional(v.any()), // Original JSON analysis data
+    analysisMarkdown: v.optional(v.string()), // Markdown formatted analysis for display
     // Video metadata from YouTube API
     snippet: v.optional(v.object({
       title: v.optional(v.string()),
@@ -364,7 +354,6 @@ export default defineSchema({
       })),
       tags: v.optional(v.array(v.string())),
     })),
-    
     // Technical details of the video
     content_details: v.optional(v.object({
       duration: v.optional(v.string()),
@@ -373,7 +362,6 @@ export default defineSchema({
       has_captions: v.optional(v.boolean()),
       is_live: v.optional(v.boolean()),
     })),
-    
     // View/engagement statistics
     statistics: v.optional(v.object({
       views: v.optional(v.float64()),
@@ -381,7 +369,6 @@ export default defineSchema({
       dislikes: v.optional(v.float64()),
       comments: v.optional(v.float64()),
     })),
-    
     // Video status information
     status: v.optional(v.object({
       privacyStatus: v.optional(v.string()),
@@ -392,7 +379,6 @@ export default defineSchema({
       selfDeclaredMadeForKids: v.optional(v.boolean()),
       publicStatsViewable: v.optional(v.boolean()),
     })),
-    
     // Caption information - flexible structure for different responses
     captions: v.optional(v.object({
       status: v.optional(v.string()),
@@ -408,7 +394,6 @@ export default defineSchema({
       })),
       data: v.optional(v.any()), // For storing additional caption data if needed
     })),
-    
     // Comment information - flexible structure
     comments: v.optional(v.object({
       status: v.optional(v.string()),
@@ -430,13 +415,8 @@ export default defineSchema({
         })),
       }))),
     })),
-
-    // Store channelId redundantly for indexing
-    channelId: v.optional(v.string()),
-    // Timestamps
     createdAt: v.optional(v.float64()),
     updatedAt: v.optional(v.float64()),
-    analysisMarkdown: v.optional(v.string()),
   })
   .index("by_userId", ["userId"])
   .index("by_videoId", ["videoId"])

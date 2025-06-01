@@ -25,10 +25,10 @@ export default function DebugTab() {
     try {
       auth = getFirebaseAuth();
     } catch (e) {
-      setError('Firebase auth not initialized');
-      setLoading(false);
-      return;
+      auth = null;
     }
+    if (!auth) return;
+    const user = auth.currentUser;
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user)
       if (user) {

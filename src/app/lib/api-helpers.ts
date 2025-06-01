@@ -15,6 +15,13 @@ export async function getApiKey(): Promise<string | null> {
     // First try to get the API key from localStorage
     const storedApiKey = localStorage.getItem('apiKey');
     let needsRefresh = false;
+    let auth;
+    try {
+      auth = getFirebaseAuth();
+    } catch (e) {
+      console.warn('getFirebaseAuth() failed:', e);
+      return null;
+    }
     if (storedApiKey) {
       const apiKey = JSON.parse(storedApiKey);
       // Check for invalid/temporary key
@@ -114,33 +121,38 @@ export async function getApiKey(): Promise<string | null> {
  * Get the current user ID from Firebase Auth
  */
 export function getCurrentUserId(): string | null {
-  const auth = getFirebaseAuth();
-  if (auth && auth.currentUser) {
-    return auth.currentUser.uid;
-  } else {
-    // get it from localStorage
-    const apiKey = localStorage.getItem('apiKey');
-    if (apiKey) {
-      const keyParts = apiKey.split('_');
-      if (keyParts.length >= 3) {
-        return keyParts[1];
-      }
+  try {
+    const authInstance = getFirebaseAuth();
+    if (authInstance.currentUser) {
+      return authInstance.currentUser.uid;
     }
-    return null;
+  } catch (e) {
+    // get it from localStorage if auth is not available
   }
+  const apiKey = localStorage.getItem('apiKey');
+  if (apiKey) {
+    const keyParts = apiKey.split('_');
+    if (keyParts.length >= 3) {
+      return keyParts[1];
+    }
+  }
+  return null;
 }
-
 
 /**
  * Helper function to make authenticated API requests
  * Automatically adds the Firebase ID token to the request headers
  */
 export async function fetchWithAuth(url: string, options: RequestInit = {}) {
-  const auth = getFirebaseAuth();
-  if (!auth) return;
   try {
     // Get the current user
-    const user = auth.currentUser;
+    let user;
+    try {
+      user = getFirebaseAuth().currentUser;
+    } catch (e) {
+      console.warn('getFirebaseAuth() failed:', e);
+      return;
+    }
 
     if (!user) {
       console.error('fetchWithAuth: No authenticated user found');

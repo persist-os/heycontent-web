@@ -13,7 +13,8 @@ import AIPreferencesTab from './tabs/AIPreferencesTab'
 import DataTab from './tabs/DataTab'
 import { handleSignOut } from './utils'
 import SubscriptionOverview from './tabs/subscription/subscription-overview'
-import { getFirebaseAuth } from '@/app/lib/firebase' // Only call inside useEffect or event handlers
+import { getFirebaseAuth } from '@/app/lib/firebase'
+import { onAuthStateChanged } from 'firebase/auth'
 
 const SettingsScreen = () => {
   const router = useRouter()
@@ -30,22 +31,34 @@ const SettingsScreen = () => {
     futureVision: ''
   })
   const [showPersonaFields, setShowPersonaFields] = useState(true)
+  const [userId, setUserId] = useState<string | undefined>()
+  const [userEmail, setUserEmail] = useState<string | undefined>()
 
   useEffect(() => {
     setIsFirstTimeSetup(window.location.search.includes('newUser=true'))
   }, [])
 
   useEffect(() => {
-    const auth = getFirebaseAuth();
-    const currentUser = auth?.currentUser;
-    if (currentUser) {
-      setFormData(prev => ({
-        ...prev,
-        name: currentUser.displayName || '',
-        email: currentUser.email || ''
-      }));
+    let auth
+    try {
+      auth = getFirebaseAuth()
+    } catch (e) {
+      auth = null
     }
-  }, []);
+    if (!auth) return
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUserId(firebaseUser?.uid)
+      setUserEmail(firebaseUser?.email)
+      if (firebaseUser) {
+        setFormData(prev => ({
+          ...prev,
+          name: firebaseUser.displayName || '',
+          email: firebaseUser.email || ''
+        }));
+      }
+    })
+    return () => unsubscribe()
+  }, [])
 
   return (
     <div className="h-full min-h-screen bg-background">

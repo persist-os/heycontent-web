@@ -1,5 +1,6 @@
-import { sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { getFirebaseAuth } from '@/app/lib/firebase';
+import { getAuth, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from 'firebase/auth';
 
 // Action code settings for the email link
 const actionCodeSettings = {
@@ -15,7 +16,12 @@ const actionCodeSettings = {
  */
 export const sendEmailLink = async (email: string) => {
   try {
-    const auth = getFirebaseAuth();
+    let auth;
+    try {
+      auth = getFirebaseAuth();
+    } catch (e) {
+      throw new Error('Firebase Auth not initialized');
+    }
     await sendSignInLinkToEmail(auth, email, actionCodeSettings);
     
     // Save the email locally so we can use it later
@@ -37,7 +43,12 @@ export const sendEmailLink = async (email: string) => {
  */
 export const completeEmailSignIn = async (email: string, url: string) => {
   try {
-    const auth = getFirebaseAuth();
+    let auth;
+    try {
+      auth = getFirebaseAuth();
+    } catch (e) {
+      throw new Error('Firebase Auth not initialized');
+    }
     
     // Sign in the user directly without verification
     const result = await signInWithEmailLink(auth, email, url);
@@ -60,7 +71,12 @@ export const completeEmailSignIn = async (email: string, url: string) => {
 export const isEmailLink = () => {
   if (typeof window === 'undefined') return false;
   
-  const auth = getFirebaseAuth();
+  let auth;
+  try {
+    auth = getFirebaseAuth();
+  } catch (e) {
+    throw new Error('Firebase Auth not initialized');
+  }
   return isSignInWithEmailLink(auth, window.location.href);
 };
 

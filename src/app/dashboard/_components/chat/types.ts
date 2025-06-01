@@ -25,6 +25,20 @@ export interface AmbientInsight {
   action: string;
 }
 
+export interface ContentContext {
+  platform: string;
+  contentId: string;
+  analysis?: string | null;
+  title?: string;
+  // Additional context fields that might be useful
+  thumbnailUrl?: string;
+  publishedAt?: string;
+  metrics?: any;
+  content?: any;
+}
+
 export interface ChatScreenProps {
   chatId?: string | null;
+  contentContext?: ContentContext | null;
+  askQuery?: string | null;
 }

@@ -17,13 +17,22 @@ export const createUserInternal = internalMutation({
     email: v.string(),
     image: v.optional(v.string()),
     userId: v.string(),
+    username: v.optional(v.string()),
+    referralCode: v.optional(v.string()),
+    referredBy: v.optional(v.string()),
   },
   handler: async ({ db }, args) => {
+    const now = Date.now();
     return await db.insert("users", {
       name: args.name,
       email: args.email,
       image: args.image,
       userId: args.userId,
+      username: args.username ?? '',
+      referralCode: args.referralCode ?? '',
+      referredBy: args.referredBy ?? '',
+      createdAt: now,
+      updatedAt: now,
     });
   },
 });

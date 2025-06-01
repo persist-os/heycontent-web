@@ -6,7 +6,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { getAuth, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { FirebaseApp } from 'firebase/app';
-import { getFirebaseApp, getFirebaseAuth } from '@/app/lib/firebase'; // Only call these inside functions or useEffect
+import { getFirebaseApp, getFirebaseAuth } from '@/app/lib/firebase';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // Import components
@@ -45,20 +45,27 @@ export function ContentAnalyticsScreen() {
   const [filterType, setFilterType] = useState<PlatformFilterType>('all');
   const [selectedContent, setSelectedContent] = useState<AnyContentItem | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [userId, setUserId] = useState<string | undefined>();
+  const [userEmail, setUserEmail] = useState<string | undefined>();
   const [authLoading, setAuthLoading] = useState(true);
   
   const router = useRouter();
 
   // Add Firebase auth listener
   useEffect(() => {
-    if (!typedApp) return;
-    const auth = getAuth(typedApp);
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setFirebaseUser(user);
+    // Check if app is initialized before using it
+    if (typedApp) {
+      const auth = getAuth(typedApp);
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setFirebaseUser(user);
+        setAuthLoading(false);
+      });
+      return () => unsubscribe();
+    } else {
+      console.error("Firebase app not initialized.");
       setAuthLoading(false);
-    });
-    return () => unsubscribe();
-  }, [typedApp]);
+    }
+  }, []);
 
   // Handle click outside filter dropdown
   useEffect(() => {
@@ -77,19 +84,19 @@ export function ContentAnalyticsScreen() {
   // Fetch data from Convex - Use firebaseUser.uid
   const youtubeVideos = useQuery(
     api.youtubeQueries.listUserYouTubeVideos,
-    !authLoading && firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
+    !authLoading && userId ? { userId } : "skip"
   );
 
   // Fetch Gmail threads from Convex
   const gmailThreads = useQuery(
     api.gmailQueries.listUserGmailThreads,
-    !authLoading && firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
+    !authLoading && userId ? { userId } : "skip"
   );
 
   // Fetch Instagram posts from Convex
   const instagramPosts = useQuery(
     api.instagramQueries.getAllInstagramPosts,
-    !authLoading && firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
+    !authLoading && userId ? { userId } : "skip"
   );
 
   // Console log data for debugging
@@ -207,7 +214,7 @@ export function ContentAnalyticsScreen() {
 
   // Navigate to chat with content context
   const discussContent = (item: AnyContentItem) => {
-    // Create a context object with the basic content info
+    // Create a context object with comprehensive content info
     const context = {
       platform: item.platform,
       contentId: item.id,
@@ -218,7 +225,19 @@ export function ContentAnalyticsScreen() {
         ? (item as YouTubeContentItem).content?.title
         : item.platform === 'instagram'
           ? (item as InstagramContentItem).content?.text
-          : (item as GmailContentItem).content?.subject
+          : (item as GmailContentItem).content?.subject,
+      // Include thumbnail URL for visual context
+      thumbnailUrl: item.platform === 'youtube' 
+        ? (item as YouTubeContentItem).content?.thumbnailUrl || `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`
+        : item.platform === 'instagram'
+          ? (item as InstagramContentItem).content?.mediaUrl
+          : undefined,
+      // Include published date
+      publishedAt: item.publishedAt,
+      // Include metrics for context
+      metrics: item.metrics,
+      // Include full content object for additional context
+      content: item.content
     };
     
     console.log('Sending to chat with context:', context);

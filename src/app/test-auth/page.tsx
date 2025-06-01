@@ -10,24 +10,22 @@ export default function TestAuthPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    let auth;
+    let unsubscribe = () => {};
     try {
-      auth = getFirebaseAuth();
+      const auth = getFirebaseAuth();
+      unsubscribe = onAuthStateChanged(auth, (user) => {
+        setUser(user)
+        setLoading(false)
+      }, (error) => {
+        console.error('Auth state error:', error)
+        setError(error.message)
+        setLoading(false)
+      })
     } catch (e) {
-      setError('Firebase auth not initialized');
+      setError('Firebase Auth not initialized');
       setLoading(false);
-      return;
     }
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user)
-      setLoading(false)
-    }, (error) => {
-      console.error('Auth state error:', error)
-      setError(error.message)
-      setLoading(false)
-    })
-
-    return () => unsubscribe()
+    return () => unsubscribe();
   }, [])
 
   const testGmailAuth = async () => {

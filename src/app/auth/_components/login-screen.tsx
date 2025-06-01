@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
-
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { getFirebaseAuth } from '@/app/lib/firebase';
 
 interface LoginScreenProps {
   onSuccess?: (apiKey: string) => void;
@@ -21,20 +22,59 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
     setError(null);
     setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error);
+      // Use Firebase Auth to validate credentials
+      let auth;
+      try {
+        auth = getFirebaseAuth();
+      } catch (e) {
+        setError('Firebase Auth not initialized');
+        setIsLoading(false);
+        return;
       }
+      let userCredential;
+      try {
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
+      } catch (err: any) {
+        setError('Invalid email or password.');
+        setIsLoading(false);
+        return;
+      }
+      const user = userCredential.user;
+      if (!user) {
+        setError('Authentication failed: No user returned.');
+        setIsLoading(false);
+        return;
+      }
+      // Get ID token
+      let idToken: string;
+      try {
+        idToken = await user.getIdToken(true);
+      } catch (err: any) {
+        setError('Failed to get Firebase ID token: ' + (err.message || err.code));
+        setIsLoading(false);
+        return;
+      }
+      // Send ID token to backend
+      const apiKeyResponse = await fetch('/api/auth/firebase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
+      const apiKeyData = await apiKeyResponse.json();
+      if (apiKeyResponse.ok) {
+        if (apiKeyData.apiKey) {
+          localStorage.setItem('apiKey', JSON.stringify(apiKeyData.apiKey));
+        }
+        if (apiKeyData.redirect) {
+          window.location.href = apiKeyData.redirect;
+          return;
+        }
+      } else {
+        setError(apiKeyData.error || 'Failed to get API key');
+        setIsLoading(false);
+        return;
+      }
+<<<<<<< HEAD
       if (data.customToken) {
         const { signInWithCustomToken } = await import('firebase/auth');
         const { getFirebaseAuth } = await import('@/app/lib/firebase');
@@ -146,6 +186,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
         localStorage.setItem('apiKey', JSON.stringify(data.apiKey));
       }
       if (onSuccess) onSuccess(data.apiKey || "");
+=======
+      if (onSuccess) onSuccess(apiKeyData.apiKey || "");
+>>>>>>> dc27aec84c6b547859451d75f2df78a7b1adf6a7
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {
@@ -200,15 +243,20 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
           {error && <div className="text-red-500 text-sm">{error}</div>}
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded disabled:opacity-50"
+            className="w-full bg-purple-600 text-white py-2 rounded hover:bg-purple-700 transition"
             disabled={isLoading}
           >
-            {isLoading ? 'Loading...' : 'Sign In'}
+            {isLoading ? 'Signing in...' : 'Sign In'}
           </button>
           <div className="mt-4 text-center">
             <a href="/auth/register" className="text-blue-600 hover:underline">
               Create an account
             </a>
+            <div className="mt-2">
+              <a href="/auth/forgot-password" className="text-blue-500 hover:underline">
+                Forgot your password?
+              </a>
+            </div>
           </div>
         </form>
       </div>

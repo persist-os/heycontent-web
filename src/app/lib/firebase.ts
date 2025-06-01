@@ -15,10 +15,6 @@ const firebaseConfig = {
 };
 
 
-
-// Export initialized instances
-// Removed direct exports of app and auth. Use getter functions only.
-
 // Export a function to get the auth instance
 export function getFirebaseApp(): FirebaseApp {
   if (typeof window === 'undefined') throw new Error('Cannot use Firebase App on the server');

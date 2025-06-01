@@ -57,16 +57,20 @@ export async function POST(request: Request) {
       try {
         apiKeyData = await proxyApiKeyRequest({ idToken, userId: decodedToken.uid });
       } catch (apiKeyError: any) {
-        let errorMsg = typeof apiKeyError === 'object' && apiKeyError !== null && 'message' in apiKeyError
+        const errorMsg = typeof apiKeyError === 'object' && apiKeyError !== null && 'message' in apiKeyError
           ? (apiKeyError as any).message
           : String(apiKeyError);
         apiKeyData = { error: 'Exception fetching API key', details: errorMsg };
       }
       // Always redirect to /chat on success
+      // Extract apiKey from apiKeyData (either apiKeyData.apiKey or apiKeyData.data.key)
+      const apiKey =
+        apiKeyData?.apiKey ||
+        (apiKeyData?.data && typeof apiKeyData.data.key === 'string' ? apiKeyData.data.key : undefined);
       const response = NextResponse.json({
         success: true,
         redirect: '/dashboard/chat',
-        apiKey: apiKeyData?.apiKey,
+        apiKey,
         apiKeyData
       });
       response.cookies.set('firebase-auth-token', idToken, {
