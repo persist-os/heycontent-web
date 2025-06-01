@@ -109,7 +109,7 @@ export default function CheckoutCard({ planId, onClose, returnUrl }: Props) {
 
   // Render checkout
   return (
-    <div className="relative" ref={checkoutRef}>
+    <div className="relative w-full" ref={checkoutRef}>
       {onClose && (
         <Button 
           variant="ghost" 
@@ -123,14 +123,14 @@ export default function CheckoutCard({ planId, onClose, returnUrl }: Props) {
       )}
       <div 
         id="checkout" 
-        className="min-h-[400px] max-w-[450px] mx-auto max-h-[80vh] overflow-auto rounded-lg shadow-lg relative"
+        className="w-full min-h-[400px] sm:min-h-[500px] max-h-[80vh] sm:max-h-[85vh] overflow-auto rounded-lg stripe-embedded-checkout stripe-checkout-container"
       >
         {clientSecret && (
           <EmbeddedCheckoutProvider
             stripe={stripePromise}
             options={{ clientSecret }}
           >
-            <EmbeddedCheckout />
+            <EmbeddedCheckout className="w-full" />
           </EmbeddedCheckoutProvider>
         )}
       </div>

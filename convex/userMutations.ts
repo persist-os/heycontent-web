@@ -112,7 +112,7 @@ export const deleteUserAndData = mutation({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
     const { userId } = args;
-    let summary: Record<string, any> = { errors: [] };
+    const summary: Record<string, any> = { errors: [] };
     // 1. Validate user exists
     const user = await ctx.db
       .query("users")
@@ -123,7 +123,7 @@ export const deleteUserAndData = mutation({
     // Helper for batch deletion
     async function batchDelete(table: string, getQuery: () => Promise<any[]>) {
       let deleted = 0;
-      let errors: any[] = [];
+      const errors: any[] = [];
       let hasMore = true;
       while (hasMore) {
         const items = await getQuery();

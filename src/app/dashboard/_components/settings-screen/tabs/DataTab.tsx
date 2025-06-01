@@ -17,6 +17,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 const DataTab = () => {
   const router = useRouter();
   const deleteUserAndData = useMutation(api.userMutations.deleteUserAndData);
+  const createUser = useMutation(api.userMutations.create_user);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -86,20 +87,50 @@ const DataTab = () => {
       return;
     }
     setIsDeleting(true);
+    let userDeleted = false;
     try {
-      await deleteUserAndData({ userId: user.uid });
-      await user.delete();
+      // Step 1: Delete Firebase user
+      try {
+        await user.delete();
+        userDeleted = true;
+      } catch (error: any) {
+        if (error.code === 'auth/requires-recent-login') {
+          toast.error('Please re-authenticate and try again.');
+        } else {
+          toast.error('Failed to delete Firebase user.');
+        }
+        console.error('Firebase user delete error:', error);
+        return;
+      }
+      // Step 2: Delete Convex user data
+      try {
+        await deleteUserAndData({ userId: user.uid });
+      } catch (error: any) {
+        toast.error('Failed to delete user data. Attempting rollback...');
+        console.error('Convex deleteUserAndData error:', error);
+        // Rollback: re-insert minimal user data
+        try {
+          await createUser({
+            name: user.displayName || 'User',
+            email: user.email || '',
+            userId: user.uid,
+            image: user.photoURL || '',
+            username: user.displayName || '',
+            referralCode: undefined,
+            referredBy: undefined,
+            subscription: undefined,
+          });
+          toast.error('User account deleted, but data could not be fully removed. Please contact support.');
+        } catch (rollbackError) {
+          toast.error('Critical error: User deleted but data rollback failed. Please contact support.');
+          console.error('Rollback error:', rollbackError);
+        }
+        return;
+      }
       toast.success('Account deleted.');
       try { localStorage.clear(); } catch (e) { /* ignore */ }
       try { sessionStorage.clear(); } catch (e) { /* ignore */ }
       router.push('/auth/login');
-    } catch (error: any) {
-      if (error.code === 'auth/requires-recent-login') {
-        toast.error('Please re-authenticate and try again.');
-      } else {
-        toast.error('Failed to delete account.');
-      }
-      console.error('Delete account error:', error);
     } finally {
       setIsDeleting(false);
       setShowDeleteDialog(false);

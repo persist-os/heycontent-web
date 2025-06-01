@@ -40,7 +40,13 @@ export const getUserDetails = query({
       .filter((q) => q.eq(q.field("referralCode"), referralCode))
       .first();
     if (user) {
-      return { valid: true, userId: user.userId };
+      return { 
+        valid: true, 
+        userId: user.userId,
+        referrerName: user.name,
+        referrerUsername: user.username || '',
+        referrerEmail: user.email
+      };
     } else {
       return { valid: false };
     }

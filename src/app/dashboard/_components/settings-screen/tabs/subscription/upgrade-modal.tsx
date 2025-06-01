@@ -202,7 +202,7 @@ export default function UpgradeModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className={showCheckout ? "max-w-4xl w-[95vw] max-h-[95vh] overflow-auto" : "max-w-2xl"}>
         <DialogHeader>
           <DialogTitle>Choose Your Plan</DialogTitle>
           <DialogDescription>
@@ -210,23 +210,25 @@ export default function UpgradeModal({
           </DialogDescription>
         </DialogHeader>
         {showCheckout && selectedPlanId ? (
-          <div className="flex flex-col items-center justify-center min-h-[400px]">
-            <CheckoutForm
-              planId={selectedPlanId}
-              onSuccess={handleCheckoutSuccess}
-              onCancel={handleCheckoutCancel}
-              returnUrl={(() => {
-                if (typeof window === 'undefined') return undefined;
-                if (context === 'registration') {
-                  return window.location.origin + '/auth/register?step=waitlist';
-                } else {
-                  return window.location.origin + '/settings';
-                }
-              })()}
-            />
+          <div className="flex flex-col items-center justify-center w-full min-h-[500px] md:min-h-[600px] p-2 sm:p-4">
+            <div className="w-full">
+              <CheckoutForm
+                planId={selectedPlanId}
+                onSuccess={handleCheckoutSuccess}
+                onCancel={handleCheckoutCancel}
+                returnUrl={(() => {
+                  if (typeof window === 'undefined') return undefined;
+                  if (context === 'registration') {
+                    return window.location.origin + '/auth/register?step=waitlist';
+                  } else {
+                    return window.location.origin + '/settings';
+                  }
+                })()}
+              />
+            </div>
             <Button
               variant="outline"
-              className="mt-6"
+              className="mt-4 sm:mt-6 w-full max-w-xs"
               onClick={handleCheckoutCancel}
             >
               Cancel

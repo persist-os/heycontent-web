@@ -42,10 +42,17 @@ export const handleSignOut = async (router: AppRouterInstance) => {
 export const handleResendVerification = async (setIsResending: (val: boolean) => void) => {
   setIsResending(true)
   try {
-    if (!getFirebaseAuth()) throw new Error('Auth not initialized')
+    let auth;
+    try {
+      auth = getFirebaseAuth();
+    } catch (err) {
+      throw new Error('Auth not initialized');
+    }
+    if (!auth) throw new Error('Auth not initialized');
+    const email = auth.currentUser?.email;
     const response = await fetchWithAuth('/api/auth/verify-email', {
       method: 'POST',
-      body: JSON.stringify({ email: getFirebaseAuth()?.currentUser?.email }),
+      body: JSON.stringify({ email }),
     })
     if (!response) throw new Error('Failed to resend verification email')
     if (!response.ok) {

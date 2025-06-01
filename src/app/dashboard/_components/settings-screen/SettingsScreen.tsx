@@ -49,11 +49,13 @@ const SettingsScreen = () => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUserId(firebaseUser?.uid)
       setUserEmail(firebaseUser?.email)
-      setFormData(prev => ({
-        ...prev,
-        name: firebaseUser?.displayName || '',
-        email: firebaseUser?.email || ''
-      }))
+      if (firebaseUser) {
+        setFormData(prev => ({
+          ...prev,
+          name: firebaseUser.displayName || '',
+          email: firebaseUser.email || ''
+        }));
+      }
     })
     return () => unsubscribe()
   }, [])
