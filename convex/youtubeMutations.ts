@@ -156,27 +156,64 @@ export const storeVideoAnalysis = mutation({
       .first();
 
     if (!video) {
-      throw new Error(`No video found with videoId: ${videoId}`);
-    }
+      // Create a minimal video record if it doesn't exist
+      console.log(`Creating new video record for videoId: ${videoId}, userId: ${userId}`);
+      const videoId_internal = await ctx.db.insert("youtubeVideos", {
+        userId,
+        id: videoId,
+        videoId,
+        createdAt: now,
+        updatedAt: now,
+        // Add minimal required fields
+        snippet: {
+          title: "YouTube Video",
+          description: "",
+          published_at: new Date(now).toISOString(),
+          thumbnails: {}
+        },
+        statistics: {
+          views: 0,
+          likes: 0,
+          comments: 0
+        }
+      });
 
-    // Determine if this is the new markdown format or legacy JSON format
-    const updateData: any = { updatedAt: now };
+      // Now store the analysis on the newly created record
+      const updateData: any = { updatedAt: now };
 
-    if (analysisData && typeof analysisData === 'object' && analysisData.markdown) {
-      // New format: { markdown: "...", timestamp: ... }
-      updateData.analysisMarkdown = analysisData.markdown;
-      // Keep existing JSON analysis if present, don't overwrite it
-      console.log(`Storing markdown analysis for video ${videoId}`);
+      if (analysisData && typeof analysisData === 'object' && analysisData.markdown) {
+        // New format: { markdown: "...", timestamp: ... }
+        updateData.analysisMarkdown = analysisData.markdown;
+        console.log(`Storing markdown analysis for new video ${videoId}`);
+      } else {
+        // Legacy format: Store as JSON analysis
+        updateData.analysis = analysisData;
+        console.log(`Storing JSON analysis for new video ${videoId}`);
+      }
+
+      await ctx.db.patch(videoId_internal, updateData);
+
+      return { success: true, status: "created", videoId: videoId_internal };
     } else {
-      // Legacy format: Store as JSON analysis
-      updateData.analysis = analysisData;
-      console.log(`Storing JSON analysis for video ${videoId}`);
+      // Update existing video with analysis
+      const updateData: any = { updatedAt: now };
+
+      if (analysisData && typeof analysisData === 'object' && analysisData.markdown) {
+        // New format: { markdown: "...", timestamp: ... }
+        updateData.analysisMarkdown = analysisData.markdown;
+        // Keep existing JSON analysis if present, don't overwrite it
+        console.log(`Storing markdown analysis for video ${videoId}`);
+      } else {
+        // Legacy format: Store as JSON analysis
+        updateData.analysis = analysisData;
+        console.log(`Storing JSON analysis for video ${videoId}`);
+      }
+
+      await ctx.db.patch(video._id, updateData);
+
+      // Optionally, you can log or audit userId here if needed
+      return { success: true, status: "updated", videoId: video._id };
     }
-
-    await ctx.db.patch(video._id, updateData);
-
-    // Optionally, you can log or audit userId here if needed
-    return { success: true, status: "updated", videoId: video._id };
   },
 });
 

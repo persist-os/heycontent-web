@@ -68,6 +68,9 @@ export const YouTubeInsightsGrid: React.FC<Props> = ({ userId, channelId }) => {
         }
       }
       setLoading(false);
+    } else if (existingInsights === null) {
+      // Query returned null, stop loading
+      setLoading(false);
     }
   }, [existingInsights]);
 
@@ -143,9 +146,10 @@ export const YouTubeInsightsGrid: React.FC<Props> = ({ userId, channelId }) => {
             analysisData: data.data
           });
           console.log('Convex storage result:', convexResult);
-        } catch (convexError) {
+        } catch (convexError: any) {
           console.error('Error storing in Convex:', convexError);
-          setError(`Failed to store insights: ${convexError instanceof Error ? convexError.message : 'Unknown error'}`);
+          // Don't set error state for storage failures when insights are working
+          console.warn('Failed to store insights in Convex, but insights are still available in the UI');
         }
       } else {
         console.error('Backend API error:', data.error);
