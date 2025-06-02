@@ -4,8 +4,16 @@ import { ActionCtx } from "./_generated/server";
 import { api } from "./_generated/api";
 import { cors } from "hono/cors";
 import { Id } from "./_generated/dataModel";
+import * as usageEventsApi from "./usageEvents";
 
 const app: HonoWithConvex<ActionCtx> = new Hono();
+
+// Add global logging middleware
+app.use('*', async (c, next) => {
+  console.log(`HTTP_TS_DEBUG: Request received: Method=${c.req.method}, Path=${c.req.path}`);
+  await next();
+  console.log(`HTTP_TS_DEBUG: Response sent for: Method=${c.req.method}, Path=${c.req.path}, Status=${c.res.status}`);
+});
 
 // Add CORS middleware
 app.use("*", cors());
@@ -172,32 +180,33 @@ app.delete("/api/api-keys/delete", async (c) => {
   }
 });
 
-
 // NOTES ROUTES
-app.post("/api/notes/create", async (c) => {
+
+// CREATE NOTE ENDPOINT
+app.post("/api/notes", async (c) => {
   const ctx = c.env;
   try {
-    const { userId, content, platform, templateInput, analysisId, type } = await c.req.json();
-
-    // Basic validation for required fields
+    const body = await c.req.json();
+    const { userId, content, platform, type, templateInput, analysisId, title, important, tags } = body;
     if (!userId || !content || !platform) {
-      return c.json({ error: "Missing required fields: userId, content, or platform" }, 400);
+      return c.json({ error: "Missing required fields: userId, content, platform" }, 400);
     }
-
-    const noteId = await ctx.runMutation(api.notes.createNote, {
+    const note = await ctx.runMutation(api.notes.createNote, {
       userId,
       content,
       platform,
+      type,
       templateInput,
       analysisId,
-      type,
+      title,
+      important,
+      tags,
     });
-    return c.json({ success: true, noteId }, 201); // 201 Created
+    return c.json({ success: true, note }, 201);
   } catch (error: any) {
     console.error("Failed to create note:", error);
-    // Check if the error is a ConvexError with data
     if (error.data) {
-        return c.json({ success: false, error: "Failed to create note", details: error.data }, 500);
+      return c.json({ success: false, error: "Failed to create note", details: error.data }, 500);
     }
     return c.json({ success: false, error: "Failed to create note", message: error.message || "Internal Server Error" }, 500);
   }
@@ -362,6 +371,123 @@ app.get("/api/notes/:noteId/analyses", async (c) => {
   }
 });
 
+// Create a new analysis
+app.post("/api/analyses/create", async (c) => {
+  const ctx = c.env;
+  try {
+    const { noteId, platform, output, error } = await c.req.json();
+
+    if (!noteId || !platform) {
+      return c.json({ error: "Missing required fields: noteId and platform" }, 400);
+    }
+
+    // Only include 'error' if it is a string
+    const args: any = {
+      noteId,
+      platform,
+      output: output || {},
+      createdAt: Date.now(),
+    };
+    if (typeof error === "string") {
+      args.error = error;
+    }
+
+    const analysisId = await ctx.runMutation(api.analyses.createNoteAnalysis, args);
+    return c.json({ success: true, analysisId }, 201);
+  } catch (error: any) {
+    console.error("Failed to create analysis:", error);
+    if (error.data) {
+        return c.json({ success: false, error: "Failed to create analysis", details: error.data }, 500);
+    }
+    return c.json({ success: false, error: "Failed to create analysis", message: error.message || "Internal Server Error" }, 500);
+  }
+});
+
+// Get analyses by user
+app.get("/api/analyses/by-user/:userId", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("userId");
+  const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : undefined;
+
+  if (!userId) {
+    return c.json({ error: "Missing userId in path" }, 400);
+  }
+
+  try {
+    const analyses: any = await ctx.runQuery(api.analyses.getAnalysesByUser, { userId, limit });
+    // If Convex returns {success, data}, unwrap, else pass as is
+    let data = Array.isArray(analyses) ? analyses : (analyses.data ?? []);
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    console.error("Failed to get analyses by user:", error);
+    if (error.data) {
+        return c.json({ success: false, error: "Failed to get analyses by user", details: error.data }, 500);
+    }
+    return c.json({ success: false, error: "Failed to get analyses by user", message: error.message || "Internal Server Error" }, 500);
+  }
+});
+
+// Get analyses by user and platform
+app.get("/api/analyses/by-user-platform", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.query("userId");
+  const platform = c.req.query("platform");
+  const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : undefined;
+
+  if (!userId || !platform) {
+    return c.json({ error: "Missing required query parameters: userId and platform" }, 400);
+  }
+
+  try {
+    const analyses: any = await ctx.runQuery(api.analyses.getAnalysesByUserPlatform, { 
+      userId, 
+      platform, 
+      limit 
+    });
+    let data = Array.isArray(analyses) ? analyses : (analyses.data ?? []);
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    console.error("Failed to get analyses by user and platform:", error);
+    if (error.data) {
+        return c.json({ success: false, error: "Failed to get analyses by user and platform", details: error.data }, 500);
+    }
+    return c.json({ success: false, error: "Failed to get analyses by user and platform", message: error.message || "Internal Server Error" }, 500);
+  }
+});
+
+// Link analysis to note  
+app.post("/api/notes/:noteId/link-analysis", async (c) => {
+  const ctx = c.env;
+  const noteId = c.req.param("noteId");
+  
+  try {
+    const { analysisId, userId } = await c.req.json();
+
+    if (!analysisId || !userId) {
+      return c.json({ error: "Missing required fields: analysisId and userId" }, 400);
+    }
+
+    const result = await ctx.runMutation(api.analyses.linkAnalysisToNote, {
+      noteId,
+      analysisId,
+      userId,
+    });
+    
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Failed to link analysis to note:", error);
+    if (error.message && error.message.includes("Note not found")) {
+        return c.json({ success: false, error: "Note not found" }, 404);
+    }
+    if (error.message && error.message.includes("Unauthorized")) {
+        return c.json({ success: false, error: "Unauthorized to link analysis to this note" }, 403);
+    }
+    if (error.data) {
+        return c.json({ success: false, error: "Failed to link analysis to note", details: error.data }, 500);
+    }
+    return c.json({ success: false, error: "Failed to link analysis to note", message: error.message || "Internal Server Error" }, 500);
+  }
+});
 
 // GMAIL ROUTES
 
@@ -816,7 +942,7 @@ app.post("/api/users/:id/stripe/subscription", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
   const { 
-    planId, 
+    plan, 
     priceId,
     status, 
     includedRequests,
@@ -824,13 +950,14 @@ app.post("/api/users/:id/stripe/subscription", async (c) => {
     stripeCustomerId,
     currentPeriodStart,
     currentPeriodEnd,
-    cancelAtPeriodEnd
+    cancelAtPeriodEnd,
+    canceledAt
   } = await c.req.json();
   
   try {
     const result = await ctx.runMutation(api.subscriptionQueries.saveSubscription, {
       userId,
-      planId,
+      plan,
       priceId,
       status,
       includedRequests,
@@ -838,7 +965,8 @@ app.post("/api/users/:id/stripe/subscription", async (c) => {
       stripeCustomerId,
       currentPeriodStart,
       currentPeriodEnd,
-      cancelAtPeriodEnd
+      cancelAtPeriodEnd,
+      canceledAt
     });
     
     return c.json({ success: true, subscriptionId: result });
@@ -924,8 +1052,6 @@ app.get("/api/users/:id/stripe/subscription/item", async (c) => {
     return c.json({ success: false, error: "Failed to retrieve subscription item" }, 500);
   }
 });
-
-
 
 // Get a single Instagram post
 app.get("/api/users/:id/instagram/post/:postId", async (c) => {
@@ -1076,6 +1202,55 @@ app.post("/addRateLimitRequest", async (c) => {
     console.error("Failed to store rate limit request:", error);
     return c.json({ success: false, error: "Failed to store rate limit request" }, 500);
   }
+});
+
+// USAGE EVENTS ROUTES
+
+// Log a usage event
+app.post("/api/users/:id/usage/log", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { timestamp, model, status, qty } = await c.req.json();
+  if (!userId || !timestamp || !model || !status || typeof qty !== "number") {
+    return c.json({ success: false, error: "Missing required fields" }, 400);
+  }
+  // Log the event
+  await ctx.runMutation(api.usageEvents.logUsageEvent, {
+    userId,
+    timestamp,
+    model,
+    status,
+    qty,
+  });
+  // Update user's usage field
+  await ctx.runMutation(api.usageEvents.updateUserUsage, { userId, qty });
+  return c.json({ success: true });
+});
+
+// Get usage summary for a user
+app.get("/api/users/:id/usage/summary", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  if (!userId) return c.json({ success: false, error: "Missing userId" }, 400);
+  const summary = await ctx.runQuery(api.usageEvents.getUsageSummary, { userId });
+  return c.json({ success: true, ...summary });
+});
+
+// Reset usage for a new period (admin/cron)
+app.post("/api/users/:id/usage/reset", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { periodStart, periodEnd, includedRequests } = await c.req.json();
+  if (!userId || !periodStart || !periodEnd || typeof includedRequests !== "number") {
+    return c.json({ success: false, error: "Missing required fields" }, 400);
+  }
+  const result = await ctx.runMutation(api.usageEvents.resetUsageForPeriod, {
+    userId,
+    periodStart,
+    periodEnd,
+    includedRequests,
+  });
+  return c.json(result);
 });
 
 const router = new HttpRouterWithHono(app);

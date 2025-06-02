@@ -9,7 +9,8 @@ const noteType = v.union(
   v.literal("idea"),
   v.literal("url"),
   v.literal("date"),
-  v.literal("brainstorm")
+  v.literal("brainstorm"),
+  v.literal("click")
 );
 
 const referenceType = v.union(
@@ -18,8 +19,50 @@ const referenceType = v.union(
   v.literal("idea"),
   v.literal("url"),
   v.literal("date"),
-  v.literal("brainstorm")
+  v.literal("brainstorm"),
+  v.literal("click")
 );
+
+// CREATE NOTE MUTATION
+export const createNote = mutation({
+  args: {
+    userId: v.string(),
+    content: v.optional(v.string()),
+    platform: v.optional(v.string()),
+    type: v.optional(noteType),
+    templateInput: v.optional(v.any()),
+    analysisId: v.optional(v.string()),
+    title: v.optional(v.string()),
+    important: v.optional(v.boolean()),
+    tags: v.optional(v.array(v.string())),
+    references: v.optional(v.array(v.object({
+      type: noteType,
+      content: v.string(),
+      isLoading: v.optional(v.boolean()),
+    }))),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    // Required fields with defaults
+    const noteData: any = {
+      userId: args.userId,
+      title: args.title ?? "",
+      content: args.content ?? "",
+      platform: args.platform ?? "",
+      type: args.type ?? "idea",
+      important: args.important ?? false,
+      tags: args.tags ?? [],
+      references: args.references ?? [],
+      createdAt: now,
+      updatedAt: now,
+    };
+    if (args.templateInput) noteData.templateInput = args.templateInput;
+    if (args.analysisId) noteData.analysisId = args.analysisId;
+    const noteId = await ctx.db.insert("notes", noteData);
+    const createdNote = await ctx.db.get(noteId);
+    return createdNote;
+  },
+});
 
 export const getNotesByUser = query({
   args: { userId: v.string() },
@@ -28,37 +71,6 @@ export const getNotesByUser = query({
       .query("notes")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .collect();
-  },
-});
-
-export const createNote = mutation({
-  args: {
-    userId: v.string(),
-    content: v.string(),
-    platform: v.string(),
-    templateInput: v.optional(v.any()),
-    analysisId: v.optional(v.string()),
-    type: v.optional(noteType), // <-- Accept type argument
-  },
-  handler: async (ctx, args) => {
-    // Fill in required fields from schema with defaults if not present
-    const now = Date.now();
-    const noteToInsert = {
-      userId: args.userId,
-      content: args.content,
-      platform: args.platform,
-      templateInput: args.templateInput,
-      analysisId: args.analysisId,
-      createdAt: now,
-      updatedAt: now,
-      title: "Untitled Note",
-      important: false,
-      tags: [],
-      references: [],
-      type: args.type, // <-- Set type from argument
-    };
-    const noteId = await ctx.db.insert("notes", noteToInsert);
-    return noteId;
   },
 });
 

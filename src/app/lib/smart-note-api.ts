@@ -3,29 +3,30 @@
  */
 
 /**
- * Analyze a note's content using the SmartNoteGemini agent
+ * Generate content ideas for a note using the SmartNoteGemini agent
  *
- * @param contentNote - The note content to analyze
- * @returns The analysis result
+ * @param platform - The platform for which to generate ideas
+ * @param limit - The number of ideas to generate
+ * @returns The generated ideas
  */
-export async function analyzeNoteContent(contentNote: string) {
+export async function analyzeNoteContent(platform: string = 'general', limit: number = 5) {
   try {
-    const response = await fetch('/api/smart-note/analyze', {
+    const response = await fetch('/api/smart-note/ideas', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ content_note: contentNote }),
+      body: JSON.stringify({ platform, limit }),
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
-      throw new Error(errorData?.message || `Error analyzing note: ${response.status}`);
+      throw new Error(errorData?.message || `Error generating ideas: ${response.status}`);
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Failed to analyze note content:', error);
+    console.error('Failed to generate content ideas:', error);
     throw error;
   }
 }

@@ -1,9 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import React from 'react'
 import { ArrowRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { Logo } from './logo'
+
+console.log('[HeroSection] Module loaded');
 
 const searchSuggestions = [
   "What's my brand deal potential?",
@@ -13,6 +16,7 @@ const searchSuggestions = [
 ]
 
 export function HeroSection() {
+  console.log('[HeroSection] Function start');
   const [placeholder, setPlaceholder] = useState('')
   const [currentSuggestion, setCurrentSuggestion] = useState(0)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)

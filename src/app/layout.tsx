@@ -5,6 +5,7 @@ import { Providers } from './providers'
 import { headers } from 'next/headers'
 import { Toaster } from 'react-hot-toast'
 import { CommandPaletteProvider } from './context/CommandPaletteProvider'
+import { Analytics } from "@vercel/analytics/next"
 
 export const metadata: Metadata = {
   title: 'HeyContent',
@@ -37,6 +38,7 @@ export default async function RootLayout({
             {children}
           </CommandPaletteProvider>
         </Providers>
+        <Analytics />
       </body>
     </html>
   )

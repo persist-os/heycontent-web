@@ -14,6 +14,7 @@ interface FrontWaitlistQueueProps {
 }
 
 export const FrontWaitlistQueue = ({ position, queueId, onQueueComplete }: FrontWaitlistQueueProps) => {
+  console.log('[FrontWaitlistQueue] Function start');
   const [stage, setStage] = useState<'register' | 'queue' | 'card'>('register');
   const [currentPosition, setCurrentPosition] = useState(Math.floor(Math.random() * (57 - 51 + 1)) + 51);
   const [email, setEmail] = useState('');

@@ -159,10 +159,21 @@ export const storeVideoAnalysis = mutation({
       throw new Error(`No video found with videoId: ${videoId}`);
     }
 
-    await ctx.db.patch(video._id, {
-      analysis: analysisData,
-      updatedAt: now,
-    });
+    // Determine if this is the new markdown format or legacy JSON format
+    const updateData: any = { updatedAt: now };
+
+    if (analysisData && typeof analysisData === 'object' && analysisData.markdown) {
+      // New format: { markdown: "...", timestamp: ... }
+      updateData.analysisMarkdown = analysisData.markdown;
+      // Keep existing JSON analysis if present, don't overwrite it
+      console.log(`Storing markdown analysis for video ${videoId}`);
+    } else {
+      // Legacy format: Store as JSON analysis
+      updateData.analysis = analysisData;
+      console.log(`Storing JSON analysis for video ${videoId}`);
+    }
+
+    await ctx.db.patch(video._id, updateData);
 
     // Optionally, you can log or audit userId here if needed
     return { success: true, status: "updated", videoId: video._id };

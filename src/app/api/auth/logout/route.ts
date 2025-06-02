@@ -1,16 +1,11 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/app/lib/firebase'
-import { signOut } from 'firebase/auth'
 
 export async function POST() {
   try {
-    console.log('Starting logout process...')
-
-    // Create response object first
+    // Create a response object
     const response = NextResponse.json({ success: true })
 
-    // Clear the Firebase auth token cookie
-    console.log('Clearing auth token cookie...')
+    // Clear the Firebase auth token cookie (client and httpOnly for SSR safety)
     response.cookies.set('firebase-auth-token', '', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -18,25 +13,18 @@ export async function POST() {
       path: '/',
       maxAge: 0 // Expire immediately
     })
+    // Also clear the client-accessible cookie (if set)
+    response.cookies.set('firebase-auth-token', '', {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 0
+    })
 
-    // Add header to trigger client-side cleanup
+    // Add header to trigger client-side cleanup if needed
     response.headers.set('x-signout', 'true')
 
-    // Sign out from Firebase last, after we've set up the response
-    if (auth) {
-      try {
-        console.log('Attempting Firebase signOut...')
-        await signOut(auth)
-        console.log('Firebase signOut successful')
-      } catch (firebaseError) {
-        console.error('Firebase signOut error:', firebaseError)
-        // Don't throw here, we still want to return the response with cleared cookies
-      }
-    } else {
-      console.warn('Firebase auth not initialized')
-    }
-
-    console.log('Logout process completed successfully')
     return response
   } catch (error) {
     console.error('Logout error:', error)

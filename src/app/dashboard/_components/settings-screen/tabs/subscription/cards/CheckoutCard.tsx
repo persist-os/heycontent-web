@@ -16,10 +16,11 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
 interface Props {
   planId: string
   onClose?: () => void
+  returnUrl?: string
 }
 
-export default function CheckoutCard({ planId, onClose }: Props) {
-  const { user } = useAuth()
+export default function CheckoutCard({ planId, onClose, returnUrl }: Props) {
+  const { firebaseUser } = useAuth()
   const [apiKey, setApiKey] = useState(null)
   const [clientSecret, setClientSecret] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -43,7 +44,7 @@ export default function CheckoutCard({ planId, onClose }: Props) {
   // Fetch client secret
   useEffect(() => {
     const fetchClientSecret = async () => {
-      if (!apiKey || !user) return
+      if (!apiKey || !firebaseUser) return
       try {
         const response = await fetch('/api/subscription', {
           method: 'POST',
@@ -53,9 +54,10 @@ export default function CheckoutCard({ planId, onClose }: Props) {
           },
           body: JSON.stringify({
             planId,
-            userId: user.uid,
-            email: user.email,
-            name: user.displayName,
+            userId: firebaseUser?.uid,
+            email: firebaseUser?.email,
+            name: firebaseUser?.displayName,
+            ...(returnUrl ? { returnUrl } : {})
           })
         })
         const data = await response.json()
@@ -78,7 +80,7 @@ export default function CheckoutCard({ planId, onClose }: Props) {
       }
     }
     fetchClientSecret()
-  }, [planId, user, apiKey])
+  }, [planId, firebaseUser, apiKey, returnUrl])
 
   // No need for checkout ready state detection anymore
 
@@ -107,7 +109,7 @@ export default function CheckoutCard({ planId, onClose }: Props) {
 
   // Render checkout
   return (
-    <div className="relative" ref={checkoutRef}>
+    <div className="relative w-full" ref={checkoutRef}>
       {onClose && (
         <Button 
           variant="ghost" 
@@ -121,14 +123,14 @@ export default function CheckoutCard({ planId, onClose }: Props) {
       )}
       <div 
         id="checkout" 
-        className="min-h-[400px] max-w-[450px] mx-auto max-h-[80vh] overflow-auto rounded-lg shadow-lg relative"
+        className="w-full min-h-[400px] sm:min-h-[500px] max-h-[80vh] sm:max-h-[85vh] overflow-auto rounded-lg stripe-embedded-checkout stripe-checkout-container"
       >
         {clientSecret && (
           <EmbeddedCheckoutProvider
             stripe={stripePromise}
             options={{ clientSecret }}
           >
-            <EmbeddedCheckout />
+            <EmbeddedCheckout className="w-full" />
           </EmbeddedCheckoutProvider>
         )}
       </div>

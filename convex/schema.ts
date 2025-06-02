@@ -22,11 +22,9 @@ export default defineSchema({
     updatedAt: v.number(),
     referralCode: v.optional(v.string()),
     referredBy: v.optional(v.string()),
-    
     // Stripe integration
     stripeCustomerId: v.optional(v.string()),
     stripeSubscriptionId: v.optional(v.string()),
-    
     // Subscription state
     subscription: v.optional(v.object({
       status: v.union(
@@ -36,6 +34,12 @@ export default defineSchema({
         v.literal("unpaid"),
         v.literal("dev"),
         v.literal("tester"),
+        v.literal("incomplete"),
+        v.literal("incomplete_expired"),
+        v.literal("trialing"),
+        v.literal("paused"),
+        v.literal("deleted"),
+        v.literal("unknown"),
       ),
       // Plan type with interval
       plan: v.union(
@@ -44,16 +48,24 @@ export default defineSchema({
         v.literal("yearly_basic"),
         v.literal("yearly_pro")
       ),
-      priceId: v.string(),
+      priceId: v.string(), // The Stripe price ID for the flat quota
+      meteredPriceId: v.optional(v.string()), // The Stripe price ID for metered overage
       currentPeriodStart: v.number(),
       currentPeriodEnd: v.number(),
       cancelAtPeriodEnd: v.boolean(),
-      includedRequests: v.number(),
-      usedRequests: v.number(),
+      includedRequests: v.number(), // Flat quota
+      usedRequests: v.number(), // Usage in current period
       subscriptionItemId: v.optional(v.string()), // For metered billing
-      lastSyncedAt: v.optional(v.number())
+      lastSyncedAt: v.optional(v.number()),
+      canceledAt: v.optional(v.number()),
+      interval: v.optional(v.union(v.literal("month"), v.literal("year"))),
+      // Legacy/Stripe fields (optional, if still needed)
+      cancel_at: v.optional(v.number()),
+      customer: v.optional(v.string()),
+      items: v.optional(v.any()),
+      quantity: v.optional(v.number()),
+      start_date: v.optional(v.number()),
     })),
-    
     // Payment method info (minimal, just for display)
     paymentMethod: v.optional(v.object({
       brand: v.string(),
@@ -61,21 +73,12 @@ export default defineSchema({
       expMonth: v.number(),
       expYear: v.number()
     })),
-    
-    // Usage tracking for current billing period
-    usage: v.optional(v.object({
-      periodStart: v.number(),
-      periodEnd: v.number(),
-      totalRequests: v.number(),
-      includedRequests: v.number(),
-      overageRequests: v.number(),
-      lastUpdated: v.number()
-    }))
   })
   .index("by_userId", ["userId"])
   .index("by_email", ["email"])
   .index("by_stripeCustomerId", ["stripeCustomerId"])
-  .index("by_username", ["username"]),
+  .index("by_username", ["username"])
+  .index("by_referralCode", ["referralCode"]),
 
   personas: defineTable({
     name: v.string(),
@@ -113,16 +116,17 @@ export default defineSchema({
   notes: defineTable({
     userId: v.string(),
     title: v.string(),
-    content: v.string(),
+    content: v.optional(v.string()),
     important: v.boolean(),
-    platform: v.optional(v.string()), // Added to support platform-specific notes
+    platform: v.optional(v.string()), // Optional: platform-specific notes, not required at creation
     type: v.optional(v.union(
       v.literal("ai_insight"),
       v.literal("conversation"),
       v.literal("idea"),
       v.literal("url"),
       v.literal("date"),
-      v.literal("brainstorm")
+      v.literal("brainstorm"),
+      v.literal("click")
     )),
     tags: v.array(v.string()),
     references: v.array(v.object({
@@ -132,11 +136,14 @@ export default defineSchema({
         v.literal("idea"),
         v.literal("url"),
         v.literal("date"),
-        v.literal("brainstorm")
+        v.literal("brainstorm"),
+        v.literal("click")
       ),
       content: v.string(),
       isLoading: v.optional(v.boolean()),
     })),
+    analysisId: v.optional(v.string()), // Link to analysis
+    templateInput: v.optional(v.any()), // For template-based notes
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -266,54 +273,32 @@ export default defineSchema({
 
   youtubeChannels: defineTable({
     userId: v.string(),
+    analysis: v.optional(v.any()),
+    createdAt: v.float64(),
+    updatedAt: v.float64(),
     id: v.string(),
-    snippet: v.optional(v.object({
-      customUrl: v.optional(v.string()),
-      description: v.optional(v.string()),
-      localized: v.optional(v.object({
-        description: v.optional(v.string()),
-        title: v.optional(v.string()),
-      })),
-      publishedAt: v.optional(v.string()),
-      thumbnails: v.optional(v.object({
-        default: v.optional(v.object({
-          height: v.optional(v.number()),
-          url: v.optional(v.string()),
-          width: v.optional(v.number()),
-        })),
-        high: v.optional(v.object({
-          height: v.optional(v.number()),
-          url: v.optional(v.string()),
-          width: v.optional(v.number()),
-        })),
-        medium: v.optional(v.object({
-          height: v.optional(v.number()),
-          url: v.optional(v.string()),
-          width: v.optional(v.number()),
-        })),
-      })),
-      title: v.optional(v.string()),
-    })),
-    statistics: v.optional(v.object({
-      hiddenSubscriberCount: v.optional(v.boolean()),
-      subscriberCount: v.optional(v.string()),
-      videoCount: v.optional(v.string()),
-      viewCount: v.optional(v.string()),
-    })),
-    createdAt: v.number(),
-    updatedAt: v.number(),
+    snippet: v.optional(v.any()), // Make snippet fully flexible to accept any fields
+    statistics: v.optional(
+      v.object({
+        hiddenSubscriberCount: v.optional(v.boolean()),
+        subscriberCount: v.optional(v.string()),
+        videoCount: v.optional(v.string()),
+        viewCount: v.optional(v.string()),
+      })
+    )
   })
   .index("by_userId", ["userId"])
-  .index("by_publishedAt", ["snippet.publishedAt"])
-  .index("by_channelId", ["id"]),
+  .index("by_channelId", ["id"])
+  .index("by_publishedAt", ["snippet.publishedAt"]),
 
   youtubeVideos: defineTable({
     userId: v.string(), // Required field
     videoId: v.string(), // Required - this is the YouTube video ID
+    channelId: v.optional(v.string()), // Added to support channelId index
     id: v.optional(v.string()), // For internal IDs if different from videoId
     url: v.optional(v.string()), // Full YouTube URL
-    analysis: v.optional(v.any()),
-    
+    analysis: v.optional(v.any()), // Original JSON analysis data
+    analysisMarkdown: v.optional(v.string()), // Markdown formatted analysis for display
     // Video metadata from YouTube API
     snippet: v.optional(v.object({
       title: v.optional(v.string()),
@@ -332,7 +317,6 @@ export default defineSchema({
       })),
       tags: v.optional(v.array(v.string())),
     })),
-    
     // Technical details of the video
     content_details: v.optional(v.object({
       duration: v.optional(v.string()),
@@ -341,7 +325,6 @@ export default defineSchema({
       has_captions: v.optional(v.boolean()),
       is_live: v.optional(v.boolean()),
     })),
-    
     // View/engagement statistics
     statistics: v.optional(v.object({
       views: v.optional(v.float64()),
@@ -349,7 +332,6 @@ export default defineSchema({
       dislikes: v.optional(v.float64()),
       comments: v.optional(v.float64()),
     })),
-    
     // Video status information
     status: v.optional(v.object({
       privacyStatus: v.optional(v.string()),
@@ -360,7 +342,6 @@ export default defineSchema({
       selfDeclaredMadeForKids: v.optional(v.boolean()),
       publicStatsViewable: v.optional(v.boolean()),
     })),
-    
     // Caption information - flexible structure for different responses
     captions: v.optional(v.object({
       status: v.optional(v.string()),
@@ -376,7 +357,6 @@ export default defineSchema({
       })),
       data: v.optional(v.any()), // For storing additional caption data if needed
     })),
-    
     // Comment information - flexible structure
     comments: v.optional(v.object({
       status: v.optional(v.string()),
@@ -398,8 +378,6 @@ export default defineSchema({
         })),
       }))),
     })),
-    
-    // Timestamps
     createdAt: v.optional(v.float64()),
     updatedAt: v.optional(v.float64()),
   })

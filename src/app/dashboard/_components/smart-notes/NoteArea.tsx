@@ -2,12 +2,14 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Note, NoteUpdate } from './types';
 import { ShortcutManager } from './keyboard-shortcuts';
 import { CommandMenu, type Command } from './CommandMenu';
+import type { PlatformKey } from './types/platformPrompts';
 import { saveToLocal, getCursorCoordinates, applyFormat } from './utils/note-utils';
 import { NoteHeader } from './components/NoteHeader';
 import { NoteReferences } from './components/NoteReferences';
 import { CommandMenus } from './components/CommandMenus';
 import { FullAnalysisModal } from './components/FullAnalysisModal';
 import { Keyboard } from 'lucide-react';
+import IdeasPanel from './components/IdeasPanel';
 
 interface NoteAreaProps {
   note: Note;
@@ -36,7 +38,9 @@ export function NoteArea({
   }, [note.content]);
 
   const [cursorPosition, setCursorPosition] = useState<number | null>(null);
+  // The command (slash) menu is only shown when the user types `/` at the start of a line
   const [showCommands, setShowCommands] = useState(false);
+  const [commandMenuKey, setCommandMenuKey] = useState(0);
   const [showMentions, setShowMentions] = useState(false);
   const [showTags, setShowTags] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
@@ -134,7 +138,7 @@ export function NoteArea({
   }, [note._id, note.content]);
 
   const insertText = (text: string) => {
-    if (!textAreaRef.current || !content) return;
+    if (!textAreaRef.current) return;
 
     const start = textAreaRef.current.selectionStart || 0;
     const end = textAreaRef.current.selectionEnd || 0;
@@ -145,23 +149,31 @@ export function NoteArea({
     if (text === '#' || text === '@' || text === '/') {
       newText = text;
       newCursorPosition = start + 1;
-      updateMenuPosition();
-
-      if (text === '/') {
-        setShowCommands(true);
-        setShowMentions(false);
-        setShowTags(false);
-      }
-      if (text === '@') {
-        setShowMentions(true);
-        setShowCommands(false);
-        setShowTags(false);
-      }
-      if (text === '#') {
-        setShowTags(true);
-        setShowCommands(false);
-        setShowMentions(false);
-      }
+      
+      // Update menu position before showing the menu
+      setTimeout(() => {
+        updateMenuPosition();
+        
+        if (text === '/') {
+          console.log('Slash detected, showing commands menu with platform:', note.platform || 'instagram');
+          setSearchTerm('');
+          setShowCommands(true);
+          setShowMentions(false);
+          setShowTags(false);
+        }
+        if (text === '@') {
+          setSearchTerm('');
+          setShowMentions(true);
+          setShowCommands(false);
+          setShowTags(false);
+        }
+        if (text === '#') {
+          setSearchTerm('');
+          setShowTags(true);
+          setShowCommands(false);
+          setShowMentions(false);
+        }
+      }, 0);
     } else if (selectedText) {
       newText = text;
       newCursorPosition = start + text.length;
@@ -218,6 +230,33 @@ export function NoteArea({
     console.log('Content changing to:', newContent);
     setContent(newContent);
     
+    // Check for slash commands
+    if (textAreaRef.current) {
+      const cursorPos = textAreaRef.current.selectionStart;
+      const lineStart = newContent.lastIndexOf('\n', cursorPos - 1) + 1;
+      const lineContent = newContent.substring(lineStart, cursorPos);
+      
+      // If the user just typed a slash at the beginning of a line
+      if (lineContent === '/') {
+        console.log('Slash command detected at beginning of line');
+        updateMenuPosition();
+        setSearchTerm('');
+        setShowCommands(true);
+        setShowMentions(false);
+        setShowTags(false);
+      } 
+      // If the user is typing after a slash, update the search term
+      else if (lineContent.startsWith('/')) {
+        const searchTerm = lineContent.substring(1);
+        console.log('Updating slash command search term:', searchTerm);
+        setSearchTerm(searchTerm);
+      }
+      // If the user deleted the slash, hide the commands menu
+      else if (showCommands && !lineContent.includes('/')) {
+        setShowCommands(false);
+      }
+    }
+    
     // Save to local storage as backup immediately
     saveToLocal(note._id, { content: newContent });
     
@@ -231,21 +270,44 @@ export function NoteArea({
   const updateMenuPosition = () => {
     if (!textAreaRef.current) return;
 
+    // Get cursor coordinates
     const { top, left } = getCursorCoordinates(textAreaRef.current, textAreaRef.current.selectionStart || 0);
-    setMenuPosition({ top, left });
+    
+    // Add a small offset to position the menu below the cursor
+    const menuTop = top + 20;
+    const menuLeft = Math.max(10, left);
+    
+    console.log('Menu position updated:', { top: menuTop, left: menuLeft });
+    setMenuPosition({ top: menuTop, left: menuLeft });
   };
 
 
-  const handleCommand = (command: Command) => {
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const handleCommand = async (command: Command) => {
     if (command.type === 'format') {
       handleFormat(command.shortcut || '', command.shortcut || '');
     } else if (command.type === 'block' && command.template) {
-      insertText(command.template);
+      // If this is an AI prompt, handle it here
+      if (command.metadata?.type === 'idea') {
+        // Insert the template directly for now
+        if (textAreaRef.current) {
+          const start = textAreaRef.current.selectionStart || 0;
+          const end = textAreaRef.current.selectionEnd || 0;
+          const newContent = content.substring(0, start) + command.template + content.substring(end);
+          setContent(newContent);
+          setCursorPosition(start + command.template.length);
+          onUpdate(note._id, { content: newContent });
+        }
+      } else {
+        insertText(command.template);
+      }
     } else if (command.type === 'metadata' && command.metadata) {
       onUpdate(note._id, { [command.metadata.type || '']: command.metadata.value });
     }
     setShowCommands(false);
   };
+
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (shortcutManager.current) {
@@ -254,55 +316,78 @@ export function NoteArea({
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <NoteHeader
-        note={note}
-        onUpdate={onUpdate}
-        onSave={onSave}
-        onBack={onBack}
-        isMobile={isMobile}
-        onRequestAIInsights={onRequestAIInsights}
-        currentContent={content}
-      />
-      <div className="flex-1 overflow-auto p-4">
-        <textarea
-          ref={textAreaRef}
-          className="w-full h-full resize-none outline-none bg-transparent"
-          value={content}
-          onChange={(e) => handleContentChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type / for commands, @ to reference content, # to add tags"
-          aria-label="Note content"
+    <div className="flex flex-col h-full w-full overflow-hidden">
+      {/* Fixed Header */}
+      <div className="flex-shrink-0">
+        <NoteHeader
+          note={note}
+          onUpdate={onUpdate}
+          onSave={onSave}
+          onBack={onBack}
+          isMobile={isMobile}
+          onRequestAIInsights={onRequestAIInsights}
+          currentContent={content}
         />
       </div>
-      <NoteReferences
-        references={references}
-        selectedInsight={selectedInsight}
-        setSelectedInsight={setSelectedInsight}
-        setShowFullAnalysis={setShowFullAnalysis}
-      />
-      <CommandMenus
-        showCommands={showCommands}
-        showMentions={showMentions}
-        showTags={showTags}
-        menuPosition={menuPosition}
-        searchTerm={searchTerm}
-        onCommandSelect={handleCommand}
-        onCloseCommands={() => {
-          setShowCommands(false);
-          setShowMentions(false);
-          setShowTags(false);
-        }}
-        textAreaRef={textAreaRef}
-        onUpdate={onUpdate}
-        noteId={note._id}
-      />
-      <FullAnalysisModal
-        showFullAnalysis={showFullAnalysis}
-        setShowFullAnalysis={setShowFullAnalysis}
-        selectedInsight={selectedInsight}
-        references={references}
-      />
+      
+      {/* Scrollable Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden relative">
+        {/* Sticky Ideas Panel */}
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
+          <IdeasPanel
+            noteId={note._id}
+            userId={note.userId}
+            platform={note.platform || 'general'}
+            mode="note"
+            limit={5}
+            onApplyIdea={(ideaContent) => {
+              if (textAreaRef.current) {
+                const start = textAreaRef.current.selectionStart || 0;
+                const end = textAreaRef.current.selectionEnd || 0;
+                const newContent = content.substring(0, start) + ideaContent + content.substring(end);
+                setContent(newContent);
+                setCursorPosition(start + ideaContent.length);
+                onUpdate(note._id, { content: newContent });
+              }
+            }}
+          />
+        </div>
+        
+        {/* Text Area Container with proper scrolling */}
+        <div className="flex-1 overflow-auto p-3 flex flex-col">
+          <textarea
+            ref={textAreaRef}
+            value={content}
+            onChange={e => handleContentChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="flex-1 w-full min-h-[300px] resize-none p-3 text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-300 bg-white"
+            placeholder="Type your note here..."
+            disabled={aiLoading}
+          />
+        </div>
+        
+        {/* AI Loading Overlay */}
+        {aiLoading && (
+          <div className="absolute z-50 flex items-center justify-center w-full h-full bg-white bg-opacity-70" style={{top:0,left:0}}>
+            <span className="text-lg font-medium text-primary-600">Generating with AI...</span>
+          </div>
+        )}
+        
+        {/* Command Menu */}
+        {showCommands && (
+          <CommandMenu
+            key={commandMenuKey}
+            onSelect={handleCommand}
+            onClose={() => setShowCommands(false)}
+            searchTerm={searchTerm}
+            position={menuPosition}
+            noteId={note._id}
+            userId={note.userId}
+          />
+        )}
+      </div>
+      
+      {/* Keyboard Shortcuts Button */}
       <button
         onClick={onToggleShortcuts}
         className="fixed bottom-4 left-4 p-2 bg-white/80 backdrop-blur-sm rounded-full shadow-lg border border-gray-200 hover:bg-white transition-colors"
@@ -313,3 +398,4 @@ export function NoteArea({
     </div>
   );
 }
+    

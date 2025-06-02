@@ -4,6 +4,7 @@ import type { Message } from '@/app/types/chat'
 import type { InteractiveOption } from './interactive-response'
 import { MessageSquare } from 'lucide-react'
 import { ExpandableInsights } from './expandable-insights'
+import { MarkdownRenderer } from './markdown-renderer'
 
 interface MessageBubbleProps {
   message: Message
@@ -83,9 +84,12 @@ export function MessageBubble({
 
               {/* Message Content */}
               <div className="flex-1 min-w-0">
-                <p className="whitespace-pre-wrap break-words text-xs sm:text-sm leading-relaxed overflow-hidden">
-                  {message.chat_response || message.content}
-                </p>
+                <div className="break-words overflow-hidden">
+                  <MarkdownRenderer 
+                    content={message.chat_response || message.content} 
+                    className=""
+                  />
+                </div>
 
                 {message.status === 'failed' && onRetry && (
                   <button

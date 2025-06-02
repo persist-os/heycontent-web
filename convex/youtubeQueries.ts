@@ -217,26 +217,44 @@ export const getVideoAnalysis = query({
         .withIndex("by_videoId", (q) => q.eq("videoId", videoId))
         .filter((q) => q.eq(q.field("userId"), userId))
         .first();
+
+      if (!video) {
+        console.log(`[getVideoAnalysis] No video found for videoId=${videoId} and userId=${userId}`);
+        return null;
+      }
       console.log('[getVideoAnalysis] Video object found:', {
         videoId: video.videoId,
         userId: video.userId,
         _id: video._id,
+        hasAnalysisMarkdown: !!video.analysisMarkdown,
+        hasAnalysis: !!video.analysis,
       });
-      if (video && Object.prototype.hasOwnProperty.call(video, 'analysis')) {
+      if (video.analysisMarkdown || video.analysis) {
         console.log(`[getVideoAnalysis] Returning analysis for videoId=${videoId}`);
+
+        // Prepare the analysis object - prefer markdown over JSON
+        let analysisToReturn;
+        if (video.analysisMarkdown) {
+          // Return markdown as a string directly
+          analysisToReturn = video.analysisMarkdown;
+          console.log(`[getVideoAnalysis] Returning markdown analysis for videoId=${videoId}`);
+        } else if (video.analysis) {
+          // Return JSON analysis
+          analysisToReturn = video.analysis;
+          console.log(`[getVideoAnalysis] Returning JSON analysis for videoId=${videoId}`);
+        }
+
         return {
           _id: video._id,
           videoId: video.videoId,
           userId: video.userId,
-          analysis: video.analysis,
+          analysis: analysisToReturn,
+          analysisMarkdown: video.analysisMarkdown,
           updatedAt: video.updatedAt || video._creationTime
         };
       }
-      if (video) {
-        console.log(`[getVideoAnalysis] Video found but no analysis field for videoId=${videoId}`);
-      } else {
-        console.log(`[getVideoAnalysis] No video found for videoId=${videoId} and userId=${userId}`);
-      }
+
+      console.log(`[getVideoAnalysis] No analysis found for videoId=${videoId}`);
       return null;
     } catch (error) {
       console.error('Error retrieving video analysis:', error);

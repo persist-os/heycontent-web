@@ -1,57 +1,80 @@
+// Extend Window interface for debug globals
+declare global {
+  interface Window {
+    __FIREBASE_AUTH_IN_EFFECT?: boolean;
+    __FIREBASE_DEBUG?: boolean;
+  }
+}
+
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/app/lib/firebase';
+import { getFirebaseAuth } from '@/app/lib/firebase';
 
 interface AuthContextType {
-  user: User | null;
-  loading: boolean;
+  firebaseUser: User | null;
+  authLoading: boolean;
   error: string | null;
   getToken: () => Promise<string>;
 }
 
 const AuthContext = createContext<AuthContextType>({
-  user: null,
-  loading: true,
+  firebaseUser: null,
+  authLoading: true,
   error: null,
   getToken: async () => { throw new Error('AuthContext not initialized'); }
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isRedirecting = useRef(false);
 
   useEffect(() => {
     // Skip auth state changes on server side
     if (typeof window === 'undefined') {
-      setLoading(false);
+      setAuthLoading(false);
       return;
     }
-
-    if (!auth) {
-      setError('Firebase auth not initialized');
-      setLoading(false);
-      return;
-    }
-
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (user) => {
-        if (isRedirecting.current) return;
-
-        setUser(user);
-        setLoading(false);
-        setError(null);
-      },
-      (error) => {
-        console.error('Auth state error:', error);
-        setError(error.message);
-        setLoading(false);
+    window.__FIREBASE_AUTH_IN_EFFECT = true;
+    let unsubscribe = () => {};
+    try {
+      const auth = getFirebaseAuth();
+      // Debug: log when auth instance is acquired
+      if (window.__FIREBASE_DEBUG) {
+        // eslint-disable-next-line no-console
+        console.log('[AUTH-CONTEXT] Firebase Auth instance acquired');
       }
-    );
-
-    return () => unsubscribe();
+      unsubscribe = onAuthStateChanged(
+        auth,
+        (user) => {
+          if (isRedirecting.current) return;
+          if (window.__FIREBASE_DEBUG) {
+            // eslint-disable-next-line no-console
+            console.log('[AUTH-CONTEXT] onAuthStateChanged fired. User:', user);
+          }
+          setFirebaseUser(user);
+          setAuthLoading(false);
+          setError(null);
+        },
+        (error) => {
+          console.error('[AUTH-CONTEXT] Auth state error:', error);
+          setError(error.message);
+          setAuthLoading(false);
+        }
+      );
+    } catch (e) {
+      setError('Firebase auth not initialized');
+      setAuthLoading(false);
+      if (window.__FIREBASE_DEBUG) {
+        // eslint-disable-next-line no-console
+        console.error('[AUTH-CONTEXT] Error initializing Firebase Auth:', e);
+      }
+    }
+    return () => {
+      unsubscribe();
+      window.__FIREBASE_AUTH_IN_EFFECT = false;
+    };
   }, []);
 
   const safeRedirect = (path: string) => {
@@ -61,12 +84,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // getToken returns the Firebase ID token for the current user
   const getToken = async () => {
-    if (!user) throw new Error('User not authenticated');
-    return await user.getIdToken();
+    if (!firebaseUser) throw new Error('User not authenticated');
+    return await firebaseUser.getIdToken();
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, getToken }}>
+    <AuthContext.Provider value={{ firebaseUser, authLoading, error, getToken }}>
       {children}
     </AuthContext.Provider>
   );

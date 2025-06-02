@@ -20,9 +20,13 @@ export async function GET(request: Request) {
     const authHeader = request.headers.get('Authorization');
     if (authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.substring(7);
+      console.log(`[${requestId}] Token found in Authorization header`);
     } else {
       const cookieStore = await cookies();
       token = cookieStore.get('firebase-auth-token')?.value;
+      if (token) {
+        console.log(`[${requestId}] Token found in firebase-auth-token cookie`);
+      }
     }
     if (!token) {
       console.warn(`[${requestId}] Authentication failed: No token found in header or cookie`);
@@ -32,9 +36,10 @@ export async function GET(request: Request) {
     // Get the user ID from the token using local utility
     const userId = await getUserIdFromToken(token);
     if (!userId) {
-      console.warn(`[${requestId}] Invalid token: Could not get user ID`);
+      console.warn(`[${requestId}] Invalid token: Could not get user ID. Token: ${token.substring(0, 10)}...`);
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
+    console.log(`[${requestId}] Resolved userId: ${userId}`);
 
     // Fetch conversations from Convex
     const conversations = await fetchQuery(api.chatQueries.getHistory, {

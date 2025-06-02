@@ -4,9 +4,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { getAuth, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { FirebaseApp } from 'firebase/app';
-import { app, getFirebaseApp, getFirebaseAuth } from '@/app/lib/firebase';
 import { getApiKey } from '@/app/lib/api-helpers';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -18,8 +15,8 @@ import { EmailTypeFilter } from '../filters/EmailTypeFilter';
 import { GmailModal } from '../modals/GmailModal';
 import { InstagramModal } from '../modals/InstagramModal';
 import { YoutubeModal } from '../modals/YoutubeModal';
-import { LoadingState } from '../loading/LoadingState';
 import { Header } from '../header/Header';
+import ErrorState from './ErrorState';
 
 import {
   AnyContentItem, TimeRange, SortOption, PlatformType,
@@ -28,12 +25,8 @@ import {
   PlatformFilterType
 } from '../types';
 
-import {
-  sortAndFilterContent,
-  getMockGmailItems,
-  getMockInstagramItem,
-  getMockYouTubeItem
-} from '../utils';
+import { sortAndFilterContent } from '../utils';
+import { useAuth } from '@/app/context/auth-context';
 
 // Instagram analysis type
 interface InstagramAnalysis {
@@ -55,9 +48,12 @@ interface InstagramAnalysis {
   } | null;
 }
 
-const typedApp: FirebaseApp | undefined = app;
 
 export function ContentAnalyticsScreen() {
+  const { firebaseUser, authLoading } = useAuth();
+  const userId = firebaseUser?.uid;
+  const router = useRouter();
+
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformType>('all');
   const [selectedEmailType, setSelectedEmailType] = useState<TEmailTypeFilter>('all');
   const [timeRange, setTimeRange] = useState<TimeRange>('7d');
@@ -66,116 +62,38 @@ export function ContentAnalyticsScreen() {
   const [sortBy, setSortBy] = useState<SortOption>('date');
   const [filterType, setFilterType] = useState<PlatformFilterType>('all');
   const [selectedContent, setSelectedContent] = useState<AnyContentItem | null>(null);
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
   const [instagramAnalysis, setInstagramAnalysis] = useState<string | InstagramAnalysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  const router = useRouter();
+  // Debug logs
+  console.log('[Debug] firebaseUser:', firebaseUser);
+  console.log('[Debug] userId:', userId);
+  console.log('[Debug] authLoading:', authLoading);
 
-  useEffect(() => {
-    if (typedApp) {
-      const auth = getAuth(typedApp);
-      const unsubscribe = onAuthStateChanged(auth, (user) => {
-        setFirebaseUser(user);
-        setAuthLoading(false);
-      });
-      return () => unsubscribe();
-    } else {
-      console.error("Firebase app not initialized.");
-      setAuthLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (filterRef && !filterRef.contains(event.target as Node)) {
-        setIsFilterOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [filterRef]);
-
+  // Convex queries (never skip, just allow undefined)
   const youtubeVideos = useQuery(
     api.youtubeQueries.listUserYouTubeVideos,
-    !authLoading && firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
+    userId ? { userId } : undefined
   );
-
   const gmailThreads = useQuery(
     api.gmailQueries.listUserGmailThreads,
-    !authLoading && firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
+    userId ? { userId } : undefined
   );
-
   const instagramPosts = useQuery(
     api.instagramQueries.getAllInstagramPosts,
-    !authLoading && firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
+    userId ? { userId } : undefined
   );
 
   useEffect(() => {
-    console.log('YouTube Videos from Convex:', youtubeVideos);
-    console.log('Gmail Threads from Convex:', gmailThreads);
-    console.log('Instagram Posts from Convex:', instagramPosts);
+    console.log('[Debug] YouTube Videos:', youtubeVideos);
+    console.log('[Debug] Gmail Threads:', gmailThreads);
+    console.log('[Debug] Instagram Posts:', instagramPosts);
   }, [youtubeVideos, gmailThreads, instagramPosts]);
 
-  useEffect(() => {
-    if (selectedPlatform === 'instagram' && !instagramAnalysis && firebaseUser?.uid) {
-      fetchInstagramAnalysis();
-    }
-  }, [selectedPlatform, instagramAnalysis, firebaseUser]);
-
-  const fetchInstagramAnalysis = async () => {
-    try {
-      setIsAnalyzing(true);
-      const apiKey = await getApiKey();
-      if (!apiKey) throw new Error('Missing API key');
-
-      const response = await fetch('/api/social/instagram/analystics', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({ user_id: firebaseUser?.uid })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Instagram analysis API error:', {
-          status: response.status,
-          statusText: response.statusText,
-          body: errorText
-        });
-        throw new Error(`API error: ${response.status} ${response.statusText}`);
-      }
-
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error(`Invalid content type: ${contentType}`);
-      }
-
-      const data = await response.json();
-      if (data?.analysis?.full_analysis?.content) {
-        setInstagramAnalysis(data.analysis.full_analysis.content);
-      } else if (data?.analysis?.content) {
-        setInstagramAnalysis(data.analysis.content);
-      } else if (data?.content) {
-        setInstagramAnalysis(data.content);
-      } else {
-        setInstagramAnalysis('Unable to generate analysis at this time.');
-      }
-    } catch (err) {
-      console.error('Instagram analysis fetch error:', err);
-      setInstagramAnalysis('Error generating analysis. Please try again.');
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const mappedYouTubeItems = useMemo(() => {
-    if (Array.isArray(youtubeVideos)) {
-      return youtubeVideos.map((video: any): YouTubeContentItem => ({
+  // Map YouTube items
+  const mappedYouTubeItems: YouTubeContentItem[] = useMemo(() => {
+    if (youtubeVideos && Array.isArray(youtubeVideos)) {
+      return youtubeVideos.map((video: any) => ({
         id: video._id || video.id,
         platform: 'youtube',
         publishedAt: video.publishedAt || '',
@@ -254,14 +172,30 @@ export function ContentAnalyticsScreen() {
     ...mappedInstagramItems,
   ], [mappedYouTubeItems, mappedGmailItems, mappedInstagramItems]);
 
+  // Platform-specific arrays using mapped items
+  const youtubeItemsArray = mappedYouTubeItems;
+  const gmailItemsArray = mappedGmailItems;
+  const instagramItemsArray = mappedInstagramItems;
+
+  // Apply filtering based on selected platform
   const filteredContent = useMemo(() => {
-    if (selectedPlatform === 'youtube') return mappedYouTubeItems;
-    if (selectedPlatform === 'gmail') return mappedGmailItems;
-    if (selectedPlatform === 'instagram') return mappedInstagramItems;
-    return sortAndFilterContent(allContentItems, selectedPlatform, selectedEmailType, sortBy, timeRange);
-  }, [selectedPlatform, mappedYouTubeItems, mappedGmailItems, mappedInstagramItems, allContentItems, sortBy, timeRange, selectedEmailType]);
+    if (selectedPlatform === 'youtube') return youtubeItemsArray;
+    if (selectedPlatform === 'gmail') return gmailItemsArray;
+    if (selectedPlatform === 'instagram') return instagramItemsArray;
+    return sortAndFilterContent(
+      allContentItems,
+      selectedPlatform,
+      selectedEmailType,
+      sortBy,
+      timeRange
+    );
+  }, [selectedPlatform, youtubeItemsArray, gmailItemsArray, instagramItemsArray, allContentItems, selectedEmailType, sortBy, timeRange]);
+
+  // Final display items
+  const displayItems = filteredContent;
 
   const discussContent = (item: AnyContentItem) => {
+    // Create a context object with comprehensive content info
     const context = {
       platform: item.platform,
       contentId: item.id,
@@ -269,8 +203,20 @@ export function ContentAnalyticsScreen() {
       title: item.platform === 'youtube'
         ? (item as YouTubeContentItem).content.title
         : item.platform === 'instagram'
-          ? (item as InstagramContentItem).content.text
-          : (item as GmailContentItem).content.subject,
+          ? (item as InstagramContentItem).content?.text
+          : (item as GmailContentItem).content?.subject,
+      // Include thumbnail URL for visual context
+      thumbnailUrl: item.platform === 'youtube' 
+        ? (item as YouTubeContentItem).content?.thumbnailUrl || `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`
+        : item.platform === 'instagram'
+          ? (item as InstagramContentItem).content?.mediaUrl
+          : undefined,
+      // Include published date
+      publishedAt: item.publishedAt,
+      // Include metrics for context
+      metrics: item.metrics,
+      // Include full content object for additional context
+      content: item.content
     };
     const encodedContext = encodeURIComponent(JSON.stringify(context));
     router.push(`/dashboard/chat?contentContext=${encodedContext}`);
@@ -283,9 +229,18 @@ export function ContentAnalyticsScreen() {
     setIsFilterOpen(false);
   };
 
-  if (authLoading) return <LoadingState type="auth" />;
-  if (!firebaseUser) return <LoadingState type="error" />;
-  if (youtubeVideos === undefined || gmailThreads === undefined) return <LoadingState type="content" />;
+  // Show a small spinner if auth is loading, but never gate the whole screen
+  // Optionally, you can show a subtle spinner in the header or avatar area
+
+  // Show error state if not logged in
+  if (!firebaseUser) {
+    return <ErrorState message="Please log in to view your content." />;
+  }
+
+  // Show error state if data failed to load
+  if (youtubeVideos === undefined || gmailThreads === undefined) {
+    return <ErrorState message="We couldn't load your content. Try again later." />;
+  }
 
   return (
     <div className="relative">

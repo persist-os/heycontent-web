@@ -8,11 +8,12 @@ interface CheckoutFormProps {
   planId: string;
   onSuccess?: () => void;
   onCancel?: () => void;
+  returnUrl?: string;
 }
 
 // Using direct Stripe approach to avoid React integration issues
-export const CheckoutForm: React.FC<CheckoutFormProps> = ({ planId, onSuccess, onCancel }) => {
-  const { user } = useAuth();
+export const CheckoutForm: React.FC<CheckoutFormProps> = ({ planId, onSuccess, onCancel, returnUrl }) => {
+  const { firebaseUser } = useAuth();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const checkoutMountedRef = useRef<boolean>(false);
@@ -46,7 +47,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ planId, onSuccess, o
   }, []);
 
   return (
-    <div className="min-h-[400px] bg-white dark:bg-gray-900 rounded-lg shadow-lg p-4">
+    <div className="w-full bg-white dark:bg-gray-900 rounded-lg shadow-lg p-2 sm:p-4">
       
       {error && (
         <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-md">
@@ -60,7 +61,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ planId, onSuccess, o
           </button>
         </div>
       )}
-      <CheckoutCard planId={planId} />
+      <CheckoutCard planId={planId} returnUrl={returnUrl} />
     </div>
   );
 };
