@@ -728,6 +728,23 @@ app.get("/api/users/:id/youtube/channels/:channelId/videos", async (c) => {
   }
 });
 
+// Get all video analyses for a user
+app.get("/api/users/:id/youtube/video-analyses", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  
+  try {
+    const analyses = await ctx.runQuery(api.youtubeQueries.getVideoAnalyses, { userId });
+    return c.json({ success: true, data: analyses });
+  } catch (error) {
+    console.error("Failed to get video analyses:", error);
+    return c.json({ 
+      success: false, 
+      error: `Failed to get video analyses: ${error instanceof Error ? error.message : 'Unknown error'}`
+    }, 500);
+  }
+});
+
 // INSTAGRAM ROUTES
 
 // Instagram data deletion request URL
