@@ -6,6 +6,8 @@ import { cors } from "hono/cors";
 import { Id } from "./_generated/dataModel";
 import * as usageEventsApi from "./usageEvents";
 
+import { registerUserRoutes } from "./http_actions/user";
+
 const app: HonoWithConvex<ActionCtx> = new Hono();
 
 // Add global logging middleware
@@ -18,85 +20,11 @@ app.use('*', async (c, next) => {
 // Add CORS middleware
 app.use("*", cors());
 
+//Register routes
+registerUserRoutes(app);
+app.get("/api/ping", (c) => c.json({ pong: true }));
 // USER ROUTES
-
-// List all users
-app.get("/api/users", async (c) => {
-  const ctx = c.env;
-  const users = await ctx.runQuery(api.userQueries.list, {});
-  return c.json(users);
-});
-
-// Get user by ID
-app.get("/api/users/:id", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const user = await ctx.runQuery(api.userQueries.getUser, { userId });
-  return c.json(user);
-});
-
-// Get user by email
-app.get("/api/users/email/:email", async (c) => {
-  const ctx = c.env;
-  const email = c.req.param("email");
-  const user = await ctx.runQuery(api.userQueries.getUserByEmail, { email });
-  return c.json(user);
-});
-
-// NEW LOOKUP ROUTES
-app.get("/api/users/lookup/customer/:customerId", async (c) => {
-  const ctx = c.env;
-  const customerId = c.req.param("customerId");
-  const user = await ctx.runQuery(api.userQueries.getUserByStripeCustomerId, { stripeCustomerId: customerId });
-  if (user && user.userId) {
-    return c.json({ userId: user.userId.toString() });
-  }
-  return c.json({ userId: null, message: "User not found or userId field missing for the given Stripe Customer ID" }, 404); 
-});
-
-app.get("/api/users/lookup/subscription/:subscriptionId", async (c) => {
-  const ctx = c.env;
-  const subscriptionId = c.req.param("subscriptionId");
-  const subscription = await ctx.runQuery(api.userQueries.getUserByStripeSubscriptionId, { stripeSubscriptionId: subscriptionId });
-  if (subscription && subscription.userId) {
-    return c.json({ userId: subscription.userId.toString() });
-  }
-  return c.json({ userId: null, message: "User not found for the given Stripe Subscription ID" }, 404); 
-});
-
-// Access a persona
-app.get("/api/users/:id/personas", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const persona = await ctx.runQuery(api.personas.getPersona, { userId });
-  return c.json(persona);
-});
-
-// Conversations
-app.post("/api/users/:id/create_conversation", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const { title, messages } = await c.req.json();
-  const result = await ctx.runMutation(api.chatMutations.createConversation, {
-    userId,
-    title,
-    messages,
-  });
-  return c.json(result);
-});
-
-// Add message to conversation
-app.post("/api/users/:id/add_message_to_conversation", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const { conversationId, message } = await c.req.json();
-  const result = await ctx.runMutation(api.chatMutations.addMessageToConversation, {
-    userId,
-    conversationId,
-    message,
-  });
-  return c.json(result);
-});
+// User-related routes have been moved to convex/routes/user.ts
 
 // API KEY ROUTES
 

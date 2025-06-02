@@ -254,3 +254,24 @@ export const deleteUserAndData = mutation({
     return summary;
   },
 });
+
+export const update_user = mutation({
+  args: {
+    userId: v.string(),
+    updates: v.object({
+      name: v.optional(v.string()),
+      email: v.optional(v.string()),
+      image: v.optional(v.string()),
+      // Add more fields as needed
+    }),
+  },
+  handler: async ({ db }, { userId, updates }) => {
+    const user = await db
+      .query("users")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .first();
+    if (!user) throw new Error("User not found");
+    await db.patch(user._id, { ...updates, updatedAt: Date.now() });
+    return { success: true, userId: user._id };
+  },
+});
