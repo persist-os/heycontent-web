@@ -2,7 +2,8 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/app/context/auth-context';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { LogOut, Users, Bell, Globe, Sliders, Database, CreditCard } from 'lucide-react'
@@ -18,6 +19,7 @@ import { onAuthStateChanged } from 'firebase/auth'
 
 const SettingsScreen = () => {
   const router = useRouter()
+  const { firebaseUser, authLoading } = useAuth()
   const [isFirstTimeSetup, setIsFirstTimeSetup] = useState(false)
   const [isResending, setIsResending] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)

@@ -37,8 +37,8 @@ interface CommandMenuProps {
 type PromptStep = 'platform' | 'postType' | 'aiPrompts';
 
 export function CommandMenu({ onSelect, onClose, searchTerm = '', position, userId: propUserId, noteId: propNoteId }: CommandMenuProps) {
-  const { user } = useAuth();
-  const userId = propUserId || user?.uid;
+  const { firebaseUser } = useAuth();
+  const userId = propUserId || firebaseUser?.uid;
   const noteId = propNoteId;
   // Reset state to initial step when menu mounts
   useEffect(() => {

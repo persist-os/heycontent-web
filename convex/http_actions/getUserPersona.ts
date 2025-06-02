@@ -1,6 +1,7 @@
 import { api } from "../_generated/api";
+import { httpAction } from "../_generated/server";
 
-export default async function httpRequest(ctx, request) {
+export default httpAction(async (ctx, request) => {
   if (request.method !== "GET") {
     return new Response("Method Not Allowed", { status: 405 });
   }
@@ -9,9 +10,9 @@ export default async function httpRequest(ctx, request) {
   if (!userId) {
     return new Response(JSON.stringify({ error: "Missing userId" }), { status: 400 });
   }
-  const persona = await ctx.runQuery(api.personas.getPersona, { userId });
-  return new Response(JSON.stringify(persona), {
+  const personas = await ctx.runQuery(api.personaQueries.getPersonasByUser, { creatorId: userId });
+  return new Response(JSON.stringify(personas), {
     headers: { "Content-Type": "application/json" },
     status: 200,
   });
-}
+});

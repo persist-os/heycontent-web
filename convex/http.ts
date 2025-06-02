@@ -5,8 +5,14 @@ import { api } from "./_generated/api";
 import { cors } from "hono/cors";
 import { Id } from "./_generated/dataModel";
 import * as usageEventsApi from "./usageEvents";
+import { httpRouter } from "convex/server";
+import getUserById from "./http_actions/getUserById";
+import createUser from "./http_actions/createUser";
+import updateUser from "./http_actions/updateUser";
+import getUserByEmail from "./http_actions/getUserByEmail";
+import getUserPersona from "./http_actions/getUserPersona";
+import ping from "./http_actions/ping";
 
-import { registerUserRoutes } from "./http_actions/user";
 
 const app: HonoWithConvex<ActionCtx> = new Hono();
 
@@ -21,7 +27,6 @@ app.use('*', async (c, next) => {
 app.use("*", cors());
 
 //Register routes
-registerUserRoutes(app);
 app.get("/api/ping", (c) => c.json({ pong: true }));
 // USER ROUTES
 // User-related routes have been moved to convex/routes/user.ts
@@ -1075,6 +1080,45 @@ app.post("/api/users/:id/usage/reset", async (c) => {
     includedRequests,
   });
   return c.json(result);
+});
+
+// === Convex httpRouter for new user HTTP actions ===
+const http = httpRouter();
+
+http.route({
+  path: "/api/http/getUserById",
+  method: "GET",
+  handler: getUserById,
+});
+
+http.route({
+  path: "/api/http/createUser",
+  method: "POST",
+  handler: createUser,
+});
+
+http.route({
+  path: "/api/http/updateUser",
+  method: "PATCH",
+  handler: updateUser,
+});
+
+http.route({
+  path: "/api/http/getUserByEmail",
+  method: "GET",
+  handler: getUserByEmail,
+});
+
+http.route({
+  path: "/api/http/getUserPersona",
+  method: "GET",
+  handler: getUserPersona,
+});
+
+http.route({
+  path: "/api/http/ping",
+  method: "GET",
+  handler: ping,
 });
 
 const router = new HttpRouterWithHono(app);

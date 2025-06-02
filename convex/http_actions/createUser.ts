@@ -1,6 +1,7 @@
 import { api } from "../_generated/api";
+import { httpAction } from "../_generated/server";
 
-export default async function httpRequest(ctx, request) {
+export default httpAction(async (ctx, request) => {
   if (request.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405 });
   }
@@ -16,4 +17,4 @@ export default async function httpRequest(ctx, request) {
     headers: { "Content-Type": "application/json" },
     status: 201,
   });
-}
+});

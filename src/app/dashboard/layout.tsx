@@ -12,16 +12,16 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const { user, loading } = useAuth()
+  const { firebaseUser, authLoading } = useAuth()
   const { isExpanded, setIsExpanded } = useSidebar()
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!authLoading && !firebaseUser) {
       window.location.href = '/auth/login'
     }
-  }, [user, loading])
+  }, [firebaseUser, authLoading])
 
-  if (loading) {
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
@@ -29,7 +29,7 @@ export default function DashboardLayout({
     )
   }
 
-  if (!user) {
+  if (!firebaseUser) {
     return null
   }
 

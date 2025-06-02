@@ -10,10 +10,11 @@ import {
   Star
 } from 'lucide-react'
 import { ChatHistory } from '@/app/types/chat'
+import { getApiKey } from '@/app/lib/api-helpers'
 
 export default function HistoryPage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { firebaseUser } = useAuth()
   const [chats, setChats] = useState<ChatHistory[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [isLoading, setIsLoading] = useState(true)
@@ -21,9 +22,12 @@ export default function HistoryPage() {
   // Fetch chats
   useEffect(() => {
     const fetchChats = async () => {
-      if (!user?.uid) return
+      if (!firebaseUser?.uid) return
       try {
-        const response = await fetch('/api/chat/history')
+        const apiKey = await getApiKey();
+        const response = await fetch('/api/chat/history', {
+          headers: { Authorization: `Bearer ${apiKey}` },
+        });
         const data = await response.json()
         if (data.conversations) {
           setChats(data.conversations)
@@ -36,7 +40,7 @@ export default function HistoryPage() {
     }
 
     fetchChats()
-  }, [user?.uid])
+  }, [firebaseUser?.uid])
 
   const handleDeleteChat = async (chatId: string) => {
     try {

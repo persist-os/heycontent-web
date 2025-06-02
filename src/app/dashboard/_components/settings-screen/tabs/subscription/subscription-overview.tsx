@@ -18,8 +18,9 @@ import { useQuery } from 'convex/react';
 import { api } from '@/../convex/_generated/api';
 
 export default function SubscriptionOverview() {
-  const { user } = useAuth();
-  const userId = user?.uid || '';
+  const { firebaseUser, authLoading } = useAuth();
+  const userId = firebaseUser?.uid || '';
+  console.log('[Debug] Can run Convex query?', !authLoading && !!firebaseUser?.uid);
 
   // API data state
   const [plans, setPlans] = useState<Record<string, any>>({});
@@ -51,7 +52,7 @@ export default function SubscriptionOverview() {
   // Fetch plans and subscription status from API
   useEffect(() => {
     async function fetchData() {
-      if (!user?.uid) return;
+      if (!firebaseUser?.uid) return;
       setLoading(true);
       try {
         const apiKey = await getApiKey();
@@ -107,7 +108,7 @@ export default function SubscriptionOverview() {
       }
     }
     fetchData();
-  }, [user?.uid]);
+  }, [firebaseUser?.uid]);
 
   // Map plan using plan_type whenever plans or status changes
   useEffect(() => {
@@ -213,7 +214,7 @@ export default function SubscriptionOverview() {
   
   // Handle manage subscription (redirect to Stripe Customer Portal)
   const handleManageSubscription = async () => {
-    if (!user?.uid) return;
+    if (!firebaseUser?.uid) return;
     setRedirectingToPortal(true);
     try {
       const apiKey = await getApiKey();
@@ -221,7 +222,7 @@ export default function SubscriptionOverview() {
         throw new Error('No API key found. Please log in again.');
       }
       const returnUrl = window.location.origin + '/settings';
-      const response = await createCustomerPortalSession(apiKey, user.uid, user.email, returnUrl);
+      const response = await createCustomerPortalSession(apiKey, firebaseUser.uid, firebaseUser.email, returnUrl);
       if (response.success && response.data?.url) {
         window.location.href = response.data.url;
       } else {
@@ -264,7 +265,7 @@ export default function SubscriptionOverview() {
           {/* Right Column: Account and Controls */}
           <div className="w-full md:w-1/3 max-w-md mx-auto md:mx-0 flex flex-col gap-6">
             <AccountSubscriptionCard
-              user={user}
+              user={firebaseUser}
               currentSubscription={currentSubscription}
               handleUpgrade={handleOpenUpgradeModal}
               handleOpenQuantityModal={() => handleOpenQuantityModal(currentSubscription?.quantity || 1)}
