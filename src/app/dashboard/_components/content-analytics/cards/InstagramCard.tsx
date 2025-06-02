@@ -6,6 +6,7 @@ import { InstagramContentItem } from '../types';
 
 export interface InstagramCardProps {
   item: InstagramContentItem;
+  userId: string;
   onDiscussContent: (item: InstagramContentItem) => void;
   onViewDetailedAnalytics: (item: InstagramContentItem) => void;
 }
@@ -20,7 +21,7 @@ export const InstagramCardPlaceholder: React.FC = () => (
   </Card>
 );
 
-export const InstagramCard: React.FC<InstagramCardProps> = ({ item, onDiscussContent, onViewDetailedAnalytics }) => {
+export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDiscussContent, onViewDetailedAnalytics }) => {
   const { content, metrics, publishedAt } = item;
   // @ts-ignore: allow children on content for carousel support
   const children = (item as any)?.children || (item as any)?.content?.children || [];
@@ -30,6 +31,13 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, onDiscussCon
   const handleImgError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     if (e.currentTarget.src !== window.location.origin + fallbackImg) {
       e.currentTarget.src = fallbackImg;
+    }
+  };
+
+  const handleRefresh = async () => {
+    try {
+
+    } catch (error) {
     }
   };
 
@@ -104,6 +112,12 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, onDiscussCon
             onClick={() => onDiscussContent(item)}
           >
             Discuss
+          </button>
+          <button
+            className="px-3 py-1 rounded bg-green-500 text-white hover:bg-green-600 text-xs"
+            onClick={handleRefresh}
+          >
+            Refresh
           </button>
         </div>
       </div>

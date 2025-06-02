@@ -19,8 +19,10 @@ export const getInstagramPost = query({
   handler: async (ctx, args) => {
     const post = await ctx.db
       .query("instagramPosts")
-      .withIndex("by_postId", q => q.eq("postId", args.postId))
-      .filter(q => q.eq(q.field("userId"), args.userId))
+      .withIndex("by_userId_postId", q => 
+        q.eq("userId", args.userId)
+         .eq("postId", args.postId)
+      )
       .first();
     return post;
   },
