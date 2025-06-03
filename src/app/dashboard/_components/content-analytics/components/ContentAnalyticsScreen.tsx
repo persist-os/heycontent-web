@@ -16,7 +16,7 @@ import { GmailModal } from '../modals/GmailModal';
 import { InstagramModal } from '../modals/InstagramModal';
 import { YoutubeModal } from '../modals/YoutubeModal';
 import { Header } from '../header/Header';
-import ErrorState from './ErrorState';
+import { LoadingState } from '../loading/LoadingState';
 
 // Import types and utilities
 import { AnyContentItem, TimeRange, SortOption, PlatformType, EmailTypeFilter as TEmailTypeFilter, YouTubeContentItem, InstagramContentItem, GmailContentItem, PlatformFilterType } from '../types';
@@ -215,14 +215,14 @@ export function ContentAnalyticsScreen() {
   // Show a small spinner if auth is loading, but never gate the whole screen
   // Optionally, you can show a subtle spinner in the header or avatar area
 
-  // Show error state if not logged in
+  // Show loading state if not logged in
   if (!firebaseUser) {
-    return <ErrorState message="Please log in to view your content." />;
+    return <LoadingState type="auth" />;
   }
 
-  // Show error state if data failed to load
+  // Show loading state if data failed to load
   if (youtubeVideos === undefined || gmailThreads === undefined) {
-    return <ErrorState message="We couldn’t load your content. Try again later." />;
+    return <LoadingState type="content" />;
   }
 
   // Platform-specific arrays using mapped items
