@@ -11,7 +11,24 @@ import createUser from "./http_actions/createUser";
 import updateUser from "./http_actions/updateUser";
 import getUserByEmail from "./http_actions/getUserByEmail";
 import getUserPersona from "./http_actions/getUserPersona";
-import ping from "./http_actions/ping";
+import insertApiKey from "./http_actions/insertApiKey";
+import validateApiKey from "./http_actions/validateApiKey";
+import getUserApiKeys from "./http_actions/getUserApiKeys";
+import deleteApiKey from "./http_actions/deleteApiKey";
+import createNote from "./http_actions/createNote";
+import getNote from "./http_actions/getNote";
+import getNotesByUser from "./http_actions/getNotesByUser";
+import updateNote from "./http_actions/updateNote";
+import deleteNote from "./http_actions/deleteNote";
+import getAnalysesByNote from "./http_actions/getAnalysesByNote";
+import linkAnalysisToNote from "./http_actions/linkAnalysisToNote";
+import createAnalysis from "./http_actions/createAnalysis";
+import getAnalysesByUser from "./http_actions/getAnalysesByUser";
+import getAnalysesByUserPlatform from "./http_actions/getAnalysesByUserPlatform";
+import getGmailTokens from "./http_actions/getGmailTokens";
+import updateGmailToken from "./http_actions/updateGmailToken";
+import saveGmailAccount from "./http_actions/saveGmailAccount";
+import storeGmailFullProfile from "./http_actions/storeGmailFullProfile";
 
 
 const app: HonoWithConvex<ActionCtx> = new Hono();
@@ -26,510 +43,19 @@ app.use('*', async (c, next) => {
 // Add CORS middleware
 app.use("*", cors());
 
-//Register routes
-app.get("/api/ping", (c) => c.json({ pong: true }));
+
 // USER ROUTES
-// User-related routes have been moved to convex/routes/user.ts
+// User-related routes have been moved to convex/http_actions/
 
 // API KEY ROUTES
-
-// Insert API key
-app.post("/api/api-keys", async (c) => {
-  const ctx = c.env;
-  const { user_id, key_hash, scopes, rate_tier } = await c.req.json();
-  if (!user_id || !key_hash) {
-    return c.json({ error: "Missing user_id or key_hash" }, 400);
-  }
-  try {
-    await ctx.runMutation(api.apiKeysMutations.insert_api_key, {
-      user_id,
-      key_hash,
-      scopes,
-      rate_tier,
-    });
-    return c.json({ success: true }, 201); // 201 Created status
-  } catch (error) {
-    console.error("Failed to create API key:", error);
-    return c.json({ success: false, error: "Failed to create API key" }, 500);
-  }
-});
-
-// Validate API key
-app.post("/api/api-keys/validate", async (c) => {
-  const ctx = c.env;
-  const { key_hash } = await c.req.json();
-
-  if (!key_hash) {
-    return c.json({ error: "Missing key_hash" }, 400);
-  }
-
-  try {
-    // Use the validate_api_key query
-    const userId = await ctx.runQuery(api.apiKeysQueries.validate_api_key, {
-      key_hash: key_hash, 
-    });
-
-    if (userId) {
-      // Key is valid, return success and potentially the user ID
-      return c.json({ success: true, userId });
-    } else {
-      // Key is invalid
-      return c.json({ success: false, error: "Invalid API key" }, 401); // 401 Unauthorized
-    }
-  } catch (error) {
-    console.error("Failed to validate API key:", error);
-    return c.json({ success: false, error: "Failed to validate API key" }, 500);
-  }
-});
-
-// Get user API keys
-app.get("/api/api-keys/user/:userId", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("userId");
-  
-  try {
-    const keys = await ctx.runQuery(api.apiKeysQueries.getUserKeys, { userId });
-    return c.json({ success: true, keys });
-  } catch (error) {
-    console.error("Failed to get user API keys:", error);
-    return c.json({ success: false, error: "Failed to retrieve API keys" }, 500);
-  }
-});
-
-// Delete API key endpoint (with request body)
-app.delete("/api/api-keys/delete", async (c) => {
-  const ctx = c.env;
-  const { key_id, user_id } = await c.req.json();
-  
-  if (!key_id) {
-    return c.json({ success: false, error: "Missing key_id" }, 400);
-  }
-  try {
-    await ctx.runAction(api.apiKeys.deleteByStringId, { keyIdStr: key_id });
-    return c.json({ success: true });
-  } catch (error) {
-    console.error("Failed to delete API key:", error);
-    return c.json({ success: false, error: "Failed to delete API key" }, 500);
-  }
-});
+// API-related routes have been moved to convex/http_actions/
 
 // NOTES ROUTES
-
-// CREATE NOTE ENDPOINT
-app.post("/api/notes", async (c) => {
-  const ctx = c.env;
-  try {
-    const body = await c.req.json();
-    const { userId, content, platform, type, templateInput, analysisId, title, important, tags } = body;
-    if (!userId || !content || !platform) {
-      return c.json({ error: "Missing required fields: userId, content, platform" }, 400);
-    }
-    const note = await ctx.runMutation(api.notes.createNote, {
-      userId,
-      content,
-      platform,
-      type,
-      templateInput,
-      analysisId,
-      title,
-      important,
-      tags,
-    });
-    return c.json({ success: true, note }, 201);
-  } catch (error: any) {
-    console.error("Failed to create note:", error);
-    if (error.data) {
-      return c.json({ success: false, error: "Failed to create note", details: error.data }, 500);
-    }
-    return c.json({ success: false, error: "Failed to create note", message: error.message || "Internal Server Error" }, 500);
-  }
-});
-
-app.get("/api/notes/:noteId", async (c) => {
-  const ctx = c.env;
-  const noteId = c.req.param("noteId");
-  const userId = c.req.query("userId"); // Get userId from query parameter
-
-  if (!userId) {
-    return c.json({ error: "Missing required query parameter: userId" }, 400);
-  }
-  if (!noteId) {
-    return c.json({ error: "Missing noteId in path" }, 400);
-  }
-
-  try {
-    const note = await ctx.runQuery(api.notes.getNote, { noteId, userId });
-    if (note) {
-      return c.json({ success: true, note });
-    } else {
-      return c.json({ success: false, error: "Note not found or unauthorized" }, 404);
-    }
-  } catch (error: any) {
-    console.error("Failed to get note:", error);
-    if (error.data) {
-        return c.json({ success: false, error: "Failed to get note", details: error.data }, 500);
-    }
-    return c.json({ success: false, error: "Failed to get note", message: error.message || "Internal Server Error" }, 500);
-  }
-});
-
-app.get("/api/users/:userId/notes", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("userId");
-
-  if (!userId) {
-    return c.json({ error: "Missing userId in path" }, 400);
-  }
-
-  try {
-    const notes = await ctx.runQuery(api.notes.getNotesByUser, { userId });
-    return c.json({ success: true, notes }); 
-  } catch (error: any) {
-    console.error("Failed to get notes by user:", error);
-    if (error.data) {
-        return c.json({ success: false, error: "Failed to get notes by user", details: error.data }, 500);
-    }
-    return c.json({ success: false, error: "Failed to get notes by user", message: error.message || "Internal Server Error" }, 500);
-  }
-});
-
-app.patch("/api/notes/:noteId", async (c) => {
-  const ctx = c.env;
-  const noteId = c.req.param("noteId"); // noteId from path
-  
-  try {
-    const { userId, updates } = await c.req.json(); // userId and updates from body
-
-    if (!userId) {
-      return c.json({ error: "Missing required field in body: userId" }, 400);
-    }
-    if (!updates || typeof updates !== 'object' || Object.keys(updates).length === 0) {
-      return c.json({ error: "Missing or empty 'updates' object in request body" }, 400);
-    }
-
-    const updatedNote = await ctx.runMutation(api.notes.updateNote, {
-      noteId: noteId as Id<"notes">, // Cast string from path to Id<"notes">
-      userId,
-      updates,
-    });
-    
-    return c.json({ success: true, note: updatedNote });
-
-  } catch (error: any) {
-    console.error("Failed to update note:", error);
-    if (error.message) {
-        if (error.message.includes("Note not found")) {
-            return c.json({ success: false, error: "Note not found" }, 404);
-        }
-        if (error.message.includes("Unauthorized")) {
-            return c.json({ success: false, error: "Unauthorized to update this note" }, 403);
-        }
-    }
-    if (error.data) { 
-        return c.json({ success: false, error: "Failed to update note", details: error.data }, 500);
-    }
-    return c.json({ success: false, error: "Failed to update note", message: error.message || "Internal Server Error" }, 500);
-  }
-});
-
-app.delete("/api/notes/:noteId", async (c) => {
-  const ctx = c.env;
-  const noteIdStr = c.req.param("noteId");
-  
-  try {
-    const { userId } = await c.req.json(); 
-
-    if (!userId) {
-      return c.json({ error: "Missing required field in body: userId" }, 400);
-    }
-
-    // Run the delete mutation (api.notes.deleteNote now expects noteId as v.id("notes"))
-    // Convex handles string to Id conversion, but we cast for TypeScript type safety.
-    const deleteResult = await ctx.runMutation(api.notes.deleteNote, {
-      noteId: noteIdStr as Id<"notes">,
-      userId,
-    });
-    
-    if (!deleteResult || !deleteResult.success) {
-      return c.json({ success: false, error: "Mutation reported failure to delete note" }, 500);
-    }
-
-    // Verification Step: Attempt to fetch the note to confirm deletion
-    // (api.notes.getNote expects noteId as string)
-    const stillExists = await ctx.runQuery(api.notes.getNote, { 
-      noteId: noteIdStr, 
-      userId // Pass userId, as getNote might require it for auth, though for a deleted note it should be null regardless
-    });
-
-    if (stillExists) {
-      console.error(`CRITICAL_VERIFICATION_FAILURE: Note ${noteIdStr} still found after supposed deletion.`);
-      return c.json({ success: false, error: "Note still found after deletion attempt, verification failed" }, 500);
-    }
-
-    // If we reach here, delete was successful and verification passed
-    return c.json({ success: true, message: "Note deleted successfully and verified" });
-
-  } catch (error: any) {
-    console.error("Failed to delete note or verify deletion:", error);
-    // Check if the error is from the initial delete attempt (e.g., note didn't exist)
-    if (error.message && error.message.includes("Note not found or unauthorized")) {
-        return c.json({ success: false, error: "Note not found or unauthorized to delete" }, 404);
-    }
-    // Generic error handling
-    if (error.data) {
-        return c.json({ success: false, error: "Failed to delete note", details: error.data }, 500);
-    }
-    return c.json({ success: false, error: "Failed to delete note", message: error.message || "Internal Server Error" }, 500);
-  }
-});
-
-// ANALYSES ROUTES
-app.get("/api/notes/:noteId/analyses", async (c) => {
-  const ctx = c.env;
-  const noteId = c.req.param("noteId");
-
-  if (!noteId) {
-    return c.json({ error: "Missing noteId in path" }, 400);
-  }
-
-  try {
-    const analyses = await ctx.runQuery(api.analyses.getAnalysesByNote, { noteId });
-    return c.json({ success: true, analyses });
-  } catch (error: any) {
-    console.error("Failed to get analyses for note:", error);
-    if (error.data) {
-        return c.json({ success: false, error: "Failed to get analyses for note", details: error.data }, 500);
-    }
-    return c.json({ success: false, error: "Failed to get analyses for note", message: error.message || "Internal Server Error" }, 500);
-  }
-});
-
-// Create a new analysis
-app.post("/api/analyses/create", async (c) => {
-  const ctx = c.env;
-  try {
-    const { noteId, platform, output, error } = await c.req.json();
-
-    if (!noteId || !platform) {
-      return c.json({ error: "Missing required fields: noteId and platform" }, 400);
-    }
-
-    // Only include 'error' if it is a string
-    const args: any = {
-      noteId,
-      platform,
-      output: output || {},
-      createdAt: Date.now(),
-    };
-    if (typeof error === "string") {
-      args.error = error;
-    }
-
-    const analysisId = await ctx.runMutation(api.analyses.createNoteAnalysis, args);
-    return c.json({ success: true, analysisId }, 201);
-  } catch (error: any) {
-    console.error("Failed to create analysis:", error);
-    if (error.data) {
-        return c.json({ success: false, error: "Failed to create analysis", details: error.data }, 500);
-    }
-    return c.json({ success: false, error: "Failed to create analysis", message: error.message || "Internal Server Error" }, 500);
-  }
-});
-
-// Get analyses by user
-app.get("/api/analyses/by-user/:userId", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("userId");
-  const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : undefined;
-
-  if (!userId) {
-    return c.json({ error: "Missing userId in path" }, 400);
-  }
-
-  try {
-    const analyses: any = await ctx.runQuery(api.analyses.getAnalysesByUser, { userId, limit });
-    // If Convex returns {success, data}, unwrap, else pass as is
-    let data = Array.isArray(analyses) ? analyses : (analyses.data ?? []);
-    return c.json({ success: true, data });
-  } catch (error: any) {
-    console.error("Failed to get analyses by user:", error);
-    if (error.data) {
-        return c.json({ success: false, error: "Failed to get analyses by user", details: error.data }, 500);
-    }
-    return c.json({ success: false, error: "Failed to get analyses by user", message: error.message || "Internal Server Error" }, 500);
-  }
-});
-
-// Get analyses by user and platform
-app.get("/api/analyses/by-user-platform", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.query("userId");
-  const platform = c.req.query("platform");
-  const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : undefined;
-
-  if (!userId || !platform) {
-    return c.json({ error: "Missing required query parameters: userId and platform" }, 400);
-  }
-
-  try {
-    const analyses: any = await ctx.runQuery(api.analyses.getAnalysesByUserPlatform, { 
-      userId, 
-      platform, 
-      limit 
-    });
-    let data = Array.isArray(analyses) ? analyses : (analyses.data ?? []);
-    return c.json({ success: true, data });
-  } catch (error: any) {
-    console.error("Failed to get analyses by user and platform:", error);
-    if (error.data) {
-        return c.json({ success: false, error: "Failed to get analyses by user and platform", details: error.data }, 500);
-    }
-    return c.json({ success: false, error: "Failed to get analyses by user and platform", message: error.message || "Internal Server Error" }, 500);
-  }
-});
-
-// Link analysis to note  
-app.post("/api/notes/:noteId/link-analysis", async (c) => {
-  const ctx = c.env;
-  const noteId = c.req.param("noteId");
-  
-  try {
-    const { analysisId, userId } = await c.req.json();
-
-    if (!analysisId || !userId) {
-      return c.json({ error: "Missing required fields: analysisId and userId" }, 400);
-    }
-
-    const result = await ctx.runMutation(api.analyses.linkAnalysisToNote, {
-      noteId,
-      analysisId,
-      userId,
-    });
-    
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("Failed to link analysis to note:", error);
-    if (error.message && error.message.includes("Note not found")) {
-        return c.json({ success: false, error: "Note not found" }, 404);
-    }
-    if (error.message && error.message.includes("Unauthorized")) {
-        return c.json({ success: false, error: "Unauthorized to link analysis to this note" }, 403);
-    }
-    if (error.data) {
-        return c.json({ success: false, error: "Failed to link analysis to note", details: error.data }, 500);
-    }
-    return c.json({ success: false, error: "Failed to link analysis to note", message: error.message || "Internal Server Error" }, 500);
-  }
-});
+// Notes-related routes have been moved to convex/http_actions/
 
 // GMAIL ROUTES
 
-// Gmail token endpoints
-// Get Gmail tokens for a user
-app.get("/api/users/:id/gmail/tokens", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  try {
-    const token = await ctx.runQuery(api.gmailQueries.getGmailToken, { userId });
-    return c.json({ success: true, token });
-  } catch (error) {
-    console.error("Failed to get Gmail tokens:", error);
-    return c.json({ success: false, error: "Failed to retrieve Gmail tokens" }, 500);
-  }
-});
-
-// Update Gmail token
-app.post("/api/users/:id/gmail/token", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const { accessToken, refreshToken, expiryDate, scope, tokenType } = await c.req.json();
-
-  if (!accessToken || !refreshToken || !expiryDate) {
-    return c.json({ success: false, error: "Missing required token fields" }, 400);
-  }
-
-  try {
-    await ctx.runMutation(api.gmailMutations.updateGmailToken, {
-      userId,
-      accessToken,
-      refreshToken,
-      expiryDate,
-      scope: scope || "",
-      tokenType: tokenType || "Bearer",
-    });
-    return c.json({ success: true });
-  } catch (error) {
-    console.error("Failed to store Gmail token:", error);
-    return c.json({ success: false, error: "Failed to store Gmail token" }, 500);
-  }
-});
-
-// Store Gmail account data
-app.post("/api/users/:id/gmail/account", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const { email, messagesTotal, threadsTotal, labelsTotal, historyId } = await c.req.json();
-  
-  if (!email) {
-    return c.json({ success: false, error: "Email is required" }, 400);
-  }
-
-  try {
-    // Use the saveProfileData mutation
-    const result = await ctx.runMutation(api.gmailMutations.saveProfileData, {
-      userId,
-      email,
-      profileData: {
-        messagesTotal,
-        threadsTotal,
-        historyId,
-        labelsTotal,
-      }
-    });
-    
-    return c.json({ 
-      success: true,
-      status: result.status,
-    });
-  } catch (error) {
-    console.error("Failed to store Gmail account data:", error);
-    return c.json({ 
-      success: false, 
-      error: `Failed to store Gmail account data: ${error instanceof Error ? error.message : 'Unknown error'}`
-    }, 500);
-  }
-});
-
-// Store full Gmail profile (account + messages + threads) for a user
-app.post("/api/users/:id/gmail/full_profile", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const { account, messages, threads } = await c.req.json();
-  
-  if (!account || !account.email) {
-    return c.json({ success: false, error: "Account and email are required" }, 400);
-  }
-  
-  try {
-    const result = await ctx.runMutation(api.gmailMutations.storeGmailFullProfile, {
-      userId,
-      account,
-      messages,
-      threads,
-    });
-    
-    return c.json({ 
-      success: true,
-      result
-    });
-  } catch (error) {
-    console.error("Error storing Gmail full profile:", error);
-    return c.json({ 
-      success: false, 
-      error: `Failed to store Gmail profile: ${error instanceof Error ? error.message : 'Unknown error'}`
-    }, 500);
-  }
-});
+// Gmail routes have been moved to convex/http_actions/
 
 // YOUTUBE ROUTES
 
@@ -1220,10 +746,43 @@ http.route({
 });
 
 http.route({
-  path: "/api/http/ping",
-  method: "GET",
-  handler: ping,
+  path: "/insertApiKey",
+  method: "POST",
+  handler: insertApiKey,
 });
 
+http.route({
+  path: "/validateApiKey",
+  method: "POST",
+  handler: validateApiKey,
+});
+
+http.route({
+  path: "/getUserApiKeys",
+  method: "GET",
+  handler: getUserApiKeys,
+});
+
+http.route({
+  path: "/deleteApiKey",
+  method: "DELETE",
+  handler: deleteApiKey,
+});
+
+http.route({ path: "/createNote", method: "POST", handler: createNote });
+http.route({ path: "/getNote", method: "GET", handler: getNote });
+http.route({ path: "/getNotesByUser", method: "GET", handler: getNotesByUser });
+http.route({ path: "/updateNote", method: "PATCH", handler: updateNote });
+http.route({ path: "/deleteNote", method: "DELETE", handler: deleteNote });
+http.route({ path: "/getAnalysesByNote", method: "GET", handler: getAnalysesByNote });
+http.route({ path: "/linkAnalysisToNote", method: "POST", handler: linkAnalysisToNote });
+http.route({ path: "/createAnalysis", method: "POST", handler: createAnalysis });
+http.route({ path: "/getAnalysesByUser", method: "GET", handler: getAnalysesByUser });
+http.route({ path: "/getAnalysesByUserPlatform", method: "GET", handler: getAnalysesByUserPlatform });
+http.route({ path: "/getGmailTokens", method: "GET", handler: getGmailTokens });
+http.route({ path: "/updateGmailToken", method: "POST", handler: updateGmailToken });
+http.route({ path: "/saveGmailAccount", method: "POST", handler: saveGmailAccount });
+http.route({ path: "/storeGmailFullProfile", method: "POST", handler: storeGmailFullProfile });
+
 const router = new HttpRouterWithHono(app);
-export default router;
+export default http;
