@@ -85,6 +85,8 @@ export default function PromptPlayground() {
                   isLoading={playground.isLoading}
                   userMessage={playground.userMessage}
                   setUserMessage={playground.setUserMessage}
+                  selectedPersona={playground.selectedPersona}
+                  setSelectedPersona={playground.setSelectedPersona}
                 />
                 <PromptTestResults
                   testOutput={playground.testOutput}

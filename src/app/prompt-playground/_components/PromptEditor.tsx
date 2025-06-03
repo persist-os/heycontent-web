@@ -28,6 +28,8 @@ interface PromptEditorProps {
   isLoading: boolean;
   userMessage: string;
   setUserMessage: (v: string) => void;
+  selectedPersona: string;
+  setSelectedPersona: (v: string) => void;
 }
 
 export function PromptEditor({
@@ -39,10 +41,10 @@ export function PromptEditor({
   onTest,
   isLoading,
   userMessage,
-  setUserMessage
+  setUserMessage,
+  selectedPersona,
+  setSelectedPersona
 }: PromptEditorProps) {
-  const [selectedPersona, setSelectedPersona] = useState('');
-
   return (
     <Card>
       <CardHeader>

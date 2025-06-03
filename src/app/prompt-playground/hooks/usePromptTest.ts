@@ -13,11 +13,14 @@ export function usePromptTest(selectedPrompt: Prompt | null, instructions: strin
     setError(null);
     setTestOutput('');
     try {
-      const { output, error } = await sendPlaygroundMessage({
+      const payload = {
         description: selectedPrompt.description,
         instructions: instructions,
         message: `Test this prompt for ${selectedPrompt.platform} as persona: ${selectedPersona || 'None'}`
-      });
+      };
+      console.log('DEBUG: Sending payload in handleTestPrompt:', payload);
+      
+      const { output, error } = await sendPlaygroundMessage(payload);
       if (error) {
         setError(error);
         setTestOutput('');
@@ -41,11 +44,14 @@ export function usePromptTest(selectedPrompt: Prompt | null, instructions: strin
     setError(null);
     setTestOutput('');
     try {
-      const { output, error } = await sendPlaygroundMessage({
+      const payload = {
         description: prompt.description,
         instructions: prompt.instructions,
         message: `Test this prompt for ${prompt.platform} as persona: ${selectedPersona || 'None'}`
-      });
+      };
+      console.log('DEBUG: Sending payload in handleTestPromptFromLibrary:', payload);
+      
+      const { output, error } = await sendPlaygroundMessage(payload);
       if (error) {
         setError(error);
         setTestOutput('');
