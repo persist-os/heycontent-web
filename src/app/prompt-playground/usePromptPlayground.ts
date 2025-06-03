@@ -5,6 +5,7 @@ import { usePromptTest } from './hooks/usePromptTest';
 import { usePromptFeedback } from './hooks/usePromptFeedback';
 import { usePersonas } from './hooks/usePersonas';
 import { usePromptEditRequest } from './hooks/usePromptEditRequest';
+import { useAgentProposal } from './hooks/useAgentProposal';
 
 export * from './hooks/usePromptFilters';
 export * from './hooks/usePromptData';
@@ -56,6 +57,8 @@ export function usePromptPlayground() {
   const feedback = usePromptFeedback(data.selectedPrompt, test.testOutput);
   // Edit Request
   const editRequest = usePromptEditRequest();
+  // Agent Proposal
+  const agentProposal = useAgentProposal();
 
   // Handle edit request submission
   const handleProposeEdit = async () => {
@@ -71,6 +74,30 @@ export function usePromptPlayground() {
       justification,
       newDescription,
       newInstructions
+    );
+  };
+
+  // Handle agent proposal submission
+  const handleProposeAgent = async () => {
+    if (!data.selectedPrompt) return;
+    agentProposal.openModal();
+  };
+
+  const handleSubmitAgentProposal = async (
+    agentName: string,
+    useCases: string,
+    targetUsers: string,
+    description: string,
+    instructions: string
+  ) => {
+    if (!data.selectedPrompt) return false;
+    return await agentProposal.submitAgentProposal(
+      data.selectedPrompt,
+      agentName,
+      useCases,
+      targetUsers,
+      description,
+      instructions
     );
   };
 
@@ -128,5 +155,21 @@ export function usePromptPlayground() {
     },
     handleProposeEdit,
     handleSubmitEditRequest,
+    // Agent proposal functionality
+    agentProposal: {
+      isModalOpen: agentProposal.isModalOpen,
+      isSubmitting: agentProposal.isSubmitting,
+      error: agentProposal.error,
+      success: agentProposal.success,
+      closeModal: agentProposal.closeModal,
+    },
+    handleProposeAgent,
+    handleSubmitAgentProposal,
+    // Helper to check if we're in "Create New" mode
+    isCreateNewMode: () => {
+      return data.selectedPrompt && 
+             !data.selectedPrompt.agentType && 
+             data.prompts.findIndex(p => p.id === data.selectedPrompt?.id) !== -1;
+    }
   };
 }
