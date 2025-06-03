@@ -1,19 +1,15 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Brain, Filter, Loader2, MessageSquare, Plus, RefreshCw, Save, Search, Send, Settings, Target } from 'lucide-react';
+import { Brain, Plus, Loader2, MessageSquare } from 'lucide-react';
 import { PromptEditor } from './_components/PromptEditor';
-import { PromptLibrary } from './_components/PromptLibrary';
-import { PromptTestHistory } from './_components/PromptTestHistory';
 import { PromptTestResults } from './_components/PromptTestResults';
 import { EditRequestModal } from './_components/EditRequestModal';
+import { AgentProposalModal } from './_components/AgentProposalModal';
 import { usePromptPlayground } from './usePromptPlayground';
+import { PromptLibrary } from './_components/PromptLibrary';
 import { PlaygroundPasswordModal, isPlaygroundUnlocked } from './_components/PlaygroundPasswordModal';
 
 export default function PromptPlayground() {
@@ -103,6 +99,8 @@ export default function PromptPlayground() {
                       onReset={playground.handleFullReset}
                       onTest={playground.handleTestPrompt}
                       onProposeEdit={playground.handleProposeEdit}
+                      onProposeAgent={playground.handleProposeAgent}
+                      isCreateNewMode={playground.isCreateNewMode()}
                       isLoading={playground.isLoading}
                       userMessage={playground.userMessage}
                       setUserMessage={playground.setUserMessage}
@@ -159,6 +157,20 @@ export default function PromptPlayground() {
               promptTitle={playground.selectedPrompt?.title || ''}
               oldDescription={playground.selectedPrompt?.description || ''}
               oldInstructions={playground.selectedPrompt?.instructions || ''}
+            />
+
+            {/* Agent Proposal Modal */}
+            <AgentProposalModal
+              isOpen={playground.agentProposal.isModalOpen}
+              onClose={playground.agentProposal.closeModal}
+              onSubmit={(agentName, useCases, targetUsers, description, instructions) => 
+                playground.handleSubmitAgentProposal(agentName, useCases, targetUsers, description, instructions)}
+              isSubmitting={playground.agentProposal.isSubmitting}
+              error={playground.agentProposal.error}
+              success={playground.agentProposal.success}
+              promptTitle={playground.selectedPrompt?.title || ''}
+              description={playground.selectedPrompt?.description || ''}
+              instructions={playground.instructions || ''}
             />
           </div>
         </div>

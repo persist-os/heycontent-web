@@ -26,6 +26,8 @@ interface PromptEditorProps {
   onReset: () => void;
   onTest: () => void;
   onProposeEdit?: () => void;
+  onProposeAgent?: () => void;
+  isCreateNewMode?: boolean;
   isLoading: boolean;
   userMessage: string;
   setUserMessage: (v: string) => void;
@@ -41,6 +43,8 @@ export function PromptEditor({
   onReset,
   onTest,
   onProposeEdit,
+  onProposeAgent,
+  isCreateNewMode,
   isLoading,
   userMessage,
   setUserMessage,
@@ -156,6 +160,17 @@ export function PromptEditor({
               >
                 <Edit className="w-4 h-4 mr-1" />
                 Propose Edit
+              </Button>
+            )}
+            {isCreateNewMode && onProposeAgent && (
+              <Button 
+                variant="outline" 
+                onClick={onProposeAgent} 
+                disabled={isLoading}
+                className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300"
+              >
+                <Brain className="w-4 h-4 mr-1" />
+                Propose Agent
               </Button>
             )}
             <Button onClick={onTest} disabled={isLoading}>

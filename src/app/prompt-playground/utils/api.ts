@@ -149,3 +149,47 @@ export async function getPlaygroundPrompts(): Promise<GetPromptsResponse> {
 
   return await response.json();
 } 
+
+export interface AgentProposalRequest {
+  title: string; 
+  justification?: string;
+  name?: string;
+  target_users?: string[];
+  use_cases?: string;
+  description?: string;
+  status?: string; 
+  instructions?: string;
+  submission_date?: string; 
+}
+
+export interface AgentProposalResponse {
+  ok: boolean;
+  result?: any;
+  error?: string;
+}
+
+export async function proposeAgent(agentProposal: AgentProposalRequest): Promise<AgentProposalResponse> {
+  const apiKey = await getApiKey();
+  if (!apiKey) {
+    throw new Error('You are not authenticated. Please log in again.');
+  }
+
+  const response = await fetch('/api/playground/propose_agent', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(agentProposal)
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    let errorMsg = 'Failed to propose agent';
+    try {
+      errorMsg = data.error || errorMsg;
+    } catch {}
+    throw new Error(errorMsg);
+  }
+  return data;
+}

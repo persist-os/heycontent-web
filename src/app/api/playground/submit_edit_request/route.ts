@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server';
 import { extractAuthInfo } from '@/app/lib/api-helpers-server';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
