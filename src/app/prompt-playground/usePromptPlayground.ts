@@ -53,6 +53,36 @@ export function usePromptPlayground() {
   // Feedback
   const feedback = usePromptFeedback(data.selectedPrompt, test.testOutput);
 
+  // Full reset: clears all fields
+  const handleFullReset = () => {
+    // Reset editor fields
+    editor.setInstructions('');
+    editor.setUserMessage('');
+    // Reset filters
+    filters.setSelectedPersona('');
+    filters.setSelectedPlatform('');
+    filters.setSelectedGoal('');
+    filters.setSearchQuery('');
+    // Reset feedback
+    feedback.setCurrentRating(0);
+    feedback.setFeedback('');
+    feedback.setTestResults([]);
+    // Reset test output and error
+    test.setTestOutput('');
+    test.setError(null);
+    // Reset selected prompt fields if possible
+    if (data.selectedPrompt) {
+      data.setSelectedPrompt(prev => prev ? {
+        ...prev,
+        title: '',
+        description: '',
+        instructions: '',
+        platform: '',
+        goal: '',
+      } : prev);
+    }
+  };
+
   return {
     ...filters,
     ...data,
@@ -62,5 +92,6 @@ export function usePromptPlayground() {
     personas,
     filteredPrompts: data.filteredPrompts,
     handleLoadPromptContent: data.handleLoadPromptContent,
+    handleFullReset,
   };
 } 

@@ -104,7 +104,7 @@ export function PromptLibrary({
           </div>
         ) : (
           agentTypes.map(agentType => {
-            const isExpanded = expandedSections[agentType] !== false; // Default to expanded
+            const isExpanded = expandedSections[agentType] === true; // Default to collapsed
             const prompts = groupedPrompts[agentType];
             const firstPrompt = prompts[0];
 

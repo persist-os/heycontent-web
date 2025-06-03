@@ -6,6 +6,7 @@ export function usePromptEditor(initialInstructions: string) {
 
   const handleResetEditor = (resetValue: string) => {
     setInstructions(resetValue);
+    setUserMessage('');
   };
 
   return {
