@@ -51,7 +51,9 @@ export function usePromptPlayground() {
   // Test
   const test = usePromptTest(data.selectedPrompt, editor.instructions, filters.selectedPersona);
   // Feedback
-  const feedback = usePromptFeedback(data.selectedPrompt, test.testOutput);
+  // TODO: Replace with actual user name from auth context if available
+  const userName = 'Anonymous';
+  const feedback = usePromptFeedback(data.selectedPrompt, test.testOutput, userName);
 
   // Full reset: clears all fields
   const handleFullReset = () => {
@@ -85,13 +87,17 @@ export function usePromptPlayground() {
 
   return {
     ...filters,
-    ...data,
     ...editor,
+    ...data,
+    personas,
     ...test,
     ...feedback,
-    personas,
+    feedbackLoading: feedback.loading,
+    feedbackError: feedback.error,
+    feedbackSuccess: feedback.success,
+    handleSaveFeedback: async () => await feedback.handleSaveFeedback(),
+    handleFullReset,
     filteredPrompts: data.filteredPrompts,
     handleLoadPromptContent: data.handleLoadPromptContent,
-    handleFullReset,
   };
-} 
+}

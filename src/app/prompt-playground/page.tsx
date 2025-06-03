@@ -115,6 +115,9 @@ export default function PromptPlayground() {
                       feedback={playground.feedback}
                       setFeedback={playground.setFeedback}
                       onSaveFeedback={playground.handleSaveFeedback}
+                      feedbackLoading={playground.feedbackLoading}
+                      feedbackError={playground.feedbackError}
+                      feedbackSuccess={playground.feedbackSuccess}
                       disabled={playground.currentRating === 0}
                     />
                   </>

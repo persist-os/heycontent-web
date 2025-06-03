@@ -12,7 +12,11 @@ interface PromptTestResultsProps {
   setCurrentRating: (v: number) => void;
   feedback: string;
   setFeedback: (v: string) => void;
-  onSaveFeedback: () => void;
+  onSaveFeedback: () => Promise<void>;
+  feedbackLoading?: boolean;
+  feedbackError?: string | null;
+  feedbackSuccess?: boolean;
+
   disabled: boolean;
 }
 
@@ -24,6 +28,9 @@ export function PromptTestResults({
   feedback,
   setFeedback,
   onSaveFeedback,
+  feedbackLoading,
+  feedbackError,
+  feedbackSuccess,
   disabled
 }: PromptTestResultsProps) {
   return (
@@ -75,12 +82,22 @@ export function PromptTestResults({
                 </div>
                 <Button 
                   onClick={onSaveFeedback}
-                  disabled={disabled}
+                  disabled={disabled || feedbackLoading}
                   className="w-full"
                 >
-                  <Save className="w-4 h-4 mr-1" />
-                  Save Feedback
+                  {feedbackLoading ? (
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-1" />
+                  )}
+                  {feedbackLoading ? 'Saving...' : 'Save Feedback'}
                 </Button>
+                {feedbackError && (
+                  <div className="text-sm text-red-500 mt-2">{feedbackError}</div>
+                )}
+                {feedbackSuccess && (
+                  <div className="text-sm text-green-600 mt-2">Feedback submitted successfully!</div>
+                )}
               </div>
             </div>
           </div>
