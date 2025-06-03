@@ -29,6 +29,21 @@ import getGmailTokens from "./http_actions/getGmailTokens";
 import updateGmailToken from "./http_actions/updateGmailToken";
 import saveGmailAccount from "./http_actions/saveGmailAccount";
 import storeGmailFullProfile from "./http_actions/storeGmailFullProfile";
+import getYouTubeTokens from "./http_actions/getYouTubeTokens";
+import storeYouTubeVideoAnalysis from "./http_actions/storeYouTubeVideoAnalysis";
+import updateYouTubeToken from "./http_actions/updateYouTubeToken";
+import storeYouTubeFullProfile from "./http_actions/storeYouTubeFullProfile";
+import storeYouTubeChannelData from "./http_actions/storeYouTubeChannelData";
+import createConversation from "./http_actions/createConversations";
+import addMessageToConversation from "./http_actions/addMessageToConversation";
+import disconnectInstagram from "./http_actions/disconnectInstagram";
+import getInstagramTokens from "./http_actions/getInstagramTokens";
+import updateInstagramToken from "./http_actions/updateInstagramToken";
+import storeInstagramPostsBulk from "./http_actions/storeInstagramPostsBulk";
+import storeInstagramProfile from "./http_actions/storeInstagramProfile";
+import getInstagramPost from "./http_actions/getInstagramPost";
+import getInstagramPostInsights from "./http_actions/getInstagramPostInsights";
+import getInstagramPostComments from "./http_actions/getInstagramPostComments";
 
 
 const app: HonoWithConvex<ActionCtx> = new Hono();
@@ -54,115 +69,11 @@ app.use("*", cors());
 // Notes-related routes have been moved to convex/http_actions/
 
 // GMAIL ROUTES
-
 // Gmail routes have been moved to convex/http_actions/
 
 // YOUTUBE ROUTES
+// Youtube routes have been moved to convex/http_actions/
 
-// Get YouTube tokens for a user
-app.get("/api/users/:id/youtube/tokens", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  try {
-    const tokens = await ctx.runQuery(api.youtubeQueries.getYouTubeTokens, { userId });
-    return c.json({ success: true, tokens });
-  } catch (error) {
-    console.error("Failed to get user tokens:", error);
-    return c.json({ success: false, error: "Failed to retrieve user tokens" }, 500);
-  }
-});
-
-// Store YouTube video analysis
-app.post("/api/users/:userId/youtube/videos/:videoId/analysis", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("userId");
-  const videoId = c.req.param("videoId");
-  const { analysisData } = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.youtubeMutations.storeVideoAnalysis, { 
-      userId, 
-      videoId, 
-      analysisData 
-    });
-    return c.json(result);
-  } catch (error) {
-    console.error("Failed to store video analysis:", error);
-    return c.json({ 
-      success: false, 
-      error: `Failed to store video analysis: ${error instanceof Error ? error.message : 'Unknown error'}` 
-    }, 500);
-  }
-});
-
-// Update YouTube token
-app.post("/api/users/:id/youtube/token", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const { accessToken, refreshToken, expiresAt, tokenType, scope } = await c.req.json();
-
-  // Ensure scope is an array of strings
-  const scopeArray = Array.isArray(scope)
-    ? scope
-    : typeof scope === "string"
-    ? scope.split(" ")
-    : [];
-
-  try {
-    await ctx.runMutation(api.youtubeMutations.update_youtube_token, {
-      userId,
-      accessToken,
-      refreshToken,
-      expiresAt,
-      tokenType,
-      scope: scopeArray,
-    });
-    return c.json({ success: true });
-  } catch (error) {
-    console.error("Failed to store YouTube token:", error);
-    return c.json({ success: false, error: "Failed to store YouTube token" }, 500);
-  }
-});
-
-// Store full YouTube profile (channel + videos) for a user
-app.post("/api/users/:id/youtube/full_profile", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const { channel, videos } = await c.req.json();
-  await ctx.runMutation(api.youtubeMutations.storeYoutubeFullProfile, {
-    userId,
-    channel,
-    videos,
-  });
-  return c.json({ success: true });
-});
-
-// Store YouTube channel data
-app.post("/api/users/:id/youtube/channel", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const { channelId, title, description, customUrl, thumbnails, statistics } = await c.req.json();
-  
-  try {
-    await ctx.runMutation(api.youtubeMutations.saveChannelData, {
-      userId,
-      channelId,
-      title,
-      description,
-      customUrl,
-      thumbnails,
-      statistics,
-      updatedAt: Date.now()
-    });
-    return c.json({ success: true });
-  } catch (error) {
-    console.error("Failed to store YouTube channel data:", error);
-    return c.json({ 
-      success: false, 
-      error: `Failed to store YouTube channel data: ${error instanceof Error ? error.message : 'Unknown error'}`
-    }, 500);
-  }
-});
 
 // INSTAGRAM ROUTES
 
@@ -783,6 +694,62 @@ http.route({ path: "/getGmailTokens", method: "GET", handler: getGmailTokens });
 http.route({ path: "/updateGmailToken", method: "POST", handler: updateGmailToken });
 http.route({ path: "/saveGmailAccount", method: "POST", handler: saveGmailAccount });
 http.route({ path: "/storeGmailFullProfile", method: "POST", handler: storeGmailFullProfile });
+
+// Helper to extract YouTube videoId from URL
+function extractYouTubeVideoId(url: string): string | null {
+  // Handles standard, short, and embed URLs
+  const patterns = [
+    /(?:v=|\/videos\/|embed\/|youtu.be\/|\/v\/|\/e\/|watch\?v=|watch\?.+&v=)([\w-]{11})/, // Standard and embed
+    /youtu\.be\/([\w-]{11})/, // Short
+    /youtube\.com\/shorts\/([\w-]{11})/, // Shorts
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match && match[1]) return match[1];
+  }
+  return null;
+}
+
+// Get all stored data for a specific YouTube video by video URL and user ID
+app.get("/api/users/:userId/youtube/video-data", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("userId");
+  const videoUrl = c.req.query("videoUrl");
+  if (!videoUrl) {
+    return c.json({ success: false, error: "Missing videoUrl query parameter" }, 400);
+  }
+  const videoId = extractYouTubeVideoId(videoUrl);
+  if (!videoId) {
+    return c.json({ success: false, error: "Invalid or unrecognized YouTube video URL" }, 400);
+  }
+  try {
+    const video = await ctx.runQuery(api.youtubeQueries.getVideoById, { userId, videoId });
+    if (!video) {
+      return c.json({ success: false, error: "No video found for this user and videoId" }, 404);
+    }
+    return c.json({ success: true, video });
+  } catch (error) {
+    console.error("Failed to get video data:", error);
+    return c.json({ success: false, error: "Failed to retrieve video data" }, 500);
+  }
+});
+
+http.route({ path: "/api/users/:id/youtube/tokens", method: "GET", handler: getYouTubeTokens });
+http.route({ path: "/api/users/:userId/youtube/videos/:videoId/analysis", method: "POST", handler: storeYouTubeVideoAnalysis });
+http.route({ path: "/api/users/:id/youtube/token", method: "POST", handler: updateYouTubeToken });
+http.route({ path: "/api/users/:id/youtube/full_profile", method: "POST", handler: storeYouTubeFullProfile });
+http.route({ path: "/api/users/:id/youtube/channel", method: "POST", handler: storeYouTubeChannelData });
+http.route({ path: "/createConversation", method: "POST", handler: createConversation });
+http.route({ path: "/addMessageToConversation", method: "POST", handler: addMessageToConversation });
+
+http.route({ path: "/instagram/:id/delete", method: "POST", handler: disconnectInstagram });
+http.route({ path: "/api/users/:id/instagram/tokens", method: "GET", handler: getInstagramTokens });
+http.route({ path: "/api/users/:id/instagram/token", method: "POST", handler: updateInstagramToken });
+http.route({ path: "/api/users/:id/instagram/posts/bulk", method: "POST", handler: storeInstagramPostsBulk });
+http.route({ path: "/api/users/:id/instagram/profile", method: "POST", handler: storeInstagramProfile });
+http.route({ path: "/api/users/:id/instagram/post/:postId", method: "GET", handler: getInstagramPost });
+http.route({ path: "/api/users/:id/instagram/post/:postId/insights", method: "GET", handler: getInstagramPostInsights });
+http.route({ path: "/api/users/:id/instagram/post/:postId/comments", method: "GET", handler: getInstagramPostComments });
 
 const router = new HttpRouterWithHono(app);
 export default http;
