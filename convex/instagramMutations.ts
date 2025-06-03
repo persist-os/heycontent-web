@@ -20,10 +20,8 @@ export const storePostData = mutation({
       // Check if post already exists using the compound index
       const existingPost = await ctx.db
         .query("instagramPosts")
-        .withIndex("by_userId_postId", q => 
-          q.eq("userId", userId)
-           .eq("postId", postId)
-        )
+        .withIndex("by_userId", q => q.eq("userId", userId))
+        .filter(q => q.eq(q.field("postId"), postId))
         .first();
 
       if (existingPost) {

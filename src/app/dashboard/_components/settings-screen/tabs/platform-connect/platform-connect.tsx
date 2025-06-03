@@ -15,6 +15,11 @@ export function PlatformConnect() {
   const { firebaseUser } = useAuth();
   const [refetchKey, setRefetchKey] = useState(0);
 
+  // Add logging for firebaseUser
+  useEffect(() => {
+    console.log('Current firebaseUser:', firebaseUser);
+  }, [firebaseUser]);
+
   // Refetch on successful connection and clean up the URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -29,6 +34,11 @@ export function PlatformConnect() {
   const youtubeData = firebaseUser?.uid ? useQuery(api.youtubeQueries.getYouTubeChannelData, { userId: firebaseUser.uid }) : undefined;
   const instagramData = firebaseUser?.uid ? useQuery(api.instagramQueries.getInstagramAccount, { userId: firebaseUser.uid }) : undefined;
   const gmailAccounts = firebaseUser?.uid ? useQuery(api.gmailQueries.getGmailAccounts, { userId: firebaseUser.uid }) : undefined;
+
+  // Add console logging for Convex responses
+  useEffect(() => {
+    console.log('Instagram data from Convex:', instagramData);
+  }, [instagramData]);
 
   // All hooks must be declared at the top, before any return
   const [connecting, setConnecting] = useState<SocialPlatform | null>(null);
@@ -102,9 +112,6 @@ export function PlatformConnect() {
     }
   };
 
-  // Add console logging for Convex responses
-
-
   // Update connected accounts when data changes
   useEffect(() => {
     fetchConnectedPlatforms();
@@ -124,9 +131,9 @@ export function PlatformConnect() {
   }, []);
 
   // Early error/fallback handling (AFTER all hooks)
-  if (youtubeData === undefined || instagramData === undefined) {
-    return <div className="flex items-center justify-center h-40">Loading platform data...</div>;
-  }
+  // if (youtubeData === undefined || instagramData === undefined) {
+  //   return <div className="flex items-center justify-center h-40">Loading platform data...</div>;
+  // }
   if (isError(youtubeData)) {
     return <div className="text-red-500 p-4">Failed to load YouTube data: {youtubeData.error}</div>;
   }
