@@ -33,17 +33,28 @@ export const getInstagramAccount = query({
 export const getInstagramPost = query({
   args: { userId: v.string(), postId: v.string() },
   handler: async (ctx, args) => {
-    const post = await ctx.db
-      .query("instagramPosts")
-      .withIndex("by_userId", q => q.eq("userId", args.userId))
-      .filter(q => 
-        q.or(
-          q.eq(q.field("postId"), args.postId),
-          q.eq(q.field("data.id"), args.postId)
-        )
-      )
-      .first();
-    return post;
+    try {
+      // First try to find by postId since it's more specific
+      const post = await ctx.db
+        .query("instagramPosts")
+        .withIndex("by_postId", q => q.eq("postId", args.postId))
+        .filter(q => q.eq(q.field("userId"), args.userId))
+        .first();
+      
+      // If not found by postId, try data.id
+      if (!post) {
+        return await ctx.db
+          .query("instagramPosts")
+          .withIndex("by_userId", q => q.eq("userId", args.userId))
+          .filter(q => q.eq(q.field("data.id"), args.postId))
+          .first();
+      }
+      
+      return post;
+    } catch (error) {
+      console.error('Error fetching Instagram post:', error);
+      throw new Error(`Failed to fetch Instagram post: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   },
 });
 
