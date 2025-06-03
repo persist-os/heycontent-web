@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Send, Brain, Filter } from 'lucide-react';
+import { RefreshCw, Send, Brain, Filter, Edit } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { personas } from '@/data/personas';
@@ -25,6 +25,7 @@ interface PromptEditorProps {
   setSelectedPrompt: (fn: (prev: Prompt | null) => Prompt | null) => void;
   onReset: () => void;
   onTest: () => void;
+  onProposeEdit?: () => void;
   isLoading: boolean;
   userMessage: string;
   setUserMessage: (v: string) => void;
@@ -39,6 +40,7 @@ export function PromptEditor({
   setSelectedPrompt,
   onReset,
   onTest,
+  onProposeEdit,
   isLoading,
   userMessage,
   setUserMessage,
@@ -139,15 +141,28 @@ export function PromptEditor({
             className="min-h-24"
           />
         </div>
-        <div className="flex justify-between">
+        <div className="flex justify-between gap-3">
           <Button variant="outline" onClick={onReset} disabled={isLoading}>
             <RefreshCw className="w-4 h-4 mr-1" />
             Reset
           </Button>
-          <Button onClick={onTest} disabled={isLoading}>
-            <Send className="w-4 h-4 mr-1" />
-            {isLoading ? 'Testing...' : 'Test Prompt'}
-          </Button>
+          <div className="flex gap-2">
+            {onProposeEdit && (
+              <Button 
+                variant="outline" 
+                onClick={onProposeEdit} 
+                disabled={isLoading}
+                className="bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100 hover:border-orange-300"
+              >
+                <Edit className="w-4 h-4 mr-1" />
+                Propose Edit
+              </Button>
+            )}
+            <Button onClick={onTest} disabled={isLoading}>
+              <Send className="w-4 h-4 mr-1" />
+              {isLoading ? 'Testing...' : 'Test Prompt'}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

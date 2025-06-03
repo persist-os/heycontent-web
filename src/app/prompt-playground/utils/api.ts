@@ -84,14 +84,16 @@ export async function submitPlaygroundFeedback(feedbackReq: PlaygroundFeedbackRe
 }
 
 export interface PlaygroundEditRequest {
+  name: string;
   request_title: string;
   prompt_title: string;
-  edited_by: string;
   justification: string;
-  old_prompt: string;
-  new_prompt: string;
-  status?: string;
-  synced?: boolean;
+  old_description: string;
+  new_description: string;
+  old_instructions: string;
+  new_instructions: string;
+  status: string;
+  synced: boolean;
 }
 
 export interface PlaygroundEditResponse {

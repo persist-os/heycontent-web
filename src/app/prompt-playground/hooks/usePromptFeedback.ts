@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useAuth } from '@/app/context/auth-context';
 import { TestResult, Prompt } from '../usePromptPlayground';
 
-export function usePromptFeedback(selectedPrompt: Prompt | null, testOutput: string, userName: string = 'Anonymous') {
+export function usePromptFeedback(selectedPrompt: Prompt | null, testOutput: string) {
+  const { firebaseUser } = useAuth();
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [currentRating, setCurrentRating] = useState(0);
   const [feedback, setFeedback] = useState('');
@@ -37,8 +39,9 @@ export function usePromptFeedback(selectedPrompt: Prompt | null, testOutput: str
     try {
       // Use shared API utility
       const { submitPlaygroundFeedback } = await import('../utils/api');
+      const userName = firebaseUser?.displayName || firebaseUser?.email || 'Anonymous';
       const result = await submitPlaygroundFeedback({
-        name: userName || 'Anonymous',
+        name: userName,
         prompt_title: selectedPrompt.title,
         feedback,
         model_output: testOutput,

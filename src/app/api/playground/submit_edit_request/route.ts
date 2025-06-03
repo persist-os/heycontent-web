@@ -17,27 +17,32 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const {
+      name,
       request_title,
       prompt_title,
-      edited_by,
       justification,
-      old_prompt,
-      new_prompt,
+      old_description,
+      new_description,
+      old_instructions,
+      new_instructions,
       status = 'Pending',
       synced = false
     } = body;
-    if (!request_title || !prompt_title || !edited_by || !justification || !old_prompt || !new_prompt) {
-      return NextResponse.json({ error: 'request_title, prompt_title, edited_by, justification, old_prompt, and new_prompt are required' }, { status: 400 });
+
+    if (!name || !request_title || !prompt_title || !justification || !old_description || !new_description || !old_instructions || !new_instructions) {
+      return NextResponse.json({ ok: false, error: 'Missing required fields' }, { status: 400 });
     }
 
     // Prepare backend request body
     const backendRequestBody = {
+      name,
       request_title,
       prompt_title,
-      edited_by,
       justification,
-      old_prompt,
-      new_prompt,
+      old_description,
+      new_description,
+      old_instructions,
+      new_instructions,
       status,
       synced
     };

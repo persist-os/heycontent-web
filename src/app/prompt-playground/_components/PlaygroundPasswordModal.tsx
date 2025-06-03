@@ -8,7 +8,7 @@ interface PlaygroundPasswordModalProps {
   onClose?: () => void;
 }
 
-const PASSWORD = 'prompter1205';
+const PASSWORD = 'heycontentletsplay';
 const STORAGE_KEY = 'playgroundUnlocked';
 
 export function isPlaygroundUnlocked() {

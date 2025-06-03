@@ -12,6 +12,7 @@ import { PromptEditor } from './_components/PromptEditor';
 import { PromptLibrary } from './_components/PromptLibrary';
 import { PromptTestHistory } from './_components/PromptTestHistory';
 import { PromptTestResults } from './_components/PromptTestResults';
+import { EditRequestModal } from './_components/EditRequestModal';
 import { usePromptPlayground } from './usePromptPlayground';
 import { PlaygroundPasswordModal, isPlaygroundUnlocked } from './_components/PlaygroundPasswordModal';
 
@@ -101,6 +102,7 @@ export default function PromptPlayground() {
                       setSelectedPrompt={playground.setSelectedPrompt}
                       onReset={playground.handleFullReset}
                       onTest={playground.handleTestPrompt}
+                      onProposeEdit={playground.handleProposeEdit}
                       isLoading={playground.isLoading}
                       userMessage={playground.userMessage}
                       setUserMessage={playground.setUserMessage}
@@ -145,6 +147,19 @@ export default function PromptPlayground() {
                 )}
               </div>
             </div>
+
+            {/* Edit Request Modal */}
+            <EditRequestModal
+              isOpen={playground.editRequest.isModalOpen}
+              onClose={playground.editRequest.closeModal}
+              onSubmit={(requestTitle, justification, newDescription, newInstructions) => playground.handleSubmitEditRequest(requestTitle, justification, newDescription, newInstructions)}
+              isSubmitting={playground.editRequest.isSubmitting}
+              error={playground.editRequest.error}
+              success={playground.editRequest.success}
+              promptTitle={playground.selectedPrompt?.title || ''}
+              oldDescription={playground.selectedPrompt?.description || ''}
+              oldInstructions={playground.selectedPrompt?.instructions || ''}
+            />
           </div>
         </div>
       )}
