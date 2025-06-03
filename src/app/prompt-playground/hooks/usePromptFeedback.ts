@@ -29,33 +29,23 @@ export function usePromptFeedback(selectedPrompt: Prompt | null, testOutput: str
       setError('Please select a prompt and rating.');
       return;
     }
+    if (!feedback || feedback.trim().length === 0) {
+      setError('Feedback is required.');
+      return;
+    }
     setLoading(true);
     try {
-      // Get API key for Authorization header
-      const { getApiKey } = await import('@/app/lib/api-helpers');
-      const apiKey = await getApiKey();
-      if (!apiKey) {
-        setError('You are not authenticated. Please log in again.');
-        setLoading(false);
-        return;
-      }
-      const res = await fetch('/api/playground/submit_feedback', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          name: userName || 'Anonymous',
-          prompt_title: selectedPrompt.title,
-          feedback,
-          model_output: testOutput,
-          rating: ratingToNotion(currentRating),
-        })
+      // Use shared API utility
+      const { submitPlaygroundFeedback } = await import('../utils/api');
+      const result = await submitPlaygroundFeedback({
+        name: userName || 'Anonymous',
+        prompt_title: selectedPrompt.title,
+        feedback,
+        model_output: testOutput,
+        rating: ratingToNotion(currentRating),
       });
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error || 'Failed to submit feedback.');
+      if (!result.ok) {
+        setError(result.error || 'Failed to submit feedback.');
       } else {
         setSuccess(true);
         setTestResults(prev => [

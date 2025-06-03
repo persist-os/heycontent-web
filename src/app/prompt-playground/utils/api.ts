@@ -43,6 +43,89 @@ export async function sendPlaygroundMessage({ description, instructions, message
   return await response.json();
 }
 
+export interface PlaygroundFeedbackRequest {
+  name: string;
+  prompt_title: string;
+  feedback: string;
+  model_output: string;
+  rating: string;
+}
+
+export interface PlaygroundFeedbackResponse {
+  ok: boolean;
+  result?: any;
+  error?: string;
+}
+
+export async function submitPlaygroundFeedback(feedbackReq: PlaygroundFeedbackRequest): Promise<PlaygroundFeedbackResponse> {
+  const apiKey = await getApiKey();
+  if (!apiKey) {
+    throw new Error('You are not authenticated. Please log in again.');
+  }
+
+  const response = await fetch('/api/playground/submit_feedback', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(feedbackReq)
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    let errorMsg = 'Failed to submit feedback';
+    try {
+      errorMsg = data.error || errorMsg;
+    } catch {}
+    throw new Error(errorMsg);
+  }
+  return data;
+}
+
+export interface PlaygroundEditRequest {
+  request_title: string;
+  prompt_title: string;
+  edited_by: string;
+  justification: string;
+  old_prompt: string;
+  new_prompt: string;
+  status?: string;
+  synced?: boolean;
+}
+
+export interface PlaygroundEditResponse {
+  ok: boolean;
+  result?: any;
+  error?: string;
+}
+
+export async function submitPlaygroundEditRequest(editRequest: PlaygroundEditRequest): Promise<PlaygroundEditResponse> {
+  const apiKey = await getApiKey();
+  if (!apiKey) {
+    throw new Error('You are not authenticated. Please log in again.');
+  }
+
+  const response = await fetch('/api/playground/submit_edit_request', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(editRequest)
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    let errorMsg = 'Failed to submit edit request';
+    try {
+      errorMsg = data.error || errorMsg;
+    } catch {}
+    throw new Error(errorMsg);
+  }
+  return data;
+}
+
 export async function getPlaygroundPrompts(): Promise<GetPromptsResponse> {
   const apiKey = await getApiKey();
   const response = await fetch('/api/playground/get_prompts', {

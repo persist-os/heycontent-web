@@ -70,15 +70,21 @@ export function PromptTestResults({
                   </span>
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-2 block">
-                    Feedback & Notes
+                  <label className="text-sm font-medium mb-2 block flex items-center gap-1">
+                    Feedback & Notes <span className="text-red-500">*</span>
                   </label>
+                  {(!feedback || feedback.trim().length === 0) && !feedbackSuccess && (
+                    <div className="text-xs text-gray-600 mb-2">Feedback is required to submit.</div>
+                  )}
                   <Textarea
                     value={feedback}
                     onChange={(e) => setFeedback(e.target.value)}
-                    placeholder="Add your feedback, suggestions, or notes..."
-                    className="min-h-20"
+                    placeholder="(Required) Add your feedback, suggestions, or notes..."
+                    className={`min-h-20${feedbackError === 'Feedback is required.' ? ' border-red-500 ring-1 ring-red-400' : ''}`}
                   />
+                  {feedbackError === 'Feedback is required.' && (
+                    <div className="text-xs text-red-500 mt-1">Feedback is required.</div>
+                  )}
                 </div>
                 <Button 
                   onClick={onSaveFeedback}
