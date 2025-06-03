@@ -18,9 +18,18 @@ export function AIInsightsScreen() {
   // Track expanded card index for each tab
   const [expandedYoutube, setExpandedYoutube] = useState<number | null>(null)
   const [expandedInstagram, setExpandedInstagram] = useState<number | null>(null)
+  const [expandedGmail, setExpandedGmail] = useState<number | null>(null)
   const [activeTab, setActiveTab] = useState('youtube')
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [refreshError, setRefreshError] = useState<string | null>(null)
+  
+  // Separate state for each platform
+  const [youtubeRefreshing, setYoutubeRefreshing] = useState(false)
+  const [instagramRefreshing, setInstagramRefreshing] = useState(false)
+  const [gmailRefreshing, setGmailRefreshing] = useState(false)
+  
+  const [youtubeError, setYoutubeError] = useState<string | null>(null)
+  const [instagramError, setInstagramError] = useState<string | null>(null)
+  const [gmailError, setGmailError] = useState<string | null>(null)
+  
   const { user } = useAuth()
 
   // Fetch YouTube channel data
@@ -38,22 +47,21 @@ export function AIInsightsScreen() {
   // Store channel analysis mutation
   const storeChannelAnalysis = useMutation(api.youtubeMutations.storeChannelAnalysis)
 
-  // Filter insights by platform
+  // Platform-specific insights
   const youtubeInsightsList = youtubeInsights?.analysis?.insights || []
   const instagramInsights = [] // TODO: Add Instagram insights when available
-  // Gmail tab is empty for now
+  const gmailInsights = [] // TODO: Add Gmail insights when available
 
-  const handleRefresh = async () => {
+  const handleYoutubeRefresh = async () => {
     if (!user || !youtubeChannel?.id) {
-      setRefreshError('YouTube channel not connected')
+      setYoutubeError('YouTube channel not connected')
       return
     }
 
-    setIsRefreshing(true)
-    setRefreshError(null)
+    setYoutubeRefreshing(true)
+    setYoutubeError(null)
     
     try {
-      // Get API key for authentication
       const apiKey = await getApiKey()
       if (!apiKey) {
         throw new Error('You are not authenticated. Please log in again.')
@@ -61,7 +69,6 @@ export function AIInsightsScreen() {
 
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'
       
-      // Call the channel insights API
       const response = await fetch(`${backendUrl}/api/v1/youtube/channel-insights`, {
         method: 'POST',
         headers: { 
@@ -85,25 +92,111 @@ export function AIInsightsScreen() {
       }
       
       if (data.status === 'success') {
-        // Store the updated analysis in Convex
         await storeChannelAnalysis({
           userId: user.uid,
           channelId: youtubeChannel.id,
           analysisData: data.data
         })
         
-        // The Convex query will automatically refresh and update the UI
         console.log('Successfully refreshed YouTube insights')
       } else {
-        throw new Error(data.error || 'Failed to refresh insights')
+        throw new Error(data.error || 'Failed to refresh YouTube insights')
       }
     } catch (error: any) {
-      console.error('Error refreshing insights:', error)
-      setRefreshError(error.message || 'Failed to refresh insights')
+      console.error('Error refreshing YouTube insights:', error)
+      setYoutubeError(error.message || 'Failed to refresh YouTube insights')
     } finally {
-      setIsRefreshing(false)
+      setYoutubeRefreshing(false)
     }
   }
+
+  const handleInstagramRefresh = async () => {
+    if (!user) {
+      setInstagramError('User not authenticated')
+      return
+    }
+
+    setInstagramRefreshing(true)
+    setInstagramError(null)
+    
+    try {
+      // TODO: Implement Instagram insights refresh
+      await new Promise(resolve => setTimeout(resolve, 1000)) // Placeholder
+      console.log('Instagram refresh - Coming soon')
+    } catch (error: any) {
+      console.error('Error refreshing Instagram insights:', error)
+      setInstagramError(error.message || 'Failed to refresh Instagram insights')
+    } finally {
+      setInstagramRefreshing(false)
+    }
+  }
+
+  const handleGmailRefresh = async () => {
+    if (!user) {
+      setGmailError('User not authenticated')
+      return
+    }
+
+    setGmailRefreshing(true)
+    setGmailError(null)
+    
+    try {
+      // TODO: Implement Gmail insights refresh
+      await new Promise(resolve => setTimeout(resolve, 1000)) // Placeholder
+      console.log('Gmail refresh - Coming soon')
+    } catch (error: any) {
+      console.error('Error refreshing Gmail insights:', error)
+      setGmailError(error.message || 'Failed to refresh Gmail insights')
+    } finally {
+      setGmailRefreshing(false)
+    }
+  }
+
+  // Helper component for tab-specific refresh button and error display
+  const TabRefreshControls = ({ 
+    platform, 
+    isRefreshing, 
+    error, 
+    onRefresh, 
+    disabled = false 
+  }: {
+    platform: string
+    isRefreshing: boolean
+    error: string | null
+    onRefresh: () => void
+    disabled?: boolean
+  }) => (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <button
+          onClick={onRefresh}
+          disabled={isRefreshing || disabled}
+          className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
+            isRefreshing || disabled
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500'
+              : 'bg-heycontent-light-yellow hover:bg-heycontent-yellow text-black'
+          }`}
+        >
+          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <span>
+            {isRefreshing ? 'Refreshing...' : 
+             disabled ? 'Coming Soon' :
+             `Refresh ${platform}`}
+          </span>
+        </button>
+      </div>
+
+      {error && (
+        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+            <AlertCircle className="w-4 h-4" />
+            <span className="font-medium">Error</span>
+          </div>
+          <p className="text-sm text-red-600 dark:text-red-400 mt-1">{error}</p>
+        </div>
+      )}
+    </div>
+  )
 
   return (
     <div className="relative">
@@ -119,21 +212,8 @@ export function AIInsightsScreen() {
               </p>
             </div>
           </div>
-          <div className="w-[100px] sm:w-auto flex justify-end">
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors ${
-                isRefreshing 
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500'
-                  : 'bg-heycontent-light-yellow hover:bg-heycontent-yellow text-black'
-              }`}
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">
-                {isRefreshing ? 'Refreshing...' : 'Refresh Insights'}
-              </span>
-            </button>
+          <div className="w-[100px] sm:w-auto">
+            {/* Removed global refresh button - now each tab has its own */}
           </div>
         </div>
       </div>
@@ -142,84 +222,130 @@ export function AIInsightsScreen() {
       <div className="flex-1 overflow-y-auto dark:bg-gray-900">
         <div className="p-6">
           <div className="max-w-5xl mx-auto space-y-6">
-            {/* Error display */}
-            {refreshError && (
-              <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
-                  <AlertCircle className="w-4 h-4" />
-                  <span className="font-medium">Refresh Error</span>
-                </div>
-                <p className="text-sm text-red-600 dark:text-red-400 mt-1">{refreshError}</p>
-              </div>
-            )}
-            
-            {/* Only show loading if isRefreshing is true */}
-            {isRefreshing ? (
-              <div className="text-center py-12">
-                <RefreshCw className="w-12 h-12 text-text-gray animate-spin mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-text-dark dark:text-white mb-2">
-                  Refreshing insights...
-                </h3>
-              </div>
-            ) : (
-              <Tabs defaultValue="youtube" className="w-full" onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-3 mb-6">
-                  <TabsTrigger 
-                    value="youtube" 
-                    className="flex items-center gap-2"
-                  >
-                    <Youtube className="w-4 h-4" />
-                    YouTube ({youtubeInsightsList.length})
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="instagram" 
-                    className="flex items-center gap-2"
-                  >
-                    <Instagram className="w-4 h-4" />
-                    Instagram ({instagramInsights.length})
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="gmail" 
-                    className="flex items-center gap-2"
-                  >
-                    <Mail className="w-4 h-4" />
-                    Gmail (0)
-                  </TabsTrigger>
-                </TabsList>
+            <Tabs defaultValue="youtube" className="w-full" onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-3 mb-6">
+                <TabsTrigger 
+                  value="youtube" 
+                  className="flex items-center gap-2"
+                >
+                  <Youtube className="w-4 h-4" />
+                  YouTube ({youtubeInsightsList.length})
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="instagram" 
+                  className="flex items-center gap-2"
+                >
+                  <Instagram className="w-4 h-4" />
+                  Instagram ({instagramInsights.length})
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="gmail" 
+                  className="flex items-center gap-2"
+                >
+                  <Mail className="w-4 h-4" />
+                  Gmail ({gmailInsights.length})
+                </TabsTrigger>
+              </TabsList>
 
-                <TabsContent value="youtube" className="grid gap-6">
-                  {youtubeInsightsList.length === 0 && (
-                    <div className="text-center text-gray-400">No YouTube insights available.</div>
-                  )}
-                  {youtubeInsightsList.map((insight, idx) => (
-                    <InsightCard
-                      key={idx}
-                      {...insight}
-                      expanded={expandedYoutube === idx}
-                      onExpand={() => setExpandedYoutube(expandedYoutube === idx ? null : idx)}
-                    />
-                  ))}
-                </TabsContent>
+              <TabsContent value="youtube" className="space-y-6">
+                <TabRefreshControls
+                  platform="YouTube"
+                  isRefreshing={youtubeRefreshing}
+                  error={youtubeError}
+                  onRefresh={handleYoutubeRefresh}
+                  disabled={!user || !youtubeChannel?.id}
+                />
+                
+                {youtubeRefreshing ? (
+                  <div className="text-center py-12">
+                    <RefreshCw className="w-12 h-12 text-text-gray animate-spin mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-text-dark dark:text-white mb-2">
+                      Refreshing YouTube insights...
+                    </h3>
+                  </div>
+                ) : (
+                  <div className="grid gap-6">
+                    {youtubeInsightsList.length === 0 && !youtubeError && (
+                      <div className="text-center text-gray-400">No YouTube insights available.</div>
+                    )}
+                    {youtubeInsightsList.map((insight, idx) => (
+                      <InsightCard
+                        key={idx}
+                        {...insight}
+                        expanded={expandedYoutube === idx}
+                        onExpand={() => setExpandedYoutube(expandedYoutube === idx ? null : idx)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
 
-                <TabsContent value="instagram" className="grid gap-6">
-                  {instagramInsights.length === 0 && (
-                    <div className="text-center text-gray-400">No Instagram insights available.</div>
-                  )}
-                  {instagramInsights.map((insight, idx) => (
-                    <InsightCard
-                      key={idx}
-                      {...insight}
-                      expanded={expandedInstagram === idx}
-                      onExpand={() => setExpandedInstagram(expandedInstagram === idx ? null : idx)}
-                    />
-                  ))}
-                </TabsContent>
+              <TabsContent value="instagram" className="space-y-6">
+                <TabRefreshControls
+                  platform="Instagram"
+                  isRefreshing={instagramRefreshing}
+                  error={instagramError}
+                  onRefresh={handleInstagramRefresh}
+                  disabled={true} // Disabled until implemented
+                />
+                
+                {instagramRefreshing ? (
+                  <div className="text-center py-12">
+                    <RefreshCw className="w-12 h-12 text-text-gray animate-spin mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-text-dark dark:text-white mb-2">
+                      Refreshing Instagram insights...
+                    </h3>
+                  </div>
+                ) : (
+                  <div className="grid gap-6">
+                    {instagramInsights.length === 0 && !instagramError && (
+                      <div className="text-center text-gray-400">Instagram insights coming soon.</div>
+                    )}
+                    {instagramInsights.map((insight, idx) => (
+                      <InsightCard
+                        key={idx}
+                        {...insight}
+                        expanded={expandedInstagram === idx}
+                        onExpand={() => setExpandedInstagram(expandedInstagram === idx ? null : idx)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
 
-                <TabsContent value="gmail" className="grid gap-6">
-                  <div className="text-center text-gray-400">No Gmail insights available.</div>
-                </TabsContent>
-              </Tabs>
-            )}
+              <TabsContent value="gmail" className="space-y-6">
+                <TabRefreshControls
+                  platform="Gmail"
+                  isRefreshing={gmailRefreshing}
+                  error={gmailError}
+                  onRefresh={handleGmailRefresh}
+                  disabled={true} // Disabled until implemented
+                />
+                
+                {gmailRefreshing ? (
+                  <div className="text-center py-12">
+                    <RefreshCw className="w-12 h-12 text-text-gray animate-spin mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-text-dark dark:text-white mb-2">
+                      Refreshing Gmail insights...
+                    </h3>
+                  </div>
+                ) : (
+                  <div className="grid gap-6">
+                    {gmailInsights.length === 0 && !gmailError && (
+                      <div className="text-center text-gray-400">Gmail insights coming soon.</div>
+                    )}
+                    {gmailInsights.map((insight, idx) => (
+                      <InsightCard
+                        key={idx}
+                        {...insight}
+                        expanded={expandedGmail === idx}
+                        onExpand={() => setExpandedGmail(expandedGmail === idx ? null : idx)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>
