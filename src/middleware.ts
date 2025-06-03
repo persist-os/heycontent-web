@@ -36,6 +36,8 @@ export function middleware(request: NextRequest) {
     "https://securetoken.googleapis.com",
     "wss://benevolent-basilisk-784.convex.cloud",
     "https://benevolent-basilisk-784.convex.cloud",
+    "wss://whimsical-clownfish-162.convex.cloud",
+    "https://whimsical-clownfish-162.convex.cloud",
     "https://backend.hicontent.co",
     "http://127.0.0.1:8000",
     "http://localhost:8000",

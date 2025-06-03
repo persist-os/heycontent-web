@@ -5,10 +5,26 @@ import { query } from "./_generated/server";
 export const getInstagramAccount = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
+    console.log('Querying Instagram account for userId:', args.userId);
+    
+    // First check if we can find any accounts at all
+    const allAccounts = await ctx.db
+      .query("instagramAccounts")
+      .collect();
+    console.log('Total Instagram accounts in DB:', allAccounts.length);
+    
+    // Then try to find the specific account
     const accounts = await ctx.db
       .query("instagramAccounts")
       .withIndex("by_userId", q => q.eq("userId", args.userId))
       .first();
+    
+    console.log('Found account:', accounts ? {
+      userId: accounts.userId,
+      username: accounts.username,
+      accountId: accounts.accountId
+    } : 'No account found');
+    
     return accounts;
   },
 });
@@ -19,9 +35,12 @@ export const getInstagramPost = query({
   handler: async (ctx, args) => {
     const post = await ctx.db
       .query("instagramPosts")
-      .withIndex("by_userId_postId", q => 
-        q.eq("userId", args.userId)
-         .eq("postId", args.postId)
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
+      .filter(q => 
+        q.or(
+          q.eq(q.field("postId"), args.postId),
+          q.eq(q.field("data.id"), args.postId)
+        )
       )
       .first();
     return post;
