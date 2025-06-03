@@ -9,9 +9,10 @@ import {
   RefreshCw, AlertCircle
 } from 'lucide-react'
 import { InsightCard } from './InsightCard'
-import { useQuery } from 'convex/react'
+import { useQuery, useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useAuth } from '@/app/context/auth-context'
+import { getApiKey } from '@/app/lib/api-helpers'
 
 export function AIInsightsScreen() {
   // Track expanded card index for each tab
@@ -19,6 +20,7 @@ export function AIInsightsScreen() {
   const [expandedInstagram, setExpandedInstagram] = useState<number | null>(null)
   const [activeTab, setActiveTab] = useState('youtube')
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [refreshError, setRefreshError] = useState<string | null>(null)
   const { user } = useAuth()
 
   // Fetch YouTube channel data
@@ -33,16 +35,71 @@ export function AIInsightsScreen() {
     youtubeChannel?.id ? { userId: user?.uid, channelId: youtubeChannel.id } : "skip"
   )
 
+  // Store channel analysis mutation
+  const storeChannelAnalysis = useMutation(api.youtubeMutations.storeChannelAnalysis)
+
   // Filter insights by platform
   const youtubeInsightsList = youtubeInsights?.analysis?.insights || []
   const instagramInsights = [] // TODO: Add Instagram insights when available
   // Gmail tab is empty for now
 
   const handleRefresh = async () => {
+    if (!user || !youtubeChannel?.id) {
+      setRefreshError('YouTube channel not connected')
+      return
+    }
+
     setIsRefreshing(true)
+    setRefreshError(null)
+    
     try {
-      // TODO: Implement refresh logic
-      await new Promise(resolve => setTimeout(resolve, 1000)) // Placeholder
+      // Get API key for authentication
+      const apiKey = await getApiKey()
+      if (!apiKey) {
+        throw new Error('You are not authenticated. Please log in again.')
+      }
+
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'
+      
+      // Call the channel insights API
+      const response = await fetch(`${backendUrl}/api/v1/youtube/channel-insights`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          user_id: user.uid,
+          channel_id: youtubeChannel.id,
+          max_videos: 10,
+          include_captions: true,
+          include_comments: true,
+          force_refresh: true
+        }),
+      })
+
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP error! status: ${response.status}`)
+      }
+      
+      if (data.status === 'success') {
+        // Store the updated analysis in Convex
+        await storeChannelAnalysis({
+          userId: user.uid,
+          channelId: youtubeChannel.id,
+          analysisData: data.data
+        })
+        
+        // The Convex query will automatically refresh and update the UI
+        console.log('Successfully refreshed YouTube insights')
+      } else {
+        throw new Error(data.error || 'Failed to refresh insights')
+      }
+    } catch (error: any) {
+      console.error('Error refreshing insights:', error)
+      setRefreshError(error.message || 'Failed to refresh insights')
     } finally {
       setIsRefreshing(false)
     }
@@ -85,6 +142,17 @@ export function AIInsightsScreen() {
       <div className="flex-1 overflow-y-auto dark:bg-gray-900">
         <div className="p-6">
           <div className="max-w-5xl mx-auto space-y-6">
+            {/* Error display */}
+            {refreshError && (
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="font-medium">Refresh Error</span>
+                </div>
+                <p className="text-sm text-red-600 dark:text-red-400 mt-1">{refreshError}</p>
+              </div>
+            )}
+            
             {/* Only show loading if isRefreshing is true */}
             {isRefreshing ? (
               <div className="text-center py-12">
