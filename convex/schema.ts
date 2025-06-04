@@ -370,6 +370,7 @@ export default defineSchema({
   instagramTokens: defineTable({
     userId: v.string(),
     accountId: v.any(),
+    username: v.string(),
     accessToken: v.string(),
     refreshToken: v.string(),
     expiryDate: v.number(),
