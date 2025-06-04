@@ -6,7 +6,13 @@ export default httpAction(async (ctx, request) => {
     return new Response("Method Not Allowed", { status: 405 });
   }
   const url = new URL(request.url);
-  const userId = url.searchParams.get("id");
+  // Extract userId from path: /api/users/:userId/youtube/channel
+  let userId: string | null = null;
+  const match = url.pathname.match(/\/api\/users\/([^/]+)\/youtube\/channel/);
+  if (match) {
+    userId = match[1];
+  }
+
   const { channelId, title, description, customUrl, thumbnails, statistics } = await request.json();
   if (!userId || !channelId || !title) {
     return new Response(JSON.stringify({ success: false, error: "Missing required fields" }), { status: 400 });

@@ -6,9 +6,22 @@ export default httpAction(async (ctx, request) => {
     return new Response("Method Not Allowed", { status: 405 });
   }
   const url = new URL(request.url);
-  const parts = url.pathname.split("/");
-  const userId = parts[4];
-  const postId = parts[7];
+  // Expect path: /api/instagram/users/:userId/posts/:postId/comments
+  const match = url.pathname.match(/^\/api\/instagram\/users\/([^/]+)\/posts\/([^/]+)\/comments$/);
+  if (!match) {
+    return new Response(
+      JSON.stringify({ success: false, error: "Invalid URL format. Expected /api/instagram/users/:userId/posts/:postId/comments" }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
+  const userId = match[1];
+  const postId = match[2];
+  if (!userId || !postId) {
+    return new Response(
+      JSON.stringify({ success: false, error: "Missing userId or postId in URL" }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
   try {
     const post = await ctx.runQuery(api.instagramQueries.getInstagramPost, { userId, postId });
     if (!post) {

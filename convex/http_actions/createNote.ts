@@ -2,6 +2,9 @@ import { httpAction } from "../_generated/server";
 import { api } from "../_generated/api";
 
 export default httpAction(async (ctx, req) => {
+  if (req.method !== "POST") {
+    return new Response("Method Not Allowed", { status: 405 });
+  }
   try {
     const body = await req.json();
     const { userId, content, platform, type, templateInput, analysisId, title, important, tags } = body;

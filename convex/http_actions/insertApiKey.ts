@@ -5,7 +5,13 @@ export default httpAction(async (ctx, request) => {
   if (request.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405 });
   }
-  const { user_id, key_hash, scopes, rate_tier } = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch (error) {
+    return new Response(JSON.stringify({ error: "Invalid JSON in request body" }), { status: 400 });
+  }
+  const { user_id, key_hash, scopes, rate_tier } = body;
   if (!user_id || !key_hash) {
     return new Response(JSON.stringify({ error: "Missing user_id or key_hash" }), { status: 400 });
   }

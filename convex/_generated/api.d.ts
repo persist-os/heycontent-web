@@ -17,6 +17,7 @@ import type * as analyses from "../analyses.js";
 import type * as apiKeys from "../apiKeys.js";
 import type * as apiKeysMutations from "../apiKeysMutations.js";
 import type * as apiKeysQueries from "../apiKeysQueries.js";
+import type * as backfillInstagramTokenUsernames from "../backfillInstagramTokenUsernames.js";
 import type * as chatMutations from "../chatMutations.js";
 import type * as chatQueries from "../chatQueries.js";
 import type * as gmailMutations from "../gmailMutations.js";
@@ -55,9 +56,11 @@ import type * as http_actions_getYouTubeTokens from "../http_actions/getYouTubeT
 import type * as http_actions_getYouTubeVideoData from "../http_actions/getYouTubeVideoData.js";
 import type * as http_actions_insertApiKey from "../http_actions/insertApiKey.js";
 import type * as http_actions_linkAnalysisToNote from "../http_actions/linkAnalysisToNote.js";
+import type * as http_actions_listUsers from "../http_actions/listUsers.js";
 import type * as http_actions_logUsageEvent from "../http_actions/logUsageEvent.js";
 import type * as http_actions_resetUsageForPeriod from "../http_actions/resetUsageForPeriod.js";
 import type * as http_actions_saveGmailAccount from "../http_actions/saveGmailAccount.js";
+import type * as http_actions_saveInstagramToken from "../http_actions/saveInstagramToken.js";
 import type * as http_actions_saveSubscription from "../http_actions/saveSubscription.js";
 import type * as http_actions_storeGmailFullProfile from "../http_actions/storeGmailFullProfile.js";
 import type * as http_actions_storeInstagramPostsBulk from "../http_actions/storeInstagramPostsBulk.js";
@@ -72,7 +75,6 @@ import type * as http_actions_updateStripeCustomer from "../http_actions/updateS
 import type * as http_actions_updateSubscriptionFromStripe from "../http_actions/updateSubscriptionFromStripe.js";
 import type * as http_actions_updateUser from "../http_actions/updateUser.js";
 import type * as http_actions_updateYouTubeToken from "../http_actions/updateYouTubeToken.js";
-import type * as http_actions_user from "../http_actions/user.js";
 import type * as http_actions_validateApiKey from "../http_actions/validateApiKey.js";
 import type * as instagramMutations from "../instagramMutations.js";
 import type * as instagramQueries from "../instagramQueries.js";
@@ -103,6 +105,7 @@ declare const fullApi: ApiFromModules<{
   apiKeys: typeof apiKeys;
   apiKeysMutations: typeof apiKeysMutations;
   apiKeysQueries: typeof apiKeysQueries;
+  backfillInstagramTokenUsernames: typeof backfillInstagramTokenUsernames;
   chatMutations: typeof chatMutations;
   chatQueries: typeof chatQueries;
   gmailMutations: typeof gmailMutations;
@@ -141,9 +144,11 @@ declare const fullApi: ApiFromModules<{
   "http_actions/getYouTubeVideoData": typeof http_actions_getYouTubeVideoData;
   "http_actions/insertApiKey": typeof http_actions_insertApiKey;
   "http_actions/linkAnalysisToNote": typeof http_actions_linkAnalysisToNote;
+  "http_actions/listUsers": typeof http_actions_listUsers;
   "http_actions/logUsageEvent": typeof http_actions_logUsageEvent;
   "http_actions/resetUsageForPeriod": typeof http_actions_resetUsageForPeriod;
   "http_actions/saveGmailAccount": typeof http_actions_saveGmailAccount;
+  "http_actions/saveInstagramToken": typeof http_actions_saveInstagramToken;
   "http_actions/saveSubscription": typeof http_actions_saveSubscription;
   "http_actions/storeGmailFullProfile": typeof http_actions_storeGmailFullProfile;
   "http_actions/storeInstagramPostsBulk": typeof http_actions_storeInstagramPostsBulk;
@@ -158,7 +163,6 @@ declare const fullApi: ApiFromModules<{
   "http_actions/updateSubscriptionFromStripe": typeof http_actions_updateSubscriptionFromStripe;
   "http_actions/updateUser": typeof http_actions_updateUser;
   "http_actions/updateYouTubeToken": typeof http_actions_updateYouTubeToken;
-  "http_actions/user": typeof http_actions_user;
   "http_actions/validateApiKey": typeof http_actions_validateApiKey;
   instagramMutations: typeof instagramMutations;
   instagramQueries: typeof instagramQueries;

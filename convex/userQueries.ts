@@ -10,10 +10,10 @@ export const list = query({
 
 export const getUserDetails = query({
     args: { email: v.string() },
-    handler: async ({ db }, { email }) => {
-      const user = await db
+    handler: async (ctx, args) => {
+      const user = await ctx.db
         .query("users")
-        .withIndex("by_email", (q) => q.eq("email", email))
+        .withIndex("by_email", (q) => q.eq("email", args.email))
         .first();
       
       if (!user) return null;
@@ -34,10 +34,10 @@ export const getUserDetails = query({
   
   export const checkReferralCode = query({
   args: { referralCode: v.string() },
-  handler: async ({ db }, { referralCode }) => {
-    const user = await db
+  handler: async (ctx, args) => {
+    const user = await ctx.db
       .query("users")
-      .withIndex("by_referralCode", (q) => q.eq("referralCode", referralCode))
+      .withIndex("by_referralCode", (q) => q.eq("referralCode", args.referralCode))
       .first();
     if (user) {
       return { 

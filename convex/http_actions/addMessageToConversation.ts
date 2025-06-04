@@ -5,7 +5,13 @@ export default httpAction(async (ctx, request) => {
   if (request.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405 });
   }
-  const { userId, conversationId, message } = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch (error) {
+    return new Response(JSON.stringify({ error: "Invalid JSON in request body" }), { status: 400 });
+  }
+  const { userId, conversationId, message } = body;
   if (!userId || !conversationId || !message) {
     return new Response(JSON.stringify({ error: "Missing required fields" }), { status: 400 });
   }

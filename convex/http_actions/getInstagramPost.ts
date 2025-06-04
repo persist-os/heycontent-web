@@ -6,9 +6,12 @@ export default httpAction(async (ctx, request) => {
     return new Response("Method Not Allowed", { status: 405 });
   }
   const url = new URL(request.url);
-  const parts = url.pathname.split("/");
-  const userId = parts[4]; // /api/users/:id/instagram/post/:postId
-  const postId = parts[7];
+  const pathMatch = url.pathname.match(/\/api\/users\/([^\/]+)\/instagram\/post\/([^\/]+)/);
+  if (!pathMatch) {
+    return new Response(JSON.stringify({ error: "Invalid URL format" }), { status: 400 });
+  }
+  const [, userId, postId] = pathMatch;
+
   try {
     const post = await ctx.runQuery(api.instagramQueries.getInstagramPost, { userId, postId });
     if (!post) {

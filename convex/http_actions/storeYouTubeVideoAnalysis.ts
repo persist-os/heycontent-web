@@ -8,7 +8,13 @@ export default httpAction(async (ctx, request) => {
   const url = new URL(request.url);
   const userId = url.searchParams.get("userId");
   const videoId = url.searchParams.get("videoId");
-  const { analysisData } = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch (error) {
+    return new Response(JSON.stringify({ success: false, error: "Invalid JSON in request body" }), { status: 400 });
+  }
+  const { analysisData } = body;
   if (!userId || !videoId) {
     return new Response(JSON.stringify({ success: false, error: "Missing userId or videoId" }), { status: 400 });
   }

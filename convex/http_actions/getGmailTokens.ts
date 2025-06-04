@@ -2,6 +2,9 @@ import { httpAction } from "../_generated/server";
 import { api } from "../_generated/api";
 
 export default httpAction(async (ctx, req) => {
+  if (req.method !== "GET") {
+    return new Response("Method Not Allowed", { status: 405 });
+  }
   const { userId } = Object.fromEntries(new URL(req.url).searchParams);
   if (!userId) {
     return new Response(JSON.stringify({ error: "Missing userId in query" }), { status: 400 });

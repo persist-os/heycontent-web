@@ -388,11 +388,11 @@ export default defineSchema({
   .index("by_views", ["statistics.views"])
   .index("by_likes", ["statistics.likes"]),
 
-
   // Instagram Tokens
   instagramTokens: defineTable({
     userId: v.string(),
     accountId: v.any(),
+    username: v.string(),
     accessToken: v.string(),
     refreshToken: v.string(),
     expiryDate: v.number(),

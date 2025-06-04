@@ -1,10 +1,30 @@
 import { httpAction } from "../_generated/server";
 import { api } from "../_generated/api";
 
+// Helper to extract userId from /api/users/:userId/...
+function extractUserIdFromApiUsersPath(pathname: string): string | null {
+  // e.g. /api/users/:userId/stripe/subscription
+  const parts = pathname.split("/");
+  // ['', 'api', 'users', ':userId', ...]
+  if (parts.length > 3 && parts[1] === "api" && parts[2] === "users") {
+    return parts[3];
+  }
+  return null;
+}
+
 export default httpAction(async (ctx, req) => {
+  if (req.method !== "GET") {
+    return new Response("Method Not Allowed", { status: 405 });
+  }
   const url = new URL(req.url);
-  const userId = url.pathname.split("/")[4];
+  const userId = extractUserIdFromApiUsersPath(url.pathname);
   const meterName = url.searchParams.get("meterName");
+  if (!userId) {
+    return new Response(
+      JSON.stringify({ success: false, error: "Missing or invalid userId in path" }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
   if (!meterName) {
     return new Response(
       JSON.stringify({ success: false, error: "Missing meter name" }),

@@ -5,7 +5,12 @@ export default httpAction(async (ctx, request) => {
   if (request.method !== "PATCH") {
     return new Response("Method Not Allowed", { status: 405 });
   }
-  const body = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch (error) {
+    return new Response(JSON.stringify({ error: "Invalid JSON in request body" }), { status: 400 });
+  }
   const { userId, name, email, image } = body;
   if (!userId) {
     return new Response(JSON.stringify({ error: "Missing userId" }), { status: 400 });

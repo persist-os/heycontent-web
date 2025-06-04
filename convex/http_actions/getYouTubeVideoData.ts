@@ -14,10 +14,24 @@ function extractYouTubeVideoId(url: string): string | null {
   return null;
 }
 
+// Helper to extract userId from /api/users/:userId/...
+function extractUserIdFromApiUsersPath(pathname: string): string | null {
+  // e.g. /api/users/:userId/youtube/video-data
+  const parts = pathname.split("/");
+  // ['', 'api', 'users', ':userId', ...]
+  if (parts.length > 3 && parts[1] === "api" && parts[2] === "users") {
+    return parts[3];
+  }
+  return null;
+}
+
 export default httpAction(async (ctx, req) => {
   const url = new URL(req.url);
-  const userId = url.pathname.split("/")[4];
+  const userId = extractUserIdFromApiUsersPath(url.pathname);
   const videoUrl = url.searchParams.get("videoUrl");
+  if (!userId) {
+    return new Response(JSON.stringify({ success: false, error: "Missing or invalid userId in path" }), { status: 400 });
+  }
   if (!videoUrl) {
     return new Response(JSON.stringify({ success: false, error: "Missing videoUrl query parameter" }), { status: 400 });
   }

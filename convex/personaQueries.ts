@@ -4,22 +4,22 @@ import { v } from "convex/values";
 
 // Get all personas for a user
 export const getPersonasByUser = query({
-  args: { creatorId: v.string() },
+  args: { userId: v.string() },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("personas")
-      .withIndex("by_userId", q => q.eq("userId", args.creatorId))
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
       .collect();
   },
 });
 
 // Get all active personas for a user
 export const getActivePersonasByUser = query({
-  args: { creatorId: v.string() },
+  args: { userId: v.string() },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("personas")
-      .withIndex("by_userId", q => q.eq("userId", args.creatorId))
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
       .filter(q => q.eq(q.field("isActive"), true))
       .collect();
   },

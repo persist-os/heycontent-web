@@ -3,6 +3,9 @@ import { api } from "../_generated/api";
 
 export default httpAction(async (ctx, req) => {
   const { noteId } = Object.fromEntries(new URL(req.url).searchParams);
+  if (!noteId || typeof noteId !== "string" || noteId.trim() === "") {
+    return new Response(JSON.stringify({ error: "Missing or invalid noteId in query parameters" }), { status: 400 });
+  }
   try {
     const { analysisId, userId } = await req.json();
     if (!analysisId || !userId) {

@@ -7,7 +7,13 @@ export default httpAction(async (ctx, request) => {
   }
   const url = new URL(request.url);
   const userId = url.searchParams.get("id");
-  const { channel, videos } = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch (error) {
+    return new Response(JSON.stringify({ success: false, error: "Invalid JSON in request body" }), { status: 400 });
+  }
+  const { channel, videos } = body;
   if (!userId || !channel || !videos) {
     return new Response(JSON.stringify({ success: false, error: "Missing required fields" }), { status: 400 });
   }

@@ -3,7 +3,17 @@ import { api } from "../_generated/api";
 
 export default httpAction(async (ctx, req) => {
   const url = new URL(req.url);
-  const userId = url.pathname.split("/")[4];
+  // Prefer userId from query parameter, fallback to regex path extraction
+  let userId = url.searchParams.get("userId");
+  if (!userId) {
+    const pathMatch = url.pathname.match(/\/api\/users\/([^\/]+)\/stripe\/customer/);
+    if (pathMatch) {
+      userId = pathMatch[1];
+    }
+  }
+  if (!userId) {
+    return new Response(JSON.stringify({ success: false, error: "Missing or invalid userId" }), { status: 400, headers: { "Content-Type": "application/json" } });
+  }
   try {
     const user = await ctx.runQuery(api.userQueries.getUser, { userId });
     if (!user) {
