@@ -61,7 +61,7 @@ export function NoteArea({
         }
         // Create a new note object with the current content
         const currentNote = { ...note, content };
-        onRequestAIInsights(note._id, currentNote);
+        onRequestAIInsights(String(note._id), currentNote);
       },
       onCommandMenu: () => {
         if (textAreaRef.current) {
@@ -94,7 +94,7 @@ export function NoteArea({
           if (lineContent.startsWith('  ')) {
             const newContent = content.substring(0, lineStart) + content.substring(lineStart + 2);
             setContent(newContent);
-            onUpdate(note._id, { content: newContent });
+            onUpdate(String(note._id), { content: newContent });
           }
         }
       },
@@ -120,7 +120,7 @@ export function NoteArea({
       }
 
       if (JSON.stringify(tags) !== JSON.stringify(note.tags)) {
-        onUpdate(note._id, { tags: [...new Set(tags)] });
+        onUpdate(String(note._id), { tags: [...new Set(tags)] });
       }
     }
   }, [content, note._id, note.tags]);
@@ -182,7 +182,7 @@ export function NoteArea({
     const newContent = content.substring(0, start) + newText + content.substring(end);
     setContent(newContent);
     setCursorPosition(newCursorPosition);
-    onUpdate(note._id, { content: newContent });
+    onUpdate(String(note._id), { content: newContent });
   };
 
   const handleFormat = (prefix: string, suffix: string = prefix) => {
@@ -205,7 +205,9 @@ export function NoteArea({
 
     setContent(newContent);
     setCursorPosition(newCursorPosition);
-    onUpdate(note._id, { content: newContent });
+    onUpdate(String(note._id), { content: newContent });
+    // Save to local storage immediately after formatting
+    saveToLocal(`note_${String(note._id)}`, { content: newContent });
   };
 
   // Create a debounced version of onUpdate using useRef
@@ -258,10 +260,10 @@ export function NoteArea({
     }
     
     // Save to local storage as backup immediately
-    saveToLocal(note._id, { content: newContent });
+    saveToLocal(`note_${String(note._id)}`, { content: newContent });
     
     // Debounce the API update
-    debouncedUpdate(note._id, {
+    debouncedUpdate(String(note._id), {
       content: newContent
     });
   };
@@ -297,13 +299,13 @@ export function NoteArea({
           const newContent = content.substring(0, start) + command.template + content.substring(end);
           setContent(newContent);
           setCursorPosition(start + command.template.length);
-          onUpdate(note._id, { content: newContent });
+          onUpdate(String(note._id), { content: newContent });
         }
       } else {
         insertText(command.template);
       }
     } else if (command.type === 'metadata' && command.metadata) {
-      onUpdate(note._id, { [command.metadata.type || '']: command.metadata.value });
+      onUpdate(String(note._id), { [command.metadata.type || '']: command.metadata.value });
     }
     setShowCommands(false);
   };
@@ -335,7 +337,7 @@ export function NoteArea({
         {/* Sticky Ideas Panel */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
           <IdeasPanel
-            noteId={note._id}
+            noteId={String(note._id)}
             userId={note.userId}
             platform={note.platform || 'general'}
             mode="note"
@@ -347,7 +349,7 @@ export function NoteArea({
                 const newContent = content.substring(0, start) + ideaContent + content.substring(end);
                 setContent(newContent);
                 setCursorPosition(start + ideaContent.length);
-                onUpdate(note._id, { content: newContent });
+                onUpdate(String(note._id), { content: newContent, references: [] });
               }
             }}
           />

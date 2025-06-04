@@ -35,11 +35,7 @@ export const createNote = mutation({
     title: v.optional(v.string()),
     important: v.optional(v.boolean()),
     tags: v.optional(v.array(v.string())),
-    references: v.optional(v.array(v.object({
-      type: noteType,
-      content: v.string(),
-      isLoading: v.optional(v.boolean()),
-    }))),
+    references: v.optional(v.array(v.any())), // Use v.any() for flexibility with references
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -74,6 +70,36 @@ export const getNotesByUser = query({
   },
 });
 
+// Simple mutation just for updating note content and title
+export const updateNoteContent = mutation({
+  args: {
+    noteId: v.id("notes"),
+    userId: v.string(),
+    content: v.string(),
+    title: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Ownership check
+    const note = await ctx.db.get(args.noteId);
+    if (!note) {
+      throw new Error("Note not found");
+    }
+    if (note.userId !== args.userId) {
+      throw new Error("Unauthorized: You do not own this note.");
+    }
+    
+    // Update just the content, title and timestamp
+    await ctx.db.patch(args.noteId, {
+      content: args.content,
+      title: args.title,
+      updatedAt: Date.now(),
+    });
+    
+    // Return the updated note
+    return await ctx.db.get(args.noteId);
+  },
+});
+
 export const updateNote = mutation({
   args: {
     noteId: v.id("notes"),
@@ -87,26 +113,58 @@ export const updateNote = mutation({
       important: v.optional(v.boolean()),
       type: v.optional(noteType),
       tags: v.optional(v.array(v.string())),
+      // Handle references separately to avoid schema validation issues
+      references: v.optional(v.any()),
     }),
   },
   handler: async (ctx, args) => {
-    // Ownership check
-    const note = await ctx.db.get(args.noteId);
-    if (!note) {
-      throw new Error("Note not found");
+    try {
+      // Ownership check
+      const note = await ctx.db.get(args.noteId);
+      if (!note) {
+        throw new Error("Note not found");
+      }
+      if (note.userId !== args.userId) {
+        throw new Error("Unauthorized: You do not own this note.");
+      }
+
+      // Create a clean update object with only valid fields
+      const cleanUpdates: any = {};
+      
+      // Handle basic fields
+      if (args.updates.content !== undefined) cleanUpdates.content = args.updates.content;
+      if (args.updates.title !== undefined) cleanUpdates.title = args.updates.title;
+      if (args.updates.platform !== undefined) cleanUpdates.platform = args.updates.platform;
+      if (args.updates.important !== undefined) cleanUpdates.important = args.updates.important;
+      if (args.updates.type !== undefined) cleanUpdates.type = args.updates.type;
+      if (args.updates.templateInput !== undefined) cleanUpdates.templateInput = args.updates.templateInput;
+      if (args.updates.analysisId !== undefined) cleanUpdates.analysisId = args.updates.analysisId;
+      
+      // Handle array fields
+      if (Array.isArray(args.updates.tags)) cleanUpdates.tags = args.updates.tags;
+      
+      // Handle references field specially
+      if (args.updates.references !== undefined) {
+        // Ensure references is an array or set to empty array
+        cleanUpdates.references = Array.isArray(args.updates.references) 
+          ? args.updates.references 
+          : [];
+      }
+      
+      // Always update updatedAt
+      cleanUpdates.updatedAt = Date.now();
+      
+      // Apply the update
+      await ctx.db.patch(args.noteId, cleanUpdates);
+      
+      // Fetch and return the updated note
+      const updatedNote = await ctx.db.get(args.noteId);
+      return updatedNote;
+    } catch (error) {
+      // Log the error for debugging
+      console.error("Error in updateNote:", error);
+      throw error;
     }
-    if (note.userId !== args.userId) {
-      throw new Error("Unauthorized: You do not own this note.");
-    }
-    // Always update updatedAt
-    const updatesWithTimestamp = {
-      ...args.updates,
-      updatedAt: Date.now(),
-    };
-    await ctx.db.patch(args.noteId, updatesWithTimestamp);
-    // Fetch and return the updated note
-    const updatedNote = await ctx.db.get(args.noteId);
-    return updatedNote;
   },
 });
 
