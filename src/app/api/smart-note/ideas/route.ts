@@ -20,7 +20,11 @@ export async function POST(request: Request) {
     debug('--- New Request ---');
     debug('Request method:', request.method);
     debug('Request url:', request.url);
-    debug('Request headers:', JSON.stringify(Object.fromEntries(request.headers.entries()), null, 2));
+    if (process.env.NODE_ENV !== 'production') {
+      debug('Request headers:', JSON.stringify(Object.fromEntries(request.headers.entries()), null, 2));
+    } else {
+      debug('Request headers: [REDACTED]');
+    }
     // Get API key from Authorization header
     const authHeader = request.headers.get('Authorization');
     debug('Extracted Authorization header:', authHeader);
