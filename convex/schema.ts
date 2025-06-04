@@ -3,6 +3,14 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  notesAnalyses: defineTable({
+    noteId: v.string(),
+    platform: v.string(),
+    output: v.optional(v.any()),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+  .index("by_noteId", ["noteId"]),
   // User Info
   users: defineTable({
     name: v.string(),
@@ -57,6 +65,8 @@ export default defineSchema({
       items: v.optional(v.any()),
       quantity: v.optional(v.number()),
       start_date: v.optional(v.number()),
+      trial_start: v.optional(v.number()),
+      trial_end: v.optional(v.number()),
     })),
     // Payment method info (minimal, just for display)
     paymentMethod: v.optional(v.object({
@@ -108,9 +118,9 @@ export default defineSchema({
   notes: defineTable({
     userId: v.string(),
     title: v.string(),
-    content: v.optional(v.string()),
-    important: v.optional(v.boolean()),
-    platform: v.optional(v.string()), 
+    content: v.string(),
+    important: v.boolean(),
+    platform: v.optional(v.string()),
     type: v.optional(v.union(
       v.literal("ai_insight"),
       v.literal("conversation"),
@@ -121,7 +131,20 @@ export default defineSchema({
       v.literal("click")
     )),
     tags: v.array(v.string()),
-    analysis: v.optional(v.string()),
+    references: v.optional(v.array(v.object({
+      type: v.union(
+        v.literal("ai_insight"),
+        v.literal("conversation"),
+        v.literal("idea"),
+        v.literal("url"),
+        v.literal("date"),
+        v.literal("brainstorm"),
+        v.literal("click")
+      ),
+      content: v.string(),
+      isLoading: v.optional(v.boolean()),
+    }))),
+    analysis: v.optional(v.any()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -255,7 +278,54 @@ export default defineSchema({
     createdAt: v.float64(),
     updatedAt: v.float64(),
     id: v.string(),
-    snippet: v.optional(v.any()), // Make snippet fully flexible to accept any fields
+    snippet: v.optional(v.object({
+      customUrl: v.optional(v.string()),
+      description: v.optional(v.string()),
+      thumbnails: v.optional(v.object({
+        default: v.optional(v.object({
+          height: v.optional(v.float64()),
+          url: v.optional(v.string()),
+          width: v.optional(v.float64()),
+        })),
+        high: v.optional(v.object({
+          height: v.optional(v.float64()),
+          url: v.optional(v.string()),
+          width: v.optional(v.float64()),
+        })),
+        medium: v.optional(v.object({
+          height: v.optional(v.float64()),
+          url: v.optional(v.string()),
+          width: v.optional(v.float64()),
+        })),
+      })),
+      localized: v.optional(v.object({
+        description: v.optional(v.string()),
+        localized: v.optional(v.object({
+          description: v.optional(v.string()),
+          title: v.optional(v.string()),
+        })),
+        publishedAt: v.optional(v.string()),
+        thumbnails: v.optional(v.object({
+          default: v.optional(v.object({
+            height: v.optional(v.float64()),
+            url: v.optional(v.string()),
+            width: v.optional(v.float64()),
+          })),
+          high: v.optional(v.object({
+            height: v.optional(v.float64()),
+            url: v.optional(v.string()),
+            width: v.optional(v.float64()),
+          })),
+          medium: v.optional(v.object({
+            height: v.optional(v.float64()),
+            url: v.optional(v.string()),
+            width: v.optional(v.float64()),
+          })),
+        })),
+        title: v.optional(v.string()),
+      })),
+      title: v.optional(v.string()),
+    })),
     statistics: v.optional(
       v.object({
         hiddenSubscriberCount: v.optional(v.boolean()),
@@ -266,13 +336,11 @@ export default defineSchema({
     )
   })
   .index("by_userId", ["userId"])
-  .index("by_channelId", ["id"])
-  .index("by_publishedAt", ["snippet.publishedAt"]),
+  .index("by_channelId", ["id"]),
 
   youtubeVideos: defineTable({
     userId: v.string(), // Required field
     videoId: v.string(), // Required - this is the YouTube video ID
-    channelId: v.optional(v.string()), // Added to support channelId index
     id: v.optional(v.string()), // For internal IDs if different from videoId
     url: v.optional(v.string()), // Full YouTube URL
     analysis: v.optional(v.any()), // Original JSON analysis data
@@ -361,22 +429,44 @@ export default defineSchema({
   })
   .index("by_userId", ["userId"])
   .index("by_videoId", ["videoId"])
-  .index("by_channelId", ["snippet.channel.id"])
   .index("by_publishedAt", ["snippet.published_at"])
   .index("by_views", ["statistics.views"])
   .index("by_likes", ["statistics.likes"]),
 
+
   // Instagram Tokens
   instagramTokens: defineTable({
     userId: v.string(),
-    accountId: v.any(),
-    username: v.string(),
+    accountId: v.union(v.string(), v.float64()),
+    username: v.optional(v.string()),
     accessToken: v.string(),
     refreshToken: v.string(),
     expiryDate: v.number(),
     scope: v.string(),
     lastRefreshed: v.number(),
   }).index("by_userId", ["userId"]),
+
+  // PLACEHOLDER Instagram Data (edit to fit exact Instagram schema)
+  instagramData: defineTable({
+    userId: v.string(),
+    resourceType: v.union(
+      v.literal("profile"), 
+      v.literal("post"), 
+      v.literal("story"),
+      v.literal("reel")
+    ),
+    resourceId: v.string(),
+    data: v.any(),
+    timestamp: v.optional(v.number()),
+    followerCount: v.optional(v.number()),
+    followingCount: v.optional(v.number()),
+    postCount: v.optional(v.number()),
+  })
+  .index("by_user", ["userId"])
+  .index("by_resource_type", ["resourceType"])
+  .index("by_resource_id", ["resourceId"])
+  .index("by_user_resource", ["userId", "resourceType"])
+  .index("by_timestamp", ["timestamp"]),
 
   // Instagram Accounts
   instagramAccounts: defineTable({
@@ -433,6 +523,33 @@ export default defineSchema({
   .index("by_postId", ["postId"])
   .index("by_timestamp", ["data.timestamp"]),
 
+
+  // Subscription plans are now managed in Stripe
+  // and cached in memory or environment variables
+
+  // Historical usage records
+  usageHistory: defineTable({
+    userId: v.string(),
+    periodStart: v.number(),
+    periodEnd: v.number(),
+    totalRequests: v.number(),
+    includedRequests: v.number(),
+    overageRequests: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_period", ["periodStart", "periodEnd"]),
+
+  sessions: defineTable({
+    userId: v.string(),
+    type: v.union(v.literal("desktop"), v.literal("web")),
+    createdAt: v.number(),
+    lastActive: v.number(),
+    revoked: v.boolean(),
+  })
+  .index("by_user", ["userId"]),
+
   usageEvents: defineTable({
     userId: v.string(),
     timestamp: v.number(),
@@ -443,4 +560,13 @@ export default defineSchema({
   .index("by_user", ["userId"])
   .index("by_timestamp", ["timestamp"]),
 
+  ubpSettings: defineTable({
+    userId: v.string(),
+    enabled: v.boolean(),
+    premiumEnabled: v.boolean(),
+    monthlyLimit: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_user", ["userId"]),
 });
