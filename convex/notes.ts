@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { error } from "console";
 
 // Type definition for note types and reference types
 const noteType = v.union(
@@ -35,7 +36,7 @@ export const createNote = mutation({
     title: v.optional(v.string()),
     important: v.optional(v.boolean()),
     tags: v.optional(v.array(v.string())),
-    references: v.optional(v.array(v.any())), // Use v.any() for flexibility with references
+
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -48,15 +49,13 @@ export const createNote = mutation({
       type: args.type ?? "idea",
       important: args.important ?? false,
       tags: args.tags ?? [],
-      references: args.references ?? [],
+
       createdAt: now,
       updatedAt: now,
     };
-    if (args.templateInput) noteData.templateInput = args.templateInput;
-    if (args.analysisId) noteData.analysisId = args.analysisId;
+
     const noteId = await ctx.db.insert("notes", noteData);
-    const createdNote = await ctx.db.get(noteId);
-    return createdNote;
+    return noteId;
   },
 });
 
@@ -100,74 +99,50 @@ export const updateNoteContent = mutation({
   },
 });
 
+// UPDATE NOTE MUTATION
+
 export const updateNote = mutation({
   args: {
     noteId: v.id("notes"),
     userId: v.string(),
     updates: v.object({
       content: v.optional(v.string()),
-      platform: v.optional(v.string()),
-      templateInput: v.optional(v.any()),
-      analysisId: v.optional(v.string()),
       title: v.optional(v.string()),
+      analysis: v.optional(v.string()),
       important: v.optional(v.boolean()),
       type: v.optional(noteType),
       tags: v.optional(v.array(v.string())),
-      // Handle references separately to avoid schema validation issues
-      references: v.optional(v.any()),
-    }),
+      platform: v.optional(v.string()),
+      postType: v.optional(v.string()),
+      goal: v.optional(v.string()),
+      fields: v.optional(v.any()),
+    })
   },
   handler: async (ctx, args) => {
-    try {
-      // Ownership check
-      const note = await ctx.db.get(args.noteId);
-      if (!note) {
-        throw new Error("Note not found");
-      }
-      if (note.userId !== args.userId) {
-        throw new Error("Unauthorized: You do not own this note.");
-      }
-
-      // Create a clean update object with only valid fields
-      const cleanUpdates: any = {};
-      
-      // Handle basic fields
-      if (args.updates.content !== undefined) cleanUpdates.content = args.updates.content;
-      if (args.updates.title !== undefined) cleanUpdates.title = args.updates.title;
-      if (args.updates.platform !== undefined) cleanUpdates.platform = args.updates.platform;
-      if (args.updates.important !== undefined) cleanUpdates.important = args.updates.important;
-      if (args.updates.type !== undefined) cleanUpdates.type = args.updates.type;
-      if (args.updates.templateInput !== undefined) cleanUpdates.templateInput = args.updates.templateInput;
-      if (args.updates.analysisId !== undefined) cleanUpdates.analysisId = args.updates.analysisId;
-      
-      // Handle array fields
-      if (Array.isArray(args.updates.tags)) cleanUpdates.tags = args.updates.tags;
-      
-      // Handle references field specially
-      if (args.updates.references !== undefined) {
-        // Ensure references is an array or set to empty array
-        cleanUpdates.references = Array.isArray(args.updates.references) 
-          ? args.updates.references 
-          : [];
-      }
-      
-      // Always update updatedAt
-      cleanUpdates.updatedAt = Date.now();
-      
-      // Apply the update
-      await ctx.db.patch(args.noteId, cleanUpdates);
-      
-      // Fetch and return the updated note
-      const updatedNote = await ctx.db.get(args.noteId);
-      return updatedNote;
-    } catch (error) {
-      // Log the error for debugging
-      console.error("Error in updateNote:", error);
-      throw error;
+    // 1. Get the note by its ID to verify existence and ownership
+    const note = await ctx.db.get(args.noteId);
+    if (!note) {
+      throw new Error("Note not found");
     }
+    if (note.userId !== args.userId) {
+      throw new Error("Unauthorized: You do not own this note.");
+    }
+    // 2. Build update object
+    const updateObj: any = { updatedAt: Date.now() };
+    for (const key of Object.keys(args.updates)) {
+      const value = args.updates[key];
+      if (value !== undefined) {
+        updateObj[key] = value;
+      }
+    }
+    // 3. Patch the note
+    await ctx.db.patch(args.noteId, updateObj);
+    // 4. Return updated note
+    return await ctx.db.get(args.noteId);
   },
 });
 
+// DELETE NOTE MUTATION
 export const deleteNote = mutation({
   args: {
     noteId: v.id("notes"), // Changed from v.string() to v.id("notes")
@@ -193,6 +168,40 @@ export const deleteNote = mutation({
     await ctx.db.delete(args.noteId);
 
     return { success: true };
+  },
+});
+
+// Add analysis to an existing note
+export const addAnalysisToNote = mutation({
+  args: {
+    noteId: v.id("notes"),
+    analysis: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { noteId, analysis } = args;
+    await ctx.db.patch(noteId, {
+      analysis,
+      updatedAt: Date.now(),
+    });
+    return await ctx.db.get(noteId);
+  },
+});
+
+export const getAnalysisforNote = query({
+  args: {
+    noteId: v.id("notes"),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { noteId, userId } = args;
+    const note = await ctx.db.get(noteId);
+    if (!note) {
+      throw new Error("Note not found");
+    }
+    if (note.userId !== userId) {
+      throw new Error("Unauthorized: You do not own this note.");
+    }
+    return note.analysis;
   },
 });
 

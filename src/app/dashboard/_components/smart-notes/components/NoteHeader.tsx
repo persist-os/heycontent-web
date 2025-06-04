@@ -66,16 +66,7 @@ export function NoteHeader({ note, onUpdate, onSave, onRequestAIInsights, onBack
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </button>
         )}
-        <input
-          type="text"
-          value={note.title}
-          onChange={(e) => {
-            const newTitle = e.target.value;
-            onUpdate(note._id, { title: newTitle });
-          }}
-          className="text-2xl font-semibold bg-transparent border-none focus:outline-none w-full"
-          placeholder="Untitled Note"
-        />
+        <div className="text-gray-500 font-medium">Smart Notes</div>
       </div>
       <div className="flex gap-2">
         <button
