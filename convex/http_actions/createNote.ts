@@ -23,11 +23,11 @@ export default httpAction(async (ctx, req) => {
       tags,
     });
     return new Response(JSON.stringify({ success: true, note }), { status: 201 });
-  } catch (error: any) {
-    console.error("Failed to create note:", error);
-    if (error.data) {
-      return new Response(JSON.stringify({ success: false, error: "Failed to create note", details: error.data }), { status: 500 });
-    }
-    return new Response(JSON.stringify({ success: false, error: "Failed to create note", message: error.message || "Internal Server Error" }), { status: 500 });
+  } catch (_err) {
+    // Return a generic error message, do not leak internal details
+    return new Response(
+      JSON.stringify({ success: false, error: "Failed to create note due to an internal server error." }),
+      { status: 500 }
+    );
   }
 });
