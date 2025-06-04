@@ -3,14 +3,6 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-  notesAnalyses: defineTable({
-    noteId: v.string(),
-    platform: v.string(),
-    output: v.optional(v.any()),
-    error: v.optional(v.string()),
-    createdAt: v.number(),
-  })
-  .index("by_noteId", ["noteId"]),
   // User Info
   users: defineTable({
     name: v.string(),
@@ -117,8 +109,8 @@ export default defineSchema({
     userId: v.string(),
     title: v.string(),
     content: v.optional(v.string()),
-    important: v.boolean(),
-    platform: v.optional(v.string()), // Optional: platform-specific notes, not required at creation
+    important: v.optional(v.boolean()),
+    platform: v.optional(v.string()), 
     type: v.optional(v.union(
       v.literal("ai_insight"),
       v.literal("conversation"),
@@ -129,21 +121,7 @@ export default defineSchema({
       v.literal("click")
     )),
     tags: v.array(v.string()),
-    references: v.array(v.object({
-      type: v.union(
-        v.literal("ai_insight"),
-        v.literal("conversation"),
-        v.literal("idea"),
-        v.literal("url"),
-        v.literal("date"),
-        v.literal("brainstorm"),
-        v.literal("click")
-      ),
-      content: v.string(),
-      isLoading: v.optional(v.boolean()),
-    })),
-    analysisId: v.optional(v.string()), // Link to analysis
-    templateInput: v.optional(v.any()), // For template-based notes
+    analysis: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -400,28 +378,6 @@ export default defineSchema({
     lastRefreshed: v.number(),
   }).index("by_userId", ["userId"]),
 
-  // PLACEHOLDER Instagram Data (edit to fit exact Instagram schema)
-  instagramData: defineTable({
-    userId: v.string(),
-    resourceType: v.union(
-      v.literal("profile"), 
-      v.literal("post"), 
-      v.literal("story"),
-      v.literal("reel")
-    ),
-    resourceId: v.string(),
-    data: v.any(),
-    timestamp: v.optional(v.number()),
-    followerCount: v.optional(v.number()),
-    followingCount: v.optional(v.number()),
-    postCount: v.optional(v.number()),
-  })
-  .index("by_user", ["userId"])
-  .index("by_resource_type", ["resourceType"])
-  .index("by_resource_id", ["resourceId"])
-  .index("by_user_resource", ["userId", "resourceType"])
-  .index("by_timestamp", ["timestamp"]),
-
   // Instagram Accounts
   instagramAccounts: defineTable({
     userId: v.string(),
@@ -477,33 +433,6 @@ export default defineSchema({
   .index("by_postId", ["postId"])
   .index("by_timestamp", ["data.timestamp"]),
 
-
-  // Subscription plans are now managed in Stripe
-  // and cached in memory or environment variables
-
-  // Historical usage records
-  usageHistory: defineTable({
-    userId: v.string(),
-    periodStart: v.number(),
-    periodEnd: v.number(),
-    totalRequests: v.number(),
-    includedRequests: v.number(),
-    overageRequests: v.number(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_user", ["userId"])
-  .index("by_period", ["periodStart", "periodEnd"]),
-
-  sessions: defineTable({
-    userId: v.string(),
-    type: v.union(v.literal("desktop"), v.literal("web")),
-    createdAt: v.number(),
-    lastActive: v.number(),
-    revoked: v.boolean(),
-  })
-  .index("by_user", ["userId"]),
-
   usageEvents: defineTable({
     userId: v.string(),
     timestamp: v.number(),
@@ -514,13 +443,4 @@ export default defineSchema({
   .index("by_user", ["userId"])
   .index("by_timestamp", ["timestamp"]),
 
-  ubpSettings: defineTable({
-    userId: v.string(),
-    enabled: v.boolean(),
-    premiumEnabled: v.boolean(),
-    monthlyLimit: v.number(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_user", ["userId"]),
 });

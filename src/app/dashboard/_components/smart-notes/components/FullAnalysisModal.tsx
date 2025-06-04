@@ -6,14 +6,12 @@ interface FullAnalysisModalProps {
   showFullAnalysis: boolean;
   setShowFullAnalysis: (show: boolean) => void;
   selectedInsight: string | null;
-  references: Note['references'];
 }
 
 export function FullAnalysisModal({
   showFullAnalysis,
   setShowFullAnalysis,
   selectedInsight,
-  references
 }: FullAnalysisModalProps) {
   if (!showFullAnalysis || !selectedInsight) return null;
 
@@ -35,8 +33,8 @@ export function FullAnalysisModal({
         </div>
         <div className="flex-1 overflow-auto p-6">
           <div className="markdown-content">
-            {references.find(ref => ref.content === selectedInsight)?.content ? (
-              references.find(ref => ref.content === selectedInsight)?.content?.split('\n')?.map((line: string, i: number, arr: string[]) => {
+            {selectedInsight ? (
+              selectedInsight?.split('\n')?.map((line: string, i: number, arr: string[]) => {
                 if (line.startsWith('```json')) {
                   let codeContent = [];
                   let endIndex = i;
