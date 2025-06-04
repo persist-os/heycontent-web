@@ -2,8 +2,9 @@ import { query } from "./_generated/server";
 import { v } from "convex/values";
 
 export const list = query({
-  handler: async ({ db }) => {
-    return await db.query("users").collect();
+  args: {},
+  handler: async (ctx, args) => {
+    return await ctx.db.query("users").collect();
   },
 });
 

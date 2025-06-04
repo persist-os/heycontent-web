@@ -3,12 +3,13 @@ import { api } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
 
 export default httpAction(async (ctx, req) => {
-  const { noteId } = Object.fromEntries(new URL(req.url).searchParams);
+  const searchParams = new URL(req.url).searchParams;
+  const noteId = searchParams.get("noteId");
+  const userId = searchParams.get("userId");
+  if (!noteId || !userId) {
+    return new Response(JSON.stringify({ error: "Missing required query parameter: noteId or userId" }), { status: 400 });
+  }
   try {
-    const { userId } = await req.json();
-    if (!userId) {
-      return new Response(JSON.stringify({ error: "Missing required field in body: userId" }), { status: 400 });
-    }
     const deleteResult = await ctx.runMutation(api.notes.deleteNote, {
       noteId: noteId as Id<"notes">,
       userId,

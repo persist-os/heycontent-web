@@ -11,7 +11,7 @@ export default httpAction(async (ctx, request) => {
     return new Response(JSON.stringify({ error: "Missing userId" }), { status: 400 });
   }
   const updates = { ...(name && { name }), ...(email && { email }), ...(image && { image }) };
-  const result = await ctx.runMutation(api.userMutations.update_user, { userId, updates });
+  const result = await ctx.runMutation(api.userMutations.updateUser, { userId, updates });
   return new Response(JSON.stringify(result), {
     headers: { "Content-Type": "application/json" },
     status: 200,

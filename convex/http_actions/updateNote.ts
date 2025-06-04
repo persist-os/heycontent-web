@@ -1,11 +1,11 @@
 import { httpAction } from "../_generated/server";
 import { api } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
+import { httpx } from "httpx";
 
 export default httpAction(async (ctx, req) => {
-  const { noteId } = Object.fromEntries(new URL(req.url).searchParams);
+  const { noteId, userId, updates } = await req.json();
   try {
-    const { userId, updates } = await req.json();
     if (!userId) {
       return new Response(JSON.stringify({ error: "Missing required field in body: userId" }), { status: 400 });
     }
