@@ -223,10 +223,6 @@ export const deleteUserAndData = mutation({
     await batchDelete("instagramTokens", () =>
       ctx.db.query("instagramTokens").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
-    // instagramData
-    await batchDelete("instagramData", () =>
-      ctx.db.query("instagramData").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
     // instagramAccounts
     await batchDelete("instagramAccounts", () =>
       ctx.db.query("instagramAccounts").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
@@ -235,21 +231,9 @@ export const deleteUserAndData = mutation({
     await batchDelete("instagramPosts", () =>
       ctx.db.query("instagramPosts").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
-    // usageHistory
-    await batchDelete("usageHistory", () =>
-      ctx.db.query("usageHistory").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // sessions
-    await batchDelete("sessions", () =>
-      ctx.db.query("sessions").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
     // usageEvents
     await batchDelete("usageEvents", () =>
       ctx.db.query("usageEvents").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // ubpSettings
-    await batchDelete("ubpSettings", () =>
-      ctx.db.query("ubpSettings").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     return summary;
   },

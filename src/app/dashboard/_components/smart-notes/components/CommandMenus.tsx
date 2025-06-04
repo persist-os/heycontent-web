@@ -71,19 +71,11 @@ export function CommandMenus({
             const textContent = textAreaRef.current?.value || '';
             const mentionText = `@${option.id}`;
             const newContent = textContent.substring(0, start - 1) + mentionText + ' ' + textContent.substring(start);
-            const newReference = {
-              type: option.id as Note['references'][0]['type'],
-              content: option.label,
-              isLoading: false
-            };
             try {
               const currentNote = textAreaRef.current?.closest('.note-container')?.getAttribute('data-note');
-              const currentReferences = currentNote ? JSON.parse(currentNote).references || [] : [];
-              const updatedReferences = [...currentReferences, newReference];
               await onUpdate(noteId, {
                 updates: {
                   content: newContent,
-                  references: updatedReferences,
                   updatedAt: Date.now()
                 }
               });

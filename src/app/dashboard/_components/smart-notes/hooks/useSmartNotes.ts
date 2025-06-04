@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { Note, NoteUpdate } from "../types";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../../../../convex/_generated/api";
+import type { Id } from "../../../../../../convex/_generated/dataModel";
+import { Note, NoteUpdate, NoteType } from "../types";
 import { getApiKey } from "@/app/lib/api-helpers";
 import { formatAnalysisToMarkdown } from '../utils/format-utils';
 
@@ -19,353 +22,218 @@ interface SmartNoteAnalysis {
   message?: string;
 }
 
-export function useSmartNotes(userId: string | undefined) {
+// Define the return type for the hook to ensure TypeScript knows about all returned functions
+interface SmartNotesHook {
+  notes: Note[];
+  isLoading: boolean;
+  isSaving: boolean;
+  saveNote: (content: string, options?: any) => Promise<{ success: boolean; noteId?: Id<"notes">; error?: string }>;
+  updateNote: (noteId: string | Id<"notes">, updateFields: NoteUpdate, force?: boolean) => Promise<Note | null>;
+  saveNoteContent: (noteId: string | Id<"notes">, content: string, title: string) => Promise<Note | null>;
+  deleteNote: (noteId: Id<"notes"> | string) => Promise<boolean>;
+}
+
+export function useSmartNotes(userId: string | undefined): SmartNotesHook {
+  // Fetch notes using Convex useQuery
+  const notesFromConvex = useQuery(api.notes.getNotesByUser, userId ? { userId } : "skip");
+  
+  // State variables
   const [notes, setNotes] = useState<Note[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isGeneratingIdeas, setIsGeneratingIdeas] = useState(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  
+  // Define isLoading based on query status
+  const isLoading = notesFromConvex === undefined && userId !== undefined;
 
-  // Fetch notes from API
+  // Convex mutations
+  const createNoteConvex = useMutation(api.notes.createNote);
+  const updateNoteConvex = useMutation(api.notes.updateNote);
+  const updateNoteContentConvex = useMutation(api.notes.updateNoteContent);
+  const deleteNoteConvex = useMutation(api.notes.deleteNote);
+
+  // Update local notes state when Convex data changes
   useEffect(() => {
-    if (!userId) return;
-    setIsLoading(true);
-    
-    (async () => {
-      const apiKey = await getApiKey();
-      if (!apiKey) {
-        console.error('No API key available');
-        setIsLoading(false);
-        return;
-      }
+    if (notesFromConvex) {
+      // Transform the data to ensure it matches the Note interface
+      const transformedNotes: Note[] = notesFromConvex.map(note => ({
+        ...note,
+        // Ensure required properties have default values if they're missing
+        content: note.content || "",
+        title: note.title || "",
+        createdAt: note.createdAt || note._creationTime,
+        updatedAt: note.updatedAt || note._creationTime,
+        important: note.important ?? false,
+        tags: note.tags || [],
+      }));
+      setNotes(transformedNotes);
+    }
+  }, [notesFromConvex]);
 
-      fetch("/api/smart-note/user", {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-      })
-        .then(res => res.json())
-        .then(data => setNotes(Array.isArray(data.data) ? data.data : []))
-        .catch(error => {
-          console.error('Failed to fetch notes:', error);
-          setNotes([]);
-        })
-        .finally(() => setIsLoading(false));
-    })();
-  }, [userId]);
-
-  // Save note with smart capabilities
-  // Save a new note (no ID or local ID)
+  /**
+   * Save a new note with content
+   */
   const saveNote = useCallback(async (
     content: string,
     options: {
-      platform?: string;
-      metadata?: {
-        type?: string;
-        templateInput?: any;
-      };
-      analysisResult?: {
-        analysisId?: string;
-      };
+      title?: string;
+      type?: NoteType;
+      references?: string[];
     } = {}
-  ): Promise<{ success: boolean; noteId?: string; error?: string }> => {
-    setIsSaving(true);
-    try {
-      const apiKey = await getApiKey();
-      if (!apiKey) {
-        return { success: false, error: 'No API key available' };
-      }
-      // Provide default placeholders if content or platform are missing
-      const safeContent = content && content.trim() ? content : 'Write your note here...';
-      const safePlatform = options.platform && options.platform.trim() ? options.platform : 'web';
-      if (!content || !content.trim()) {
-        console.warn('No note content provided, using default placeholder for save.');
-      }
-      if (!options.platform || !options.platform.trim()) {
-        console.warn('No platform provided for save, using default platform \'web\'.');
-      }
-      // Log actual values being sent to backend
-      console.log('[saveNote] About to save note:', {
-        content,
-        safeContent,
-        platform: options.platform,
-        safePlatform,
-        type: options.metadata?.type,
-        analysisId: options.analysisResult?.analysisId
-      });
-      // Prepare payload as expected by backend
-      const allowedTypes = [
-        'ai_insight', 'conversation', 'idea', 'url', 'date', 'brainstorm', 'click'];
-      const type = options.metadata?.type;
-      const payload: Record<string, any> = {
-        content: safeContent,
-        platform: safePlatform,
-      templateInput: options.metadata?.templateInput || null,
-      analysisId: options.analysisResult?.analysisId || null
-    };
-    if (type && allowedTypes.includes(type)) {
-      payload.type = type;
+  ): Promise<{ success: boolean; noteId?: Id<"notes">; error?: string }> => {
+    if (!userId) {
+      return { success: false, error: "User not authenticated" };
     }
-    // If type is not provided, or is invalid, omit it from payload.
-      const response = await fetch('/api/smart-note/save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify(payload),
+
+    const { title = "Untitled Note", type = "idea" } = options;
+
+    try {
+      setIsSaving(true);
+      console.log("Creating new note:", { title, contentLength: content?.length || 0 });
+
+      const noteId = await createNoteConvex({
+        userId,
+        title,
+        content: content || "",
+        type,
       });
-      const data = await response.json();
-      if (response.ok && data.success && data.data && data.data._id) {
-        // Insert the new note into local state
-        setNotes(prev => [{ ...data.data }, ...prev.filter(n => n._id !== data.data._id)]);
-        return { success: true, noteId: data.data._id };
+
+      if (noteId) {
+        console.log("Note created successfully:", noteId);
+        // No optimistic update, rely on Convex query
+        return { success: true, noteId };
       } else {
-        return {
-          success: false,
-          error: data.error || data.message || 'Failed to save note',
-        };
+        console.error("Failed to create note - no ID returned");
+        return { success: false, error: "Failed to create note" };
       }
     } catch (error) {
-      console.error('Error saving note:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Network error occurred',
-      };
+      console.error("Error creating note:", error);
+      return { success: false, error: String(error) };
     } finally {
       setIsSaving(false);
     }
-  }, []);
+  }, [userId, createNoteConvex]);
 
-  // Update existing note by Convex ID
-  // NoteUpdate type must include: content, platform, type, templateInput, analysisId
-  // IMPORTANT: During analysis, updateNote should ONLY be used to update references (AI insights),
-  // NOT to update note content, platform, or trigger any save.
-  const updateNote = useCallback(async (
-    noteId: string,
-    updateFields: Partial<Pick<Note, 'content' | 'platform' | 'type' | 'templateInput' | 'analysisId' | 'references' | 'title'>>,
-    force: boolean = false
-  ): Promise<Note | null> => {
-    if (!userId || !noteId) return null;
-    if (!force) {
-      // If noteId is a local temp ID, do NOT save as a side effect of analysis
-      if (noteId.startsWith('local_')) {
-        // Only allow updating references (AI insights) for local notes during analysis
-        if (Object.keys(updateFields).every(key => key === 'references' || key === 'title')) {
-          // Update local note in memory only (not persisted)
-          setNotes(prev => prev.map(n => n._id === noteId ? { ...n, ...updateFields } : n));
-          return { ...(notes.find(n => n._id === noteId) || {}), ...updateFields } as Note;
-        }
-        // Prevent accidental save or update of content/platform during analysis
-        console.warn('Prevented save/update of content/platform for local note during analysis.');
-        return null;
-      }
-      // For persisted notes, only allow update of references/title during analysis
-      if (Object.keys(updateFields).every(key => key === 'references' || key === 'title')) {
-        // Perform backend update for references/title
-        try {
-        const apiKey = await getApiKey();
-        if (!apiKey) return null;
-        const payload = { ...updateFields };
-        const response = await fetch(`/api/smart-note/update/${noteId}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify(payload),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setNotes(prev => prev.map(n => n._id === noteId ? { ...n, ...updateFields } : n));
-          return { ...(notes.find(n => n._id === noteId) || {}), ...updateFields } as Note;
-        }
-        return null;
-      } catch (error) {
-        console.error('Error updating note references/title:', error);
-        return null;
-      }
-    }
-    // Prevent accidental save or update of content/platform for persisted note during analysis.
-    console.warn('Prevented save/update of content/platform for persisted note during analysis.');
-    return null;
-    }
-    // If force is true, skip all analysis checks and always allow update
-    try {
-      const apiKey = await getApiKey();
-      if (!apiKey) return null;
-      const payload = { ...updateFields };
-      const response = await fetch(`/api/smart-note/update/${noteId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify(payload),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setNotes(prev => prev.map(n => n._id === noteId ? { ...n, ...updateFields } : n));
-        return { ...(notes.find(n => n._id === noteId) || {}), ...updateFields } as Note;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error updating note (forced):', error);
-      return null;
-    }
-  
-  }, [userId, notes]);
-
-  // Analyze note content
-  const analyzeNote = useCallback(async (
-    content: string,
-    platform: string = 'general'
-  ): Promise<{ success: boolean; ideas?: string[]; message?: string }> => {
-    if (!content.trim()) {
-      return { success: false, message: 'Content cannot be empty' };
-    }
-
-    setIsAnalyzing(true);
+  /**
+   * Delete a note by ID
+   */
+  const deleteNote = useCallback(async (
+    noteId: Id<"notes"> | string
+  ): Promise<boolean> => {
+    if (!userId) return false;
     
+    const convexNoteId = noteId as Id<"notes">;
+    
+    setIsSaving(true);
     try {
-      const apiKey = await getApiKey();
-      if (!apiKey) {
-        return { success: false, message: 'No API key available' };
-      }
-
-      const response = await fetch('/api/smart-note/ideas', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          platform,
-          limit: 5
-        }),
+      const success = await deleteNoteConvex({ 
+        noteId: convexNoteId, 
+        userId 
       });
-
-      const data = await response.json();
       
-      if (response.ok && data.ideas) {
-        return { 
-          success: true, 
-          ideas: data.ideas 
-        };
-      } else {
-        return { 
-          success: false, 
-          message: data.error || data.message || 'Failed to generate ideas' 
-        };
-      }
-    } catch (error) {
-      console.error('Error generating ideas:', error);
-      return { 
-        success: false, 
-        message: error instanceof Error ? error.message : 'Network error occurred' 
-      };
-    } finally {
-      setIsAnalyzing(false);
-    }
-  }, []);
-
-  // Generate content ideas
-  const generateIdeas = useCallback(async (
-    platform: string = 'general',
-    options: {
-      contentType?: string;
-      targetAudience?: string;
-      limit?: number;
-    } = {}
-  ): Promise<{ success: boolean; ideas?: SmartNoteIdea[]; error?: string }> => {
-    setIsGeneratingIdeas(true);
-    
-    try {
-      const apiKey = await getApiKey();
-      if (!apiKey) {
-        return { success: false, error: 'No API key available' };
-      }
-
-      const response = await fetch('/api/smart-note/ideas', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          platform,
-          contentType: options.contentType || 'general',
-          targetAudience: options.targetAudience || 'general',
-          limit: options.limit || 5,
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
-        return { success: true, ideas: data.ideas || [] };
-      } else {
-        return { 
-          success: false, 
-          error: data.error || data.message || 'Failed to generate ideas' 
-        };
-      }
-    } catch (error) {
-      console.error('Error generating ideas:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Network error occurred' 
-      };
-    } finally {
-      setIsGeneratingIdeas(false);
-    }
-  }, []);
-
-
-  // Delete note
-  const deleteNote = useCallback(async (noteId: string): Promise<boolean> => {
-    if (!userId || !noteId) return false;
-    
-    try {
-      const apiKey = await getApiKey();
-      if (!apiKey) return false;
-
-      const response = await fetch(`/api/smart-note/${noteId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-      });
-
-      if (response.ok) {
-        setNotes(prev => prev.filter(note => note._id !== noteId));
+      if (success) {
+        setNotes(prev => prev.filter(n => n._id !== convexNoteId));
         return true;
       }
       return false;
     } catch (error) {
       console.error('Error deleting note:', error);
       return false;
+    } finally {
+      setIsSaving(false);
     }
-  }, [userId]);
+  }, [userId, deleteNoteConvex, setNotes]);
 
+  /**
+   * Save only the content and title of a note
+   * This is a simpler mutation to avoid schema validation errors
+   */
+  const saveNoteContent = useCallback(async (
+    noteId: string | Id<"notes">,
+    content: string,
+    title: string
+  ): Promise<Note | null> => {
+    if (!userId) return null;
+    
+    // Always use Convex IDs
+    const convexNoteId = noteId as Id<"notes">;
+    
+    setIsSaving(true);
+    try {
+      console.log('Saving note content:', {
+        id: String(convexNoteId),
+        title,
+        contentLength: content?.length || 0
+      });
+      
+      const updatedNote = await updateNoteContentConvex({
+        noteId: convexNoteId,
+        userId,
+        content: content || '',
+        title: title || ''
+      });
+      
+      if (updatedNote) {
+        console.log('Note content saved successfully');
+        setNotes(prev => prev.map(n => 
+          n._id === convexNoteId ? { ...n, content, title, updatedAt: Date.now() } : n
+        ));
+      }
+      
+    } catch (error) {
+      console.error('Error saving note content:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [userId, updateNoteContentConvex, setNotes]);
+
+  /**
+   * Update a note with various fields
+   */
+  const updateNote = useCallback(async (
+    noteId: string | Id<"notes">,
+    updateFields: NoteUpdate,
+    force: boolean = false
+  ): Promise<Note | null> => {
+    if (!userId) return null;
+
+    // Always use Convex IDs
+    const convexNoteId = noteId as Id<"notes">;
+    
+    setIsSaving(true);
+    try {
+      console.log('Updating note:', {
+        id: String(convexNoteId),
+        fields: Object.keys(updateFields)
+      });
+      
+      const updatedNote = await updateNoteConvex({
+        noteId: convexNoteId,
+        userId,
+        updates: updateFields,
+      });
+      
+      if (updatedNote) {
+        console.log('Note updated successfully');
+        setNotes(prev => prev.map(n => 
+          n._id === convexNoteId ? { ...n, ...updateFields, updatedAt: Date.now() } : n
+        ));
+      }
+      
+    } catch (error) {
+      console.error('Error updating note:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [userId, updateNoteConvex, setNotes]);
+
+
+  // Return all functions and state from the hook
   return {
-    // State
     notes,
     isLoading,
-    isAnalyzing,
     isSaving,
-    isGeneratingIdeas,
-    
-    // Actions
     saveNote,
-    analyzeNote,
-    generateIdeas,
     updateNote,
+    saveNoteContent,
     deleteNote,
-    
-    // Utilities
-    formatAnalysisToMarkdown,
   };
-} 
+}
