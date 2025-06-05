@@ -2,11 +2,14 @@ import { ComponentType } from 'react';
 
 export interface ChatResponseData {
   chat_response: string;
+  response?: string; // For backward compatibility
   suggestions?: string[];
   session_id: string;
   metadata?: {
+    suggestions?: string[];
     request_id: string;
     processing_time_ms: number;
+    is_persona_flow?: boolean; // Indicates if this is part of the persona creation flow
   };
 }
 
@@ -30,7 +33,6 @@ export interface ContentContext {
   contentId: string;
   analysis?: string | null;
   title?: string;
-  // Additional context fields that might be useful
   thumbnailUrl?: string;
   publishedAt?: string;
   metrics?: any;
