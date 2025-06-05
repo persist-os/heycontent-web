@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Card } from '@/components/ui/card';
-import { X, MessageSquare, Youtube, Sparkles, Bot, ExternalLink } from 'lucide-react';
+import { X, MessageSquare, Sparkles, Bot, ExternalLink } from 'lucide-react';
 import { getCurrentUserId, getApiKey } from '@/app/lib/api-helpers';
 import { YouTubeContentItem } from '../types';
 import { getMetricsDisplay } from '../utils';
 import { Button } from '@/components/ui/button';
 import { MarkdownRenderer } from '../../chat/markdown-renderer';
+import { YouTubeBrandIcon } from '../../YoutubeBrandIcon';
 
 interface YoutubeModalProps {
   selectedContent: YouTubeContentItem;
@@ -197,7 +198,7 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
         <div className="px-6 py-4 border-b dark:border-gray-800 flex items-center justify-between flex-shrink-0">
           <div>
             <h2 className="text-lg font-medium text-black dark:text-white flex items-center gap-2">
-              <Youtube className="w-5 h-5 text-red-500" /> YouTube Analytics
+              <YouTubeBrandIcon size={24} className="mr-2" /> YouTube Analytics
             </h2>
             <p className="text-sm text-text-gray dark:text-gray-400">
               Video • {selectedContent.content.channelTitle || 'Channel Unknown'}

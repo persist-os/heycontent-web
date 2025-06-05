@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import { Youtube, Instagram, Mail, X, ExternalLink, Brain, Sparkles, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Instagram, Mail, X, ExternalLink, Brain, Sparkles, ToggleLeft, ToggleRight } from 'lucide-react';
+import { YouTubeBrandIcon } from '../../YoutubeBrandIcon';
 import { ContentContext } from '../types';
 import { MarkdownRenderer } from '../markdown-renderer';
 
@@ -20,7 +21,7 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
   const getPlatformIcon = () => {
     switch (context.platform) {
       case 'youtube':
-        return <Youtube className="w-5 h-5 text-red-500" />;
+        return <YouTubeBrandIcon size={24} className="mr-2" />;
       case 'instagram':
         return <Instagram className="w-5 h-5 text-pink-500" />;
       case 'gmail':
