@@ -67,4 +67,5 @@ export interface ChatScreenProps {
   chatId?: string | null;
   contentContext?: ContentContext | null;
   askQuery?: string | null;
+  welcome?: boolean;
 }
