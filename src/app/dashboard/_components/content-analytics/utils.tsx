@@ -1,5 +1,6 @@
 import React from 'react';
-import { Instagram, Youtube, Mail } from 'lucide-react';
+import { Instagram, Mail } from 'lucide-react';
+import { YouTubeBrandIcon } from '../YoutubeBrandIcon';
 import { 
   AnyContentItem, 
   SortOption, 
@@ -18,7 +19,7 @@ export const getPlatformIcon = (platform: string) => {
     case 'instagram':
       return <Instagram className="w-5 h-5" />;
     case 'youtube':
-      return <Youtube className="w-5 h-5" />;
+      return <YouTubeBrandIcon size={24} className="mr-2" />;
     case 'tiktok':
       return (
         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
