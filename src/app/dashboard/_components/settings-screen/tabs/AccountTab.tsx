@@ -14,6 +14,7 @@ import { useAuth } from '@/app/context/auth-context'
 import { ReadOnlyField, ReadOnlyTextArea } from './account/ReadOnlyField'
 import { ProfileFields, ReferralFields, PersonaFields } from './account/FormSections'
 import { PersonaData } from '../../chat/types';
+import { PersonaCard } from '../../chat/components/PersonaCard';
 
 const MAX_PERSONA_LENGTH = 500
 const MAX_VISION_LENGTH = 500
@@ -199,6 +200,16 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
 
   return (
     <div className="grid gap-4 sm:gap-6 max-w-full">
+      {personaDetails && (
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle>{formData.name ? `${formData.name}'s Content Persona` : 'Your Content Persona'}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PersonaCard persona={personaDetails} userId={userId!} />
+          </CardContent>
+        </Card>
+      )}
       <Card className={cn(
         "transition-all duration-300 ease-in-out",
         isEditMode 
@@ -292,31 +303,11 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
               <div className="grid grid-cols-1 gap-4">
                 <ProfileFields formData={formData} setFormData={setFormData} isEditMode={isEditMode} />
                 <ReferralFields formData={formData} referrerName={referrerName} referrerLoading={referrerLoading} />
-                <PersonaFields formData={formData} setFormData={setFormData} isEditMode={isEditMode} showPersonaFields={showPersonaFields} setShowPersonaFields={setShowPersonaFields} />
               </div>
             </form>
           </div>
         </CardContent>
       </Card>
-      {personaDetails && (
-        <Card className="mt-4">
-          <CardHeader>
-            <CardTitle>Your AI Persona</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {Object.entries(personaDetails).map(([key, value]) => (
-                <div key={key} className="flex flex-col">
-                  <span className="font-semibold text-sm capitalize">{key.replace(/_/g, ' ')}</span>
-                  <span className="text-gray-800 dark:text-gray-200 text-base">
-                    {Array.isArray(value) ? value.join(', ') : (value ?? '—')}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }
