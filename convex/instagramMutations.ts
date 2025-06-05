@@ -17,13 +17,13 @@ export const storePostData = mutation({
     const accountId = postData.accountId || "";
 
     try {
-      // Check if post already exists using the compound index
+      // Check if post already exists using postId index
       const existingPost = await ctx.db
         .query("instagramPosts")
-        .withIndex("by_userId_postId", q => 
-          q.eq("userId", userId)
-           .eq("postId", postId)
-        )
+
+        .withIndex("by_userId", q => q.eq("userId", userId))
+        .filter(q => q.eq(q.field("postId"), postId))
+
         .first();
 
       if (existingPost) {
@@ -222,6 +222,7 @@ export const updateInstagramToken = mutation({
   args: {
     userId: v.string(),
     accountId: v.any(),
+    username: v.string(),
     accessToken: v.string(),
     refreshToken: v.string(),
     expiresAt: v.number(),
@@ -236,6 +237,7 @@ export const updateInstagramToken = mutation({
     if (existing) {
       await ctx.db.patch(existing._id, {
         accountId: args.accountId,
+        username: args.username,
         accessToken: args.accessToken,
         refreshToken: args.refreshToken,
         expiryDate: args.expiresAt,
@@ -246,6 +248,7 @@ export const updateInstagramToken = mutation({
       await ctx.db.insert("instagramTokens", {
         accountId: args.accountId,
         userId: args.userId,
+        username: args.username,
         accessToken: args.accessToken,
         refreshToken: args.refreshToken,
         expiryDate: args.expiresAt,
