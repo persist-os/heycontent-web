@@ -19,6 +19,31 @@ export const create_user = mutation(async ({ db }, { name, email, image, userId,
   referredBy?: string,
 }) => {
   const now = Date.now();
+
+  // Try to find an existing user by userId (preferred) or email (fallback)
+  let existingUser = await db.query("users").withIndex("by_userId", q => q.eq("userId", userId)).first();
+  if (!existingUser && email) {
+    existingUser = await db.query("users").withIndex("by_email", q => q.eq("email", email)).first();
+  }
+
+  if (existingUser) {
+    // Only update fields that are safe to update (never overwrite referralCode or referredBy)
+    const updates: Record<string, any> = {};
+    if (name && name !== existingUser.name) updates.name = name;
+    if (typeof image !== 'undefined' && image !== existingUser.image) updates.image = image;
+    if (username && username !== existingUser.username) updates.username = username;
+    updates.updatedAt = now;
+    // Only patch if there are changes
+    if (Object.keys(updates).length > 1 || (Object.keys(updates).length === 1 && !updates.hasOwnProperty('updatedAt'))) {
+      await db.patch(existingUser._id, updates);
+    } else {
+      // Always update updatedAt
+      await db.patch(existingUser._id, { updatedAt: now });
+    }
+    return { success: true, userId: existingUser._id, alreadyExisted: true };
+  }
+
+  // If no user exists, create a new one
   const id = await db.insert("users", {
     name,
     email,
@@ -30,7 +55,7 @@ export const create_user = mutation(async ({ db }, { name, email, image, userId,
     createdAt: now,
     updatedAt: now,
   });
-  return { success: true, userId: id };
+  return { success: true, userId: id, alreadyExisted: false };
 });
 
 
