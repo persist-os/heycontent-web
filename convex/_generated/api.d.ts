@@ -29,6 +29,7 @@ import type * as http_actions_createAnalysis from "../http_actions/createAnalysi
 import type * as http_actions_createConversations from "../http_actions/createConversations.js";
 import type * as http_actions_createNote from "../http_actions/createNote.js";
 import type * as http_actions_createOrUpdateStripeCustomer from "../http_actions/createOrUpdateStripeCustomer.js";
+import type * as http_actions_createPersona from "../http_actions/createPersona.js";
 import type * as http_actions_createUser from "../http_actions/createUser.js";
 import type * as http_actions_deleteApiKey from "../http_actions/deleteApiKey.js";
 import type * as http_actions_deleteNote from "../http_actions/deleteNote.js";
@@ -116,6 +117,7 @@ declare const fullApi: ApiFromModules<{
   "http_actions/createConversations": typeof http_actions_createConversations;
   "http_actions/createNote": typeof http_actions_createNote;
   "http_actions/createOrUpdateStripeCustomer": typeof http_actions_createOrUpdateStripeCustomer;
+  "http_actions/createPersona": typeof http_actions_createPersona;
   "http_actions/createUser": typeof http_actions_createUser;
   "http_actions/deleteApiKey": typeof http_actions_deleteApiKey;
   "http_actions/deleteNote": typeof http_actions_deleteNote;

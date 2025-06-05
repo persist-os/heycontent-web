@@ -2,7 +2,6 @@ import { useState, useCallback } from 'react'
 import { Message } from '@/app/types/chat'
 import { sendChatMessage } from '../utils/api-utils'
 import { ChatStateReturnType } from './useChatState'
-
 import { v4 as uuidv4 } from 'uuid';
 
 export const useChat = (
@@ -80,11 +79,9 @@ export const useChat = (
         }
       ]);
 
-
       console.log('Sending message with isFirstMessage:', isFirstMessage, 'backendSessionId:', backendSessionId);
 
       // Send the enhanced query to the backend (with analysis injected if enabled)
-      // Don't send content_context separately anymore since it's injected in the query
       const data = await sendChatMessage(enhancedQuery, isFirstMessage, backendSessionId, null);
 
       // Log the response to check structure
@@ -127,25 +124,37 @@ export const useChat = (
       });
 
       // Update messages with the response
+      console.log('[useChat] Response metadata before setting messages:', JSON.stringify(data.metadata, null, 2));
+      
+      // Check if we have a persona in the metadata
+      if (data.metadata?.persona) {
+        console.log('[useChat] Persona found in metadata:', {
+          name: data.metadata.persona.current_name,
+          isComplete: data.metadata.is_persona_complete
+        });
+      }
+      
       setMessages(prev => {
         const withoutTyping = prev.filter(msg => msg.status !== 'typing');
-        return [...withoutTyping, {
+        const newMessage: Message = {
           id: uuidv4(),
           content: data.chat_response || data.response || '',
           chat_response: data.chat_response || data.response || '',
           role: 'assistant',
           timestamp: new Date().toISOString(),
-          // Use the most reliable session ID in this order: 
-          // 1. From backend response
-          // 2. Current session ID in state
-          // 3. Undefined as last resort
-          sessionId: data.session_id || sessionId || undefined,
-          // Get suggestions from either the root level or metadata
-          suggestions: data.suggestions || data.metadata?.suggestions || []
-        }];
+          suggestions: data.suggestions || (data.metadata && data.metadata.suggestions) || [],
+          metadata: data.metadata // Use the backend metadata as-is, do not mutate or patch
+        };
+        
+        console.log('[useChat] New message with metadata:', {
+          id: newMessage.id,
+          hasMetadata: !!newMessage.metadata,
+          isPersonaComplete: newMessage.metadata?.is_persona_complete,
+          hasPersona: !!newMessage.metadata?.persona
+        });
+        
+        return [...withoutTyping, newMessage];
       });
-
-
 
       // Only update sessionId from backend (never generate a local one for persistence)
       // Only set sessionId if we don't already have a valid one
@@ -153,11 +162,10 @@ export const useChat = (
       if (data.session_id && !isValidBackendSession) {
         console.log('Received session ID from API:', data.session_id);
         setSessionId(data.session_id);
-        // Do NOT set conversationSaved(false) here; already set above after user message
       } else if (!sessionId) {
         // If the backend fails to return a sessionId, do not attempt to save or persist
         console.warn('No session ID received from API. Will not persist conversation until backend provides one.');
-      } // else: do not set conversationSaved(false) again
+      }
 
       setReferencedMessage(null)
 

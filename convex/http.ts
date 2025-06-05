@@ -54,10 +54,12 @@ import resetUsageForPeriod from "./http_actions/resetUsageForPeriod";
 import getYouTubeVideoData from "./http_actions/getYouTubeVideoData";
 import listUsers from "./http_actions/listUsers";
 import saveInstagramToken from "./http_actions/saveInstagramToken";
+import createPersona from "./http_actions/createPersona";
 
 const http = httpRouter();
 
 // USER ROUTES
+http.route({ path: "/api/http/createPersona", method: "POST", handler: createPersona });
 http.route({ path: "/api/http/getUserById", method: "GET", handler: getUserById });
 http.route({ path: "/api/http/createUser", method: "POST", handler: createUser });
 http.route({ path: "/api/http/updateUser", method: "PATCH", handler: updateUser });

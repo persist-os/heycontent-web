@@ -27,6 +27,29 @@ export interface Message {
   suggestions?: any[];
   metadata?: {
     suggestions?: any[];
+    is_persona_flow?: boolean;
+    is_persona_complete?: boolean;
+    persona?: {
+      current_name: string;
+      current_description: string;
+      experience_level: string;
+      content_formats: string[];
+      content_tone: string;
+      content_voice: string;
+      content_pillars: string[];
+      unique_value: string;
+      future_name: string;
+      future_description: string;
+      goals: string[];
+      desired_impact: string;
+      primary_topics: string[];
+      secondary_topics: string[];
+      tone_descriptors: string[];
+      style_descriptors: string[];
+      audience_type: string;
+      engagement_style: string[];
+      [key: string]: any;
+    };
     [key: string]: any;
   };
   relatedInsights?: {

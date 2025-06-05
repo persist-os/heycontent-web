@@ -54,10 +54,10 @@ export const ambientInsights: AmbientInsight[] = [
   },
   {
     type: 'content',
-    title: 'Short-Form Code Tips',
-    description: 'Huge potential in quick problem-solving content',
+    title: 'Write your persona',
+    description: 'Create or edit your persona to get personalized insights',
     icon: Brain,
-    action: 'Explore content ideas'
+    action: 'Hey Content Persona'
   },
   {
     type: 'strategy',

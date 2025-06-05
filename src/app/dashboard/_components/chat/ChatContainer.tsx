@@ -23,6 +23,7 @@ import { useChatState } from './hooks/useChatState'
 import { useChat } from './hooks/useChat'
 import { useConversation } from './hooks/useConversation'
 import { useUIEffects } from './hooks/useUIEffects'
+import { usePersonaManager } from './utils/persona-utils'
 
 const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery }) => {
   const router = useRouter()
@@ -43,6 +44,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     includeAnalysisInQuery,
     setIncludeAnalysisInQuery
   } = chatState
+
+  const { savePersonaFromResponse } = usePersonaManager()
 
   // Set content context when component mounts or when contentContext prop changes
   useEffect(() => {
@@ -190,6 +193,19 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     }
   }, [user, chatId, loading, handleLoadConversation])
 
+  useEffect(() => {
+    if (!userId) return;
+    if (messages.length === 0) return;
+    const lastMsg = messages[messages.length - 1];
+    if (
+      lastMsg.role === 'assistant' &&
+      lastMsg.metadata?.is_persona_complete &&
+      lastMsg.metadata?.persona
+    ) {
+      savePersonaFromResponse(lastMsg.metadata, userId);
+    }
+  }, [messages, userId, savePersonaFromResponse]);
+
   if (loading) {
     return <div className="flex items-center justify-center h-full w-full p-4">Loading...</div>
   }
@@ -307,6 +323,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                       onReferenceClick={handleReferenceClick}
                       onOptionClick={handleOptionClick}
                       onFollowUpClick={handleFollowUpClick}
+                      userId={userId}
                     />
                     {message.role === 'assistant' && message.suggestions && (
                       <div className="mt-3 flex flex-wrap gap-2 pl-12">

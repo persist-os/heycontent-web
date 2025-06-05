@@ -15,7 +15,7 @@ export async function sendChatMessage(
   isFirstMessage: boolean, 
   sessionId: string | null,
   contentContext?: ContentContext | null
-): Promise<ChatResponseData> {
+): Promise<any> {
   // Get API key - make sure we have one before proceeding
   const apiKey = await getApiKey();
   if (!apiKey) {
