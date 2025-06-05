@@ -8,6 +8,7 @@ import { YouTubeContentItem } from '../types';
 import { getMetricsDisplay } from '../utils';
 import { Button } from '@/components/ui/button';
 import { MarkdownRenderer } from '../../chat/markdown-renderer';
+import { YouTubeBrandIcon } from '../../YoutubeBrandIcon';
 
 interface YoutubeModalProps {
   selectedContent: YouTubeContentItem;
@@ -197,7 +198,7 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
         <div className="px-6 py-4 border-b dark:border-gray-800 flex items-center justify-between flex-shrink-0">
           <div>
             <h2 className="text-lg font-medium text-black dark:text-white flex items-center gap-2">
-              <Youtube className="w-5 h-5 text-red-500" /> YouTube Analytics
+              <YouTubeBrandIcon size={24} className="mr-2" /> YouTube Analytics
             </h2>
             <p className="text-sm text-text-gray dark:text-gray-400">
               Video • {selectedContent.content.channelTitle || 'Channel Unknown'}
