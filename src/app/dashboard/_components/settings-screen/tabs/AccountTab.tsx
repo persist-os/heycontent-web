@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 import { useAuth } from '@/app/context/auth-context'
 import { ReadOnlyField, ReadOnlyTextArea } from './account/ReadOnlyField'
 import { ProfileFields, ReferralFields, PersonaFields } from './account/FormSections'
+import { PersonaData } from '../../chat/types';
 
 const MAX_PERSONA_LENGTH = 500
 const MAX_VISION_LENGTH = 500
@@ -127,18 +128,22 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
   // Update form data when persona data and user data load
   useEffect(() => {
     if (personaData) {
+      setPersonaDetails(personaData as PersonaData);
       setFormData(prev => ({
         ...prev,
-        currentPersona: personaData?.currentPersona || '',
-        futureVision: personaData?.futureVision || ''
+        currentPersona: personaData.current_name || '',
+        futureVision: personaData.future_description || ''
       }));
       setOriginalFormData(prev => ({
         ...prev,
-        currentPersona: personaData?.currentPersona || '',
-        futureVision: personaData?.futureVision || ''
+        currentPersona: personaData.current_name || '',
+        futureVision: personaData.future_description || ''
       }));
     }
   }, [personaData, setFormData]);
+  
+  // Add a new state to hold the full persona object
+  const [personaDetails, setPersonaDetails] = useState<PersonaData | null>(null);
   
   // Update form data with user information when it loads
   useEffect(() => {
@@ -293,6 +298,25 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
           </div>
         </CardContent>
       </Card>
+      {personaDetails && (
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle>Your AI Persona</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {Object.entries(personaDetails).map(([key, value]) => (
+                <div key={key} className="flex flex-col">
+                  <span className="font-semibold text-sm capitalize">{key.replace(/_/g, ' ')}</span>
+                  <span className="text-gray-800 dark:text-gray-200 text-base">
+                    {Array.isArray(value) ? value.join(', ') : (value ?? '—')}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
