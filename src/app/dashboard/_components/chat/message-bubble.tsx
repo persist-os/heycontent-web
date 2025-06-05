@@ -5,6 +5,7 @@ import type { InteractiveOption } from './interactive-response'
 import { MessageSquare } from 'lucide-react'
 import { ExpandableInsights } from './expandable-insights'
 import { MarkdownRenderer } from './markdown-renderer'
+import { PersonaCard } from './components/PersonaCard'
 
 interface MessageBubbleProps {
   message: Message
@@ -17,6 +18,7 @@ interface MessageBubbleProps {
   onFollowUpClick?: (choice: string) => void
   onScrollToMessage?: (messageId: string) => void
   className?: string
+  userId?: string
 }
 
 export function MessageBubble({
@@ -29,9 +31,17 @@ export function MessageBubble({
   onOptionClick,
   onFollowUpClick,
   onScrollToMessage,
-  className = ''
+  className = '',
+  userId
 }: MessageBubbleProps) {
   const isUser = message.role === 'user'
+
+  console.log('MessageBubble', {
+    isPersona: message.metadata?.is_persona_complete && message.metadata?.persona,
+    userId,
+    persona: message.metadata?.persona,
+    message
+  });
 
   return (
     <div className={`w-full ${className}`}>
@@ -82,13 +92,17 @@ export function MessageBubble({
                 </button>
               )}
 
-              {/* Message Content */}
+              {/* Message Content or Persona Card */}
               <div className="flex-1 min-w-0">
                 <div className="break-words overflow-hidden">
-                  <MarkdownRenderer 
-                    content={message.chat_response || message.content} 
-                    className=""
-                  />
+                  {message.metadata?.is_persona_complete && message.metadata?.persona && userId ? (
+                    <PersonaCard persona={message.metadata.persona} userId={userId} />
+                  ) : (
+                    <MarkdownRenderer 
+                      content={message.chat_response || message.content} 
+                      className=""
+                    />
+                  )}
                 </div>
 
                 {message.status === 'failed' && onRetry && (
