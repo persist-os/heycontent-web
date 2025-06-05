@@ -27,7 +27,6 @@ export const logger = {
 };
 
 export async function updateOrCreateConvexUser(userId: string, name: string, email: string, image: string, username: string, referredBy: string) {
-  // Log the values we're trying to save to help with debugging
   logger.debug('Saving user data to Convex', {
     userId,
     name,
@@ -38,33 +37,61 @@ export async function updateOrCreateConvexUser(userId: string, name: string, ema
     referredByLength: referredBy?.length || 0,
     referredByType: typeof referredBy
   });
-  
-  // Add a default subscription object for new users
-  const defaultSubscription = {
-    status: 'dev', // or 'incomplete' if you prefer
-    plan: 'monthly_basic',
-    priceId: '',
-    currentPeriodStart: Date.now(),
-    currentPeriodEnd: Date.now(),
-    cancelAtPeriodEnd: false,
-    includedRequests: 100,
-    usedRequests: 0,
-  };
-  
-  console.log('[Firebase Helper] About to call create_user with referredBy:', referredBy);
-  
-  const result = await fetchMutation(api.userMutations.create_user, {
-    name,
-    email,
-    image,
-    username,
-    referredBy,
-    userId,
-    // referralCode is generated in the mutation, don't need to pass it
-    referralCode: undefined,
-    subscription: defaultSubscription as any, // type assertion to avoid linter error
-  });
-  logger.debug('Result of create_user mutation', { result });
+
+  // Check if user exists (by userId, then email)
+  let existingUser = null;
+  try {
+    existingUser = await fetchQuery(api.userQueries.getUserDetails, { email });
+    // If userId is available and doesn't match, try to find by userId
+    if ((!existingUser || (existingUser && existingUser.userId !== userId)) && userId) {
+      // Try to find by userId (if you have a userQueries.getUserByUserId, use it)
+      // For now, fallback to email only
+    }
+  } catch (err) {
+    logger.error('Error checking for existing user', err);
+  }
+
+  if (existingUser && existingUser.userId === userId) {
+    // Only update safe fields (never referralCode, referredBy, or subscription)
+    const updates: Record<string, any> = {};
+    if (name && name !== existingUser.name) updates.name = name;
+    if (typeof image !== 'undefined' && image !== existingUser.image) updates.image = image;
+    if (username && username !== existingUser.username) updates.username = username;
+    updates.updatedAt = Date.now();
+    if (Object.keys(updates).length > 1 || (Object.keys(updates).length === 1 && !updates.hasOwnProperty('updatedAt'))) {
+      // Use updateUser mutation if available, otherwise skip
+      try {
+        await fetchMutation(api.userMutations.updateUser, { userId: existingUser.id, updates });
+      } catch (err) {
+        logger.error('Error updating user', err);
+      }
+    } else {
+      // Always update updatedAt
+      try {
+        await fetchMutation(api.userMutations.updateUser, { userId: existingUser.id, updates: { updatedAt: Date.now() } });
+      } catch (err) {
+        logger.error('Error updating user updatedAt', err);
+      }
+    }
+    logger.debug('User already existed, updated safe fields only', { userId });
+    return;
+  }
+
+  // If no user exists, create a new one with all fields
+  try {
+    const result = await fetchMutation(api.userMutations.create_user, {
+      name,
+      email,
+      image,
+      username,
+      referredBy,
+      userId,
+      // referralCode is generated in the mutation, don't need to pass it
+    });
+    logger.debug('Result of create_user mutation', { result });
+  } catch (err) {
+    logger.error('Error creating user', err);
+  }
 }
 
 export function mapAuthErrorCodeToMessage(code: string): string {

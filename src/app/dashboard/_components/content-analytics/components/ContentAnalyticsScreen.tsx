@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -16,7 +16,7 @@ import { GmailModal } from '../modals/GmailModal';
 import { InstagramModal } from '../modals/InstagramModal';
 import { YoutubeModal } from '../modals/YoutubeModal';
 import { Header } from '../header/Header';
-import ErrorState from './ErrorState';
+import { LoadingState } from '../loading/LoadingState';
 
 import {
   AnyContentItem, TimeRange, SortOption, PlatformType,
@@ -48,6 +48,118 @@ interface InstagramAnalysis {
   } | null;
 }
 
+// Separate component for Instagram analytics
+function InstagramAnalytics({ userId }: { userId: string }) {
+  const [instagramAnalysis, setInstagramAnalysis] = useState<string | InstagramAnalysis | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
+
+  const fetchInstagramAnalysis = async () => {
+    if (hasAttemptedFetch) return;
+    
+    try {
+      setIsAnalyzing(true);
+      setHasAttemptedFetch(true);
+      const apiKey = await getApiKey();
+      if (!apiKey) throw new Error('Missing API key');
+
+      const response = await fetch('/api/instagram/analytics', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({ user_id: userId })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Instagram analysis API error:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        });
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Invalid content type: ${contentType}`);
+      }
+
+      const data = await response.json();
+      
+      if (data?.analysis?.full_analysis?.content) {
+        setInstagramAnalysis(data.analysis.full_analysis.content);
+      } else if (data?.analysis?.content) {
+        setInstagramAnalysis(data.analysis.content);
+      } else if (data?.content) {
+        setInstagramAnalysis(data.content);
+      } else {
+        setInstagramAnalysis('Unable to generate analysis at this time.');
+      }
+    } catch (err) {
+      console.error('Instagram analysis fetch error:', err);
+      setInstagramAnalysis('Error generating analysis. Please try again.');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!hasAttemptedFetch) {
+      fetchInstagramAnalysis();
+    }
+  }, [hasAttemptedFetch]);
+
+  return (
+    <div className="mb-6">
+      <div className="p-4 bg-gradient-to-r from-pink-200 via-purple-200 to-yellow-200 rounded-lg text-black dark:text-black">
+        <h3 className="font-semibold mb-2">Content Activity Tracker</h3>
+        {isAnalyzing ? (
+          <p className="text-sm">Analyzing your Instagram profile...</p>
+        ) : instagramAnalysis ? (
+          <div className="text-sm">
+            {typeof instagramAnalysis === 'string' ? (
+              <p>{instagramAnalysis}</p>
+            ) : (
+              <>
+                {instagramAnalysis.last_post && (
+                  <div className="mb-2">
+                    <p className="font-medium">Last Post:</p>
+                    <p>Date: {instagramAnalysis.last_post.date || 'N/A'}</p>
+                    <p>Type: {instagramAnalysis.last_post.type || 'N/A'}</p>
+                    <p>Time Ago: {instagramAnalysis.last_post.time_ago || 'N/A'}</p>
+                  </div>
+                )}
+                {instagramAnalysis.posting_frequency && (
+                  <div className="mb-2">
+                    <p className="font-medium">Posting Frequency:</p>
+                    <p>Average Days Between Posts: {instagramAnalysis.posting_frequency.average_days_between_posts ?? 'N/A'}</p>
+                    <p>Recent Posts: {instagramAnalysis.posting_frequency.has_recent_posts ? 'Yes' : 'No'}</p>
+                    <p>Posts Last 7 Days: {instagramAnalysis.posting_frequency.total_posts_last_7_days || '0'}</p>
+                  </div>
+                )}
+                {instagramAnalysis.media_distribution && (
+                  <div className="mb-2">
+                    <p className="font-medium">Media Distribution:</p>
+                    <p>Regular Posts: {instagramAnalysis.media_distribution.regular_post || '0%'}</p>
+                    <p>Carousels: {instagramAnalysis.media_distribution.carousel || '0%'}</p>
+                    <p>Reels: {instagramAnalysis.media_distribution.reel || '0%'}</p>
+                    <p>Stories: {instagramAnalysis.media_distribution.story || '0%'}</p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm">Discover trends, best posting times, and engagement drivers for your Instagram content.</p>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function ContentAnalyticsScreen() {
   const { firebaseUser, authLoading } = useAuth();
@@ -62,8 +174,6 @@ export function ContentAnalyticsScreen() {
   const [sortBy, setSortBy] = useState<SortOption>('date');
   const [filterType, setFilterType] = useState<PlatformFilterType>('all');
   const [selectedContent, setSelectedContent] = useState<AnyContentItem | null>(null);
-  const [instagramAnalysis, setInstagramAnalysis] = useState<string | InstagramAnalysis | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // Debug logs
   console.log('[Debug] firebaseUser:', firebaseUser);
@@ -232,14 +342,14 @@ export function ContentAnalyticsScreen() {
   // Show a small spinner if auth is loading, but never gate the whole screen
   // Optionally, you can show a subtle spinner in the header or avatar area
 
-  // Show error state if not logged in
+  // Show loading state if not logged in
   if (!firebaseUser) {
-    return <ErrorState message="Please log in to view your content." />;
+    return <LoadingState type="auth" />;
   }
 
-  // Show error state if data failed to load
+  // Show loading state if data failed to load
   if (youtubeVideos === undefined || gmailThreads === undefined) {
-    return <ErrorState message="We couldn't load your content. Try again later." />;
+    return <LoadingState type="content" />;
   }
 
   return (
@@ -273,51 +383,8 @@ export function ContentAnalyticsScreen() {
               <TabsTrigger value="youtube">YouTube</TabsTrigger>
             </TabsList>
 
-            {selectedPlatform === 'instagram' && (
-              <div className="mb-6">
-                <div className="p-4 bg-gradient-to-r from-pink-200 via-purple-200 to-yellow-200 rounded-lg text-black dark:text-black">
-                  <h3 className="font-semibold mb-2">Content Activity Tracker</h3>
-                  {isAnalyzing ? (
-                    <p className="text-sm">Analyzing your Instagram profile...</p>
-                  ) : instagramAnalysis ? (
-                    <div className="text-sm">
-                      {typeof instagramAnalysis === 'string' ? (
-                        <p>{instagramAnalysis}</p>
-                      ) : (
-                        <>
-                          {instagramAnalysis.last_post && (
-                            <div className="mb-2">
-                              <p className="font-medium">Last Post:</p>
-                              <p>Date: {instagramAnalysis.last_post.date || 'N/A'}</p>
-                              <p>Type: {instagramAnalysis.last_post.type || 'N/A'}</p>
-                              <p>Time Ago: {instagramAnalysis.last_post.time_ago || 'N/A'}</p>
-                            </div>
-                          )}
-                          {instagramAnalysis.posting_frequency && (
-                            <div className="mb-2">
-                              <p className="font-medium">Posting Frequency:</p>
-                              <p>Average Days Between Posts: {instagramAnalysis.posting_frequency.average_days_between_posts ?? 'N/A'}</p>
-                              <p>Recent Posts: {instagramAnalysis.posting_frequency.has_recent_posts ? 'Yes' : 'No'}</p>
-                              <p>Posts Last 7 Days: {instagramAnalysis.posting_frequency.total_posts_last_7_days || '0'}</p>
-                            </div>
-                          )}
-                          {instagramAnalysis.media_distribution && (
-                            <div className="mb-2">
-                              <p className="font-medium">Media Distribution:</p>
-                              <p>Regular Posts: {instagramAnalysis.media_distribution.regular_post || '0%'}</p>
-                              <p>Carousels: {instagramAnalysis.media_distribution.carousel || '0%'}</p>
-                              <p>Reels: {instagramAnalysis.media_distribution.reel || '0%'}</p>
-                              <p>Stories: {instagramAnalysis.media_distribution.story || '0%'}</p>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-sm">Discover trends, best posting times, and engagement drivers for your Instagram content.</p>
-                  )}
-                </div>
-              </div>
+            {selectedPlatform === 'instagram' && userId && (
+              <InstagramAnalytics userId={userId} />
             )}
 
             {selectedPlatform === 'gmail' && (

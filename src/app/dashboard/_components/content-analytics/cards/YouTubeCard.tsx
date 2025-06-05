@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import { MessageSquare, ThumbsUp, PlayCircle, Eye, Clock, BarChart3 } from 'lucide-react';
+import { MessageSquare, ThumbsUp, PlayCircle, Eye, Clock, BarChart3, RefreshCw } from 'lucide-react';
 
 import { YouTubeContentItem } from '../types';
 
@@ -31,6 +31,11 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
   const views = metrics?.views ? Number(metrics.views) : 0;
   const likes = metrics?.likes ? Number(metrics.likes) : 0;
   const comments = metrics?.comments ? Number(metrics.comments) : 0;
+
+  const handleRefresh = () => {
+    // TODO: Implement actual refresh logic for the card
+    window.location.reload();
+  };
 
   return (
     <Card key={item.id} className="overflow-hidden border-2 border-red-500 dark:border-red-400 shadow-lg">
@@ -110,16 +115,25 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
         {/* Actions */}
         <div className="flex gap-2 mt-4">
           <button
-            className="px-3 py-1 rounded bg-heycontent-purple text-white hover:bg-purple-700 text-xs"
+            className="px-3 py-1 rounded text-white hover:opacity-90 text-xs transition-opacity"
+            style={{ backgroundColor: '#4715C8' }}
             onClick={() => onViewDetailedAnalytics(item)}
           >
             View Analytics
           </button>
           <button
-            className="px-3 py-1 rounded border border-heycontent-purple text-heycontent-purple hover:bg-purple-50 text-xs"
+            className="px-3 py-1 rounded border text-xs hover:opacity-90 transition-opacity"
+            style={{ borderColor: '#4715C8', color: '#4715C8' }}
             onClick={() => onDiscussContent(item)}
           >
             Discuss
+          </button>
+          <button
+            className="px-3 py-1 rounded text-black hover:opacity-90 text-xs flex items-center gap-1 transition-opacity"
+            style={{ backgroundColor: '#BAA9FC' }}
+            onClick={handleRefresh}
+          >
+            <RefreshCw className="w-4 h-4" /> Refresh
           </button>
         </div>
       </div>

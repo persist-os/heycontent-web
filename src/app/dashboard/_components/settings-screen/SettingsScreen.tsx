@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/context/auth-context';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { LogOut, Users, Bell, Globe, Sliders, Database, CreditCard } from 'lucide-react'
+import { LogOut, Users, Bell, Globe, Sliders, Database, CreditCard, Key } from 'lucide-react'
 import { PlatformConnect } from './tabs/platform-connect/platform-connect'
 import AccountTab from './tabs/AccountTab'
 import NotificationsTab from './tabs/NotificationsTab'
@@ -16,6 +16,7 @@ import { handleSignOut } from './utils'
 import SubscriptionOverview from './tabs/subscription/subscription-overview'
 import { getFirebaseAuth } from '@/app/lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
+import { PlaygroundPasswordModal, isPlaygroundUnlocked, setPlaygroundUnlocked } from '@/app/prompt-playground/_components/PlaygroundPasswordModal'
 
 const SettingsScreen = () => {
   const router = useRouter()
@@ -35,6 +36,7 @@ const SettingsScreen = () => {
   const [showPersonaFields, setShowPersonaFields] = useState(true)
   const [userId, setUserId] = useState<string | undefined>()
   const [userEmail, setUserEmail] = useState<string | undefined>()
+  const [showPlaygroundModal, setShowPlaygroundModal] = useState(false)
 
   useEffect(() => {
     setIsFirstTimeSetup(window.location.search.includes('newUser=true'))
@@ -62,8 +64,33 @@ const SettingsScreen = () => {
     return () => unsubscribe()
   }, [])
 
+  const handleOpenPlayground = () => {
+    if (isPlaygroundUnlocked()) {
+      router.push('/prompt-playground');
+    } else {
+      setShowPlaygroundModal(true);
+    }
+  }
+
+  const handlePlaygroundUnlock = () => {
+    setShowPlaygroundModal(false);
+    router.push('/prompt-playground');
+  }
+
   return (
-    <div className="h-full min-h-screen bg-background">
+    <div className="h-full min-h-screen bg-background relative">
+      {/* Hidden Playground Button */}
+      <button
+        className="fixed bottom-3 right-3 z-50 opacity-40 hover:opacity-100 transition-opacity bg-white border border-gray-200 rounded-full p-2 shadow-sm text-xs flex items-center gap-1"
+        title="Secret Playground"
+        onClick={handleOpenPlayground}
+        style={{ fontSize: '11px' }}
+      >
+        <Key className="w-3 h-3 mr-1" />
+        Playground
+      </button>
+      {/* Playground Password Modal */}
+      <PlaygroundPasswordModal open={showPlaygroundModal} onUnlock={handlePlaygroundUnlock} onClose={() => setShowPlaygroundModal(false)} />
       <div className="container max-w-6xl mx-auto py-4 sm:py-6 px-3 sm:px-6 space-y-4 sm:space-y-6">
         {isFirstTimeSetup && (
           <div className="mb-4 sm:mb-6 bg-purple-50 p-3 sm:p-4 rounded-lg">

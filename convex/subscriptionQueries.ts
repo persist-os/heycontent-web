@@ -121,14 +121,3 @@ export const saveSubscription = mutation({
   },
 });
 
-// Get usage history
-export const getUsageHistory = query({
-  args: { userId: v.string(), limit: v.optional(v.number()) },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("usageHistory")
-      .filter((q) => q.eq(q.field("userId"), args.userId))
-      .order("desc")
-      .take(args.limit || 12);
-  },
-});

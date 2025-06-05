@@ -10,6 +10,7 @@ import { FileText, Plus, Lightbulb, ArrowLeft } from 'lucide-react';
 import { useSidebar } from '@/app/context/sidebar-context';
 import { useAuth } from '@/app/context/auth-context';
 import { useRouter } from 'next/navigation';
+import type { Id } from '../../../../../convex/_generated/dataModel'; // Import Id type from Convex generated data model
 
 function EmptyState({ onCreateNote }: { onCreateNote: () => void }) {
   return (
@@ -71,85 +72,106 @@ export default function SmartNotes() {
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true); // Make sidebar visible by default
-  const [notes, setNotes] = useState<any[]>([]); // Local notes state for creation only
-  const { updateNote, deleteNote, saveNote } = useSmartNotes(userId); // Only use backend for update/delete
-  const { requestAIInsights } = useAIInsights(updateNote);
+  
+  // Get notes and mutations from useSmartNotes hook
+  const { notes, isLoading, saveNote, updateNote, deleteNote, saveNoteContent } = useSmartNotes(userId);
+  
+  const { requestAIInsights } = useAIInsights(updateNote); // updateNote from useSmartNotes is passed here
   const { setIsViewingNote } = useSidebar();
   const router = useRouter();
 
-  // Local note creation (no backend call)
-  const createNote = React.useCallback((options: any = {}) => {
-    const newNote = {
-      _id: `local_${Date.now()}`,
-      _creationTime: Date.now(),
-      userId: userId || 'local',
-      title: '',
-      content: '',
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      important: false,
-      type: options.type || undefined,
-      tags: [],
-      references: [],
-      platform: options.platform || undefined,
-      postType: undefined,
-      goal: undefined,
-      fields: undefined,
-      noteContent: undefined,
-      analysis: undefined,
-    };
-    setNotes(prev => [newNote, ...prev]);
-    setActiveNoteId(newNote._id);
-    setShowSidebar(false);
-  }, [userId]);
+  // Local note creation: This creates a temporary local note.
+  // The actual saving to Convex will happen via saveNote from useSmartNotes when the user explicitly saves.
+  const createNote = React.useCallback(async (options: any = {}) => {
+    // For creating a new note, we'll call the saveNote mutation immediately with minimal content.
+    // The user can then edit it. This avoids managing purely local state that needs complex syncing.
+    // Alternatively, could create a truly local object and then call saveNote on first explicit save action.
+    // For simplicity with Convex, let's try to save immediately.
+    const placeholderContent = options.type === 'brainstorm' ? 'New Brainstorm' : 'New Note';
+    const result = await saveNote(options.content || '', {
+      metadata: {
+        type: options.type || 'idea',
+        title: options.title || placeholderContent,
+      }
+    });
+
+    if (result.success && result.noteId) {
+      setActiveNoteId(result.noteId.toString()); // Convex IDs are objects, convert to string for activeNoteId state
+      setShowSidebar(false);
+    } else {
+      console.error("Failed to create note via Convex immediately");
+      // Fallback or error handling: maybe create a purely local note if immediate save fails
+      // For now, log error. The UI might not show a new note if this fails.
+    }
+  }, [userId, saveNote]);
+
 
   // Update isViewingNote when showSidebar changes
   useEffect(() => {
     setIsViewingNote(!showSidebar);
   }, [showSidebar, setIsViewingNote]);
 
-  const handleDeleteNote = async (noteId: string) => {
+  const handleDeleteNote = async (noteId: string | Id<"notes">) => {
     try {
-      // Remove from local state
-      setNotes(prev => prev.filter(note => note._id !== noteId));
-      // Optionally call backend for remote notes
-      await deleteNote(noteId);
-      if (activeNoteId === noteId) {
-        setActiveNoteId(null);
+      // deleteNote from useSmartNotes handles both local string IDs (like 'local_...') and Convex Id<"notes">
+      // It will only call Convex deletion for actual Convex IDs.
+      const result = await deleteNote(noteId);
+      if (result) {
+        // If the active note was deleted, clear activeNoteId
+        // activeNoteId is string | null. noteId is string | Id<"notes">.
+        // Use String() for a safe string conversion for comparison.
+        if (activeNoteId === String(noteId)) {
+          setActiveNoteId(null);
+        }
+      } else {
+        console.error('Failed to delete note');
       }
     } catch (error) {
       console.error('Failed to delete note:', error);
     }
   };
 
-  const activeNote = notes.find(note => note._id === activeNoteId);
 
+
+  // activeNote is derived from the `notes` array (from useSmartNotes)
+  const activeNote = notes?.find(note => note._id.toString() === activeNoteId);
+
+  // This function is called by NoteArea's onSave button
+  // It ensures all content is properly saved to the database using the simpler saveNoteContent function
   const handleSave = async () => {
-  if (!activeNote) return;
-  try {
-    // Update local state first so UI reflects changes immediately
-    setNotes(prev =>
-      prev.map(note =>
-        note._id === activeNote._id
-          ? { ...note, content: activeNote.content }
-          : note
-      )
-    );
-    // Always POST to /api/smart-note/save for saving (new or existing)
-    await saveNote(activeNote.content, {
-      platform: activeNote.platform,
-      metadata: {
-        type: activeNote.type,
-        templateInput: activeNote.templateInput,
-      },
-      analysisResult: {
-        analysisId: activeNote.analysisId,
-      },
+    if (!activeNote || !activeNoteId) return;
+    
+    // Log the active note for debugging
+    console.log('Saving note content:', { 
+      id: activeNote._id, 
+      title: activeNote.title,
+      contentLength: activeNote.content?.length || 0
     });
-  } catch (error) {
-    console.error('Failed to save note:', error);
-  }
-};
+    
+    try {
+      // Use the simpler saveNoteContent function that only updates content and title
+      // This avoids schema validation issues with references and other complex fields
+      const result = await saveNoteContent(
+        activeNote._id,
+        activeNote.content || '',
+        activeNote.title || ''
+      );
+      
+      if (result) {
+        console.log('Note content saved successfully:', { 
+          id: result._id,
+          contentSaved: result.content?.substring(0, 30) + '...',
+          updatedAt: new Date(result.updatedAt).toLocaleTimeString()
+        });
+      } else {
+        console.warn('Note content save returned null result');
+      }
+    } catch (error) {
+      console.error('Failed to save note content:', error);
+    }
+  };
+
+
 
   return (
     <div className="flex h-screen bg-white/70 backdrop-blur-sm rounded-3xl overflow-hidden">
@@ -169,8 +191,11 @@ export default function SmartNotes() {
           <NoteArea
             note={activeNote}
             onUpdate={async (noteId, updates) => {
-              setNotes(prev => prev.map(note => note._id === noteId ? { ...note, ...updates } : note));
-              // Await and return the backend update for remote notes
+              // Optimistic update (manual setNotes) can be done here if desired for immediate UI feedback.
+              // However, updateNote (from useSmartNotes) will trigger Convex update, and reactivity should refresh the notes list.
+              // For simplicity, relying on Convex reactivity initially.
+              // const currentNotes = notes || [];
+              // setNotes(currentNotes.map(note => note._id.toString() === noteId.toString() ? { ...note, ...updates } as Note : note));
               return await updateNote(noteId, updates);
             }}
             onSave={handleSave}
@@ -195,9 +220,16 @@ export default function SmartNotes() {
                 <ArrowLeft className="w-5 h-5 text-gray-600" />
               </button>
             )}
-            <SelectNotePrompt onCreateNote={() => createNote({})} />
+            {isLoading && <p>Loading notes...</p> } {/* Show loading indicator */}
+            {!isLoading && notes && notes.length > 0 && !activeNote && (
+                <SelectNotePrompt onCreateNote={() => createNote({})} />
+            )}
+            {!isLoading && (!notes || notes.length === 0) && (
+                 <EmptyState onCreateNote={() => createNote({})} />
+            )}
           </div>
         )}
+
       </div>
     </div>
   );

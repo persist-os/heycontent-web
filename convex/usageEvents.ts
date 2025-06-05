@@ -100,8 +100,8 @@ export const updateUserUsage = mutation({
       return { success: false, error: "User subscription not found" };
     }
     const sub = user.subscription;
-    let used = sub.usedRequests || 0;
-    let quota = sub.includedRequests || 0;
+    const used = sub.usedRequests || 0;
+    const quota = sub.includedRequests || 0;
     let overage = 0;
     let newUsed = used + args.qty;
     if (newUsed > quota) {

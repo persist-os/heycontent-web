@@ -98,6 +98,21 @@
 
 /* Custom Scrollbar Styles */
 @layer utilities {
+  /* Line clamp utilities for consistent text truncation */
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  .line-clamp-4 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+  }
+
   /* For Webkit browsers (Chrome, Safari) */
   ::-webkit-scrollbar {
     width: 8px;

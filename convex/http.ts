@@ -72,6 +72,85 @@ app.get("/api/users/:id/personas", async (c) => {
   return c.json(persona);
 });
 
+// Create a new persona
+app.post("/api/users/:id/personas", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const {
+    current_name,
+    current_description,
+    experience_level,
+    content_formats,
+    content_tone,
+    content_voice,
+    content_pillars,
+    unique_value,
+    future_name,
+    future_description,
+    goals,
+    desired_impact,
+    primary_topics,
+    secondary_topics,
+    tone_descriptors,
+    style_descriptors,
+    audience_type,
+    engagement_style
+  } = await c.req.json();
+
+  // Validate required fields
+  const missing = [];
+  if (!current_name) missing.push("current_name");
+  if (!current_description) missing.push("current_description");
+  if (!experience_level) missing.push("experience_level");
+  if (!Array.isArray(content_formats)) missing.push("content_formats");
+  if (!content_tone) missing.push("content_tone");
+  if (!content_voice) missing.push("content_voice");
+  if (!Array.isArray(content_pillars)) missing.push("content_pillars");
+  if (!unique_value) missing.push("unique_value");
+  if (!future_name) missing.push("future_name");
+  if (!future_description) missing.push("future_description");
+  if (!Array.isArray(goals)) missing.push("goals");
+  if (!desired_impact) missing.push("desired_impact");
+  if (!Array.isArray(primary_topics)) missing.push("primary_topics");
+  if (!Array.isArray(secondary_topics)) missing.push("secondary_topics");
+  if (!Array.isArray(tone_descriptors)) missing.push("tone_descriptors");
+  if (!Array.isArray(style_descriptors)) missing.push("style_descriptors");
+  if (!audience_type) missing.push("audience_type");
+  if (!Array.isArray(engagement_style)) missing.push("engagement_style");
+
+  if (missing.length > 0) {
+    return c.json({ success: false, error: `Missing required fields: ${missing.join(", ")}` }, 400);
+  }
+
+  try {
+    const result = await ctx.runMutation(api.personas.createPersona, {
+      userId,
+      current_name,
+      current_description,
+      experience_level,
+      content_formats,
+      content_tone,
+      content_voice,
+      content_pillars,
+      unique_value,
+      future_name,
+      future_description,
+      goals,
+      desired_impact,
+      primary_topics,
+      secondary_topics,
+      tone_descriptors,
+      style_descriptors,
+      audience_type,
+      engagement_style
+    });
+    return c.json({ success: true, personaId: result });
+  } catch (error) {
+    console.error("Failed to create persona:", error);
+    return c.json({ success: false, error: "Failed to create persona" }, 500);
+  }
+});
+
 // Conversations
 app.post("/api/users/:id/create_conversation", async (c) => {
   const ctx = c.env;
@@ -181,36 +260,6 @@ app.delete("/api/api-keys/delete", async (c) => {
 });
 
 // NOTES ROUTES
-
-// CREATE NOTE ENDPOINT
-app.post("/api/notes", async (c) => {
-  const ctx = c.env;
-  try {
-    const body = await c.req.json();
-    const { userId, content, platform, type, templateInput, analysisId, title, important, tags } = body;
-    if (!userId || !content || !platform) {
-      return c.json({ error: "Missing required fields: userId, content, platform" }, 400);
-    }
-    const note = await ctx.runMutation(api.notes.createNote, {
-      userId,
-      content,
-      platform,
-      type,
-      templateInput,
-      analysisId,
-      title,
-      important,
-      tags,
-    });
-    return c.json({ success: true, note }, 201);
-  } catch (error: any) {
-    console.error("Failed to create note:", error);
-    if (error.data) {
-      return c.json({ success: false, error: "Failed to create note", details: error.data }, 500);
-    }
-    return c.json({ success: false, error: "Failed to create note", message: error.message || "Internal Server Error" }, 500);
-  }
-});
 
 app.get("/api/notes/:noteId", async (c) => {
   const ctx = c.env;
@@ -416,7 +465,7 @@ app.get("/api/analyses/by-user/:userId", async (c) => {
   try {
     const analyses: any = await ctx.runQuery(api.analyses.getAnalysesByUser, { userId, limit });
     // If Convex returns {success, data}, unwrap, else pass as is
-    let data = Array.isArray(analyses) ? analyses : (analyses.data ?? []);
+    const data = Array.isArray(analyses) ? analyses : (analyses.data ?? []);
     return c.json({ success: true, data });
   } catch (error: any) {
     console.error("Failed to get analyses by user:", error);
@@ -444,7 +493,7 @@ app.get("/api/analyses/by-user-platform", async (c) => {
       platform, 
       limit 
     });
-    let data = Array.isArray(analyses) ? analyses : (analyses.data ?? []);
+    const data = Array.isArray(analyses) ? analyses : (analyses.data ?? []);
     return c.json({ success: true, data });
   } catch (error: any) {
     console.error("Failed to get analyses by user and platform:", error);
@@ -749,135 +798,134 @@ app.get("/api/users/:id/youtube/video-analyses", async (c) => {
 
 // Instagram data deletion request URL
 app.post("/instagram/:id/delete", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  try {
+const ctx = c.env;
+const userId = c.req.param("id");
+try {
     const result = await ctx.runMutation(api.instagramMutations.disconnectInstagram, { 
-      userId: userId 
+    userId: userId 
     });
     
     if (result.success) {
-      return c.json({ success: true });
+    return c.json({ success: true });
     } else {
-      return c.json({ success: false, error: result }, 400);
+    return c.json({ success: false, error: result }, 400);
     }
-  } catch (error) {
+} catch (error) {
     console.error("Error processing Instagram data deletion request:", error);
     return c.json({ 
-      success: false, 
-      error: `Server error: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    success: false, 
+    error: `Server error: ${error instanceof Error ? error.message : 'Unknown error'}` 
     }, 500);
-  }
+}
 });
 
 // Get Instagram tokens for a user
 app.get("/api/users/:id/instagram/tokens", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  try {
+const ctx = c.env;
+const userId = c.req.param("id");
+try {
     const tokens = await ctx.runQuery(api.instagramQueries.getInstagramTokens, { userId });
     return c.json({ success: true, tokens });
-  } catch (error) {
+} catch (error) {
     console.error("Failed to get Instagram tokens:", error);
     return c.json({ success: false, error: "Failed to retrieve Instagram tokens" }, 500);
-  }
+}
 });
 
 // Update Instagram token
 app.post("/api/users/:id/instagram/token", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const { accountId, accessToken, refreshToken, expiresAt, scope } = await c.req.json();
+const ctx = c.env;
+const userId = c.req.param("id");
+const { accountId, accessToken, refreshToken, expiresAt, scope } = await c.req.json();
 
-  // Ensure scope is an array of strings
-  const scopeArray = Array.isArray(scope)
+// Ensure scope is an array of strings
+const scopeArray = Array.isArray(scope)
     ? scope
     : typeof scope === "string"
     ? scope.split(" ")
     : [];
 
-  try {
+try {
     await ctx.runMutation(api.instagramMutations.updateInstagramToken, {
-      userId,
-      accountId,
-      accessToken,
-      refreshToken,
-      expiresAt,
-      scope: scopeArray,
+    userId,
+    accountId,
+    accessToken,
+    refreshToken,
+    expiresAt,
+    scope: scopeArray,
     });
     return c.json({ success: true });
-  } catch (error) {
+} catch (error) {
     console.error("Failed to store Instagram token:", error);
     return c.json({ success: false, error: "Failed to store Instagram token" }, 500);
-  }
+}
 });
 
 // Store Instagram posts in bulk
 app.post("/api/users/:id/instagram/posts/bulk", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const { posts } = await c.req.json();
+const ctx = c.env;
+const userId = c.req.param("id");
+const { posts } = await c.req.json();
 
-  if (!Array.isArray(posts) || posts.length === 0) {
+if (!Array.isArray(posts) || posts.length === 0) {
     return c.json({ success: false, error: "No posts provided" }, 400);
-  }
+}
 
-  const results = [];
-  for (const post of posts) {
+const results = [];
+for (const post of posts) {
     if (!post.id) {
-      results.push({ status: "error", error: "Missing post id", post });
-      continue;
+    results.push({ status: "error", error: "Missing post id", post });
+    continue;
     }
     try {
-      const result = await ctx.runMutation(api.instagramMutations.storePostData, {
+    const result = await ctx.runMutation(api.instagramMutations.storePostData, {
         userId,
         postId: post.id,
         postData: post,
-      });
-      results.push({ status: result.status, postId: post.id });
+    });
+    results.push({ status: result.status, postId: post.id });
     } catch (error) {
-      results.push({ status: "error", error: error instanceof Error ? error.message : "Unknown error", postId: post.id });
+    results.push({ status: "error", error: error instanceof Error ? error.message : "Unknown error", postId: post.id });
     }
-  }
+}
 
-  return c.json({ success: true, results });
+return c.json({ success: true, results });
 });
 
 // Store Instagram profile data
 app.post("/api/users/:id/instagram/profile", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const { username, accountId, profileData, createdAt, updatedAt } = await c.req.json();
+const ctx = c.env;
+const userId = c.req.param("id");
+const { username, accountId, profileData, createdAt, updatedAt } = await c.req.json();
 
-  // Validate required fields
-  if (!profileData || !profileData.id || !username || !accountId) {
+// Validate required fields
+if (!profileData || !profileData.id || !username || !accountId) {
     return c.json({ success: false, error: "profileData.id, accountId, and username are required" }, 400);
-  }
+}
 
-  try {
+try {
     const result = await ctx.runMutation(api.instagramMutations.storeProfileData, {
-      userId,
-      accountId,
-      username,
-      profileData,
-      createdAt: createdAt ?? Date.now(),
-      updatedAt: updatedAt ?? Date.now(),
+    userId,
+    accountId,
+    username,
+    profileData,
+    createdAt: createdAt ?? Date.now(),
+    updatedAt: updatedAt ?? Date.now(),
     });
 
     return c.json({ 
-      success: true,
-      status: result.status,
-      accountId: result.accountId,
+    success: true,
+    status: result.status,
+    accountId: result.accountId,
     });
-  } catch (error) {
+} catch (error) {
     console.error("Failed to store Instagram profile data:", error);
     return c.json({ 
-      success: false, 
-      error: `Failed to store Instagram profile data: ${error instanceof Error ? error.message : 'Unknown error'}`
+    success: false, 
+    error: `Failed to store Instagram profile data: ${error instanceof Error ? error.message : 'Unknown error'}`
     }, 500);
-  }
+}
 });
-
 // SUBSCRIPTION ENDPOINTS
 
 // Get user's subscription

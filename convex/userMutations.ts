@@ -1,103 +1,61 @@
-import { mutation, action } from "./_generated/server";
+import { mutation } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
-import { api } from "./_generated/api";
 
-function generateReferralCode(username: string, name: string) {
-    // Extract a clean name component (max 8 chars for better readability)
-    const nameBase = (name || username || 'user')
-      .toUpperCase()
-      .replace(/[^A-Z0-9]/g, '') // remove special chars (note: using A-Z since string is uppercase)
-      .slice(0, 8);
+export const updateUser = mutation(async ({ db }, { userId, updates }: { userId: Id<"users">, updates: any }) => {
+  if (!userId || !updates) throw new Error("Missing userId or updates");
+  // You may need to adjust the collection name and update logic
+  await db.patch(userId, updates);
+  return { success: true };
+});
 
-    // Add an alphabet part (random capital letter A-Z)
-    const alphabetPart = String.fromCharCode(Math.floor(Math.random() * 26) + 65);
+export const create_user = mutation(async ({ db }, { name, email, image, userId, username, referralCode, referredBy }: {
+  name: string,
+  email: string,
+  image?: string,
+  userId: string,
+  username?: string,
+  referralCode?: string,
+  referredBy?: string,
+}) => {
+  const now = Date.now();
 
-    // Add a short numeric segment for variety (100-999)
-    const numericPart = 100 + Math.floor(Math.random() * 900);
- 
-    // Combine into a referral code
-    return `${nameBase}${alphabetPart}${numericPart}`;
+  // Try to find an existing user by userId (preferred) or email (fallback)
+  let existingUser = await db.query("users").withIndex("by_userId", q => q.eq("userId", userId)).first();
+  if (!existingUser && email) {
+    existingUser = await db.query("users").withIndex("by_email", q => q.eq("email", email)).first();
   }
-  
 
-export const create_user = mutation({
-  args: {
-    name: v.string(),
-    email: v.string(),
-    image: v.optional(v.string()),
-    userId: v.string(),
-    username: v.optional(v.string()),
-    referralCode: v.optional(v.string()),
-    referredBy: v.optional(v.string()),
-    subscription: v.optional(v.any()),
-
-  },
-  handler: async ({ db }, args) => {
-    const now = Date.now();
-    
-    // Debug log the arguments received
-    console.log('[Convex] create_user args:', {
-      name: args.name,
-      email: args.email,
-      userId: args.userId,
-      username: args.username,
-      referredBy: args.referredBy,
-      hasReferredBy: !!args.referredBy,
-      referredByLength: args.referredBy?.length || 0
-    });
-    
-    // Check if user exists by email
-    const existing = await db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
-      .first();
-
-    let referralCode = args.referralCode;
-    if (!args.referralCode) {
-      // Generate referral code based on username and name
-      referralCode = generateReferralCode(args.username ?? '', args.name);
-    }
-
-    if (existing) {
-      // Update user with all fields
-      const updateData = {
-        name: args.name,
-        email: args.email,
-        image: args.image,
-        userId: args.userId,
-        updatedAt: now,
-        ...(args.username !== undefined ? { username: args.username } : {}),
-        ...(args.referredBy !== undefined ? { referredBy: args.referredBy } : {}),
-        ...(args.subscription ? { subscription: args.subscription } : {}),
-      };
-      
-      console.log('[Convex] Updating existing user with data:', updateData);
-      
-      await db.patch(existing._id, updateData);
-      console.log('[Convex] Updated user', { id: existing._id, email: args.email, referredBy: args.referredBy });
-      return { updated: true, id: existing._id };
+  if (existingUser) {
+    // Only update fields that are safe to update (never overwrite referralCode or referredBy)
+    const updates: Record<string, any> = {};
+    if (name && name !== existingUser.name) updates.name = name;
+    if (typeof image !== 'undefined' && image !== existingUser.image) updates.image = image;
+    if (username && username !== existingUser.username) updates.username = username;
+    updates.updatedAt = now;
+    // Only patch if there are changes
+    if (Object.keys(updates).length > 1 || (Object.keys(updates).length === 1 && !updates.hasOwnProperty('updatedAt'))) {
+      await db.patch(existingUser._id, updates);
     } else {
-      // Create new user
-      const newUserData = {
-        name: args.name,
-        email: args.email,
-        image: args.image,
-        userId: args.userId,
-        username: args.username ?? '',
-        referralCode: referralCode,
-        referredBy: args.referredBy ?? '',
-        createdAt: now,
-        updatedAt: now,
-        ...(args.subscription ? { subscription: args.subscription } : {}),
-      };
-      
-      console.log('[Convex] Creating new user with data:', newUserData);
-      
-      const id = await db.insert("users", newUserData);
-      console.log('[Convex] Created user', { id, email: args.email, referredBy: args.referredBy });
-      return { created: true, id };
+      // Always update updatedAt
+      await db.patch(existingUser._id, { updatedAt: now });
     }
-  },
+    return { success: true, userId: existingUser._id, alreadyExisted: true };
+  }
+
+  // If no user exists, create a new one
+  const id = await db.insert("users", {
+    name,
+    email,
+    image,
+    userId,
+    username: username ?? '',
+    referralCode: referralCode ?? '',
+    referredBy: referredBy ?? '',
+    createdAt: now,
+    updatedAt: now,
+  });
+  return { success: true, userId: id, alreadyExisted: false };
 });
 
 
@@ -223,10 +181,6 @@ export const deleteUserAndData = mutation({
     await batchDelete("instagramTokens", () =>
       ctx.db.query("instagramTokens").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
-    // instagramData
-    await batchDelete("instagramData", () =>
-      ctx.db.query("instagramData").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
     // instagramAccounts
     await batchDelete("instagramAccounts", () =>
       ctx.db.query("instagramAccounts").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
@@ -235,21 +189,9 @@ export const deleteUserAndData = mutation({
     await batchDelete("instagramPosts", () =>
       ctx.db.query("instagramPosts").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
-    // usageHistory
-    await batchDelete("usageHistory", () =>
-      ctx.db.query("usageHistory").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // sessions
-    await batchDelete("sessions", () =>
-      ctx.db.query("sessions").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
     // usageEvents
     await batchDelete("usageEvents", () =>
       ctx.db.query("usageEvents").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // ubpSettings
-    await batchDelete("ubpSettings", () =>
-      ctx.db.query("ubpSettings").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     return summary;
   },

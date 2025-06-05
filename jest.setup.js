@@ -1,5 +1,5 @@
 /* eslint-disable */
-require('openai/shims/node');
+// require('openai/shims/node');
 const { TextEncoder, TextDecoder } = require('util');
 const { fetch, Headers, Request, Response } = require('cross-fetch');
 const { ReadableStream, WritableStream, TransformStream } = require('stream/web');
