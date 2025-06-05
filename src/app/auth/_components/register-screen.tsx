@@ -7,7 +7,6 @@ import { useAuth } from '@/app/context/auth-context';
 import WaitlistScreen from "./waitlist-screen";
 import UpgradeModal from "@/app/dashboard/_components/settings-screen/tabs/subscription/upgrade-modal";
 import RegistrationForm from "./steps/RegistrationForm";
-import PersonaStep from "./steps/PersonaStep";
 
 interface RegisterScreenProps {
   onSuccess?: (apiKey: string) => void;
@@ -22,7 +21,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
   const router = useRouter();
   const { firebaseUser } = useAuth();
   
-  const [step, setStep] = useState<'register' | 'personas' | 'payment' | 'waitlist' | 'chat'>('register');
+  const [step, setStep] = useState<'register' | 'payment' | 'waitlist' | 'chat'>('register');
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -30,7 +29,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
       const urlStep = params.get("step");
       if (
         urlStep === "register" ||
-        urlStep === "personas" ||
         urlStep === "payment" ||
         urlStep === "waitlist" ||
         urlStep === "chat"
@@ -48,7 +46,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
 
   const handleContinueAfterSuccess = () => {
     setRegistrationSuccess(false);
-    setStep('personas');
+    setStep('payment');
   };
 
   const handleWaitlistComplete = (apiKey: string) => {
@@ -61,14 +59,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
   const handleUpgradeClose = () => {
     // Prevent closing modal without completing checkout
     // Optionally, show a warning or keep modal open
-  };
-
-  const handlePersonaComplete = () => {
-    setStep('payment');
-  };
-
-  const handlePersonaSkip = () => {
-    setStep('payment');
   };
 
   return (
@@ -97,14 +87,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
               Continue
             </button>
           </div>
-        )}
-        
-        {step === 'personas' && (
-          <PersonaStep 
-            name={name}
-            onComplete={handlePersonaComplete}
-            onSkip={handlePersonaSkip}
-          />
         )}
         
         {step === 'waitlist' && (
