@@ -90,16 +90,58 @@ export const useChat = (
       // Log the response to check structure
       console.log('API response:', data);
       
+      // Handle session ID from backend response
+      console.log('[useChat] Received response:', {
+        hasSessionId: !!data.session_id,
+        currentSessionId: sessionId,
+        isFirstMessage,
+        isPersonaFlow: data.metadata?.is_persona_flow,
+        responseData: data
+      });
+
+      // Always use the session ID from the backend if it exists
+      if (data.session_id) {
+        console.log('[useChat] Received session ID from backend:', data.session_id);
+        
+        // Only update the session ID if it's different from the current one
+        if (sessionId !== data.session_id) {
+          console.log('[useChat] Updating session ID from:', sessionId, 'to:', data.session_id);
+          setSessionId(data.session_id);
+        }
+      } 
+      // Only generate a new session ID if this is the first message and we don't have one yet
+      else if (isFirstMessage && !sessionId) {
+        const newSessionId = `frontend_${Date.now()}`;
+        console.log('[useChat] Generated new frontend session ID:', newSessionId);
+        setSessionId(newSessionId);
+      }
+      
+      // Log the current session state for debugging
+      console.log('[useChat] Current session state:', { 
+        receivedSessionId: data.session_id, 
+        currentSessionId: sessionId,
+        isFirstMessage,
+        isPersonaFlow: data.metadata?.is_persona_flow,
+        hasMetadata: !!data.metadata,
+        metadata: data.metadata
+      });
+
       // Update messages with the response
       setMessages(prev => {
         const withoutTyping = prev.filter(msg => msg.status !== 'typing');
         return [...withoutTyping, {
           id: uuidv4(),
-          content: data.chat_response,
-          chat_response: data.chat_response,
+          content: data.chat_response || data.response || '',
+          chat_response: data.chat_response || data.response || '',
           role: 'assistant',
           timestamp: new Date().toISOString(),
-          suggestions: data.suggestions || []
+          // Use the most reliable session ID in this order: 
+          // 1. From backend response
+          // 2. Current session ID in state
+          // 3. Undefined as last resort
+          sessionId: data.session_id || sessionId || undefined,
+          // Get suggestions from either the root level or metadata
+          suggestions: data.suggestions || data.metadata?.suggestions || []
         }];
       });
 
