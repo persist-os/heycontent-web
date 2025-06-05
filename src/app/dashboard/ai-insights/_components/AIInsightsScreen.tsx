@@ -30,18 +30,18 @@ export function AIInsightsScreen() {
   const [instagramError, setInstagramError] = useState<string | null>(null)
   const [gmailError, setGmailError] = useState<string | null>(null)
   
-  const { user } = useAuth()
+  const { firebaseUser } = useAuth()
 
   // Fetch YouTube channel data
   const youtubeChannel = useQuery(
     api.youtubeQueries.getYouTubeChannelData,
-    user ? { userId: user.uid } : "skip"
+    firebaseUser ? { userId: firebaseUser.uid } : "skip"
   )
 
   // Fetch YouTube insights
   const youtubeInsights = useQuery(
     api.youtubeQueries.getChannelAnalysis,
-    youtubeChannel?.id ? { userId: user?.uid, channelId: youtubeChannel.id } : "skip"
+    youtubeChannel?.id ? { userId: firebaseUser?.uid, channelId: youtubeChannel.id } : "skip"
   )
 
   // Store channel analysis mutation
@@ -53,7 +53,7 @@ export function AIInsightsScreen() {
   const gmailInsights = [] // TODO: Add Gmail insights when available
 
   const handleYoutubeRefresh = async () => {
-    if (!user || !youtubeChannel?.id) {
+    if (!firebaseUser || !youtubeChannel?.id) {
       setYoutubeError('YouTube channel not connected')
       return
     }
@@ -76,7 +76,7 @@ export function AIInsightsScreen() {
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          user_id: user.uid,
+          user_id: firebaseUser.uid,
           channel_id: youtubeChannel.id,
           max_videos: 10,
           include_captions: true,
@@ -93,7 +93,7 @@ export function AIInsightsScreen() {
       
       if (data.status === 'success') {
         await storeChannelAnalysis({
-          userId: user.uid,
+          userId: firebaseUser.uid,
           channelId: youtubeChannel.id,
           analysisData: data.data
         })
@@ -111,7 +111,7 @@ export function AIInsightsScreen() {
   }
 
   const handleInstagramRefresh = async () => {
-    if (!user) {
+    if (!firebaseUser) {
       setInstagramError('User not authenticated')
       return
     }
@@ -132,7 +132,7 @@ export function AIInsightsScreen() {
   }
 
   const handleGmailRefresh = async () => {
-    if (!user) {
+    if (!firebaseUser) {
       setGmailError('User not authenticated')
       return
     }
@@ -253,7 +253,7 @@ export function AIInsightsScreen() {
                   isRefreshing={youtubeRefreshing}
                   error={youtubeError}
                   onRefresh={handleYoutubeRefresh}
-                  disabled={!user || !youtubeChannel?.id}
+                  disabled={!firebaseUser || !youtubeChannel?.id}
                 />
                 
                 {youtubeRefreshing ? (
