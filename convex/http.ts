@@ -72,6 +72,85 @@ app.get("/api/users/:id/personas", async (c) => {
   return c.json(persona);
 });
 
+// Create a new persona
+app.post("/api/users/:id/personas", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const {
+    current_name,
+    current_description,
+    experience_level,
+    content_formats,
+    content_tone,
+    content_voice,
+    content_pillars,
+    unique_value,
+    future_name,
+    future_description,
+    goals,
+    desired_impact,
+    primary_topics,
+    secondary_topics,
+    tone_descriptors,
+    style_descriptors,
+    audience_type,
+    engagement_style
+  } = await c.req.json();
+
+  // Validate required fields
+  const missing = [];
+  if (!current_name) missing.push("current_name");
+  if (!current_description) missing.push("current_description");
+  if (!experience_level) missing.push("experience_level");
+  if (!Array.isArray(content_formats)) missing.push("content_formats");
+  if (!content_tone) missing.push("content_tone");
+  if (!content_voice) missing.push("content_voice");
+  if (!Array.isArray(content_pillars)) missing.push("content_pillars");
+  if (!unique_value) missing.push("unique_value");
+  if (!future_name) missing.push("future_name");
+  if (!future_description) missing.push("future_description");
+  if (!Array.isArray(goals)) missing.push("goals");
+  if (!desired_impact) missing.push("desired_impact");
+  if (!Array.isArray(primary_topics)) missing.push("primary_topics");
+  if (!Array.isArray(secondary_topics)) missing.push("secondary_topics");
+  if (!Array.isArray(tone_descriptors)) missing.push("tone_descriptors");
+  if (!Array.isArray(style_descriptors)) missing.push("style_descriptors");
+  if (!audience_type) missing.push("audience_type");
+  if (!Array.isArray(engagement_style)) missing.push("engagement_style");
+
+  if (missing.length > 0) {
+    return c.json({ success: false, error: `Missing required fields: ${missing.join(", ")}` }, 400);
+  }
+
+  try {
+    const result = await ctx.runMutation(api.personas.createPersona, {
+      userId,
+      current_name,
+      current_description,
+      experience_level,
+      content_formats,
+      content_tone,
+      content_voice,
+      content_pillars,
+      unique_value,
+      future_name,
+      future_description,
+      goals,
+      desired_impact,
+      primary_topics,
+      secondary_topics,
+      tone_descriptors,
+      style_descriptors,
+      audience_type,
+      engagement_style
+    });
+    return c.json({ success: true, personaId: result });
+  } catch (error) {
+    console.error("Failed to create persona:", error);
+    return c.json({ success: false, error: "Failed to create persona" }, 500);
+  }
+});
+
 // Conversations
 app.post("/api/users/:id/create_conversation", async (c) => {
   const ctx = c.env;
