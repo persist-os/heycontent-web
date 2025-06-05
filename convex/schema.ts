@@ -73,14 +73,34 @@ export default defineSchema({
   .index("by_referralCode", ["referralCode"]),
 
   personas: defineTable({
-    name: v.string(),
+    // Current Persona
+    current_name: v.string(),
+    current_description: v.string(),
+    experience_level: v.string(),
+    
+    // Content Style
+    content_formats: v.array(v.string()),
+    content_tone: v.string(),
+    content_voice: v.string(),
+    content_pillars: v.array(v.string()),
+    unique_value: v.string(),
+    
+    // Future Persona
+    future_name: v.string(),
+    future_description: v.string(),
+    goals: v.array(v.string()),
+    desired_impact: v.string(),
+    
+    // Persona Fingerprint
+    primary_topics: v.array(v.string()),
+    secondary_topics: v.array(v.string()),
+    tone_descriptors: v.array(v.string()),
+    style_descriptors: v.array(v.string()),
+    audience_type: v.string(),
+    engagement_style: v.array(v.string()),
+    
+    // System fields
     userId: v.string(),
-    currentPersona: v.object({
-      description: v.string()
-    }),
-    futureVision: v.object({
-      description: v.string()
-    }),
     isActive: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.number(),

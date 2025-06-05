@@ -2,6 +2,8 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
+type ExperienceLevel = "Beginner" | "Intermediate" | "Experienced" | "Professional";
+
 // Query to get the active persona for a user
 export const getPersona = query({
   args: {
@@ -21,25 +23,10 @@ export const getPersona = query({
         return null;
       }
 
-      // Defensive: fallback to empty string if fields are missing or malformed
-      const currentPersonaDesc = persona.currentPersona?.description ?? '';
-      const futureVisionDesc = persona.futureVision?.description ?? '';
-      const personaData = {
-        userId: persona.userId ?? '',
-        name: persona.name ?? '',
-        currentPersona: currentPersonaDesc,
-        futureVision: futureVisionDesc,
-      };
-
-      return personaData;
+      return persona;
     } catch (error) {
-      // Always return a safe object if anything goes wrong
-      return {
-        userId: '',
-        name: '',
-        currentPersona: '',
-        futureVision: '',
-      };
+      console.error("Error fetching persona:", error);
+      return null;
     }
   },
 });
@@ -48,36 +35,47 @@ export const getPersona = query({
 export const createPersona = mutation({
   args: {
     userId: v.string(),
-    preferredName: v.string(),
-    currentPersona: v.string(),
-    futureVision: v.optional(v.string()),
+    current_name: v.string(),
+    current_description: v.string(),
+    experience_level: v.string(),
+    content_formats: v.array(v.string()),
+    content_tone: v.string(),
+    content_voice: v.string(),
+    content_pillars: v.array(v.string()),
+    unique_value: v.string(),
+    future_name: v.string(),
+    future_description: v.string(),
+    goals: v.array(v.string()),
+    desired_impact: v.string(),
+    primary_topics: v.array(v.string()),
+    secondary_topics: v.array(v.string()),
+    tone_descriptors: v.array(v.string()),
+    style_descriptors: v.array(v.string()),
+    audience_type: v.string(),
+    engagement_style: v.array(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId, preferredName, currentPersona, futureVision } = args;
-
-    // Delete all previous personas for this user
+    const timestamp = Date.now();
+    
+    // Deactivate all previous personas for this user
     const allPersonas = await ctx.db
       .query("personas")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .collect();
 
     for (const persona of allPersonas) {
-      await ctx.db.delete(persona._id);
+      await ctx.db.patch(persona._id, {
+        isActive: false,
+        updatedAt: timestamp,
+      });
     }
 
-    // Create new persona
+    // Create new persona with all fields
     return await ctx.db.insert("personas", {
-      name: preferredName,
-      userId: userId,
-      currentPersona: {
-        description: currentPersona
-      },
-      futureVision: {
-        description: futureVision || currentPersona
-      },
+      ...args,
       isActive: true,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      createdAt: timestamp,
+      updatedAt: timestamp,
     });
   },
 });
@@ -93,5 +91,15 @@ export const deactivatePersona = mutation({
       isActive: false,
       updatedAt: Date.now(),
     });
+  },
+});
+
+// Mutation to delete a persona (permanently)
+export const deletePersona = mutation({
+  args: {
+    personaId: v.id("personas"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.personaId);
   },
 });

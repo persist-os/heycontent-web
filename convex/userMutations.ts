@@ -33,6 +33,34 @@ export const create_user = mutation(async ({ db }, { name, email, image, userId,
   return { success: true, userId: id };
 });
 
+
+export const updateUserStripeData = mutation({
+  args: {
+    userId: v.string(),
+    updates: v.object({
+      stripeCustomerId: v.optional(v.string()),
+      stripeSubscriptionId: v.optional(v.string()),
+      // Add more Stripe/user fields here as needed
+    })
+  },
+  handler: async ({ db }, args) => {
+    const user = await db
+      .query("users")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    await db.patch(user._id, {
+      ...args.updates,
+      updatedAt: Date.now(),
+    });
+    return { success: true, userId: user._id };
+  },
+});
+
 // Delete all user data
 export const deleteUserAndData = mutation({
   args: { userId: v.string() },
