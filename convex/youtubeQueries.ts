@@ -351,3 +351,24 @@ export const getVideoAnalyses = query({
     }
   },
 });
+
+// Query: Get full video details by userId and videoId, including analysis
+export const getFullVideoDetails = query({
+  args: { userId: v.string(), videoId: v.string() },
+  handler: async (ctx, args) => {
+    try {
+      const video = await ctx.db
+        .query("youtubeVideos")
+        .withIndex("by_videoId", (q) => q.eq("videoId", args.videoId))
+        .filter((q) => q.eq(q.field("userId"), args.userId))
+        .first();
+
+      if (!video) return null;
+      // Return the full video object, including any analysis fields
+      return video;
+    } catch (error) {
+      console.error('Error getting full video details:', error);
+      throw new Error(`Failed to get full video details: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
