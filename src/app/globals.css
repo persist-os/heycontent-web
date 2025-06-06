@@ -253,18 +253,73 @@
 }
 
 @keyframes float-subtle {
-  0% {
-    transform: translateY(0px) rotate(0deg);
+  0%, 100% {
+    transform: translateY(0);
   }
   50% {
-    transform: translateY(-3px) rotate(1deg);
-  }
-  100% {
-    transform: translateY(0px) rotate(0deg);
+    transform: translateY(-10px);
   }
 }
 
-/* Card 3D effect styles */
+.animate-float-subtle {
+  animation: float-subtle 6s ease-in-out infinite;
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient {
+  animation: gradient 15s ease infinite;
+  background-size: 200% 200%;
+}
+
+/* Card container styles */
+.card-container {
+  transform-style: preserve-3d;
+  transform: perspective(1000px);
+}
+
+/* Ensure the card has proper 3D space */
+.card-container > div {
+  transform-style: preserve-3d;
+}
+
+/* Add smooth transitions for all card elements */
+.card-container * {
+  transition: all 0.3s ease;
+}
+
+/* Add hover effect for share buttons */
+.card-container button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Add glow effect for the card */
+.card-container::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  background: radial-gradient(circle at center, rgba(255,255,255,0.1) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.card-container:hover::before {
+  opacity: 1;
+}
+
+/* Waitlist Queue Card Styles */
 .perspective-1000 {
   perspective: 1000px;
 }
@@ -275,7 +330,6 @@
 
 .backface-hidden {
   backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
 }
 
 .rotateY-180 {

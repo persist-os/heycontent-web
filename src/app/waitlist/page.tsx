@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { WaitlistQueue } from '../../components/ui/WaitlistQueue';
-import { CreatorCard } from '../../components/ui/CreatorCard';
+import { WaitlistQueue } from '@/components/ui/WaitlistQueue';
+import { CreatorCard } from '@/components/ui/CreatorCard';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const generateQueueId = () => {
@@ -25,7 +25,7 @@ const generateCreativeTitle = (name: string) => {
 };
 
 export default function WaitlistPage() {
-  const [stage, setStage] = useState<'queue' | 'card'>('queue');
+  const [stage, setStage] = useState<'register' | 'queue' | 'card'>('queue');
   const [queueId] = useState(generateQueueId());
   const [inviteCode] = useState(generateInviteCode());
   const [name, setName] = useState('');
@@ -45,43 +45,59 @@ export default function WaitlistPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <AnimatePresence mode="wait">
-        {stage === 'queue' ? (
-          <motion.div
-            key="queue"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-          >
-            <WaitlistQueue
-              position={325}
-              queueId={queueId}
-              onQueueComplete={handleQueueComplete}
-            />
-          </motion.div>
-        ) : (
-          <motion.div
-            key="card"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-          >
-            <CreatorCard
-              name={name || 'Creator'}
-              title={generateCreativeTitle(name)}
-              joinDate={new Date().toLocaleDateString('en-US', { 
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric'
-              })}
-              inviteCode={inviteCode}
-              invitesLeft={invitesLeft}
-              onShare={handleShare}
-            />
-          </motion.div>
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+      <div className="max-w-6xl mx-auto px-4 py-16">
+        {stage === 'register' && (
+          <div className="text-center mb-12">
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-4xl font-bold mb-4"
+            >
+              Join the Waitlist
+            </motion.h1>
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-gray-600 text-lg"
+            >
+              Be among the first to experience the future of content creation
+            </motion.p>
+          </div>
         )}
-      </AnimatePresence>
+        {stage === 'queue' && (
+          <div className="text-center mb-12">
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-4xl font-bold mb-4"
+            >
+              You're in line!
+            </motion.h1>
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-gray-600 text-lg"
+            >
+              Hang tight, we're moving you up the waitlist...
+            </motion.p>
+          </div>
+        )}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <WaitlistQueue 
+            position={10} 
+            queueId={Math.random().toString(36).substring(2, 15)} 
+            onQueueComplete={() => {}}
+            onStageChange={setStage}
+          />
+        </motion.div>
+      </div>
     </div>
   );
 } 

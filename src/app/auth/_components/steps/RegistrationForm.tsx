@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Mail } from 'lucide-react';
+import { Eye, EyeOff, Mail, User, AtSign, Key } from 'lucide-react';
 import { getFirebaseAuth } from '@/app/lib/firebase';
 import { usePasswordValidation, useReferralValidation } from '../hooks';
+import { Logo } from '@/components/ui/logo';
+import { motion } from "framer-motion";
 
 interface RegistrationFormProps {
   onSuccess: (name: string) => void;
@@ -129,129 +131,173 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess }) => {
   const displayError = error || referralError;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 bg-white shadow-lg rounded-xl p-4 sm:p-8">
-      <h2 className="text-2xl font-bold mb-4 text-center">Register</h2>
-      
-      <div>
-        <label htmlFor="name" className="block text-sm font-medium mb-1">Name</label>
-        <input
-          id="name"
-          type="text"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          className="w-full border rounded px-3 py-2"
-          required
-        />
+    <div className="w-full max-w-md">
+      <div className="text-center mb-8">
+        <motion.div
+          animate={{
+            y: [0, -10, 0],
+            rotate: [0, 2, 0, -2, 0],
+          }}
+          transition={{
+            duration: 4,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        >
+          <Logo className="h-12 mx-auto mb-4" />
+        </motion.div>
+        <h1 className="text-2xl font-bold text-gray-900">Create your account</h1>
+        <p className="text-gray-600 mt-2">Join HeyContent today</p>
       </div>
-      
-      <div>
-        <label htmlFor="username" className="block text-sm font-medium mb-1">Username</label>
-        <input
-          id="username"
-          type="text"
-          value={username}
-          onChange={e => setUsername(e.target.value)}
-          className="w-full border rounded px-3 py-2"
-          required
-        />
-      </div>
-      
-      <div>
-        <label className="block text-sm font-medium mb-1">Referral Code</label>
-        <input
-          type="text"
-          value={referralCode}
-          onChange={e => handleReferralCodeChange(e.target.value)}
-          className={`w-full border rounded px-3 py-2 ${referralCodeValid ? 'border-green-500' : ''}`}
-          placeholder="Enter your referral code"
-          required
-        />
-        {checkReferralCode === undefined && referralCode && (
-          <div className="text-sm text-gray-500 mt-1">Validating code...</div>
-        )}
-        {referralCodeValid && (
-          <div className="text-sm text-green-500 mt-1">Referral code valid!</div>
-        )}
-      </div>
-      
-      <div>
-        <label htmlFor="email" className="block text-sm font-medium mb-1">Email</label>
-        <div className="relative">
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            className="w-full border rounded px-3 py-2 pr-10"
-            required
-          />
-          <span className="absolute right-2 top-2 text-gray-400">
-            <Mail size={18} />
-          </span>
-        </div>
-      </div>
-      
-      <div>
-        <label htmlFor="password" className="block text-sm font-medium mb-1">Password</label>
-        <div className="relative">
-          <input
-            id="password"
-            type={showPassword ? 'text' : 'password'}
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            className="w-full border rounded px-3 py-2 pr-10"
-            required
-          />
-          <button
-            type="button"
-            className="absolute right-2 top-2 text-gray-400"
-            onClick={() => setShowPassword(!showPassword)}
-            tabIndex={-1}
-          >
-            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-          </button>
+
+      <form onSubmit={handleSubmit} className="space-y-6 bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-8">
+        <div>
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+          <div className="relative">
+            <input
+              id="name"
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              className="w-full px-4 py-3 pl-11 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              required
+              placeholder="Enter your full name"
+            />
+            <User className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 transform -translate-y-1/2" />
+          </div>
         </div>
         
-        {/* Password requirements UI */}
-        <ul className="mt-2 text-xs space-y-1">
-          <li className={passwordValid.upper ? 'text-green-600' : 'text-gray-500'}>
-            {passwordValid.upper ? '✓' : '•'} At least one uppercase letter
-          </li>
-          <li className={passwordValid.lower ? 'text-green-600' : 'text-gray-500'}>
-            {passwordValid.lower ? '✓' : '•'} At least one lowercase letter
-          </li>
-          <li className={passwordValid.number ? 'text-green-600' : 'text-gray-500'}>
-            {passwordValid.number ? '✓' : '•'} At least one number
-          </li>
-          <li className={passwordValid.special ? 'text-green-600' : 'text-gray-500'}>
-            {passwordValid.special ? '✓' : '•'} At least one special character
-          </li>
-          <li className={passwordValid.length ? 'text-green-600' : 'text-gray-500'}>
-            {passwordValid.length ? '✓' : '•'} At least 8 characters
-          </li>
-        </ul>
-      </div>
-      
-      {displayError && <div className="text-red-500 text-sm">{displayError}</div>}
-      
-      <button
-        type="submit"
-        className="w-full bg-blue-600 text-white py-2 rounded disabled:opacity-50"
-        disabled={
-          isLoading ||
-          !isPasswordValid ||
-          (referralCode && (!referralCodeValid || !referredById || checkReferralCode === undefined))
-        }
-      >
-        {isLoading ? 'Loading...' : 'Register'}
-      </button>
-      
-      <div className="mt-4 text-center">
-        <a href="/auth/login" className="text-blue-600 hover:underline">
-          Already have an account? Sign In
-        </a>
-      </div>
-    </form>
+        <div>
+          <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+          <div className="relative">
+            <input
+              id="username"
+              type="text"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              className="w-full px-4 py-3 pl-11 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              required
+              placeholder="Choose a username"
+            />
+            <AtSign className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 transform -translate-y-1/2" />
+          </div>
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Referral Code</label>
+          <div className="relative">
+            <input
+              type="text"
+              value={referralCode}
+              onChange={e => handleReferralCodeChange(e.target.value)}
+              className={`w-full px-4 py-3 pl-11 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                referralCodeValid ? 'border-green-500' : 'border-gray-200'
+              }`}
+              placeholder="Enter your referral code"
+              required
+            />
+            <Key className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 transform -translate-y-1/2" />
+          </div>
+          {checkReferralCode === undefined && referralCode && (
+            <div className="text-sm text-gray-500 mt-1">Validating code...</div>
+          )}
+          {referralCodeValid && (
+            <div className="text-sm text-green-600 mt-1">✓ Valid referral code</div>
+          )}
+        </div>
+        
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+          <div className="relative">
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="w-full px-4 py-3 pl-11 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              required
+              placeholder="Enter your email"
+            />
+            <Mail className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 transform -translate-y-1/2" />
+          </div>
+        </div>
+        
+        <div>
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+          <div className="relative">
+            <input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="w-full px-4 py-3 pl-11 pr-11 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              required
+              placeholder="Create a password"
+            />
+            <Key className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 transform -translate-y-1/2" />
+            <button
+              type="button"
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              onClick={() => setShowPassword(!showPassword)}
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
+          
+          {/* Password requirements UI */}
+          <div className="mt-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
+            <p className="text-sm font-medium text-gray-700 mb-2">Password requirements:</p>
+            <ul className="space-y-1.5 text-sm">
+              <li className={`flex items-center ${passwordValid.upper ? 'text-green-600' : 'text-gray-500'}`}>
+                <span className="mr-2">{passwordValid.upper ? '✓' : '•'}</span>
+                At least one uppercase letter
+              </li>
+              <li className={`flex items-center ${passwordValid.lower ? 'text-green-600' : 'text-gray-500'}`}>
+                <span className="mr-2">{passwordValid.lower ? '✓' : '•'}</span>
+                At least one lowercase letter
+              </li>
+              <li className={`flex items-center ${passwordValid.number ? 'text-green-600' : 'text-gray-500'}`}>
+                <span className="mr-2">{passwordValid.number ? '✓' : '•'}</span>
+                At least one number
+              </li>
+              <li className={`flex items-center ${passwordValid.special ? 'text-green-600' : 'text-gray-500'}`}>
+                <span className="mr-2">{passwordValid.special ? '✓' : '•'}</span>
+                At least one special character
+              </li>
+              <li className={`flex items-center ${passwordValid.length ? 'text-green-600' : 'text-gray-500'}`}>
+                <span className="mr-2">{passwordValid.length ? '✓' : '•'}</span>
+                At least 8 characters
+              </li>
+            </ul>
+          </div>
+        </div>
+        
+        {displayError && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+            {displayError}
+          </div>
+        )}
+        
+        <button
+          type="submit"
+          className="w-full bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+          disabled={
+            isLoading ||
+            !isPasswordValid ||
+            (referralCode && (!referralCodeValid || !referredById || checkReferralCode === undefined))
+          }
+        >
+          {isLoading ? 'Creating account...' : 'Create Account'}
+        </button>
+        
+        <div className="text-center">
+          <a href="/auth/login" className="text-sm text-gray-600 hover:text-gray-900">
+            Already have an account? <span className="text-blue-600 hover:text-blue-700 font-medium">Sign in</span>
+          </a>
+        </div>
+      </form>
+    </div>
   );
 };
 

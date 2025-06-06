@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from '@/app/context/auth-context';
+import { WaitlistButton } from '@/components/ui/WaitlistButton';
 
 import WaitlistScreen from "./waitlist-screen";
 import UpgradeModal from "@/app/dashboard/_components/settings-screen/tabs/subscription/upgrade-modal";
@@ -84,7 +85,16 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
         )}
         
         {step === 'register' && !registrationSuccess && (
-          <RegistrationForm onSuccess={handleRegisterSuccess} />
+          <>
+            <RegistrationForm onSuccess={handleRegisterSuccess} />
+            <div className="mt-6 text-center">
+              <p className="text-gray-600 mb-2 text-sm">
+                Need access?<br />
+                Join the waitlist below, or ask a friend for their invite code.
+              </p>
+              <WaitlistButton />
+            </div>
+          </>
         )}
         {step === 'register' && registrationSuccess && (
           <div className="bg-white shadow-lg rounded-xl p-8 text-center">
