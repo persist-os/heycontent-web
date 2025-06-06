@@ -926,6 +926,209 @@ try {
     }, 500);
 }
 });
+
+// Get Instagram profile insights
+app.get("/api/users/:id/instagram/profile/insights", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const accountId = c.req.query("accountId");
+
+  if (!accountId) {
+    return c.json({ success: false, error: "Missing accountId query parameter" }, 400);
+  }
+
+  try {
+    const insights = await ctx.runQuery(api.instagramQueries.getProfileInsights, { 
+      userId,
+      accountId
+    });
+    
+    if (!insights) {
+      return c.json({ 
+        success: false, 
+        error: "Profile insights not found" 
+      }, 404);
+    }
+
+    return c.json({ 
+      success: true,
+      insights
+    });
+  } catch (error) {
+    console.error("Error fetching Instagram profile insights:", error);
+    return c.json({ 
+      success: false, 
+      error: `Server error: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    }, 500);
+  }
+});
+
+// Get Instagram stories
+app.get("/api/users/:id/instagram/stories", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const accountId = c.req.query("accountId");
+
+  if (!accountId) {
+    return c.json({ success: false, error: "Missing accountId query parameter" }, 400);
+  }
+
+  try {
+    const stories = await ctx.runQuery(api.instagramQueries.getStories, { 
+      userId,
+      accountId
+    });
+    
+    if (!stories) {
+      return c.json({ 
+        success: false, 
+        error: "Stories not found" 
+      }, 404);
+    }
+
+    return c.json({ 
+      success: true,
+      stories
+    });
+  } catch (error) {
+    console.error("Error fetching Instagram stories:", error);
+    return c.json({ 
+      success: false, 
+      error: `Server error: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    }, 500);
+  }
+});
+
+// Store Instagram profile insights
+app.post("/api/users/:id/instagram/profile/insights", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { accountId, insightsData } = await c.req.json();
+
+  if (!accountId || !insightsData) {
+    return c.json({ success: false, error: "Missing required fields" }, 400);
+  }
+
+  try {
+    const result = await ctx.runMutation(api.instagramMutations.storeProfileInsights, {
+      userId,
+      accountId,
+      insightsData,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    });
+
+    return c.json({ 
+      success: true,
+      result
+    });
+  } catch (error) {
+    console.error("Error storing Instagram profile insights:", error);
+    return c.json({ 
+      success: false, 
+      error: `Server error: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    }, 500);
+  }
+});
+
+// Store Instagram stories
+app.post("/api/users/:id/instagram/stories", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { accountId, storiesData } = await c.req.json();
+
+  if (!accountId || !storiesData) {
+    return c.json({ success: false, error: "Missing required fields" }, 400);
+  }
+
+  try {
+    const result = await ctx.runMutation(api.instagramMutations.storeStories, {
+      userId,
+      accountId,
+      storiesData,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    });
+
+    return c.json({ 
+      success: true,
+      result
+    });
+  } catch (error) {
+    console.error("Error storing Instagram stories:", error);
+    return c.json({ 
+      success: false, 
+      error: `Server error: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    }, 500);
+  }
+});
+
+// Store Instagram post insights
+app.post("/api/users/:id/instagram/post/:postId/insights", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const postId = c.req.param("postId");
+  const { insightsData } = await c.req.json();
+
+  if (!insightsData) {
+    return c.json({ success: false, error: "Missing insightsData" }, 400);
+  }
+
+  try {
+    const result = await ctx.runMutation(api.instagramMutations.storePostInsights, {
+      userId,
+      postId,
+      insightsData,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    });
+
+    return c.json({ 
+      success: true,
+      result
+    });
+  } catch (error) {
+    console.error("Error storing Instagram post insights:", error);
+    return c.json({ 
+      success: false, 
+      error: `Server error: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    }, 500);
+  }
+});
+
+// Store Instagram post comments
+app.post("/api/users/:id/instagram/post/:postId/comments", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const postId = c.req.param("postId");
+  const { commentsData } = await c.req.json();
+
+  if (!commentsData) {
+    return c.json({ success: false, error: "Missing commentsData" }, 400);
+  }
+
+  try {
+    const result = await ctx.runMutation(api.instagramMutations.storePostComments, {
+      userId,
+      postId,
+      commentsData,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    });
+
+    return c.json({ 
+      success: true,
+      result
+    });
+  } catch (error) {
+    console.error("Error storing Instagram post comments:", error);
+    return c.json({ 
+      success: false, 
+      error: `Server error: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    }, 500);
+  }
+});
+
 // SUBSCRIPTION ENDPOINTS
 
 // Get user's subscription

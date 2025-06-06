@@ -489,6 +489,107 @@ export default defineSchema({
   .index("by_postId", ["postId"])
   .index("by_timestamp", ["data.timestamp"]),
 
+  // Instagram Profile Insights
+  instagramProfileInsights: defineTable({
+    userId: v.string(),
+    accountId: v.any(),
+    data: v.object({
+      impressions: v.optional(v.number()),
+      reach: v.optional(v.number()),
+      profile_views: v.optional(v.number()),
+      follower_count: v.optional(v.number()),
+      follows_count: v.optional(v.number()),
+      media_count: v.optional(v.number()),
+      saved_count: v.optional(v.number()),
+      engagement_rate: v.optional(v.number()),
+      period: v.string(),
+      timestamp: v.number()
+    }),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_userId", ["userId"])
+  .index("by_accountId", ["accountId"])
+  .index("by_timestamp", ["data.timestamp"]),
+
+  // Instagram Stories
+  instagramStories: defineTable({
+    userId: v.string(),
+    accountId: v.any(),
+    data: v.array(v.object({
+      id: v.string(),
+      media_type: v.string(),
+      media_url: v.string(),
+      permalink: v.string(),
+      timestamp: v.number(),
+      insights: v.optional(v.object({
+        impressions: v.optional(v.number()),
+        reach: v.optional(v.number()),
+        exits: v.optional(v.number()),
+        replies: v.optional(v.number()),
+        taps_forward: v.optional(v.number()),
+        taps_back: v.optional(v.number()),
+        navigation: v.optional(v.object({
+          next: v.optional(v.number()),
+          back: v.optional(v.number()),
+          exit: v.optional(v.number())
+        }))
+      }))
+    })),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_userId", ["userId"])
+  .index("by_accountId", ["accountId"]),
+
+  // Instagram Post Insights
+  instagramPostInsights: defineTable({
+    userId: v.string(),
+    postId: v.string(),
+    data: v.object({
+      impressions: v.optional(v.number()),
+      reach: v.optional(v.number()),
+      saved: v.optional(v.number()),
+      shares: v.optional(v.number()),
+      comments: v.optional(v.number()),
+      likes: v.optional(v.number()),
+      total_interactions: v.optional(v.number()),
+      follows: v.optional(v.number()),
+      profile_visits: v.optional(v.number()),
+      profile_activity: v.optional(v.number()),
+      views: v.optional(v.number()),
+      period: v.string(),
+      timestamp: v.number()
+    }),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_userId", ["userId"])
+  .index("by_postId", ["postId"])
+  .index("by_timestamp", ["data.timestamp"]),
+
+  // Instagram Post Comments
+  instagramPostComments: defineTable({
+    userId: v.string(),
+    postId: v.string(),
+    data: v.array(v.object({
+      id: v.string(),
+      text: v.string(),
+      timestamp: v.number(),
+      username: v.string(),
+      replies: v.optional(v.array(v.object({
+        id: v.string(),
+        text: v.string(),
+        timestamp: v.number(),
+        username: v.string()
+      })))
+    })),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_userId", ["userId"])
+  .index("by_postId", ["postId"]),
+
   usageEvents: defineTable({
     userId: v.string(),
     timestamp: v.number(),
