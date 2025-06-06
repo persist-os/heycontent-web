@@ -94,6 +94,7 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
         title,
         content: content || "",
         type,
+        tags: [],
       });
 
       if (noteId) {
@@ -204,6 +205,8 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
         id: String(convexNoteId),
         fields: Object.keys(updateFields)
       });
+      
+      console.log("updateFields being sent to Convex:", updateFields);
       
       const updatedNote = await updateNoteConvex({
         noteId: convexNoteId,

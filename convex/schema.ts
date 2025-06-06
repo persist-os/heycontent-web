@@ -144,6 +144,7 @@ export default defineSchema({
     analysis: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
+    titleGenerated: v.optional(v.boolean()),
   })
   .index("by_user", ["userId"])
   .index("by_creation", ["createdAt"])

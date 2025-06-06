@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import dotenv from 'dotenv';
+import { getUserIdFromToken } from '@/app/lib/getUserIdFromToken';
 
 dotenv.config();
 
@@ -29,10 +30,24 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized - Missing or invalid Authorization header' }, { status: 401 });
     }
 
-    const updateFields = await request.json();
-    console.log(`[${requestId}] Request body for note update:`, updateFields);
+    const userId = await getUserIdFromToken(apiKey);
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized - Invalid Firebase token' }, { status: 401 });
+    }
 
-    if (!updateFields || typeof updateFields !== 'object' || Object.keys(updateFields).length === 0) {
+    // Log the raw request body
+    const rawBody = await request.text();
+    console.log(`[${requestId}] Raw request body:`, rawBody);
+    // Parse the JSON body
+    const updateFields = rawBody ? JSON.parse(rawBody) : {};
+    console.log(`[${requestId}] Parsed updateFields:`, updateFields);
+    const backendBody = {
+      userId,
+      updates: updateFields
+    };
+    console.log(`[${requestId}] Request body for note update (to backend):`, backendBody);
+
+    if (!backendBody || typeof backendBody !== 'object' || Object.keys(backendBody).length === 0) {
       console.warn(`[${requestId}] Invalid request: No fields provided for update/save`);
       return NextResponse.json({ error: 'At least one field is required to update/save a note', status: 400 }, { status: 400 });
     }
@@ -51,7 +66,7 @@ export async function PATCH(
         'Accept': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
-      body: JSON.stringify(updateFields)
+      body: JSON.stringify(backendBody)
     });
 
     if (!response.ok) {

@@ -39,17 +39,17 @@ export const createNote = mutation({
 
   },
   handler: async (ctx, args) => {
+    console.log('createNote args:', args); // Debug log
     const now = Date.now();
     // Required fields with defaults
     const noteData: any = {
       userId: args.userId,
-      title: args.title ?? "",
+      title: typeof args.title === "string" ? args.title : "",
       content: args.content ?? "",
       platform: args.platform ?? "",
       type: args.type ?? "idea",
       important: args.important ?? false,
-      tags: args.tags ?? [],
-
+      tags: Array.isArray(args.tags) ? args.tags : [],
       createdAt: now,
       updatedAt: now,
     };
@@ -116,6 +116,7 @@ export const updateNote = mutation({
       postType: v.optional(v.string()),
       goal: v.optional(v.string()),
       fields: v.optional(v.any()),
+      titleGenerated: v.optional(v.boolean()),
     })
   },
   handler: async (ctx, args) => {

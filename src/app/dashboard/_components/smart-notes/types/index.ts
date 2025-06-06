@@ -19,6 +19,7 @@ export interface Note {
   goal?: string;
   fields?: any;
   analysis?: any;
+  titleGenerated?: boolean;
 }
 
 export interface NoteUpdate {
@@ -35,6 +36,7 @@ export interface NoteUpdate {
   fields?: any;
 
   analysis?: any;
+  titleGenerated?: boolean;
 }
 
 export interface Command {
