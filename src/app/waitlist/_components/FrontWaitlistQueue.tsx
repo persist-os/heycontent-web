@@ -155,7 +155,6 @@ export const FrontWaitlistQueue = ({ position, queueId, onQueueComplete }: Front
     return (
       <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-8">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold mb-4">Join the Waitlist</h1>
           <p className="text-gray-600">Enter your details to secure your spot</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
