@@ -125,19 +125,120 @@ export const getInstagramPostsByUsername = query({
   },
 });
 
-// Get all Instagram tokens for a user
-export const getInstagramTokens = query({
-  args: { userId: v.string() },
+// Get Instagram profile insights
+export const getProfileInsights = query({
+  args: {
+    userId: v.string(),
+    accountId: v.any(),
+  },
   handler: async (ctx, args) => {
+    const { userId, accountId } = args;
+
+    try {
+      const insights = await ctx.db
+        .query("instagramProfileInsights")
+        .withIndex("by_userId", q => q.eq("userId", userId))
+        .filter(q => q.eq(q.field("accountId"), accountId))
+        .first();
+
+      return insights?.data || null;
+    } catch (error) {
+      console.error(`Error fetching profile insights for user ${userId}:`, error);
+      throw new Error(`Failed to fetch profile insights: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Get Instagram stories
+export const getStories = query({
+  args: {
+    userId: v.string(),
+    accountId: v.any(),
+  },
+  handler: async (ctx, args) => {
+    const { userId, accountId } = args;
+
+    try {
+      const stories = await ctx.db
+        .query("instagramStories")
+        .withIndex("by_userId", q => q.eq("userId", userId))
+        .filter(q => q.eq(q.field("accountId"), accountId))
+        .first();
+
+      return stories?.data || null;
+    } catch (error) {
+      console.error(`Error fetching stories for user ${userId}:`, error);
+      throw new Error(`Failed to fetch stories: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Get Instagram post insights
+export const getPostInsights = query({
+  args: {
+    userId: v.string(),
+    postId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { userId, postId } = args;
+
+    try {
+      const insights = await ctx.db
+        .query("instagramPostInsights")
+        .withIndex("by_postId", q => q.eq("postId", postId))
+        .filter(q => q.eq(q.field("userId"), userId))
+        .first();
+
+      return insights?.data || null;
+    } catch (error) {
+      console.error(`Error fetching post insights for post ${postId}:`, error);
+      throw new Error(`Failed to fetch post insights: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Get Instagram post comments
+export const getPostComments = query({
+  args: {
+    userId: v.string(),
+    postId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { userId, postId } = args;
+
+    try {
+      const comments = await ctx.db
+        .query("instagramPostComments")
+        .withIndex("by_postId", q => q.eq("postId", postId))
+        .filter(q => q.eq(q.field("userId"), userId))
+        .first();
+
+      return comments?.data || null;
+    } catch (error) {
+      console.error(`Error fetching post comments for post ${postId}:`, error);
+      throw new Error(`Failed to fetch post comments: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Get Instagram tokens
+export const getInstagramTokens = query({
+  args: {
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = args;
+
     try {
       const tokens = await ctx.db
         .query("instagramTokens")
-        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-        .collect();
-      return tokens;
+        .withIndex("by_userId", q => q.eq("userId", userId))
+        .first();
+
+      return tokens || null;
     } catch (error) {
-      console.error('Error getting Instagram tokens:', error);
-      throw new Error(`Failed to get Instagram tokens: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error(`Error fetching Instagram tokens for user ${userId}:`, error);
+      throw new Error(`Failed to fetch Instagram tokens: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
 });
