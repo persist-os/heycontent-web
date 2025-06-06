@@ -37,19 +37,6 @@ export const useChat = (
       enhancedQuery = `Context for user question:\n\n${contentContext.analysis}\n\n Make sure to address user question in your response\n\n---\n\nUser question: ${content}`;
     }
 
-    // Log current state to debug the issue
-    console.log('Current chat state before sending message:', {
-      isFirstMessage,
-      sessionId,
-      messagesCount: messages.length,
-      hasContentContext: !!contentContext,
-      contentContextPlatform: contentContext?.platform,
-      includeAnalysisInQuery,
-      hasAnalysis: !!contentContext?.analysis,
-      originalQueryLength: content.length,
-      enhancedQueryLength: enhancedQuery.length
-    });
-
     const newMessage: Message = {
       id: uuidv4() as string,
       content, // Store the original user message for display
@@ -86,9 +73,6 @@ export const useChat = (
       // Send the enhanced query to the backend (with analysis injected if enabled)
       // Don't send content_context separately anymore since it's injected in the query
       const data = await sendChatMessage(enhancedQuery, isFirstMessage, backendSessionId, null);
-
-      // Log the response to check structure
-      console.log('API response:', data);
       
       // Handle session ID from backend response
       console.log('[useChat] Received response:', {

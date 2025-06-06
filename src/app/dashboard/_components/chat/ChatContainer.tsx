@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { getFirebaseAuth } from '@/app/lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
@@ -17,21 +17,22 @@ import { ContextBox } from './components/ContextBox'
 
 // Import data
 import { ambientInsights } from './data/ambient-insights'
-import { welcomeMessage, welcomeSuggestions } from './data/welcome-message'
 
 // Import custom hooks
 import { useChatState } from './hooks/useChatState'
 import { useChat } from './hooks/useChat'
 import { useConversation } from './hooks/useConversation'
 import { useUIEffects } from './hooks/useUIEffects'
-import { usePersonaManager } from './utils/persona-utils'
 
-const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery, welcome }) => {
+const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery }) => {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [userId, setUserId] = useState<string | undefined>()
   const [userEmail, setUserEmail] = useState<string | undefined>()
   const { isExpanded } = useSidebar()
+  
+  // Track which conversation has been loaded to prevent infinite loops
+  const loadedConversationRef = useRef<string | null>(null)
 
   // Initialize shared state
   const chatState = useChatState()
@@ -45,8 +46,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     includeAnalysisInQuery,
     setIncludeAnalysisInQuery
   } = chatState
-
-  const { savePersonaFromResponse } = usePersonaManager()
 
   // Set content context when component mounts or when contentContext prop changes
   useEffect(() => {
@@ -93,13 +92,14 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Initialize conversation hook with shared state
   const {
-    loading,
-    setLoading,
-
+    loading: conversationLoading,
+    setLoading: setConversationLoading,
     handleLoadConversation,
-
     initSession // Extract the initSession function from the hook
   } = useConversation(chatState, user)
+
+  // Use a separate loading state for auth
+  const [authLoading, setAuthLoading] = useState(true)
 
   // Wrapper for insight click to pass handleSendMessage
   const handleInsightClick = (action: string, insight: any) => {
@@ -128,12 +128,11 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     // Clear content context when starting new chat
     setContentContext(null);
     
-    console.log('Started new chat with fresh state:', {
-      sessionId: null,
-      isFirstMessage: true,
-      messagesCount: 0,
-      contentContext: null
-    });
+    // Clear the loaded conversation ref to allow loading new conversations
+    loadedConversationRef.current = null;
+    
+    // Navigate to a clean chat URL without chatId
+    router.push('/dashboard/chat');
   };
 
   // Handle removing context
@@ -147,11 +146,11 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Handle initial ask query if provided
   useEffect(() => {
-    if (askQuery && messages.length === 0 && !isLoading && !welcome) {
-      // Auto-send the ask query when component mounts (unless welcome is true)
+    if (askQuery && messages.length === 0 && !isLoading) {
+      // Auto-send the ask query when component mounts
       handleSendMessage(askQuery);
     }
-  }, [askQuery, messages.length, isLoading, welcome, handleSendMessage]);
+  }, [askQuery, messages.length, isLoading, handleSendMessage]);
 
   // Authentication effect
   useEffect(() => {
@@ -170,77 +169,46 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       setUserId(firebaseUser?.uid)
       setUserEmail(firebaseUser?.email)
       if (!firebaseUser) {
-        setLoading(false)
+        setAuthLoading(false)
         return
       }
       if (chatId) {
         // If we have a chat ID, we'll load the conversation in a separate effect
+        console.log('Chat ID provided, will load conversation:', chatId)
       } else {
-        // For a new chat, sessionId will be null initially
-        // and will be set after the first message is sent
+        // For a new chat, reset to clean state
+        console.log('No chat ID provided, initializing new chat state')
         chatState.setSessionId(null)
+        chatState.setIsFirstMessage(true)
+        setMessages([])
+        loadedConversationRef.current = null
       }
-      setLoading(false)
+      setAuthLoading(false)
     })
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [chatId, chatState.setSessionId]);
+  }, [chatId, chatState.setSessionId, chatState.setIsFirstMessage, setMessages]);
 
-  // Load conversation when user and chatId are available
+  // Load conversation when user and chatId are available, or reset when chatId is null
   useEffect(() => {
-    if (user && chatId && !loading) {
-      handleLoadConversation(chatId)
-    }
-  }, [user, chatId, loading, handleLoadConversation])
-
-  useEffect(() => {
-    if (!userId) return;
-    if (messages.length === 0) return;
-    const lastMsg = messages[messages.length - 1];
-    if (
-      lastMsg.role === 'assistant' &&
-      lastMsg.metadata?.is_persona_complete &&
-      lastMsg.metadata?.persona
-    ) {
-      savePersonaFromResponse(lastMsg.metadata, userId);
-    }
-  }, [messages, userId, savePersonaFromResponse]);
-
-  // Handle welcome message for new users
-  useEffect(() => {
-    console.log('[ChatContainer] Welcome effect triggered:', {
-      welcome,
-      messagesLength: messages.length,
-      isLoading,
-      hasUser: !!user,
-      shouldTrigger: welcome && messages.length === 0 && !isLoading && user
-    });
-    
-    if (welcome && messages.length === 0 && !isLoading && user) {
-      console.log('[ChatContainer] Creating welcome message...');
-      // Add welcome message directly to the messages
-      const welcomeMessageObj = {
-        id: `welcome-${Date.now()}`,
-        content: welcomeMessage,
-        chat_response: welcomeMessage,
-        role: 'assistant' as const,
-        timestamp: new Date().toISOString(),
-        suggestions: welcomeSuggestions
+    if (user && !authLoading) {
+      if (chatId && loadedConversationRef.current !== chatId) {
+        console.log('Attempting to load conversation:', chatId);
+        loadedConversationRef.current = chatId; // Mark this conversation as being loaded
+        handleLoadConversation(chatId);
+      } else if (!chatId && loadedConversationRef.current !== null) {
+        // User navigated to new chat - reset state
+        console.log('Switching to new chat - resetting conversation state');
+        setMessages([]);
+        chatState.setSessionId(null);
+        chatState.setIsFirstMessage(true);
+        loadedConversationRef.current = null;
       }
-      
-      console.log('[ChatContainer] Setting welcome message:', welcomeMessageObj);
-      setMessages([welcomeMessageObj])
-      
-      // Clear the welcome parameter from URL without causing a reload
-      const url = new URL(window.location.href)
-      url.searchParams.delete('welcome')
-      window.history.replaceState({}, '', url.toString())
-      console.log('[ChatContainer] Cleared welcome parameter from URL');
     }
-  }, [welcome, messages.length, isLoading, user, setMessages])
+  }, [user, chatId, authLoading, handleLoadConversation]);
 
-  if (loading) {
+  if (authLoading || conversationLoading) {
     return <div className="flex items-center justify-center h-full w-full p-4">Loading...</div>
   }
 
@@ -357,7 +325,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                       onReferenceClick={handleReferenceClick}
                       onOptionClick={handleOptionClick}
                       onFollowUpClick={handleFollowUpClick}
-                      userId={userId}
                     />
                     {message.role === 'assistant' && message.suggestions && (
                       <div className="mt-3 flex flex-wrap gap-2 pl-12">

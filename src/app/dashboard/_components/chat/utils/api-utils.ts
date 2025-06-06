@@ -1,5 +1,10 @@
 import { ChatResponseData } from '../types';
 import { ContentContext } from '../types';
+
+import dotenv from 'dotenv';
+
+dotenv.config();
+
 import { getApiKey } from '@/app/lib/api-helpers';
 
 /**
@@ -9,7 +14,8 @@ export async function sendChatMessage(
   content: string, 
   isFirstMessage: boolean, 
   sessionId: string | null,
-  contentContext?: ContentContext | null
+  contentContext?: ContentContext | null,
+  hasContextInjection?: boolean
 ): Promise<ChatResponseData> {
   // Get API key - make sure we have one before proceeding
   const apiKey = await getApiKey();
@@ -26,11 +32,25 @@ export async function sendChatMessage(
     is_first_message: isFirstMessageBool
   };
 
-  // If this is the first message, explicitly set session_id to null in the request
+  // Add context injection flag to help backend understand the message type
+  if (hasContextInjection) {
+    requestBody.has_context_injection = true;
+    requestBody.context_enhanced = true;
+  }
+
+  // Handle session ID based on whether this is a first message or continuing conversation
   if (isFirstMessageBool) {
+    // For new conversations, explicitly set session_id to null
     requestBody.session_id = null;
+    console.log('Sending first message - session_id set to null for new conversation');
   } else if (sessionId) {
+    // For continuing conversations, use the conversation ID as session_id
     requestBody.session_id = sessionId;
+    console.log('Continuing existing conversation - session_id set to:', sessionId);
+  } else {
+    // This shouldn't happen, but handle gracefully
+    console.warn('Non-first message without session ID - this may cause issues');
+    requestBody.session_id = null;
   }
 
   // Include content context if available
@@ -49,17 +69,15 @@ export async function sendChatMessage(
 
   // Do NOT include user_id in the request body; backend extracts it from API key
 
-  console.log('Sending chat message with details:', {
-    query_length: content.length,
-    is_first_message_original: isFirstMessage,
-    is_first_message_sent: isFirstMessageBool,
+  // Add this right before the fetch call
+  console.log('📤 SENDING MESSAGE TO BACKEND:', {
+    is_first_message: requestBody.is_first_message,
     session_id: requestBody.session_id,
-    has_session_id: !!requestBody.session_id,
-    has_content_context: !!contentContext,
-    content_context_platform: contentContext?.platform
+    current_session_id: sessionId,
+    expected_behavior: isFirstMessageBool ? 'CREATE_NEW_CONVERSATION' : 'CONTINUE_EXISTING_CONVERSATION',
+    conversation_to_continue: isFirstMessageBool ? 'N/A' : sessionId,
+    endpoint: '/api/chat/message'
   });
-  console.log('Full request body:', JSON.stringify(requestBody));
-  console.log('Sending Authorization header:', apiKey);
 
   const response = await fetch('/api/chat/message', {
     method: 'POST',
@@ -74,7 +92,20 @@ export async function sendChatMessage(
     throw new Error('Failed to send message');
   }
 
-  return await response.json();
+  const data = await response.json();
+
+  // Add this right after receiving the response
+  console.log('📥 RECEIVED RESPONSE FROM BACKEND:', {
+    session_id_returned: data.session_id,
+    session_id_expected: sessionId,
+    response_length: data.chat_response?.length,
+    conversation_context: isFirstMessageBool ? 'NEW' : 'EXISTING',
+    session_id_changed: sessionId !== data.session_id,
+    response_preview: data.chat_response?.substring(0, 100) + '...',
+    full_response_structure: Object.keys(data)
+  });
+
+  return data;
 }
 
 /**
@@ -82,7 +113,17 @@ export async function sendChatMessage(
  */
 export async function loadConversation(id: string) {
   try {
-    const response = await fetch(`/api/chat/conversation/${id}`);
+    // Get API key for authentication - same pattern as sendChatMessage
+    const apiKey = await getApiKey();
+    if (!apiKey) {
+      throw new Error('You are not authenticated. Please log in again.');
+    }
+
+    const response = await fetch(`/api/chat/conversation/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+      },
+    });
 
     if (!response.ok) {
       throw new Error(`Failed to load conversation: ${response.status}`);
