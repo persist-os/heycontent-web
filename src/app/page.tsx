@@ -261,13 +261,13 @@ export default function LandingPage() {
             <div>
               <h3 className="font-medium mb-4">Legal</h3>
               <div className="flex flex-col gap-3 text-gray-600">
-                <Link href="/privacy" className="hover:text-gray-900 text-left">
+                <Link href="/legal/privacy" className="hover:text-gray-900 text-left">
                   Privacy
                 </Link>
-                <Link href="/terms" className="hover:text-gray-900 text-left">
+                <Link href="/legal/terms" className="hover:text-gray-900 text-left">
                   Terms
                 </Link>
-                <Link href="/security" className="hover:text-gray-900 text-left">
+                <Link href="/legal/security" className="hover:text-gray-900 text-left">
                   Security
                 </Link>
               </div>
