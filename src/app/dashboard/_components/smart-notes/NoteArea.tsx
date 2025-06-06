@@ -18,7 +18,7 @@ import { Brain, Lightbulb, Edit } from 'lucide-react';
 interface NoteAreaProps {
   note: Note;
   onUpdate: (noteId: string, updates: NoteUpdate) => Promise<Note>;
-  onSave: () => void;
+  onSave: (content: string, title?: string) => void;
   onToggleShortcuts: () => void;
   onRequestAIInsights: (noteId: string, note: Note) => Promise<void>;
   onBack: () => void;
@@ -68,6 +68,7 @@ export function NoteArea({
     handleCommand,
     handleKeyDown,
     textAreaRef,
+    handleSave,
   } = useSmartNoteEditor({
     note,
     onUpdate,
@@ -76,13 +77,27 @@ export function NoteArea({
     onRequestAIInsights
   });
 
+  // Track the latest title from NoteMeta
+  const [latestTitle, setLatestTitle] = useState(note.title || "Untitled Note");
+
+  // Keep local latestTitle in sync with note prop
+  React.useEffect(() => {
+    setLatestTitle(note.title || "Untitled Note");
+  }, [note._id, note.title]);
+
+  // Callback to receive title changes from NoteMeta
+  const handleMetaTitleChange = (title: string) => {
+    setLatestTitle(title);
+    console.log('[NoteArea] handleMetaTitleChange: received new title', title);
+  };
+
   return (
     <div className="flex flex-col h-full w-full">
       {/* Header */}
       <NoteHeader 
         note={note}
         onUpdate={onUpdate}
-        onSave={onSave}
+        onSave={handleSave}
         onRequestAIInsights={onRequestAIInsights}
         onBack={onBack} 
         isMobile={isMobile}
@@ -93,6 +108,7 @@ export function NoteArea({
       <NoteMeta
         note={note}
         onUpdate={onUpdate}
+        onTitleChange={handleMetaTitleChange}
       />
       
       {/* Main content area with tabs */}

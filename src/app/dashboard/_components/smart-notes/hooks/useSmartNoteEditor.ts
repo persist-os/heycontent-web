@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Note, NoteUpdate, Command } from '../types';
 import { ShortcutManager } from '../keyboard-shortcuts';
 import { saveToLocal, getCursorCoordinates } from '../utils/note-utils';
+import { useTitleGeneration } from './useTitleGeneration';
 
 interface UseSmartNoteEditorProps {
   note: Note;
   onUpdate: (noteId: string, updates: NoteUpdate) => Promise<Note>;
-  onSave: () => void;
+  onSave: (content: string, title?: string) => void;
   onToggleShortcuts: () => void;
   onRequestAIInsights: (noteId: string, note: Note) => Promise<void>;
 }
@@ -22,6 +23,8 @@ export function useSmartNoteEditor({
 }: UseSmartNoteEditorProps) {
   // Core state
   const [content, setContent] = useState(note.content || '');
+  const [titleGenerated, setTitleGenerated] = useState(note.titleGenerated ?? false);
+  const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [showFullAnalysis, setShowFullAnalysis] = useState(false);
   const [selectedInsight, setSelectedInsight] = useState<string | null>(null);
@@ -37,15 +40,46 @@ export function useSmartNoteEditor({
   // References
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastGenerationAttemptRef = useRef<string | null>(null);
+  
+  // Title generation hook
+  const { generateTitle, loading: titleLoading, clearAttempted } = useTitleGeneration();
 
-  // Keep content in sync with note prop
+  // Sync state with note prop changes
   useEffect(() => {
-    if (note.content !== content) {
-      setContent(note.content || '');
+    setContent(note.content || '');
+    setTitleGenerated(note.titleGenerated ?? false);
+    
+    // Clear generation attempts when note changes
+    if (note._id !== lastGenerationAttemptRef.current) {
+      clearAttempted();
+      lastGenerationAttemptRef.current = String(note._id);
     }
-    // Sync selectedInsight with the latest AI insight in references
-  }, [note.content]);
-
+  }, [note._id, note.content, note.titleGenerated, clearAttempted]);
+  
+  // Memoized condition for title generation
+  const shouldGenerateTitle = useMemo(() => {
+    return (
+      !titleGenerated && // Not already generated
+      !isGeneratingTitle && // Not currently generating
+      !titleLoading && // Hook not busy
+      (!note.title || note.title === 'Untitled Note' || note.title.trim() === '') && // No meaningful title
+      content.trim().length >= 20 // Sufficient content
+    );
+  }, [titleGenerated, isGeneratingTitle, titleLoading, note.title, content]);
+  
+  // Debounced content update - separate from title generation
+  const debouncedContentUpdate = useCallback((newContent: string) => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    debounceTimerRef.current = setTimeout(() => {
+      // Only update content, never title here
+      onUpdate(String(note._id), { content: newContent });
+    }, 2000);
+  }, [note._id, onUpdate]);
+  
   // Extract tags from content
   useEffect(() => {
     if (!content) return;
@@ -134,37 +168,6 @@ export function useSmartNoteEditor({
     return title;
   }, []);
   
-  // Debounced update function to prevent excessive API calls
-  const debouncedUpdate = useCallback((newContent: string) => {
-    // Save to local storage immediately
-    saveToLocal(`note_${String(note._id)}`, { content: newContent });
-    
-    // Generate title from content if current title is empty or "Untitled Note"
-    const shouldUpdateTitle = 
-      !note.title || 
-      note.title === 'Untitled Note' || 
-      note.title.trim() === '';
-    
-    // Debounce API update
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-    
-    debounceTimerRef.current = setTimeout(() => {
-      const updates: NoteUpdate = { content: newContent };
-      
-      // Add title update if needed
-      if (shouldUpdateTitle && newContent.trim()) {
-        const generatedTitle = generateTitleFromContent(newContent);
-        if (generatedTitle) {
-          updates.title = generatedTitle;
-        }
-      }
-      
-      onUpdate(String(note._id), updates);
-    }, 5000); 
-  }, [note._id, note.title, onUpdate, generateTitleFromContent]);
-
   // Handle text formatting
   const handleFormat = useCallback((prefix: string, suffix: string = prefix) => {
     if (!textAreaRef.current) return;
@@ -187,8 +190,8 @@ export function useSmartNoteEditor({
     setContent(newContent);
     setCursorPosition(newCursorPosition);
     // Use debounced update instead of direct update
-    debouncedUpdate(newContent);
-  }, [content, note._id, debouncedUpdate]);
+    debouncedContentUpdate(newContent);
+  }, [content, note._id, debouncedContentUpdate]);
 
   // Insert text at cursor (no more command menu logic here)
   const insertText = useCallback((text: string) => {
@@ -199,8 +202,8 @@ export function useSmartNoteEditor({
     const newContent = content.substring(0, start) + text + content.substring(end);
     setContent(newContent);
     setCursorPosition(newCursorPosition);
-    debouncedUpdate(newContent);
-  }, [content, debouncedUpdate]);
+    debouncedContentUpdate(newContent);
+  }, [content, debouncedContentUpdate]);
 
   // Handle indentation
   const handleIndent = useCallback((indent: boolean = true) => {
@@ -217,10 +220,10 @@ export function useSmartNoteEditor({
         const newContent = content.substring(0, lineStart) + content.substring(lineStart + 2);
         setContent(newContent);
         // Use debounced update instead of direct update
-        debouncedUpdate(newContent);
+        debouncedContentUpdate(newContent);
       }
     }
-  }, [content, insertText, debouncedUpdate]);
+  }, [content, insertText, debouncedContentUpdate]);
 
   // Handle content changes from typing
   const handleContentChange = useCallback((newContent: string) => {
@@ -246,8 +249,8 @@ export function useSmartNoteEditor({
         setShowCommands(false);
       }
     }
-    debouncedUpdate(newContent);
-  }, [debouncedUpdate, showCommands, updateMenuPosition]);
+    debouncedContentUpdate(newContent);
+  }, [debouncedContentUpdate, showCommands, updateMenuPosition]);
 
   // Handle command selection
   const handleCommand = useCallback((command: Command) => {
@@ -261,7 +264,7 @@ export function useSmartNoteEditor({
         const newContent = content.substring(0, start - 1) + template + content.substring(end);
         setContent(newContent);
         setCursorPosition(start - 1 + template.length);
-        debouncedUpdate(newContent);
+        debouncedContentUpdate(newContent);
       } else {
         insertText(template);
       }
@@ -269,12 +272,12 @@ export function useSmartNoteEditor({
       onUpdate(String(note._id), { [command.metadata.type || '']: command.metadata.value });
     }
     setShowCommands(false);
-  }, [content, debouncedUpdate, handleFormat, insertText, note._id, onUpdate]);
+  }, [content, debouncedContentUpdate, handleFormat, insertText, note._id, onUpdate]);
 
   // Set up shortcut manager
   const shortcutManager = useRef(
     new ShortcutManager({
-      onSave,
+      onSave: () => onSave(content, note.title),
       onQuickCapture: requestAIInsights,
       onCommandMenu: () => {
         if (textAreaRef.current) {
@@ -309,9 +312,60 @@ export function useSmartNoteEditor({
     shortcutManager.handleKeyDown(e as any);
   }, [shortcutManager]);
   
+  // Add a save handler that generates the title on first save if needed
+  const handleSave = useCallback(async () => {
+    console.log("[handleSave] Called with note.title:", note.title, "content:", content);
+
+    // Only generate title if it's the first save and title is missing
+    if (!note.title || note.title === 'Untitled Note') {
+      const result = await generateTitle({
+        content,
+        platform: note.platform || 'general',
+        noteId: String(note._id),
+      });
+      console.log("[handleSave] AI title generation result:", result);
+
+      const BAD_TITLES = [
+        "Untitled Note",
+        "Content"
+      ];
+
+      if (
+        result.title &&
+        typeof result.title === "string" &&
+        result.title.trim().length >= 5 &&
+        !BAD_TITLES.includes(result.title.trim())
+      ) {
+        console.log("[handleSave] About to update note with:", {
+          noteId: String(note._id),
+          updates: {
+            title: result.title,
+            titleGenerated: true,
+          }
+        });
+        const updatedNote = await onUpdate(String(note._id), {
+          title: result.title,
+          titleGenerated: true,
+        });
+        console.log("Mutation response (updated note):", updatedNote);
+        await onSave(content, result.title);
+        return;
+      } else {
+        console.warn("[handleSave] Skipping update: invalid or generic title from AI:", result.title);
+        // Optionally, show an error or fallback
+        // toast.error("Failed to generate a valid title");
+        await onSave(content, note.title);
+        return;
+      }
+    }
+    // Now proceed with the normal save
+    await onSave(content, note.title);
+  }, [note.title, note._id, note.platform, content, generateTitle, onUpdate, onSave]);
+
   return {
     content,
-    setContent,
+    titleGenerated,
+    isGeneratingTitle,
     aiLoading,
     setAiLoading,
     showFullAnalysis,
@@ -339,5 +393,6 @@ export function useSmartNoteEditor({
     handleContentChange,
     handleCommand,
     handleKeyDown,
+    handleSave, // Export the new save handler
   };
 }

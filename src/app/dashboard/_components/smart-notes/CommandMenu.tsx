@@ -435,5 +435,3 @@ setSelectedIndex(i => {
     </div>
   );
 }
-    
- 

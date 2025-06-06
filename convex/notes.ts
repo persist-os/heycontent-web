@@ -39,17 +39,17 @@ export const createNote = mutation({
 
   },
   handler: async (ctx, args) => {
+    console.log('createNote args:', args); // Debug log
     const now = Date.now();
     // Required fields with defaults
     const noteData: any = {
       userId: args.userId,
-      title: args.title ?? "",
+      title: typeof args.title === "string" ? args.title : "",
       content: args.content ?? "",
       platform: args.platform ?? "",
       type: args.type ?? "idea",
       important: args.important ?? false,
-      tags: args.tags ?? [],
-
+      tags: Array.isArray(args.tags) ? args.tags : [],
       createdAt: now,
       updatedAt: now,
     };
@@ -76,26 +76,38 @@ export const updateNoteContent = mutation({
     userId: v.string(),
     content: v.string(),
     title: v.string(),
+    titleGenerated: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    console.log('[Convex] updateNoteContent called with:', args);
     // Ownership check
     const note = await ctx.db.get(args.noteId);
+    console.log('[Convex] Note before updateNoteContent:', note);
     if (!note) {
+      console.error('[Convex] Note not found for updateNoteContent:', args.noteId);
       throw new Error("Note not found");
     }
     if (note.userId !== args.userId) {
+      console.error('[Convex] Unauthorized updateNoteContent attempt:', { noteUserId: note.userId, requestUserId: args.userId });
       throw new Error("Unauthorized: You do not own this note.");
     }
-    
-    // Update just the content, title and timestamp
-    await ctx.db.patch(args.noteId, {
+    // Update just the content, title, titleGenerated, and timestamp
+    const patchObj: any = {
       content: args.content,
       title: args.title,
       updatedAt: Date.now(),
-    });
-    
+    };
+    if (args.titleGenerated !== undefined) {
+      patchObj.titleGenerated = args.titleGenerated;
+    }
+    await ctx.db.patch(args.noteId, patchObj);
+    const updatedNote = await ctx.db.get(args.noteId);
+    console.log('[Convex] Note after updateNoteContent:', updatedNote);
+    if (!updatedNote) {
+      console.error('[Convex] updateNoteContent returned null after patch:', args.noteId);
+    }
     // Return the updated note
-    return await ctx.db.get(args.noteId);
+    return updatedNote;
   },
 });
 
@@ -116,15 +128,20 @@ export const updateNote = mutation({
       postType: v.optional(v.string()),
       goal: v.optional(v.string()),
       fields: v.optional(v.any()),
+      titleGenerated: v.optional(v.boolean()),
     })
   },
   handler: async (ctx, args) => {
+    console.log('[Convex] updateNote called with:', args);
     // 1. Get the note by its ID to verify existence and ownership
     const note = await ctx.db.get(args.noteId);
+    console.log('[Convex] Note before updateNote:', note);
     if (!note) {
+      console.error('[Convex] Note not found for updateNote:', args.noteId);
       throw new Error("Note not found");
     }
     if (note.userId !== args.userId) {
+      console.error('[Convex] Unauthorized updateNote attempt:', { noteUserId: note.userId, requestUserId: args.userId });
       throw new Error("Unauthorized: You do not own this note.");
     }
     // 2. Build update object
@@ -137,8 +154,13 @@ export const updateNote = mutation({
     }
     // 3. Patch the note
     await ctx.db.patch(args.noteId, updateObj);
+    const updatedNote = await ctx.db.get(args.noteId);
+    console.log('[Convex] Note after updateNote:', updatedNote);
+    if (!updatedNote) {
+      console.error('[Convex] updateNote returned null after patch:', args.noteId);
+    }
     // 4. Return updated note
-    return await ctx.db.get(args.noteId);
+    return updatedNote;
   },
 });
 

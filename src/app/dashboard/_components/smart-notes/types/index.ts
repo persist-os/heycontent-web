@@ -8,10 +8,10 @@ export interface Note {
   _creationTime: number;
   userId: string;
   title: string;
-  content: string;
+  content?: string;
   createdAt: number;
   updatedAt: number;
-  important: boolean;
+  important?: boolean;
   type?: NoteType;
   tags: string[];
   platform?: string;
@@ -19,6 +19,7 @@ export interface Note {
   goal?: string;
   fields?: any;
   analysis?: any;
+  titleGenerated?: boolean;
 }
 
 export interface NoteUpdate {
@@ -35,6 +36,7 @@ export interface NoteUpdate {
   fields?: any;
 
   analysis?: any;
+  titleGenerated?: boolean;
 }
 
 export interface Command {

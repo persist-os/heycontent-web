@@ -131,6 +131,7 @@ export default defineSchema({
     content: v.optional(v.string()),
     important: v.optional(v.boolean()),
     platform: v.optional(v.string()), 
+    references: v.optional(v.array(v.string())),
     type: v.optional(v.union(
       v.literal("ai_insight"),
       v.literal("conversation"),
