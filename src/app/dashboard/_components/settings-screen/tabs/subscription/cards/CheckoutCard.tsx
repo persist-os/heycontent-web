@@ -61,7 +61,6 @@ export default function CheckoutCard({ planId, onClose, returnUrl }: Props) {
           })
         })
         const data = await response.json()
-        console.log('Checkout session response:', data)
         
         // Extract client_secret from the nested response structure
         if (data.data?.client_secret) {

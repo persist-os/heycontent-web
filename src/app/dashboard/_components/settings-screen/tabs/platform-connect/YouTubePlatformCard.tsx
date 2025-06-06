@@ -1,8 +1,9 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import { CheckCircle2, Loader2, AlertCircle, Youtube } from 'lucide-react';
+import { CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ConnectedAccount } from './platform-utils';
+import { YouTubeBrandIcon } from '../../../YoutubeBrandIcon';
 
 interface YouTubePlatformCardProps {
   account: ConnectedAccount | undefined;
@@ -61,8 +62,8 @@ export function YouTubePlatformCard({
         </div>
       )}
       <div className="flex items-center gap-3 mb-2">
-        <div className="w-12 h-12 rounded-lg bg-red-600 flex items-center justify-center">
-          <Youtube className="w-6 h-6 text-white" />
+        <div className="flex items-center justify-center">
+          <YouTubeBrandIcon href="https://youtube.com/" />
         </div>
         <div>
           <h3 className="text-lg font-semibold">YouTube</h3>

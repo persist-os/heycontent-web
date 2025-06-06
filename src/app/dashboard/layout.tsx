@@ -38,7 +38,7 @@ export default function DashboardLayout({
       <div className="fixed inset-y-0 left-0 z-40">
         <DashboardNav />
       </div>
-      <main className={`flex-1 transition-[margin] duration-300 ${isExpanded ? 'md:ml-64' : ''}`}>
+      <main className={`flex-1 transition-[margin] duration-300 ${isExpanded ? 'md:ml-64' : 'ml-0'}`}>
         {children}
       </main>
     </div>

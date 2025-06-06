@@ -51,9 +51,6 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
       if (!apiKey) {
         throw new Error('API key not found. Please log in again.');
       }
-      // Log the API key format for debugging (full key for now)
-      console.debug('API key format:', apiKey);
-
       // Get the post ID from the selected content
       const postId = selectedContent.id;
       if (!postId) {
@@ -66,7 +63,6 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
 
       // Call our API endpoint
       const apiUrl = `${window.location.origin}/api/social/instagram/analyze`;
-      console.log('Making API request to:', apiUrl);
       
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -82,7 +78,6 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
 
       // Read the response data once
       const responseData = await response.json();
-      console.log('Backend analysis response:', responseData);
       
       // Then check if the response was OK
       if (!response.ok) {
