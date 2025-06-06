@@ -49,8 +49,8 @@ export async function POST(request: Request) {
   decodedToken.name || name || '',
   decodedToken.email || email,
   decodedToken.picture || '',
-  username || '',
-  referredBy || ''
+  username, // Don't default to empty string - pass undefined if not provided
+  referredBy // Don't default to empty string - pass undefined if not provided
 );
       // Call the /api/auth/key route to get an API key for this user
       let apiKeyData = null;

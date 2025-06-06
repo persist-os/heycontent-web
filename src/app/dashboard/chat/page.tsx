@@ -8,6 +8,7 @@ export default function ChatPage() {
   const chatId = searchParams.get('id')
   const contentContext = searchParams.get('contentContext')
   const askQuery = searchParams.get('ask')
+  const welcome = searchParams.get('welcome')
 
   // Parse content context if it exists
   let parsedContext = null
@@ -19,5 +20,5 @@ export default function ChatPage() {
     }
   }
 
-  return <ChatScreen chatId={chatId} contentContext={parsedContext} askQuery={askQuery} />
+  return <ChatScreen chatId={chatId} contentContext={parsedContext} askQuery={askQuery} welcome={welcome === 'true'} />
 }

@@ -1,10 +1,5 @@
 import { ChatResponseData } from '../types';
 import { ContentContext } from '../types';
-
-import dotenv from 'dotenv';
-
-dotenv.config();
-
 import { getApiKey } from '@/app/lib/api-helpers';
 
 /**

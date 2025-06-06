@@ -17,6 +17,7 @@ import { ContextBox } from './components/ContextBox'
 
 // Import data
 import { ambientInsights } from './data/ambient-insights'
+import { welcomeMessage, welcomeSuggestions } from './data/welcome-message'
 
 // Import custom hooks
 import { useChatState } from './hooks/useChatState'
@@ -25,7 +26,7 @@ import { useConversation } from './hooks/useConversation'
 import { useUIEffects } from './hooks/useUIEffects'
 import { usePersonaManager } from './utils/persona-utils'
 
-const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery }) => {
+const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery, welcome }) => {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [userId, setUserId] = useState<string | undefined>()
@@ -146,11 +147,11 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Handle initial ask query if provided
   useEffect(() => {
-    if (askQuery && messages.length === 0 && !isLoading) {
-      // Auto-send the ask query when component mounts
+    if (askQuery && messages.length === 0 && !isLoading && !welcome) {
+      // Auto-send the ask query when component mounts (unless welcome is true)
       handleSendMessage(askQuery);
     }
-  }, [askQuery, messages.length, isLoading, handleSendMessage]);
+  }, [askQuery, messages.length, isLoading, welcome, handleSendMessage]);
 
   // Authentication effect
   useEffect(() => {
@@ -205,6 +206,39 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       savePersonaFromResponse(lastMsg.metadata, userId);
     }
   }, [messages, userId, savePersonaFromResponse]);
+
+  // Handle welcome message for new users
+  useEffect(() => {
+    console.log('[ChatContainer] Welcome effect triggered:', {
+      welcome,
+      messagesLength: messages.length,
+      isLoading,
+      hasUser: !!user,
+      shouldTrigger: welcome && messages.length === 0 && !isLoading && user
+    });
+    
+    if (welcome && messages.length === 0 && !isLoading && user) {
+      console.log('[ChatContainer] Creating welcome message...');
+      // Add welcome message directly to the messages
+      const welcomeMessageObj = {
+        id: `welcome-${Date.now()}`,
+        content: welcomeMessage,
+        chat_response: welcomeMessage,
+        role: 'assistant' as const,
+        timestamp: new Date().toISOString(),
+        suggestions: welcomeSuggestions
+      }
+      
+      console.log('[ChatContainer] Setting welcome message:', welcomeMessageObj);
+      setMessages([welcomeMessageObj])
+      
+      // Clear the welcome parameter from URL without causing a reload
+      const url = new URL(window.location.href)
+      url.searchParams.delete('welcome')
+      window.history.replaceState({}, '', url.toString())
+      console.log('[ChatContainer] Cleared welcome parameter from URL');
+    }
+  }, [welcome, messages.length, isLoading, user, setMessages])
 
   if (loading) {
     return <div className="flex items-center justify-center h-full w-full p-4">Loading...</div>

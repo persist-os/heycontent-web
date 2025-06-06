@@ -276,7 +276,45 @@ export default defineSchema({
     createdAt: v.float64(),
     updatedAt: v.float64(),
     id: v.string(),
-    snippet: v.optional(v.any()), // Make snippet fully flexible to accept any fields
+    snippet: v.optional(
+      v.object({
+        customUrl: v.optional(v.string()),
+        description: v.optional(v.string()),
+        localized: v.optional(
+          v.object({
+            description: v.optional(v.string()),
+            title: v.optional(v.string()),
+          })
+        ),
+        publishedAt: v.optional(v.string()),
+        thumbnails: v.optional(
+          v.object({
+            default: v.optional(
+              v.object({
+                height: v.optional(v.float64()),
+                url: v.optional(v.string()),
+                width: v.optional(v.float64()),
+              })
+            ),
+            high: v.optional(
+              v.object({
+                height: v.optional(v.float64()),
+                url: v.optional(v.string()),
+                width: v.optional(v.float64()),
+              })
+            ),
+            medium: v.optional(
+              v.object({
+                height: v.optional(v.float64()),
+                url: v.optional(v.string()),
+                width: v.optional(v.float64()),
+              })
+            ),
+          })
+        ),
+        title: v.optional(v.string()),
+      })
+    ),
     statistics: v.optional(
       v.object({
         hiddenSubscriberCount: v.optional(v.boolean()),
@@ -346,7 +384,6 @@ export default defineSchema({
       status: v.optional(v.string()),
       message: v.optional(v.string()),
       video_url: v.optional(v.string()),
-      // Caption track containing actual captions data
       caption_track: v.optional(v.object({
         id: v.optional(v.string()),
         format: v.optional(v.string()),
@@ -354,13 +391,13 @@ export default defineSchema({
         name: v.optional(v.string()),
         text: v.optional(v.string()),
       })),
-      data: v.optional(v.any()), // For storing additional caption data if needed
+      data: v.optional(v.any()),
     })),
     // Comment information - flexible structure
     comments: v.optional(v.object({
       status: v.optional(v.string()),
       video_url: v.optional(v.string()),
-      message: v.optional(v.string()), // Error message when comments are disabled or not found
+      message: v.optional(v.string()),
       total_comments: v.optional(v.float64()),
       top_level_comments: v.optional(v.float64()),
       comments: v.optional(v.array(v.object({
