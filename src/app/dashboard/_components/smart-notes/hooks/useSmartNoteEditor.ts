@@ -314,6 +314,8 @@ export function useSmartNoteEditor({
   
   // Add a save handler that generates the title on first save if needed
   const handleSave = useCallback(async () => {
+    console.log("[handleSave] Called with note.title:", note.title, "content:", content);
+
     // Only generate title if it's the first save and title is missing
     if (!note.title || note.title === 'Untitled Note') {
       const result = await generateTitle({
@@ -325,11 +327,6 @@ export function useSmartNoteEditor({
 
       const BAD_TITLES = [
         "Untitled Note",
-        "Type:",
-        "Title",
-        "Note",
-        "Notes",
-        "Idea",
         "Content"
       ];
 

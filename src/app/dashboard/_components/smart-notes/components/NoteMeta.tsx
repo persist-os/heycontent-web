@@ -5,9 +5,10 @@ import { Note } from '../types';
 interface NoteMetaProps {
   note: Note;
   onUpdate: (noteId: string, updates: { title: string }) => Promise<Note>;
+  onTitleChange?: (title: string) => void;
 }
 
-export function NoteMeta({ note, onUpdate }: NoteMetaProps) {
+export function NoteMeta({ note, onUpdate, onTitleChange }: NoteMetaProps) {
   const [title, setTitle] = useState(note.title || "Untitled Note");
   const [isEditing, setIsEditing] = useState(false);
   
@@ -15,11 +16,20 @@ export function NoteMeta({ note, onUpdate }: NoteMetaProps) {
   useEffect(() => {
     setTitle(note.title || "Untitled Note");
     console.log('[NoteMeta] Rendering title:', note.title);
-  }, [note._id, note.title]);
+    if (onTitleChange) {
+      onTitleChange(note.title || "Untitled Note");
+      console.log('[NoteMeta] useEffect: called onTitleChange with', note.title || "Untitled Note");
+    }
+  }, [note._id, note.title, onTitleChange]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(e.target.value);
+    if (onTitleChange) {
+      onTitleChange(e.target.value);
+      console.log('[NoteMeta] handleTitleChange: called onTitleChange with', e.target.value);
+    }
   };
+
 
   const handleTitleBlur = async () => {
     if (title !== note.title) {
