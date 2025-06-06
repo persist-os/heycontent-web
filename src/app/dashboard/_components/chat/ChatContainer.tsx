@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { getFirebaseAuth } from '@/app/lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { MessageBubble } from './message-bubble'
 import { ChatInput } from './chat-input'
 import { RefreshCw, Brain } from 'lucide-react'
@@ -39,6 +39,8 @@ import { usePersonaData } from './hooks/usePersonaData'
 
 const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery }) => {
   const router = useRouter()
+  const searchParams = useSearchParams();
+  const welcome = searchParams.get('welcome') === 'true';
   const [user, setUser] = useState<any>(null)
   const [userId, setUserId] = useState<string | undefined>()
   const [userEmail, setUserEmail] = useState<string | undefined>()
@@ -174,21 +176,21 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Handle initial ask query if provided
   useEffect(() => {
-
     if (askQuery && messages.length === 0 && !isLoading) {
       // Auto-send the ask query when component mounts
-    // Prevent duplicate processing of the same askQuery
-    if (askQuery && 
-        askQuery !== askQueryProcessedRef.current && 
-        messages.length === 0 && 
-        !isLoading && 
+      // Prevent duplicate processing of the same askQuery
+      if (askQuery &&
+        askQuery !== askQueryProcessedRef.current &&
+        messages.length === 0 &&
+        !isLoading &&
         !welcome) {
       
-      // Mark this askQuery as processed
-      askQueryProcessedRef.current = askQuery;
+        // Mark this askQuery as processed
+        askQueryProcessedRef.current = askQuery;
       
-      // Auto-send the ask query when component mounts (unless welcome is true)
-      handleSendMessage(askQuery);
+        // Auto-send the ask query when component mounts (unless welcome is true)
+        handleSendMessage(askQuery);
+      }
     }
   }, [askQuery, messages.length, isLoading, handleSendMessage]);
 
@@ -245,14 +247,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         chatState.setIsFirstMessage(true);
         loadedConversationRef.current = null;
       }
-  }, [chatId, chatState.setSessionId]);
-
-  // Load conversation when user and chatId are available
-  useEffect(() => {
-    if (user && chatId && !loading) {
-      handleLoadConversation(chatId)
     }
-  }, [user, chatId, loading, handleLoadConversation])
+  }, [chatId, chatState.setSessionId]);
 
   // Handle welcome message for new users (multi-step)
   useEffect(() => {
@@ -266,8 +262,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     }
   }, [user, chatId, authLoading, handleLoadConversation]);
 
-  if (authLoading || conversationLoading) {
-  // Handle suggestion click for welcome steps and normal suggestions
+  // Move handleSuggestionClick definition outside of any conditional or loading block, so it is only defined once and used throughout
   const handleSuggestionClick = (suggestion, onSendMessage) => {
     // If we're in the welcome step flow, advance the step
     if (
@@ -324,7 +319,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     onSendMessage(message);
   };
 
-  if (loading) {
+  // In the render, only check for authLoading, conversationLoading, or isLoading once
+  if (authLoading || conversationLoading || isLoading) {
     return <div className="flex items-center justify-center h-full w-full p-4">Loading...</div>
   }
 
@@ -364,14 +360,14 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
       {/* Main chat container */}
       <div className="flex-1 overflow-hidden relative">
-        <div 
+        <div
           ref={chatContainerRef}
           className="h-full overflow-y-auto p-2 sm:p-4 space-y-3 sm:space-y-4 pb-28 sm:pb-32 md:pb-36"
         >
           {/* Only show ambient insights when there's no context and no messages */}
           {showAmbient && messages.length === 0 && !currentContext ? (
             <div className="p-6">
-              <AmbientInsights 
+              <AmbientInsights
                 insights={ambientInsights}
                 loading={ambientLoading}
                 error={error}
@@ -411,9 +407,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                 ))}
                 {/* Show persona tip in onboarding flow when ready and at least 4 messages exist */}
                 {onboardingState.shouldShowPersonaTip && messages.length >= 4 && (
-                  <PersonaTip 
+                  <PersonaTip
                     userId={userId}
-                    onTipClick={handleSendMessage} 
+                    onTipClick={handleSendMessage}
                   />
                 )}
                 <ChatMessagesList
@@ -430,7 +426,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                 {error && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-4">
                     <p className="text-red-600 text-sm">{error}</p>
-                    <button 
+                    <button
                       onClick={() => chatState.setError(null)}
                       className="text-xs text-red-500 hover:text-red-700 mt-1"
                     >
