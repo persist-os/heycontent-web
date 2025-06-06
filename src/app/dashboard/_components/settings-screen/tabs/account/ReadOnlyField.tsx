@@ -13,7 +13,7 @@ export const ReadOnlyField: React.FC<{
     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
     <div className="relative">
       <div className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-base border-0 min-h-[42px] flex items-center text-gray-900 dark:text-gray-100">
-        {value || <span className="text-gray-400">Not provided</span>}
+        {value || <span className="text-gray-400">Loading...</span>}
       </div>
       {showCopy && value && (
         <Button 
@@ -49,7 +49,7 @@ export const ReadOnlyTextArea: React.FC<{
       )}
     </div>
     <div className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-base border-0 min-h-[100px] text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
-      {value || <span className="text-gray-400">Not provided</span>}
+      {value || <span className="text-gray-400">Loading...</span>}
     </div>
   </div>
 ); 

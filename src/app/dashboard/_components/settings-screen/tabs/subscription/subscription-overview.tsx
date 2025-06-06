@@ -20,7 +20,6 @@ import { api } from '@/../convex/_generated/api';
 export default function SubscriptionOverview() {
   const { firebaseUser, authLoading } = useAuth();
   const userId = firebaseUser?.uid || '';
-  console.log('[Debug] Can run Convex query?', !authLoading && !!firebaseUser?.uid);
 
   // API data state
   const [plans, setPlans] = useState<Record<string, any>>({});

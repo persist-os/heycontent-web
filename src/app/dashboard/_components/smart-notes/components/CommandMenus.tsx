@@ -155,13 +155,6 @@ export function CommandMenus({
     }
   }, [menuPosition]);
 
-  // Debug log when component renders
-  useEffect(() => {
-    if (showCommands) {
-      console.log('CommandMenus - showCommands is TRUE', { platform, menuPosition });
-    }
-  }, [showCommands, platform, menuPosition]);
-
   return (
     <>
       {showCommands && (

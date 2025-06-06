@@ -14,17 +14,16 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
   // Extract data with type safety
   const { content, metrics, publishedAt = new Date().toISOString() } = item;
   
-  // Create a direct thumbnail URL - using either our data or constructing from video ID
+  // Create a direct thumbnail URL - prioritize our stored data first
   let thumbnailUrl = '';
 
-  // First try using the standard YouTube thumbnail URL format 
-  if (item.id) {
-    // Construct a YouTube thumbnail URL directly from video ID - most reliable method
-    thumbnailUrl = `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`;
-  } 
-  // Fall back to content.thumbnailUrl if necessary
-  else if (content.thumbnailUrl) {
+  // First try using our stored thumbnail URL if available
+  if (content.thumbnailUrl) {
     thumbnailUrl = content.thumbnailUrl;
+  } 
+  // Fall back to constructing from video ID if no stored thumbnail
+  else if (item.id) {
+    thumbnailUrl = `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`;
   }
   
   // Format metrics for display with fallbacks

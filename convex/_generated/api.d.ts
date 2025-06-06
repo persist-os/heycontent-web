@@ -13,7 +13,6 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
-import type * as analyses from "../analyses.js";
 import type * as apiKeys from "../apiKeys.js";
 import type * as apiKeysMutations from "../apiKeysMutations.js";
 import type * as apiKeysQueries from "../apiKeysQueries.js";
@@ -35,6 +34,7 @@ import type * as subscriptionQueries from "../subscriptionQueries.js";
 import type * as usageEvents from "../usageEvents.js";
 import type * as userMutations from "../userMutations.js";
 import type * as userQueries from "../userQueries.js";
+import type * as waitlist from "../waitlist.js";
 import type * as youtubeMutations from "../youtubeMutations.js";
 import type * as youtubeQueries from "../youtubeQueries.js";
 
@@ -47,7 +47,6 @@ import type * as youtubeQueries from "../youtubeQueries.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
-  analyses: typeof analyses;
   apiKeys: typeof apiKeys;
   apiKeysMutations: typeof apiKeysMutations;
   apiKeysQueries: typeof apiKeysQueries;
@@ -69,6 +68,7 @@ declare const fullApi: ApiFromModules<{
   usageEvents: typeof usageEvents;
   userMutations: typeof userMutations;
   userQueries: typeof userQueries;
+  waitlist: typeof waitlist;
   youtubeMutations: typeof youtubeMutations;
   youtubeQueries: typeof youtubeQueries;
 }>;

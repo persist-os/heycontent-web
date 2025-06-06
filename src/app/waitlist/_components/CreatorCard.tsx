@@ -7,8 +7,6 @@ interface CreatorCardProps {
   name: string;
   title: string;
   joinDate: string;
-  inviteCode: string;
-  invitesLeft: number;
   onShare: () => void;
 }
 
@@ -16,8 +14,6 @@ export const CreatorCard = ({
   name,
   title,
   joinDate,
-  inviteCode,
-  invitesLeft,
   onShare
 }: CreatorCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
@@ -55,16 +51,6 @@ export const CreatorCard = ({
               <div className="bg-black/20 px-4 py-2 rounded-full">
                 <span className="text-sm">{joinDate}</span>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-sm opacity-90">Your Invite Code:</p>
-              <div className="bg-white/10 p-3 rounded-lg backdrop-blur-sm">
-                <code className="text-lg font-mono">{inviteCode}</code>
-              </div>
-              <p className="text-sm opacity-75">
-                {invitesLeft} invite{invitesLeft !== 1 ? 's' : ''} remaining
-              </p>
             </div>
           </div>
         </div>

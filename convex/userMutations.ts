@@ -47,8 +47,25 @@ export const create_user = mutation(async ({ db }, { name, email, image, userId,
   // Generate a unique referral code if not provided
   let finalReferralCode = referralCode || '';
   if (!finalReferralCode) {
-    // Generate a unique 6-character uppercase code
-    finalReferralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    // Generate a referral code that includes the user's name
+    // Extract first name or use first part of email if name is not available
+    let namePrefix = '';
+    if (name && name.trim()) {
+      // Get first name and convert to uppercase
+      namePrefix = name.trim().split(' ')[0].toUpperCase().substring(0, 4);
+    } else if (email) {
+      // Use part of email before @ symbol
+      namePrefix = email.split('@')[0].toUpperCase().substring(0, 4);
+    }
+    
+    // If we still don't have a prefix, use a default
+    if (!namePrefix) {
+      namePrefix = 'USER';
+    }
+    
+    // Add random characters to ensure uniqueness
+    const randomPart = Math.random().toString(36).substring(2, 5).toUpperCase();
+    finalReferralCode = `${namePrefix}-${randomPart}`;
     
     // Ensure uniqueness by checking for duplicates
     let isUnique = false;
@@ -60,12 +77,30 @@ export const create_user = mutation(async ({ db }, { name, email, image, userId,
       if (!existingWithCode) {
         isUnique = true;
       } else {
-        finalReferralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+        // Generate a new random part
+        const newRandomPart = Math.random().toString(36).substring(2, 5).toUpperCase();
+        finalReferralCode = `${namePrefix}-${newRandomPart}`;
         attempts++;
       }
     }
   }
 
+  // Final safety check to ensure referral code is never empty
+  if (!finalReferralCode) {
+    // In the extremely unlikely case we still don't have a referral code
+    // Generate a fallback code using the user's name/email and timestamp
+    let prefix = 'USER';
+    if (name && name.trim()) {
+      prefix = name.trim().split(' ')[0].toUpperCase().substring(0, 4);
+    } else if (email) {
+      prefix = email.split('@')[0].toUpperCase().substring(0, 4);
+    }
+    
+    // Add timestamp to ensure uniqueness
+    const timestamp = Date.now().toString().substring(8, 12);
+    finalReferralCode = `${prefix}-${timestamp}`;
+  }
+  
   const id = await db.insert("users", {
     name,
     email,

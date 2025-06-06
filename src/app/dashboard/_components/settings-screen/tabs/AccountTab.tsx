@@ -13,8 +13,6 @@ import { cn } from '@/lib/utils'
 import { useAuth } from '@/app/context/auth-context'
 import { ReadOnlyField, ReadOnlyTextArea } from './account/ReadOnlyField'
 import { ProfileFields, ReferralFields, PersonaFields } from './account/FormSections'
-import { PersonaData } from '../../chat/types';
-import { PersonaCard } from '../../chat/components/PersonaCard';
 
 const MAX_PERSONA_LENGTH = 500
 const MAX_VISION_LENGTH = 500
@@ -48,7 +46,6 @@ async function handleProfileUpdate(
   formData: AccountFormData,
   setIsUpdating: (val: boolean) => void,
   setFormData: React.Dispatch<React.SetStateAction<AccountFormData>>,
-  updatePersona: ReturnType<typeof useMutation>,
   updateUser: ReturnType<typeof useMutation>,
   userId: string | undefined,
   email: string | undefined,
@@ -64,12 +61,7 @@ async function handleProfileUpdate(
       return;
     }
     try {
-      await updatePersona({
-        userId,
-        preferredName: formData.name,
-        currentPersona: formData.currentPersona,
-        futureVision: formData.futureVision
-      });
+      // Only update user profile, persona updates are handled by PersonaUpdateManager
       if (email) {
         const auth = getFirebaseAuth();
         await updateUser({
@@ -98,7 +90,7 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
   const [isEditMode, setIsEditMode] = React.useState(false);
   const [originalFormData, setOriginalFormData] = React.useState<AccountFormData>(formData);
   
-  // Properly fetch persona data using the useQuery hook at component level
+  // Properly fetch user data using the useQuery hook at component level
   const [userId, setUserId] = useState<string | undefined>()
   const [userEmail, setUserEmail] = useState<string | undefined>()
   useEffect(() => {
@@ -117,34 +109,10 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
   }, [])
   
   // Only run the queries if userId is available
-  const personaData = useQuery(
-    api.personas.getPersona,
-    userId ? { userId } : "skip"
-  );
   const userData = useQuery(
     api.userQueries.getUser,
     userId ? { userId } : "skip"
   );
-  
-  // Update form data when persona data and user data load
-  useEffect(() => {
-    if (personaData) {
-      setPersonaDetails(personaData as PersonaData);
-      setFormData(prev => ({
-        ...prev,
-        currentPersona: personaData.current_name || '',
-        futureVision: personaData.future_description || ''
-      }));
-      setOriginalFormData(prev => ({
-        ...prev,
-        currentPersona: personaData.current_name || '',
-        futureVision: personaData.future_description || ''
-      }));
-    }
-  }, [personaData, setFormData]);
-  
-  // Add a new state to hold the full persona object
-  const [personaDetails, setPersonaDetails] = useState<PersonaData | null>(null);
   
   // Update form data with user information when it loads
   useEffect(() => {
@@ -170,7 +138,6 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
     }
   }, [userData, firebaseUser?.photoURL, setFormData]);
   
-  const updatePersona = useMutation(api.personas.createPersona);
   const updateUser = useMutation(api.userMutations.create_user);
   
   // Handle edit mode toggle
@@ -200,16 +167,7 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
 
   return (
     <div className="grid gap-4 sm:gap-6 max-w-full">
-      {personaDetails && (
-        <Card className="mt-4">
-          <CardHeader>
-            <CardTitle>{formData.name ? `${formData.name}'s Content Persona` : 'Your Content Persona'}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <PersonaCard persona={personaDetails} userId={userId!} />
-          </CardContent>
-        </Card>
-      )}
+      {/* Profile Information Card */}
       <Card className={cn(
         "transition-all duration-300 ease-in-out",
         isEditMode 
@@ -228,27 +186,7 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
               )}
             </div>
             
-            <div className="flex items-center gap-2">
-              {userEmail ? (
-                <Badge variant="default" className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
-                  Verified
-                </Badge>
-              ) : (
-                <>
-                  <Badge variant="destructive">Unverified</Badge>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleResendVerification(setIsResending)}
-                    disabled={isResending}
-                    className="w-full sm:w-auto"
-                  >
-                    {isResending ? 'Sending...' : 'Resend Verification'}
-                  </Button>
-                </>
-              )}
-              
-              {/* Edit/Save/Cancel Controls */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
               <div className="flex items-center gap-2 ml-2">
                 {!isEditMode ? (
                   <Button
@@ -274,7 +212,7 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
                     </Button>
                     <Button
                       size="sm"
-                      onClick={(e) => handleProfileUpdate(e, formData, setIsUpdating, setFormData, updatePersona, updateUser, userId, userEmail, setIsEditMode, firebaseUser?.photoURL)}
+                      onClick={(e) => handleProfileUpdate(e, formData, setIsUpdating, setFormData, updateUser, userId, userEmail, setIsEditMode, firebaseUser?.photoURL)}
                       disabled={isUpdating}
                       className="flex items-center gap-2"
                     >
@@ -298,7 +236,7 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
                 e.preventDefault();
                 return;
               }
-              handleProfileUpdate(e, formData, setIsUpdating, setFormData, updatePersona, updateUser, userId, userEmail, setIsEditMode, firebaseUser?.photoURL);
+              handleProfileUpdate(e, formData, setIsUpdating, setFormData, updateUser, userId, userEmail, setIsEditMode, firebaseUser?.photoURL);
             }}>
               <div className="grid grid-cols-1 gap-4">
                 <ProfileFields formData={formData} setFormData={setFormData} isEditMode={isEditMode} />

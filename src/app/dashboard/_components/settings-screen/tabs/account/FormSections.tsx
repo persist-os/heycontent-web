@@ -90,9 +90,9 @@ export const ReferralFields = ({ formData, referrerName = '', referrerLoading = 
     {/* Referral Code (always read-only with copy) */}
     <ReadOnlyField 
       label="Your Referral Code" 
-      value={formData.referralCode} 
+      value={formData.referralCode || "Loading..."} 
       showCopy={!!formData.referralCode}
-      helperText={formData.referralCode ? "Share this code with friends to invite them" : undefined}
+      helperText={formData.referralCode ? "Share this code with friends to invite them" : "Your referral code is being generated..."}
     />
     {/* Referred By (always read-only) */}
     <ReadOnlyField 

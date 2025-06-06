@@ -19,7 +19,7 @@ export const getPlatformIcon = (platform: string) => {
     case 'instagram':
       return <Instagram className="w-5 h-5" />;
     case 'youtube':
-      return <YouTubeBrandIcon size={24} className="mr-2" />;
+      return <YouTubeBrandIcon href="https://youtube.com/" />;
     case 'tiktok':
       return (
         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">

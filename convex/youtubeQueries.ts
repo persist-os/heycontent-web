@@ -9,25 +9,21 @@ function getThumbnailUrl(video: any): string {
   const thumbnails = video.snippet?.thumbnails;
   if (!thumbnails) return '';
   
+  // Based on your data format, thumbnails are direct strings, not objects with .url property
   // Try high quality first
-  if (thumbnails.high?.url) return thumbnails.high.url;
-  if (typeof thumbnails.high === 'string') return thumbnails.high;
-  
-  // Try standard quality
-  if (thumbnails.standard?.url) return thumbnails.standard.url;
-  if (typeof thumbnails.standard === 'string') return thumbnails.standard;
+  if (thumbnails.high) return thumbnails.high;
   
   // Try maxres quality
-  if (thumbnails.maxres?.url) return thumbnails.maxres.url;
-  if (typeof thumbnails.maxres === 'string') return thumbnails.maxres;
+  if (thumbnails.maxres) return thumbnails.maxres;
+  
+  // Try standard quality
+  if (thumbnails.standard) return thumbnails.standard;
   
   // Try medium quality
-  if (thumbnails.medium?.url) return thumbnails.medium.url;
-  if (typeof thumbnails.medium === 'string') return thumbnails.medium;
+  if (thumbnails.medium) return thumbnails.medium;
   
   // Try default quality
-  if (thumbnails.default?.url) return thumbnails.default.url;
-  if (typeof thumbnails.default === 'string') return thumbnails.default;
+  if (thumbnails.default) return thumbnails.default;
   
   // Last resort: check if thumbnails is a string itself
   if (typeof thumbnails === 'string') return thumbnails;

@@ -1,269 +1,302 @@
 import React from 'react'
-import Link from 'next/link';
+import Link from 'next/link'
 
 export default function Terms() {
   return (
-    <div className="max-w-4xl mx-auto px-4 py-12">
-      <nav className="mb-8">
-        <Link href="/" className="text-blue-600 hover:text-blue-800">
-          ← Back to Home
+    <div className="max-w-none">
+      {/* Header Navigation */}
+      <nav className="mb-12">
+        <Link 
+          href="/" 
+          className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium"
+        >
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Home
         </Link>
       </nav>
 
-      <article className="prose prose-gray max-w-none">
-        <h1 className="text-4xl font-bold mb-4">Terms of Service</h1>
-        <p className="text-gray-600 mb-8">Last Updated: December 7, 2024</p>
-        
-        <div className="mb-12">
-          <p className="mb-8">
-            Thank you for choosing HeyContent. These Terms of Service ("Terms") constitute a legally binding agreement between 
-            you and HeyContent, Inc. ("HeyContent," "we," "our," or "us") governing your use of our AI-powered analytics platform, 
-            including all associated websites, services, and applications (collectively, the "Services").
-          </p>
-        </div>
+      {/* Document Header */}
+      <header className="mb-16 border-b border-gray-200 pb-8">
+        <h1 className="text-5xl font-light text-gray-900 mb-4 tracking-tight">
+          Terms of Service
+        </h1>
+        <p className="text-lg text-gray-600">
+          Last updated: June 06, 2025
+        </p>
+      </header>
 
-        {/* Core Services */}
-        <section className="mb-12">
-          <h2 className="text-2xl font-semibold mb-4">1. Understanding Our Services</h2>
+      <article className="space-y-12 text-gray-800 leading-relaxed">
+        {/* Agreement Section */}
+        <section className="space-y-6">
+          <h2 className="text-3xl font-medium text-gray-900 border-b border-gray-100 pb-3">Agreement to Our Legal Terms</h2>
           <p>
-            HeyContent provides an artificial intelligence-powered platform designed to help content creators and influencers 
-            optimize their online presence. Our Services analyze data from your connected platforms to provide insights, 
-            recommendations, and growth strategies.
+            These Terms of Service ("Terms") constitute a legally binding agreement made between you, whether personally or on behalf of an entity ("you"), and Divertissement AI, Inc. ("Company," "we," "us," or "our"), concerning your access to and use of the HeyContent website (<a href="https://www.heycontent.co" className="text-blue-600 hover:underline">https://www.heycontent.co</a>) and any related products and services that refer or link to these Terms (collectively, the "Services").
+          </p>
+          <p>
+            By accessing or using the Services, you agree that you have read, understood, and agree to be bound by all of these Terms. IF YOU DO NOT AGREE WITH ALL OF THESE TERMS, THEN YOU ARE EXPRESSLY PROHIBITED FROM USING THE SERVICES AND YOU MUST DISCONTINUE USE IMMEDIATELY.
+          </p>
+          <p>
+            We may update these Terms from time to time. We will alert you about any changes by updating the "Last updated" date at the top of these Terms. It is your responsibility to review these Terms periodically. Your continued use of the Services after any changes constitutes your acceptance of those changes.
+          </p>
+          <p>
+            The Services are intended for users who are at least 18 years old. Persons under the age of 18 are not permitted to use or register for the Services.
+          </p>
+          <p>
+            You can contact us by email at <a href="mailto:hello@divertissement.ai" className="text-blue-600 hover:underline">hello@divertissement.ai</a>.
           </p>
         </section>
 
-        {/* Account & Registration */}
-        <section className="mb-12">
-          <h2 className="text-2xl font-semibold mb-4">2. Registration and Account Access</h2>
-          
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-xl font-medium mb-3">Age Requirements and Eligibility</h3>
-              <p>
-                You must be at least 13 years old to use our Services. If you are under 18 years of age, you must obtain 
-                verifiable consent from a parent or legal guardian before using our Services.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="text-xl font-medium mb-3">Account Creation and Security</h3>
-              <p>
-                When registering for an account, you must provide accurate, current, and complete information. You are 
-                responsible for maintaining the confidentiality of your account credentials.
-              </p>
-            </div>
-          </div>
+        {/* Table of Contents */}
+        <section className="space-y-2">
+          <h2 className="text-2xl font-medium text-gray-900">Table of Contents</h2>
+          <ol className="list-decimal ml-8 space-y-1">
+            <li>Our Services</li>
+            <li>Intellectual Property Rights</li>
+            <li>User Representations</li>
+            <li>User Registration</li>
+            <li>Purchases and Payment</li>
+            <li>Subscriptions</li>
+            <li>Prohibited Activities</li>
+            <li>User Generated Contributions</li>
+            <li>Contribution License</li>
+            <li>Social Media</li>
+            <li>Third-Party Websites and Content</li>
+            <li>Services Management</li>
+            <li>Privacy Policy</li>
+            <li>Term and Termination</li>
+            <li>Modifications and Interruptions</li>
+            <li>Governing Law</li>
+            <li>Dispute Resolution</li>
+            <li>Corrections</li>
+            <li>Disclaimer</li>
+            <li>Limitations of Liability</li>
+            <li>Indemnification</li>
+            <li>User Data</li>
+            <li>Electronic Communications, Transactions, and Signatures</li>
+            <li>California Users and Residents</li>
+            <li>Miscellaneous</li>
+            <li>Contact Us</li>
+          </ol>
         </section>
 
-        {/* Platform Integration */}
-        <section className="mb-12">
-          <h2 className="text-2xl font-semibold mb-4">3. Platform Integration and Data Processing</h2>
-          
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-xl font-medium mb-3">Connected Platforms</h3>
-              <p className="mb-4">Our Services integrate with various third-party platforms to provide comprehensive analytics and insights:</p>
-              <ul className="list-disc pl-6 space-y-3">
-                <li>
-                  <span className="font-medium">Google Workspace & Microsoft Outlook:</span> Email communications and calendar data analysis
-                </li>
-                <li>
-                  <span className="font-medium">YouTube:</span> Channel metrics, video performance, and audience engagement analysis
-                </li>
-                <li>
-                  <span className="font-medium">Instagram:</span> Post performance, story analytics, and audience demographics
-                </li>
-                <li>
-                  <span className="font-medium">TikTok:</span> Video metrics, engagement rates, and trend analysis
-                </li>
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        {/* Data Rights and Controls */}
-        <section className="mb-12">
-          <h2 className="text-2xl font-semibold mb-4">4. Your Rights and Controls</h2>
-          
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-xl font-medium mb-3">Data Control and Access</h3>
-              <p className="mb-4">You maintain full control over your connected platform data. At any time, you may:</p>
-              <ul className="list-disc pl-6 space-y-3">
-                <li>
-                  <span className="font-medium">Manage Platform Connections:</span> Connect or disconnect any integrated platform through your account settings
-                </li>
-                <li>
-                  <span className="font-medium">Access Your Data:</span> Request a comprehensive export of all data we have collected
-                </li>
-                <li>
-                  <span className="font-medium">Modify Permissions:</span> Adjust the scope of data access through your account settings
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-xl font-medium mb-3">Data Deletion Rights</h3>
-              <p className="mb-4">You have multiple options for requesting data deletion:</p>
-              <ul className="list-disc pl-6 space-y-3">
-                <li>Platform-Specific Deletion through respective platform settings</li>
-                <li>Complete Account Deletion with 30-day data removal</li>
-                <li>Selective Data Deletion while maintaining your account</li>
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        {/* Intellectual Property */}
-        <section className="mb-12">
-          <h2 className="text-2xl font-semibold mb-4">5. Intellectual Property Rights</h2>
-          
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-xl font-medium mb-3">Our Property</h3>
-              <p>
-                The HeyContent platform, including all software, algorithms, designs, analytics systems, and related 
-                technologies, are owned by HeyContent. Nothing in these Terms transfers ownership of our intellectual 
-                property to you.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="text-xl font-medium mb-3">Your Content</h3>
-              <p>
-                You retain all rights to your original content and data. By using our Services, you grant us a limited 
-                license to access, analyze, and process this information solely to provide and improve our Services.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Service Reliability */}
-        <section className="mb-12">
-          <h2 className="text-2xl font-semibold mb-4">6. Service Reliability and Modifications</h2>
-          
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-xl font-medium mb-3">Service Availability</h3>
-              <p>
-                While we strive for consistent service availability, we do not guarantee uninterrupted access. 
-                Temporary interruptions may occur due to maintenance, updates, or factors beyond our control.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="text-xl font-medium mb-3">Platform Evolution</h3>
-              <p>
-                We continuously improve our Services and may add, modify, or remove features. We will notify you 
-                of significant changes that might affect your use of the Services.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Payment Terms */}
-        <section className="mb-12">
-          <h2 className="text-2xl font-semibold mb-4">7. Payment Terms</h2>
-          
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-xl font-medium mb-3">Subscription and Fees</h3>
-              <p>
-                Our Services are provided on a subscription basis. Fees are billed according to your selected plan 
-                and are non-refundable, except as required by law.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="text-xl font-medium mb-3">Price Changes</h3>
-              <p>
-                We may modify our pricing with thirty (30) days notice. Changes will take effect on your next 
-                billing cycle. You may cancel your subscription before new prices take effect.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Account Termination */}
-        <section className="mb-12">
-          <h2 className="text-2xl font-semibold mb-4">8. Account Termination</h2>
-          
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-xl font-medium mb-3">Termination by Users</h3>
-              <p>
-                You may terminate your account at any time. Upon termination, we will process the deletion of your 
-                data as outlined in our Privacy Policy.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="text-xl font-medium mb-3">Termination by HeyContent</h3>
-              <p className="mb-4">We reserve the right to suspend or terminate your access if:</p>
-              <ul className="list-disc pl-6 space-y-3">
-                <li>You violate these Terms or our platform policies</li>
-                <li>We are required to do so by law</li>
-                <li>Your account has been inactive for over 12 months</li>
-                <li>You fail to pay applicable fees after notice</li>
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        {/* Dispute Resolution */}
-        <section className="mb-12">
-          <h2 className="text-2xl font-semibold mb-4">9. Dispute Resolution</h2>
-          
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-xl font-medium mb-3">Initial Resolution</h3>
-              <p>
-                If you have any concerns or disputes, please contact us first at legal@heycontent.com. We will work 
-                in good faith to resolve any issues directly with you.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="text-xl font-medium mb-3">Arbitration Agreement</h3>
-              <p>
-                Any unresolved dispute shall be resolved through binding arbitration, conducted by the American 
-                Arbitration Association under its Commercial Arbitration Rules in San Francisco, California.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Final Provisions */}
-        <section className="mb-12">
-          <h2 className="text-2xl font-semibold mb-4">10. General Provisions</h2>
-          
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-xl font-medium mb-3">Governing Law</h3>
-              <p>
-                These Terms are governed by the laws of the State of California, without regard to its conflict 
-                of law principles.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="text-xl font-medium mb-3">Changes to Terms</h3>
-              <p>
-                We may update these Terms to reflect changes in our Services or legal requirements. We will 
-                provide at least 30 days' notice of material changes through our website or email.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <footer className="mt-16 pt-8 border-t border-gray-200">
-          <p className="text-gray-600 text-sm">
-            For questions about these Terms of Service, please contact us at{' '}
-            <a href="mailto:hello@divertissement.ai" className="text-blue-600 hover:text-blue-800">
-              hello@divertissement.ai
-            </a>
+        {/* 1. Our Services */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">1. Our Services</h2>
+          <p>
+            HeyContent is an AI-powered platform for content creators, providing tools for content creation, analytics, and collaboration. Our platform integrates with YouTube, Instagram, Gmail, and Google to help you analyze and manage your content. We use Stripe for payments, Convex for database operations, and Firebase for authentication. The Services are not intended for use in any jurisdiction or country where such use would be contrary to law or regulation.
           </p>
-        </footer>
+          <p>
+            The Services are not tailored to comply with industry-specific regulations (such as HIPAA or FISMA). If your interactions would be subject to such laws, you may not use the Services.
+          </p>
+        </section>
+
+        {/* 2. Intellectual Property Rights */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">2. Intellectual Property Rights</h2>
+          <p>
+            HeyContent and its licensors own all rights to the platform, including the software, website design, branding, and all related intellectual property. These are protected by copyright, trademark, and other applicable laws.
+          </p>
+          <p>
+            You retain all rights to the content you create using our Services. You are free to use, publish, and monetize your own content without restriction from us.
+          </p>
+          <p>
+            You may reference or promote HeyContent in connection with your own work, provided you do not misrepresent your relationship with us or use our branding in a misleading or unlawful way. Any use of HeyContent's platform, software, or branding beyond these purposes requires our express written permission.
+          </p>
+        </section>
+
+        {/* 3. User Representations */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">3. User Representations</h2>
+          <p>
+            By using the Services, you represent and warrant that all registration information you submit is true and accurate, you have the legal capacity to agree to these Terms, and you will not use the Services for any unlawful or unauthorized purpose.
+          </p>
+        </section>
+
+        {/* 4. User Registration */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">4. User Registration</h2>
+          <p>
+            You may be required to register to use the Services. You agree to keep your password confidential and are responsible for all use of your account. We reserve the right to remove or change a username if we determine it is inappropriate.
+          </p>
+        </section>
+
+        {/* 5. Purchases and Payment */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">5. Purchases and Payment</h2>
+          <p>
+            We use Stripe to process payments. You agree to provide current, complete, and accurate purchase and account information for all purchases made via the Services. All payments are in US dollars. We reserve the right to refuse or cancel orders at our discretion.
+          </p>
+        </section>
+
+        {/* 6. Subscriptions */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">6. Subscriptions</h2>
+          <p>
+            Your subscription will continue and automatically renew unless canceled. You can cancel your subscription at any time from your account. All purchases are non-refundable. We may change subscription fees and will communicate any changes as required by law.
+          </p>
+        </section>
+
+        {/* 7. Prohibited Activities */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">7. Prohibited Activities</h2>
+          <p>
+            You may not use the Services for any unlawful purpose or in any way that could harm us or other users. Prohibited activities include, but are not limited to: attempting to gain unauthorized access, interfering with the Services, using automated systems to access the Services, or using the Services for any commercial purpose not expressly permitted by us.
+          </p>
+        </section>
+
+        {/* 8. User Generated Contributions */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">8. User Generated Contributions</h2>
+          <p>
+            The Services may allow you to submit content, such as comments or feedback. You are responsible for your contributions and must have the necessary rights to submit them. We may remove or edit any contributions at our discretion.
+          </p>
+        </section>
+
+        {/* 9. Contribution License */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">9. Contribution License</h2>
+          <p>
+            By posting contributions, you grant us a worldwide, royalty-free license to use, reproduce, and display your contributions in connection with the Services. You retain ownership of your contributions.
+          </p>
+        </section>
+
+        {/* 10. Social Media */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">10. Social Media</h2>
+          <p>
+            You may link your account with third-party services such as Google, YouTube, Instagram, and Gmail. We are not responsible for the content or practices of these third-party services. Your use of third-party integrations is subject to their terms and privacy policies.
+          </p>
+        </section>
+
+        {/* 11. Third-Party Websites and Content */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">11. Third-Party Websites and Content</h2>
+          <p>
+            The Services may contain links to third-party websites or content. We are not responsible for the content, accuracy, or practices of any third-party websites or content.
+          </p>
+        </section>
+
+        {/* 12. Services Management */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">12. Services Management</h2>
+          <p>
+            We reserve the right to monitor the Services for violations of these Terms and to take appropriate action, including removing content or disabling accounts.
+          </p>
+        </section>
+
+        {/* 13. Privacy Policy */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">13. Privacy Policy</h2>
+          <p>
+            We care about your privacy and data security. Please review our <Link href="/legal/privacy" className="text-blue-600 hover:underline">Privacy Policy</Link>. By using the Services, you agree to be bound by our Privacy Policy.
+          </p>
+        </section>
+
+        {/* 14. Term and Termination */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">14. Term and Termination</h2>
+          <p>
+            These Terms remain in effect while you use the Services. We may suspend or terminate your access at any time for any reason, including violation of these Terms.
+          </p>
+        </section>
+
+        {/* 15. Modifications and Interruptions */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">15. Modifications and Interruptions</h2>
+          <p>
+            We may change, suspend, or discontinue the Services at any time without notice. We are not liable for any loss or inconvenience caused by your inability to access the Services.
+          </p>
+        </section>
+
+        {/* 16. Governing Law */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">16. Governing Law</h2>
+          <p>
+            These Terms are governed by the laws of the State of California, without regard to conflict of law principles.
+          </p>
+        </section>
+
+        {/* 17. Dispute Resolution */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">17. Dispute Resolution</h2>
+          <p>
+            If you have a dispute with us, please contact us first to try to resolve it informally. Any disputes arising from these Terms will be resolved in the state or federal courts located in California, unless otherwise required by law.
+          </p>
+        </section>
+
+        {/* 18. Corrections */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">18. Corrections</h2>
+          <p>
+            We reserve the right to correct any errors or omissions in the Services at any time without notice.
+          </p>
+        </section>
+
+        {/* 19. Disclaimer */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">19. Disclaimer</h2>
+          <p>
+            The Services are provided "as is" and "as available." We disclaim all warranties, express or implied, to the fullest extent permitted by law.
+          </p>
+        </section>
+
+        {/* 20. Limitations of Liability */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">20. Limitations of Liability</h2>
+          <p>
+            To the fullest extent permitted by law, we are not liable for any indirect, incidental, or consequential damages arising from your use of the Services.
+          </p>
+        </section>
+
+        {/* 21. Indemnification */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">21. Indemnification</h2>
+          <p>
+            You agree to indemnify and hold us harmless from any claims, damages, or expenses arising from your use of the Services or your violation of these Terms.
+          </p>
+        </section>
+
+        {/* 22. User Data */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">22. User Data</h2>
+          <p>
+            We may maintain certain data you transmit to the Services for the purpose of managing the Services. You are responsible for all data you provide.
+          </p>
+        </section>
+
+        {/* 23. Electronic Communications, Transactions, and Signatures */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">23. Electronic Communications, Transactions, and Signatures</h2>
+          <p>
+            By using the Services, you consent to receive electronic communications from us and agree that electronic agreements, notices, and records satisfy any legal requirements for written communication.
+          </p>
+        </section>
+
+        {/* 24. California Users and Residents */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">24. California Users and Residents</h2>
+          <p>
+            If you are a California resident and have a complaint, you may contact the Complaint Assistance Unit of the Division of Consumer Services of the California Department of Consumer Affairs.
+          </p>
+        </section>
+
+        {/* 25. Miscellaneous */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-medium text-gray-900">25. Miscellaneous</h2>
+          <p>
+            These Terms constitute the entire agreement between you and us regarding the Services. If any provision is found to be unlawful or unenforceable, the remaining provisions will remain in effect.
+          </p>
+        </section>
+
+        {/* 26. Contact Us */}
+        <section className="space-y-4 border-t border-gray-200 pt-12">
+          <h2 className="text-2xl font-medium text-gray-900">26. Contact Us</h2>
+          <p>
+            If you have any questions or concerns about these Terms, please contact us at <a href="mailto:hello@divertissement.ai" className="text-blue-600 hover:underline">hello@divertissement.ai</a>.
+          </p>
+        </section>
       </article>
     </div>
   );

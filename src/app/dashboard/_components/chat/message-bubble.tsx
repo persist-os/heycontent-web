@@ -5,7 +5,7 @@ import type { InteractiveOption } from './interactive-response'
 import { MessageSquare } from 'lucide-react'
 import { ExpandableInsights } from './expandable-insights'
 import { MarkdownRenderer } from './markdown-renderer'
-import { PersonaCard } from './components/PersonaCard'
+import { PersonaCardRenderer } from './components/PersonaCardRenderer'
 
 interface MessageBubbleProps {
   message: Message
@@ -36,12 +36,13 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const isUser = message.role === 'user'
 
-  console.log('MessageBubble', {
-    isPersona: message.metadata?.is_persona_complete && message.metadata?.persona,
-    userId,
-    persona: message.metadata?.persona,
-    message
-  });
+  // Determine if this message might contain a completed persona
+  // Let PersonaCardRenderer handle the detailed logic and Convex fetching
+  const mightHavePersona = message.role === 'assistant' && 
+    userId && 
+    (message.metadata?.is_persona_complete === true || 
+     message.metadata?.persona_created === true ||
+     message.metadata?.is_persona_flow === true);
 
   return (
     <div className={`w-full ${className}`}>
@@ -95,8 +96,14 @@ export function MessageBubble({
               {/* Message Content or Persona Card */}
               <div className="flex-1 min-w-0">
                 <div className="break-words overflow-hidden">
-                  {message.metadata?.is_persona_complete && message.metadata?.persona && userId ? (
-                    <PersonaCard persona={message.metadata.persona} userId={userId} />
+                  {mightHavePersona ? (
+                    <>
+                      <MarkdownRenderer 
+                        content={message.chat_response || message.content} 
+                        className=""
+                      />
+                      <PersonaCardRenderer message={message} userId={userId} />
+                    </>
                   ) : (
                     <MarkdownRenderer 
                       content={message.chat_response || message.content} 
