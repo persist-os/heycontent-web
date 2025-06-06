@@ -3,10 +3,11 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from '@/app/context/auth-context';
+import { WaitlistButton } from '@/components/ui/WaitlistButton';
 
 import WaitlistScreen from "./waitlist-screen";
 import UpgradeModal from "@/app/dashboard/_components/settings-screen/tabs/subscription/upgrade-modal";
-import RegistrationForm from "./steps/RegistrationForm";
+import { RegistrationForm } from './steps/RegistrationForm';
 
 interface RegisterScreenProps {
   onSuccess?: (apiKey: string) => void;
@@ -47,6 +48,10 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
   const handleContinueAfterSuccess = () => {
     setRegistrationSuccess(false);
     setStep('payment');
+    // Update URL to reflect current step
+    const url = new URL(window.location.href);
+    url.searchParams.set('step', 'payment');
+    router.replace(url.toString());
   };
 
   const handleWaitlistComplete = (apiKey: string) => {
@@ -58,12 +63,13 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
   };
 
   const handleUpgradeClose = () => {
-    // Prevent closing modal without completing checkout
-    // Optionally, show a warning or keep modal open
+    // Prevent accidental closing of the payment modal
+    // We'll keep this empty to ensure users complete the payment flow
+    // The modal will close automatically after successful payment
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#F8F0F9] to-blue-50 p-4">
       <div className="w-full max-w-md">
         {step === 'payment' && (
           <UpgradeModal
@@ -75,7 +81,16 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
         )}
         
         {step === 'register' && !registrationSuccess && (
-          <RegistrationForm onSuccess={handleRegisterSuccess} />
+          <>
+            <RegistrationForm onSuccess={handleRegisterSuccess} />
+            <div className="mt-6 text-center">
+              <p className="text-gray-600 mb-2 text-sm">
+                Need access?<br />
+                Join the waitlist below, or ask a friend for their invite code.
+              </p>
+              <WaitlistButton />
+            </div>
+          </>
         )}
         {step === 'register' && registrationSuccess && (
           <div className="bg-white shadow-lg rounded-xl p-8 text-center">

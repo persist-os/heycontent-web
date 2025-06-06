@@ -55,7 +55,7 @@ export default function WaitlistPage() {
             exit={{ opacity: 0, y: -20 }}
           >
             <WaitlistQueue
-              position={325}
+              position={20}
               queueId={queueId}
               onQueueComplete={handleQueueComplete}
             />
