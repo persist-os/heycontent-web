@@ -36,13 +36,13 @@ const navItems = [
     href: '/dashboard/content',
     color: 'text-blue-500'
   },
-  // {
-  //   id: 'ai-insights',
-  //   label: 'AI Insights',
-  //   icon: Brain,
-  //   href: '/dashboard/ai-insights',
-  //   color: 'text-purple-500'
-  // },
+  {
+    id: 'ai-insights',
+    label: 'AI Insights',
+    icon: Brain,
+    href: '/dashboard/ai-insights',
+    color: 'text-purple-500'
+  },
   // {
   //   id: 'audience',
   //   label: 'Audience DNA',

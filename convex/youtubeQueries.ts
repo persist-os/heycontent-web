@@ -121,6 +121,7 @@ export const listUserYouTubeVideos = query({
           thumbnailUrl: getThumbnailUrl(video),
           videoUrl: video.url || `https://www.youtube.com/watch?v=${video.videoId}`,
           channelTitle: video.snippet?.channel?.title || '',
+          channelId: video.snippet?.channel?.id || '',
         },
         metrics: {
           views: Number(video.statistics?.views || 0),
@@ -292,6 +293,65 @@ export const getVideoStatsSummary = query({
     } catch (error) {
       console.error('Error getting video stats summary:', error);
       throw new Error(`Failed to get video stats summary: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Get analysis for a specific YouTube channel
+export const getChannelAnalysis = query({
+  args: {
+    userId: v.string(),
+    channelId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const channel = await ctx.db
+        .query("youtubeChannels")
+        .withIndex("by_channelId", (q) => q.eq("id", args.channelId))
+        .filter((q) => q.eq(q.field("userId"), args.userId))
+        .first();
+
+      if (!channel) {
+        return null;
+      }
+
+      return {
+        _id: channel._id,
+        userId: channel.userId,
+        channelId: channel.id,
+        analysis: channel.analysis,
+        updatedAt: channel.updatedAt || channel._creationTime
+      };
+    } catch (error) {
+      console.error("Error fetching channel analysis:", error);
+      throw new Error("Failed to fetch channel analysis");
+    }
+  },
+});
+
+// Get all video analyses for a user
+export const getVideoAnalyses = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    try {
+      const videos = await ctx.db
+        .query("youtubeVideos")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .filter((q) => q.neq(q.field("analysis"), null))
+        .order("desc")
+        .collect();
+
+      // Transform videos to include only necessary analysis data
+      return videos.map(video => ({
+        id: video.videoId,
+        title: video.snippet?.title || 'Untitled Video',
+        publishedAt: video.snippet?.published_at || video.createdAt,
+        analysis: video.analysis,
+        statistics: video.statistics || {}
+      }));
+    } catch (error) {
+      console.error('Error getting video analyses:', error);
+      throw new Error(`Failed to get video analyses: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
 });
