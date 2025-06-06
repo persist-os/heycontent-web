@@ -107,7 +107,7 @@ export const getRecentSignups = query({
     const limit = args.limit || 5;
     const signups = await ctx.db
       .query("waitlist")
-      .order("desc")
+      .order("timestamp", "desc")
       .take(limit);
     
     return signups.map(signup => ({
