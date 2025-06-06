@@ -1,16 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { WaitlistQueue } from '../../components/ui/WaitlistQueue';
-import { CreatorCard } from '../../components/ui/CreatorCard';
+import { WaitlistQueue } from './_components/WaitlistQueue';
+import { CreatorCard } from './_components/CreatorCard';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const generateQueueId = () => {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-};
-
-const generateInviteCode = () => {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
 };
 
 const generateCreativeTitle = (name: string) => {
@@ -27,17 +23,16 @@ const generateCreativeTitle = (name: string) => {
 export default function WaitlistPage() {
   const [stage, setStage] = useState<'queue' | 'card'>('queue');
   const [queueId] = useState(generateQueueId());
-  const [inviteCode] = useState(generateInviteCode());
   const [name, setName] = useState('');
-  const [invitesLeft, setInvitesLeft] = useState(3);
 
-  const handleQueueComplete = () => {
+  const handleQueueComplete = (userName?: string) => {
+    if (userName) setName(userName);
     setStage('card');
   };
 
   const handleShare = async () => {
     try {
-      await navigator.clipboard.writeText(`Join me on HeyContent! Use my invite code: ${inviteCode}`);
+      await navigator.clipboard.writeText(`Join me on HeyContent!`);
       alert('Invite link copied to clipboard!');
     } catch (err) {
       console.error('Failed to copy text: ', err);
@@ -75,8 +70,6 @@ export default function WaitlistPage() {
                 day: 'numeric',
                 year: 'numeric'
               })}
-              inviteCode={inviteCode}
-              invitesLeft={invitesLeft}
               onShare={handleShare}
             />
           </motion.div>

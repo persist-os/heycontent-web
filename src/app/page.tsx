@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { HeroSection } from '../components/ui/hero-section'
 import Link from 'next/link'
-import { FrontWaitlistQueue } from '../components/ui/FrontWaitlistQueue'
+import { FrontWaitlistQueue } from './waitlist/_components/FrontWaitlistQueue'
 import Footer from '../components/ui/Footer'
 
 const featureCards = [
@@ -53,16 +53,15 @@ export default function LandingPage() {
         <HeroSection />
       </div>
 
-      {/* Waitlist Section */}
-      <section className="py-16 bg-gradient-to-b from-blue-50 to-white">
-        <div className="max-w-6xl mx-auto px-4">
-          <FrontWaitlistQueue 
-            position={10} 
-            queueId={Math.random().toString(36).substring(2, 15)} 
-            onQueueComplete={() => {}}
-          />
-        </div>
-      </section>
+
+
+
+
+
+
+
+
+
       
       <section className="min-h-screen bg-gradient-to-r from-[#F8F0F9] to-blue-50">
         {/* Featured Influencers */}

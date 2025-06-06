@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirebaseAuth } from '@/app/lib/firebase';
-import { WaitlistButton } from '@/components/ui/WaitlistButton';
+import { WaitlistButton } from '@/app/waitlist/_components/WaitlistButton';
 import { Logo } from '@/components/ui/logo';
 import { motion } from "framer-motion";
 

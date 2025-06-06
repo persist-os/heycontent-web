@@ -5,8 +5,7 @@ import React from 'react'
 import { ArrowRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { Logo } from './logo'
-import { WaitlistButton } from '@/components/ui/WaitlistButton'
-import { WaitlistQueue } from '@/components/ui/WaitlistQueue'
+import { WaitlistButton } from '@/app/waitlist/_components/WaitlistButton'
 
 console.log('[HeroSection] Module loaded');
 
@@ -56,18 +55,13 @@ export function HeroSection() {
     console.log('Waitlist stage changed:', stage)
   }
 
-  if (showWaitlist) {
-    return (
-      <div className="min-h-screen bg-gradient-to-r from-[#F8F0F9] to-blue-50 py-12 px-4">
-        <WaitlistQueue
-          position={100}
-          queueId="HC-2024-001"
-          onQueueComplete={handleWaitlistComplete}
-          onStageChange={handleStageChange}
-        />
-      </div>
-    )
-  }
+
+
+
+
+
+
+
 
   return (
     <div className="bg-gradient-to-r from-[#F8F0F9] to-blue-50 min-h-[80vh] flex flex-col">

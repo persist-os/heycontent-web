@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from '@/app/context/auth-context';
-import { WaitlistButton } from '@/components/ui/WaitlistButton';
+import { WaitlistButton } from '@/app/waitlist/_components/WaitlistButton';
 
 import WaitlistScreen from "./waitlist-screen";
 import UpgradeModal from "@/app/dashboard/_components/settings-screen/tabs/subscription/upgrade-modal";

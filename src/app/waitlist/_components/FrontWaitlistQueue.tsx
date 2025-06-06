@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Logo } from './logo';
+import { Logo } from '../../../components/ui/logo';
 import { Share2, Copy, Check, Twitter, Dice6 } from 'lucide-react';
 import Tilt from 'react-parallax-tilt';
 import { COLOR_SCHEMES } from '@/data/colorSchemes';

@@ -1,7 +1,8 @@
 'use client'
 
-import { motion } from 'framer-motion'
-import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 interface WaitlistButtonProps {
   size?: 'default' | 'large'
@@ -31,12 +32,28 @@ export function WaitlistButton({ size = 'default' }: WaitlistButtonProps) {
 
   const currentSize = sizeStyles[size]
 
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleClick = async () => {
+    try {
+      setIsLoading(true);
+      await router.push('/waitlist');
+    } catch (error) {
+      console.error('Navigation error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <motion.button
       drag
       dragMomentum={false}
-      onClick={() => router.push('/waitlist')}
-      className={`${currentSize.button} font-bold rounded-full shadow-lg relative border-2 border-dashed border-yellow-400`}
+      onClick={handleClick}
+      disabled={isLoading}
+      className={`${currentSize.button} font-bold rounded-full shadow-lg relative border-2 border-dashed border-yellow-400 ${
+        isLoading ? 'opacity-70 cursor-not-allowed' : ''
+      }`}
       style={{
         background: 'linear-gradient(120deg, #232526 0%, #414345 40%, #111 100%)',
         color: 'white',
@@ -44,8 +61,8 @@ export function WaitlistButton({ size = 'default' }: WaitlistButtonProps) {
         boxShadow: '0 10px 20px rgba(0,0,0,0.15)',
         zIndex: 1,
       }}
-      whileHover={{ scale: size === 'large' ? 1.07 : 1.05 }}
-      whileTap={{ scale: 0.97 }}
+      whileHover={isLoading ? {} : { scale: size === 'large' ? 1.07 : 1.05 }}
+      whileTap={isLoading ? {} : { scale: 0.97 }}
     >
       {/* Glowing dashed border effect */}
       <span
@@ -59,7 +76,9 @@ export function WaitlistButton({ size = 'default' }: WaitlistButtonProps) {
           zIndex: 0,
         }}
       />
-      <span style={{ position: 'relative', zIndex: 2 }}>Join Waitlist</span>
+      <span style={{ position: 'relative', zIndex: 2 }}>
+        {isLoading ? 'Loading...' : 'Join Waitlist'}
+      </span>
     </motion.button>
   )
 } 

@@ -600,4 +600,12 @@ export default defineSchema({
   .index("by_user", ["userId"])
   .index("by_timestamp", ["timestamp"]),
 
+  waitlist: defineTable({
+    name: v.string(),
+    email: v.string(),
+    timestamp: v.number(),
+    status: v.string(),
+  })
+  .index("by_email", ["email"]),
+
 });
