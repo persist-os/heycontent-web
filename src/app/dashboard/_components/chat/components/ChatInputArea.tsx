@@ -64,7 +64,16 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
           onClearReference={handleClearReference}
           hasContext={!!currentContext}
           contextPlatform={currentContext?.platform}
-          hasAnalysis={!!currentContext?.analysis && includeAnalysisInQuery}
+          hasAnalysis={
+            includeAnalysisInQuery && (
+              !!currentContext?.analysis || 
+              (currentContext?.platform === 'ai-insights' && (
+                !!currentContext?.actionStep || 
+                !!currentContext?.title || 
+                !!currentContext?.additionalContext
+              ))
+            )
+          }
         />
       </div>
     </div>

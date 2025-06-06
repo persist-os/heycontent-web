@@ -61,6 +61,8 @@ export interface ContentContext {
   publishedAt?: string;
   metrics?: any;
   content?: any;
+  actionStep?: string;  // Add this for AI Insights action steps
+  source?: string;      // Add this to track the source of the context
 }
 
 export interface ChatScreenProps {

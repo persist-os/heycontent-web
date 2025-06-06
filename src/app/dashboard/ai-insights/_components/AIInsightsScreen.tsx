@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
-  Youtube, Instagram, Mail, 
+  Instagram, Mail, 
   ChevronRight, ArrowRight, Clock, MessageSquare,
   RefreshCw, AlertCircle
 } from 'lucide-react'
@@ -38,7 +38,7 @@ export function AIInsightsScreen() {
     "When creating content, be the best answer on the internet. — Andy Crestodina",
     "We need to stop interrupting what people are interested in and be what people are interested in. — Craig Davis",
     "I don't create content for a specific type of audience; I just share my life and whatever resonates with people is what draws them to me. — Nara Smith",
-    "The artists today that are making it realize that it’s about creating a continuous engagement with their fans. — Daniel Ek",
+    "The artists today that are making it realize that it's about creating a continuous engagement with their fans. — Daniel Ek",
     "Without big data, you are blind and deaf and in the middle of a freeway. — Geoffrey Moore",
     "Data is the new oil. — Clive Humby",
     "Data are just summaries of thousands of stories—tell a few of those stories to help make the data meaningful. — Dan Heath",
@@ -256,7 +256,7 @@ export function AIInsightsScreen() {
                   value="youtube" 
                   className="flex items-center gap-2"
                 >
-                  <Youtube className="w-4 h-4" />
+                
                   YouTube ({youtubeInsightsList.length})
                 </TabsTrigger>
                 <TabsTrigger 

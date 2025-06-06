@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { Message } from '@/app/types/chat'
 import { sendChatMessage } from '../utils/api-utils'
 import { ChatStateReturnType } from './useChatState'
@@ -24,9 +24,26 @@ export const useChat = (
     includeAnalysisInQuery
   } = chatState
   const [referencedMessage, setReferencedMessage] = useState<Message | null>(null)
+  
+  // Add ref to track last sent message to prevent rapid duplicates
+  const lastSentMessageRef = useRef<{ content: string; timestamp: number } | null>(null);
 
   const handleSendMessage = useCallback(async (content: string) => {
     if (!content || typeof content !== 'string' || !content.trim()) return;
+
+    // Prevent duplicate messages within a short time window (1 second)
+    const now = Date.now();
+    const trimmedContent = content.trim();
+    
+    if (lastSentMessageRef.current && 
+        lastSentMessageRef.current.content === trimmedContent && 
+        now - lastSentMessageRef.current.timestamp < 1000) {
+      console.log('Duplicate message prevented:', trimmedContent);
+      return;
+    }
+    
+    // Update last sent message tracking
+    lastSentMessageRef.current = { content: trimmedContent, timestamp: now };
 
     // Check for help command (case-insensitive, exact match)
     if (content.trim().toLowerCase() === 'hey content help') {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { getFirebaseAuth } from '@/app/lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
@@ -18,6 +18,7 @@ import { ContextBox } from './components/ContextBox'
 import { PersonaTip } from './components/PersonaTip'
 import ChatHeader from './components/ChatHeader'
 import ChatContextBox from './components/ChatContextBox'
+import AIInsightsContextBox from './components/AIInsightsContextBox'
 import ChatMessagesList from './components/ChatMessagesList'
 import ChatInputArea from './components/ChatInputArea'
 
@@ -93,6 +94,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Track which welcome step the user is on
   const [welcomeStep, setWelcomeStep] = useState(0);
+  
+  // Add a ref to track if askQuery has been processed to prevent duplicates
+  const askQueryProcessedRef = useRef<string | null>(null);
 
   const handleReferenceClick = (messageId: string) => {
     handleReferenceClickProp(messageId)
@@ -135,6 +139,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     // Clear content context when starting new chat
     setContentContext(null);
     
+    // Reset askQuery processing to allow new auto-sends
+    askQueryProcessedRef.current = null;
+    
     console.log('Started new chat with fresh state:', {
       sessionId: null,
       isFirstMessage: true,
@@ -154,7 +161,16 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Handle initial ask query if provided
   useEffect(() => {
-    if (askQuery && messages.length === 0 && !isLoading && !welcome) {
+    // Prevent duplicate processing of the same askQuery
+    if (askQuery && 
+        askQuery !== askQueryProcessedRef.current && 
+        messages.length === 0 && 
+        !isLoading && 
+        !welcome) {
+      
+      // Mark this askQuery as processed
+      askQueryProcessedRef.current = askQuery;
+      
       // Auto-send the ask query when component mounts (unless welcome is true)
       handleSendMessage(askQuery);
     }
@@ -288,14 +304,25 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       />
 
       {/* Context Box - shown when context is available */}
-      <ChatContextBox
-        currentContext={currentContext}
-        messages={messages}
-        onRemove={handleRemoveContext}
-        includeAnalysisInQuery={includeAnalysisInQuery}
-        onToggleAnalysis={setIncludeAnalysisInQuery}
-        onSendMessage={handleSendMessage}
-      />
+      {currentContext?.platform === 'ai-insights' ? (
+        <AIInsightsContextBox
+          currentContext={currentContext}
+          messages={messages}
+          onRemove={handleRemoveContext}
+          includeAnalysisInQuery={includeAnalysisInQuery}
+          onToggleAnalysis={setIncludeAnalysisInQuery}
+          onSendMessage={handleSendMessage}
+        />
+      ) : (
+        <ChatContextBox
+          currentContext={currentContext}
+          messages={messages}
+          onRemove={handleRemoveContext}
+          includeAnalysisInQuery={includeAnalysisInQuery}
+          onToggleAnalysis={setIncludeAnalysisInQuery}
+          onSendMessage={handleSendMessage}
+        />
+      )}
 
       {/* Main chat container */}
       <div className="flex-1 overflow-hidden relative">
