@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { Message } from '@/app/types/chat'
 import { sendChatMessage } from '../utils/api-utils'
 import { ChatStateReturnType } from './useChatState'
+import { getHelpMessage } from '../data/help-message'
 
 import { v4 as uuidv4 } from 'uuid';
 
@@ -26,6 +27,21 @@ export const useChat = (
 
   const handleSendMessage = useCallback(async (content: string) => {
     if (!content || typeof content !== 'string' || !content.trim()) return;
+
+    // Check for help command (case-insensitive, exact match)
+    if (content.trim().toLowerCase() === 'hey content help') {
+      const helpMsg = getHelpMessage();
+      const userMessage: Message = {
+        id: uuidv4(),
+        content,
+        role: 'user',
+        timestamp: new Date().toISOString(),
+        chat_response: content,
+        sessionId: sessionId
+      };
+      setMessages(prev => [...prev, userMessage, helpMsg]);
+      return;
+    }
 
     // Determine if this is the first message by checking sessionId directly
     const isFirstMessage = !sessionId;
@@ -59,7 +75,8 @@ export const useChat = (
         id: referencedMessage.id,
         content: referencedMessage.content
       } : undefined,
-      chat_response: content
+      chat_response: content,
+      sessionId: sessionId // Include current sessionId
     }
 
     try {
@@ -141,11 +158,11 @@ export const useChat = (
           // 3. Undefined as last resort
           sessionId: data.session_id || sessionId || undefined,
           // Get suggestions from either the root level or metadata
-          suggestions: data.suggestions || data.metadata?.suggestions || []
+          suggestions: data.suggestions || data.metadata?.suggestions || [],
+          // Properly transfer metadata from API response
+          metadata: data.metadata
         }];
       });
-
-
 
       // Only update sessionId from backend (never generate a local one for persistence)
       // Only set sessionId if we don't already have a valid one

@@ -168,7 +168,7 @@ export function ContentAnalyticsScreen() {
 
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformType>('all');
   const [selectedEmailType, setSelectedEmailType] = useState<TEmailTypeFilter>('all');
-  const [timeRange, setTimeRange] = useState<TimeRange>('7d');
+  const [timeRange, setTimeRange] = useState<TimeRange>('90d');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filterRef, setFilterRef] = useState<HTMLDivElement | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>('date');
@@ -335,7 +335,7 @@ export function ContentAnalyticsScreen() {
   const resetFilters = () => {
     setSortBy('date');
     setFilterType('all');
-    setTimeRange('7d');
+    setTimeRange('90d');
     setIsFilterOpen(false);
   };
 

@@ -61,13 +61,11 @@ export default function UpgradeModal({
       
       try {
         setLoading(true);
-        console.log('Starting to fetch plans...');
         const apiKey = await getApiKey();
         if (!apiKey) {
           throw new Error('No API key found. Please log in again.');
         }
         
-        console.log('Fetching plans from API...');
         const response = await fetch('/api/subscription/plans', {
           headers: {
             'Authorization': `Bearer ${apiKey}`,
@@ -77,18 +75,15 @@ export default function UpgradeModal({
         
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('Failed to fetch plans:', response.status, errorText);
           throw new Error(`Failed to fetch plans: ${response.status} ${errorText}`);
         }
         
         const responseData = await response.json();
-        console.log('Plans data received:', JSON.stringify(responseData, null, 2));
         
         // Handle the nested data structure
         const plansData = responseData.data || {};
         setPlans(plansData);
       } catch (error) {
-        console.error('Error fetching plans:', error);
       } finally {
         setLoading(false);
       }
@@ -158,13 +153,11 @@ export default function UpgradeModal({
     // Find the selected plan
     const selectedPlanData = planArray.find(plan => plan.id === planId);
     if (!selectedPlanData) {
-      console.error('Selected plan not found');
       return;
     }
     // Use the price_id from the selected interval plan
     const priceId = selectedPlanData.price_id;
     if (!priceId) {
-      console.error('No valid price ID found for selected plan');
       return;
     }
     setLoading(true);
@@ -173,7 +166,6 @@ export default function UpgradeModal({
       setShowCheckout(true);
       // Do not call onSelectPlan here; handle in checkout success/cancel
     } catch (error) {
-      console.error('Error selecting plan:', error);
     } finally {
       setLoading(false);
     }

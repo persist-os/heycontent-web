@@ -64,8 +64,6 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
   useEffect(() => {
     if (loading || !storedAnalysisQuery || aiAnalysis) return;
     
-    console.log('Loading stored analysis:', storedAnalysisQuery);
-    
     if (storedAnalysisQuery?.analysis) {
       const analysisData = storedAnalysisQuery.analysis;
       
@@ -101,7 +99,6 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
   const storeAnalysisInConvex = async (analysisData: string) => {
     try {
       if (!userId || !videoId) {
-        console.warn('Cannot store analysis: missing userId or videoId');
         return;
       }
 
@@ -114,9 +111,7 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
         }
       });
 
-      console.log('Analysis stored successfully in Convex');
     } catch (error) {
-      console.error('Error storing analysis in Convex:', error);
       // Don't throw - storage failure shouldn't break the analysis display
     }
   };

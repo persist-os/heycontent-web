@@ -50,12 +50,10 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
   };
 
   const handleWaitlistComplete = (apiKey: string) => {
-    console.log('[RegisterScreen] Waitlist completed with API key:', apiKey);
     setFinalApiKey(apiKey);
     if (onSuccess) onSuccess(apiKey);
     setStep('chat');
     // Redirect to chat with a welcome parameter to trigger the onboarding message
-    console.log('[RegisterScreen] Redirecting to chat with welcome=true');
     router.push("/dashboard/chat?welcome=true");
   };
 

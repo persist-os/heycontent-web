@@ -9,22 +9,30 @@ import { useSidebar } from '@/app/context/sidebar-context'
 
 // Import types
 import { ChatScreenProps, SuggestedAction } from './types'
+import { Message } from '@/app/types/chat'
 
 // Import components 
 import { SuggestionChip } from './components/SuggestionChip'
 import { AmbientInsights } from './components/AmbientInsights'
 import { ContextBox } from './components/ContextBox'
+import { PersonaTip } from './components/PersonaTip'
+import ChatHeader from './components/ChatHeader'
+import ChatContextBox from './components/ChatContextBox'
+import ChatMessagesList from './components/ChatMessagesList'
+import ChatInputArea from './components/ChatInputArea'
 
 // Import data
 import { ambientInsights } from './data/ambient-insights'
-import { welcomeMessage, welcomeSuggestions } from './data/welcome-message'
+import { welcomeMessageSteps, getWelcomeStepMessage, welcomeSuggestions, welcomeSuggestionsWithPersona } from './data/welcome-message'
 
 // Import custom hooks
 import { useChatState } from './hooks/useChatState'
 import { useChat } from './hooks/useChat'
 import { useConversation } from './hooks/useConversation'
 import { useUIEffects } from './hooks/useUIEffects'
-import { usePersonaManager } from './utils/persona-utils'
+import { useOnboardingState } from './hooks/useOnboardingState'
+import { usePersonaData } from './hooks/usePersonaData'
+// Removed usePersonaManager - now using direct Convex queries
 
 const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery, welcome }) => {
   const router = useRouter()
@@ -46,18 +54,12 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     setIncludeAnalysisInQuery
   } = chatState
 
-  const { savePersonaFromResponse } = usePersonaManager()
+  // Check if user has an existing persona
+  const { hasPersona } = usePersonaData(userId, !!userId)
 
   // Set content context when component mounts or when contentContext prop changes
   useEffect(() => {
     if (contentContext && contentContext !== currentContext) {
-      console.log('Setting content context:', {
-        platform: contentContext.platform,
-        contentId: contentContext.contentId,
-        hasAnalysis: !!contentContext.analysis,
-        analysisLength: contentContext.analysis?.length || 0,
-        title: contentContext.title
-      });
       setContentContext(contentContext)
     }
   }, [contentContext, currentContext, setContentContext])
@@ -71,7 +73,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     isRefreshing,
     ambientLoading,
     handleInsightClick: handleRawInsightClick,
-    handleSuggestionClick,
     handleRefresh,
     resetChat
   } = useUIEffects(messages, isExpanded)
@@ -86,6 +87,12 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     handleFollowUpClick,
     handleReferenceClick: handleReferenceClickProp
   } = useChat(chatState)
+
+  // Track onboarding state for persona tip
+  const onboardingState = useOnboardingState(messages, chatState.sessionId)
+
+  // Track which welcome step the user is on
+  const [welcomeStep, setWelcomeStep] = useState(0);
 
   const handleReferenceClick = (messageId: string) => {
     handleReferenceClickProp(messageId)
@@ -194,51 +201,74 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     }
   }, [user, chatId, loading, handleLoadConversation])
 
+  // Handle welcome message for new users (multi-step)
   useEffect(() => {
-    if (!userId) return;
-    if (messages.length === 0) return;
-    const lastMsg = messages[messages.length - 1];
-    if (
-      lastMsg.role === 'assistant' &&
-      lastMsg.metadata?.is_persona_complete &&
-      lastMsg.metadata?.persona
-    ) {
-      savePersonaFromResponse(lastMsg.metadata, userId);
-    }
-  }, [messages, userId, savePersonaFromResponse]);
-
-  // Handle welcome message for new users
-  useEffect(() => {
-    console.log('[ChatContainer] Welcome effect triggered:', {
-      welcome,
-      messagesLength: messages.length,
-      isLoading,
-      hasUser: !!user,
-      shouldTrigger: welcome && messages.length === 0 && !isLoading && user
-    });
-    
     if (welcome && messages.length === 0 && !isLoading && user) {
-      console.log('[ChatContainer] Creating welcome message...');
-      // Add welcome message directly to the messages
-      const welcomeMessageObj = {
-        id: `welcome-${Date.now()}`,
-        content: welcomeMessage,
-        chat_response: welcomeMessage,
-        role: 'assistant' as const,
-        timestamp: new Date().toISOString(),
-        suggestions: welcomeSuggestions
-      }
-      
-      console.log('[ChatContainer] Setting welcome message:', welcomeMessageObj);
-      setMessages([welcomeMessageObj])
-      
+      setWelcomeStep(0);
+      setMessages([getWelcomeStepMessage(0)]);
       // Clear the welcome parameter from URL without causing a reload
       const url = new URL(window.location.href)
       url.searchParams.delete('welcome')
       window.history.replaceState({}, '', url.toString())
-      console.log('[ChatContainer] Cleared welcome parameter from URL');
     }
   }, [welcome, messages.length, isLoading, user, setMessages])
+
+  // Handle suggestion click for welcome steps and normal suggestions
+  const handleSuggestionClick = (suggestion, onSendMessage) => {
+    // If we're in the welcome step flow, advance the step
+    if (
+      messages.length > 0 &&
+      messages[messages.length - 1].id.startsWith('welcome-step-') &&
+      messages[messages.length - 1].role === 'assistant'
+    ) {
+      const currentStep = messages[messages.length - 1].metadata?.step || 0;
+      const isLastStep = currentStep === welcomeMessageSteps.length - 1;
+      const lastWelcomeWithSuggestions = messages[messages.length - 1].suggestions &&
+        Array.isArray(messages[messages.length - 1].suggestions) &&
+        messages[messages.length - 1].suggestions.length > 1 &&
+        messages[messages.length - 1].suggestions.includes('hey content persona');
+      // Prevent duplicate appending after the last step
+      if (isLastStep && lastWelcomeWithSuggestions) {
+        // After the last step, treat as a normal suggestion click
+        const message = typeof suggestion === 'string' ? suggestion : suggestion.description;
+        onSendMessage(message);
+        return;
+      }
+      const userMessage: Message = {
+        id: `welcome-user-${currentStep}`,
+        content: suggestion,
+        chat_response: suggestion,
+        role: 'user',
+        timestamp: new Date().toISOString(),
+        suggestions: [],
+      };
+      if (currentStep < welcomeMessageSteps.length - 1) {
+        const nextStep = currentStep + 1;
+        setWelcomeStep(nextStep);
+        setMessages(prev => [
+          ...prev,
+          userMessage,
+          { ...getWelcomeStepMessage(nextStep), role: 'assistant' }
+        ]);
+        return;
+      } else {
+        // Last step: show normal suggestions only once
+        setMessages(prev => [
+          ...prev,
+          userMessage,
+          {
+            ...getWelcomeStepMessage(currentStep),
+            role: 'assistant',
+            suggestions: hasPersona ? welcomeSuggestionsWithPersona : welcomeSuggestions,
+          },
+        ]);
+        return;
+      }
+    }
+    // Otherwise, normal suggestion click
+    const message = typeof suggestion === 'string' ? suggestion : suggestion.description;
+    onSendMessage(message);
+  };
 
   if (loading) {
     return <div className="flex items-center justify-center h-full w-full p-4">Loading...</div>
@@ -251,78 +281,21 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   return (
     <div className="h-full flex flex-col bg-white w-full">
       {/* Header */}
-      <div className="shrink-0 h-14 flex items-center justify-between px-6">
-        <div className="w-5" /> {/* Empty div for spacing */}
-        <div className="absolute left-1/2 transform -translate-x-1/2">
-          <h1 className="text-base font-medium text-gray-900">
-            Chat With Content
-          </h1>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className={`p-2 rounded-lg ${
-              isRefreshing 
-                ? 'text-gray-400 cursor-not-allowed' 
-                : 'text-gray-900 hover:text-blue-600 hover:bg-blue-50'
-            } transition-colors`}
-            title="Refresh Insights"
-          >
-            <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </button>
-          <button
-            onClick={handleNewChat}
-            className="p-2 rounded-lg text-gray-900 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-            title="New Chat"
-          >
-            <svg className="w-5 h-5" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <g transform="translate(0,512) scale(0.1,-0.1)">
-                <path d="M712 4835 c-205 -49 -390 -239 -431 -443 -8 -36 -11 -476 -11 -1410 0 -1495 -4 -1408 62 -1542 41 -82 161 -206 238 -245 124 -63 148 -67 390 -74 248 -7 261 -10 317 -75 43 -48 51 -81 56 -236 4 -102 10 -150 26 -194 59 -166 186 -274 367 -314 93 -20 189 -9 284 33 59 26 96 60 425 386 264 262 373 364 405 378 44 20 64 21 760 21 795 0 795 0 930 66 98 48 211 160 257 254 67 137 63 47 63 1543 0 934 -3 1373 -11 1409 -19 95 -85 213 -161 289 -75 75 -189 138 -286 158 -83 17 -3609 14 -3680 -4z m1936 -1077 c18 -11 41 -37 52 -59 18 -35 20 -59 20 -293 l0 -255 263 -3 c255 -3 263 -4 300 -27 51 -31 81 -91 74 -149 -5 -50 -29 -87 -77 -119 -32 -22 -40 -23 -296 -23 l-263 0 -3 -269 c-3 -255 -4 -271 -24 -298 -35 -48 -82 -73 -134 -73 -52 0 -99 25 -134 73 -20 27 -21 43 -24 298 l-3 269 -263 0 c-256 0 -264 1 -296 23 -77 52 -100 138 -58 211 45 77 58 81 356 84 l262 3 0 255 c0 232 2 258 19 293 24 45 39 59 88 77 45 16 96 10 141 -18z" fill="currentColor"/>
-              </g>
-            </svg>
-          </button>
-        </div>
-      </div>
+      <ChatHeader
+        isRefreshing={isRefreshing}
+        onRefresh={handleRefresh}
+        onNewChat={handleNewChat}
+      />
 
       {/* Context Box - shown when context is available */}
-      {currentContext && (
-        <div className="shrink-0 px-6 pb-4">
-          <ContextBox 
-            context={currentContext} 
-            onRemove={handleRemoveContext}
-            includeAnalysisInQuery={includeAnalysisInQuery}
-            onToggleAnalysis={setIncludeAnalysisInQuery}
-          />
-          
-          {/* Context-aware suggestions */}
-          {currentContext.analysis && messages.length === 0 && (
-            <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
-              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <Brain className="w-4 h-4 text-purple-600" />
-                Ask about the analysis
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  "What are the key insights from this analysis?",
-                  "How can I improve based on these findings?",
-                  "What trends do you see in the performance data?",
-                  "What should I focus on next?",
-                  "Summarize the main recommendations"
-                ].map((suggestion, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleSendMessage(suggestion)}
-                    className="px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-purple-200 dark:border-purple-600 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/30 text-gray-700 dark:text-gray-300 transition-colors"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      <ChatContextBox
+        currentContext={currentContext}
+        messages={messages}
+        onRemove={handleRemoveContext}
+        includeAnalysisInQuery={includeAnalysisInQuery}
+        onToggleAnalysis={setIncludeAnalysisInQuery}
+        onSendMessage={handleSendMessage}
+      />
 
       {/* Main chat container */}
       <div className="flex-1 overflow-hidden relative">
@@ -343,35 +316,24 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           ) : (
             <div className="p-6">
               <div className="max-w-5xl mx-auto space-y-4">
-                {messages.map((message, index) => (
-                  <div
-                    key={message.id}
-                    id={`message-${message.id}`}
-                    className="transition-all duration-300"
-                  >
-                    <MessageBubble
-                      message={message}
-                      isLastMessage={index === messages.length - 1}
-                      onReference={handleMessageReference}
-                      showReferenceButton={!referencedMessage && message.status !== 'typing'}
-                      onReferenceClick={handleReferenceClick}
-                      onOptionClick={handleOptionClick}
-                      onFollowUpClick={handleFollowUpClick}
-                      userId={userId}
-                    />
-                    {message.role === 'assistant' && message.suggestions && (
-                      <div className="mt-3 flex flex-wrap gap-2 pl-12">
-                        {message.suggestions.map((suggestion, index) => (
-                          <SuggestionChip
-                            key={index}
-                            suggestion={suggestion}
-                            onClick={() => handleSuggestionClick(suggestion, handleSendMessage)}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                {/* Show persona tip in onboarding flow when ready and at least 4 messages exist */}
+                {onboardingState.shouldShowPersonaTip && messages.length >= 4 && (
+                  <PersonaTip 
+                    userId={userId}
+                    onTipClick={handleSendMessage} 
+                  />
+                )}
+                <ChatMessagesList
+                  messages={messages}
+                  referencedMessage={referencedMessage}
+                  handleMessageReference={handleMessageReference}
+                  handleReferenceClick={handleReferenceClick}
+                  handleOptionClick={handleOptionClick}
+                  handleFollowUpClick={handleFollowUpClick}
+                  userId={userId}
+                  handleSuggestionClick={handleSuggestionClick}
+                  handleSendMessage={handleSendMessage}
+                />
                 {error && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-4">
                     <p className="text-red-600 text-sm">{error}</p>
@@ -387,54 +349,20 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             </div>
           )}
         </div>
-
-        {/* Responsive chat input container that respects the dashboard layout */}
-        <div className="fixed bottom-0 right-0 left-0 z-10">
-          {/* Only show ambient insights at bottom when there's no context and no messages */}
-          {showAmbient && messages.length === 0 && !currentContext && (
-            <div className="border-t border-gray-200">
-              <div className="max-w-5xl mx-auto px-6 py-2">
-                <div className="flex gap-2 overflow-x-auto scrollbar-none">
-                  {ambientInsights.map((insight, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleInsightClick(insight.action, insight)}
-                      className="shrink-0 px-4 h-8 text-xs text-gray-600 bg-gray-50 hover:bg-blue-50 hover:text-blue-600 
-                        rounded-full flex items-center transition-colors"
-                    >
-                      {insight.action}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-          <div className="h-px bg-gray-200 w-full"></div>
-          <div className="flex w-full">
-            {/* Left sidebar spacer - dynamically matches the dashboard layout */}
-            <div className={`hidden md:block flex-shrink-0 ${isExpanded ? 'md:w-64' : 'md:w-16'}`}></div>
-            {/* Main content area with the chat input */}
-            <div className="flex-1 bg-white shadow-md">
-              <div className="max-w-6xl mx-auto px-2 sm:px-4 pb-safe">
-                <ChatInput
-                  inputRef={inputRef}
-                  onSend={(content) => {
-                    handleSendMessage(content)
-                    setShowAmbient(content === '')
-                  }}
-                  isLoading={isLoading}
-                  referencedMessage={referencedMessage}
-                  onClearReference={handleClearReference}
-                  hasContext={!!currentContext}
-                  contextPlatform={currentContext?.platform}
-                  hasAnalysis={!!currentContext?.analysis && includeAnalysisInQuery}
-                />
-              </div>
-            </div>
-            {/* Right padding to ensure the input doesn't overlap with any right sidebar */}
-            <div className="hidden lg:block w-0 flex-shrink-0"></div>
-          </div>
-        </div>
+        <ChatInputArea
+          showAmbient={showAmbient}
+          currentContext={currentContext}
+          ambientInsights={ambientInsights}
+          ambientLoading={ambientLoading}
+          error={error}
+          handleInsightClick={handleInsightClick}
+          handleSendMessage={handleSendMessage}
+          inputRef={inputRef}
+          isLoading={isLoading}
+          referencedMessage={referencedMessage}
+          handleClearReference={handleClearReference}
+          includeAnalysisInQuery={includeAnalysisInQuery}
+        />
       </div>
     </div>
   )

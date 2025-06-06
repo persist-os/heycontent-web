@@ -7,7 +7,7 @@ export const ambientInsights: AmbientInsight[] = [
     type: 'strategy',
     title: "React Performance Patterns",
     description: "From your notes on React optimization techniques, there's an opportunity to explore advanced performance patterns.",
-    action: "hey content persona",
+    action: "hey content update persona",
     icon: Brain
   },
   {

@@ -6,9 +6,10 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/context/auth-context';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { LogOut, Users, Bell, Globe, Sliders, Database, CreditCard, Key } from 'lucide-react'
+import { LogOut, Users, Bell, Globe, Sliders, Database, CreditCard, Key, User } from 'lucide-react'
 import { PlatformConnect } from './tabs/platform-connect/platform-connect'
 import AccountTab from './tabs/AccountTab'
+import PersonaTab from './tabs/PersonaTab'
 import NotificationsTab from './tabs/NotificationsTab'
 import AIPreferencesTab from './tabs/AIPreferencesTab'
 import DataTab from './tabs/DataTab'
@@ -125,8 +126,9 @@ const SettingsScreen = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="account" className="space-y-4 sm:space-y-6">
+        <Tabs defaultValue="persona" className="space-y-4 sm:space-y-6">
           <TabsList className="w-full md:w-auto flex flex-nowrap px-3 sm:px-0">
+            <TabsTrigger value="persona" className="flex-1 sm:flex-none"><User className="w-4 h-4 mr-2" /><span className="hidden sm:inline">Persona</span></TabsTrigger>
             <TabsTrigger value="account" className="flex-1 sm:flex-none"><Users className="w-4 h-4 mr-2" /><span className="hidden sm:inline">Account</span></TabsTrigger>
             <TabsTrigger value="subscription" className="flex-1 sm:flex-none"><CreditCard className="w-4 h-4 mr-2" /><span className="hidden sm:inline">Subscription</span></TabsTrigger>
             <TabsTrigger value="notifications" className="flex-1 sm:flex-none"><Bell className="w-4 h-4 mr-2" /><span className="hidden sm:inline">Notifications</span></TabsTrigger>
@@ -134,6 +136,10 @@ const SettingsScreen = () => {
             <TabsTrigger value="ai-preferences" className="flex-1 sm:flex-none"><Sliders className="w-4 h-4 mr-2" /><span className="hidden sm:inline">AI Preferences</span></TabsTrigger>
             <TabsTrigger value="data" className="flex-1 sm:flex-none"><Database className="w-4 h-4 mr-2" /><span className="hidden sm:inline">Data</span></TabsTrigger>
           </TabsList>
+
+          <TabsContent value="persona">
+            <PersonaTab />
+          </TabsContent>
 
           <TabsContent value="account">
             <AccountTab

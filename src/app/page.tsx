@@ -1,7 +1,5 @@
 'use client'
 
-console.log('[LandingPage] Module loaded');
-
 import React from 'react'
 import { ArrowRight, Brain, Target, ChartBar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -38,7 +36,6 @@ const featureCards = [
 ]
 
 export default function LandingPage() {
-  console.log('[LandingPage] Function start');
   const router = useRouter()
 
   const scrollSection = (direction: 'left' | 'right', elementId: string) => {
@@ -48,8 +45,6 @@ export default function LandingPage() {
       container.scrollBy({ left: scrollAmount, behavior: 'smooth' })
     }
   }
-
-  console.log('[LandingPage] Before render');
 
   return (
     <div className="overflow-x-hidden">
