@@ -394,12 +394,20 @@ export const storePostComments = mutation({
       text: v.string(),
       timestamp: v.number(),
       username: v.string(),
-      replies: v.optional(v.array(v.object({
-        id: v.string(),
-        text: v.string(),
-        timestamp: v.number(),
-        username: v.string()
-      })))
+      replies: v.optional(v.object({
+        data: v.array(v.object({
+          id: v.string(),
+          text: v.string(),
+          timestamp: v.number(),
+          username: v.string()
+        })),
+        paging: v.optional(v.object({
+          cursors: v.object({
+            before: v.string(),
+            after: v.string()
+          })
+        }))
+      }))
     })),
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
@@ -409,6 +417,15 @@ export const storePostComments = mutation({
     const now = Date.now();
 
     try {
+      // Format comments data to match schema
+      const formattedComments = commentsData.map(comment => ({
+        ...comment,
+        replies: comment.replies ? {
+          data: Array.isArray(comment.replies) ? comment.replies : [],
+          paging: comment.replies.paging
+        } : undefined
+      }));
+
       // Check if comments already exist
       const existingComments = await ctx.db
         .query("instagramPostComments")
@@ -419,7 +436,7 @@ export const storePostComments = mutation({
       if (existingComments) {
         // Update existing comments
         await ctx.db.patch(existingComments._id, {
-          data: commentsData,
+          data: formattedComments,
           updatedAt: updatedAt ?? now,
         });
         return { status: "updated", commentsId: existingComments._id };
@@ -428,7 +445,7 @@ export const storePostComments = mutation({
         const id = await ctx.db.insert("instagramPostComments", {
           userId,
           postId,
-          data: commentsData,
+          data: formattedComments,
           createdAt: createdAt ?? now,
           updatedAt: updatedAt ?? now,
         });
