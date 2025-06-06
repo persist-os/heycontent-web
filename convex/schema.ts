@@ -458,7 +458,7 @@ export default defineSchema({
   // Instagram Posts
   instagramPosts: defineTable({
     accountId: v.any(),
-    userId: v.string(),
+    userId: v.optional(v.string()),
     postId: v.string(),
     data: v.object({
       id: v.string(),
