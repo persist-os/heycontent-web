@@ -58,12 +58,12 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
       const transformedNotes: Note[] = notesFromConvex.map(note => ({
         ...note,
         // Ensure required properties have default values if they're missing
-        content: note.content || "",
-        title: note.title || "",
-        createdAt: note.createdAt || note._creationTime,
-        updatedAt: note.updatedAt || note._creationTime,
+        content: note.content ?? "",
+        title: note.title ?? "",
+        createdAt: note.createdAt ?? note._creationTime,
+        updatedAt: note.updatedAt ?? note._creationTime,
         important: note.important ?? false,
-        tags: note.tags || [],
+        tags: note.tags ?? [],
       }));
       setNotes(transformedNotes);
     }
@@ -160,10 +160,12 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
     
     setIsSaving(true);
     try {
+      console.log("About to save note with title:", title);
       console.log('Saving note content:', {
         id: String(convexNoteId),
         title,
-        contentLength: content?.length || 0
+        contentLength: content?.length || 0,
+        userId
       });
       
       const updatedNote = await updateNoteContentConvex({
@@ -172,16 +174,27 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
         content: content || '',
         title: title || ''
       });
-      
+      console.log('Raw response from updateNoteContentConvex:', updatedNote);
       if (updatedNote) {
-        console.log('Note content saved successfully');
-        setNotes(prev => prev.map(n => 
-          n._id === convexNoteId ? { ...n, content, title, updatedAt: Date.now() } : n
-        ));
+        console.log('Note content saved successfully:', updatedNote);
+        setNotes(prev => {
+          const updated = prev.map(n => n._id === convexNoteId ? updatedNote : n);
+          console.log("Notes after update:", updated);
+          return updated;
+        });
+        return updatedNote;
+      } else {
+        console.warn('updateNoteContentConvex returned null or invalid note!', {
+          noteId: convexNoteId,
+          userId,
+          content,
+          title
+        });
+        return null;
       }
-      
     } catch (error) {
       console.error('Error saving note content:', error);
+      return null;
     } finally {
       setIsSaving(false);
     }
@@ -204,7 +217,8 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
     try {
       console.log('Updating note:', {
         id: String(convexNoteId),
-        fields: Object.keys(updateFields)
+        fields: Object.keys(updateFields),
+        userId
       });
       
       console.log("updateFields being sent to Convex:", updateFields);
@@ -214,16 +228,28 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
         userId,
         updates: updateFields,
       });
-      
+      console.log('Raw response from updateNoteConvex:', updatedNote);
       if (updatedNote) {
-        console.log('Note updated successfully');
-        setNotes(prev => prev.map(n => 
-          n._id === convexNoteId ? { ...n, ...updateFields, updatedAt: Date.now() } : n
-        ));
+        console.log('Note updated successfully:', updatedNote);
+        setNotes(prev => {
+          const updated = prev.map(n => 
+            n._id === convexNoteId ? { ...n, ...updatedNote } : n
+          );
+          console.log('[useSmartNotes] Notes after update:', updated);
+          return updated;
+        });
+        return updatedNote;
+      } else {
+        console.warn('updateNoteConvex returned null or invalid note!', {
+          noteId: convexNoteId,
+          userId,
+          updateFields
+        });
+        return null;
       }
-      
     } catch (error) {
       console.error('Error updating note:', error);
+      return null;
     } finally {
       setIsSaving(false);
     }

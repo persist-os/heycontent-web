@@ -18,7 +18,7 @@ import { Brain, Lightbulb, Edit } from 'lucide-react';
 interface NoteAreaProps {
   note: Note;
   onUpdate: (noteId: string, updates: NoteUpdate) => Promise<Note>;
-  onSave: () => void;
+  onSave: (content: string) => void;
   onToggleShortcuts: () => void;
   onRequestAIInsights: (noteId: string, note: Note) => Promise<void>;
   onBack: () => void;
@@ -68,7 +68,6 @@ export function NoteArea({
     handleCommand,
     handleKeyDown,
     textAreaRef,
-    handleSave,
   } = useSmartNoteEditor({
     note,
     onUpdate,
@@ -76,6 +75,10 @@ export function NoteArea({
     onToggleShortcuts,
     onRequestAIInsights
   });
+
+  const handleSave = () => {
+    onSave(content);
+  };
 
   return (
     <div className="flex flex-col h-full w-full">

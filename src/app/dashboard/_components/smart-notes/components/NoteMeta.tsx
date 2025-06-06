@@ -14,6 +14,7 @@ export function NoteMeta({ note, onUpdate }: NoteMetaProps) {
   // Update local title state when note prop changes
   useEffect(() => {
     setTitle(note.title || "Untitled Note");
+    console.log('[NoteMeta] Rendering title:', note.title);
   }, [note._id, note.title]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -22,6 +23,7 @@ export function NoteMeta({ note, onUpdate }: NoteMetaProps) {
 
   const handleTitleBlur = async () => {
     if (title !== note.title) {
+      console.log('[NoteMeta] handleTitleBlur: updating title', { noteId: note._id, newTitle: title });
       await onUpdate(String(note._id), { title });
     }
     setIsEditing(false);

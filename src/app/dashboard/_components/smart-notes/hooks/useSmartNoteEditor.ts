@@ -9,7 +9,7 @@ import { useTitleGeneration } from './useTitleGeneration';
 interface UseSmartNoteEditorProps {
   note: Note;
   onUpdate: (noteId: string, updates: NoteUpdate) => Promise<Note>;
-  onSave: () => void;
+  onSave: (content: string, title?: string) => void;
   onToggleShortcuts: () => void;
   onRequestAIInsights: (noteId: string, note: Note) => Promise<void>;
 }
@@ -277,7 +277,7 @@ export function useSmartNoteEditor({
   // Set up shortcut manager
   const shortcutManager = useRef(
     new ShortcutManager({
-      onSave,
+      onSave: () => onSave(content, note.title),
       onQuickCapture: requestAIInsights,
       onCommandMenu: () => {
         if (textAreaRef.current) {
@@ -346,19 +346,23 @@ export function useSmartNoteEditor({
             titleGenerated: true,
           }
         });
-        await onUpdate(String(note._id), {
+        const updatedNote = await onUpdate(String(note._id), {
           title: result.title,
           titleGenerated: true,
         });
+        console.log("Mutation response (updated note):", updatedNote);
+        await onSave(content, result.title);
+        return;
       } else {
         console.warn("[handleSave] Skipping update: invalid or generic title from AI:", result.title);
         // Optionally, show an error or fallback
         // toast.error("Failed to generate a valid title");
+        await onSave(content, note.title);
         return;
       }
     }
     // Now proceed with the normal save
-    await onSave();
+    await onSave(content, note.title);
   }, [note.title, note._id, note.platform, content, generateTitle, onUpdate, onSave]);
 
   return {

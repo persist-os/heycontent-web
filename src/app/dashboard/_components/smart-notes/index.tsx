@@ -136,9 +136,13 @@ export default function SmartNotes() {
   // activeNote is derived from the `notes` array (from useSmartNotes)
   const activeNote = notes?.find(note => note._id.toString() === activeNoteId);
 
+  console.log('[SmartNotes] activeNote:', activeNote);
+  console.log('[SmartNotes] activeNoteId:', activeNoteId);
+  console.log('[SmartNotes] notes:', notes);
+
   // This function is called by NoteArea's onSave button
   // It ensures all content is properly saved to the database using the simpler saveNoteContent function
-  const handleSave = async () => {
+  const handleSave = async (latestContent: string, latestTitle?: string) => {
     if (!activeNote || !activeNoteId) return;
     
     // Log the active note for debugging
@@ -153,8 +157,8 @@ export default function SmartNotes() {
       // This avoids schema validation issues with references and other complex fields
       const result = await saveNoteContent(
         activeNote._id,
-        activeNote.content || '',
-        activeNote.title || ''
+        latestContent,
+        latestTitle ?? activeNote.title ?? ''
       );
       
       if (result) {

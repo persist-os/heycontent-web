@@ -8,10 +8,10 @@ export interface Note {
   _creationTime: number;
   userId: string;
   title: string;
-  content: string;
+  content?: string;
   createdAt: number;
   updatedAt: number;
-  important: boolean;
+  important?: boolean;
   type?: NoteType;
   tags: string[];
   platform?: string;
