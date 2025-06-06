@@ -13,7 +13,7 @@ export const storePostData = mutation({
   handler: async (ctx, args) => {
     const { userId, postId, postData } = args;
     const now = Date.now();
-    // accountId is not present in args, so set as empty string or adapt if available
+    // Get accountId from postData
     const accountId = postData.accountId || "";
 
     try {
@@ -21,14 +21,12 @@ export const storePostData = mutation({
       const existingPost = await ctx.db
         .query("instagramPosts")
         .withIndex("by_postId", q => q.eq("postId", postId))
-        .filter(q => q.eq(q.field("userId"), userId))
         .first();
 
       if (existingPost) {
         // Update existing post
         await ctx.db.patch(existingPost._id, {
           accountId,
-          userId,
           postId,
           data: {
             id: postId,
@@ -41,7 +39,6 @@ export const storePostData = mutation({
         // Insert new post
         const id = await ctx.db.insert("instagramPosts", {
           accountId,
-          userId,
           postId,
           data: {
             id: postId,
