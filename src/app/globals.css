@@ -432,3 +432,52 @@
     }
   }
 }
+
+/* 3D Card Styles (no rainbow border) */
+.rainbow-glow-border {
+  perspective: 1200px;
+  transform-style: preserve-3d;
+  border-radius: 1rem;
+  padding: 3px;
+  z-index: 0;
+}
+
+.rainbow-glow-border > div {
+  transition: transform 0.4s cubic-bezier(.25,.8,.25,1), box-shadow 0.3s;
+  box-shadow:
+    0 4px 24px 0 rgba(80, 80, 180, 0.10),
+    0 1.5px 6px 0 rgba(80, 80, 180, 0.08),
+    0 0.5px 1.5px 0 rgba(80, 80, 180, 0.06);
+  position: relative;
+  background: rgba(255,255,255,0.40);
+  backdrop-filter: blur(12px);
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.rainbow-glow-border > div:hover {
+  transform: rotateY(8deg) rotateX(2deg) scale(1.03);
+  box-shadow:
+    0 8px 32px 0 rgba(80, 80, 180, 0.18),
+    0 3px 12px 0 rgba(80, 80, 180, 0.12),
+    0 1px 3px 0 rgba(80, 80, 180, 0.10);
+}
+
+.rainbow-glow-border > div::after {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: 1rem;
+  background: linear-gradient(120deg, rgba(255,255,255,0.18) 10%, rgba(255,255,255,0.04) 60%);
+  opacity: 0.7;
+  mix-blend-mode: lighten;
+  z-index: 2;
+}
+
+/* Granular sandy effect for card backgrounds - STRONGEST */
+.card-noise-overlay {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.4;
+  mix-blend-mode: overlay;
+}
