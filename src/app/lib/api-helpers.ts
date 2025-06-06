@@ -2,15 +2,10 @@
 
 import { getFirebaseAuth } from '@/app/lib/firebase';
 
-import dotenv from 'dotenv';
-
-dotenv.config();
-
 /**
  * Get API key from localStorage or request a new one
  */
 export async function getApiKey(): Promise<string | null> {
-  const auth = getFirebaseAuth();
   try {
     // First try to get the API key from localStorage
     const storedApiKey = localStorage.getItem('apiKey');

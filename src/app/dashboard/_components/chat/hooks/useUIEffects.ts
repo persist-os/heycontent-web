@@ -36,8 +36,7 @@ export const useUIEffects = (
 
   const handleInsightClick = useCallback((action: string, insight: AmbientInsight, onSendMessage: (message: string) => void) => {
     setShowAmbient(false)
-    const message = `${action} - Regarding: ${insight.title} (${insight.description})`
-    onSendMessage(message)
+    onSendMessage(action)
   }, [])
 
   const handleSuggestionClick = useCallback((suggestion: string | SuggestedAction, onSendMessage: (message: string) => void) => {

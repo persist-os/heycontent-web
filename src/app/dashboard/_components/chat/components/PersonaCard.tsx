@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { PersonaData } from '../types';
-import { usePersonaManager } from '../utils/persona-utils';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface PersonaCardProps {
   persona: PersonaData;
@@ -9,46 +10,92 @@ interface PersonaCardProps {
 
 export const PersonaCard: React.FC<PersonaCardProps> = ({ persona, userId }) => {
   console.log('PersonaCard rendered', { persona, userId });
-  const { savePersonaFromResponse } = usePersonaManager();
-  const [status, setStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
 
-  useEffect(() => {
-    let isMounted = true;
-    const save = async () => {
-      setStatus('saving');
-      try {
-        const result = await savePersonaFromResponse({ is_persona_complete: true, persona }, userId);
-        if (isMounted) setStatus(result ? 'success' : 'error');
-      } catch (e) {
-        if (isMounted) setStatus('error');
-      }
-    };
-    save();
-    return () => { isMounted = false; };
-  }, [persona, userId, savePersonaFromResponse]);
+  const PersonaSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <div className="space-y-3">
+      <h3 className="text-lg font-semibold text-[#4715C8] dark:text-[#4715C8] border-b border-[#BAA9FC]/20 pb-2">
+        {title}
+      </h3>
+      <div className="space-y-2">
+        {children}
+      </div>
+    </div>
+  );
+
+  const InfoItem = ({ label, value }: { label: string; value: string | string[] | undefined }) => {
+    if (!value || (Array.isArray(value) && value.length === 0)) return null;
+    
+    return (
+      <div className="flex flex-col space-y-1">
+        <span className="text-sm font-medium text-[#4715C8] uppercase tracking-wide">
+          {label}
+        </span>
+        <div className="text-gray-700 dark:text-gray-300">
+          {Array.isArray(value) ? (
+            <div className="flex flex-wrap gap-1">
+              {value.map((item, index) => (
+                <Badge 
+                  key={index} 
+                  variant="outline" 
+                  className="bg-[#4715C8]/10 text-[#4715C8] border-[#4715C8] hover:bg-[#4715C8]/20 rounded-full px-3 py-1"
+                >
+                  {item}
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <p className="text-base leading-relaxed">{value}</p>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <div className="rounded-lg border p-4 bg-purple-50 my-2 shadow-md max-w-xl mx-auto">
-      <h2 className="font-bold text-lg mb-2 text-purple-700">{persona.current_name}</h2>
-      <p className="mb-2 text-sm text-gray-700">{persona.current_description}</p>
-      <div className="mb-1"><b>Experience:</b> {persona.experience_level}</div>
-      <div className="mb-1"><b>Formats:</b> {persona.content_formats?.join(', ')}</div>
-      <div className="mb-1"><b>Tone:</b> {persona.content_tone}</div>
-      <div className="mb-1"><b>Voice:</b> {persona.content_voice}</div>
-      <div className="mb-1"><b>Unique Value:</b> {persona.unique_value}</div>
-      <div className="mb-1"><b>Audience:</b> {persona.audience_type}</div>
-      <div className="mb-1"><b>Future Name:</b> {persona.future_name}</div>
-      <div className="mb-1"><b>Future Description:</b> {persona.future_description}</div>
-      <div className="mb-1"><b>Desired Impact:</b> {persona.desired_impact}</div>
-      <div className="mb-1"><b>Primary Topics:</b> {persona.primary_topics?.join(', ')}</div>
-      <div className="mb-1"><b>Secondary Topics:</b> {persona.secondary_topics?.join(', ')}</div>
-      <div className="mb-1"><b>Tone Descriptors:</b> {persona.tone_descriptors?.join(', ')}</div>
-      <div className="mb-1"><b>Style Descriptors:</b> {persona.style_descriptors?.join(', ')}</div>
-      <div className="mb-1"><b>Engagement Style:</b> {persona.engagement_style?.join(', ')}</div>
-      <div className="mt-3">
-        {status === 'saving' && <span className="text-xs text-blue-500">Saving persona...</span>}
-        {status === 'success' && <span className="text-xs text-green-600">Persona saved!</span>}
-        {status === 'error' && <span className="text-xs text-red-500">Failed to save persona.</span>}
+    <div className="w-full space-y-6">
+      {/* Header Section */}
+      <div className="text-center space-y-4 p-6 bg-gradient-to-br from-[#BAA9FC]/5 to-[#BAA9FC]/10 rounded-xl border border-[#BAA9FC]/20">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-[#4715C8] dark:text-[#4715C8]">
+            {persona.current_name}
+          </h2>
+          <p className="text-lg text-gray-600 dark:text-gray-400 leading-relaxed max-w-2xl mx-auto">
+            {persona.current_description}
+          </p>
+        </div>
+      </div>
+
+      {/* Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Current Identity */}
+        <PersonaSection title="Current Identity">
+          <InfoItem label="Experience Level" value={persona.experience_level} />
+          <InfoItem label="Content Formats" value={persona.content_formats} />
+          <InfoItem label="Content Tone" value={persona.content_tone} />
+          <InfoItem label="Content Voice" value={persona.content_voice} />
+          <InfoItem label="Unique Value" value={persona.unique_value} />
+          <InfoItem label="Audience Type" value={persona.audience_type} />
+        </PersonaSection>
+
+        {/* Future Vision */}
+        <PersonaSection title="Future Vision">
+          <InfoItem label="Future Name" value={persona.future_name} />
+          <InfoItem label="Future Description" value={persona.future_description} />
+          <InfoItem label="Desired Impact" value={persona.desired_impact} />
+        </PersonaSection>
+
+        {/* Content Strategy */}
+        <PersonaSection title="Content Strategy">
+          <InfoItem label="Primary Topics" value={persona.primary_topics} />
+          <InfoItem label="Secondary Topics" value={persona.secondary_topics} />
+          <InfoItem label="Engagement Style" value={persona.engagement_style} />
+        </PersonaSection>
+
+        {/* Style & Voice */}
+        <PersonaSection title="Style & Voice">
+          <InfoItem label="Tone Descriptors" value={persona.tone_descriptors} />
+          <InfoItem label="Style Descriptors" value={persona.style_descriptors} />
+        </PersonaSection>
       </div>
     </div>
   );

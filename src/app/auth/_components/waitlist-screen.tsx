@@ -109,17 +109,17 @@ const WaitlistScreen: React.FC<WaitlistScreenProps> = ({
     }
   }, [isComplete, apiKey]);
 
-  // Auto-push to /chat when showContinue becomes true
+  // Auto-complete when showContinue becomes true
   useEffect(() => {
     if (showContinue && apiKey) {
-      // Give a brief moment for user to see success, then push
+      // Give a brief moment for user to see success, then complete
       const timeout = setTimeout(() => {
         if (onComplete) onComplete(apiKey);
-        router.push('/dashboard/chat');
+        // Don't navigate here - let the parent handle navigation
       }, 1200); // 1.2s delay for smoothness
       return () => clearTimeout(timeout);
     }
-  }, [showContinue, apiKey, onComplete, router]);
+  }, [showContinue, apiKey, onComplete]);
 
   // Call onComplete only when continue is shown and user clicks continue (if you have a continue button)
   // If you want to auto-complete, you can call onComplete here as before.

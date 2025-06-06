@@ -26,7 +26,7 @@ export const logger = {
   },
 };
 
-export async function updateOrCreateConvexUser(userId: string, name: string, email: string, image: string, username: string, referredBy: string) {
+export async function updateOrCreateConvexUser(userId: string, name: string, email: string, image: string, username?: string, referredBy?: string) {
   logger.debug('Saving user data to Convex', {
     userId,
     name,
@@ -56,6 +56,7 @@ export async function updateOrCreateConvexUser(userId: string, name: string, ema
     const updates: Record<string, any> = {};
     if (name && name !== existingUser.name) updates.name = name;
     if (typeof image !== 'undefined' && image !== existingUser.image) updates.image = image;
+    // Only update username if it's provided and different
     if (username && username !== existingUser.username) updates.username = username;
     updates.updatedAt = Date.now();
     if (Object.keys(updates).length > 1 || (Object.keys(updates).length === 1 && !updates.hasOwnProperty('updatedAt'))) {
@@ -83,8 +84,8 @@ export async function updateOrCreateConvexUser(userId: string, name: string, ema
       name,
       email,
       image,
-      username,
-      referredBy,
+      username: username || '', // Only default to empty string for new users
+      referredBy: referredBy || '', // Only default to empty string for new users
       userId,
       // referralCode is generated in the mutation, don't need to pass it
     });

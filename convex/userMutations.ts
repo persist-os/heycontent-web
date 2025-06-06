@@ -44,13 +44,35 @@ export const create_user = mutation(async ({ db }, { name, email, image, userId,
   }
 
   // If no user exists, create a new one
+  // Generate a unique referral code if not provided
+  let finalReferralCode = referralCode || '';
+  if (!finalReferralCode) {
+    // Generate a unique 6-character uppercase code
+    finalReferralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+    // Ensure uniqueness by checking for duplicates
+    let isUnique = false;
+    let attempts = 0;
+    while (!isUnique && attempts < 10) {
+      const existingWithCode = await db.query("users")
+        .withIndex("by_referralCode", q => q.eq("referralCode", finalReferralCode))
+        .first();
+      if (!existingWithCode) {
+        isUnique = true;
+      } else {
+        finalReferralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+        attempts++;
+      }
+    }
+  }
+
   const id = await db.insert("users", {
     name,
     email,
     image,
     userId,
     username: username ?? '',
-    referralCode: referralCode ?? '',
+    referralCode: finalReferralCode,
     referredBy: referredBy ?? '',
     createdAt: now,
     updatedAt: now,

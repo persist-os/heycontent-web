@@ -8,7 +8,7 @@ export default function RegisterPage() {
   const router = useRouter();
 
   const onRegisterSuccess = (apiKey: string) => {
-    router.push('/dashboard/chat');
+    router.push('/dashboard/chat?welcome=true');
     toast.success('Registration successful! Welcome to HeyContent.');
   };
 
