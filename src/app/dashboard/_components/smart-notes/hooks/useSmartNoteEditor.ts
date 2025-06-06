@@ -68,43 +68,6 @@ export function useSmartNoteEditor({
     );
   }, [titleGenerated, isGeneratingTitle, titleLoading, note.title, content]);
   
-  // Title generation effect - only triggers when conditions are met
-  useEffect(() => {
-    if (!shouldGenerateTitle) return;
-    
-    const generateTitleAsync = async () => {
-      setIsGeneratingTitle(true);
-      
-      try {
-        const result = await generateTitle({
-          content,
-          platform: note.platform || 'general',
-          noteId: String(note._id),
-        });
-        
-        if (result.title && result.wasGenerated) {
-          // Update local state immediately
-          setTitleGenerated(true);
-          
-          // Update note in database
-          await onUpdate(String(note._id), {
-            title: result.title,
-            titleGenerated: true
-          });
-        }
-      } catch (error) {
-        console.error('Title generation failed:', error);
-      } finally {
-        setIsGeneratingTitle(false);
-      }
-    };
-    
-    // Debounce title generation
-    const titleDebounceTimer = setTimeout(generateTitleAsync, 1000);
-    
-    return () => clearTimeout(titleDebounceTimer);
-  }, [shouldGenerateTitle, content, note.platform, note._id, generateTitle, onUpdate]);
-  
   // Debounced content update - separate from title generation
   const debouncedContentUpdate = useCallback((newContent: string) => {
     if (debounceTimerRef.current) {
@@ -349,6 +312,55 @@ export function useSmartNoteEditor({
     shortcutManager.handleKeyDown(e as any);
   }, [shortcutManager]);
   
+  // Add a save handler that generates the title on first save if needed
+  const handleSave = useCallback(async () => {
+    // Only generate title if it's the first save and title is missing
+    if (!note.title || note.title === 'Untitled Note') {
+      const result = await generateTitle({
+        content,
+        platform: note.platform || 'general',
+        noteId: String(note._id),
+      });
+      console.log("[handleSave] AI title generation result:", result);
+
+      const BAD_TITLES = [
+        "Untitled Note",
+        "Type:",
+        "Title",
+        "Note",
+        "Notes",
+        "Idea",
+        "Content"
+      ];
+
+      if (
+        result.title &&
+        typeof result.title === "string" &&
+        result.title.trim().length >= 5 &&
+        !BAD_TITLES.includes(result.title.trim())
+      ) {
+        console.log("[handleSave] About to update note with:", {
+          noteId: String(note._id),
+          updates: {
+            title: result.title,
+            titleGenerated: true,
+          }
+        });
+        await onUpdate(String(note._id), {
+          title: result.title,
+          titleGenerated: true,
+        });
+      } else {
+        console.warn("[handleSave] Skipping update: invalid or generic title from AI:", result.title);
+        // Optionally, show an error or fallback
+        // toast.error("Failed to generate a valid title");
+        return;
+      }
+    }
+    // Now proceed with the normal save
+    await onSave();
+  }, [note.title, note._id, note.platform, content, generateTitle, onUpdate, onSave]);
+
   return {
     content,
     titleGenerated,
@@ -380,5 +392,6 @@ export function useSmartNoteEditor({
     handleContentChange,
     handleCommand,
     handleKeyDown,
+    handleSave, // Export the new save handler
   };
 }

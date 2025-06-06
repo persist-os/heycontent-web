@@ -68,6 +68,7 @@ export function NoteArea({
     handleCommand,
     handleKeyDown,
     textAreaRef,
+    handleSave,
   } = useSmartNoteEditor({
     note,
     onUpdate,
@@ -82,7 +83,7 @@ export function NoteArea({
       <NoteHeader 
         note={note}
         onUpdate={onUpdate}
-        onSave={onSave}
+        onSave={handleSave}
         onRequestAIInsights={onRequestAIInsights}
         onBack={onBack} 
         isMobile={isMobile}

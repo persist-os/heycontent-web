@@ -46,13 +46,14 @@ export function NoteHeader({ note, onUpdate, onSave, onRequestAIInsights, onBack
 
   // Handler for Save button that shows a toast
   const handleSave = async () => {
-  try {
-    await onSave();
-    toast.success('Note saved!', { duration: 1800, position: 'top-right' });
-  } catch (err) {
-    toast.error('Failed to save note');
-  }
-};
+    console.log('[NoteHeader] Save button clicked, calling onSave');
+    try {
+      await onSave();
+      toast.success('Note saved!', { duration: 1800, position: 'top-right' });
+    } catch (err) {
+      toast.error('Failed to save note');
+    }
+  };
 
   return (
     <div className="border-b border-gray-100 px-6 py-4 flex justify-between items-center">

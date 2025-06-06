@@ -76,6 +76,7 @@ export const updateNoteContent = mutation({
     userId: v.string(),
     content: v.string(),
     title: v.string(),
+    titleGenerated: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     // Ownership check
@@ -86,14 +87,16 @@ export const updateNoteContent = mutation({
     if (note.userId !== args.userId) {
       throw new Error("Unauthorized: You do not own this note.");
     }
-    
-    // Update just the content, title and timestamp
-    await ctx.db.patch(args.noteId, {
+    // Update just the content, title, titleGenerated, and timestamp
+    const patchObj: any = {
       content: args.content,
       title: args.title,
       updatedAt: Date.now(),
-    });
-    
+    };
+    if (args.titleGenerated !== undefined) {
+      patchObj.titleGenerated = args.titleGenerated;
+    }
+    await ctx.db.patch(args.noteId, patchObj);
     // Return the updated note
     return await ctx.db.get(args.noteId);
   },

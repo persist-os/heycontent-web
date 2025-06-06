@@ -31,6 +31,7 @@ interface SmartNotesHook {
   updateNote: (noteId: string | Id<"notes">, updateFields: NoteUpdate, force?: boolean) => Promise<Note | null>;
   saveNoteContent: (noteId: string | Id<"notes">, content: string, title: string) => Promise<Note | null>;
   deleteNote: (noteId: Id<"notes"> | string) => Promise<boolean>;
+  setNotes: React.Dispatch<React.SetStateAction<Note[]>>;
 }
 
 export function useSmartNotes(userId: string | undefined): SmartNotesHook {
@@ -238,5 +239,6 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
     updateNote,
     saveNoteContent,
     deleteNote,
+    setNotes,
   };
 }
