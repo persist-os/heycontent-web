@@ -185,8 +185,10 @@ export function ContentAnalyticsScreen() {
     userId ? { userId } : undefined
   );
   const instagramPosts = useQuery(
-    api.instagramQueries.getAllInstagramPosts,
-    userId ? { userId } : undefined
+    // api.instagramQueries.getAllInstagramPosts,
+    // userId ? { userId } : undefined
+    api.instagramQueries.getInstagramPostsByUsername,
+    { username: "avasetail" } // Replace after testing
   );
 
   useEffect(() => {
