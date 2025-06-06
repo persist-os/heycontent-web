@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Card } from '@/components/ui/card';
-import { X, MessageSquare, Youtube, Sparkles, Bot, ExternalLink, RefreshCw } from 'lucide-react';
+import { X, MessageSquare, Sparkles, Bot, ExternalLink, RefreshCw } from 'lucide-react';
 import { getCurrentUserId, getApiKey } from '@/app/lib/api-helpers';
 import { YouTubeContentItem } from '../types';
 import { getMetricsDisplay } from '../utils';
 import { Button } from '@/components/ui/button';
 import { MarkdownRenderer } from '../../chat/markdown-renderer';
 import { YouTubeBrandIcon } from '../../YoutubeBrandIcon';
+import { ThreeColumnHeader } from '@/components/ui/ThreeColumnHeader';
 
 interface YoutubeModalProps {
   selectedContent: YouTubeContentItem;
@@ -44,6 +45,7 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
     videoId: string;
     userId: string;
     analysis: any;
+    analysisMarkdown?: string;
     updatedAt?: number;
     _creationTime?: number;
   };
@@ -64,36 +66,45 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
   useEffect(() => {
     if (loading || !storedAnalysisQuery || aiAnalysis) return;
     
-    console.log('Loading stored analysis:', storedAnalysisQuery);
+    // Check if we have stored analysis data - handle both analysis and analysisMarkdown fields
+    const analysisData = storedAnalysisQuery?.analysis;
+    const markdownData = storedAnalysisQuery?.analysisMarkdown;
     
-    if (storedAnalysisQuery?.analysis) {
-      const analysisData = storedAnalysisQuery.analysis;
-      
+    if (analysisData || markdownData) {
       // Handle different analysis data formats - prioritize markdown format
       let storedAnalysisContent = '';
       
-      if (typeof analysisData === 'string') {
-        // If it's already a string, use it as is
-        storedAnalysisContent = analysisData;
-      } else if (analysisData.markdown) {
-        // Prefer markdown format if available
-        storedAnalysisContent = analysisData.markdown;
-      } else if (analysisData.aiAnalysis) {
-        // Handle legacy format
-        storedAnalysisContent = typeof analysisData.aiAnalysis === 'string' 
-          ? analysisData.aiAnalysis 
-          : JSON.stringify(analysisData.aiAnalysis, null, 2);
-      } else {
-        // Default case: stringify the entire analysis object
-        storedAnalysisContent = JSON.stringify(analysisData, null, 2);
+      // First check for dedicated markdown field
+      if (markdownData && typeof markdownData === 'string') {
+        storedAnalysisContent = markdownData;
+      }
+      // Then check the analysis object
+      else if (analysisData) {
+        if (typeof analysisData === 'string') {
+          // If it's already a string, use it as is
+          storedAnalysisContent = analysisData;
+        } else if (analysisData.markdown) {
+          // Prefer markdown format if available
+          storedAnalysisContent = analysisData.markdown;
+        } else if (analysisData.aiAnalysis) {
+          // Handle legacy format
+          storedAnalysisContent = typeof analysisData.aiAnalysis === 'string' 
+            ? analysisData.aiAnalysis 
+            : JSON.stringify(analysisData.aiAnalysis, null, 2);
+        } else {
+          // Default case: stringify the entire analysis object
+          storedAnalysisContent = JSON.stringify(analysisData, null, 2);
+        }
       }
       
-      setAiAnalysis(storedAnalysisContent);
-      
-      // Handle the updatedAt timestamp
-      const timestamp = storedAnalysisQuery.updatedAt || storedAnalysisQuery._creationTime || Date.now();
-      setAnalysisTimestamp(typeof timestamp === 'number' ? timestamp : new Date(timestamp).getTime());
-      setIsStoredAnalysis(true);
+      if (storedAnalysisContent) {
+        setAiAnalysis(storedAnalysisContent);
+        
+        // Handle the updatedAt timestamp
+        const timestamp = storedAnalysisQuery.updatedAt || storedAnalysisQuery._creationTime || Date.now();
+        setAnalysisTimestamp(typeof timestamp === 'number' ? timestamp : new Date(timestamp).getTime());
+        setIsStoredAnalysis(true);
+      }
     }
   }, [storedAnalysisQuery, loading, aiAnalysis]);
 
@@ -101,7 +112,6 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
   const storeAnalysisInConvex = async (analysisData: string) => {
     try {
       if (!userId || !videoId) {
-        console.warn('Cannot store analysis: missing userId or videoId');
         return;
       }
 
@@ -114,9 +124,7 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
         }
       });
 
-      console.log('Analysis stored successfully in Convex');
     } catch (error) {
-      console.error('Error storing analysis in Convex:', error);
       // Don't throw - storage failure shouldn't break the analysis display
     }
   };
@@ -195,21 +203,23 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-gray-900 rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="px-6 py-4 border-b dark:border-gray-800 flex items-center justify-between flex-shrink-0">
-          <div>
-            <h2 className="text-lg font-medium text-black dark:text-white flex items-center gap-2">
-              <YouTubeBrandIcon size={24} className="mr-2" /> YouTube Analytics
-            </h2>
-            <p className="text-sm text-text-gray dark:text-gray-400">
-              Video • {selectedContent.content.channelTitle || 'Channel Unknown'}
-            </p>
-          </div>
-          <div className="flex gap-2">
+        <ThreeColumnHeader
+          left={<YouTubeBrandIcon href="https://youtube.com/" />}
+          center={
+            <div>
+              <h2 className="text-lg font-medium text-black dark:text-white">YouTube Analytics</h2>
+              <p className="text-sm text-text-gray dark:text-gray-400">
+                Video • {selectedContent.content.channelTitle || 'Channel Unknown'}
+              </p>
+            </div>
+          }
+          right={
             <Button variant="ghost" onClick={onClose} aria-label="Close">
               <X className="w-5 h-5" />
             </Button>
-          </div>
-        </div>
+          }
+          className="px-6 py-4 border-b dark:border-gray-800 flex-shrink-0"
+        />
 
         {/* Content */}
         <div className="p-6 overflow-y-auto flex-grow space-y-6">

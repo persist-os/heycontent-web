@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { Message } from '@/app/types/chat'
 import { sendChatMessage } from '../utils/api-utils'
 import { ChatStateReturnType } from './useChatState'
+import { getHelpMessage } from '../data/help-message'
 
 import { v4 as uuidv4 } from 'uuid';
 
@@ -23,9 +24,41 @@ export const useChat = (
     includeAnalysisInQuery
   } = chatState
   const [referencedMessage, setReferencedMessage] = useState<Message | null>(null)
+  
+  // Add ref to track last sent message to prevent rapid duplicates
+  const lastSentMessageRef = useRef<{ content: string; timestamp: number } | null>(null);
 
   const handleSendMessage = useCallback(async (content: string) => {
     if (!content || typeof content !== 'string' || !content.trim()) return;
+
+    // Prevent duplicate messages within a short time window (1 second)
+    const now = Date.now();
+    const trimmedContent = content.trim();
+    
+    if (lastSentMessageRef.current && 
+        lastSentMessageRef.current.content === trimmedContent && 
+        now - lastSentMessageRef.current.timestamp < 1000) {
+      console.log('Duplicate message prevented:', trimmedContent);
+      return;
+    }
+    
+    // Update last sent message tracking
+    lastSentMessageRef.current = { content: trimmedContent, timestamp: now };
+
+    // Check for help command (case-insensitive, exact match)
+    if (content.trim().toLowerCase() === 'hey content help') {
+      const helpMsg = getHelpMessage();
+      const userMessage: Message = {
+        id: uuidv4(),
+        content,
+        role: 'user',
+        timestamp: new Date().toISOString(),
+        chat_response: content,
+        sessionId: sessionId
+      };
+      setMessages(prev => [...prev, userMessage, helpMsg]);
+      return;
+    }
 
     // Determine if this is the first message by checking sessionId directly
     const isFirstMessage = !sessionId;
@@ -37,19 +70,6 @@ export const useChat = (
       enhancedQuery = `Context for user question:\n\n${contentContext.analysis}\n\n Make sure to address user question in your response\n\n---\n\nUser question: ${content}`;
     }
 
-    // Log current state to debug the issue
-    console.log('Current chat state before sending message:', {
-      isFirstMessage,
-      sessionId,
-      messagesCount: messages.length,
-      hasContentContext: !!contentContext,
-      contentContextPlatform: contentContext?.platform,
-      includeAnalysisInQuery,
-      hasAnalysis: !!contentContext?.analysis,
-      originalQueryLength: content.length,
-      enhancedQueryLength: enhancedQuery.length
-    });
-
     const newMessage: Message = {
       id: uuidv4() as string,
       content, // Store the original user message for display
@@ -59,7 +79,8 @@ export const useChat = (
         id: referencedMessage.id,
         content: referencedMessage.content
       } : undefined,
-      chat_response: content
+      chat_response: content,
+      sessionId: sessionId // Include current sessionId
     }
 
     try {
@@ -86,9 +107,6 @@ export const useChat = (
       // Send the enhanced query to the backend (with analysis injected if enabled)
       // Don't send content_context separately anymore since it's injected in the query
       const data = await sendChatMessage(enhancedQuery, isFirstMessage, backendSessionId, null);
-
-      // Log the response to check structure
-      console.log('API response:', data);
       
       // Handle session ID from backend response
       console.log('[useChat] Received response:', {
@@ -141,11 +159,11 @@ export const useChat = (
           // 3. Undefined as last resort
           sessionId: data.session_id || sessionId || undefined,
           // Get suggestions from either the root level or metadata
-          suggestions: data.suggestions || data.metadata?.suggestions || []
+          suggestions: data.suggestions || data.metadata?.suggestions || [],
+          // Properly transfer metadata from API response
+          metadata: data.metadata
         }];
       });
-
-
 
       // Only update sessionId from backend (never generate a local one for persistence)
       // Only set sessionId if we don't already have a valid one

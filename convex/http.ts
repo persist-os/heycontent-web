@@ -399,145 +399,6 @@ app.delete("/api/notes/:noteId", async (c) => {
   }
 });
 
-// ANALYSES ROUTES
-app.get("/api/notes/:noteId/analyses", async (c) => {
-  const ctx = c.env;
-  const noteId = c.req.param("noteId");
-
-  if (!noteId) {
-    return c.json({ error: "Missing noteId in path" }, 400);
-  }
-
-  try {
-    const analyses = await ctx.runQuery(api.analyses.getAnalysesByNote, { noteId });
-    return c.json({ success: true, analyses });
-  } catch (error: any) {
-    console.error("Failed to get analyses for note:", error);
-    if (error.data) {
-        return c.json({ success: false, error: "Failed to get analyses for note", details: error.data }, 500);
-    }
-    return c.json({ success: false, error: "Failed to get analyses for note", message: error.message || "Internal Server Error" }, 500);
-  }
-});
-
-// Create a new analysis
-app.post("/api/analyses/create", async (c) => {
-  const ctx = c.env;
-  try {
-    const { noteId, platform, output, error } = await c.req.json();
-
-    if (!noteId || !platform) {
-      return c.json({ error: "Missing required fields: noteId and platform" }, 400);
-    }
-
-    // Only include 'error' if it is a string
-    const args: any = {
-      noteId,
-      platform,
-      output: output || {},
-      createdAt: Date.now(),
-    };
-    if (typeof error === "string") {
-      args.error = error;
-    }
-
-    const analysisId = await ctx.runMutation(api.analyses.createNoteAnalysis, args);
-    return c.json({ success: true, analysisId }, 201);
-  } catch (error: any) {
-    console.error("Failed to create analysis:", error);
-    if (error.data) {
-        return c.json({ success: false, error: "Failed to create analysis", details: error.data }, 500);
-    }
-    return c.json({ success: false, error: "Failed to create analysis", message: error.message || "Internal Server Error" }, 500);
-  }
-});
-
-// Get analyses by user
-app.get("/api/analyses/by-user/:userId", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("userId");
-  const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : undefined;
-
-  if (!userId) {
-    return c.json({ error: "Missing userId in path" }, 400);
-  }
-
-  try {
-    const analyses: any = await ctx.runQuery(api.analyses.getAnalysesByUser, { userId, limit });
-    // If Convex returns {success, data}, unwrap, else pass as is
-    const data = Array.isArray(analyses) ? analyses : (analyses.data ?? []);
-    return c.json({ success: true, data });
-  } catch (error: any) {
-    console.error("Failed to get analyses by user:", error);
-    if (error.data) {
-        return c.json({ success: false, error: "Failed to get analyses by user", details: error.data }, 500);
-    }
-    return c.json({ success: false, error: "Failed to get analyses by user", message: error.message || "Internal Server Error" }, 500);
-  }
-});
-
-// Get analyses by user and platform
-app.get("/api/analyses/by-user-platform", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.query("userId");
-  const platform = c.req.query("platform");
-  const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : undefined;
-
-  if (!userId || !platform) {
-    return c.json({ error: "Missing required query parameters: userId and platform" }, 400);
-  }
-
-  try {
-    const analyses: any = await ctx.runQuery(api.analyses.getAnalysesByUserPlatform, { 
-      userId, 
-      platform, 
-      limit 
-    });
-    const data = Array.isArray(analyses) ? analyses : (analyses.data ?? []);
-    return c.json({ success: true, data });
-  } catch (error: any) {
-    console.error("Failed to get analyses by user and platform:", error);
-    if (error.data) {
-        return c.json({ success: false, error: "Failed to get analyses by user and platform", details: error.data }, 500);
-    }
-    return c.json({ success: false, error: "Failed to get analyses by user and platform", message: error.message || "Internal Server Error" }, 500);
-  }
-});
-
-// Link analysis to note  
-app.post("/api/notes/:noteId/link-analysis", async (c) => {
-  const ctx = c.env;
-  const noteId = c.req.param("noteId");
-  
-  try {
-    const { analysisId, userId } = await c.req.json();
-
-    if (!analysisId || !userId) {
-      return c.json({ error: "Missing required fields: analysisId and userId" }, 400);
-    }
-
-    const result = await ctx.runMutation(api.analyses.linkAnalysisToNote, {
-      noteId,
-      analysisId,
-      userId,
-    });
-    
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("Failed to link analysis to note:", error);
-    if (error.message && error.message.includes("Note not found")) {
-        return c.json({ success: false, error: "Note not found" }, 404);
-    }
-    if (error.message && error.message.includes("Unauthorized")) {
-        return c.json({ success: false, error: "Unauthorized to link analysis to this note" }, 403);
-    }
-    if (error.data) {
-        return c.json({ success: false, error: "Failed to link analysis to note", details: error.data }, 500);
-    }
-    return c.json({ success: false, error: "Failed to link analysis to note", message: error.message || "Internal Server Error" }, 500);
-  }
-});
-
 // GMAIL ROUTES
 
 // Gmail token endpoints
@@ -791,6 +652,23 @@ app.get("/api/users/:id/youtube/video-analyses", async (c) => {
       success: false, 
       error: `Failed to get video analyses: ${error instanceof Error ? error.message : 'Unknown error'}`
     }, 500);
+  }
+});
+
+// Get full details for a specific YouTube video (including analysis)
+app.get("/api/users/:id/youtube/videos/:videoId", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const videoId = c.req.param("videoId");
+  try {
+    const video = await ctx.runQuery(api.youtubeQueries.getFullVideoDetails, { userId, videoId });
+    if (!video) {
+      return c.json({ success: false, error: "Video not found" }, 404);
+    }
+    return c.json({ success: true, video });
+  } catch (error) {
+    console.error("Failed to get full video details:", error);
+    return c.json({ success: false, error: "Failed to get full video details" }, 500);
   }
 });
 

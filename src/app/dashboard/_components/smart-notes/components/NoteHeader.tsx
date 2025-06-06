@@ -27,12 +27,6 @@ export function NoteHeader({ note, onUpdate, onSave, onRequestAIInsights, onBack
           ? { ...note, content: currentContent }
           : note;
         
-        console.log('Requesting AI insights with note:', {
-          noteId: note._id,
-          hasCurrentContent: currentContent !== undefined,
-          contentLength: noteWithCurrentContent.content?.length || 0
-        });
-        
         await onRequestAIInsights(note._id, noteWithCurrentContent);
       } else {
         console.error('Cannot request AI insights: Invalid note or note ID');

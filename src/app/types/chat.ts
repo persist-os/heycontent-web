@@ -25,6 +25,7 @@ export interface Message {
   status?: 'typing' | 'sent' | 'delivered' | 'read' | 'failed';
   chat_response: string;
   suggestions?: any[];
+  sessionId?: string;
   metadata?: {
     suggestions?: any[];
     [key: string]: any;

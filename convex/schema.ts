@@ -498,6 +498,7 @@ export default defineSchema({
       impressions: v.optional(v.number()),
       reach: v.optional(v.number()),
       profile_views: v.optional(v.number()),
+      website_clicks: v.optional(v.number()),
       follower_count: v.optional(v.number()),
       follows_count: v.optional(v.number()),
       media_count: v.optional(v.number()),
@@ -578,12 +579,20 @@ export default defineSchema({
       text: v.string(),
       timestamp: v.number(),
       username: v.string(),
-      replies: v.optional(v.array(v.object({
-        id: v.string(),
-        text: v.string(),
-        timestamp: v.number(),
-        username: v.string()
-      })))
+      replies: v.optional(v.object({
+        data: v.array(v.object({
+          id: v.string(),
+          text: v.string(),
+          timestamp: v.number(),
+          username: v.string()
+        })),
+        paging: v.optional(v.object({
+          cursors: v.object({
+            before: v.string(),
+            after: v.string()
+          })
+        }))
+      }))
     })),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -600,5 +609,13 @@ export default defineSchema({
   })
   .index("by_user", ["userId"])
   .index("by_timestamp", ["timestamp"]),
+
+  waitlist: defineTable({
+    name: v.string(),
+    email: v.string(),
+    timestamp: v.number(),
+    status: v.string(),
+  })
+  .index("by_email", ["email"]),
 
 });

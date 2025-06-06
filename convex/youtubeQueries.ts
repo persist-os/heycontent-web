@@ -9,25 +9,21 @@ function getThumbnailUrl(video: any): string {
   const thumbnails = video.snippet?.thumbnails;
   if (!thumbnails) return '';
   
+  // Based on your data format, thumbnails are direct strings, not objects with .url property
   // Try high quality first
-  if (thumbnails.high?.url) return thumbnails.high.url;
-  if (typeof thumbnails.high === 'string') return thumbnails.high;
-  
-  // Try standard quality
-  if (thumbnails.standard?.url) return thumbnails.standard.url;
-  if (typeof thumbnails.standard === 'string') return thumbnails.standard;
+  if (thumbnails.high) return thumbnails.high;
   
   // Try maxres quality
-  if (thumbnails.maxres?.url) return thumbnails.maxres.url;
-  if (typeof thumbnails.maxres === 'string') return thumbnails.maxres;
+  if (thumbnails.maxres) return thumbnails.maxres;
+  
+  // Try standard quality
+  if (thumbnails.standard) return thumbnails.standard;
   
   // Try medium quality
-  if (thumbnails.medium?.url) return thumbnails.medium.url;
-  if (typeof thumbnails.medium === 'string') return thumbnails.medium;
+  if (thumbnails.medium) return thumbnails.medium;
   
   // Try default quality
-  if (thumbnails.default?.url) return thumbnails.default.url;
-  if (typeof thumbnails.default === 'string') return thumbnails.default;
+  if (thumbnails.default) return thumbnails.default;
   
   // Last resort: check if thumbnails is a string itself
   if (typeof thumbnails === 'string') return thumbnails;
@@ -352,6 +348,27 @@ export const getVideoAnalyses = query({
     } catch (error) {
       console.error('Error getting video analyses:', error);
       throw new Error(`Failed to get video analyses: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Query: Get full video details by userId and videoId, including analysis
+export const getFullVideoDetails = query({
+  args: { userId: v.string(), videoId: v.string() },
+  handler: async (ctx, args) => {
+    try {
+      const video = await ctx.db
+        .query("youtubeVideos")
+        .withIndex("by_videoId", (q) => q.eq("videoId", args.videoId))
+        .filter((q) => q.eq(q.field("userId"), args.userId))
+        .first();
+
+      if (!video) return null;
+      // Return the full video object, including any analysis fields
+      return video;
+    } catch (error) {
+      console.error('Error getting full video details:', error);
+      throw new Error(`Failed to get full video details: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
 });

@@ -61,15 +61,15 @@ export function MessagePreview() {
   const [messages, setMessages] = useState<Message[]>([mockMessage])
 
   const handleOptionClick = (option: InteractiveOption) => {
-    console.log('Option clicked:', option)
+    // Placeholder for the removed console.log
   }
 
   const handleFollowUpClick = (choice: string) => {
-    console.log('Follow-up choice clicked:', choice)
+    // Placeholder for the removed console.log
   }
 
   const handleReferenceClick = (messageId: string) => {
-    console.log('Reference clicked for message:', messageId)
+    // Placeholder for the removed console.log
   }
 
   return (

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { MessageSquare, ThumbsUp, PlayCircle, Eye, Clock, BarChart3, RefreshCw } from 'lucide-react';
+import { useYouTubeRefresh } from '@/app/hooks/useYouTubeRefresh';
 
 import { YouTubeContentItem } from '../types';
 
@@ -14,17 +15,16 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
   // Extract data with type safety
   const { content, metrics, publishedAt = new Date().toISOString() } = item;
   
-  // Create a direct thumbnail URL - using either our data or constructing from video ID
+  // Create a direct thumbnail URL - prioritize our stored data first
   let thumbnailUrl = '';
 
-  // First try using the standard YouTube thumbnail URL format 
-  if (item.id) {
-    // Construct a YouTube thumbnail URL directly from video ID - most reliable method
-    thumbnailUrl = `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`;
-  } 
-  // Fall back to content.thumbnailUrl if necessary
-  else if (content.thumbnailUrl) {
+  // First try using our stored thumbnail URL if available
+  if (content.thumbnailUrl) {
     thumbnailUrl = content.thumbnailUrl;
+  } 
+  // Fall back to constructing from video ID if no stored thumbnail
+  else if (item.id) {
+    thumbnailUrl = `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`;
   }
   
   // Format metrics for display with fallbacks
@@ -32,9 +32,10 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
   const likes = metrics?.likes ? Number(metrics.likes) : 0;
   const comments = metrics?.comments ? Number(metrics.comments) : 0;
 
-  const handleRefresh = () => {
-    // TODO: Implement actual refresh logic for the card
-    window.location.reload();
+  const { refresh, loading, error } = useYouTubeRefresh();
+
+  const handleRefresh = async () => {
+    await refresh(item.id, content.videoUrl || `https://www.youtube.com/watch?v=${item.id}`);
   };
 
   return (
@@ -132,9 +133,16 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
             className="px-3 py-1 rounded text-black hover:opacity-90 text-xs flex items-center gap-1 transition-opacity"
             style={{ backgroundColor: '#BAA9FC' }}
             onClick={handleRefresh}
+            disabled={loading}
           >
-            <RefreshCw className="w-4 h-4" /> Refresh
+            {loading ? (
+              <svg className="animate-spin h-4 w-4 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+            ) : (
+              <RefreshCw className="w-4 h-4" />
+            )}
+            Refresh
           </button>
+          {error && <span className="text-xs text-red-500 ml-2">{error}</span>}
         </div>
       </div>
     </Card>

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
-  Youtube, Instagram, Mail, 
+  Instagram, Mail, 
   ChevronRight, ArrowRight, Clock, MessageSquare,
   RefreshCw, AlertCircle
 } from 'lucide-react'
@@ -29,8 +29,22 @@ export function AIInsightsScreen() {
   const [youtubeError, setYoutubeError] = useState<string | null>(null)
   const [instagramError, setInstagramError] = useState<string | null>(null)
   const [gmailError, setGmailError] = useState<string | null>(null)
+  const [currentQuote, setCurrentQuote] = useState<string>('')
   
   const { firebaseUser } = useAuth()
+
+  const motivationalQuotes = [
+    "Create because it's fun. Create because it helps people. Create because it gives you a sense of accomplishment. Create like nobody's watching and you might be surprised how many do. — Matt D'Avella",
+    "When creating content, be the best answer on the internet. — Andy Crestodina",
+    "We need to stop interrupting what people are interested in and be what people are interested in. — Craig Davis",
+    "I don't create content for a specific type of audience; I just share my life and whatever resonates with people is what draws them to me. — Nara Smith",
+    "The artists today that are making it realize that it's about creating a continuous engagement with their fans. — Daniel Ek",
+    "Without big data, you are blind and deaf and in the middle of a freeway. — Geoffrey Moore",
+    "Data is the new oil. — Clive Humby",
+    "Data are just summaries of thousands of stories—tell a few of those stories to help make the data meaningful. — Dan Heath",
+    "Data helps solve problems. — Anne Wojcicki",
+    "Data visualization is language. It's a means to convey an opinion or argument. — Kim Rees"
+  ];  
 
   // Fetch YouTube channel data
   const youtubeChannel = useQuery(
@@ -51,6 +65,24 @@ export function AIInsightsScreen() {
   const youtubeInsightsList = youtubeInsights?.analysis?.insights || []
   const instagramInsights = [] // TODO: Add Instagram insights when available
   const gmailInsights = [] // TODO: Add Gmail insights when available
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (youtubeRefreshing) {
+      // Set initial quote
+      setCurrentQuote(motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)]);
+      
+      // Change quote every 5 seconds while refreshing
+      interval = setInterval(() => {
+        setCurrentQuote(motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)]);
+      }, 4000);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [youtubeRefreshing]);
 
   const handleYoutubeRefresh = async () => {
     if (!firebaseUser || !youtubeChannel?.id) {
@@ -97,8 +129,6 @@ export function AIInsightsScreen() {
           channelId: youtubeChannel.id,
           analysisData: data.data
         })
-        
-        console.log('Successfully refreshed YouTube insights')
       } else {
         throw new Error(data.error || 'Failed to refresh YouTube insights')
       }
@@ -122,7 +152,6 @@ export function AIInsightsScreen() {
     try {
       // TODO: Implement Instagram insights refresh
       await new Promise(resolve => setTimeout(resolve, 1000)) // Placeholder
-      console.log('Instagram refresh - Coming soon')
     } catch (error: any) {
       console.error('Error refreshing Instagram insights:', error)
       setInstagramError(error.message || 'Failed to refresh Instagram insights')
@@ -143,7 +172,6 @@ export function AIInsightsScreen() {
     try {
       // TODO: Implement Gmail insights refresh
       await new Promise(resolve => setTimeout(resolve, 1000)) // Placeholder
-      console.log('Gmail refresh - Coming soon')
     } catch (error: any) {
       console.error('Error refreshing Gmail insights:', error)
       setGmailError(error.message || 'Failed to refresh Gmail insights')
@@ -228,7 +256,7 @@ export function AIInsightsScreen() {
                   value="youtube" 
                   className="flex items-center gap-2"
                 >
-                  <Youtube className="w-4 h-4" />
+                
                   YouTube ({youtubeInsightsList.length})
                 </TabsTrigger>
                 <TabsTrigger 
@@ -257,11 +285,17 @@ export function AIInsightsScreen() {
                 />
                 
                 {youtubeRefreshing ? (
-                  <div className="text-center py-12">
-                    <RefreshCw className="w-12 h-12 text-text-gray animate-spin mx-auto mb-4" />
+                  <div className="text-center py-12 px-4">
+                    <RefreshCw className="w-12 h-12 text-text-gray animate-spin mx-auto mb-6" />
                     <h3 className="text-lg font-medium text-text-dark dark:text-white mb-2">
                       Refreshing YouTube insights...
                     </h3>
+                    <p className="text-text-gray dark:text-gray-400 max-w-md mx-auto">
+                      {currentQuote || motivationalQuotes[0]}
+                    </p>
+                    <div className="mt-4 text-sm text-text-gray/60 dark:text-gray-500">
+                      This may take a few moments
+                    </div>
                   </div>
                 ) : (
                   <div className="grid gap-6">

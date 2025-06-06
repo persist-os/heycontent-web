@@ -168,17 +168,12 @@ export function ContentAnalyticsScreen() {
 
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformType>('all');
   const [selectedEmailType, setSelectedEmailType] = useState<TEmailTypeFilter>('all');
-  const [timeRange, setTimeRange] = useState<TimeRange>('7d');
+  const [timeRange, setTimeRange] = useState<TimeRange>('90d');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filterRef, setFilterRef] = useState<HTMLDivElement | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>('date');
   const [filterType, setFilterType] = useState<PlatformFilterType>('all');
   const [selectedContent, setSelectedContent] = useState<AnyContentItem | null>(null);
-
-  // Debug logs
-  console.log('[Debug] firebaseUser:', firebaseUser);
-  console.log('[Debug] userId:', userId);
-  console.log('[Debug] authLoading:', authLoading);
 
   // Convex queries (never skip, just allow undefined)
   const youtubeVideos = useQuery(
@@ -195,30 +190,32 @@ export function ContentAnalyticsScreen() {
   );
 
   useEffect(() => {
-    console.log('[Debug] YouTube Videos:', youtubeVideos);
-    console.log('[Debug] Gmail Threads:', gmailThreads);
-    console.log('[Debug] Instagram Posts:', instagramPosts);
   }, [youtubeVideos, gmailThreads, instagramPosts]);
 
-  // Map YouTube items
+  // Map YouTube items - using the correctly structured data from listUserYouTubeVideos query
   const mappedYouTubeItems: YouTubeContentItem[] = useMemo(() => {
     if (youtubeVideos && Array.isArray(youtubeVideos)) {
       return youtubeVideos.map((video: any) => ({
-        id: video._id || video.id,
+        id: video.id || '',
         platform: 'youtube',
-        publishedAt: video.publishedAt || '',
+        publishedAt: video.publishedAt || new Date().toISOString(),
         content: {
-          title: video.title || '',
-          description: video.description || '',
-          thumbnailUrl: video.thumbnailUrl || '',
-          videoUrl: video.videoUrl || '',
+          title: video.content?.title || 'Untitled Video',
+          description: video.content?.description || '',
+          thumbnailUrl: video.content?.thumbnailUrl || '',
+          videoUrl: video.content?.videoUrl || `https://www.youtube.com/watch?v=${video.id}`,
+          channelTitle: video.content?.channelTitle || '',
+          channelId: video.content?.channelId || '',
         },
         metrics: {
-          views: video.metrics?.views ?? 0,
-          likes: video.metrics?.likes ?? 0,
-          comments: video.metrics?.comments ?? 0,
-          shares: video.metrics?.shares ?? 0,
+          views: video.metrics?.views || 0,
+          likes: video.metrics?.likes || 0,
+          dislikes: video.metrics?.dislikes || 0,
+          comments: video.metrics?.comments || 0,
+          watchTimeMinutes: video.metrics?.watchTimeMinutes || 0,
+          averageViewDurationSeconds: video.metrics?.averageViewDurationSeconds || 0,
         },
+        analysis: video.analysis || null,
         aiAnalysis: video.aiAnalysis || null,
       }));
     }
@@ -335,7 +332,7 @@ export function ContentAnalyticsScreen() {
   const resetFilters = () => {
     setSortBy('date');
     setFilterType('all');
-    setTimeRange('7d');
+    setTimeRange('90d');
     setIsFilterOpen(false);
   };
 
