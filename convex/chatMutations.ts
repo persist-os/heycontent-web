@@ -20,7 +20,7 @@ export const createConversation = mutation({
         updatedAt: Date.now(),
         starred: false,
       });
-  
+
       return conversationId;
     },
   });
@@ -36,17 +36,23 @@ args: {
     }),
 },
 handler: async (ctx, args) => {
-    // Find the conversation and verify ownership
-    const conversation = await ctx.db
-    .query("conversations")
-    .filter((q) =>
-        q.eq(q.field("_id"), args.conversationId) &&
-        q.eq(q.field("userId"), args.userId)
-    )
-    .first();
+    // Use direct ID lookup for reliable conversation fetching
+    const doc = await ctx.db.get(args.conversationId as any);
 
-    if (!conversation) {
-    throw new Error("Conversation not found or unauthorized");
+    if (!doc) {
+        throw new Error("Conversation not found");
+    }
+
+    // Type check to ensure it's a conversation document
+    if (!('userId' in doc) || !('messages' in doc)) {
+        throw new Error("Invalid document type - not a conversation");
+    }
+
+    const conversation = doc as any; // Type assertion after validation
+
+    // Verify ownership
+    if (conversation.userId !== args.userId) {
+        throw new Error("Unauthorized access to conversation");
     }
 
     const message = {
@@ -63,7 +69,7 @@ handler: async (ctx, args) => {
     updatedAt: Date.now(),
     });
 
-    return { success: true, conversationId: conversation._id };
+    return { success: true, conversationId: args.conversationId };
 },
 });
 
@@ -73,17 +79,23 @@ args: {
     userId: v.string(),
 },
 handler: async (ctx, args) => {
-    // Find the conversation and verify ownership
-    const conversation = await ctx.db
-    .query("conversations")
-    .filter((q) =>
-        q.eq(q.field("_id"), args.conversationId) &&
-        q.eq(q.field("userId"), args.userId)
-    )
-    .first();
+    // Use direct ID lookup for reliable conversation fetching
+    const doc = await ctx.db.get(args.conversationId as any);
 
-    if (!conversation) {
-    throw new Error("Conversation not found or unauthorized");
+    if (!doc) {
+        throw new Error("Conversation not found");
+    }
+
+    // Type check to ensure it's a conversation document
+    if (!('userId' in doc) || !('messages' in doc)) {
+        throw new Error("Invalid document type - not a conversation");
+    }
+
+    const conversation = doc as any; // Type assertion after validation
+
+    // Verify ownership
+    if (conversation.userId !== args.userId) {
+        throw new Error("Unauthorized access to conversation");
     }
 
     // Delete the conversation
@@ -98,17 +110,23 @@ args: {
     userId: v.string(),
 },
 handler: async (ctx, args) => {
-    // Find the conversation and verify ownership
-    const conversation = await ctx.db
-    .query("conversations")
-    .filter((q) =>
-        q.eq(q.field("_id"), args.conversationId) &&
-        q.eq(q.field("userId"), args.userId)
-    )
-    .first();
+    // Use direct ID lookup for reliable conversation fetching
+    const doc = await ctx.db.get(args.conversationId as any);
 
-    if (!conversation) {
-    throw new Error("Conversation not found or unauthorized");
+    if (!doc) {
+        throw new Error("Conversation not found");
+    }
+
+    // Type check to ensure it's a conversation document
+    if (!('userId' in doc) || !('messages' in doc)) {
+        throw new Error("Invalid document type - not a conversation");
+    }
+
+    const conversation = doc as any; // Type assertion after validation
+
+    // Verify ownership
+    if (conversation.userId !== args.userId) {
+        throw new Error("Unauthorized access to conversation");
     }
 
     // Toggle the starred status

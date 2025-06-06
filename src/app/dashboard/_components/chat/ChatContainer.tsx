@@ -24,6 +24,7 @@ import ChatInputArea from './components/ChatInputArea'
 
 // Import data
 import { ambientInsights } from './data/ambient-insights'
+
 import { welcomeMessageSteps, getWelcomeStepMessage, welcomeSuggestions, welcomeSuggestionsWithPersona } from './data/welcome-message'
 
 // Import custom hooks
@@ -31,16 +32,20 @@ import { useChatState } from './hooks/useChatState'
 import { useChat } from './hooks/useChat'
 import { useConversation } from './hooks/useConversation'
 import { useUIEffects } from './hooks/useUIEffects'
+
 import { useOnboardingState } from './hooks/useOnboardingState'
 import { usePersonaData } from './hooks/usePersonaData'
-// Removed usePersonaManager - now using direct Convex queries
 
-const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery, welcome }) => {
+
+const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery }) => {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [userId, setUserId] = useState<string | undefined>()
   const [userEmail, setUserEmail] = useState<string | undefined>()
   const { isExpanded } = useSidebar()
+  
+  // Track which conversation has been loaded to prevent infinite loops
+  const loadedConversationRef = useRef<string | null>(null)
 
   // Initialize shared state
   const chatState = useChatState()
@@ -104,13 +109,14 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Initialize conversation hook with shared state
   const {
-    loading,
-    setLoading,
-
+    loading: conversationLoading,
+    setLoading: setConversationLoading,
     handleLoadConversation,
-
     initSession // Extract the initSession function from the hook
   } = useConversation(chatState, user)
+
+  // Use a separate loading state for auth
+  const [authLoading, setAuthLoading] = useState(true)
 
   // Wrapper for insight click to pass handleSendMessage
   const handleInsightClick = (action: string, insight: any) => {
@@ -139,6 +145,12 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     // Clear content context when starting new chat
     setContentContext(null);
     
+    // Clear the loaded conversation ref to allow loading new conversations
+    loadedConversationRef.current = null;
+    
+    // Navigate to a clean chat URL without chatId
+    router.push('/dashboard/chat');
+
     // Reset askQuery processing to allow new auto-sends
     askQueryProcessedRef.current = null;
     
@@ -148,6 +160,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       messagesCount: 0,
       contentContext: null
     });
+
   };
 
   // Handle removing context
@@ -161,6 +174,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Handle initial ask query if provided
   useEffect(() => {
+
+    if (askQuery && messages.length === 0 && !isLoading) {
+      // Auto-send the ask query when component mounts
     // Prevent duplicate processing of the same askQuery
     if (askQuery && 
         askQuery !== askQueryProcessedRef.current && 
@@ -174,7 +190,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       // Auto-send the ask query when component mounts (unless welcome is true)
       handleSendMessage(askQuery);
     }
-  }, [askQuery, messages.length, isLoading, welcome, handleSendMessage]);
+  }, [askQuery, messages.length, isLoading, handleSendMessage]);
 
   // Authentication effect
   useEffect(() => {
@@ -193,21 +209,42 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       setUserId(firebaseUser?.uid)
       setUserEmail(firebaseUser?.email)
       if (!firebaseUser) {
-        setLoading(false)
+        setAuthLoading(false)
         return
       }
       if (chatId) {
         // If we have a chat ID, we'll load the conversation in a separate effect
+        console.log('Chat ID provided, will load conversation:', chatId)
       } else {
-        // For a new chat, sessionId will be null initially
-        // and will be set after the first message is sent
+        // For a new chat, reset to clean state
+        console.log('No chat ID provided, initializing new chat state')
         chatState.setSessionId(null)
+        chatState.setIsFirstMessage(true)
+        setMessages([])
+        loadedConversationRef.current = null
       }
-      setLoading(false)
+      setAuthLoading(false)
     })
     return () => {
       if (unsubscribe) unsubscribe();
     };
+  }, [chatId, chatState.setSessionId, chatState.setIsFirstMessage, setMessages]);
+
+  // Load conversation when user and chatId are available, or reset when chatId is null
+  useEffect(() => {
+    if (user && !authLoading) {
+      if (chatId && loadedConversationRef.current !== chatId) {
+        console.log('Attempting to load conversation:', chatId);
+        loadedConversationRef.current = chatId; // Mark this conversation as being loaded
+        handleLoadConversation(chatId);
+      } else if (!chatId && loadedConversationRef.current !== null) {
+        // User navigated to new chat - reset state
+        console.log('Switching to new chat - resetting conversation state');
+        setMessages([]);
+        chatState.setSessionId(null);
+        chatState.setIsFirstMessage(true);
+        loadedConversationRef.current = null;
+      }
   }, [chatId, chatState.setSessionId]);
 
   // Load conversation when user and chatId are available
@@ -227,8 +264,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       url.searchParams.delete('welcome')
       window.history.replaceState({}, '', url.toString())
     }
-  }, [welcome, messages.length, isLoading, user, setMessages])
+  }, [user, chatId, authLoading, handleLoadConversation]);
 
+  if (authLoading || conversationLoading) {
   // Handle suggestion click for welcome steps and normal suggestions
   const handleSuggestionClick = (suggestion, onSendMessage) => {
     // If we're in the welcome step flow, advance the step
@@ -343,6 +381,34 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           ) : (
             <div className="p-6">
               <div className="max-w-5xl mx-auto space-y-4">
+                {messages.map((message, index) => (
+                  <div
+                    key={message.id}
+                    id={`message-${message.id}`}
+                    className="transition-all duration-300"
+                  >
+                    <MessageBubble
+                      message={message}
+                      isLastMessage={index === messages.length - 1}
+                      onReference={handleMessageReference}
+                      showReferenceButton={!referencedMessage && message.status !== 'typing'}
+                      onReferenceClick={handleReferenceClick}
+                      onOptionClick={handleOptionClick}
+                      onFollowUpClick={handleFollowUpClick}
+                    />
+                    {message.role === 'assistant' && message.suggestions && (
+                      <div className="mt-3 flex flex-wrap gap-2 pl-12">
+                        {message.suggestions.map((suggestion, index) => (
+                          <SuggestionChip
+                            key={index}
+                            suggestion={suggestion}
+                            onClick={() => handleSuggestionClick(suggestion, handleSendMessage)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
                 {/* Show persona tip in onboarding flow when ready and at least 4 messages exist */}
                 {onboardingState.shouldShowPersonaTip && messages.length >= 4 && (
                   <PersonaTip 

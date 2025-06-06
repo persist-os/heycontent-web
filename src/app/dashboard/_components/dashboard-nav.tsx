@@ -217,7 +217,7 @@ export function DashboardNav() {
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-gray-700">Recent Chats</span>
                     <Link
-                        href="/history"
+                        href="/dashboard/history"
                         onClick={() => setIsExpanded(false)}
                         className="text-xs text-blue-500 hover:underline"
                     >

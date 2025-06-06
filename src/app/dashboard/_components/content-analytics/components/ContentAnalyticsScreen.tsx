@@ -175,11 +175,6 @@ export function ContentAnalyticsScreen() {
   const [filterType, setFilterType] = useState<PlatformFilterType>('all');
   const [selectedContent, setSelectedContent] = useState<AnyContentItem | null>(null);
 
-  // Debug logs
-  console.log('[Debug] firebaseUser:', firebaseUser);
-  console.log('[Debug] userId:', userId);
-  console.log('[Debug] authLoading:', authLoading);
-
   // Convex queries (never skip, just allow undefined)
   const youtubeVideos = useQuery(
     api.youtubeQueries.listUserYouTubeVideos,
@@ -195,9 +190,6 @@ export function ContentAnalyticsScreen() {
   );
 
   useEffect(() => {
-    console.log('[Debug] YouTube Videos:', youtubeVideos);
-    console.log('[Debug] Gmail Threads:', gmailThreads);
-    console.log('[Debug] Instagram Posts:', instagramPosts);
   }, [youtubeVideos, gmailThreads, instagramPosts]);
 
   // Map YouTube items - using the correctly structured data from listUserYouTubeVideos query

@@ -25,10 +25,13 @@ export default function HistoryPage() {
       if (!firebaseUser?.uid) return
       try {
         const apiKey = await getApiKey();
+        
         const response = await fetch('/api/chat/history', {
           headers: { Authorization: `Bearer ${apiKey}` },
         });
+        
         const data = await response.json()
+        
         if (data.conversations) {
           setChats(data.conversations)
         }
@@ -43,11 +46,36 @@ export default function HistoryPage() {
   }, [firebaseUser?.uid])
 
   const handleDeleteChat = async (chatId: string) => {
+    // Show confirmation dialog
+    const isConfirmed = window.confirm(
+      'Are you sure you want to delete this conversation? This action cannot be undone.'
+    );
+    
+    if (!isConfirmed) {
+      return;
+    }
+
     try {
-      await fetch(`/api/chat/${chatId}`, { method: 'DELETE' })
-      setChats(chats.filter(chat => chat.id !== chatId))
+      const apiKey = await getApiKey();
+      
+      const response = await fetch(`/api/chat/${chatId}`, { 
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete conversation');
+      }
+      
+      // Remove from local state only after successful deletion
+      setChats(chats.filter(chat => chat.id !== chatId));
+      console.log('Successfully deleted conversation:', chatId);
     } catch (error) {
-      console.error('Failed to delete chat:', error)
+      console.error('Failed to delete chat:', error);
+      alert('Failed to delete conversation. Please try again.');
     }
   }
 
@@ -75,6 +103,20 @@ export default function HistoryPage() {
       {/* Chat List */}
       {isLoading ? (
         <div className="text-center text-gray-500">Loading...</div>
+      ) : filteredChats.length === 0 ? (
+        <div className="text-center py-12">
+          <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-500 mb-2">No conversations found</h3>
+          <p className="text-gray-400 mb-4">
+            {searchQuery ? 'No conversations match your search.' : 'Start a conversation to see your chat history here.'}
+          </p>
+          <button
+            onClick={() => router.push('/dashboard/chat')}
+            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            Start New Chat
+          </button>
+        </div>
       ) : (
         <div className="space-y-3">
           {filteredChats.map((chat) => (
