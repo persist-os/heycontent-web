@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { BarChart3, Instagram, Eye, Users, RefreshCw } from 'lucide-react';
 
 import { InstagramContentItem } from '../types';
+import { useInstagramRefresh } from '@/app/hooks/useInstagramRefresh';
 
 export interface InstagramCardProps {
   item: InstagramContentItem;
@@ -28,8 +29,7 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
   const isCarousel = content.mediaType === 'carousel' && Array.isArray(children) && children.length > 0;
   const fallbackImg = '/no-image.png';
 
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const { refresh, loading, error } = useInstagramRefresh();
 
   const handleImgError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     if (e.currentTarget.src !== window.location.origin + fallbackImg) {
@@ -38,15 +38,7 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
   };
 
   const handleRefresh = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // your refresh logic here
-    } catch (e) {
-      setError('Failed to refresh');
-    } finally {
-      setLoading(false);
-    }
+    await refresh(item.id, content.permalink || '');
   };
 
   return (
