@@ -6,14 +6,18 @@ interface AmbientInsightsProps {
   insights: AmbientInsight[];
   loading: boolean;
   error: string | null;
-  onInsightClick: (action: string, insight: AmbientInsight) => void;
+  onInsightClick?: (action: string, insight: AmbientInsight) => void;
+  onInsightHover?: (insight: AmbientInsight) => void;
+  onInsightFocus?: (insight: AmbientInsight) => void;
 }
 
 export const AmbientInsights = ({ 
   insights, 
   loading, 
   error, 
-  onInsightClick 
+  onInsightClick,
+  onInsightHover,
+  onInsightFocus
 }: AmbientInsightsProps) => {
   if (loading) {
     return <div className="text-center text-gray-500">Loading insights...</div>;
@@ -40,9 +44,14 @@ export const AmbientInsights = ({
       {insights.map((insight, index) => (
         <div
           key={index}
-          onClick={() => onInsightClick(insight.action, insight)}
+          onClick={() => onInsightClick?.(insight.action, insight)}
+          onMouseEnter={() => onInsightHover?.(insight)}
+          onFocus={() => onInsightFocus?.(insight)}
           className="bg-white border border-gray-200 shadow-sm p-4 rounded-xl cursor-pointer 
             hover:shadow-md transition-all duration-200 hover:scale-[1.02]"
+          tabIndex={0}
+          role="button"
+          aria-label={`${insight.title}: ${insight.description}`}
         >
           <div className="flex items-start gap-3">
             <div className="p-2 rounded-lg bg-gray-50">
