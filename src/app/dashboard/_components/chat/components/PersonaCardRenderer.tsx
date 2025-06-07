@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { PersonaCard } from './PersonaCard';
 import { usePersonaData } from '../hooks/usePersonaData';
 import { Message } from '@/app/types/chat';
+import { useRouter } from 'next/navigation';
 
 interface PersonaCardRendererProps {
   message: Message;
@@ -11,6 +12,8 @@ interface PersonaCardRendererProps {
 export const PersonaCardRenderer: React.FC<PersonaCardRendererProps> = ({ message, userId }) => {
   const [retryCount, setRetryCount] = useState(0);
   const [shouldShow, setShouldShow] = useState(false);
+  const [showSettingsButton, setShowSettingsButton] = useState(false);
+  const router = useRouter();
   
   // Always fetch persona if this is an assistant message
   const isAssistantMessage = message.role === 'assistant';
@@ -60,6 +63,13 @@ export const PersonaCardRenderer: React.FC<PersonaCardRendererProps> = ({ messag
     }
   }, [hasPersonaIndicators, shouldFetchPersona, hasPersona, persona, isLoading, retryCount]);
 
+  useEffect(() => {
+    // Check if PersonaTip was clicked
+    if (typeof window !== 'undefined' && localStorage.getItem('personaTipClicked') === 'true') {
+      setShowSettingsButton(true);
+    }
+  }, []);
+
   // Loading state
   if (shouldFetchPersona && isLoading) {
     return (
@@ -91,6 +101,17 @@ export const PersonaCardRenderer: React.FC<PersonaCardRendererProps> = ({ messag
           <p className="text-sm text-purple-600">Your personalized content identity has been created!</p>
         </div>
         <PersonaCard persona={persona} userId={userId} variant="compact" />
+        {showSettingsButton && (
+          <div className="flex justify-center mt-6">
+            <button
+              className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-lg shadow hover:from-purple-600 hover:to-pink-600 transition-colors"
+              onClick={() => router.push('/settings')}
+              type="button"
+            >
+              Go see my persona in settings
+            </button>
+          </div>
+        )}
       </div>
     );
   }

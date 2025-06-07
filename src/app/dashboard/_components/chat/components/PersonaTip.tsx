@@ -10,6 +10,7 @@ export const PersonaTip: React.FC<PersonaTipProps> = ({ onTipClick }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   
   const handleClick = () => {
+    localStorage.setItem('personaTipClicked', 'true');
     onTipClick('hey content write my persona');
   };
   
