@@ -474,7 +474,7 @@ export default defineSchema({
       permalink: v.string(),
       username: v.string(),
       timestamp: v.optional(v.number()),
-      comment_count: v.optional(v.number()),
+      comments_count: v.optional(v.number()),
       thumbnail_url: v.optional(v.string()),
       comments: v.optional(v.any()),
       children: v.optional(v.array(v.object({
