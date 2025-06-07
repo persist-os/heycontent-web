@@ -9,6 +9,7 @@ import Image from 'next/image'
 import { HeroSection } from '../components/ui/hero-section'
 import Link from 'next/link'
 import Tilt from 'react-parallax-tilt'
+import Footer from '../components/ui/Footer'
 
 const featureCards = [
   {
@@ -49,12 +50,11 @@ export default function LandingPage() {
   console.log('[LandingPage] Before render');
 
   return (
-    <div className="overflow-x-hidden">
-      <div className="relative">
+    <div className="min-h-screen flex flex-col overflow-x-hidden">
+      <div className="relative flex-shrink-0">
         <HeroSection />
       </div>
-      
-      <section className="min-h-screen bg-gradient-to-r from-[#F8F0F9] to-blue-50">
+      <section className="flex-1 flex flex-col justify-center bg-gradient-to-r from-[#F8F0F9] to-blue-50">
         {/* Featured Influencers */}
         <div className="relative">
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 sm:px-6 mb-3 pt-8 sm:pt-12">
@@ -228,53 +228,10 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
-
-        {/* Stats/Footer */}
-        <footer className="border-t py-8 sm:py-12 px-4 sm:px-6">
-          <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
-            <div>
-              <h3 className="font-medium mb-4">Product</h3>
-              <div className="flex flex-col gap-3 text-gray-600">
-                <button className="hover:text-gray-900 text-left">Overview</button>
-                <button className="hover:text-gray-900 text-left">Pricing</button>
-                <button className="hover:text-gray-900 text-left">Features</button>
-              </div>
-            </div>
-            <div>
-              <h3 className="font-medium mb-4">Company</h3>
-              <div className="flex flex-col gap-3 text-gray-600">
-                <Link href="/about" className="hover:text-gray-900 text-left">
-                  About us
-                </Link>
-                <button className="hover:text-gray-900 text-left">Careers</button>
-                <button className="hover:text-gray-900 text-left">Contact</button>
-              </div>
-            </div>
-            <div>
-              <h3 className="font-medium mb-4">Resources</h3>
-              <div className="flex flex-col gap-3 text-gray-600">
-                <button className="hover:text-gray-900 text-left">Blog</button>
-                <button className="hover:text-gray-900 text-left">Documentation</button>
-                <button className="hover:text-gray-900 text-left">Help Center</button>
-              </div>
-            </div>
-            <div>
-              <h3 className="font-medium mb-4">Legal</h3>
-              <div className="flex flex-col gap-3 text-gray-600">
-                <Link href="/legal/privacy" className="hover:text-gray-900 text-left">
-                  Privacy
-                </Link>
-                <Link href="/legal/terms" className="hover:text-gray-900 text-left">
-                  Terms
-                </Link>
-                <Link href="/legal/security" className="hover:text-gray-900 text-left">
-                  Security
-                </Link>
-              </div>
-            </div>
-          </div>
-        </footer>
       </section>
+      <footer className="flex-1 flex items-center justify-center">
+        <Footer />
+      </footer>
     </div>
   );
 } 

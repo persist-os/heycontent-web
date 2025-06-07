@@ -1,25 +1,34 @@
 import { AmbientInsight } from '../types';
 
 export class AmbientInsightsActions {
-  static handleInsightClick(action: string, insight: AmbientInsight, onSendMessage: (message: string) => void) {
-    // Handle the insight click by sending the insight description as a message
+  static handleClickAction(action: string, insight: AmbientInsight, onSendMessage: (message: string) => void) {
+    // Send the action string (for bottom bar)
+    onSendMessage(action);
+  }
+
+  static handleClickInsight(action: string, insight: AmbientInsight, onSendMessage: (message: string) => void) {
+    // Send the insight description (for main screen)
     onSendMessage(insight.description);
   }
 
   static handleInsightHover(insight: AmbientInsight) {
     // Handle insight hover effects if needed
-    console.log('Insight hovered:', insight.title);
+    // (no-op in production)
   }
 
   static handleInsightFocus(insight: AmbientInsight) {
     // Handle insight focus for accessibility
-    console.log('Insight focused:', insight.title);
+    // (no-op in production)
   }
 }
 
 export const useAmbientInsightsActions = (onSendMessage: (message: string) => void) => {
-  const handleClick = (action: string, insight: AmbientInsight) => {
-    AmbientInsightsActions.handleInsightClick(action, insight, onSendMessage);
+  const handleClickAction = (action: string, insight: AmbientInsight) => {
+    AmbientInsightsActions.handleClickAction(action, insight, onSendMessage);
+  };
+
+  const handleClickInsight = (action: string, insight: AmbientInsight) => {
+    AmbientInsightsActions.handleClickInsight(action, insight, onSendMessage);
   };
 
   const handleHover = (insight: AmbientInsight) => {
@@ -31,7 +40,8 @@ export const useAmbientInsightsActions = (onSendMessage: (message: string) => vo
   };
 
   return {
-    handleClick,
+    handleClickAction,
+    handleClickInsight,
     handleHover,
     handleFocus
   };

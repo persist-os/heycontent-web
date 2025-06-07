@@ -103,6 +103,22 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   // Track onboarding state for persona tip
   const onboardingState = useOnboardingState(messages, chatState.sessionId)
 
+  // Effect to detect persona completion and trigger persona display
+  useEffect(() => {
+    if (!userId || messages.length === 0) return;
+
+    // Check if the last message indicates persona completion
+    const lastMessage = messages[messages.length - 1];
+    const isPersonaCompleted = lastMessage.role === 'assistant' && 
+                              (lastMessage.metadata?.is_persona_complete === true || 
+                               lastMessage.metadata?.persona_created === true);
+
+    if (isPersonaCompleted) {
+      console.log('🎭 Persona completion detected in chat flow!');
+      // The PersonaCardRenderer should now pick this up and display the persona
+    }
+  }, [messages, userId]);
+
   // Track which welcome step the user is on
   const [welcomeStep, setWelcomeStep] = useState(0);
   
@@ -369,7 +385,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                 insights={ambientInsights}
                 loading={ambientLoading}
                 error={error}
-                onInsightClick={ambientInsightsActions.handleClick}
+                onInsightClick={ambientInsightsActions.handleClickInsight}
                 onInsightHover={ambientInsightsActions.handleHover}
                 onInsightFocus={ambientInsightsActions.handleFocus}
               />
@@ -416,7 +432,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           ambientInsights={ambientInsights}
           ambientLoading={ambientLoading}
           error={error}
-          handleInsightClick={ambientInsightsActions.handleClick}
+          handleInsightClick={ambientInsightsActions.handleClickAction}
           handleSendMessage={handleSendMessage}
           inputRef={inputRef}
           isLoading={isLoading}

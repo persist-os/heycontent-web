@@ -10,20 +10,10 @@ import { Id } from '@/convex/_generated/dataModel';
  * @returns Object with persona data and loading state
  */
 export function usePersonaData(userId: string | undefined, enabled: boolean = true) {
-  console.log('🔍 usePersonaData called:', { userId, enabled, shouldQuery: userId && enabled });
-  
   const persona = useQuery(
     api.personas.getPersona,
     userId && enabled ? { userId } : "skip"
   );
-
-  console.log('🔍 Raw Convex persona result:', { 
-    persona, 
-    personaType: typeof persona,
-    isUndefined: persona === undefined,
-    isNull: persona === null,
-    hasData: !!persona 
-  });
 
   // Transform the Convex persona data to match our PersonaData interface
   const transformedPersona: PersonaData | null = persona ? {
@@ -54,25 +44,6 @@ export function usePersonaData(userId: string | undefined, enabled: boolean = tr
     isError: persona === null && enabled && userId,
     hasPersona: !!transformedPersona
   };
-
-  console.log('🔍 usePersonaData result:', {
-    hasTransformedPersona: !!transformedPersona,
-    hasPersona: result.hasPersona,
-    isLoading: result.isLoading,
-    isError: result.isError,
-    personaName: transformedPersona?.current_name
-  });
-
-  // Log only when we actually have or fail to get persona data
-  if (enabled && userId) {
-    if (transformedPersona) {
-      console.log('✅ Persona data loaded:', transformedPersona.current_name);
-    } else if (persona === null) {
-      console.log('❌ No persona found for user:', userId);
-    } else if (persona === undefined) {
-      console.log('⏳ Persona query still loading for user:', userId);
-    }
-  }
 
   return result;
 }
@@ -122,7 +93,6 @@ export function usePersonaManager(userId: string | undefined) {
    */
   const updatePersona = async (updates: Partial<PersonaData>): Promise<boolean> => {
     if (!rawPersona?._id || !userId) {
-      console.error('Cannot update persona: missing persona ID or user ID');
       return false;
     }
 
@@ -133,19 +103,9 @@ export function usePersonaManager(userId: string | undefined) {
         ...updates
       };
 
-      console.log('🔄 Updating persona with context:', {
-        personaId: rawPersona._id,
-        userId,
-        totalPersonasInHistory: allPersonas.length,
-        updates: Object.keys(updates)
-      });
-
       await updatePersonaMutation(updatePayload);
-      
-      console.log('✅ Persona updated successfully');
       return true;
     } catch (error) {
-      console.error('❌ Failed to update persona:', error);
       return false;
     }
   };
@@ -157,7 +117,6 @@ export function usePersonaManager(userId: string | undefined) {
    */
   const createPersonaWithContext = async (newPersonaData: PersonaData): Promise<boolean> => {
     if (!userId) {
-      console.error('Cannot create persona: missing user ID');
       return false;
     }
 
@@ -175,18 +134,9 @@ export function usePersonaManager(userId: string | undefined) {
         }
       };
 
-      console.log('🆕 Creating persona with full context:', {
-        userId,
-        previousPersonaCount: allPersonas.length,
-        hasHistory: allPersonas.length > 0
-      });
-
       await createPersonaMutation(contextPayload);
-      
-      console.log('✅ Persona created successfully with context');
       return true;
     } catch (error) {
-      console.error('❌ Failed to create persona:', error);
       return false;
     }
   };
@@ -198,16 +148,13 @@ export function usePersonaManager(userId: string | undefined) {
    */
   const activatePersona = async (personaId: Id<"personas">): Promise<boolean> => {
     if (!userId) {
-      console.error('Cannot activate persona: missing user ID');
       return false;
     }
 
     try {
       await activatePersonaMutation({ personaId, userId });
-      console.log('✅ Persona activated successfully');
       return true;
     } catch (error) {
-      console.error('❌ Failed to activate persona:', error);
       return false;
     }
   };
@@ -220,10 +167,8 @@ export function usePersonaManager(userId: string | undefined) {
   const deletePersona = async (personaId: Id<"personas">): Promise<boolean> => {
     try {
       await deletePersonaMutation({ personaId });
-      console.log('✅ Persona deleted successfully');
       return true;
     } catch (error) {
-      console.error('❌ Failed to delete persona:', error);
       return false;
     }
   };

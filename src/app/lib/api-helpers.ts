@@ -1,14 +1,15 @@
 'use client';
 
 import { getFirebaseAuth } from '@/app/lib/firebase';
+import Cookies from 'js-cookie';
 
 /**
- * Get API key from localStorage or request a new one
+ * Get API key from cookies or request a new one
  */
 export async function getApiKey(): Promise<string | null> {
   try {
-    // First try to get the API key from localStorage
-    const storedApiKey = localStorage.getItem('apiKey');
+    // First try to get the API key from cookies
+    const storedApiKey = Cookies.get('apiKey');
     let needsRefresh = false;
     let auth;
     try {
@@ -35,12 +36,12 @@ export async function getApiKey(): Promise<string | null> {
       }
       console.log('[getApiKey] Firebase user:', firebaseUserId, '| API key:', apiKey, '| Extracted user from key:', keyUserId, '| Match:', userMatches);
       if (!isValid || !userMatches) {
-        console.warn('API key in localStorage is invalid or does not match current user. Removing and refreshing...');
-        localStorage.removeItem('apiKey');
+        console.warn('API key in cookies is invalid or does not match current user. Removing and refreshing...');
+        Cookies.remove('apiKey');
         needsRefresh = true;
       } else {
         // Valid key found for current user
-        console.log('Retrieved API key from localStorage for current user');
+        console.log('Retrieved API key from cookies for current user');
         return apiKey;
       }
     } else {
@@ -80,14 +81,14 @@ export async function getApiKey(): Promise<string | null> {
           // Log the userId we requested and the key returned
           console.log('[getApiKey] Requested API key for Firebase user:', userId, '| API key received from backend:', apiKeyValue);
           if (typeof apiKeyValue === 'string' && apiKeyValue.startsWith('heycontent_') && !apiKeyValue.endsWith('_temporary')) {
-            localStorage.setItem('apiKey', JSON.stringify(apiKeyValue));
-            console.log('API key saved to localStorage:', apiKeyValue);
-            // Log what is now in localStorage
-            console.log('API key in localStorage after save:', localStorage.getItem('apiKey'));
+            Cookies.set('apiKey', JSON.stringify(apiKeyValue), { expires: 7, sameSite: 'Lax', secure: process.env.NODE_ENV === 'production', path: '/' });
+            console.log('API key saved to cookies:', apiKeyValue);
+            // Log what is now in cookies
+            console.log('API key in cookies after save:', Cookies.get('apiKey'));
             return apiKeyValue;
           } else {
             console.warn('Received invalid or temporary API key from backend:', apiKeyValue);
-            localStorage.removeItem('apiKey');
+            Cookies.remove('apiKey');
             return null;
           }
         } else {
@@ -122,9 +123,9 @@ export function getCurrentUserId(): string | null {
       return authInstance.currentUser.uid;
     }
   } catch (e) {
-    // get it from localStorage if auth is not available
+    // get it from cookies if auth is not available
   }
-  const apiKey = localStorage.getItem('apiKey');
+  const apiKey = Cookies.get('apiKey');
   if (apiKey) {
     const keyParts = apiKey.split('_');
     if (keyParts.length >= 3) {
@@ -187,8 +188,6 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
     throw error;
   }
 }
-
-
 
 export async function fetchWithApiKey(url: string, options: RequestInit = {}): Promise<Response> {
   const apiKey = await getApiKey();

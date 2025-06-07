@@ -107,6 +107,9 @@ export const useChat = (
       // Send the enhanced query to the backend (with analysis injected if enabled)
       // Don't send content_context separately anymore since it's injected in the query
       const data = await sendChatMessage(enhancedQuery, isFirstMessage, backendSessionId, null);
+
+      // CRITICAL DEBUG: Check the raw backend response for persona flags
+      console.log('🔍 useChat: RAW BACKEND RESPONSE:', JSON.stringify(data, null, 2));
       
       // Handle session ID from backend response
       console.log('[useChat] Received response:', {
@@ -147,11 +150,11 @@ export const useChat = (
       // Update messages with the response
       setMessages(prev => {
         const withoutTyping = prev.filter(msg => msg.status !== 'typing');
-        return [...withoutTyping, {
+        const newMessage: Message = {
           id: uuidv4(),
           content: data.chat_response || data.response || '',
           chat_response: data.chat_response || data.response || '',
-          role: 'assistant',
+          role: 'assistant' as const,
           timestamp: new Date().toISOString(),
           // Use the most reliable session ID in this order: 
           // 1. From backend response
@@ -162,7 +165,19 @@ export const useChat = (
           suggestions: data.suggestions || data.metadata?.suggestions || [],
           // Properly transfer metadata from API response
           metadata: data.metadata
-        }];
+        };
+
+        // DEBUG: Log the message being added to check persona flags
+        console.log('🔍 useChat: Adding new message to state:', {
+          messageId: newMessage.id,
+          hasMetadata: !!newMessage.metadata,
+          metadata: newMessage.metadata,
+          is_persona_complete: (newMessage.metadata as any)?.is_persona_complete,
+          persona_created: (newMessage.metadata as any)?.persona_created,
+          content: newMessage.content?.substring(0, 100) + '...'
+        });
+
+        return [...withoutTyping, newMessage];
       });
 
       // Only update sessionId from backend (never generate a local one for persistence)

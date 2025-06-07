@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useState } from 'react';
 
 interface WaitlistButtonProps {
@@ -10,6 +10,7 @@ interface WaitlistButtonProps {
 
 export function WaitlistButton({ size = 'default' }: WaitlistButtonProps) {
   const router = useRouter()
+  const pathname = usePathname();
 
   const sizeStyles = {
     default: {
@@ -37,7 +38,10 @@ export function WaitlistButton({ size = 'default' }: WaitlistButtonProps) {
   const handleClick = async () => {
     try {
       setIsLoading(true);
-      await router.push('/waitlist');
+      // Always navigate to /waitlist without redirecting to chat
+      if (pathname !== '/waitlist') {
+        await router.push('/waitlist');
+      }
     } catch (error) {
       console.error('Navigation error:', error);
     } finally {
