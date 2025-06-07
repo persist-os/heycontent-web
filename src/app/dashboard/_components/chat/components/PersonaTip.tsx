@@ -45,6 +45,7 @@ export const PersonaTip: React.FC<PersonaTipProps> = ({ onTipClick }) => {
                   <span className="break-words">{"Create my persona"}</span>
                 </button>
                 <button
+                  aria-label="Persona tip"
                   onClick={toggleExpand}
                   className="p-2 bg-white text-purple-500 rounded-lg border border-purple-200 hover:bg-purple-50 transition-colors"
                 >

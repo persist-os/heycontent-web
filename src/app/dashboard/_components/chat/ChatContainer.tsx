@@ -14,6 +14,7 @@ import { Message } from '@/app/types/chat'
 // Import components 
 import { SuggestionChip } from './components/SuggestionChip'
 import { AmbientInsights } from './components/AmbientInsights'
+import { useAmbientInsightsActions } from './components/AmbientInsightsActions'
 import { ContextBox } from './components/ContextBox'
 import { PersonaTip } from './components/PersonaTip'
 import ChatHeader from './components/ChatHeader'
@@ -96,6 +97,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     handleReferenceClick: handleReferenceClickProp
   } = useChat(chatState)
 
+  // Initialize ambient insights actions
+  const ambientInsightsActions = useAmbientInsightsActions(handleSendMessage)
+
   // Track onboarding state for persona tip
   const onboardingState = useOnboardingState(messages, chatState.sessionId)
 
@@ -176,23 +180,22 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Handle initial ask query if provided
   useEffect(() => {
-    if (askQuery && messages.length === 0 && !isLoading) {
-      // Auto-send the ask query when component mounts
-      // Prevent duplicate processing of the same askQuery
-      if (askQuery &&
-        askQuery !== askQueryProcessedRef.current &&
-        messages.length === 0 &&
-        !isLoading &&
-        !welcome) {
+    // Only process askQuery if we haven't processed it yet and we're not in a loading state
+    if (askQuery && 
+        askQuery !== askQueryProcessedRef.current && 
+        !isLoading && 
+        !welcome &&
+        messages.length === 0) {
       
-        // Mark this askQuery as processed
-        askQueryProcessedRef.current = askQuery;
+      console.log('Processing askQuery:', askQuery);
       
-        // Auto-send the ask query when component mounts (unless welcome is true)
-        handleSendMessage(askQuery);
-      }
+      // Mark this askQuery as processed immediately to prevent duplicate processing
+      askQueryProcessedRef.current = askQuery;
+      
+      // Send the message directly without timeout
+      handleSendMessage(askQuery);
     }
-  }, [askQuery, messages.length, isLoading, handleSendMessage]);
+  }, [askQuery, isLoading, welcome, handleSendMessage, messages.length]);
 
   // Authentication effect
   useEffect(() => {
@@ -319,11 +322,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     onSendMessage(message);
   };
 
-  // In the render, only check for authLoading, conversationLoading, or isLoading once
-  if (authLoading || conversationLoading || isLoading) {
-    return <div className="flex items-center justify-center h-full w-full p-4">Loading...</div>
-  }
-
   if (!user) {
     return null
   }
@@ -371,47 +369,14 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                 insights={ambientInsights}
                 loading={ambientLoading}
                 error={error}
-                onInsightClick={handleInsightClick}
+                onInsightClick={ambientInsightsActions.handleClick}
+                onInsightHover={ambientInsightsActions.handleHover}
+                onInsightFocus={ambientInsightsActions.handleFocus}
               />
             </div>
           ) : (
             <div className="p-6">
               <div className="max-w-5xl mx-auto space-y-4">
-                {messages.map((message, index) => (
-                  <div
-                    key={message.id}
-                    id={`message-${message.id}`}
-                    className="transition-all duration-300"
-                  >
-                    <MessageBubble
-                      message={message}
-                      isLastMessage={index === messages.length - 1}
-                      onReference={handleMessageReference}
-                      showReferenceButton={!referencedMessage && message.status !== 'typing'}
-                      onReferenceClick={handleReferenceClick}
-                      onOptionClick={handleOptionClick}
-                      onFollowUpClick={handleFollowUpClick}
-                    />
-                    {message.role === 'assistant' && message.suggestions && (
-                      <div className="mt-3 flex flex-wrap gap-2 pl-12">
-                        {message.suggestions.map((suggestion, index) => (
-                          <SuggestionChip
-                            key={index}
-                            suggestion={suggestion}
-                            onClick={() => handleSuggestionClick(suggestion, handleSendMessage)}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {/* Show persona tip in onboarding flow when ready and at least 4 messages exist */}
-                {onboardingState.shouldShowPersonaTip && messages.length >= 4 && (
-                  <PersonaTip
-                    userId={userId}
-                    onTipClick={handleSendMessage}
-                  />
-                )}
                 <ChatMessagesList
                   messages={messages}
                   referencedMessage={referencedMessage}
@@ -423,6 +388,13 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                   handleSuggestionClick={handleSuggestionClick}
                   handleSendMessage={handleSendMessage}
                 />
+                {/* Show persona tip in onboarding flow when ready and at least 4 messages exist */}
+                {onboardingState.shouldShowPersonaTip && messages.length >= 4 && (
+                  <PersonaTip
+                    userId={userId}
+                    onTipClick={handleSendMessage}
+                  />
+                )}
                 {error && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-4">
                     <p className="text-red-600 text-sm">{error}</p>
@@ -444,7 +416,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           ambientInsights={ambientInsights}
           ambientLoading={ambientLoading}
           error={error}
-          handleInsightClick={handleInsightClick}
+          handleInsightClick={ambientInsightsActions.handleClick}
           handleSendMessage={handleSendMessage}
           inputRef={inputRef}
           isLoading={isLoading}
