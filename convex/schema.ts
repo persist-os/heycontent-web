@@ -459,7 +459,7 @@ export default defineSchema({
   // Instagram Posts
   instagramPosts: defineTable({
     accountId: v.any(),
-    userId: v.string(),
+    userId: v.optional(v.string()),
     postId: v.string(),
     data: v.object({
       id: v.string(),
@@ -480,8 +480,7 @@ export default defineSchema({
       children: v.optional(v.array(v.object({
         id: v.string(),
         media_url: v.string(),
-        media_type: v.string(),
-        thumbnail_url: v.optional(v.string())
+        media_type: v.string()
       })))
     }),
     createdAt: v.number(),
@@ -507,11 +506,7 @@ export default defineSchema({
       saved_count: v.optional(v.number()),
       engagement_rate: v.optional(v.number()),
       period: v.string(),
-      timestamp: v.number(),
-      values: v.optional(v.array(v.object({
-        value: v.number(),
-        end_time: v.string()
-      })))
+      timestamp: v.number()
     }),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -528,7 +523,7 @@ export default defineSchema({
       id: v.string(),
       media_type: v.string(),
       media_url: v.string(),
-      permalink: v.optional(v.string()),
+      permalink: v.string(),
       timestamp: v.number(),
       insights: v.optional(v.object({
         impressions: v.optional(v.number()),
@@ -567,10 +562,7 @@ export default defineSchema({
       profile_activity: v.optional(v.number()),
       views: v.optional(v.number()),
       period: v.string(),
-      timestamp: v.number(),
-      values: v.optional(v.array(v.object({
-        value: v.number()
-      })))
+      timestamp: v.number()
     }),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -583,7 +575,6 @@ export default defineSchema({
   instagramPostComments: defineTable({
     userId: v.string(),
     postId: v.string(),
-    accountId: v.any(),
     data: v.array(v.object({
       id: v.string(),
       text: v.string(),
@@ -594,7 +585,7 @@ export default defineSchema({
           id: v.string(),
           text: v.string(),
           timestamp: v.number(),
-          username: v.optional(v.string())
+          username: v.string()
         })),
         paging: v.optional(v.object({
           cursors: v.object({
@@ -608,8 +599,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
   .index("by_userId", ["userId"])
-  .index("by_postId", ["postId"])
-  .index("by_accountId", ["accountId"]),
+  .index("by_postId", ["postId"]),
 
   usageEvents: defineTable({
     userId: v.string(),
