@@ -46,6 +46,7 @@ export const storePostData = mutation({
       } else {
         // Insert new post
         const id = await ctx.db.insert("instagramPosts", {
+          userId,
           accountId,
           postId,
           data: {
