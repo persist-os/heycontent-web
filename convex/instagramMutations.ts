@@ -17,6 +17,37 @@ export const storePostData = mutation({
     const accountId = postData.accountId || "";
 
     try {
+      // Convert timestamp to number if it's a string
+      const timestamp = postData.timestamp 
+        ? (typeof postData.timestamp === 'string' 
+          ? new Date(postData.timestamp).getTime() 
+          : postData.timestamp)
+        : now;
+
+      // Process comments to ensure they have username
+      const processedComments = postData.comments?.map((comment: any) => ({
+        ...comment,
+        username: comment.username || 'unknown',
+        timestamp: typeof comment.timestamp === 'string' 
+          ? new Date(comment.timestamp).getTime() 
+          : comment.timestamp
+      }));
+
+      // Process children (for carousel posts)
+      const processedChildren = postData.children?.map((child: any) => ({
+        ...child,
+        thumbnail_url: child.thumbnail_url || null
+      }));
+
+      const postDataToStore = {
+        id: postId,
+        ...postData,
+        timestamp,
+        comments: processedComments,
+        children: processedChildren,
+        comment_count: postData.comment_count || postData.comments_count || 0
+      };
+
       // Check if post already exists using postId index
       const existingPost = await ctx.db
         .query("instagramPosts")
@@ -29,10 +60,7 @@ export const storePostData = mutation({
           userId,
           accountId,
           postId,
-          data: {
-            id: postId,
-            ...postData,
-          },
+          data: postDataToStore,
           updatedAt: now,
         });
         return { status: "updated", postId: existingPost._id };
@@ -42,10 +70,7 @@ export const storePostData = mutation({
           userId,
           accountId,
           postId,
-          data: {
-            id: postId,
-            ...postData,
-          },
+          data: postDataToStore,
           createdAt: now,
           updatedAt: now,
         });
@@ -206,53 +231,33 @@ export const storeProfileInsights = mutation({
   args: {
     userId: v.string(),
     accountId: v.any(),
-    insightsData: v.object({
-      impressions: v.optional(v.number()),
-      reach: v.optional(v.number()),
-      profile_views: v.optional(v.number()),
-      follower_count: v.optional(v.number()),
-      follows_count: v.optional(v.number()),
-      media_count: v.optional(v.number()),
-      saved_count: v.optional(v.number()),
-      engagement_rate: v.optional(v.number()),
-      period: v.string(),
-      timestamp: v.number()
-    }),
-    createdAt: v.optional(v.number()),
-    updatedAt: v.optional(v.number()),
+    insightsData: v.any(),
   },
   handler: async (ctx, args) => {
-    const { userId, accountId, insightsData, createdAt, updatedAt } = args;
+    const { userId, accountId, insightsData } = args;
     const now = Date.now();
 
     try {
-      // Check if insights already exist
-      const existingInsights = await ctx.db
-        .query("instagramProfileInsights")
-        .withIndex("by_userId", q => q.eq("userId", userId))
-        .filter(q => q.eq(q.field("accountId"), accountId))
-        .first();
+      // Process insights data to match schema
+      const processedData = {
+        ...insightsData,
+        timestamp: now,
+        period: insightsData.period || 'week',
+        values: insightsData.values || []
+      };
 
-      if (existingInsights) {
-        // Update existing insights
-        await ctx.db.patch(existingInsights._id, {
-          data: insightsData,
-          updatedAt: updatedAt ?? now,
-        });
-        return { status: "updated", insightsId: existingInsights._id };
-      } else {
-        // Insert new insights
-        const id = await ctx.db.insert("instagramProfileInsights", {
-          userId,
-          accountId,
-          data: insightsData,
-          createdAt: createdAt ?? now,
-          updatedAt: updatedAt ?? now,
-        });
-        return { status: "created", insightsId: id };
-      }
+      // Store insights
+      const id = await ctx.db.insert("instagramProfileInsights", {
+        userId,
+        accountId,
+        data: processedData,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      return { status: "created", id };
     } catch (error) {
-      console.error(`Error storing profile insights for user ${userId}:`, error);
+      console.error(`Error storing profile insights for ${accountId}:`, error);
       throw new Error(`Failed to store profile insights: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
@@ -263,61 +268,33 @@ export const storeStories = mutation({
   args: {
     userId: v.string(),
     accountId: v.any(),
-    storiesData: v.array(v.object({
-      id: v.string(),
-      media_type: v.string(),
-      media_url: v.string(),
-      permalink: v.string(),
-      timestamp: v.number(),
-      insights: v.optional(v.object({
-        impressions: v.optional(v.number()),
-        reach: v.optional(v.number()),
-        exits: v.optional(v.number()),
-        replies: v.optional(v.number()),
-        taps_forward: v.optional(v.number()),
-        taps_back: v.optional(v.number()),
-        navigation: v.optional(v.object({
-          next: v.optional(v.number()),
-          back: v.optional(v.number()),
-          exit: v.optional(v.number())
-        }))
-      }))
-    })),
-    createdAt: v.optional(v.number()),
-    updatedAt: v.optional(v.number()),
+    storiesData: v.any(),
   },
   handler: async (ctx, args) => {
-    const { userId, accountId, storiesData, createdAt, updatedAt } = args;
+    const { userId, accountId, storiesData } = args;
     const now = Date.now();
 
     try {
-      // Check if stories already exist
-      const existingStories = await ctx.db
-        .query("instagramStories")
-        .withIndex("by_userId", q => q.eq("userId", userId))
-        .filter(q => q.eq(q.field("accountId"), accountId))
-        .first();
+      // Process stories data
+      const processedStories = storiesData.data.map((story: any) => ({
+        ...story,
+        timestamp: typeof story.timestamp === 'string' 
+          ? new Date(story.timestamp).getTime() 
+          : story.timestamp
+      }));
 
-      if (existingStories) {
-        // Update existing stories
-        await ctx.db.patch(existingStories._id, {
-          data: storiesData,
-          updatedAt: updatedAt ?? now,
-        });
-        return { status: "updated", storiesId: existingStories._id };
-      } else {
-        // Insert new stories
-        const id = await ctx.db.insert("instagramStories", {
-          userId,
-          accountId,
-          data: storiesData,
-          createdAt: createdAt ?? now,
-          updatedAt: updatedAt ?? now,
-        });
-        return { status: "created", storiesId: id };
-      }
+      // Store stories
+      const id = await ctx.db.insert("instagramStories", {
+        userId,
+        accountId,
+        data: processedStories,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      return { status: "created", id };
     } catch (error) {
-      console.error(`Error storing stories for user ${userId}:`, error);
+      console.error(`Error storing stories for ${accountId}:`, error);
       throw new Error(`Failed to store stories: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
@@ -328,56 +305,33 @@ export const storePostInsights = mutation({
   args: {
     userId: v.string(),
     postId: v.string(),
-    insightsData: v.object({
-      impressions: v.optional(v.number()),
-      reach: v.optional(v.number()),
-      saved: v.optional(v.number()),
-      shares: v.optional(v.number()),
-      comments: v.optional(v.number()),
-      likes: v.optional(v.number()),
-      total_interactions: v.optional(v.number()),
-      follows: v.optional(v.number()),
-      profile_visits: v.optional(v.number()),
-      profile_activity: v.optional(v.number()),
-      views: v.optional(v.number()),
-      period: v.string(),
-      timestamp: v.number()
-    }),
-    createdAt: v.optional(v.number()),
-    updatedAt: v.optional(v.number()),
+    insightsData: v.any(),
   },
   handler: async (ctx, args) => {
-    const { userId, postId, insightsData, createdAt, updatedAt } = args;
+    const { userId, postId, insightsData } = args;
     const now = Date.now();
 
     try {
-      // Check if insights already exist
-      const existingInsights = await ctx.db
-        .query("instagramPostInsights")
-        .withIndex("by_postId", q => q.eq("postId", postId))
-        .filter(q => q.eq(q.field("userId"), userId))
-        .first();
+      // Process insights data
+      const processedData = {
+        ...insightsData,
+        timestamp: now,
+        period: insightsData.period || 'lifetime',
+        values: insightsData.values || []
+      };
 
-      if (existingInsights) {
-        // Update existing insights
-        await ctx.db.patch(existingInsights._id, {
-          data: insightsData,
-          updatedAt: updatedAt ?? now,
-        });
-        return { status: "updated", insightsId: existingInsights._id };
-      } else {
-        // Insert new insights
-        const id = await ctx.db.insert("instagramPostInsights", {
-          userId,
-          postId,
-          data: insightsData,
-          createdAt: createdAt ?? now,
-          updatedAt: updatedAt ?? now,
-        });
-        return { status: "created", insightsId: id };
-      }
+      // Store insights
+      const id = await ctx.db.insert("instagramPostInsights", {
+        userId,
+        postId,
+        data: processedData,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      return { status: "created", id };
     } catch (error) {
-      console.error(`Error storing post insights for post ${postId}:`, error);
+      console.error(`Error storing post insights for ${postId}:`, error);
       throw new Error(`Failed to store post insights: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
@@ -388,71 +342,45 @@ export const storePostComments = mutation({
   args: {
     userId: v.string(),
     postId: v.string(),
-    commentsData: v.array(v.object({
-      id: v.string(),
-      text: v.string(),
-      timestamp: v.number(),
-      username: v.string(),
-      replies: v.optional(v.object({
-        data: v.array(v.object({
-          id: v.string(),
-          text: v.string(),
-          timestamp: v.number(),
-          username: v.string()
-        })),
-        paging: v.optional(v.object({
-          cursors: v.object({
-            before: v.string(),
-            after: v.string()
-          })
-        }))
-      }))
-    })),
-    createdAt: v.optional(v.number()),
-    updatedAt: v.optional(v.number()),
+    accountId: v.any(),
+    commentsData: v.any(),
   },
   handler: async (ctx, args) => {
-    const { userId, postId, commentsData, createdAt, updatedAt } = args;
+    const { userId, postId, accountId, commentsData } = args;
     const now = Date.now();
 
     try {
-      // Format comments data to match schema
-      const formattedComments = commentsData.map(comment => ({
+      // Process comments data
+      const processedComments = commentsData.data.map((comment: any) => ({
         ...comment,
+        timestamp: typeof comment.timestamp === 'string' 
+          ? new Date(comment.timestamp).getTime() 
+          : comment.timestamp,
         replies: comment.replies ? {
-          data: Array.isArray(comment.replies) ? comment.replies : [],
-          paging: comment.replies.paging
+          ...comment.replies,
+          data: comment.replies.data.map((reply: any) => ({
+            ...reply,
+            timestamp: typeof reply.timestamp === 'string' 
+              ? new Date(reply.timestamp).getTime() 
+              : reply.timestamp
+          }))
         } : undefined
       }));
 
-      // Check if comments already exist
-      const existingComments = await ctx.db
-        .query("instagramPostComments")
-        .withIndex("by_postId", q => q.eq("postId", postId))
-        .filter(q => q.eq(q.field("userId"), userId))
-        .first();
+      // Store comments
+      const id = await ctx.db.insert("instagramPostComments", {
+        userId,
+        postId,
+        accountId,
+        data: processedComments,
+        createdAt: now,
+        updatedAt: now,
+      });
 
-      if (existingComments) {
-        // Update existing comments
-        await ctx.db.patch(existingComments._id, {
-          data: formattedComments,
-          updatedAt: updatedAt ?? now,
-        });
-        return { status: "updated", commentsId: existingComments._id };
-      } else {
-        // Insert new comments
-        const id = await ctx.db.insert("instagramPostComments", {
-          userId,
-          postId,
-          data: formattedComments,
-          createdAt: createdAt ?? now,
-          updatedAt: updatedAt ?? now,
-        });
-        return { status: "created", commentsId: id };
-      }
+      return { status: "created", id };
     } catch (error) {
-      console.error(`Error storing post comments for post ${postId}:`, error);
-      throw new Error(`Failed to store post comments: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error(`Error storing comments for ${postId}:`, error);
+      throw new Error(`Failed to store comments: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
 });
