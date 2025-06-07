@@ -1276,7 +1276,7 @@ app.get("/api/users/:id/instagram/post/:postId/insights", async (c) => {
     // Extract insights from post data
     const insights = {
       likes: post.data.like_count || 0,
-      comments: post.data.comment_count || 0,
+      comments: post.data.comments_count || 0,
       // Add any other metrics available in the post data
     };
 

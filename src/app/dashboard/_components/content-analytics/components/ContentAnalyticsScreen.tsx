@@ -264,7 +264,7 @@ export function ContentAnalyticsScreen() {
             impressions: undefined,
             reach: undefined,
             likes: post.data.like_count ?? 0,
-            comments: post.data.comment_count ?? 0,
+            comments: post.data.comments_count ?? 0,
             shares: undefined,
           },
         };
