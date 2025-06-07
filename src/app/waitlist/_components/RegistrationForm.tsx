@@ -54,11 +54,6 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
         </button>
       </form>
       
-      <div className="mt-8 text-center">
-        <p className="text-sm text-gray-500">
-          Join {Math.floor(Math.random() * 1000) + 500} others on the waitlist!
-        </p>
-      </div>
     </div>
   );
 };
