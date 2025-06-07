@@ -17,6 +17,12 @@ export const storePostData = mutation({
     const accountId = postData.accountId || "";
 
     try {
+      // Convert ISO timestamp to Unix timestamp if present
+      const processedData = {
+        ...postData,
+        timestamp: postData.timestamp ? new Date(postData.timestamp).getTime() / 1000 : undefined
+      };
+
       // Check if post already exists using postId index
       const existingPost = await ctx.db
         .query("instagramPosts")
@@ -30,7 +36,7 @@ export const storePostData = mutation({
           postId,
           data: {
             id: postId,
-            ...postData,
+            ...processedData,
           },
           updatedAt: now,
         });
@@ -42,7 +48,7 @@ export const storePostData = mutation({
           postId,
           data: {
             id: postId,
-            ...postData,
+            ...processedData,
           },
           createdAt: now,
           updatedAt: now,
@@ -390,13 +396,13 @@ export const storePostComments = mutation({
       id: v.string(),
       text: v.string(),
       timestamp: v.number(),
-      username: v.string(),
+      username: v.optional(v.string()),
       replies: v.optional(v.object({
         data: v.array(v.object({
           id: v.string(),
           text: v.string(),
           timestamp: v.number(),
-          username: v.string()
+          username: v.optional(v.string())
         })),
         paging: v.optional(v.object({
           cursors: v.object({
@@ -414,11 +420,15 @@ export const storePostComments = mutation({
     const now = Date.now();
 
     try {
-      // Format comments data to match schema
+      // Format comments data to match schema and handle missing usernames
       const formattedComments = commentsData.map(comment => ({
         ...comment,
+        username: comment.username || 'anonymous', // Provide default username if missing
         replies: comment.replies ? {
-          data: Array.isArray(comment.replies) ? comment.replies : [],
+          data: Array.isArray(comment.replies) ? comment.replies.map(reply => ({
+            ...reply,
+            username: reply.username || 'anonymous' // Provide default username for replies if missing
+          })) : [],
           paging: comment.replies.paging
         } : undefined
       }));
