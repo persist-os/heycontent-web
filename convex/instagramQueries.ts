@@ -62,20 +62,9 @@ export const getInstagramPost = query({
 export const getAllInstagramPosts = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
-    // First get the account ID for this user
-    const account = await ctx.db
-      .query("instagramAccounts")
-      .withIndex("by_userId", q => q.eq("userId", args.userId))
-      .first();
-    
-    if (!account) {
-      return [];
-    }
-
-    // Then get all posts for this account
     const posts = await ctx.db
       .query("instagramPosts")
-      .withIndex("by_accountId", q => q.eq("accountId", account.accountId))
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
       .order("desc")
       .collect();
     return posts;
