@@ -44,12 +44,18 @@ export interface SuggestedAction {
   confidence: number;
 }
 
+export interface BottomBarAction {
+  id: string;
+  text: string;
+  action: string;
+}
+
 export interface AmbientInsight {
   type: string;
   title: string;
   description: string;
-  icon: ComponentType;
   action: string;
+  icon: ComponentType<{ className?: string }>;
 }
 
 export interface ContentContext {

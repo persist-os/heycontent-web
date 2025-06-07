@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { PersonaCard } from '../../../chat/components/PersonaCard';
 import { usePersonaManager } from '../../../chat/hooks/usePersonaData';
@@ -27,12 +27,6 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedPersona, setEditedPersona] = useState<PersonaData | null>(null);
 
-  useEffect(() => {
-    if (currentPersona && !editedPersona) {
-      setEditedPersona(currentPersona);
-    }
-  }, [currentPersona, editedPersona]);
-
   const handleEdit = () => {
     if (currentPersona) {
       setEditedPersona({ ...currentPersona });
@@ -41,7 +35,7 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
   };
 
   const handleCancel = () => {
-    setEditedPersona(currentPersona);
+    setEditedPersona(null);
     setIsEditMode(false);
   };
 
@@ -57,19 +51,21 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
     });
 
     if (Object.keys(changes).length === 0) {
+      setEditedPersona(null);
       setIsEditMode(false);
       return;
     }
 
     await updatePersona(changes);
+    setEditedPersona(null);
     setIsEditMode(false);
   };
 
-  const handleRestore = async (personaId: Id<"personas">) => {
+  const handleRestore = async (personaId: Id<'personas'>) => {
     await activatePersona(personaId);
   };
 
-  const handleDelete = async (personaId: Id<"personas">) => {
+  const handleDelete = async (personaId: Id<'personas'>) => {
     if (confirm('Delete this persona version permanently?')) {
       await deletePersona(personaId);
     }
@@ -96,9 +92,15 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
         </div>
         <div>
           <p className="font-medium text-gray-900">No persona yet</p>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-gray-500 mt-1 mb-3">
             Create your first persona in chat to get started
           </p>
+          <Button 
+            onClick={() => window.location.href = '/dashboard/chat?ask=hey%20content%20persona'}
+            className="mt-2"
+          >
+            Create Persona in Chat
+          </Button>
         </div>
       </div>
     );
@@ -115,7 +117,7 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
           </div>
           <div className="flex items-center gap-2">
             <Button
-              variant={isEditMode ? "default" : "outline"}
+              variant={isEditMode ? 'default' : 'outline'}
               size="sm"
               onClick={isEditMode ? handleSave : handleEdit}
             >

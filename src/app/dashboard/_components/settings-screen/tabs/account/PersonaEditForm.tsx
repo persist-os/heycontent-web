@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { PersonaData } from '../../../chat/types';
 import { Badge } from '@/components/ui/badge';
 
@@ -7,125 +7,155 @@ interface PersonaEditFormProps {
   onUpdate: (field: keyof PersonaData, value: string | string[]) => void;
 }
 
-export const PersonaEditForm: React.FC<PersonaEditFormProps> = ({ persona, onUpdate }) => {
-  const handleArrayUpdate = (field: keyof PersonaData, value: string) => {
-    const items = value.split(',').map(item => item.trim()).filter(Boolean);
-    onUpdate(field, items);
-  };
+const PersonaSection = React.memo(({ title, description, children }: { 
+  title: string; 
+  description?: string;
+  children: React.ReactNode 
+}) => (
+  <div className="space-y-4">
+    <div className="space-y-1">
+      <h3 className="font-bold text-[#4715C8] dark:text-[#4715C8] border-b border-[#BAA9FC]/30 pb-2 text-lg">
+        {title}
+      </h3>
+      {description && (
+        <p className="text-gray-500 dark:text-gray-400 text-sm">
+          {description}
+        </p>
+      )}
+    </div>
+    <div className="space-y-3">
+      {children}
+    </div>
+  </div>
+));
 
-  const PersonaSection = ({ title, description, children }: { 
-    title: string; 
-    description?: string;
-    children: React.ReactNode 
-  }) => (
-    <div className="space-y-4">
-      <div className="space-y-1">
-        <h3 className="font-bold text-[#4715C8] dark:text-[#4715C8] border-b border-[#BAA9FC]/30 pb-2 text-lg">
-          {title}
-        </h3>
-        {description && (
-          <p className="text-gray-500 dark:text-gray-400 text-sm">
-            {description}
-          </p>
+PersonaSection.displayName = 'PersonaSection';
+
+const EditableField = React.memo(({ label, value, onChange, isArray = false }: { 
+  label: string; 
+  value: string | string[]; 
+  onChange: (value: string) => void;
+  isArray?: boolean;
+}) => {
+  const displayValue = isArray && Array.isArray(value) ? value.join(', ') : String(value || '');
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(e.target.value);
+  }, [onChange]);
+
+  return (
+    <div className="space-y-2">
+      <label className="block font-medium text-[#4715C8] uppercase tracking-wide leading-tight text-sm" htmlFor={label}>
+        {label}
+      </label>
+      <div className="text-gray-700 dark:text-gray-300">
+        {isArray ? (
+          <div className="space-y-2">
+            <input
+              id={label}
+              type="text"
+              value={displayValue}
+              onChange={handleChange}
+              className="w-full px-4 py-3 text-base bg-white border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4715C8] focus:border-[#4715C8] transition-colors"
+              placeholder="Separate items with commas"
+              autoComplete="off"
+              spellCheck={false}
+            />
+            {value && Array.isArray(value) && value.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {value.map((item, index) => (
+                  <Badge 
+                    key={index} 
+                    variant="outline" 
+                    className="bg-[#4715C8]/10 text-[#4715C8] border-[#4715C8]/30 hover:bg-[#4715C8]/20 rounded-full transition-colors px-3 py-1 text-sm"
+                  >
+                    {item}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <input
+            id={label}
+            type="text"
+            value={displayValue}
+            onChange={handleChange}
+            className="w-full px-4 py-3 text-base leading-relaxed text-gray-800 dark:text-gray-200 bg-white border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4715C8] focus:border-[#4715C8] transition-colors"
+            aria-label={label}
+            autoComplete="off"
+            spellCheck={false}
+          />
         )}
       </div>
-      <div className="space-y-3">
-        {children}
-      </div>
     </div>
   );
+});
 
-  const EditableField = ({ label, value, onChange, isArray = false }: { 
-    label: string; 
-    value: string | string[]; 
-    onChange: (value: string) => void;
-    isArray?: boolean;
-  }) => {
-    const displayValue = isArray && Array.isArray(value) ? value.join(', ') : String(value || '');
-    
-    return (
-      <div className="space-y-2">
-        <span className="block font-medium text-[#4715C8] uppercase tracking-wide leading-tight text-sm">
-          {label}
-        </span>
-        <div className="text-gray-700 dark:text-gray-300">
-          {isArray ? (
-            <div className="space-y-2">
-              <input
-                type="text"
-                value={displayValue}
-                onChange={(e) => onChange(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-[#4715C8] focus:border-[#4715C8] transition-colors"
-                placeholder="Separate items with commas"
-              />
-              {value && Array.isArray(value) && value.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {value.map((item, index) => (
-                    <Badge 
-                      key={index} 
-                      variant="outline" 
-                      className="bg-[#4715C8]/10 text-[#4715C8] border-[#4715C8]/30 hover:bg-[#4715C8]/20 rounded-full transition-colors px-3 py-1 text-sm"
-                    >
-                      {item}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
-                     ) : (
-             <input
-               type="text"
-               value={displayValue}
-               onChange={(e) => onChange(e.target.value)}
-               className="w-full px-3 py-2 text-base leading-relaxed text-gray-800 dark:text-gray-200 bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-[#4715C8] focus:border-[#4715C8] transition-colors"
-               aria-label={label}
-             />
-           )}
-        </div>
-      </div>
-    );
-  };
+EditableField.displayName = 'EditableField';
 
-  const EditableTextArea = ({ label, value, onChange }: { 
-    label: string; 
-    value: string; 
-    onChange: (value: string) => void;
-  }) => (
+const EditableTextArea = React.memo(({ label, value, onChange }: { 
+  label: string; 
+  value: string; 
+  onChange: (value: string) => void;
+}) => {
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    onChange(e.target.value);
+  }, [onChange]);
+
+  return (
     <div className="space-y-2">
-      <span className="block font-medium text-[#4715C8] uppercase tracking-wide leading-tight text-sm">
+      <label className="block font-medium text-[#4715C8] uppercase tracking-wide leading-tight text-sm" htmlFor={label}>
         {label}
-      </span>
-             <textarea
-         value={value || ''}
-         onChange={(e) => onChange(e.target.value)}
-         rows={3}
-         className="w-full px-3 py-2 text-base leading-relaxed text-gray-800 dark:text-gray-200 bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-[#4715C8] focus:border-[#4715C8] transition-colors resize-none"
-         aria-label={label}
-       />
+      </label>
+      <textarea
+        id={label}
+        value={value || ''}
+        onChange={handleChange}
+        rows={4}
+        className="w-full px-4 py-3 text-base leading-relaxed text-gray-800 dark:text-gray-200 bg-white border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4715C8] focus:border-[#4715C8] transition-colors resize-y"
+        aria-label={label}
+        autoComplete="off"
+        spellCheck={false}
+      />
     </div>
   );
+});
+
+EditableTextArea.displayName = 'EditableTextArea';
+
+export const PersonaEditForm: React.FC<PersonaEditFormProps> = React.memo(({ persona, onUpdate }) => {
+  const handleArrayUpdate = useCallback((field: keyof PersonaData, value: string) => {
+    const items = value.split(',').map(item => item.trim()).filter(Boolean);
+    onUpdate(field, items);
+  }, [onUpdate]);
 
   return (
     <div className="w-full space-y-8">
       {/* Header Section - Editable */}
-      <div className="text-center space-y-4 p-6 bg-gradient-to-br from-[#4715C8]/5 via-[#BAA9FC]/8 to-[#4715C8]/5 rounded-2xl border border-[#BAA9FC]/20 shadow-sm">
+      <div className="text-center space-y-4 p-8 bg-gradient-to-br from-[#4715C8]/5 via-[#BAA9FC]/8 to-[#4715C8]/5 rounded-2xl border border-[#BAA9FC]/20 shadow-sm">
         <div className="space-y-3">
           <div>
             <input
               type="text"
               value={persona.current_name}
               onChange={(e) => onUpdate('current_name', e.target.value)}
-              className="text-3xl font-black text-[#4715C8] dark:text-[#4715C8] tracking-tight leading-tight bg-transparent text-center border-none outline-none focus:ring-2 focus:ring-[#4715C8]/50 rounded px-2 py-1 w-full"
+              className="text-4xl font-black text-[#4715C8] dark:text-[#4715C8] tracking-tight leading-tight bg-transparent text-center border-none outline-none focus:ring-2 focus:ring-[#4715C8]/50 rounded px-3 py-2 w-full"
               placeholder="Persona Name"
+              autoFocus
+              spellCheck={false}
+              autoComplete="off"
             />
           </div>
           <div>
             <textarea
               value={persona.current_description}
               onChange={(e) => onUpdate('current_description', e.target.value)}
-              rows={2}
-              className="text-lg text-gray-600 dark:text-gray-400 leading-relaxed max-w-3xl mx-auto bg-transparent text-center border-none outline-none focus:ring-2 focus:ring-[#4715C8]/50 rounded px-3 py-2 w-full resize-none"
+              rows={3}
+              className="text-lg text-gray-600 dark:text-gray-400 leading-relaxed max-w-3xl mx-auto bg-transparent text-center border-none outline-none focus:ring-2 focus:ring-[#4715C8]/50 rounded px-4 py-3 w-full resize-y"
               placeholder="Describe your persona..."
+              spellCheck={false}
+              autoComplete="off"
             />
           </div>
         </div>
@@ -261,4 +291,6 @@ export const PersonaEditForm: React.FC<PersonaEditFormProps> = ({ persona, onUpd
       </div>
     </div>
   );
-}; 
+});
+
+PersonaEditForm.displayName = 'PersonaEditForm'; 
