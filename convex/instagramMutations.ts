@@ -20,7 +20,9 @@ export const storePostData = mutation({
       // Convert ISO timestamp to Unix timestamp if present
       const processedData = {
         ...postData,
-        timestamp: postData.timestamp ? new Date(postData.timestamp).getTime() / 1000 : undefined
+        timestamp: postData.timestamp ? new Date(postData.timestamp).getTime() / 1000 : undefined,
+        // Handle nested children data structure
+        children: postData.children?.data || postData.children
       };
 
       // Check if post already exists using postId index
