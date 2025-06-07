@@ -817,7 +817,6 @@ app.get("/api/users/:id/instagram/profile/insights", async (c) => {
 
   try {
     const insights = await ctx.runQuery(api.instagramQueries.getProfileInsights, { 
-      userId,
       accountId
     });
     
@@ -853,7 +852,6 @@ app.get("/api/users/:id/instagram/stories", async (c) => {
 
   try {
     const stories = await ctx.runQuery(api.instagramQueries.getStories, { 
-      userId,
       accountId
     });
     
@@ -1230,7 +1228,6 @@ app.get("/api/users/:id/instagram/post/:postId", async (c) => {
 
   try {
     const post = await ctx.runQuery(api.instagramQueries.getInstagramPost, { 
-      userId,
       postId
     });
     
@@ -1262,7 +1259,6 @@ app.get("/api/users/:id/instagram/post/:postId/insights", async (c) => {
 
   try {
     const post = await ctx.runQuery(api.instagramQueries.getInstagramPost, { 
-      userId,
       postId
     });
     
@@ -1301,7 +1297,6 @@ app.get("/api/users/:id/instagram/post/:postId/comments", async (c) => {
 
   try {
     const post = await ctx.runQuery(api.instagramQueries.getInstagramPost, { 
-      userId,
       postId
     });
     
