@@ -815,7 +815,9 @@ app.get("/api/users/:id/instagram/profile/insights", async (c) => {
   }
 
   try {
-    const insights = await ctx.runQuery(api.instagramQueries.getProfileInsights, { accountId });
+    const insights = await ctx.runQuery(api.instagramQueries.getProfileInsights, { 
+      accountId
+    });
     
     if (!insights) {
       return c.json({ 
@@ -847,7 +849,9 @@ app.get("/api/users/:id/instagram/stories", async (c) => {
   }
 
   try {
-    const stories = await ctx.runQuery(api.instagramQueries.getStories, { accountId });
+    const stories = await ctx.runQuery(api.instagramQueries.getStories, { 
+      accountId
+    });
     
     if (!stories) {
       return c.json({ 
@@ -1246,7 +1250,9 @@ app.get("/api/users/:id/instagram/post/:postId", async (c) => {
   const postId = c.req.param("postId");
 
   try {
-    const post = await ctx.runQuery(api.instagramQueries.getInstagramPost, { postId });
+    const post = await ctx.runQuery(api.instagramQueries.getInstagramPost, { 
+      postId
+    });
     
     if (!post) {
       return c.json({ 
@@ -1261,6 +1267,76 @@ app.get("/api/users/:id/instagram/post/:postId", async (c) => {
     });
   } catch (error) {
     console.error("Error fetching Instagram post:", error);
+    return c.json({ 
+      success: false, 
+      error: `Server error: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    }, 500);
+  }
+});
+
+// Get Instagram post insights
+app.get("/api/users/:id/instagram/post/:postId/insights", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const postId = c.req.param("postId");
+
+  try {
+    const post = await ctx.runQuery(api.instagramQueries.getInstagramPost, { 
+      postId
+    });
+    
+    if (!post) {
+      return c.json({ 
+        success: false, 
+        error: "Post not found" 
+      }, 404);
+    }
+
+    // Extract insights from post data
+    const insights = {
+      likes: post.data.like_count || 0,
+      comments: post.data.comment_count || 0,
+      // Add any other metrics available in the post data
+    };
+
+    return c.json({ 
+      success: true,
+      insights
+    });
+  } catch (error) {
+    console.error("Error fetching Instagram post insights:", error);
+    return c.json({ 
+      success: false, 
+      error: `Server error: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    }, 500);
+  }
+});
+
+// Get Instagram post comments
+app.get("/api/users/:id/instagram/post/:postId/comments", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const postId = c.req.param("postId");
+
+  try {
+    const post = await ctx.runQuery(api.instagramQueries.getInstagramPost, { 
+      postId
+    });
+    
+    if (!post) {
+      return c.json({ 
+        success: false, 
+        error: "Post not found" 
+      }, 404);
+    }
+
+    // Return comments from post data
+    return c.json({ 
+      success: true,
+      comments: post.data.comments || []
+    });
+  } catch (error) {
+    console.error("Error fetching Instagram post comments:", error);
     return c.json({ 
       success: false, 
       error: `Server error: ${error instanceof Error ? error.message : 'Unknown error'}` 
