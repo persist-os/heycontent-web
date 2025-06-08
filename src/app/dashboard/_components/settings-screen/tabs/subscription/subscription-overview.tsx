@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { getSubscriptionPlans, getSubscriptionStatus, createCustomerPortalSession } from '@/app/lib/subscription-api';
 import { CheckoutForm } from './stripe-checkout';
+import { Button } from '@/components/ui/button';
 
 import { UsageAndBillingCard } from './cards/UsageAndBillingCard';
 import { OverageControlsCard } from './cards/OverageControlsCard';
@@ -16,6 +17,9 @@ import { getApiKey } from '@/app/lib/api-helpers';
 // Convex imports
 import { useQuery } from 'convex/react';
 import { api } from '@/../convex/_generated/api';
+
+// Utils
+import { DeleteAccountButton } from '../../utils/DeleteAccountButton';
 
 export default function SubscriptionOverview() {
   const { firebaseUser, authLoading } = useAuth();
@@ -271,12 +275,24 @@ export default function SubscriptionOverview() {
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6">
             <h1 className="text-2xl font-bold mb-6">Subscribe to HeyContent</h1>
             <p className="mb-6">You need an active subscription to access HeyContent. Please choose a plan to continue.</p>
+            
+            <div className="mb-6">
+              <Button 
+                onClick={handleOpenUpgradeModal}
+                className="w-full sm:w-auto"
+                size="lg"
+              >
+                View Plans
+              </Button>
+            </div>
+            
             <UpgradeModal
-              open={true}
-              onClose={() => {}}
+              open={showUpgradeModal}
+              onClose={handleCloseUpgradeModal}
               onSelectPlan={handleSelectPlan}
               context="registration"
             />
+            
             {showCheckout && selectedPlanId && (
               <div className="mt-8">
                 <CheckoutForm
@@ -286,6 +302,14 @@ export default function SubscriptionOverview() {
                 />
               </div>
             )}
+            
+            <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800">
+              <h3 className="text-lg font-medium mb-4">Account Management</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                If you no longer wish to use HeyContent, you can delete your account and all associated data.
+              </p>
+              <DeleteAccountButton />
+            </div>
           </div>
         </div>
       </div>
