@@ -198,22 +198,25 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Handle initial ask query if provided
   useEffect(() => {
-    // Only process askQuery if we haven't processed it yet and we're not in a loading state
+    // Only process askQuery if we haven't processed it yet, we're not in a loading state, and we have a user
     if (askQuery && 
         askQuery !== askQueryProcessedRef.current && 
         !isLoading && 
         !welcome &&
-        messages.length === 0) {
+        messages.length === 0 &&
+        user) {
       
-      console.log('Processing askQuery:', askQuery);
+      console.log('Processing askQuery:', askQuery, 'with context:', currentContext);
       
       // Mark this askQuery as processed immediately to prevent duplicate processing
       askQueryProcessedRef.current = askQuery;
       
-      // Send the message directly without timeout
-      handleSendMessage(askQuery);
+      // Send the message with a small delay to ensure context is properly set
+      setTimeout(() => {
+        handleSendMessage(askQuery);
+      }, 100);
     }
-  }, [askQuery, isLoading, welcome, handleSendMessage, messages.length]);
+  }, [askQuery, isLoading, welcome, handleSendMessage, messages.length, user, currentContext]);
   
   // Handle insight clicks by sending the action as a message
   const handleInsightClick = useCallback((action: string, insight: any) => {
@@ -230,6 +233,12 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       setUser(firebaseUser);
       setUserId(firebaseUser.uid);
       setUserEmail(firebaseUser.email);
+      setAuthLoading(false);
+    } else {
+      setUser(null);
+      setUserId(undefined);
+      setUserEmail(undefined);
+      setAuthLoading(true);
     }
   }, [firebaseUser]);
 
@@ -266,7 +275,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         loadedConversationRef.current = null;
       }
     }
-  }, [chatId, chatState.setSessionId]);
+  }, [chatId, user, authLoading, handleLoadConversation, chatState]);
 
   // Handle welcome message for new users (multi-step)
   useEffect(() => {
@@ -389,6 +398,29 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           <div ref={chatContainerRef} className="flex-1 overflow-y-auto">
             <div className="p-6">
               <div className="max-w-5xl mx-auto space-y-4">
+                {/* Show context box when context is available */}
+                {currentContext && (
+                  currentContext.platform === 'ai-insights' ? (
+                    <AIInsightsContextBox
+                      currentContext={currentContext}
+                      messages={messages}
+                      onRemove={handleRemoveContext}
+                      includeAnalysisInQuery={includeAnalysisInQuery}
+                      onToggleAnalysis={setIncludeAnalysisInQuery}
+                      onSendMessage={handleSendMessage}
+                    />
+                  ) : (
+                    <ChatContextBox
+                      currentContext={currentContext}
+                      messages={messages}
+                      onRemove={handleRemoveContext}
+                      includeAnalysisInQuery={includeAnalysisInQuery}
+                      onToggleAnalysis={setIncludeAnalysisInQuery}
+                      onSendMessage={handleSendMessage}
+                    />
+                  )
+                )}
+                
                 <ChatMessagesList
                   messages={messages}
                   referencedMessage={referencedMessage}
@@ -439,8 +471,10 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         )}
       </div>
 
-      {/* Bottom Bar Actions */}
-      <BottomBarActions onActionClick={handleActionClick} />
+      {/* Bottom Bar Actions - Only show when there are no messages */}
+      {messages.length === 0 && (
+        <BottomBarActions onActionClick={handleActionClick} />
+      )}
 
       {/* Input Bar */}
       <div className="flex-shrink-0 border-t border-gray-100">
