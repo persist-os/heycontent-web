@@ -622,9 +622,18 @@ export default defineSchema({
     model: v.string(),
     status: v.string(),
     qty: v.number(),
+    endpoint: v.optional(v.string()),
+    method: v.optional(v.string()),
+    path: v.optional(v.string()),
+    statusCode: v.optional(v.number()),
+    userAgent: v.optional(v.string()),
+    ip: v.optional(v.string()),
+    requestId: v.optional(v.string()),
   })
   .index("by_user", ["userId"])
-  .index("by_timestamp", ["timestamp"]),
+  .index("by_timestamp", ["timestamp"])
+  .index("by_endpoint", ["endpoint"])
+  .index("by_status", ["status"]),
 
   waitlist: defineTable({
     name: v.string(),

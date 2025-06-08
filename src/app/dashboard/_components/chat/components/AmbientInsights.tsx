@@ -69,7 +69,7 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
 
     if (convexInsights && Array.isArray(convexInsights.data)) {
       console.log('AmbientInsights: Using Convex data array, length:', convexInsights.data.length);
-      return convexInsights.data.map((item: ConvexInsight) => ({
+      return convexInsights.data.slice(0, 6).map((item: ConvexInsight) => ({
         type: item.category || 'auto_generated',
         title: item.title,
         description: item.content,
@@ -80,7 +80,7 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
     }
 
     // fallback
-    return hardcodedInsights.map(insight => ({
+    return hardcodedInsights.slice(0, 6).map(insight => ({
       ...insight,
       id: Math.random().toString()
     }));
@@ -110,7 +110,7 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
     // Always render fallback insights even if no Convex data
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl mx-auto">
-        {hardcodedInsights.map((insight, index) => (
+        {hardcodedInsights.slice(0, 6).map((insight, index) => (
           <div
             key={index}
             className="bg-white border border-gray-200 shadow-sm p-4 rounded-xl cursor-pointer hover:shadow-md transition-all duration-200 hover:scale-[1.02]"
@@ -164,15 +164,9 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
               <h3 className="font-medium text-sm text-gray-900 mb-1">{insight.title}</h3>
               <p className="text-sm text-gray-600">{insight.description}</p>
               {insight.action && (
-                <button 
-                  className="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onInsightClick?.(insight.action, insight);
-                  }}
-                >
+                <p className="mt-2 text-sm text-blue-600 font-medium">
                   {insight.action}
-                </button>
+                </p>
               )}
             </div>
           </div>

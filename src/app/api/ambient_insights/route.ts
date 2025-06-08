@@ -14,11 +14,11 @@ export async function POST(request: Request) {
     }
     
     // Extract the API key
-    let apiKey = authHeader.substring(7).replace(/"/g, '');
+    const apiKey = authHeader.substring(7).replace(/"/g, '');
     
     // Extract user ID from API key
     const apiKeyParts = apiKey.split('_');
-    let user_id = apiKeyParts.length >= 2 && apiKeyParts[0] === 'heycontent' ? apiKeyParts[1] : null;
+    const user_id = apiKeyParts.length >= 2 && apiKeyParts[0] === 'heycontent' ? apiKeyParts[1] : null;
     
     if (!user_id) {
       console.warn(`[${requestId}] Invalid API key format`);

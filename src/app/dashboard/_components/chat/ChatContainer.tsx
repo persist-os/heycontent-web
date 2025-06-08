@@ -337,6 +337,40 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     onSendMessage(message);
   };
 
+  // Autoscroll functionality
+  useEffect(() => {
+    if (chatContainerRef.current && messages.length > 0) {
+      const scrollContainer = chatContainerRef.current;
+      
+      // Add a small delay to account for suggestions and other content that might render
+      const scrollToBottom = () => {
+        const scrollHeight = scrollContainer.scrollHeight;
+        const height = scrollContainer.clientHeight;
+        const maxScrollTop = scrollHeight - height;
+        
+        // Only auto-scroll if user is near the bottom (within 100px) or if it's a new message
+        const currentScrollTop = scrollContainer.scrollTop;
+        const isNearBottom = currentScrollTop >= maxScrollTop - 100;
+        
+        if (isNearBottom || isLoading) {
+          // Scroll to the very bottom plus some extra padding for suggestions
+          scrollContainer.scrollTo({
+            top: scrollHeight + 200,
+            behavior: 'smooth'
+          });
+        }
+      };
+
+      // Initial scroll
+      scrollToBottom();
+      
+      // Additional scroll after a short delay to catch any async content like suggestions
+      const timeoutId = setTimeout(scrollToBottom, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [messages, isLoading]);
+
   // Show messages if there are any, or if there is a context
   const hasMessagesOrContext = currentContext || messages.length > 0;
 
@@ -352,7 +386,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {hasMessagesOrContext ? (
-          <div className="flex-1 overflow-y-auto">
+          <div ref={chatContainerRef} className="flex-1 overflow-y-auto">
             <div className="p-6">
               <div className="max-w-5xl mx-auto space-y-4">
                 <ChatMessagesList
@@ -391,7 +425,16 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           </div>
         ) : (
           <div className="flex-1 flex flex-col">
-            <AmbientInsightsContainer />
+            <AmbientInsightsContainer 
+              handleSendMessage={(msg, context) => {
+                // Start a new chat with the context from the insight
+                handleNewChat();
+                setTimeout(() => {
+                  if (context) setContentContext(context);
+                  handleSendMessage(msg);
+                }, 0);
+              }}
+            />
           </div>
         )}
       </div>

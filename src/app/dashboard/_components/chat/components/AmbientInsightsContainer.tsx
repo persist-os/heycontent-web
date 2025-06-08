@@ -2,27 +2,46 @@ import { useCallback, useState } from 'react';
 import { AmbientInsights } from './AmbientInsights';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
+import { getApiKey } from '@/app/lib/api-helpers';
 
-export function AmbientInsightsContainer({ handleSendMessage }: { handleSendMessage?: (msg: string) => void }) {
+export function AmbientInsightsContainer({ handleSendMessage }: { handleSendMessage?: (msg: string, context?: any) => void }) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState(false);
 
   const handleInsightClick = useCallback((action: string, insight: any) => {
-    // Format the entire card content as a message
+    // Map AmbientInsight to ContentContext
+    const contentContext = {
+      platform: 'ambient-insight',
+      contentId: insight.id,
+      title: insight.title,
+      analysis: insight.description,
+      actionStep: insight.action,
+      source: 'ambient-insight',
+    };
+    // Format the message for the first chat message
     const message = `"${insight.title}"
-
-${insight.description}${insight.action ? `\n\nAction: ${insight.action}` : ''}`;
+\n${insight.description}${insight.action ? `\n\nAction: ${insight.action}` : ''}`;
     if (handleSendMessage) {
-      handleSendMessage(message);
+      // Pass both message and context (if handleSendMessage supports context)
+      handleSendMessage(message, contentContext);
     } else {
-      console.log('Insight clicked:', { action, insight, message });
+      console.log('Insight clicked:', { action, insight, message, contentContext });
     }
   }, [handleSendMessage]);
 
   const handleRefresh = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/ambient_insights', { method: 'POST' });
+      const apiKey = await getApiKey();
+      if (!apiKey) throw new Error('No API key found. Please log in again.');
+      const res = await fetch('/api/ambient_insights', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({}), // Send an empty object or required payload
+      });
       if (!res.ok) {
         throw new Error('Failed to refresh ambient insights');
       }
@@ -37,26 +56,38 @@ ${insight.description}${insight.action ? `\n\nAction: ${insight.action}` : ''}`;
 
   // For simplicity, AmbientInsights manages its own loading and error states
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          disabled={loading}
-          className="gap-2"
-          onClick={handleRefresh}
-        >
-          <RefreshCw className={loading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
-          {loading ? 'Refreshing...' : 'Refresh'}
-        </Button>
+    <div className="h-full flex flex-col px-4 sm:px-6 lg:px-8">
+      {/* Compact Header with Just Refresh Button */}
+      <div className="flex-shrink-0 pt-4 pb-3">
+        <div className="max-w-7xl mx-auto">
+          {/* Refresh Button - Compact and Right-aligned */}
+          <div className="flex justify-end">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              disabled={loading}
+              className="gap-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50/50 transition-colors px-3 py-1.5 h-auto"
+              onClick={handleRefresh}
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <span className="text-xs">
+                {loading ? 'Refreshing...' : 'Refresh'}
+              </span>
+            </Button>
+          </div>
+        </div>
       </div>
-      <div className="bg-muted/50 p-4 rounded-lg">
-        <AmbientInsights 
-          key={refreshKey}
-          onInsightClick={handleInsightClick}
-          loading={loading}
-          error={null}
-        />
+
+      {/* Insights Content - Full Available Space */}
+      <div className="flex-1 overflow-y-auto pb-4 min-h-0">
+        <div className="max-w-7xl mx-auto">
+          <AmbientInsights 
+            key={refreshKey}
+            onInsightClick={handleInsightClick}
+            loading={loading}
+            error={null}
+          />
+        </div>
       </div>
     </div>
   );

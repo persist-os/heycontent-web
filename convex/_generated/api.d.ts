@@ -29,6 +29,7 @@ import type * as internal_ from "../internal.js";
 import type * as notes from "../notes.js";
 import type * as personaQueries from "../personaQueries.js";
 import type * as personas from "../personas.js";
+import type * as priceConfig from "../priceConfig.js";
 import type * as rateLimiting from "../rateLimiting.js";
 import type * as subscriptionActions from "../subscriptionActions.js";
 import type * as subscriptionQueries from "../subscriptionQueries.js";
@@ -64,6 +65,7 @@ declare const fullApi: ApiFromModules<{
   notes: typeof notes;
   personaQueries: typeof personaQueries;
   personas: typeof personas;
+  priceConfig: typeof priceConfig;
   rateLimiting: typeof rateLimiting;
   subscriptionActions: typeof subscriptionActions;
   subscriptionQueries: typeof subscriptionQueries;

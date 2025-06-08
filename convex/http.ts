@@ -1398,20 +1398,58 @@ app.post("/addRateLimitRequest", async (c) => {
 app.post("/api/users/:id/usage/log", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  const { timestamp, model, status, qty } = await c.req.json();
+  const { 
+    timestamp, 
+    model, 
+    status, 
+    qty, 
+    // New optional fields
+    endpoint,
+    method,
+    path,
+    statusCode,
+    userAgent,
+    ip,
+    requestId, // For tracking individual requests
+  } = await c.req.json();
+  
+  // Validate required fields
   if (!userId || !timestamp || !model || !status || typeof qty !== "number") {
     return c.json({ success: false, error: "Missing required fields" }, 400);
   }
-  // Log the event
-  await ctx.runMutation(api.usageEvents.logUsageEvent, {
+  
+  // Log the event with all available metadata
+  const eventData = {
     userId,
     timestamp,
     model,
     status,
     qty,
+    // Include optional fields if provided
+    ...(endpoint && { endpoint }),
+    ...(method && { method }),
+    ...(path && { path }),
+    ...(statusCode && { statusCode: Number(statusCode) }),
+    ...(userAgent && { userAgent }),
+    ...(ip && { ip }),
+    ...(requestId && { requestId }),
+  };
+  
+  await ctx.runMutation(api.usageEvents.logUsageEvent, eventData);
+  
+  // Update user's usage field with all available context
+  await ctx.runMutation(api.usageEvents.updateUserUsage, { 
+    userId, 
+    qty,
+    endpoint,
+    method,
+    path,
+    statusCode: statusCode ? Number(statusCode) : undefined,
+    userAgent,
+    ip,
+    requestId,  // Pass through the requestId
   });
-  // Update user's usage field
-  await ctx.runMutation(api.usageEvents.updateUserUsage, { userId, qty });
+  
   return c.json({ success: true });
 });
 
@@ -1439,6 +1477,19 @@ app.post("/api/users/:id/usage/reset", async (c) => {
     includedRequests,
   });
   return c.json(result);
+});
+
+// Get user data bundle for ambient insights (single call)
+app.get("/api/users/:id/ambient-data-bundle", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  try {
+    const bundle = await ctx.runQuery(api.ambientInsights.getUserDataBundle, { userId });
+    return c.json({ success: true, data: bundle });
+  } catch (error) {
+    console.error("Failed to get user data bundle:", error);
+    return c.json({ success: false, error: "Failed to get user data bundle" }, 500);
+  }
 });
 
 const router = new HttpRouterWithHono(app);
