@@ -72,6 +72,20 @@ export default defineSchema({
   .index("by_username", ["username"])
   .index("by_referralCode", ["referralCode"]),
 
+  // Ambient Insights
+  ambientInsights: defineTable({
+    userId: v.string(),
+    data: v.array(v.object({
+      title: v.string(),
+      content: v.string(),
+      category: v.string(),
+      recommendation: v.string(),
+    })),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_userId", ["userId"]),
+
   personas: defineTable({
     // Current Persona
     current_name: v.string(),

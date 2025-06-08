@@ -189,6 +189,18 @@ app.get("/api/users/:id/conversations", async (c) => {
   return c.json(result);
 });
 
+// Save insights for a user
+app.post("/api/users/:id/save_insights", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { insights } = await c.req.json();
+  const result = await ctx.runMutation(api.ambientInsights.createInsights, {
+    userId,
+    insights,
+  });
+  return c.json(result);
+});
+
 // API KEY ROUTES
 
 // Insert API key
