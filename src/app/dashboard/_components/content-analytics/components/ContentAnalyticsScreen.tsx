@@ -175,18 +175,22 @@ export function ContentAnalyticsScreen() {
   const [filterType, setFilterType] = useState<PlatformFilterType>('all');
   const [selectedContent, setSelectedContent] = useState<AnyContentItem | null>(null);
 
+  if (!firebaseUser || !userId) {
+    return <LoadingState type="auth" />;
+  }
+
   // Convex queries (never skip, just allow undefined)
   const youtubeVideos = useQuery(
     api.youtubeQueries.listUserYouTubeVideos,
-    userId ? { userId } : undefined
+    { userId }
   );
   const gmailThreads = useQuery(
     api.gmailQueries.listUserGmailThreads,
-    userId ? { userId } : undefined
+    { userId }
   );
   const instagramPosts = useQuery(
     api.instagramQueries.getAllInstagramPosts,
-    userId ? { userId } : undefined
+    { userId }
   );
 
   useEffect(() => {

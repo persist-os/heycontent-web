@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { MessageSquare, Mail, Users, CheckCircle, MousePointerClick, Eye, RefreshCw } from 'lucide-react';
+import { useGmailRefresh } from '@/app/hooks/useGmailRefresh';
 
 import { GmailContentItem } from '../types';
 
@@ -15,19 +16,12 @@ export const GmailCard: React.FC<GmailCardProps> = ({ item, onDiscussContent, on
   const openRate = ((metrics?.openRate ?? 0) * 100).toFixed(1);
   const clickRate = ((metrics?.clickRate ?? 0) * 100).toFixed(1);
 
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  // Use the Gmail refresh hook
+  const { refresh, loading, error } = useGmailRefresh();
 
   const handleRefresh = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // your refresh logic here
-    } catch (e) {
-      setError('Failed to refresh');
-    } finally {
-      setLoading(false);
-    }
+    // Use item.content.thread?.threadId as threadId and item.id as emailId
+    await refresh(item.content.thread?.threadId || '', item.id);
   };
 
   return (

@@ -664,4 +664,29 @@ export const saveProfileData = mutation({
       throw new Error(`Failed to update Gmail profile data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
+});
+
+// Store AI analysis for a Gmail thread
+export const storeGmailThreadAnalysis = mutation({
+  args: {
+    userId: v.string(),
+    threadId: v.string(),
+    analysis: v.any(), // Store as JSON
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    // Find the thread
+    const thread = await ctx.db
+      .query("gmailThreads")
+      .withIndex("by_threadId", (q) => q.eq("threadId", args.threadId))
+      .filter(q => q.eq(q.field("userId"), args.userId))
+      .first();
+    if (!thread) throw new Error("Thread not found");
+    // Patch the thread with the analysis
+    await ctx.db.patch(thread._id, {
+      analysis: args.analysis,
+      updatedAt: now,
+    });
+    return { success: true };
+  },
 }); 

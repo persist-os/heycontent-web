@@ -216,6 +216,7 @@ export default defineSchema({
     historyId: v.optional(v.string()),
     labelIds: v.optional(v.array(v.string())),
     data: v.optional(v.any()), // Complete thread data
+    analysis: v.optional(v.any()), // AI analysis/insights for the thread
     createdAt: v.number(),
     updatedAt: v.number(),
   })
