@@ -457,42 +457,42 @@ export default defineSchema({
   .index("by_userId", ["userId"])
   .index("by_username", ["username"]),
 
-  // Instagram Posts
-  instagramPosts: defineTable({
-    accountId: v.any(),
-    userId: (v.string()),
-    postId: v.string(),
-    data: v.object({
-      id: v.string(),
-      caption: v.string(),
-      media_type: v.union(
-        v.literal("IMAGE"),
-        v.literal("VIDEO"),
-        v.literal("CAROUSEL_ALBUM")
-      ),
-      like_count: v.optional(v.number()),
-      media_url: v.string(),
-      permalink: v.string(),
-      username: v.string(),
-      timestamp: v.optional(v.number()),
-      comments_count: v.optional(v.number()),
-      thumbnail_url: v.optional(v.string()),
-      comments: v.optional(v.any()),
-      children: v.optional(v.array(v.object({
+    // Instagram Posts
+    instagramPosts: defineTable({
+      accountId: v.any(),
+      userId: (v.string()),
+      postId: v.string(),
+      data: v.object({
         id: v.string(),
+        caption: v.string(),
+        media_type: v.union(
+          v.literal("IMAGE"),
+          v.literal("VIDEO"),
+          v.literal("CAROUSEL_ALBUM")
+        ),
+        like_count: v.optional(v.number()),
         media_url: v.string(),
-        media_type: v.string(),
-        thumbnail_url: v.optional(v.string())
-      })))
-    }),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_accountId", ["accountId"])
-  .index("by_userId", ["userId"])
-  .index("by_postId", ["postId"])
-  .index("by_timestamp", ["data.timestamp"]),
-
+        permalink: v.string(),
+        username: v.string(),
+        timestamp: v.optional(v.number()),
+        comments_count: v.optional(v.number()),
+        thumbnail_url: v.optional(v.string()),
+        comments: v.optional(v.any()),
+        children: v.optional(v.array(v.object({
+          id: v.string(),
+          media_url: v.string(),
+          media_type: v.string()
+        })))
+      }),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+    .index("by_accountId", ["accountId"])
+    .index("by_userId", ["userId"])
+    .index("by_postId", ["postId"])
+    .index("by_timestamp", ["data.timestamp"]),
+    
+  
   // Instagram Profile Insights
   instagramProfileInsights: defineTable({
     userId: v.string(),
