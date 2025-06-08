@@ -1,10 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+function isValidAnalysisResponse(data: any): boolean {
+  // Example: expects { status: 'success', analysis: ... }
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    typeof data.status === 'string' &&
+    data.status === 'success' &&
+    'analysis' in data
+  );
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { emailId, threadId } = await req.json();
-    if (!emailId || !threadId) {
-      return NextResponse.json({ status: 'error', error: 'Missing emailId or threadId' }, { status: 400 });
+    // Explicitly check that both are strings and not empty
+    if (
+      typeof emailId !== 'string' || emailId.trim().length === 0 ||
+      typeof threadId !== 'string' || threadId.trim().length === 0
+    ) {
+      return NextResponse.json({ status: 'error', error: 'emailId and threadId must be non-empty strings' }, { status: 400 });
     }
 
     // Get the user's auth token from cookies or headers
@@ -25,8 +40,12 @@ export async function POST(req: NextRequest) {
     });
 
     const data = await response.json();
-    return NextResponse.json(data, { status: response.status });
+    if (!isValidAnalysisResponse(data)) {
+      return NextResponse.json({ status: 'error', error: 'Failed to analyze Gmail thread. Please try again later.' }, { status: 502 });
+    }
+    return NextResponse.json(data, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ status: 'error', error: error instanceof Error ? error.message : String(error) }, { status: 500 });
+    // Only send user-friendly error information
+    return NextResponse.json({ status: 'error', error: 'An unexpected error occurred. Please try again later.' }, { status: 500 });
   }
 } 
