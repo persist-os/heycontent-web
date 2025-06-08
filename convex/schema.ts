@@ -494,8 +494,7 @@ export default defineSchema({
       children: v.optional(v.array(v.object({
         id: v.string(),
         media_url: v.string(),
-        media_type: v.string(),
-        thumbnail_url: v.optional(v.string())
+        media_type: v.string()
       })))
     }),
     createdAt: v.number(),
@@ -505,6 +504,7 @@ export default defineSchema({
   .index("by_userId", ["userId"])
   .index("by_postId", ["postId"])
   .index("by_timestamp", ["data.timestamp"]),
+
 
   // Instagram Profile Insights
   instagramProfileInsights: defineTable({

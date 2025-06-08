@@ -1278,44 +1278,39 @@ app.get("/api/users/:id/instagram/post/:postId", async (c) => {
   }
 });
 
-// Get Instagram post insights
-app.get("/api/users/:id/instagram/post/:postId/insights", async (c) => {
+// Store Instagram post insights
+app.post("/api/users/:id/instagram/post/:postId/insights", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
   const postId = c.req.param("postId");
+  const { insightsData } = await c.req.json();
+
+  if (!insightsData) {
+    return c.json({ success: false, error: "Missing insightsData" }, 400);
+  }
 
   try {
-    const post = await ctx.runQuery(api.instagramQueries.getInstagramPost, { 
+    const result = await ctx.runMutation(api.instagramMutations.storePostInsights, {
       userId,
-      postId
+      postId,
+      insightsData,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
     });
-    
-    if (!post) {
-      return c.json({ 
-        success: false, 
-        error: "Post not found" 
-      }, 404);
-    }
-
-    // Extract insights from post data
-    const insights = {
-      likes: post.data.like_count || 0,
-      comments: post.data.comment_count || 0,
-      // Add any other metrics available in the post data
-    };
 
     return c.json({ 
       success: true,
-      insights
+      result
     });
   } catch (error) {
-    console.error("Error fetching Instagram post insights:", error);
+    console.error("Error storing Instagram post insights:", error);
     return c.json({ 
       success: false, 
       error: `Server error: ${error instanceof Error ? error.message : 'Unknown error'}` 
     }, 500);
   }
 });
+
 
 // Get Instagram post comments
 app.get("/api/users/:id/instagram/post/:postId/comments", async (c) => {
