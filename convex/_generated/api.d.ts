@@ -13,6 +13,7 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as ambientInsights from "../ambientInsights.js";
 import type * as apiKeys from "../apiKeys.js";
 import type * as apiKeysMutations from "../apiKeysMutations.js";
 import type * as apiKeysQueries from "../apiKeysQueries.js";
@@ -28,6 +29,7 @@ import type * as internal_ from "../internal.js";
 import type * as notes from "../notes.js";
 import type * as personaQueries from "../personaQueries.js";
 import type * as personas from "../personas.js";
+import type * as priceConfig from "../priceConfig.js";
 import type * as rateLimiting from "../rateLimiting.js";
 import type * as subscriptionActions from "../subscriptionActions.js";
 import type * as subscriptionQueries from "../subscriptionQueries.js";
@@ -47,6 +49,7 @@ import type * as youtubeQueries from "../youtubeQueries.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  ambientInsights: typeof ambientInsights;
   apiKeys: typeof apiKeys;
   apiKeysMutations: typeof apiKeysMutations;
   apiKeysQueries: typeof apiKeysQueries;
@@ -62,6 +65,7 @@ declare const fullApi: ApiFromModules<{
   notes: typeof notes;
   personaQueries: typeof personaQueries;
   personas: typeof personas;
+  priceConfig: typeof priceConfig;
   rateLimiting: typeof rateLimiting;
   subscriptionActions: typeof subscriptionActions;
   subscriptionQueries: typeof subscriptionQueries;

@@ -164,8 +164,6 @@ export const storeGmailThread = mutation({
         // Update existing thread
         await ctx.db.patch(existingThread._id, {
           snippet: args.snippet,
-          historyId: args.historyId,
-          labelIds: args.labelIds,
           message_count: args.message_count,
           messages: args.messages,
           data,
@@ -179,8 +177,6 @@ export const storeGmailThread = mutation({
           email: args.email,
           threadId: args.threadId,
           snippet: args.snippet,
-          historyId: args.historyId,
-          labelIds: args.labelIds,
           message_count: args.message_count,
           messages: args.messages,
           data,
@@ -479,8 +475,6 @@ export const storeGmailFullProfile = mutation({
               // Update existing thread
               await ctx.db.patch(existingThread._id, {
                 snippet: thread.snippet,
-                historyId: thread.historyId,
-                labelIds: thread.labelIds,
                 message_count,
                 messages: formattedMessages,
                 data: thread,
@@ -493,8 +487,6 @@ export const storeGmailFullProfile = mutation({
                 email,
                 threadId,
                 snippet: thread.snippet,
-                historyId: thread.historyId,
-                labelIds: thread.labelIds,
                 message_count,
                 messages: formattedMessages,
                 data: thread,
@@ -586,8 +578,6 @@ export const storeGmailFullProfile = mutation({
               email,
               threadId,
               snippet: thread.snippet,
-              historyId: thread.historyId,
-              labelIds: thread.labelIds,
               message_count,
               messages: formattedMessages,
               data: thread,
@@ -688,5 +678,27 @@ export const storeGmailThreadAnalysis = mutation({
       updatedAt: now,
     });
     return { success: true };
+  },
+});
+
+// One-time migration: copy data.messages to messages for all threads
+export const migrateGmailThreadMessages = mutation({
+  args: {},
+  handler: async (ctx, args) => {
+    const threads = await ctx.db.query("gmailThreads").collect();
+    let updated = 0;
+    for (const thread of threads) {
+      if (
+        thread.data &&
+        Array.isArray(thread.data.messages) &&
+        thread.data.messages.length > 0
+      ) {
+        await ctx.db.patch(thread._id, {
+          messages: thread.data.messages,
+        });
+        updated++;
+      }
+    }
+    return { updated };
   },
 }); 

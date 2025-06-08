@@ -31,6 +31,7 @@ export interface SubscriptionStatus {
   current_period_end?: string;
   cancel_at_period_end?: boolean;
   trial_end?: string;
+  error?: string;
   usage?: {
     used: number;
     limit: number;

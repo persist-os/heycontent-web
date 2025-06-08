@@ -72,6 +72,20 @@ export default defineSchema({
   .index("by_username", ["username"])
   .index("by_referralCode", ["referralCode"]),
 
+  // Ambient Insights
+  ambientInsights: defineTable({
+    userId: v.string(),
+    data: v.array(v.object({
+      title: v.string(),
+      content: v.string(),
+      category: v.string(),
+      recommendation: v.string(),
+    })),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_userId", ["userId"]),
+
   personas: defineTable({
     // Current Persona
     current_name: v.string(),
@@ -213,10 +227,8 @@ export default defineSchema({
       label_ids: v.optional(v.array(v.string())),
     }))),
     snippet: v.optional(v.string()),
-    historyId: v.optional(v.string()),
-    labelIds: v.optional(v.array(v.string())),
     data: v.optional(v.any()), // Complete thread data
-    analysis: v.optional(v.any()), // AI analysis/insights for the thread
+    analysis: v.optional(v.any()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -429,7 +441,7 @@ export default defineSchema({
   // Instagram Tokens
   instagramTokens: defineTable({
     userId: v.string(),
-    accountId: v.any(),
+    instagramAccountId: v.string(),
     accessToken: v.string(),
     refreshToken: v.string(),
     expiryDate: v.number(),
@@ -440,7 +452,7 @@ export default defineSchema({
   // Instagram Accounts
   instagramAccounts: defineTable({
     userId: v.string(),
-    accountId: v.any(),    
+    instagramAccountId: v.string(),    
     username: v.string(),
     profileData: v.object({
       id: v.string(),
@@ -457,46 +469,46 @@ export default defineSchema({
   .index("by_userId", ["userId"])
   .index("by_username", ["username"]),
 
-    // Instagram Posts
-    instagramPosts: defineTable({
-      accountId: v.any(),
-      userId: (v.string()),
-      postId: v.string(),
-      data: v.object({
+  // Instagram Posts
+  instagramPosts: defineTable({
+    instagramAccountId: v.string(),
+    userId: (v.string()),
+    postId: v.string(),
+    data: v.object({
+      id: v.string(),
+      caption: v.string(),
+      media_type: v.union(
+        v.literal("IMAGE"),
+        v.literal("VIDEO"),
+        v.literal("CAROUSEL_ALBUM")
+      ),
+      like_count: v.optional(v.number()),
+      media_url: v.string(),
+      permalink: v.string(),
+      username: v.string(),
+      timestamp: v.optional(v.number()),
+      comments_count: v.optional(v.number()),
+      thumbnail_url: v.optional(v.string()),
+      comments: v.optional(v.any()),
+      children: v.optional(v.array(v.object({
         id: v.string(),
-        caption: v.string(),
-        media_type: v.union(
-          v.literal("IMAGE"),
-          v.literal("VIDEO"),
-          v.literal("CAROUSEL_ALBUM")
-        ),
-        like_count: v.optional(v.number()),
         media_url: v.string(),
-        permalink: v.string(),
-        username: v.string(),
-        timestamp: v.optional(v.number()),
-        comments_count: v.optional(v.number()),
-        thumbnail_url: v.optional(v.string()),
-        comments: v.optional(v.any()),
-        children: v.optional(v.array(v.object({
-          id: v.string(),
-          media_url: v.string(),
-          media_type: v.string()
-        })))
-      }),
-      createdAt: v.number(),
-      updatedAt: v.number(),
-    })
-    .index("by_accountId", ["accountId"])
-    .index("by_userId", ["userId"])
-    .index("by_postId", ["postId"])
-    .index("by_timestamp", ["data.timestamp"]),
-    
-  
+        media_type: v.string()
+      })))
+    }),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_instagramAccountId", ["instagramAccountId"])
+  .index("by_userId", ["userId"])
+  .index("by_postId", ["postId"])
+  .index("by_timestamp", ["data.timestamp"]),
+
+
   // Instagram Profile Insights
   instagramProfileInsights: defineTable({
     userId: v.string(),
-    accountId: v.any(),
+    instagramAccountId: v.string(),
     data: v.object({
       impressions: v.optional(v.number()),
       reach: v.optional(v.number()),
@@ -514,13 +526,13 @@ export default defineSchema({
     updatedAt: v.number(),
   })
   .index("by_userId", ["userId"])
-  .index("by_accountId", ["accountId"])
+  .index("by_instagramAccountId", ["instagramAccountId"])
   .index("by_timestamp", ["data.timestamp"]),
 
   // Instagram Stories
   instagramStories: defineTable({
     userId: v.string(),
-    accountId: v.any(),
+    instagramAccountId: v.string(),
     data: v.array(v.object({
       id: v.string(),
       media_type: v.string(),
@@ -545,7 +557,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
   .index("by_userId", ["userId"])
-  .index("by_accountId", ["accountId"]),
+  .index("by_instagramAccountId", ["instagramAccountId"]),
 
   // Instagram Post Insights
   instagramPostInsights: defineTable({
@@ -609,9 +621,18 @@ export default defineSchema({
     model: v.string(),
     status: v.string(),
     qty: v.number(),
+    endpoint: v.optional(v.string()),
+    method: v.optional(v.string()),
+    path: v.optional(v.string()),
+    statusCode: v.optional(v.number()),
+    userAgent: v.optional(v.string()),
+    ip: v.optional(v.string()),
+    requestId: v.optional(v.string()),
   })
   .index("by_user", ["userId"])
-  .index("by_timestamp", ["timestamp"]),
+  .index("by_timestamp", ["timestamp"])
+  .index("by_endpoint", ["endpoint"])
+  .index("by_status", ["status"]),
 
   waitlist: defineTable({
     name: v.string(),

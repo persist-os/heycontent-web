@@ -210,11 +210,12 @@ export const listUserGmailThreads = query({
       return threads.map(thread => {
         // Extract the first message in the thread for display
         const firstMessage = thread.messages && thread.messages.length > 0 ? thread.messages[0] : null;
+        const subject = firstMessage?.subject || 'No Subject';
+        const from = firstMessage?.from || 'Unknown Sender';
+        const snippet = firstMessage?.snippet || thread.snippet || '';
         
         // Determine if this is a newsletter or regular email (basic logic - can be enhanced)
         let emailType: 'newsletter' | 'partnership' | 'individual' | 'other' = 'individual';
-        const from = firstMessage?.from || thread.data?.from || '';
-        const subject = firstMessage?.subject || thread.data?.subject || 'No Subject';
         
         // Simple heuristic to guess email type - could be improved with more sophisticated logic
         if (from.toLowerCase().includes('newsletter') || subject.toLowerCase().includes('newsletter')) {
@@ -233,18 +234,15 @@ export const listUserGmailThreads = query({
           platform: 'gmail' as const,
           publishedAt: thread.createdAt ? new Date(thread.createdAt).toISOString() : new Date().toISOString(),
           content: {
-            subject: subject,
-            from: from,
-            snippet: thread.snippet || firstMessage?.snippet || '',
+            subject,
+            from,
+            snippet: snippet,
             threadId: thread.threadId,
             messageCount: thread.message_count || (thread.messages?.length || 0),
             emailType: emailType, // Add required emailType property
-            // Use default value for recipients as it's optional in the interface
             recipients: 1 // Default to 1 recipient
           },
           metrics: {
-            // These would normally come from Gmail analytics data
-            // For now, we'll use placeholders or default values
             replies: thread.message_count ? thread.message_count - 1 : 0,
             openRate: 0.75, // Placeholder
             clickRate: 0.25, // Placeholder

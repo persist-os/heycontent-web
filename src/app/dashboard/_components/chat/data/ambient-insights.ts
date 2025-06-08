@@ -45,12 +45,4 @@ export const ambientInsights: AmbientInsight[] = [
     icon: Lightbulb,
     action: 'Generate content ideas for React hooks'
   },
-  {
-    type: 'trending',
-    title: 'Trending Topic',
-    description: '#Web3 is trending among your followers',
-    icon: Hash,
-    action: 'Show me Web3 content ideas'
-  },
-
 ];

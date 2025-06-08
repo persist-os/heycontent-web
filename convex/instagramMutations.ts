@@ -8,13 +8,12 @@ export const storePostData = mutation({
   args: {
     userId: v.string(),
     postId: v.string(),
+    instagramAccountId: v.string(),
     postData: v.any(),
   },
   handler: async (ctx, args) => {
-    const { userId, postId, postData } = args;
+    const { userId, postId, instagramAccountId, postData } = args;
     const now = Date.now();
-    // Get accountId from postData
-    const accountId = postData.accountId || "";
 
     try {
       // Convert ISO timestamp to Unix timestamp if present
@@ -34,7 +33,7 @@ export const storePostData = mutation({
       if (existingPost) {
         // Update existing post
         await ctx.db.patch(existingPost._id, {
-          accountId,
+          instagramAccountId,
           postId,
           data: {
             id: postId,
@@ -47,7 +46,7 @@ export const storePostData = mutation({
         // Insert new post
         const id = await ctx.db.insert("instagramPosts", {
           userId,
-          accountId,
+          instagramAccountId,
           postId,
           data: {
             id: postId,
@@ -59,8 +58,8 @@ export const storePostData = mutation({
         return { status: "created", postId: id };
       }
     } catch (error) {
-      console.error(`Error storing post data for ${postId}:`, error);
-      throw new Error(`Failed to store post data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error(`Error storing Instagram post ${postId}:`, error);
+      throw new Error(`Failed to store Instagram post: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
 });
@@ -69,7 +68,7 @@ export const storePostData = mutation({
 export const storeProfileData = mutation({
   args: {
     userId: v.string(),
-    accountId: v.any(),
+    instagramAccountId: v.string(),
     username: v.string(),
     profileData: v.object({
       id: v.string(),
@@ -84,7 +83,7 @@ export const storeProfileData = mutation({
     updatedAt: v.number(),
   },
   handler: async (ctx, args) => {
-    const { userId, accountId, username, profileData, createdAt, updatedAt } = args;
+    const { userId, instagramAccountId, username, profileData, createdAt, updatedAt } = args;
     try {
       // Check if account already exists
       const existingAccount = await ctx.db
@@ -94,21 +93,21 @@ export const storeProfileData = mutation({
       if (existingAccount) {
         await ctx.db.patch(existingAccount._id, {
           username,
-          accountId,
+          instagramAccountId: String(instagramAccountId),
           profileData,
           updatedAt,
         });
-        return { status: "updated", accountId: existingAccount._id };
+        return { status: "updated", instagramAccountId: String(instagramAccountId) };
       } else {
         const id = await ctx.db.insert("instagramAccounts", {
           userId,
-          accountId,
+          instagramAccountId: String(instagramAccountId),
           username,
           profileData,
           createdAt,
           updatedAt,
         });
-        return { status: "created", accountId: id };
+        return { status: "created", instagramAccountId: String(instagramAccountId) };
       }
     } catch (error) {
       console.error(`Error storing Instagram account for user ${userId}:`, error);
@@ -121,7 +120,7 @@ export const storeProfileData = mutation({
 export const updateInstagramToken = mutation({
   args: {
     userId: v.string(),
-    accountId: v.any(),
+    instagramAccountId: v.string(),
     accessToken: v.string(),
     refreshToken: v.string(),
     expiresAt: v.number(),
@@ -135,7 +134,7 @@ export const updateInstagramToken = mutation({
       .first();
     if (existing) {
       await ctx.db.patch(existing._id, {
-        accountId: args.accountId,
+        instagramAccountId: String(args.instagramAccountId),
         accessToken: args.accessToken,
         refreshToken: args.refreshToken,
         expiryDate: args.expiresAt,
@@ -144,7 +143,7 @@ export const updateInstagramToken = mutation({
       });
     } else {
       await ctx.db.insert("instagramTokens", {
-        accountId: args.accountId,
+        instagramAccountId: String(args.instagramAccountId),
         userId: args.userId,
         accessToken: args.accessToken,
         refreshToken: args.refreshToken,
@@ -212,7 +211,7 @@ export const disconnectInstagram = mutation({
 export const storeProfileInsights = mutation({
   args: {
     userId: v.string(),
-    accountId: v.any(),
+    instagramAccountId: v.string(),
     insightsData: v.object({
       impressions: v.optional(v.number()),
       reach: v.optional(v.number()),
@@ -229,7 +228,7 @@ export const storeProfileInsights = mutation({
     updatedAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const { userId, accountId, insightsData, createdAt, updatedAt } = args;
+    const { userId, instagramAccountId, insightsData, createdAt, updatedAt } = args;
     const now = Date.now();
 
     try {
@@ -237,7 +236,7 @@ export const storeProfileInsights = mutation({
       const existingInsights = await ctx.db
         .query("instagramProfileInsights")
         .withIndex("by_userId", q => q.eq("userId", userId))
-        .filter(q => q.eq(q.field("accountId"), accountId))
+        .filter(q => q.eq(q.field("instagramAccountId"), String(instagramAccountId)))
         .first();
 
       if (existingInsights) {
@@ -251,7 +250,7 @@ export const storeProfileInsights = mutation({
         // Insert new insights
         const id = await ctx.db.insert("instagramProfileInsights", {
           userId,
-          accountId,
+          instagramAccountId: String(instagramAccountId),
           data: insightsData,
           createdAt: createdAt ?? now,
           updatedAt: updatedAt ?? now,
@@ -269,7 +268,7 @@ export const storeProfileInsights = mutation({
 export const storeStories = mutation({
   args: {
     userId: v.string(),
-    accountId: v.any(),
+    instagramAccountId: v.string(),
     storiesData: v.array(v.object({
       id: v.string(),
       media_type: v.string(),
@@ -294,7 +293,7 @@ export const storeStories = mutation({
     updatedAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const { userId, accountId, storiesData, createdAt, updatedAt } = args;
+    const { userId, instagramAccountId, storiesData, createdAt, updatedAt } = args;
     const now = Date.now();
 
     try {
@@ -302,7 +301,7 @@ export const storeStories = mutation({
       const existingStories = await ctx.db
         .query("instagramStories")
         .withIndex("by_userId", q => q.eq("userId", userId))
-        .filter(q => q.eq(q.field("accountId"), accountId))
+        .filter(q => q.eq(q.field("instagramAccountId"), String(instagramAccountId)))
         .first();
 
       if (existingStories) {
@@ -316,7 +315,7 @@ export const storeStories = mutation({
         // Insert new stories
         const id = await ctx.db.insert("instagramStories", {
           userId,
-          accountId,
+          instagramAccountId: String(instagramAccountId),
           data: storiesData,
           createdAt: createdAt ?? now,
           updatedAt: updatedAt ?? now,
