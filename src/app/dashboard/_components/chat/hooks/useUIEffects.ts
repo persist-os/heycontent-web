@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Message } from '@/app/types/chat'
 import { AmbientInsight, SuggestedAction } from '../types'
+import { getApiKey } from '@/app/lib/api-helpers'
 
 export const useUIEffects = (
   messages: Message[],
@@ -11,7 +12,7 @@ export const useUIEffects = (
   const [showAmbient, setShowAmbient] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
-  const [ambientLoading, setAmbientLoading] = useState(false)
+  const [ambientError, setAmbientError] = useState<string | null>(null)
 
   const scrollToBottom = useCallback(() => {
     if (chatContainerRef.current) {
@@ -35,7 +36,8 @@ export const useUIEffects = (
   }, []);
 
   const handleInsightClick = useCallback((action: string, insight: AmbientInsight, onSendMessage: (message: string) => void) => {
-    setShowAmbient(false)
+    // Don't hide ambient insights when clicking an insight
+    // This allows users to click multiple insights without the container disappearing
     onSendMessage(action)
   }, [])
 
@@ -47,8 +49,11 @@ export const useUIEffects = (
     onSendMessage(message);
   }, [])
 
+  // Ambient insights are now handled by the AmbientInsights component using Convex
+
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true)
+    // Refresh is now handled by the AmbientInsights component
     try {
       // Simulate API call - replace with actual API call
       await new Promise(resolve => setTimeout(resolve, 1000))
@@ -61,6 +66,13 @@ export const useUIEffects = (
   const resetChat = useCallback(() => {
     setShowAmbient(true)
   }, [])
+
+  // Reset showAmbient when messages change
+  useEffect(() => {
+    // Always show ambient insights when there are no messages
+    // and hide when there are messages
+    setShowAmbient(messages.length === 0);
+  }, [messages.length])
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -98,9 +110,10 @@ export const useUIEffects = (
     showAmbient,
     setShowAmbient,
     isRefreshing,
+    setIsRefreshing,
     lastRefresh,
-    ambientLoading,
-    setAmbientLoading,
+    setLastRefresh,
+    ambientError,
     scrollToBottom,
     scrollToMessage,
     handleInsightClick,

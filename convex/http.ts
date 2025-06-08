@@ -189,6 +189,18 @@ app.get("/api/users/:id/conversations", async (c) => {
   return c.json(result);
 });
 
+// Save insights for a user
+app.post("/api/users/:id/save_insights", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { insights } = await c.req.json();
+  const result = await ctx.runMutation(api.ambientInsights.createInsights, {
+    userId,
+    insights,
+  });
+  return c.json(result);
+});
+
 // API KEY ROUTES
 
 // Insert API key
@@ -1266,44 +1278,39 @@ app.get("/api/users/:id/instagram/post/:postId", async (c) => {
   }
 });
 
-// Get Instagram post insights
-app.get("/api/users/:id/instagram/post/:postId/insights", async (c) => {
+// Store Instagram post insights
+app.post("/api/users/:id/instagram/post/:postId/insights", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
   const postId = c.req.param("postId");
+  const { insightsData } = await c.req.json();
+
+  if (!insightsData) {
+    return c.json({ success: false, error: "Missing insightsData" }, 400);
+  }
 
   try {
-    const post = await ctx.runQuery(api.instagramQueries.getInstagramPost, { 
+    const result = await ctx.runMutation(api.instagramMutations.storePostInsights, {
       userId,
-      postId
+      postId,
+      insightsData,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
     });
-    
-    if (!post) {
-      return c.json({ 
-        success: false, 
-        error: "Post not found" 
-      }, 404);
-    }
-
-    // Extract insights from post data
-    const insights = {
-      likes: post.data.like_count || 0,
-      comments: post.data.comments_count || 0,
-      // Add any other metrics available in the post data
-    };
 
     return c.json({ 
       success: true,
-      insights
+      result
     });
   } catch (error) {
-    console.error("Error fetching Instagram post insights:", error);
+    console.error("Error storing Instagram post insights:", error);
     return c.json({ 
       success: false, 
       error: `Server error: ${error instanceof Error ? error.message : 'Unknown error'}` 
     }, 500);
   }
 });
+
 
 // Get Instagram post comments
 app.get("/api/users/:id/instagram/post/:postId/comments", async (c) => {
@@ -1391,20 +1398,58 @@ app.post("/addRateLimitRequest", async (c) => {
 app.post("/api/users/:id/usage/log", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  const { timestamp, model, status, qty } = await c.req.json();
+  const { 
+    timestamp, 
+    model, 
+    status, 
+    qty, 
+    // New optional fields
+    endpoint,
+    method,
+    path,
+    statusCode,
+    userAgent,
+    ip,
+    requestId, // For tracking individual requests
+  } = await c.req.json();
+  
+  // Validate required fields
   if (!userId || !timestamp || !model || !status || typeof qty !== "number") {
     return c.json({ success: false, error: "Missing required fields" }, 400);
   }
-  // Log the event
-  await ctx.runMutation(api.usageEvents.logUsageEvent, {
+  
+  // Log the event with all available metadata
+  const eventData = {
     userId,
     timestamp,
     model,
     status,
     qty,
+    // Include optional fields if provided
+    ...(endpoint && { endpoint }),
+    ...(method && { method }),
+    ...(path && { path }),
+    ...(statusCode && { statusCode: Number(statusCode) }),
+    ...(userAgent && { userAgent }),
+    ...(ip && { ip }),
+    ...(requestId && { requestId }),
+  };
+  
+  await ctx.runMutation(api.usageEvents.logUsageEvent, eventData);
+  
+  // Update user's usage field with all available context
+  await ctx.runMutation(api.usageEvents.updateUserUsage, { 
+    userId, 
+    qty,
+    endpoint,
+    method,
+    path,
+    statusCode: statusCode ? Number(statusCode) : undefined,
+    userAgent,
+    ip,
+    requestId,  // Pass through the requestId
   });
-  // Update user's usage field
-  await ctx.runMutation(api.usageEvents.updateUserUsage, { userId, qty });
+  
   return c.json({ success: true });
 });
 
@@ -1432,6 +1477,19 @@ app.post("/api/users/:id/usage/reset", async (c) => {
     includedRequests,
   });
   return c.json(result);
+});
+
+// Get user data bundle for ambient insights (single call)
+app.get("/api/users/:id/ambient-data-bundle", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  try {
+    const bundle = await ctx.runQuery(api.ambientInsights.getUserDataBundle, { userId });
+    return c.json({ success: true, data: bundle });
+  } catch (error) {
+    console.error("Failed to get user data bundle:", error);
+    return c.json({ success: false, error: "Failed to get user data bundle" }, 500);
+  }
 });
 
 const router = new HttpRouterWithHono(app);

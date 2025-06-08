@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { getFirebaseAuth } from '@/app/lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -25,6 +25,7 @@ import ChatContextBox from './components/ChatContextBox'
 import AIInsightsContextBox from './components/AIInsightsContextBox'
 import ChatMessagesList from './components/ChatMessagesList'
 import ChatInputArea from './components/ChatInputArea'
+import { AmbientInsightsContainer } from './components/AmbientInsightsContainer'
 
 import { welcomeMessageSteps, getWelcomeStepMessage, welcomeSuggestions, welcomeSuggestionsWithPersona } from './data/welcome-message'
 
@@ -36,6 +37,7 @@ import { useUIEffects } from './hooks/useUIEffects'
 
 import { useOnboardingState } from './hooks/useOnboardingState'
 import { usePersonaData } from './hooks/usePersonaData'
+import { useAuth } from '@/app/context/auth-context'
 
 
 const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery }) => {
@@ -80,7 +82,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     showAmbient,
     setShowAmbient,
     isRefreshing,
-    ambientLoading,
+    ambientError,
     handleInsightClick: handleRawInsightClick,
     handleRefresh,
     resetChat
@@ -99,12 +101,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Initialize ambient insights actions
   const ambientInsightsActions = useAmbientInsightsActions(handleSendMessage);
-  
-  // Filter out any undefined or null insights
-  const filteredAmbientInsights = React.useMemo(() => 
-    ambientInsights.filter(insight => insight && insight.title && insight.description),
-    [ambientInsights]
-  );
 
   // Track onboarding state for persona tip
   const onboardingState = useOnboardingState(messages, chatState.sessionId)
@@ -146,10 +142,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   // Use a separate loading state for auth
   const [authLoading, setAuthLoading] = useState(true)
 
-  // Wrapper for insight click to pass handleSendMessage
-  const handleInsightClick = (action: string, insight: any) => {
-    handleRawInsightClick(action, insight, handleSendMessage);
-  };
 
   // Handle bottom bar action click
   const handleActionClick = (action: string) => {
@@ -222,44 +214,41 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       handleSendMessage(askQuery);
     }
   }, [askQuery, isLoading, welcome, handleSendMessage, messages.length]);
+  
+  // Handle insight clicks by sending the action as a message
+  const handleInsightClick = useCallback((action: string, insight: any) => {
+    handleSendMessage(action);
+  }, [handleSendMessage]);
 
   // Authentication effect
+  const { firebaseUser, getToken } = useAuth();
+  const [apiKey, setApiKey] = useState<string | null>(null);
+
+  // Set user, userId, and userEmail from firebaseUser
   useEffect(() => {
-    let auth
-    try {
-      auth = getFirebaseAuth()
-    } catch (e) {
-      auth = null
+    if (firebaseUser) {
+      setUser(firebaseUser);
+      setUserId(firebaseUser.uid);
+      setUserEmail(firebaseUser.email);
     }
-    if (!auth) {
-      console.error('Firebase auth not initialized')
-      return
-    }
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser)
-      setUserId(firebaseUser?.uid)
-      setUserEmail(firebaseUser?.email)
-      if (!firebaseUser) {
-        setAuthLoading(false)
-        return
-      }
-      if (chatId) {
-        // If we have a chat ID, we'll load the conversation in a separate effect
-        console.log('Chat ID provided, will load conversation:', chatId)
+  }, [firebaseUser]);
+
+  useEffect(() => {
+    async function fetchApiKey() {
+      if (firebaseUser && getToken) {
+        try {
+          const token = await getToken();
+          setApiKey(token);
+        } catch (error) {
+          console.error('Failed to get API key token:', error);
+          setApiKey(null);
+        }
       } else {
-        // For a new chat, reset to clean state
-        console.log('No chat ID provided, initializing new chat state')
-        chatState.setSessionId(null)
-        chatState.setIsFirstMessage(true)
-        setMessages([])
-        loadedConversationRef.current = null
+        setApiKey(null);
       }
-      setAuthLoading(false)
-    })
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, [chatId, chatState.setSessionId, chatState.setIsFirstMessage, setMessages]);
+    }
+    fetchApiKey();
+  }, [firebaseUser, getToken]);
 
   // Load conversation when user and chatId are available, or reset when chatId is null
   useEffect(() => {
@@ -348,6 +337,43 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     onSendMessage(message);
   };
 
+  // Autoscroll functionality
+  useEffect(() => {
+    if (chatContainerRef.current && messages.length > 0) {
+      const scrollContainer = chatContainerRef.current;
+      
+      // Add a small delay to account for suggestions and other content that might render
+      const scrollToBottom = () => {
+        const scrollHeight = scrollContainer.scrollHeight;
+        const height = scrollContainer.clientHeight;
+        const maxScrollTop = scrollHeight - height;
+        
+        // Only auto-scroll if user is near the bottom (within 100px) or if it's a new message
+        const currentScrollTop = scrollContainer.scrollTop;
+        const isNearBottom = currentScrollTop >= maxScrollTop - 100;
+        
+        if (isNearBottom || isLoading) {
+          // Scroll to the very bottom plus some extra padding for suggestions
+          scrollContainer.scrollTo({
+            top: scrollHeight + 200,
+            behavior: 'smooth'
+          });
+        }
+      };
+
+      // Initial scroll
+      scrollToBottom();
+      
+      // Additional scroll after a short delay to catch any async content like suggestions
+      const timeoutId = setTimeout(scrollToBottom, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [messages, isLoading]);
+
+  // Show messages if there are any, or if there is a context
+  const hasMessagesOrContext = currentContext || messages.length > 0;
+
   if (!user) {
     return null
   }
@@ -355,44 +381,12 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   return (
     <div className="flex flex-col h-screen bg-white w-full overflow-hidden">
       {/* Header */}
-      <div className="flex-shrink-0">
-        <ChatHeader
-          isRefreshing={isRefreshing}
-          onRefresh={handleRefresh}
-          onNewChat={handleNewChat}
-        />
-      </div>
+      <ChatHeader isRefreshing={isRefreshing} onRefresh={handleRefresh} onNewChat={handleNewChat} />
 
-      {/* Context Box - shown when context is available */}
-      {currentContext?.platform === 'ai-insights' ? (
-        <div className="flex-shrink-0">
-          <AIInsightsContextBox
-            currentContext={currentContext}
-            messages={messages}
-            onRemove={handleRemoveContext}
-            includeAnalysisInQuery={includeAnalysisInQuery}
-            onToggleAnalysis={setIncludeAnalysisInQuery}
-            onSendMessage={handleSendMessage}
-          />
-        </div>
-      ) : currentContext ? (
-        <div className="flex-shrink-0">
-          <ChatContextBox
-            currentContext={currentContext}
-            messages={messages}
-            onRemove={handleRemoveContext}
-            includeAnalysisInQuery={includeAnalysisInQuery}
-            onToggleAnalysis={setIncludeAnalysisInQuery}
-            onSendMessage={handleSendMessage}
-          />
-        </div>
-      ) : null}
-
-      {/* Main content area - takes all available space */}
+      {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Messages container */}
-        {(currentContext || messages.length > 0) ? (
-          <div className="flex-1 overflow-y-auto">
+        {hasMessagesOrContext ? (
+          <div ref={chatContainerRef} className="flex-1 overflow-y-auto">
             <div className="p-6">
               <div className="max-w-5xl mx-auto space-y-4">
                 <ChatMessagesList
@@ -402,9 +396,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                   handleReferenceClick={handleReferenceClick}
                   handleOptionClick={handleOptionClick}
                   handleFollowUpClick={handleFollowUpClick}
+                  handleSendMessage={handleSendMessage}
                   userId={userId}
                   handleSuggestionClick={handleSuggestionClick}
-                  handleSendMessage={handleSendMessage}
                 />
 
                 {/* Show persona tip in onboarding flow when ready and at least 4 messages exist */}
@@ -430,46 +424,37 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             </div>
           </div>
         ) : (
-          /* Empty state with ambient insights - takes full height */
           <div className="flex-1 flex flex-col">
-            <ChatInputArea
-              showAmbient={true}
-              currentContext={currentContext}
-              ambientInsights={filteredAmbientInsights}
-              ambientLoading={ambientLoading}
-              error={error}
-              handleInsightClick={ambientInsightsActions.handleClickInsight}
-              handleActionClick={handleActionClick}
-              handleSendMessage={handleSendMessage}
-              inputRef={inputRef}
-              isLoading={isLoading}
-              referencedMessage={referencedMessage}
-              handleClearReference={handleClearReference}
-              includeAnalysisInQuery={includeAnalysisInQuery}
+            <AmbientInsightsContainer 
+              handleSendMessage={(msg, context) => {
+                // Start a new chat with the context from the insight
+                handleNewChat();
+                setTimeout(() => {
+                  if (context) setContentContext(context);
+                  handleSendMessage(msg);
+                }, 0);
+              }}
             />
           </div>
         )}
+      </div>
 
-        {/* Input area - only show when there are messages */}
-        {(currentContext || messages.length > 0) && (
-          <div className="flex-shrink-0 border-t border-gray-100">
-            <ChatInputArea
-              showAmbient={false}
-              currentContext={currentContext}
-              ambientInsights={filteredAmbientInsights}
-              ambientLoading={ambientLoading}
-              error={error}
-              handleInsightClick={ambientInsightsActions.handleClickInsight}
-              handleActionClick={handleActionClick}
-              handleSendMessage={handleSendMessage}
-              inputRef={inputRef}
-              isLoading={isLoading}
-              referencedMessage={referencedMessage}
-              handleClearReference={handleClearReference}
-              includeAnalysisInQuery={includeAnalysisInQuery}
-            />
-          </div>
-        )}
+      {/* Bottom Bar Actions */}
+      <BottomBarActions onActionClick={handleActionClick} />
+
+      {/* Input Bar */}
+      <div className="flex-shrink-0 border-t border-gray-100">
+        <ChatInputArea
+          showAmbient={false}
+          currentContext={currentContext}
+          handleActionClick={handleActionClick}
+          handleSendMessage={handleSendMessage}
+          inputRef={inputRef}
+          isLoading={isLoading}
+          referencedMessage={referencedMessage}
+          handleClearReference={handleClearReference}
+          includeAnalysisInQuery={includeAnalysisInQuery}
+        />
       </div>
     </div>
   )

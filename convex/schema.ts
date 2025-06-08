@@ -72,6 +72,20 @@ export default defineSchema({
   .index("by_username", ["username"])
   .index("by_referralCode", ["referralCode"]),
 
+  // Ambient Insights
+  ambientInsights: defineTable({
+    userId: v.string(),
+    data: v.array(v.object({
+      title: v.string(),
+      content: v.string(),
+      category: v.string(),
+      recommendation: v.string(),
+    })),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_userId", ["userId"]),
+
   personas: defineTable({
     // Current Persona
     current_name: v.string(),
@@ -480,8 +494,7 @@ export default defineSchema({
       children: v.optional(v.array(v.object({
         id: v.string(),
         media_url: v.string(),
-        media_type: v.string(),
-        thumbnail_url: v.optional(v.string())
+        media_type: v.string()
       })))
     }),
     createdAt: v.number(),
@@ -491,6 +504,7 @@ export default defineSchema({
   .index("by_userId", ["userId"])
   .index("by_postId", ["postId"])
   .index("by_timestamp", ["data.timestamp"]),
+
 
   // Instagram Profile Insights
   instagramProfileInsights: defineTable({
@@ -608,9 +622,18 @@ export default defineSchema({
     model: v.string(),
     status: v.string(),
     qty: v.number(),
+    endpoint: v.optional(v.string()),
+    method: v.optional(v.string()),
+    path: v.optional(v.string()),
+    statusCode: v.optional(v.number()),
+    userAgent: v.optional(v.string()),
+    ip: v.optional(v.string()),
+    requestId: v.optional(v.string()),
   })
   .index("by_user", ["userId"])
-  .index("by_timestamp", ["timestamp"]),
+  .index("by_timestamp", ["timestamp"])
+  .index("by_endpoint", ["endpoint"])
+  .index("by_status", ["status"]),
 
   waitlist: defineTable({
     name: v.string(),

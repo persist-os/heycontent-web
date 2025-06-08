@@ -25,7 +25,7 @@ export default function SubscriptionOverview() {
   const [plans, setPlans] = useState<Record<string, any>>({});
   const [currentSubscription, setCurrentSubscription] = useState<any>(null);
   const [status, setStatus] = useState<any>(null); // Store status separately
-  const [usageSummary, setUsageSummary] = useState<{ total: number; included: number; overage: number }>({ total: 62, included: 400, overage: 0 });
+  const [usageSummary, setUsageSummary] = useState<{ total: number; included: number; overage: number }>({ total: 0, included: 0, overage: 0 });
   const [usageEvents, setUsageEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +41,17 @@ export default function SubscriptionOverview() {
   // Convex usage queries
   const convexUsageSummary = useQuery(api.usageEvents.getUsageSummary, userId ? { userId } : "skip");
   const convexUsageEvents = useQuery(api.usageEvents.listUsageEvents, userId ? { userId, limit: 20 } : "skip");
+  
+  // Update usage summary when convex data changes
+  useEffect(() => {
+    if (convexUsageSummary) {
+      setUsageSummary({
+        total: convexUsageSummary.total || 0,
+        included: convexUsageSummary.included || 0,
+        overage: convexUsageSummary.overage || 0
+      });
+    }
+  }, [convexUsageSummary]);
 
   // Overage controls state
   const [ubpEnabled, setUbpEnabled] = useState(currentSubscription?.ubpEnabled ?? true);
@@ -251,6 +262,35 @@ export default function SubscriptionOverview() {
 
   if (loading) return <div className="p-8 text-center">Loading...</div>;
   if (error) return <div className="p-8 text-center text-red-600">{error}</div>;
+
+  // If user doesn't have an active subscription, show the checkout form
+  if (!status?.is_subscribed) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[300px] py-12 px-4 w-full">
+        <div className="w-full max-w-4xl mx-auto">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6">
+            <h1 className="text-2xl font-bold mb-6">Subscribe to HeyContent</h1>
+            <p className="mb-6">You need an active subscription to access HeyContent. Please choose a plan to continue.</p>
+            <UpgradeModal
+              open={true}
+              onClose={() => {}}
+              onSelectPlan={handleSelectPlan}
+              context="registration"
+            />
+            {showCheckout && selectedPlanId && (
+              <div className="mt-8">
+                <CheckoutForm
+                  planId={selectedPlanId}
+                  onSuccess={handleCheckoutSuccess}
+                  onCancel={handleCheckoutCancel}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
