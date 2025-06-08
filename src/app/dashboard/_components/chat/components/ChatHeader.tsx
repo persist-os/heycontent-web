@@ -17,18 +17,6 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ isRefreshing, onRefresh, onNewC
     </div>
     <div className="flex gap-2">
       <button
-        onClick={onRefresh}
-        disabled={isRefreshing}
-        className={`p-2 rounded-lg ${
-          isRefreshing 
-            ? 'text-gray-400 cursor-not-allowed' 
-            : 'text-gray-900 hover:text-blue-600 hover:bg-blue-50'
-        } transition-colors`}
-        title="Refresh Insights"
-      >
-        <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
-      </button>
-      <button
         onClick={onNewChat}
         className="p-2 rounded-lg text-gray-900 hover:text-blue-600 hover:bg-blue-50 transition-colors"
         title="New Chat"
