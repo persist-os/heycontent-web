@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { getFirebaseAuth } from '@/app/lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -36,6 +36,7 @@ import { useUIEffects } from './hooks/useUIEffects'
 
 import { useOnboardingState } from './hooks/useOnboardingState'
 import { usePersonaData } from './hooks/usePersonaData'
+import { useAuth } from '@/app/context/auth-context'
 
 
 const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery }) => {
@@ -80,7 +81,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     showAmbient,
     setShowAmbient,
     isRefreshing,
-    ambientLoading,
+    ambientError,
     handleInsightClick: handleRawInsightClick,
     handleRefresh,
     resetChat
@@ -99,12 +100,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Initialize ambient insights actions
   const ambientInsightsActions = useAmbientInsightsActions(handleSendMessage);
-  
-  // Filter out any undefined or null insights
-  const filteredAmbientInsights = React.useMemo(() => 
-    ambientInsights.filter(insight => insight && insight.title && insight.description),
-    [ambientInsights]
-  );
 
   // Track onboarding state for persona tip
   const onboardingState = useOnboardingState(messages, chatState.sessionId)
@@ -146,10 +141,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   // Use a separate loading state for auth
   const [authLoading, setAuthLoading] = useState(true)
 
-  // Wrapper for insight click to pass handleSendMessage
-  const handleInsightClick = (action: string, insight: any) => {
-    handleRawInsightClick(action, insight, handleSendMessage);
-  };
 
   // Handle bottom bar action click
   const handleActionClick = (action: string) => {
@@ -222,44 +213,41 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       handleSendMessage(askQuery);
     }
   }, [askQuery, isLoading, welcome, handleSendMessage, messages.length]);
+  
+  // Handle insight clicks by sending the action as a message
+  const handleInsightClick = useCallback((action: string, insight: any) => {
+    handleSendMessage(action);
+  }, [handleSendMessage]);
 
   // Authentication effect
+  const { firebaseUser, getToken } = useAuth();
+  const [apiKey, setApiKey] = useState<string | null>(null);
+
+  // Set user, userId, and userEmail from firebaseUser
   useEffect(() => {
-    let auth
-    try {
-      auth = getFirebaseAuth()
-    } catch (e) {
-      auth = null
+    if (firebaseUser) {
+      setUser(firebaseUser);
+      setUserId(firebaseUser.uid);
+      setUserEmail(firebaseUser.email);
     }
-    if (!auth) {
-      console.error('Firebase auth not initialized')
-      return
-    }
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser)
-      setUserId(firebaseUser?.uid)
-      setUserEmail(firebaseUser?.email)
-      if (!firebaseUser) {
-        setAuthLoading(false)
-        return
-      }
-      if (chatId) {
-        // If we have a chat ID, we'll load the conversation in a separate effect
-        console.log('Chat ID provided, will load conversation:', chatId)
+  }, [firebaseUser]);
+
+  useEffect(() => {
+    async function fetchApiKey() {
+      if (firebaseUser && getToken) {
+        try {
+          const token = await getToken();
+          setApiKey(token);
+        } catch (error) {
+          console.error('Failed to get API key token:', error);
+          setApiKey(null);
+        }
       } else {
-        // For a new chat, reset to clean state
-        console.log('No chat ID provided, initializing new chat state')
-        chatState.setSessionId(null)
-        chatState.setIsFirstMessage(true)
-        setMessages([])
-        loadedConversationRef.current = null
+        setApiKey(null);
       }
-      setAuthLoading(false)
-    })
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, [chatId, chatState.setSessionId, chatState.setIsFirstMessage, setMessages]);
+    }
+    fetchApiKey();
+  }, [firebaseUser, getToken]);
 
   // Load conversation when user and chatId are available, or reset when chatId is null
   useEffect(() => {
@@ -435,10 +423,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             <ChatInputArea
               showAmbient={true}
               currentContext={currentContext}
-              ambientInsights={filteredAmbientInsights}
-              ambientLoading={ambientLoading}
-              error={error}
-              handleInsightClick={ambientInsightsActions.handleClickInsight}
               handleActionClick={handleActionClick}
               handleSendMessage={handleSendMessage}
               inputRef={inputRef}
@@ -456,10 +440,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             <ChatInputArea
               showAmbient={false}
               currentContext={currentContext}
-              ambientInsights={filteredAmbientInsights}
-              ambientLoading={ambientLoading}
-              error={error}
-              handleInsightClick={ambientInsightsActions.handleClickInsight}
               handleActionClick={handleActionClick}
               handleSendMessage={handleSendMessage}
               inputRef={inputRef}

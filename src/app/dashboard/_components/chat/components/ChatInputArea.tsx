@@ -6,10 +6,6 @@ import { BottomBarActions } from './BottomBarActions';
 interface ChatInputAreaProps {
   showAmbient: boolean;
   currentContext: any;
-  ambientInsights: any[];
-  ambientLoading: boolean;
-  error: string | null;
-  handleInsightClick: (action: string, insight: any) => void;
   handleActionClick: (action: string) => void;
   handleSendMessage: (msg: string) => void;
   inputRef: React.RefObject<HTMLInputElement>;
@@ -22,10 +18,6 @@ interface ChatInputAreaProps {
 const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   showAmbient,
   currentContext,
-  ambientInsights,
-  ambientLoading,
-  error,
-  handleInsightClick,
   handleActionClick,
   handleSendMessage,
   inputRef,
@@ -34,26 +26,23 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   handleClearReference,
   includeAnalysisInQuery,
 }) => {
-  // Only show ambient insights and bottom actions when there are no messages
-  const showAmbientContent = showAmbient && !currentContext && ambientInsights.length > 0;
+  // Only show ambient content when there are no messages
+  const showAmbientContent = showAmbient && !currentContext;
   
   return (
     <div className={`bg-white border-t border-gray-200 ${showAmbientContent ? 'h-full flex flex-col' : ''}`}>
       <div className="max-w-7xl mx-auto w-full h-full flex flex-col">
-        {/* Show ambient insights when there are no messages */}
+        {/* Show ambient content when there are no messages */}
         {showAmbientContent && (
           <div className="w-full bg-white flex-1 flex flex-col">
             <div className="px-4 pt-6 pb-2 flex-shrink-0">
-    
+              {/* Empty header for consistent spacing */}
             </div>
             
-            {/* Insights container - takes all available space */}
+            {/* Ambient Insights component - handles its own data fetching */}
             <div className="flex-1 overflow-y-auto px-4 pb-4">
-              <AmbientInsights 
-                insights={ambientInsights} 
-                loading={ambientLoading}
-                error={error}
-                onInsightClick={handleInsightClick}
+              <AmbientInsights
+                onInsightClick={(action, insight) => handleSendMessage(action)}
               />
             </div>
 

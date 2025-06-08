@@ -34,6 +34,24 @@ export const getByUserId = query({
 });
 
 /**
+ * Get the most recent ambient insights document for a user
+ */
+export const getMostRecentByUserId = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args): Promise<AmbientInsightsDocument | null> => {
+    const insights = await ctx.db
+      .query('ambientInsights')
+      .withIndex('by_userId', q => q.eq('userId', args.userId))
+      .order('desc')
+      .collect();
+    if (insights.length > 0) {
+      return insights[0];
+    }
+    return null;
+  },
+});
+
+/**
  * Create a new insights document for a user
  */
 export const createInsights = mutation({
