@@ -194,6 +194,10 @@ export const getRecentGmailThreads = query({
   },
 });
 
+function isNonEmptyString(val) {
+  return typeof val === 'string' && val.trim().length > 0;
+}
+
 // List Gmail threads for content analytics page - compatible with UI components
 export const listUserGmailThreads = query({
   args: { userId: v.string() },
@@ -206,13 +210,14 @@ export const listUserGmailThreads = query({
         .order("desc")
         .collect();
       
+      // Debug log: log the raw threads from Convex
+      console.log('Convex: Raw threads from DB:', JSON.stringify(threads, null, 2));
+      
       // Transform threads to match the GmailContentItem format for UI
       return threads.map(thread => {
-        // Extract the first message in the thread for display
-        const firstMessage = thread.messages && thread.messages.length > 0 ? thread.messages[0] : null;
-        const subject = firstMessage?.subject || 'No Subject';
-        const from = firstMessage?.from || 'Unknown Sender';
-        const snippet = firstMessage?.snippet || thread.snippet || '';
+        const subject = thread.subject || 'No Subject';
+        const from = thread.from || 'Unknown Sender';
+        const snippet = thread.snippet || '';
         
         // Determine if this is a newsletter or regular email (basic logic - can be enhanced)
         let emailType: 'newsletter' | 'partnership' | 'individual' | 'other' = 'individual';
@@ -236,7 +241,7 @@ export const listUserGmailThreads = query({
           content: {
             subject,
             from,
-            snippet: snippet,
+            snippet,
             threadId: thread.threadId,
             messageCount: thread.message_count || (thread.messages?.length || 0),
             emailType: emailType, // Add required emailType property

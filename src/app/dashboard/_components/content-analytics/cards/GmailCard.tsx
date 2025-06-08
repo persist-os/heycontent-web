@@ -13,21 +13,22 @@ export interface GmailCardProps {
 
 export const GmailCard: React.FC<GmailCardProps> = ({ item, onDiscussContent, onViewDetailedAnalytics }) => {
   console.log('GmailCard item:', item);
+  console.log('GmailCard item.content:', item.content);
 
   const { content, metrics, publishedAt } = item;
 
   // Get the actual data from the Gmail thread
-  const subject = content.subject || (item as any).data?.messages?.[0]?.subject || 'No Subject';
-  const from = content.from || (item as any).data?.messages?.[0]?.from || 'Unknown Sender';
-  const snippet = content.snippet || (item as any).snippet || 'No preview available';
-  const replyCount = metrics?.replies ?? ((item as any).message_count ? (item as any).message_count - 1 : 0);
+  const subject = content.subject || 'No Subject';
+  const from = content.from || 'Unknown Sender';
+  const snippet = content.snippet || 'No preview available';
+  const replyCount = metrics?.replies ?? 0;
 
   // Use the Gmail refresh hook
   const { refresh, loading, error } = useGmailRefresh();
 
   const handleRefresh = async () => {
-    // Use item.content.thread?.threadId as threadId and item.id as emailId
-    await refresh(item.content.thread?.threadId || '', item.id);
+    // Use item.id as threadId, and item.id or user's email as emailId
+    await refresh(item.id, item.id);
   };
 
   return (

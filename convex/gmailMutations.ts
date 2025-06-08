@@ -146,7 +146,13 @@ export const storeGmailThread = mutation({
   handler: async (ctx, args) => {
     try {
       const now = Date.now();
-      
+      // Prepare data object
+      const data = args.threadData || {};
+      // Get first message for top-level fields
+      const firstMessage = args.messages && args.messages.length > 0 ? args.messages[0] : null;
+      const from = firstMessage?.from || '';
+      const subject = firstMessage?.subject || '';
+      const snippet = firstMessage?.snippet || args.snippet || '';
       // Check if the thread already exists
       const existingThread = await ctx.db
         .query("gmailThreads")
@@ -156,14 +162,12 @@ export const storeGmailThread = mutation({
           q.eq(q.field("email"), args.email)
         )
         .first();
-
-      // Prepare data object
-      const data = args.threadData || {};
-
       if (existingThread) {
         // Update existing thread
         await ctx.db.patch(existingThread._id, {
-          snippet: args.snippet,
+          from,
+          subject,
+          snippet,
           message_count: args.message_count,
           messages: args.messages,
           data,
@@ -176,7 +180,9 @@ export const storeGmailThread = mutation({
           userId: args.userId,
           email: args.email,
           threadId: args.threadId,
-          snippet: args.snippet,
+          from,
+          subject,
+          snippet,
           message_count: args.message_count,
           messages: args.messages,
           data,
@@ -698,6 +704,23 @@ export const migrateGmailThreadMessages = mutation({
         });
         updated++;
       }
+    }
+    return { updated };
+  },
+});
+
+export const migrateThreadTopLevelFields = mutation({
+  args: {},
+  handler: async (ctx, args) => {
+    const threads = await ctx.db.query("gmailThreads").collect();
+    let updated = 0;
+    for (const thread of threads) {
+      const firstMessage = thread.messages && thread.messages.length > 0 ? thread.messages[0] : null;
+      const from = firstMessage?.from || '';
+      const subject = firstMessage?.subject || '';
+      const snippet = firstMessage?.snippet || thread.snippet || '';
+      await ctx.db.patch(thread._id, { from, subject, snippet });
+      updated++;
     }
     return { updated };
   },

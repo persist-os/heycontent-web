@@ -218,6 +218,9 @@ export default defineSchema({
     userId: v.string(),
     email: v.string(),
     threadId: v.string(),
+    from: v.optional(v.string()),
+    subject: v.optional(v.string()),
+    snippet: v.optional(v.string()),
     message_count: v.optional(v.number()),
     messages: v.optional(v.array(v.object({
       id: v.string(),
@@ -226,7 +229,6 @@ export default defineSchema({
       snippet: v.optional(v.string()),
       label_ids: v.optional(v.array(v.string())),
     }))),
-    snippet: v.optional(v.string()),
     data: v.optional(v.any()), // Complete thread data
     analysis: v.optional(v.any()),
     createdAt: v.number(),

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { admin } from '@/app/lib/firebaseAdmin'; // adjust path as needed
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,15 +14,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: 'error', error: 'Not authenticated' }, { status: 401 });
     }
 
+    // Verify the Firebase token and extract userId
+    const decoded = await admin.auth().verifyIdToken(token.replace(/^Bearer /, ''));
+    const userId = decoded.uid;
+
     // Call the backend API
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://backend.hicontent.co';
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000';
     const response = await fetch(`${backendUrl}/api/v1/gmail/refresh`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`,
       },
-      body: JSON.stringify({ thread_id: threadId, email_id: emailId }),
+      body: JSON.stringify({ user_id: userId, thread_id: threadId, email_id: emailId }),
     });
 
     const data = await response.json();

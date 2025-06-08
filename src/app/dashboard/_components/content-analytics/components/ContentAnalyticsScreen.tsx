@@ -193,6 +193,9 @@ export function ContentAnalyticsScreen() {
     { userId }
   );
 
+  // Debug log: log the raw gmailThreads value
+  console.log('ContentAnalyticsScreen: raw gmailThreads from Convex:', gmailThreads);
+
   useEffect(() => {
   }, [youtubeVideos, gmailThreads, instagramPosts]);
 
@@ -235,7 +238,7 @@ export function ContentAnalyticsScreen() {
         content: {
           subject: thread.subject || '',
           snippet: thread.snippet || '',
-          thread: thread.threadId || '',
+          from: thread.from || '',
           emailType: thread.emailType || 'all',
         },
         metrics: thread.metrics || {},
@@ -243,6 +246,9 @@ export function ContentAnalyticsScreen() {
     }
     return [];
   }, [gmailThreads]);
+
+  // Debug log: log the mappedGmailItems value
+  console.log('ContentAnalyticsScreen: mappedGmailItems:', mappedGmailItems);
 
   const mappedInstagramItems = useMemo(() => {
     if (Array.isArray(instagramPosts)) {
