@@ -442,7 +442,7 @@ export default defineSchema({
   // Instagram Tokens
   instagramTokens: defineTable({
     userId: v.string(),
-    accountId: v.any(),
+    instagramAccountId: v.string(),
     accessToken: v.string(),
     refreshToken: v.string(),
     expiryDate: v.number(),
@@ -453,7 +453,7 @@ export default defineSchema({
   // Instagram Accounts
   instagramAccounts: defineTable({
     userId: v.string(),
-    accountId: v.any(),    
+    instagramAccountId: v.string(),    
     username: v.string(),
     profileData: v.object({
       id: v.string(),
@@ -472,7 +472,7 @@ export default defineSchema({
 
   // Instagram Posts
   instagramPosts: defineTable({
-    accountId: v.any(),
+    instagramAccountId: v.string(),
     userId: (v.string()),
     postId: v.string(),
     data: v.object({
@@ -500,7 +500,7 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   })
-  .index("by_accountId", ["accountId"])
+  .index("by_instagramAccountId", ["instagramAccountId"])
   .index("by_userId", ["userId"])
   .index("by_postId", ["postId"])
   .index("by_timestamp", ["data.timestamp"]),
@@ -509,7 +509,7 @@ export default defineSchema({
   // Instagram Profile Insights
   instagramProfileInsights: defineTable({
     userId: v.string(),
-    accountId: v.any(),
+    instagramAccountId: v.string(),
     data: v.object({
       impressions: v.optional(v.number()),
       reach: v.optional(v.number()),
@@ -527,13 +527,13 @@ export default defineSchema({
     updatedAt: v.number(),
   })
   .index("by_userId", ["userId"])
-  .index("by_accountId", ["accountId"])
+  .index("by_instagramAccountId", ["instagramAccountId"])
   .index("by_timestamp", ["data.timestamp"]),
 
   // Instagram Stories
   instagramStories: defineTable({
     userId: v.string(),
-    accountId: v.any(),
+    instagramAccountId: v.string(),
     data: v.array(v.object({
       id: v.string(),
       media_type: v.string(),
@@ -558,7 +558,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
   .index("by_userId", ["userId"])
-  .index("by_accountId", ["accountId"]),
+  .index("by_instagramAccountId", ["instagramAccountId"]),
 
   // Instagram Post Insights
   instagramPostInsights: defineTable({

@@ -738,7 +738,7 @@ try {
 app.post("/api/users/:id/instagram/token", async (c) => {
 const ctx = c.env;
 const userId = c.req.param("id");
-const { accountId, accessToken, refreshToken, expiresAt, scope } = await c.req.json();
+const { instagramAccountId, accessToken, refreshToken, expiresAt, scope } = await c.req.json();
 
 // Ensure scope is an array of strings
 const scopeArray = Array.isArray(scope)
@@ -750,11 +750,11 @@ const scopeArray = Array.isArray(scope)
 try {
     await ctx.runMutation(api.instagramMutations.updateInstagramToken, {
     userId,
-    accountId,
-    accessToken,
-    refreshToken,
-    expiresAt,
-    scope: scopeArray,
+    instagramAccountId,
+    accessToken: accessToken as string,
+    refreshToken: refreshToken as string,
+    expiresAt: expiresAt as number,
+    scope: scopeArray as string[],
     });
     return c.json({ success: true });
 } catch (error) {
@@ -765,60 +765,73 @@ try {
 
 // Store Instagram posts in bulk
 app.post("/api/users/:id/instagram/posts/bulk", async (c) => {
-const ctx = c.env;
-const userId = c.req.param("id");
-const { posts } = await c.req.json();
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { instagramAccountId, posts } = await c.req.json();
 
-if (!Array.isArray(posts) || posts.length === 0) {
+  if (!Array.isArray(posts) || posts.length === 0) {
     return c.json({ success: false, error: "No posts provided" }, 400);
-}
+  }
 
-const results = [];
-for (const post of posts) {
+  if (!instagramAccountId) {
+    return c.json({ success: false, error: "Missing instagramAccountId" }, 400);
+  }
+
+  const results = [];
+  for (const post of posts) {
     if (!post.id) {
-    results.push({ status: "error", error: "Missing post id", post });
-    continue;
+      results.push({ status: "error", error: "Missing post id", post });
+      continue;
     }
     try {
-    const result = await ctx.runMutation(api.instagramMutations.storePostData, {
+      const result = await ctx.runMutation(api.instagramMutations.storePostData, {
         userId,
         postId: post.id,
+        instagramAccountId,
         postData: post,
-    });
-    results.push({ status: result.status, postId: post.id });
+      });
+      results.push({ status: result.status, postId: post.id });
     } catch (error) {
-    results.push({ status: "error", error: error instanceof Error ? error.message : "Unknown error", postId: post.id });
+      results.push({ status: "error", error: error instanceof Error ? error.message : "Unknown error", postId: post.id });
     }
-}
+  }
 
-return c.json({ success: true, results });
+  return c.json({ success: true, results });
 });
 
 // Store Instagram profile data
 app.post("/api/users/:id/instagram/profile", async (c) => {
 const ctx = c.env;
 const userId = c.req.param("id");
-const { username, accountId, profileData, createdAt, updatedAt } = await c.req.json();
+const { username, instagramAccountId, profileData, createdAt, updatedAt } = await c.req.json();
 
 // Validate required fields
-if (!profileData || !profileData.id || !username || !accountId) {
-    return c.json({ success: false, error: "profileData.id, accountId, and username are required" }, 400);
+if (!profileData || !profileData.id || !username || !instagramAccountId) {
+    return c.json({ success: false, error: "profileData.id, instagramAccountId, and username are required" }, 400);
 }
 
 try {
     const result = await ctx.runMutation(api.instagramMutations.storeProfileData, {
     userId,
-    accountId,
-    username,
-    profileData,
-    createdAt: createdAt ?? Date.now(),
-    updatedAt: updatedAt ?? Date.now(),
+    instagramAccountId,
+    username: username as string,
+    profileData: profileData as {
+        id: string;
+        username: string;
+        account_type: any;
+        profile_picture_url: any;
+        followers_count: any;
+        follows_count: any;
+        media_count: any;
+    },
+    createdAt: (createdAt ?? Date.now()) as number,
+    updatedAt: (updatedAt ?? Date.now()) as number,
     });
 
     return c.json({ 
     success: true,
     status: result.status,
-    accountId: result.accountId,
+    instagramAccountId: result.instagramAccountId,
     });
 } catch (error) {
     console.error("Failed to store Instagram profile data:", error);
@@ -833,16 +846,16 @@ try {
 app.get("/api/users/:id/instagram/profile/insights", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  const accountId = c.req.query("accountId");
+  const instagramAccountId = c.req.query("instagramAccountId");
 
-  if (!accountId) {
-    return c.json({ success: false, error: "Missing accountId query parameter" }, 400);
+  if (!instagramAccountId) {
+    return c.json({ success: false, error: "Missing instagramAccountId query parameter" }, 400);
   }
 
   try {
     const insights = await ctx.runQuery(api.instagramQueries.getProfileInsights, { 
       userId,
-      accountId
+      instagramAccountId
     });
     
     if (!insights) {
@@ -869,16 +882,16 @@ app.get("/api/users/:id/instagram/profile/insights", async (c) => {
 app.get("/api/users/:id/instagram/stories", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  const accountId = c.req.query("accountId");
+  const instagramAccountId = c.req.query("instagramAccountId");
 
-  if (!accountId) {
-    return c.json({ success: false, error: "Missing accountId query parameter" }, 400);
+  if (!instagramAccountId) {
+    return c.json({ success: false, error: "Missing instagramAccountId query parameter" }, 400);
   }
 
   try {
     const stories = await ctx.runQuery(api.instagramQueries.getStories, { 
       userId,
-      accountId
+      instagramAccountId
     });
     
     if (!stories) {
@@ -905,16 +918,16 @@ app.get("/api/users/:id/instagram/stories", async (c) => {
 app.post("/api/users/:id/instagram/profile/insights", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  const { accountId, insightsData } = await c.req.json();
+  const { instagramAccountId, insightsData } = await c.req.json();
 
-  if (!accountId || !insightsData) {
+  if (!instagramAccountId || !insightsData) {
     return c.json({ success: false, error: "Missing required fields" }, 400);
   }
 
   try {
     const result = await ctx.runMutation(api.instagramMutations.storeProfileInsights, {
       userId,
-      accountId,
+      instagramAccountId,
       insightsData,
       createdAt: Date.now(),
       updatedAt: Date.now()
@@ -937,16 +950,16 @@ app.post("/api/users/:id/instagram/profile/insights", async (c) => {
 app.post("/api/users/:id/instagram/stories", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  const { accountId, storiesData } = await c.req.json();
+  const { instagramAccountId, storiesData } = await c.req.json();
 
-  if (!accountId || !storiesData) {
+  if (!instagramAccountId || !storiesData) {
     return c.json({ success: false, error: "Missing required fields" }, 400);
   }
 
   try {
     const result = await ctx.runMutation(api.instagramMutations.storeStories, {
       userId,
-      accountId,
+      instagramAccountId,
       storiesData,
       createdAt: Date.now(),
       updatedAt: Date.now()
