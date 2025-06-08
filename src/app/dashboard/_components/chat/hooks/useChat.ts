@@ -139,7 +139,7 @@ export const useChat = (
       console.log('Sending message with isFirstMessage:', isFirstMessage, 'backendSessionId:', backendSessionId);
 
       // Send the enhanced query to the backend (with analysis injected if enabled)
-      const data = await sendChatMessage(enhancedQuery, isFirstMessage, backendSessionId, null);
+      const data = await sendChatMessage(enhancedQuery, isFirstMessage, backendSessionId, contentContext, includeAnalysisInQuery && !!contentContext?.analysis);
 
       // CRITICAL DEBUG: Check the raw backend response for persona flags
       console.log('🔍 useChat: RAW BACKEND RESPONSE:', JSON.stringify(data, null, 2));

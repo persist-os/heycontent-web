@@ -76,7 +76,14 @@ export async function sendChatMessage(
     current_session_id: sessionId,
     expected_behavior: isFirstMessageBool ? 'CREATE_NEW_CONVERSATION' : 'CONTINUE_EXISTING_CONVERSATION',
     conversation_to_continue: isFirstMessageBool ? 'N/A' : sessionId,
-    endpoint: '/api/chat/message'
+    endpoint: '/api/chat/message',
+    has_content_context: !!contentContext,
+    content_context: contentContext ? {
+      platform: contentContext.platform,
+      contentId: contentContext.contentId,
+      title: contentContext.title,
+      hasAnalysis: !!contentContext.analysis
+    } : null
   });
 
   const response = await fetch('/api/chat/message', {
