@@ -3,13 +3,21 @@ import { AmbientInsights } from './AmbientInsights';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 
-export function AmbientInsightsContainer() {
+export function AmbientInsightsContainer({ handleSendMessage }: { handleSendMessage?: (msg: string) => void }) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState(false);
 
   const handleInsightClick = useCallback((action: string, insight: any) => {
-    console.log('Insight clicked:', { action, insight });
-  }, []);
+    // Format the entire card content as a message
+    const message = `"${insight.title}"
+
+${insight.description}${insight.action ? `\n\nAction: ${insight.action}` : ''}`;
+    if (handleSendMessage) {
+      handleSendMessage(message);
+    } else {
+      console.log('Insight clicked:', { action, insight, message });
+    }
+  }, [handleSendMessage]);
 
   const handleRefresh = async () => {
     setLoading(true);

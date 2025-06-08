@@ -118,3 +118,84 @@ export const createNewInsightsDocument = internalMutation({
     });
   },
 });
+
+/**
+ * Aggregate user data for Ambient Insights agent (single call)
+ */
+export const getUserDataBundle = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const userId = args.userId;
+    // Fetch last 3 conversations
+    let conversations: any[] = [];
+    try {
+      conversations = await ctx.db
+        .query("conversations")
+        .withIndex("by_user", q => q.eq("userId", userId))
+        .order("desc")
+        .take(3);
+    } catch (e) {
+      conversations = [];
+    }
+
+    // Fetch last 3 notes (with analyses)
+    let notes: any[] = [];
+    try {
+      notes = await ctx.db
+        .query("notes")
+        .withIndex("by_user", q => q.eq("userId", userId))
+        .order("desc")
+        .take(10); // get more in case some don't have analysis
+      // Only keep notes with analysis, up to 3
+      notes = notes.filter(n => n.analysis && n.analysis.length > 0).slice(0, 3);
+    } catch (e) {
+      notes = [];
+    }
+
+    // Fetch last 3 YouTube video analyses
+    let youtubeAnalyses: any[] = [];
+    try {
+      youtubeAnalyses = await ctx.db
+        .query("youtubeVideos")
+        .withIndex("by_userId", q => q.eq("userId", userId))
+        .filter(q => q.neq(q.field("analysis"), null))
+        .order("desc")
+        .take(3);
+    } catch (e) {
+      youtubeAnalyses = [];
+    }
+
+    // Fetch current persona
+    let persona = null;
+    try {
+      persona = await ctx.db
+        .query("personas")
+        .withIndex("by_userId", q => q.eq("userId", userId))
+        .filter(q => q.eq(q.field("isActive"), true))
+        .first();
+    } catch (e) {
+      persona = null;
+    }
+
+    // Fetch most recent ambient insights
+    let ambientInsights = null;
+    try {
+      const insights = await ctx.db
+        .query("ambientInsights")
+        .withIndex("by_userId", q => q.eq("userId", userId))
+        .order("desc")
+        .take(1);
+      ambientInsights = insights.length > 0 ? insights[0] : null;
+    } catch (e) {
+      ambientInsights = null;
+    }
+
+    return {
+      conversations,
+      notes,
+      youtubeAnalyses,
+      persona,
+      ambientInsights,
+    };
+  },
+});
