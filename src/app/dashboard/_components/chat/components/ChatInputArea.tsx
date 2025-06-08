@@ -1,6 +1,7 @@
 import React from 'react';
-import { AmbientInsights } from './AmbientInsights';
 import { ChatInput } from '../chat-input';
+import { AmbientInsights } from './AmbientInsights';
+import { BottomBarActions } from './BottomBarActions';
 
 interface ChatInputAreaProps {
   showAmbient: boolean;
@@ -9,6 +10,7 @@ interface ChatInputAreaProps {
   ambientLoading: boolean;
   error: string | null;
   handleInsightClick: (action: string, insight: any) => void;
+  handleActionClick: (action: string) => void;
   handleSendMessage: (msg: string) => void;
   inputRef: React.RefObject<HTMLInputElement>;
   isLoading: boolean;
@@ -24,60 +26,73 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   ambientLoading,
   error,
   handleInsightClick,
+  handleActionClick,
   handleSendMessage,
   inputRef,
   isLoading,
   referencedMessage,
   handleClearReference,
   includeAnalysisInQuery,
-}) => (
-  <div className="fixed bottom-0 right-0 left-0 z-10 bg-white">
-    {/* Only show ambient insights at bottom when there's no context and no messages */}
-    {showAmbient && !currentContext && (
-      <div className="border-t border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 py-2">
-          <div className="flex gap-2 overflow-x-auto scrollbar-none">
-            {ambientInsights.map((insight, index) => (
-              <button
-                key={index}
-                onClick={() => handleInsightClick(insight.action, insight)}
-                className="shrink-0 px-4 h-8 text-xs text-gray-600 bg-gray-50 hover:bg-blue-50 hover:text-blue-600 
-                  rounded-full flex items-center transition-colors"
-              >
-                {insight.action}
-              </button>
-            ))}
+}) => {
+  // Only show ambient insights and bottom actions when there are no messages
+  const showAmbientContent = showAmbient && !currentContext && ambientInsights.length > 0;
+  
+  return (
+    <div className={`bg-white border-t border-gray-200 ${showAmbientContent ? 'h-full flex flex-col' : ''}`}>
+      <div className="max-w-7xl mx-auto w-full h-full flex flex-col">
+        {/* Show ambient insights when there are no messages */}
+        {showAmbientContent && (
+          <div className="w-full bg-white flex-1 flex flex-col">
+            <div className="px-4 pt-6 pb-2 flex-shrink-0">
+    
+            </div>
+            
+            {/* Insights container - takes all available space */}
+            <div className="flex-1 overflow-y-auto px-4 pb-4">
+              <AmbientInsights 
+                insights={ambientInsights} 
+                loading={ambientLoading}
+                error={error}
+                onInsightClick={handleInsightClick}
+              />
+            </div>
+
+            {/* Bottom bar actions */}
+            <div className="border-t border-gray-100 flex-shrink-0">
+              <div className="px-4 py-3">
+                <BottomBarActions onActionClick={handleActionClick} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Chat input area - always show */}
+        <div className="px-4 py-4">
+          <div className="w-full max-w-4xl mx-auto">
+            <ChatInput
+              inputRef={inputRef}
+              onSend={handleSendMessage}
+              isLoading={isLoading}
+              referencedMessage={referencedMessage}
+              onClearReference={handleClearReference}
+              hasContext={!!currentContext}
+              contextPlatform={currentContext?.platform}
+              hasAnalysis={
+                includeAnalysisInQuery && (
+                  !!currentContext?.analysis || 
+                  (currentContext?.platform === 'ai-insights' && (
+                    !!currentContext?.actionStep || 
+                    !!currentContext?.title || 
+                    !!currentContext?.additionalContext
+                  ))
+                )
+              }
+            />
           </div>
         </div>
       </div>
-    )}
-    <div className="h-px bg-gray-200 w-full"></div>
-    <div className="w-full flex justify-center">
-      <div className="w-full max-w-5xl px-2 sm:px-4 pb-safe">
-        <ChatInput
-          inputRef={inputRef}
-          onSend={(content) => {
-            handleSendMessage(content)
-          }}
-          isLoading={isLoading}
-          referencedMessage={referencedMessage}
-          onClearReference={handleClearReference}
-          hasContext={!!currentContext}
-          contextPlatform={currentContext?.platform}
-          hasAnalysis={
-            includeAnalysisInQuery && (
-              !!currentContext?.analysis || 
-              (currentContext?.platform === 'ai-insights' && (
-                !!currentContext?.actionStep || 
-                !!currentContext?.title || 
-                !!currentContext?.additionalContext
-              ))
-            )
-          }
-        />
-      </div>
     </div>
-  </div>
-);
+  );
+};
 
-export default ChatInputArea; 
+export default ChatInputArea;
