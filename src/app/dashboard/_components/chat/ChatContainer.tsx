@@ -25,6 +25,7 @@ import ChatContextBox from './components/ChatContextBox'
 import AIInsightsContextBox from './components/AIInsightsContextBox'
 import ChatMessagesList from './components/ChatMessagesList'
 import ChatInputArea from './components/ChatInputArea'
+import { AmbientInsightsContainer } from './components/AmbientInsightsContainer'
 
 import { welcomeMessageSteps, getWelcomeStepMessage, welcomeSuggestions, welcomeSuggestionsWithPersona } from './data/welcome-message'
 
@@ -336,6 +337,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     onSendMessage(message);
   };
 
+  // Show messages if there are any, or if there is a context
+  const hasMessagesOrContext = currentContext || messages.length > 0;
+
   if (!user) {
     return null
   }
@@ -343,43 +347,11 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   return (
     <div className="flex flex-col h-screen bg-white w-full overflow-hidden">
       {/* Header */}
-      <div className="flex-shrink-0">
-        <ChatHeader
-          isRefreshing={isRefreshing}
-          onRefresh={handleRefresh}
-          onNewChat={handleNewChat}
-        />
-      </div>
+      <ChatHeader isRefreshing={isRefreshing} onRefresh={handleRefresh} onNewChat={handleNewChat} />
 
-      {/* Context Box - shown when context is available */}
-      {currentContext?.platform === 'ai-insights' ? (
-        <div className="flex-shrink-0">
-          <AIInsightsContextBox
-            currentContext={currentContext}
-            messages={messages}
-            onRemove={handleRemoveContext}
-            includeAnalysisInQuery={includeAnalysisInQuery}
-            onToggleAnalysis={setIncludeAnalysisInQuery}
-            onSendMessage={handleSendMessage}
-          />
-        </div>
-      ) : currentContext ? (
-        <div className="flex-shrink-0">
-          <ChatContextBox
-            currentContext={currentContext}
-            messages={messages}
-            onRemove={handleRemoveContext}
-            includeAnalysisInQuery={includeAnalysisInQuery}
-            onToggleAnalysis={setIncludeAnalysisInQuery}
-            onSendMessage={handleSendMessage}
-          />
-        </div>
-      ) : null}
-
-      {/* Main content area - takes all available space */}
+      {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Messages container */}
-        {(currentContext || messages.length > 0) ? (
+        {hasMessagesOrContext ? (
           <div className="flex-1 overflow-y-auto">
             <div className="p-6">
               <div className="max-w-5xl mx-auto space-y-4">
@@ -390,9 +362,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                   handleReferenceClick={handleReferenceClick}
                   handleOptionClick={handleOptionClick}
                   handleFollowUpClick={handleFollowUpClick}
+                  handleSendMessage={handleSendMessage}
                   userId={userId}
                   handleSuggestionClick={handleSuggestionClick}
-                  handleSendMessage={handleSendMessage}
                 />
 
                 {/* Show persona tip in onboarding flow when ready and at least 4 messages exist */}
@@ -418,38 +390,28 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             </div>
           </div>
         ) : (
-          /* Empty state with ambient insights - takes full height */
           <div className="flex-1 flex flex-col">
-            <ChatInputArea
-              showAmbient={true}
-              currentContext={currentContext}
-              handleActionClick={handleActionClick}
-              handleSendMessage={handleSendMessage}
-              inputRef={inputRef}
-              isLoading={isLoading}
-              referencedMessage={referencedMessage}
-              handleClearReference={handleClearReference}
-              includeAnalysisInQuery={includeAnalysisInQuery}
-            />
+            <AmbientInsightsContainer />
           </div>
         )}
+      </div>
 
-        {/* Input area - only show when there are messages */}
-        {(currentContext || messages.length > 0) && (
-          <div className="flex-shrink-0 border-t border-gray-100">
-            <ChatInputArea
-              showAmbient={false}
-              currentContext={currentContext}
-              handleActionClick={handleActionClick}
-              handleSendMessage={handleSendMessage}
-              inputRef={inputRef}
-              isLoading={isLoading}
-              referencedMessage={referencedMessage}
-              handleClearReference={handleClearReference}
-              includeAnalysisInQuery={includeAnalysisInQuery}
-            />
-          </div>
-        )}
+      {/* Bottom Bar Actions */}
+      <BottomBarActions onActionClick={handleActionClick} />
+
+      {/* Input Bar */}
+      <div className="flex-shrink-0 border-t border-gray-100">
+        <ChatInputArea
+          showAmbient={false}
+          currentContext={currentContext}
+          handleActionClick={handleActionClick}
+          handleSendMessage={handleSendMessage}
+          inputRef={inputRef}
+          isLoading={isLoading}
+          referencedMessage={referencedMessage}
+          handleClearReference={handleClearReference}
+          includeAnalysisInQuery={includeAnalysisInQuery}
+        />
       </div>
     </div>
   )
