@@ -51,5 +51,6 @@ export const ambientInsights: AmbientInsight[] = [
     description: '#Web3 is trending among your followers',
     icon: Hash,
     action: 'Show me Web3 content ideas'
-  }
+  },
+
 ];
