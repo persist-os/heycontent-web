@@ -3,11 +3,14 @@ import { Message } from '@/app/types/chat'
 import { sendChatMessage } from '../utils/api-utils'
 import { ChatStateReturnType } from './useChatState'
 import { getHelpMessage } from '../data/help-message'
+import { useMutation } from 'convex/react'
+import { api } from '@/convex/_generated/api'
 
 import { v4 as uuidv4 } from 'uuid';
 
 export const useChat = (
-  chatState: ChatStateReturnType
+  chatState: ChatStateReturnType,
+  userId?: string
 ) => {
   const {
     sessionId,
@@ -21,12 +24,16 @@ export const useChat = (
     isFirstMessage,
     setIsFirstMessage,
     contentContext,
-    includeAnalysisInQuery
+    includeAnalysisInQuery,
   } = chatState
   const [referencedMessage, setReferencedMessage] = useState<Message | null>(null)
   
   // Add ref to track last sent message to prevent rapid duplicates
   const lastSentMessageRef = useRef<{ content: string; timestamp: number } | null>(null);
+
+  // Add mutation hooks for chat mutations
+  const createConversationMutation = useMutation(api.chatMutations.createConversation);
+  const addMessageToConversationMutation = useMutation(api.chatMutations.addMessageToConversation);
 
   const handleSendMessage = useCallback(async (content: string) => {
     if (!content || typeof content !== 'string' || !content.trim()) return;
@@ -101,12 +108,41 @@ export const useChat = (
         }
       ]);
 
+      // Save persona conversations separately
+      if (sessionId && sessionId.startsWith('persona_')) {
+        if (isFirstMessage) {
+          const conversationId = await createConversationMutation({
+            userId: userId || '',
+            title: 'Persona Conversation',
+            messages: [
+              {
+                content: trimmedContent,
+                role: 'user',
+                timestamp: Date.now(),
+              }
+            ]
+          });
+          setSessionId(conversationId);
+        } else {
+          await addMessageToConversationMutation({
+            userId: userId || '',
+            conversationId: sessionId,
+            message: {
+              content: trimmedContent,
+              role: 'user',
+              timestamp: Date.now(),
+            }
+          });
+        }
+      }
 
       console.log('Sending message with isFirstMessage:', isFirstMessage, 'backendSessionId:', backendSessionId);
 
       // Send the enhanced query to the backend (with analysis injected if enabled)
-      // Don't send content_context separately anymore since it's injected in the query
       const data = await sendChatMessage(enhancedQuery, isFirstMessage, backendSessionId, null);
+
+      // CRITICAL DEBUG: Check the raw backend response for persona flags
+      console.log('🔍 useChat: RAW BACKEND RESPONSE:', JSON.stringify(data, null, 2));
       
       // Handle session ID from backend response
       console.log('[useChat] Received response:', {
@@ -147,11 +183,11 @@ export const useChat = (
       // Update messages with the response
       setMessages(prev => {
         const withoutTyping = prev.filter(msg => msg.status !== 'typing');
-        return [...withoutTyping, {
+        const newMessage: Message = {
           id: uuidv4(),
           content: data.chat_response || data.response || '',
           chat_response: data.chat_response || data.response || '',
-          role: 'assistant',
+          role: 'assistant' as const,
           timestamp: new Date().toISOString(),
           // Use the most reliable session ID in this order: 
           // 1. From backend response
@@ -162,7 +198,19 @@ export const useChat = (
           suggestions: data.suggestions || data.metadata?.suggestions || [],
           // Properly transfer metadata from API response
           metadata: data.metadata
-        }];
+        };
+
+        // DEBUG: Log the message being added to check persona flags
+        console.log('🔍 useChat: Adding new message to state:', {
+          messageId: newMessage.id,
+          hasMetadata: !!newMessage.metadata,
+          metadata: newMessage.metadata,
+          is_persona_complete: (newMessage.metadata as any)?.is_persona_complete,
+          persona_created: (newMessage.metadata as any)?.persona_created,
+          content: newMessage.content?.substring(0, 100) + '...'
+        });
+
+        return [...withoutTyping, newMessage];
       });
 
       // Only update sessionId from backend (never generate a local one for persistence)
@@ -186,7 +234,7 @@ export const useChat = (
     } finally {
       setIsLoading(false)
     }
-  }, [referencedMessage, sessionId, messages.length, setMessages, setSessionId, setIsLoading, setError, contentContext, includeAnalysisInQuery])
+  }, [referencedMessage, sessionId, messages.length, setMessages, setSessionId, setIsLoading, setError, contentContext, includeAnalysisInQuery, userId, createConversationMutation, addMessageToConversationMutation])
 
   const handleMessageReference = useCallback((message: Message) => {
     setReferencedMessage(message)

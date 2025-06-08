@@ -8,6 +8,7 @@ import ReferralStep from './ReferralStep';
 import BasicInfoStep from './BasicInfoStep';
 import PasswordStep from './PasswordStep';
 import StepIndicator from './StepIndicator';
+import Cookies from 'js-cookie';
 
 interface RegistrationFormProps {
   onSuccess: (name: string) => void;
@@ -54,7 +55,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    localStorage.removeItem('apiKey');
+    Cookies.remove('apiKey');
     e.preventDefault();
     setError(null);
     setIsLoading(true);
@@ -138,7 +139,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
 
       const apiKeyData = await apiKeyResponse.json();
       if (apiKeyResponse.ok && apiKeyData.apiKey) {
-        localStorage.setItem('apiKey', JSON.stringify(apiKeyData.apiKey));
+        Cookies.set('apiKey', JSON.stringify(apiKeyData.apiKey), { expires: 7, sameSite: 'Lax', secure: process.env.NODE_ENV === 'production', path: '/' });
         onSuccess(name);
       } else {
         setError(apiKeyData.error || 'Failed to get API key');

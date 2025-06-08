@@ -40,7 +40,8 @@ export function HeroSection() {
   useEffect(() => {
     const handleScroll = () => {
       const scrollPosition = window.scrollY
-      setShowFloatingSearch(scrollPosition > 100)
+      const atBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 2 // allow for rounding
+      setShowFloatingSearch(scrollPosition > 100 && !atBottom)
     }
 
     window.addEventListener('scroll', handleScroll)

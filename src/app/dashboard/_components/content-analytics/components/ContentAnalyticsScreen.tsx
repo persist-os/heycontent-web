@@ -185,10 +185,8 @@ export function ContentAnalyticsScreen() {
     userId ? { userId } : undefined
   );
   const instagramPosts = useQuery(
-    // api.instagramQueries.getAllInstagramPosts,
-    // userId ? { userId } : undefined
-    api.instagramQueries.getInstagramPostsByUsername,
-    { username: "avasetail" } // Replace after testing
+    api.instagramQueries.getAllInstagramPosts,
+    userId ? { userId } : undefined
   );
 
   useEffect(() => {
@@ -266,7 +264,7 @@ export function ContentAnalyticsScreen() {
             impressions: undefined,
             reach: undefined,
             likes: post.data.like_count ?? 0,
-            comments: post.data.comment_count ?? 0,
+            comments: post.data.comments_count ?? 0,
             shares: undefined,
           },
         };

@@ -6,11 +6,14 @@ import { Logo } from '@/components/ui/logo'
 import { Share2, Copy, Check, Twitter, Dice6, Linkedin, MessageCircle, Instagram, ArrowRight } from 'lucide-react';
 import Tilt from 'react-parallax-tilt';
 import { COLOR_SCHEMES, type ColorScheme } from '@/data/color-schemes';
+import { useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import RegistrationForm from './RegistrationForm';
 
 interface WaitlistQueueProps {
   position: number;
   queueId: string;
-  onQueueComplete?: () => void;
+  onQueueComplete?: (name: string) => void;
   onStageChange?: (stage: 'register' | 'queue' | 'card') => void;
 }
 
@@ -23,6 +26,8 @@ export const WaitlistQueue = ({ position, queueId, onQueueComplete, onStageChang
   const [isFlipped, setIsFlipped] = useState(false);
   const [invitesLeft, setInvitesLeft] = useState(3);
   const [colorSchemeIndex, setColorSchemeIndex] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const addToWaitlist = useMutation(api.waitlist.add);
   
   useEffect(() => {
     if (stage === 'queue') {
@@ -36,18 +41,28 @@ export const WaitlistQueue = ({ position, queueId, onQueueComplete, onStageChang
   useEffect(() => {
     if (stage === 'queue' && currentPosition <= 0) {
       setStage('card');
-        onQueueComplete?.();
+      onQueueComplete?.(name);
     }
-  }, [currentPosition, onQueueComplete, stage]);
+  }, [currentPosition, onQueueComplete, stage, name]);
 
   useEffect(() => {
     onStageChange?.(stage);
   }, [stage, onStageChange]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     if (email && name) {
-      setStage('queue');
+      try {
+        const result = await addToWaitlist({ name, email });
+        if (result.success) {
+          setStage('queue');
+        } else {
+          setError(result.message || 'Failed to join waitlist.');
+        }
+      } catch (err) {
+        setError('Something went wrong. Please try again.');
+      }
     }
   };
 
@@ -118,42 +133,16 @@ export const WaitlistQueue = ({ position, queueId, onQueueComplete, onStageChang
 
   if (stage === 'register') {
     return (
-      <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold mb-4">Join the Waitlist</h1>
-          <p className="text-gray-600">Enter your details to secure your spot</p>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-            <input
-              type="text"
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Join Waitlist
-          </button>
-        </form>
-      </div>
+      <>
+        <RegistrationForm
+          onSubmit={handleSubmit}
+          name={name}
+          email={email}
+          onNameChange={setName}
+          onEmailChange={setEmail}
+        />
+        {error && <div className="text-red-500 text-center mt-2">{error}</div>}
+      </>
     );
   }
 

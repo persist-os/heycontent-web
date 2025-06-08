@@ -7,6 +7,7 @@ import { getFirebaseAuth } from '@/app/lib/firebase';
 import { WaitlistButton } from '@/app/waitlist/_components/WaitlistButton';
 import { Logo } from '@/components/ui/logo';
 import { motion } from "framer-motion";
+import Cookies from 'js-cookie';
 
 interface LoginScreenProps {
   onSuccess?: (apiKey: string) => void;
@@ -20,7 +21,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    localStorage.removeItem('apiKey');
+    Cookies.remove('apiKey');
     e.preventDefault();
     setError(null);
     setIsLoading(true);
@@ -66,7 +67,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
       const apiKeyData = await apiKeyResponse.json();
       if (apiKeyResponse.ok) {
         if (apiKeyData.apiKey) {
-          localStorage.setItem('apiKey', JSON.stringify(apiKeyData.apiKey));
+          Cookies.set('apiKey', JSON.stringify(apiKeyData.apiKey), { expires: 7, sameSite: 'Lax', secure: process.env.NODE_ENV === 'production', path: '/' });
         }
         if (apiKeyData.redirect) {
           window.location.href = apiKeyData.redirect;

@@ -4,10 +4,11 @@ import { getFirebaseAuth } from '@/app/lib/firebase'
 import { fetchWithAuth } from '@/app/lib/api-helpers'
 import { toast } from 'react-hot-toast'
 import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime'
+import Cookies from 'js-cookie'
 
 export const handleSignOut = async (router: AppRouterInstance) => {
   try {
-    localStorage.removeItem('apiKey')
+    Cookies.remove('apiKey')
     localStorage.removeItem('firebaseToken')
     localStorage.removeItem('userId')
     sessionStorage.removeItem('apiKey')

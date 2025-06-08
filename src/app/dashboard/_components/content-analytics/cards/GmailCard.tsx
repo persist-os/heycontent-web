@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import { MessageSquare, Mail, Users, CheckCircle, MousePointerClick, Eye } from 'lucide-react';
+import { MessageSquare, Mail, Users, CheckCircle, MousePointerClick, Eye, RefreshCw } from 'lucide-react';
 
 import { GmailContentItem } from '../types';
 
@@ -14,6 +14,21 @@ export const GmailCard: React.FC<GmailCardProps> = ({ item, onDiscussContent, on
   const { content, metrics, publishedAt } = item;
   const openRate = ((metrics?.openRate ?? 0) * 100).toFixed(1);
   const clickRate = ((metrics?.clickRate ?? 0) * 100).toFixed(1);
+
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const handleRefresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // your refresh logic here
+    } catch (e) {
+      setError('Failed to refresh');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Card key={item.id} className="overflow-hidden border-2 border-blue-500 dark:border-blue-400 shadow-lg">
@@ -52,17 +67,33 @@ export const GmailCard: React.FC<GmailCardProps> = ({ item, onDiscussContent, on
 
         <div className="flex gap-2 mt-2">
           <button
-            className="px-3 py-1 rounded bg-heycontent-purple text-white hover:bg-purple-700 text-xs"
+            className="px-3 py-1 rounded text-white hover:opacity-90 text-xs transition-opacity"
+            style={{ backgroundColor: '#4715C8' }}
             onClick={() => onViewDetailedAnalytics(item)}
           >
             View Analytics
           </button>
           <button
-            className="px-3 py-1 rounded border border-heycontent-purple text-heycontent-purple hover:bg-purple-50 text-xs"
+            className="px-3 py-1 rounded border text-xs hover:opacity-90 transition-opacity"
+            style={{ borderColor: '#4715C8', color: '#4715C8' }}
             onClick={() => onDiscussContent(item)}
           >
             Discuss
           </button>
+          <button
+            className="px-3 py-1 rounded text-black hover:opacity-90 text-xs flex items-center gap-1 transition-opacity"
+            style={{ backgroundColor: '#BAA9FC' }}
+            onClick={handleRefresh}
+            disabled={loading}
+          >
+            {loading ? (
+              <svg className="animate-spin h-4 w-4 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+            ) : (
+              <RefreshCw className="w-4 h-4" />
+            )}
+            Refresh
+          </button>
+          {error && <span className="text-xs text-red-500 ml-2">{error}</span>}
         </div>
       </div>
     </Card>

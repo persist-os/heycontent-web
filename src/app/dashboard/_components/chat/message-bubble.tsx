@@ -37,12 +37,30 @@ export function MessageBubble({
   const isUser = message.role === 'user'
 
   // Determine if this message might contain a completed persona
-  // Let PersonaCardRenderer handle the detailed logic and Convex fetching
+  // Check for explicit completion flags OR content that indicates persona creation
   const mightHavePersona = message.role === 'assistant' && 
     userId && 
     (message.metadata?.is_persona_complete === true || 
      message.metadata?.persona_created === true ||
-     message.metadata?.is_persona_flow === true);
+     // Fallback: check if message content suggests persona creation completed
+     (message.content && (
+       message.content.includes('🎭 *Your Content Persona*') ||
+       message.content.includes('Content Persona') ||
+       (message.content.includes('persona') && message.content.includes('guide your content creation'))
+     )));
+
+  // Debug logging for persona detection
+  if (message.role === 'assistant' && userId) {
+    console.log('🔍 MessageBubble persona check:', {
+      messageId: message.id,
+      messageContent: message.content?.substring(0, 100) + '...',
+      hasMetadata: !!message.metadata,
+      metadata: message.metadata,
+      mightHavePersona,
+      is_persona_complete: message.metadata?.is_persona_complete,
+      persona_created: message.metadata?.persona_created
+    });
+  }
 
   return (
     <div className={`w-full ${className}`}>

@@ -1,8 +1,9 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import { BarChart3, Instagram, Eye, Users } from 'lucide-react';
+import { BarChart3, Instagram, Eye, Users, RefreshCw } from 'lucide-react';
 
 import { InstagramContentItem } from '../types';
+import { useInstagramRefresh } from '@/app/hooks/useInstagramRefresh';
 
 export interface InstagramCardProps {
   item: InstagramContentItem;
@@ -28,6 +29,8 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
   const isCarousel = content.mediaType === 'carousel' && Array.isArray(children) && children.length > 0;
   const fallbackImg = '/no-image.png';
 
+  const { refresh, loading, error } = useInstagramRefresh();
+
   const handleImgError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     if (e.currentTarget.src !== window.location.origin + fallbackImg) {
       e.currentTarget.src = fallbackImg;
@@ -35,10 +38,7 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
   };
 
   const handleRefresh = async () => {
-    try {
-
-    } catch (error) {
-    }
+    await refresh(item.id, content.permalink || '');
   };
 
   return (
@@ -102,23 +102,33 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
         </div>
         <div className="flex gap-2 mt-2">
           <button
-            className="px-3 py-1 rounded bg-heycontent-purple text-white hover:bg-purple-700 text-xs"
+            className="px-3 py-1 rounded text-white hover:opacity-90 text-xs transition-opacity"
+            style={{ backgroundColor: '#4715C8' }}
             onClick={() => onViewDetailedAnalytics(item)}
           >
             View Analytics
           </button>
           <button
-            className="px-3 py-1 rounded border border-heycontent-purple text-heycontent-purple hover:bg-purple-50 text-xs"
+            className="px-3 py-1 rounded border text-xs hover:opacity-90 transition-opacity"
+            style={{ borderColor: '#4715C8', color: '#4715C8' }}
             onClick={() => onDiscussContent(item)}
           >
             Discuss
           </button>
           <button
-            className="px-3 py-1 rounded bg-green-500 text-white hover:bg-green-600 text-xs"
+            className="px-3 py-1 rounded text-black hover:opacity-90 text-xs flex items-center gap-1 transition-opacity"
+            style={{ backgroundColor: '#BAA9FC' }}
             onClick={handleRefresh}
+            disabled={loading}
           >
+            {loading ? (
+              <svg className="animate-spin h-4 w-4 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+            ) : (
+              <RefreshCw className="w-4 h-4" />
+            )}
             Refresh
           </button>
+          {error && <span className="text-xs text-red-500 ml-2">{error}</span>}
         </div>
       </div>
     </Card>

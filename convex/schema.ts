@@ -459,7 +459,7 @@ export default defineSchema({
   // Instagram Posts
   instagramPosts: defineTable({
     accountId: v.any(),
-    userId: v.optional(v.string()),
+    userId: (v.string()),
     postId: v.string(),
     data: v.object({
       id: v.string(),
@@ -474,13 +474,14 @@ export default defineSchema({
       permalink: v.string(),
       username: v.string(),
       timestamp: v.optional(v.number()),
-      comment_count: v.optional(v.number()),
+      comments_count: v.optional(v.number()),
       thumbnail_url: v.optional(v.string()),
       comments: v.optional(v.any()),
       children: v.optional(v.array(v.object({
         id: v.string(),
         media_url: v.string(),
-        media_type: v.string()
+        media_type: v.string(),
+        thumbnail_url: v.optional(v.string())
       })))
     }),
     createdAt: v.number(),

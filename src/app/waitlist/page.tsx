@@ -21,13 +21,11 @@ const generateCreativeTitle = (name: string) => {
 };
 
 export default function WaitlistPage() {
-  const [stage, setStage] = useState<'queue' | 'card'>('queue');
-  const [queueId] = useState(generateQueueId());
   const [name, setName] = useState('');
+  const [queueId] = useState(generateQueueId());
 
   const handleQueueComplete = (userName?: string) => {
     if (userName) setName(userName);
-    setStage('card');
   };
 
   const handleShare = async () => {
@@ -42,7 +40,7 @@ export default function WaitlistPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <AnimatePresence mode="wait">
-        {stage === 'queue' ? (
+        {!name ? (
           <motion.div
             key="queue"
             initial={{ opacity: 0, y: 20 }}
@@ -50,7 +48,7 @@ export default function WaitlistPage() {
             exit={{ opacity: 0, y: -20 }}
           >
             <WaitlistQueue
-              position={20}
+              position={10}
               queueId={queueId}
               onQueueComplete={handleQueueComplete}
             />

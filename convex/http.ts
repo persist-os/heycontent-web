@@ -177,6 +177,18 @@ app.post("/api/users/:id/add_message_to_conversation", async (c) => {
   return c.json(result);
 });
 
+// Get conversations for a user
+app.get("/api/users/:id/conversations", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const limit = c.req.query('limit') ? parseInt(c.req.query('limit') as string) : undefined;
+  const result = await ctx.runQuery(api.chatQueries.getHistory, { 
+    userId,
+    limit
+  });
+  return c.json(result);
+});
+
 // API KEY ROUTES
 
 // Insert API key
@@ -1276,7 +1288,7 @@ app.get("/api/users/:id/instagram/post/:postId/insights", async (c) => {
     // Extract insights from post data
     const insights = {
       likes: post.data.like_count || 0,
-      comments: post.data.comment_count || 0,
+      comments: post.data.comments_count || 0,
       // Add any other metrics available in the post data
     };
 
