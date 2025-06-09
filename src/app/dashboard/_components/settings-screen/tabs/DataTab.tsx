@@ -30,6 +30,9 @@ const DataTab = () => {
   const [user, setUser] = useState<any>(null);
   const [userId, setUserId] = useState<string | undefined>();
   const [userEmail, setUserEmail] = useState<string | undefined>();
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
+  const [showDeletePassword, setShowDeletePassword] = useState(false);
 
   useEffect(() => {
     let auth;
@@ -86,18 +89,31 @@ const DataTab = () => {
       toast.error('No authenticated user.');
       return;
     }
+    if (!deletePassword) {
+      setDeletePasswordError('Please enter your password to confirm.');
+      return;
+    }
     setIsDeleting(true);
-    
+    setDeletePasswordError(null);
     try {
+      // Step 0: Re-authenticate with password
+      try {
+        const credential = EmailAuthProvider.credential(user.email, deletePassword);
+        await reauthenticateWithCredential(user, credential);
+      } catch (error: any) {
+        setDeletePasswordError('Incorrect password. Please try again.');
+        setIsDeleting(false);
+        return;
+      }
       // Step 1: Delete Convex user data FIRST
       try {
         await deleteUserAndData({ userId: user.uid });
       } catch (error: any) {
         toast.error('Failed to delete user data from database.');
         console.error('Convex deleteUserAndData error:', error);
+        setIsDeleting(false);
         return; // Stop here if database deletion fails
       }
-
       // Step 2: Delete Firebase user AFTER data is cleaned up
       try {
         await user.delete();
@@ -108,18 +124,18 @@ const DataTab = () => {
           toast.error('Failed to delete user account. Your data has been removed but you may need to contact support.');
         }
         console.error('Firebase user delete error:', error);
+        setIsDeleting(false);
         return;
       }
-
       // Success
       toast.success('Account deleted successfully.');
       try { localStorage.clear(); } catch (e) { /* ignore */ }
       try { sessionStorage.clear(); } catch (e) { /* ignore */ }
       router.push('/auth/login');
-      
     } finally {
       setIsDeleting(false);
       setShowDeleteDialog(false);
+      setDeletePassword('');
     }
   };
 
@@ -240,13 +256,39 @@ const DataTab = () => {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete Account</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Are you sure you want to permanently delete your account and all data? This action cannot be undone.
+                    <div className="mb-2 font-semibold text-red-700">Are you absolutely sure?</div>
+                    <div className="mb-4">This action cannot be undone. This will permanently delete your account and all associated data.</div>
+                    <div className="mb-2">Please enter your password to confirm account deletion:</div>
+                    <div className="relative mb-2">
+                      <Input
+                        type={showDeletePassword ? 'text' : 'password'}
+                        placeholder="Password"
+                        value={deletePassword}
+                        onChange={e => { setDeletePassword(e.target.value); setDeletePasswordError(null); }}
+                        disabled={isDeleting}
+                        required
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowDeletePassword(!showDeletePassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        tabIndex={-1}
+                      >
+                        {showDeletePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    {deletePasswordError && <div className="text-red-600 text-sm mb-2">{deletePasswordError}</div>}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
                   <AlertDialogAction asChild>
-                    <Button variant="destructive" onClick={handleDeleteAccount} disabled={isDeleting}>
+                    <Button
+                      variant="destructive"
+                      onClick={handleDeleteAccount}
+                      disabled={isDeleting || !deletePassword}
+                    >
                       {isDeleting ? 'Deleting...' : 'Delete'}
                     </Button>
                   </AlertDialogAction>
