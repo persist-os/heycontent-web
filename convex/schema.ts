@@ -494,7 +494,8 @@ export default defineSchema({
       children: v.optional(v.array(v.object({
         id: v.string(),
         media_url: v.string(),
-        media_type: v.string()
+        media_type: v.string(),
+        thumbnail_url: v.optional(v.string())
       })))
     }),
     createdAt: v.number(),
