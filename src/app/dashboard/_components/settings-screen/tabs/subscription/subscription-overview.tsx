@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { getSubscriptionPlans, getSubscriptionStatus, createCustomerPortalSession } from '@/app/lib/subscription-api';
 import { CheckoutForm } from './stripe-checkout';
 import { Button } from '@/components/ui/button';
+import { LogOut } from 'lucide-react';
+import { handleSignOut } from '../../utils';
 
 import { UsageAndBillingCard } from './cards/UsageAndBillingCard';
 import { OverageControlsCard } from './cards/OverageControlsCard';
@@ -22,6 +25,7 @@ import { api } from '@/../convex/_generated/api';
 import { DeleteAccountButton } from '../../utils/DeleteAccountButton';
 
 export default function SubscriptionOverview() {
+  const router = useRouter();
   const { firebaseUser, authLoading } = useAuth();
   const userId = firebaseUser?.uid || '';
 
@@ -249,6 +253,11 @@ export default function SubscriptionOverview() {
     }
   };
 
+  // Handle sign out
+  const onSignOut = async () => {
+    await handleSignOut(router);
+  };
+
   // Handlers for modals
   const handleOpenUpgradeModal = () => setShowUpgradeModal(true);
   const handleCloseUpgradeModal = () => setShowUpgradeModal(false);
@@ -305,10 +314,24 @@ export default function SubscriptionOverview() {
             
             <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800">
               <h3 className="text-lg font-medium mb-4">Account Management</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                If you no longer wish to use HeyContent, you can delete your account and all associated data.
-              </p>
-              <DeleteAccountButton />
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    If you no longer wish to use HeyContent, you can delete your account and all associated data.
+                  </p>
+                  <DeleteAccountButton />
+                </div>
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
+                  <Button
+                    onClick={onSignOut}
+                    variant="outline"
+                    className="w-full flex items-center gap-2"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Sign out</span>
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
