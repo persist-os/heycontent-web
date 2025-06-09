@@ -37,6 +37,7 @@ export function NoteArea({
   // Local UI state
   const [activeTab, setActiveTab] = useState<string>("editor");
   const editorRef = useRef<HTMLTextAreaElement>(null);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
   
   // Add event listener to switch to editor tab when an idea is applied
   React.useEffect(() => {
@@ -74,7 +75,8 @@ export function NoteArea({
     onUpdate,
     onSave,
     onToggleShortcuts,
-    onRequestAIInsights
+    onRequestAIInsights,
+    isEditingTitle
   });
 
   // Track the latest title from NoteMeta
@@ -109,6 +111,7 @@ export function NoteArea({
         note={note}
         onUpdate={onUpdate}
         onTitleChange={handleMetaTitleChange}
+        onEditingTitleChange={setIsEditingTitle}
       />
       
       {/* Main content area with tabs */}

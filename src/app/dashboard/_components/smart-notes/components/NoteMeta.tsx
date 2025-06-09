@@ -6,21 +6,22 @@ interface NoteMetaProps {
   note: Note;
   onUpdate: (noteId: string, updates: { title: string }) => Promise<Note>;
   onTitleChange?: (title: string) => void;
+  onEditingTitleChange?: (isEditing: boolean) => void;
 }
 
-export function NoteMeta({ note, onUpdate, onTitleChange }: NoteMetaProps) {
+export function NoteMeta({ note, onUpdate, onTitleChange, onEditingTitleChange }: NoteMetaProps) {
   const [title, setTitle] = useState(note.title || "Untitled Note");
   const [isEditing, setIsEditing] = useState(false);
   
   // Update local title state when note prop changes
   useEffect(() => {
-    setTitle(note.title || "Untitled Note");
-    console.log('[NoteMeta] Rendering title:', note.title);
-    if (onTitleChange) {
-      onTitleChange(note.title || "Untitled Note");
-      console.log('[NoteMeta] useEffect: called onTitleChange with', note.title || "Untitled Note");
+    if (!isEditing) {
+      setTitle(note.title || "Untitled Note");
+      if (onTitleChange) {
+        onTitleChange(note.title || "Untitled Note");
+      }
     }
-  }, [note._id, note.title, onTitleChange]);
+  }, [note._id, note.title, onTitleChange, isEditing]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(e.target.value);
@@ -30,6 +31,10 @@ export function NoteMeta({ note, onUpdate, onTitleChange }: NoteMetaProps) {
     }
   };
 
+  const handleTitleFocus = () => {
+    setIsEditing(true);
+    if (onEditingTitleChange) onEditingTitleChange(true);
+  };
 
   const handleTitleBlur = async () => {
     if (title !== note.title) {
@@ -37,6 +42,7 @@ export function NoteMeta({ note, onUpdate, onTitleChange }: NoteMetaProps) {
       await onUpdate(String(note._id), { title });
     }
     setIsEditing(false);
+    if (onEditingTitleChange) onEditingTitleChange(false);
   };
 
   const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -52,6 +58,7 @@ export function NoteMeta({ note, onUpdate, onTitleChange }: NoteMetaProps) {
           type="text"
           value={title}
           onChange={handleTitleChange}
+          onFocus={handleTitleFocus}
           onBlur={handleTitleBlur}
           onKeyDown={handleTitleKeyDown}
           className="w-full text-xl font-semibold px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-300"
@@ -60,7 +67,7 @@ export function NoteMeta({ note, onUpdate, onTitleChange }: NoteMetaProps) {
       ) : (
         <h1 
           className="text-xl font-semibold px-2 py-1 hover:bg-gray-50 rounded-md cursor-pointer"
-          onClick={() => setIsEditing(true)}
+          onClick={() => { setIsEditing(true); if (onEditingTitleChange) onEditingTitleChange(true); }}
         >
           {title || "Untitled Note"}
         </h1>

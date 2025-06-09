@@ -12,6 +12,7 @@ interface UseSmartNoteEditorProps {
   onSave: (content: string, title?: string) => void;
   onToggleShortcuts: () => void;
   onRequestAIInsights: (noteId: string, note: Note) => Promise<void>;
+  isEditingTitle?: boolean;
 }
 
 export function useSmartNoteEditor({
@@ -19,7 +20,8 @@ export function useSmartNoteEditor({
   onUpdate,
   onSave,
   onToggleShortcuts,
-  onRequestAIInsights
+  onRequestAIInsights,
+  isEditingTitle = false
 }: UseSmartNoteEditorProps) {
   // Core state
   const [content, setContent] = useState(note.content || '');
@@ -60,13 +62,14 @@ export function useSmartNoteEditor({
   // Memoized condition for title generation
   const shouldGenerateTitle = useMemo(() => {
     return (
+      !isEditingTitle &&
       !titleGenerated && // Not already generated
       !isGeneratingTitle && // Not currently generating
       !titleLoading && // Hook not busy
       (!note.title || note.title === 'Untitled Note' || note.title.trim() === '') && // No meaningful title
       content.trim().length >= 20 // Sufficient content
     );
-  }, [titleGenerated, isGeneratingTitle, titleLoading, note.title, content]);
+  }, [isEditingTitle, titleGenerated, isGeneratingTitle, titleLoading, note.title, content]);
   
   // Debounced content update - separate from title generation
   const debouncedContentUpdate = useCallback((newContent: string) => {

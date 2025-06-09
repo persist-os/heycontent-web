@@ -74,7 +74,7 @@ export default function SmartNotes() {
   const [showSidebar, setShowSidebar] = useState(true); // Make sidebar visible by default
   
   // Get notes and mutations from useSmartNotes hook
-  const { notes, isLoading, saveNote, updateNote, deleteNote, saveNoteContent } = useSmartNotes(userId);
+  const { notes, isLoading, saveNote, updateNote, deleteNote, saveNoteContent, setNotes } = useSmartNotes(userId);
   
   const { requestAIInsights } = useAIInsights(updateNote); // updateNote from useSmartNotes is passed here
   const { setIsViewingNote } = useSidebar();
@@ -98,11 +98,7 @@ export default function SmartNotes() {
     if (result.success && result.noteId) {
       setActiveNoteId(result.noteId.toString()); // Convex IDs are objects, convert to string for activeNoteId state
       setShowSidebar(false);
-    } else {
-      console.error("Failed to create note via Convex immediately");
-      // Fallback or error handling: maybe create a purely local note if immediate save fails
-      // For now, log error. The UI might not show a new note if this fails.
-    }
+    } 
   }, [userId, saveNote]);
 
 
@@ -195,11 +191,15 @@ export default function SmartNotes() {
           <NoteArea
             note={activeNote}
             onUpdate={async (noteId, updates) => {
-              // Optimistic update (manual setNotes) can be done here if desired for immediate UI feedback.
-              // However, updateNote (from useSmartNotes) will trigger Convex update, and reactivity should refresh the notes list.
-              // For simplicity, relying on Convex reactivity initially.
-              // const currentNotes = notes || [];
-              // setNotes(currentNotes.map(note => note._id.toString() === noteId.toString() ? { ...note, ...updates } as Note : note));
+              // Optimistically update the note in local state
+              setNotes(currentNotes =>
+                currentNotes.map(note =>
+                  note._id.toString() === noteId.toString()
+                    ? { ...note, ...updates }
+                    : note
+                )
+              );
+              // Then call the backend update
               return await updateNote(noteId, updates);
             }}
             onSave={handleSave}
