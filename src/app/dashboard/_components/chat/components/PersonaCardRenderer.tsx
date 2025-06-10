@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { getApiKey } from '@/app/lib/api-helpers';
 import { PersonaCard } from './PersonaCard';
 import { usePersonaData } from '../hooks/usePersonaData';
 import { Message } from '@/app/types/chat';
@@ -35,6 +36,47 @@ export const PersonaCardRenderer: React.FC<PersonaCardRendererProps> = ({ messag
 
   // Combined trigger: metadata flags OR content pattern
   const hasPersonaIndicators = hasPersonaCompletionFlags || hasPersonaContentPattern;
+
+  // Call ambient_insights API after successful persona generation
+  useEffect(() => {
+    const callAmbientInsights = async () => {
+      if (hasPersona && persona && hasPersonaIndicators) {
+        try {
+          console.log('Calling ambient_insights API after persona generation');
+          const apiKey = await getApiKey();
+          
+          if (!apiKey) {
+            console.error('No API key found for ambient_insights call');
+            return;
+          }
+          
+          const response = await fetch('/api/ambient_insights', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+              context_type: 'persona_generation',
+              content: JSON.stringify(persona)
+            })
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Error calling ambient_insights API:', errorData);
+          } else {
+            const data = await response.json();
+            console.log('Ambient insights generated successfully:', data);
+          }
+        } catch (error) {
+          console.error('Exception calling ambient_insights API:', error);
+        }
+      }
+    };
+    
+    callAmbientInsights();
+  }, [hasPersona, persona, hasPersonaIndicators]);
 
   useEffect(() => {
     if (!hasPersonaIndicators || !shouldFetchPersona) {

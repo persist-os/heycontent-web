@@ -5,8 +5,7 @@ import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { getApiKey } from '@/app/lib/api-helpers';
 import { Id } from '@/convex/_generated/dataModel';
-import { ambientInsights as hardcodedInsights } from '../data/ambient-insights';
-import { Lightbulb } from 'lucide-react';
+import { Lightbulb, Loader2 } from 'lucide-react';
 
 // Type for the Convex response
 type ConvexInsight = {
@@ -67,7 +66,7 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
   const insights = useMemo<Array<AmbientInsight & { id: string }>>(() => {
     console.log('AmbientInsights: Mapping insights. Convex data:', convexInsights);
 
-    if (convexInsights && Array.isArray(convexInsights.data)) {
+    if (convexInsights && Array.isArray(convexInsights.data) && convexInsights.data.length > 0) {
       console.log('AmbientInsights: Using Convex data array, length:', convexInsights.data.length);
       return convexInsights.data.slice(0, 6).map((item: ConvexInsight) => ({
         type: item.category || 'auto_generated',
@@ -79,11 +78,8 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
       }));
     }
 
-    // fallback
-    return hardcodedInsights.slice(0, 6).map(insight => ({
-      ...insight,
-      id: Math.random().toString()
-    }));
+    // Return empty array if no insights from Convex
+    return [];
   }, [convexInsights]);
 
   // Combine prop error with fetch error
@@ -96,50 +92,82 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
     }
   }, [convexInsights]);
 
-  // Log errors but continue showing the hardcoded insights
+  // Log errors
   useEffect(() => {
     const error = propError || fetchError;
     if (error) {
       console.error('Error loading insights:', error);
     }
   }, [propError, fetchError]);
+  
+  // Request new insights if none are available from Convex
+  const [isRequestingInsights, setIsRequestingInsights] = useState(false);
+  
+  useEffect(() => {
+    const requestNewInsights = async () => {
+      // Only request new insights if we have a userId and no insights from Convex
+      if (userId && 
+          typeof convexInsights !== 'string' &&
+          convexInsights !== undefined && 
+          (!convexInsights || 
+           !Array.isArray(convexInsights?.data) || 
+           convexInsights.data?.length === 0) && 
+          !isRequestingInsights) {
+        
+        try {
+          setIsRequestingInsights(true);
+          console.log('Requesting new ambient insights');
+          
+          const apiKey = await getApiKey();
+          if (!apiKey) {
+            console.error('No API key found for ambient_insights request');
+            setIsRequestingInsights(false);
+            return;
+          }
+          
+          const response = await fetch('/api/ambient_insights', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+              context_type: 'auto_generated',
+              content: JSON.stringify({ user_id: userId })
+            })
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Error requesting ambient insights:', errorData);
+          } else {
+            const data = await response.json();
+            console.log('Ambient insights requested successfully:', data);
+          }
+        } catch (error) {
+          console.error('Exception requesting ambient insights:', error);
+        } finally {
+          setIsRequestingInsights(false);
+        }
+      }
+    };
+    
+    requestNewInsights();
+  }, [userId, convexInsights, isRequestingInsights]);
 
-  // Show loading state only if we don't have any insights yet
+  // Show loading state if we don't have any insights yet
   if (!insights || insights.length === 0) {
-    console.log('AmbientInsights: No insights available, falling back to hardcoded insights');
-    // Always render fallback insights even if no Convex data
+    console.log('AmbientInsights: No insights available, showing loading state');
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl mx-auto">
-        {hardcodedInsights.slice(0, 6).map((insight, index) => (
-          <div
-            key={index}
-            className="bg-white border border-gray-200 shadow-sm p-4 rounded-xl cursor-pointer hover:shadow-md transition-all duration-200 hover:scale-[1.02]"
-            tabIndex={0}
-            role="button"
-            aria-label={`${insight.title}: ${insight.description}`}
-          >
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-gray-50">
-                <InsightIcon icon={insight.icon} type={insight.type} />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-medium text-sm text-gray-900 mb-1">{insight.title}</h3>
-                <p className="text-sm text-gray-600">{insight.description}</p>
-                {insight.action && (
-                  <button
-                    className="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onInsightClick?.(insight.action, insight);
-                    }}
-                  >
-                    {insight.action}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
+      <div className="flex flex-col items-center justify-center py-12 px-4 max-w-5xl mx-auto">
+        <div className="flex items-center justify-center mb-4">
+          <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
+        </div>
+        <h3 className="text-lg font-medium text-gray-900 mb-2 text-center">Generating insights for you...</h3>
+        <p className="text-sm text-gray-600 text-center max-w-md">
+          We're analyzing your content and preferences to create personalized insights.
+          This may take a moment.
+        </p>
       </div>
     );
   }
