@@ -16,6 +16,7 @@ interface AIInsightDisplayCardProps {
       sourceDetails: string[];
       relatedItems?: Array<{ label: string; value: string }>;
     };
+    isPersonaGeneration?: boolean;
   };
   showPlatformIcon?: boolean;
 }
@@ -27,7 +28,7 @@ const platformIcon = {
 };
 
 export const AIInsightDisplayCard: React.FC<AIInsightDisplayCardProps> = ({ context, showPlatformIcon = true }) => {
-  const { fullInsight, originalPlatform } = context;
+  const { fullInsight, originalPlatform, isPersonaGeneration } = context;
   
   if (!fullInsight) return null;
 
