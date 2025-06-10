@@ -194,6 +194,20 @@ export const getRecentGmailThreads = query({
   },
 });
 
+// Fetch a batch of unreviewed Gmail threads for spam review
+export const getUnreviewedGmailThreads = query({
+  args: { userId: v.string(), limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    let q = ctx.db
+      .query("gmailThreads")
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
+      .filter(q => q.eq(q.field("spamStatus"), "unreviewed"))
+      .order("desc");
+    const threads = args.limit ? await q.take(args.limit) : await q.collect();
+    return threads;
+  },
+});
+
 function isNonEmptyString(val) {
   return typeof val === 'string' && val.trim().length > 0;
 }
@@ -203,60 +217,30 @@ export const listUserGmailThreads = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
     try {
-      // Fetch threads from the gmailThreads table
       const threads = await ctx.db
         .query("gmailThreads")
         .withIndex("by_userId", (q) => q.eq("userId", args.userId))
         .order("desc")
         .collect();
-      
+
       // Debug log: log the raw threads from Convex
       console.log('Convex: Raw threads from DB:', JSON.stringify(threads, null, 2));
-      
+
       // Transform threads to match the GmailContentItem format for UI
       return threads.map(thread => {
-        const subject = thread.subject || 'No Subject';
-        const from = thread.from || 'Unknown Sender';
-        const snippet = thread.snippet || '';
-        
-        // Determine if this is a newsletter or regular email (basic logic - can be enhanced)
-        let emailType: 'newsletter' | 'partnership' | 'individual' | 'other' = 'individual';
-        
-        // Simple heuristic to guess email type - could be improved with more sophisticated logic
-        if (from.toLowerCase().includes('newsletter') || subject.toLowerCase().includes('newsletter')) {
-          emailType = 'newsletter';
-        } else if (from.toLowerCase().includes('partner') || subject.toLowerCase().includes('partner')) {
-          emailType = 'partnership';
-        } else if ((thread.message_count && thread.message_count > 3) || (thread.messages && thread.messages.length > 3)) {
-          // Longer threads are more likely to be individual conversations
-          emailType = 'individual';
-        } else {
-          emailType = 'other';
-        }
-        
+        const subject = thread.subject || thread.data?.subject || 'No Subject';
+        const from = thread.from || thread.data?.from || 'Unknown Sender';
+        const snippet = thread.snippet || thread.data?.snippet || '';
         return {
-          id: thread.threadId || '',
-          platform: 'gmail' as const,
-          publishedAt: thread.createdAt ? new Date(thread.createdAt).toISOString() : new Date().toISOString(),
-          content: {
-            subject,
-            from,
-            snippet,
-            threadId: thread.threadId,
-            messageCount: thread.message_count || (thread.messages?.length || 0),
-            emailType: emailType, // Add required emailType property
-            recipients: 1 // Default to 1 recipient
-          },
-          metrics: {
-            replies: thread.message_count ? thread.message_count - 1 : 0,
-            openRate: 0.75, // Placeholder
-            clickRate: 0.25, // Placeholder
-          }
+          ...thread,
+          subject,
+          from,
+          snippet,
         };
       });
     } catch (error) {
-      console.error('Error listing Gmail threads:', error);
-      throw new Error(`Failed to list Gmail threads: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Error in listUserGmailThreads:', error);
+      return [];
     }
-  },
+  }
 });

@@ -724,4 +724,59 @@ export const migrateThreadTopLevelFields = mutation({
     }
     return { updated };
   },
+});
+
+// Update the spam status of a Gmail thread
+export const updateGmailThreadSpamStatus = mutation({
+  args: {
+    userId: v.string(),
+    threadId: v.string(),
+    spamStatus: v.union(
+      v.literal('flagged'),
+      v.literal('confirmed_spam'),
+      v.literal('not_spam')
+    ),
+    spamScore: v.optional(v.number()),
+    reviewedByUser: v.optional(v.boolean()),
+    reviewedAt: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const thread = await ctx.db
+      .query("gmailThreads")
+      .withIndex("by_threadId", q => q.eq("threadId", args.threadId))
+      .filter(q => q.eq(q.field("userId"), args.userId))
+      .first();
+    if (!thread) throw new Error("Thread not found");
+    await ctx.db.patch(thread._id, {
+      spamStatus: args.spamStatus,
+      spamScore: args.spamScore,
+      reviewedByUser: args.reviewedByUser,
+      reviewedAt: args.reviewedAt,
+      updatedAt: Date.now(),
+    });
+    return { success: true };
+  },
+});
+
+// Migration: Normalize top-level fields for all Gmail threads
+export const normalizeGmailThreadTopLevelFields = mutation({
+  args: {},
+  handler: async (ctx, args) => {
+    const threads = await ctx.db.query("gmailThreads").collect();
+    let updated = 0;
+    for (const thread of threads) {
+      const firstMessage = thread.messages && thread.messages.length > 0 ? thread.messages[0] : null;
+      if (firstMessage) {
+        const patch: Record<string, any> = {};
+        if (!thread.subject && firstMessage.subject) patch["subject"] = firstMessage.subject;
+        if (!thread.from && firstMessage.from) patch["from"] = firstMessage.from;
+        if (!thread.snippet && firstMessage.snippet) patch["snippet"] = firstMessage.snippet;
+        if (Object.keys(patch).length > 0) {
+          await ctx.db.patch(thread._id, patch);
+          updated++;
+        }
+      }
+    }
+    return { updated };
+  },
 }); 

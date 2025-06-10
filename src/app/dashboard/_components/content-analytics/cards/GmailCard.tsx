@@ -32,59 +32,46 @@ export const GmailCard: React.FC<GmailCardProps> = ({ item, onDiscussContent, on
   };
 
   return (
-    <Card key={item.id} className="overflow-hidden border-2 border-blue-500 dark:border-blue-400 shadow-lg">
-      <div className="p-4">
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <Mail className="w-5 h-5 text-blue-500" />
-          </div>
-          <span className="text-xs text-gray-500 whitespace-nowrap">{new Date(publishedAt).toLocaleDateString()}</span>
+    <Card key={item.id} className="overflow-hidden border-2 border-blue-500 dark:border-blue-400 shadow-lg rounded-xl mb-4">
+      <div className="p-4 flex flex-col gap-2">
+        {/* Top Row */}
+        <div className="flex items-center justify-between">
+          <Mail className="w-5 h-5 text-blue-500" />
+          <span className="text-xs text-gray-500">{new Date(publishedAt).toLocaleDateString()}</span>
         </div>
 
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">{snippet}</p>
+        {/* Snippet */}
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-1 line-clamp-2">{snippet}</p>
 
-        {/* Subject, From on left, Replies card on right */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1 space-y-1 min-w-0 pr-4">
+        {/* Info and Replies */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex-1 min-w-0">
             <div className="text-sm">
               <span className="text-gray-500 dark:text-gray-400">Subject: </span>
-              <span className="text-gray-800 dark:text-gray-200 font-medium" title={subject}>
-                {subject}
-              </span>
+              <span className="text-gray-800 dark:text-gray-200 font-medium" title={subject}>{subject}</span>
             </div>
             <div className="text-sm">
               <span className="text-gray-500 dark:text-gray-400">From: </span>
-              <span className="text-gray-800 dark:text-gray-200" title={from}>
-                {from}
-              </span>
+              <span className="text-gray-800 dark:text-gray-200" title={from}>{from}</span>
             </div>
           </div>
-          
-          <div className="flex flex-col items-center gap-1 text-gray-600 dark:text-gray-300 p-3 bg-gray-50 dark:bg-gray-800 rounded-md min-w-[80px] flex-shrink-0">
+          <div className="flex flex-row sm:flex-col items-center gap-1 bg-gray-50 dark:bg-gray-800 rounded-md px-3 py-2 min-w-[80px]">
             <MessageSquare className="w-4 h-4 text-orange-500" />
             <span className="font-medium">{replyCount.toLocaleString()}</span>
             <span className="text-xs">Replies</span>
           </div>
         </div>
 
-        <div className="flex gap-2 mt-2">
+        {/* Actions */}
+        <div className="flex flex-col sm:flex-row gap-2 mt-2">
           <button
-            className="px-3 py-1 rounded text-white hover:opacity-90 text-xs transition-opacity"
-            style={{ backgroundColor: '#4715C8' }}
-            onClick={() => onViewDetailedAnalytics(item)}
-          >
-            View Analytics
-          </button>
-          <button
-            className="px-3 py-1 rounded border text-xs hover:opacity-90 transition-opacity"
-            style={{ borderColor: '#4715C8', color: '#4715C8' }}
+            className="w-full sm:w-auto px-3 py-2 rounded border text-xs font-semibold border-[#4715C8] text-[#4715C8] hover:bg-[#4715C8]/10 transition"
             onClick={() => onDiscussContent(item)}
           >
             Discuss
           </button>
           <button
-            className="px-3 py-1 rounded text-black hover:opacity-90 text-xs flex items-center gap-1 transition-opacity"
-            style={{ backgroundColor: '#BAA9FC' }}
+            className="w-full sm:w-auto px-3 py-2 rounded text-black text-xs font-semibold bg-[#BAA9FC] hover:opacity-90 flex items-center justify-center gap-1 transition"
             onClick={handleRefresh}
             disabled={loading}
           >
@@ -95,8 +82,8 @@ export const GmailCard: React.FC<GmailCardProps> = ({ item, onDiscussContent, on
             )}
             Refresh
           </button>
-          {error && <span className="text-xs text-red-500 ml-2">{error}</span>}
         </div>
+        {error && <span className="text-xs text-red-500 mt-1">{error}</span>}
       </div>
     </Card>
   );

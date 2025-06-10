@@ -229,17 +229,40 @@ export function ContentAnalyticsScreen() {
     return [];
   }, [youtubeVideos]);
 
+  // Map Gmail items - only use important_emails from agent analysis if available
   const mappedGmailItems = useMemo(() => {
     if (Array.isArray(gmailThreads)) {
+      // If the threads array contains an 'analysis' field with important_emails, flatten and use those
+      const importantEmails: any[] = [];
+      gmailThreads.forEach((thread: any) => {
+        if (thread.analysis && Array.isArray(thread.analysis.important_emails)) {
+          thread.analysis.important_emails.forEach((email: any) => {
+            importantEmails.push({
+              id: email.id || thread._id || thread.id,
+              platform: 'gmail',
+              publishedAt: email.date || thread.publishedAt || '',
+              content: {
+                subject: email.subject || 'No Subject',
+                snippet: email.snippet || 'No preview available',
+                from: email.sender || 'Unknown Sender',
+                emailType: email.emailType || 'important',
+              },
+              metrics: email.metrics || {},
+            });
+          });
+        }
+      });
+      // If no important_emails found, fallback to mapping all threads (legacy)
+      if (importantEmails.length > 0) return importantEmails;
       return gmailThreads.map((thread: any): GmailContentItem => ({
         id: thread._id || thread.id,
         platform: 'gmail',
         publishedAt: thread.publishedAt || '',
         content: {
-          subject: thread.subject || '',
-          snippet: thread.snippet || '',
-          from: thread.from || '',
-          emailType: thread.emailType || 'all',
+          subject: thread.subject || thread.data?.subject || 'No Subject',
+          snippet: thread.snippet || thread.data?.snippet || 'No preview available',
+          from: thread.from || thread.data?.from || 'Unknown Sender',
+          emailType: thread.emailType || thread.data?.emailType || 'all',
         },
         metrics: thread.metrics || {},
       }));

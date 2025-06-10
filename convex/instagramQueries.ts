@@ -62,35 +62,24 @@ export const getInstagramPost = query({
 export const getAllInstagramPosts = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
-    // First get the account ID for this user
-    const account = await ctx.db
-      .query("instagramAccounts")
-      .withIndex("by_userId", q => q.eq("userId", args.userId))
-      .first();
-    
-    if (!account) {
-      return [];
-    }
-
-    // Then get all posts for this account using both userId and instagramAccountId
+    // Get all posts for this user
     const posts = await ctx.db
       .query("instagramPosts")
-      .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", account.instagramAccountId))
-      .filter(q => q.eq(q.field("userId"), args.userId))
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
       .order("desc")
       .collect();
     return posts;
   },
 });
 
-// Get all Instagram posts for an instagramAccountId
+// Get all Instagram posts for an instagramAccountId (refactored: filter by username if needed)
 export const getInstagramPostsByAccount = query({
-  args: { userId: v.string(), instagramAccountId: v.string() },
+  args: { userId: v.string(), username: v.string() },
   handler: async (ctx, args) => {
     const posts = await ctx.db
       .query("instagramPosts")
-      .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", args.instagramAccountId))
-      .filter(q => q.eq(q.field("userId"), args.userId))
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
+      .filter(q => q.eq(q.field("data.username"), args.username))
       .order("desc")
       .collect();
     return posts;
@@ -101,20 +90,9 @@ export const getInstagramPostsByAccount = query({
 export const getInstagramPostsByTimeRange = query({
   args: { userId: v.string(), start: v.number(), end: v.number() },
   handler: async (ctx, args) => {
-    // First get the account ID for this user
-    const account = await ctx.db
-      .query("instagramAccounts")
-      .withIndex("by_userId", q => q.eq("userId", args.userId))
-      .first();
-    
-    if (!account) {
-      return [];
-    }
-
     const posts = await ctx.db
       .query("instagramPosts")
-      .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", account.instagramAccountId))
-      .filter(q => q.eq(q.field("userId"), args.userId))
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
       .filter(q => q.gte(q.field("data.timestamp"), args.start))
       .filter(q => q.lte(q.field("data.timestamp"), args.end))
       .order("desc")
@@ -127,20 +105,9 @@ export const getInstagramPostsByTimeRange = query({
 export const getLatestInstagramPost = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
-    // First get the account ID for this user
-    const account = await ctx.db
-      .query("instagramAccounts")
-      .withIndex("by_userId", q => q.eq("userId", args.userId))
-      .first();
-    
-    if (!account) {
-      return null;
-    }
-
     const post = await ctx.db
       .query("instagramPosts")
-      .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", account.instagramAccountId))
-      .filter(q => q.eq(q.field("userId"), args.userId))
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
       .order("desc")
       .first();
     return post;
@@ -151,20 +118,9 @@ export const getLatestInstagramPost = query({
 export const getInstagramPostsByUsername = query({
   args: { userId: v.string(), username: v.string() },
   handler: async (ctx, args) => {
-    // First get the account ID for this user
-    const account = await ctx.db
-      .query("instagramAccounts")
-      .withIndex("by_userId", q => q.eq("userId", args.userId))
-      .first();
-    
-    if (!account) {
-      return [];
-    }
-
     const posts = await ctx.db
       .query("instagramPosts")
-      .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", account.instagramAccountId))
-      .filter(q => q.eq(q.field("userId"), args.userId))
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
       .filter(q => q.eq(q.field("data.username"), args.username))
       .order("desc")
       .collect();
