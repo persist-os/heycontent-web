@@ -466,3 +466,49 @@ export const storePostComments = mutation({
     }
   },
 });
+
+// Store Instagram tracker analysis
+export const storeInstagramTrackerAnalysis = mutation({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+    analysis: v.any(),
+  },
+  handler: async (ctx, args) => {
+    const { userId, instagramAccountId, analysis } = args;
+    const now = Date.now();
+
+    try {
+      // Check if analysis already exists
+      const existingAnalysis = await ctx.db
+        .query("instagramTrackerAnalysis")
+        .withIndex("by_user_account", q => 
+          q.eq("userId", userId)
+           .eq("instagramAccountId", instagramAccountId)
+        )
+        .first();
+
+      if (existingAnalysis) {
+        // Update existing analysis
+        await ctx.db.patch(existingAnalysis._id, {
+          analysis,
+          updatedAt: now,
+        });
+        return { status: "updated", analysisId: existingAnalysis._id };
+      } else {
+        // Insert new analysis
+        const id = await ctx.db.insert("instagramTrackerAnalysis", {
+          userId,
+          instagramAccountId,
+          analysis,
+          createdAt: now,
+          updatedAt: now,
+        });
+        return { status: "created", analysisId: id };
+      }
+    } catch (error) {
+      console.error(`Error storing Instagram tracker analysis for user ${userId}:`, error);
+      throw new Error(`Failed to store Instagram tracker analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});

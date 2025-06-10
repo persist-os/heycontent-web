@@ -12,13 +12,8 @@ import { ChatScreenProps, SuggestedAction } from './types'
 import { Message } from '@/app/types/chat'
 
 // Import components 
-import { SuggestionChip } from './components/SuggestionChip'
-import { AmbientInsights } from './components/AmbientInsights';
 import { BottomBarActions } from './components/BottomBarActions';
 import { useAmbientInsightsActions } from './components/AmbientInsightsActions';
-import { ambientInsights } from './data/ambient-insights';
-import { bottomBarActions } from './data/bottom-bar-actions';
-import { ContextBox } from './components/ContextBox'
 import { PersonaTip } from './components/PersonaTip'
 import ChatHeader from './components/ChatHeader'
 import ChatContextBox from './components/ChatContextBox'
