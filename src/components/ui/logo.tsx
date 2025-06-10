@@ -14,7 +14,7 @@ export function Logo({ className = '', size = 'medium' }: LogoProps) {
   }
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <Link href="/" className={`flex items-center gap-2 ${className}`} tabIndex={0} aria-label="Go to landing page">
       <div className="rounded-2xl bg-white p-1 shadow-sm">
         <Image
           src={logoMap[size]}
@@ -25,6 +25,6 @@ export function Logo({ className = '', size = 'medium' }: LogoProps) {
           priority
         />
       </div>
-    </div>
+    </Link>
   )
 }
