@@ -644,4 +644,27 @@ export default defineSchema({
   })
   .index("by_email", ["email"]),
 
+  // Instagram Analysis Tables
+  instagramTracker: defineTable({
+    userId: v.string(),
+    instagramAccountId: v.string(),
+    analysis: v.any(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_userId", ["userId"])
+  .index("by_instagramAccountId", ["instagramAccountId"])
+  .index("by_user_account", ["userId", "instagramAccountId"]),
+
+  instagramTrackerAnalysis: defineTable({
+    userId: v.string(),
+    instagramAccountId: v.string(),
+    analysis: v.any(), // Store raw analysis data
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_userId", ["userId"])
+  .index("by_account", ["instagramAccountId"])
+  .index("by_user_account", ["userId", "instagramAccountId"]),
+
 });

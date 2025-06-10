@@ -2,10 +2,13 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { getApiKey } from '@/app/lib/api-helpers';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Sparkles } from 'lucide-react';
 
 import { YouTubeCard } from '../cards/YouTubeCard';
 import { InstagramCard } from '../cards/InstagramCard';
@@ -49,114 +52,188 @@ interface InstagramAnalysis {
 }
 
 // Separate component for Instagram analytics
-function InstagramAnalytics({ userId }: { userId: string }) {
-  const [instagramAnalysis, setInstagramAnalysis] = useState<string | InstagramAnalysis | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
+function InstagramAnalytics({ userId, onDiscussContent }: { userId: string; onDiscussContent: (item: InstagramContentItem) => void }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [analysis, setAnalysis] = useState<InstagramAnalysis | null>(null);
+  const [selectedContent, setSelectedContent] = useState<InstagramContentItem | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
-  const fetchInstagramAnalysis = async () => {
-    if (hasAttemptedFetch) return;
-    
+  // Get Instagram account data from Convex
+  const instagramAccount = useQuery(api.instagramQueries.getInstagramAccount, { userId });
+
+  // Get Instagram tracker analysis from Convex
+  const trackerAnalysis = useQuery(
+    api.instagramQueries.getInstagramTrackerAnalysis,
+    {
+      userId,
+      instagramAccountId: instagramAccount?.instagramAccountId || ""
+    }
+  );
+
+  const fetchData = async () => {
+    if (!instagramAccount) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
     try {
-      setIsAnalyzing(true);
-      setHasAttemptedFetch(true);
-      const apiKey = await getApiKey();
-      if (!apiKey) throw new Error('Missing API key');
+      // Check if we have data in Convex
+      if (trackerAnalysis !== undefined) {
+        if (trackerAnalysis) {
+          console.log('[DEBUG] Using existing Convex data');
+          setAnalysis(trackerAnalysis);
+          setLoading(false);
+          return;
+        }
+      }
 
-      const response = await fetch('/api/instagram/analytics', {
+      console.log('[DEBUG] No existing data in Convex, fetching from backend...');
+      const response = await fetch(`${window.location.origin}/api/social/instagram/analytics`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
+          'Authorization': `Bearer ${await getApiKey()}`,
         },
-        body: JSON.stringify({ user_id: userId })
+        body: JSON.stringify({
+          user_id: userId
+        })
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Instagram analysis API error:', {
-          status: response.status,
-          statusText: response.statusText,
-          body: errorText
-        });
-        throw new Error(`API error: ${response.status} ${response.statusText}`);
-      }
-
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error(`Invalid content type: ${contentType}`);
+        throw new Error(`Failed to fetch Instagram analysis: ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log('[DEBUG] Received data:', data);
       
       if (data?.analysis?.full_analysis?.content) {
-        setInstagramAnalysis(data.analysis.full_analysis.content);
-      } else if (data?.analysis?.content) {
-        setInstagramAnalysis(data.analysis.content);
-      } else if (data?.content) {
-        setInstagramAnalysis(data.content);
+        console.log('[DEBUG] Setting analysis state:', data.analysis.full_analysis.content);
+        setAnalysis(data.analysis.full_analysis.content);
       } else {
-        setInstagramAnalysis('Unable to generate analysis at this time.');
+        console.log('[DEBUG] No analysis content in data:', data);
       }
     } catch (err) {
-      console.error('Instagram analysis fetch error:', err);
-      setInstagramAnalysis('Error generating analysis. Please try again.');
+      console.error('[DEBUG] Error fetching Instagram analysis:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch Instagram analysis');
     } finally {
-      setIsAnalyzing(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!hasAttemptedFetch) {
-      fetchInstagramAnalysis();
-    }
-  }, [hasAttemptedFetch]);
+    console.log('[DEBUG] InstagramAnalytics useEffect triggered');
+    console.log('[DEBUG] Current analysis state:', analysis);
+    console.log('[DEBUG] Current trackerAnalysis:', trackerAnalysis);
+    fetchData();
+  }, [userId, instagramAccount, trackerAnalysis]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-heycontent-purple"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center text-red-500 p-4">
+        <p>Error: {error}</p>
+      </div>
+    );
+  }
+
+  if (!analysis) {
+    return (
+      <div className="text-center text-gray-500 p-4">
+        <p>No Instagram analysis available</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="mb-6">
-      <div className="p-4 bg-gradient-to-r from-pink-200 via-purple-200 to-yellow-200 rounded-lg text-black dark:text-black">
-        <h3 className="font-semibold mb-2">Content Activity Tracker</h3>
-        {isAnalyzing ? (
-          <p className="text-sm">Analyzing your Instagram profile...</p>
-        ) : instagramAnalysis ? (
-          <div className="text-sm">
-            {typeof instagramAnalysis === 'string' ? (
-              <p>{instagramAnalysis}</p>
-            ) : (
-              <>
-                {instagramAnalysis.last_post && (
-                  <div className="mb-2">
-                    <p className="font-medium">Last Post:</p>
-                    <p>Date: {instagramAnalysis.last_post.date || 'N/A'}</p>
-                    <p>Type: {instagramAnalysis.last_post.type || 'N/A'}</p>
-                    <p>Time Ago: {instagramAnalysis.last_post.time_ago || 'N/A'}</p>
-                  </div>
-                )}
-                {instagramAnalysis.posting_frequency && (
-                  <div className="mb-2">
-                    <p className="font-medium">Posting Frequency:</p>
-                    <p>Average Days Between Posts: {instagramAnalysis.posting_frequency.average_days_between_posts ?? 'N/A'}</p>
-                    <p>Recent Posts: {instagramAnalysis.posting_frequency.has_recent_posts ? 'Yes' : 'No'}</p>
-                    <p>Posts Last 7 Days: {instagramAnalysis.posting_frequency.total_posts_last_7_days || '0'}</p>
-                  </div>
-                )}
-                {instagramAnalysis.media_distribution && (
-                  <div className="mb-2">
-                    <p className="font-medium">Media Distribution:</p>
-                    <p>Regular Posts: {instagramAnalysis.media_distribution.regular_post || '0%'}</p>
-                    <p>Carousels: {instagramAnalysis.media_distribution.carousel || '0%'}</p>
-                    <p>Reels: {instagramAnalysis.media_distribution.reel || '0%'}</p>
-                    <p>Stories: {instagramAnalysis.media_distribution.story || '0%'}</p>
-                  </div>
-                )}
-              </>
-            )}
+    <div className="space-y-6">
+      {/* Last Post Section */}
+      {analysis.last_post && (
+        <Card className="p-4">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-lg font-medium">Last Post</h3>
+            <Button size="sm" onClick={fetchData} disabled={loading}>
+              <Sparkles className="w-4 h-4 mr-2" />
+              {loading ? 'Refreshing...' : 'Refresh Analysis'}
+            </Button>
           </div>
-        ) : (
-          <p className="text-sm">Discover trends, best posting times, and engagement drivers for your Instagram content.</p>
-        )}
-      </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <p className="text-sm text-gray-500">Date</p>
+              <p className="font-medium">{analysis.last_post.date || 'N/A'}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Type</p>
+              <p className="font-medium">{analysis.last_post.type || 'N/A'}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Time Ago</p>
+              <p className="font-medium">{analysis.last_post.time_ago || 'N/A'}</p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Posting Frequency Section */}
+      {analysis.posting_frequency && (
+        <Card className="p-4">
+          <h3 className="text-lg font-medium mb-2">Posting Frequency</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <p className="text-sm text-gray-500">Average Days Between Posts</p>
+              <p className="font-medium">
+                {analysis.posting_frequency.average_days_between_posts || 'N/A'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Recent Posts</p>
+              <p className="font-medium">{analysis.posting_frequency.has_recent_posts ? 'Yes' : 'No'}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Posts Last 7 Days</p>
+              <p className="font-medium">{analysis.posting_frequency.total_posts_last_7_days || '0'}</p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Media Distribution Section */}
+      {analysis.media_distribution && (
+        <Card className="p-4">
+          <h3 className="text-lg font-medium mb-2">Media Distribution</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <p className="text-sm text-gray-500">Regular Posts</p>
+              <p className="font-medium">{analysis.media_distribution.regular_post || '0%'}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Carousels</p>
+              <p className="font-medium">{analysis.media_distribution.carousel || '0%'}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Reels</p>
+              <p className="font-medium">{analysis.media_distribution.reel || '0%'}</p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {selectedContent && (
+        <InstagramModal
+          selectedContent={selectedContent}
+          userId={userId}
+          onClose={() => setShowModal(false)}
+          onDiscussContent={onDiscussContent}
+        />
+      )}
     </div>
   );
 }
@@ -381,7 +458,12 @@ export function ContentAnalyticsScreen() {
             </TabsList>
 
             {selectedPlatform === 'instagram' && userId && (
-              <InstagramAnalytics userId={userId} />
+              <InstagramAnalytics
+                userId={userId}
+                onDiscussContent={(item) => {
+                  discussContent(item);
+                }}
+              />
             )}
 
             {selectedPlatform === 'gmail' && (

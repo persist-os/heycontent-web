@@ -1505,5 +1505,51 @@ app.get("/api/users/:id/ambient-data-bundle", async (c) => {
   }
 });
 
+// Instagram Analysis Endpoints
+
+// Store Instagram tracker analysis
+app.post("/api/instagram/tracker_analysis", async (c) => {
+  const ctx = c.env;
+  const { userId, instagramAccountId, analysis } = await c.req.json();
+
+  if (!userId || !instagramAccountId || !analysis) {
+    return c.json({ success: false, error: "Missing required fields" }, 400);
+  }
+
+  try {
+    const result = await ctx.runMutation(api.instagramMutations.storeInstagramTrackerAnalysis, {
+      userId,
+      instagramAccountId,
+      analysis,
+    });
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error("Failed to store Instagram tracker analysis:", error);
+    return c.json({ success: false, error: "Failed to store Instagram tracker analysis" }, 500);
+  }
+});
+
+// Get Instagram tracker analysis
+app.get("/api/instagram/tracker_analysis", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.query("userId");
+  const instagramAccountId = c.req.query("instagramAccountId");
+
+  if (!userId || !instagramAccountId) {
+    return c.json({ success: false, error: "Missing required query parameters" }, 400);
+  }
+
+  try {
+    const result = await ctx.runQuery(api.instagramQueries.getInstagramTrackerAnalysis, {
+      userId,
+      instagramAccountId,
+    });
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error("Failed to fetch Instagram tracker analysis:", error);
+    return c.json({ success: false, error: "Failed to fetch Instagram tracker analysis" }, 500);
+  }
+});
+
 const router = new HttpRouterWithHono(app);
 export default router;
