@@ -267,3 +267,29 @@ export const getInstagramTokens = query({
     }
   },
 });
+
+// Get Instagram tracker analysis
+export const getInstagramTrackerAnalysis = query({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { userId, instagramAccountId } = args;
+
+    try {
+      const analysis = await ctx.db
+        .query("instagramTrackerAnalysis")
+        .withIndex("by_user_account", q => 
+          q.eq("userId", userId)
+           .eq("instagramAccountId", instagramAccountId)
+        )
+        .first();
+
+      return analysis?.analysis || null;
+    } catch (error) {
+      console.error(`Error fetching tracker analysis for user ${userId}:`, error);
+      throw new Error(`Failed to fetch tracker analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});

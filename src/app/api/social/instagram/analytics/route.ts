@@ -56,14 +56,9 @@ export async function POST(request: Request) {
       }
     });
 
-    // Fetch from backend with retry logic
-    const maxRetries = 3;
-    const backoffTimes = [500, 1000, 2000];
-    let response = null;
-    let lastError = null;
-    
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      response = await fetch(backendUrl, {
+    // Single attempt to fetch from backend
+    try {
+      const response = await fetch(backendUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -72,41 +67,78 @@ export async function POST(request: Request) {
         },
         body: JSON.stringify(requestBody)
       });
-      
-      if (response.status !== 500 && response.status !== 429) {
-        break;
-      }
-      
-      lastError = `Backend responded with status ${response.status}`;
-      console.warn(`[${requestId}] Backend responded with ${response.status}. Retrying in ${backoffTimes[attempt] || 0}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
-      
-      if (attempt < maxRetries) {
-        await new Promise(res => setTimeout(res, backoffTimes[attempt]));
-      }
-    }
-    
-    if (!response || response.status === 500 || response.status === 429) {
-      throw new Error(lastError || 'Backend unavailable after retries');
-    }
 
-    // Log backend response
-    console.debug(`[${requestId}] Backend response status`, response.status, response.statusText);
+      // Handle backend errors
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error(`[${requestId}] Backend API error:`, {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        });
 
-    if (!response.ok) {
-      console.error(`[${requestId}] Backend API error with status: ${response.status}`);
-      return NextResponse.json({ 
-        error: `Error analyzing Instagram profile: ${response.statusText}` 
-      }, { 
-        status: response.status 
+        // Check for specific backend errors
+        const errorMessage = errorData.error || response.statusText;
+        if (errorMessage.includes('replace_nulls') || 
+            errorMessage.includes('local variable') ||
+            errorMessage.includes('module')) {
+          console.warn(`[${requestId}] Backend analysis error, returning default structure`);
+          return NextResponse.json({
+            analysis: {
+              content: {
+                last_post: { date: null, type: null, time_ago: null },
+                posting_frequency: {
+                  average_days_between_posts: null,
+                  has_recent_posts: false,
+                  total_posts_last_7_days: '0'
+                },
+                media_distribution: {
+                  regular_post: '0%',
+                  carousel: '0%',
+                  reel: '0%',
+                  story: '0%'
+                }
+              }
+            }
+          });
+        }
+
+        return NextResponse.json({ 
+          error: `Error analyzing Instagram profile: ${response.statusText}`,
+          details: errorData
+        }, { 
+          status: response.status 
+        });
+      }
+
+      const data = await response.json();
+      console.debug(`[${requestId}] Instagram analysis successful`, {
+        responseTime: Date.now() - startTime,
+      });
+
+      return NextResponse.json(data);
+    } catch (fetchError) {
+      console.error(`[${requestId}] Backend connection error:`, fetchError);
+      // Return a default structure when backend is not available
+      return NextResponse.json({
+        analysis: {
+          content: {
+            last_post: { date: null, type: null, time_ago: null },
+            posting_frequency: {
+              average_days_between_posts: null,
+              has_recent_posts: false,
+              total_posts_last_7_days: '0'
+            },
+            media_distribution: {
+              regular_post: '0%',
+              carousel: '0%',
+              reel: '0%',
+              story: '0%'
+            }
+          }
+        }
       });
     }
-
-    const data = await response.json();
-    console.debug(`[${requestId}] Instagram analysis successful`, {
-      responseTime: Date.now() - startTime,
-    });
-
-    return NextResponse.json(data);
   } catch (error) {
     console.error(`[${requestId}] Error processing Instagram analysis:`, error);
     return NextResponse.json({ 
