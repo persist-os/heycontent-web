@@ -152,7 +152,7 @@ export const WaitlistQueue = ({ position, queueId, onQueueCompleteAction, onStag
           </motion.div>
           <h2 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-3">🎉 You're In!</h2>
           <p className="text-xl text-gray-700 mb-2">Welcome to the HeyContent family!</p>
-          <p className="text-base text-gray-500">Your exclusive access code will be sent to your email shortly.</p>
+          <p className="text-base text-gray-500">Your exclusive access code will be sent to your email.</p>
         </div>
         <CreatorCard
           name={name}

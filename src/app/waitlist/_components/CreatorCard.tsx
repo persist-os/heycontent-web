@@ -5,7 +5,6 @@ import { motion } from 'framer-motion';
 import { Share2, Twitter, Dice6, Linkedin, MessageCircle, Instagram } from 'lucide-react';
 import Tilt from 'react-parallax-tilt';
 import { COLOR_SCHEMES, type ColorScheme } from '@/data/color-schemes';
-import Link from 'next/link';
 
 const COLOR_NAMES: Record<string, string> = {
   '#7E3AF2': 'purple',
@@ -70,6 +69,7 @@ export const CreatorCard = ({
   const [showShareOptions, setShowShareOptions] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [showTapHint, setShowTapHint] = useState(true);
   const shareMenuRef = useRef<HTMLDivElement>(null);
   const shareButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -91,6 +91,14 @@ export const CreatorCard = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showShareOptions]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowTapHint(false);
+    }, 3000); // Hide after 3 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleShare = async (platform: 'twitter' | 'linkedin' | 'whatsapp' | 'instagram' | 'general') => {
     const creativeVision = CREATIVE_VISIONS[currentScheme.primary] || 'my unique creative vision';
@@ -230,7 +238,11 @@ export const CreatorCard = ({
         >
           <div 
             className="relative w-full aspect-[3/4] min-h-[420px] max-h-[600px] mx-auto cursor-pointer"
-            onClick={() => setIsFlipped(!isFlipped)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsFlipped(!isFlipped);
+            }}
           >
             <div className={`absolute inset-0 aspect-[3/4] rounded-2xl overflow-hidden shadow-[0_8px_16px_rgba(0,0,0,0.1)] transition-all duration-500 transform-gpu ${isFlipped ? 'rotate-y-180' : ''}`}>
               {/* Front of card */}
@@ -271,14 +283,12 @@ export const CreatorCard = ({
                     }}
                   ></div>
                   <div className="relative w-full h-full flex items-center justify-center">
-                    <Link href="/">
-                      <img 
-                        src="/images/hey-content-logo.svg"
-                        alt="HeyContent Logo"
-                        className="w-[85%] h-[85%] object-contain"
-                        style={{ filter: 'drop-shadow(0 0 32px ' + currentScheme.gradient.glow + ')' }}
-                      />
-                    </Link>
+                    <img 
+                      src="/images/hey-content-logo.svg"
+                      alt="HeyContent Logo"
+                      className="w-[85%] h-[85%] object-contain"
+                      style={{ filter: 'drop-shadow(0 0 32px ' + currentScheme.gradient.glow + ')' }}
+                    />
                   </div>
                 </div>
                 {/* Noise overlay, does NOT cover the logo */}
@@ -295,6 +305,14 @@ export const CreatorCard = ({
                   <div className="text-center">
                     <h3 className="text-2xl font-bold text-black mb-2">{name}</h3>
                     <p className="text-black/90 text-lg font-semibold">{currentScheme.title}</p>
+                    <motion.p 
+                      initial={{ opacity: 1 }}
+                      animate={{ opacity: showTapHint ? 1 : 0 }}
+                      transition={{ duration: 0.5 }}
+                      className="text-sm text-gray-500 mt-4"
+                    >
+                      Tap to flip
+                    </motion.p>
                   </div>
                 </div>
               </div>
