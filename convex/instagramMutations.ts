@@ -33,6 +33,7 @@ export const storePostData = mutation({
       if (existingPost) {
         // Update existing post
         await ctx.db.patch(existingPost._id, {
+          instagramAccountId,
           postId,
           data: {
             id: postId,

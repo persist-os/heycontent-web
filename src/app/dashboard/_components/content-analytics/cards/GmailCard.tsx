@@ -12,9 +12,6 @@ export interface GmailCardProps {
 }
 
 export const GmailCard: React.FC<GmailCardProps> = ({ item, onDiscussContent, onViewDetailedAnalytics }) => {
-  console.log('GmailCard item:', item);
-  console.log('GmailCard item.content:', item.content);
-
   const { content, metrics, publishedAt } = item;
 
   // Get the actual data from the Gmail thread

@@ -244,3 +244,32 @@ export const listUserGmailThreads = query({
     }
   }
 });
+
+// List Gmail messages for content analytics page - fetches individual messages with clean data
+export const listUserGmailMessages = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    try {
+      const messages = await ctx.db
+        .query("gmailMessages")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .filter((q) => 
+          // Filter out spam messages
+          q.neq(q.field("labelIds"), ["SPAM"])
+        )
+        .order("desc")
+        .collect();
+
+      // Return messages with clean data
+      return messages.map(message => ({
+        ...message,
+        subject: message.subject || 'No Subject',
+        from: message.from || 'Unknown Sender',
+        snippet: message.snippet || 'No preview available',
+      }));
+    } catch (error) {
+      console.error('Error in listUserGmailMessages:', error);
+      return [];
+    }
+  }
+});

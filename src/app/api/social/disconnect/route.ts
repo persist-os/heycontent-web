@@ -49,6 +49,11 @@ export async function POST(req: Request) {
           userId
         });
         break;
+      case 'gmail':
+        await fetchMutation(api.gmailMutations.disconnectGmail, {
+          userId
+        });
+        break;
       // Add other platforms as needed
       default:
         return NextResponse.json({ error: 'Unsupported platform' }, { status: 400 });

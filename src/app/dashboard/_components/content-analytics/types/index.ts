@@ -69,6 +69,7 @@ export interface GmailContentDetails {
     lastReplyDate?: string; // Make optional
   };
   labels?: string[]; // Gmail labels
+  threadId?: string; // <-- Add this line to support direct threadId
 }
 export interface GmailMetrics {
   openRate?: number; // Optional - for tracked emails/campaigns

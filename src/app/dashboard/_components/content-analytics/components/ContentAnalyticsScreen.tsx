@@ -251,6 +251,7 @@ export function ContentAnalyticsScreen() {
   const [sortBy, setSortBy] = useState<SortOption>('date');
   const [filterType, setFilterType] = useState<PlatformFilterType>('all');
   const [selectedContent, setSelectedContent] = useState<AnyContentItem | null>(null);
+  const [loadingDiscuss, setLoadingDiscuss] = useState(false);
 
   if (!firebaseUser || !userId) {
     return <LoadingState type="auth" />;
@@ -306,43 +307,55 @@ export function ContentAnalyticsScreen() {
     return [];
   }, [youtubeVideos]);
 
-  // Map Gmail items - only use important_emails from agent analysis if available
+  // Helper to get the received date for an email/thread
+  const getReceivedDate = (email: any, thread: any) => {
+    if (email && email.internalDate) return new Date(Number(email.internalDate)).toISOString();
+    const firstMessage = thread.messages && thread.messages.length > 0 ? thread.messages[0] : null;
+    if (firstMessage && firstMessage.internalDate) return new Date(Number(firstMessage.internalDate)).toISOString();
+    if (thread.createdAt) return new Date(thread.createdAt).toISOString();
+    return '';
+  };
+
   const mappedGmailItems = useMemo(() => {
     if (Array.isArray(gmailThreads)) {
-      // If the threads array contains an 'analysis' field with important_emails, flatten and use those
       const importantEmails: any[] = [];
       gmailThreads.forEach((thread: any) => {
         if (thread.analysis && Array.isArray(thread.analysis.important_emails)) {
           thread.analysis.important_emails.forEach((email: any) => {
+            const firstMessage = thread.messages && thread.messages.length > 0 ? thread.messages[0] : null;
             importantEmails.push({
               id: email.id || thread._id || thread.id,
               platform: 'gmail',
-              publishedAt: email.date || thread.publishedAt || '',
+              publishedAt: getReceivedDate(email, thread),
               content: {
-                subject: email.subject || 'No Subject',
-                snippet: email.snippet || 'No preview available',
-                from: email.sender || 'Unknown Sender',
+                subject: email.subject || thread.subject || firstMessage?.subject || thread.data?.subject || 'No Subject',
+                snippet: email.snippet || thread.snippet || thread.data?.snippet || 'No preview available',
+                from: email.sender || thread.from || firstMessage?.from || thread.data?.from || 'Unknown Sender',
                 emailType: email.emailType || 'important',
+                threadId: thread._id || thread.id,
               },
               metrics: email.metrics || {},
             });
           });
         }
       });
-      // If no important_emails found, fallback to mapping all threads (legacy)
       if (importantEmails.length > 0) return importantEmails;
-      return gmailThreads.map((thread: any): GmailContentItem => ({
-        id: thread._id || thread.id,
-        platform: 'gmail',
-        publishedAt: thread.publishedAt || '',
-        content: {
-          subject: thread.subject || thread.data?.subject || 'No Subject',
-          snippet: thread.snippet || thread.data?.snippet || 'No preview available',
-          from: thread.from || thread.data?.from || 'Unknown Sender',
-          emailType: thread.emailType || thread.data?.emailType || 'all',
-        },
-        metrics: thread.metrics || {},
-      }));
+      return gmailThreads.map((thread: any): GmailContentItem => {
+        const firstMessage = thread.messages && thread.messages.length > 0 ? thread.messages[0] : null;
+        return {
+          id: thread._id || thread.id,
+          platform: 'gmail',
+          publishedAt: getReceivedDate(null, thread),
+          content: {
+            subject: thread.subject || firstMessage?.subject || thread.data?.subject || 'No Subject',
+            snippet: thread.snippet || thread.data?.snippet || 'No preview available',
+            from: thread.from || firstMessage?.from || thread.data?.from || 'Unknown Sender' ,
+            emailType: thread.emailType || thread.data?.emailType || 'all',
+            threadId: thread._id || thread.id,
+          },
+          metrics: thread.metrics || {},
+        };
+      });
     }
     return [];
   }, [gmailThreads]);
@@ -411,8 +424,7 @@ export function ContentAnalyticsScreen() {
   // Final display items
   const displayItems = filteredContent;
 
-  const discussContent = (item: AnyContentItem) => {
-    // Create a context object with comprehensive content info
+  const discussContent = async (item: AnyContentItem) => {
     const context = {
       platform: item.platform,
       contentId: item.id,
@@ -422,17 +434,13 @@ export function ContentAnalyticsScreen() {
         : item.platform === 'instagram'
           ? (item as InstagramContentItem).content?.text
           : (item as GmailContentItem).content?.subject,
-      // Include thumbnail URL for visual context
-      thumbnailUrl: item.platform === 'youtube' 
+      thumbnailUrl: item.platform === 'youtube'
         ? (item as YouTubeContentItem).content?.thumbnailUrl || `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`
         : item.platform === 'instagram'
           ? (item as InstagramContentItem).content?.mediaUrl
           : undefined,
-      // Include published date
       publishedAt: item.publishedAt,
-      // Include metrics for context
       metrics: item.metrics,
-      // Include full content object for additional context
       content: item.content
     };
     const encodedContext = encodeURIComponent(JSON.stringify(context));
@@ -496,13 +504,6 @@ export function ContentAnalyticsScreen() {
                 onDiscussContent={(item) => {
                   discussContent(item);
                 }}
-              />
-            )}
-
-            {selectedPlatform === 'gmail' && (
-              <EmailTypeFilter
-                selectedEmailType={selectedEmailType}
-                onEmailTypeChange={setSelectedEmailType}
               />
             )}
 
