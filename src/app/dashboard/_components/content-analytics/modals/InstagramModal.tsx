@@ -1,68 +1,186 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { Card } from '@/components/ui/card';
-
 import { X, MessageSquare, Instagram, Sparkles, Bot, ExternalLink } from 'lucide-react';
-import { getApiKey } from '@/app/lib/api-helpers';
+import { getCurrentUserId, getApiKey } from '@/app/lib/api-helpers';
 import { InstagramContentItem } from '../types';
 import { getMetricsDisplay } from '../utils';
 import { Button } from '@/components/ui/button';
+import { MarkdownRenderer } from '../../chat/markdown-renderer';
 
 interface InstagramModalProps {
   selectedContent: InstagramContentItem;
-  userId: string;
   onClose: () => void;
   onDiscussContent: (item: InstagramContentItem) => void;
 }
 
 export const InstagramModal: React.FC<InstagramModalProps> = ({
   selectedContent,
-  userId,
   onClose,
   onDiscussContent
 }) => {
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [analysisTimestamp, setAnalysisTimestamp] = useState<number | null>(null);
+  const [isStoredAnalysis, setIsStoredAnalysis] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  const [apiKey, setApiKey] = useState<string | null>(null);
-  const [apiKeyLoaded, setApiKeyLoaded] = useState(false);
+  const postId = selectedContent.id;
 
+  // Extract user ID from the API key on component mount
   useEffect(() => {
-    const fetchApiKey = async () => {
-      const key = await getApiKey();
-      setApiKey(key);
-      setApiKeyLoaded(true);
-    };
-    fetchApiKey();
-    if (typeof window !== 'undefined') {
-      window.addEventListener('focus', fetchApiKey);
-      return () => window.removeEventListener('focus', fetchApiKey);
+    const currentUserId = getCurrentUserId();
+    if (currentUserId) {
+      setUserId(currentUserId);
     }
   }, []);
 
-  const requestAiAnalysis = async () => {
-    if (!apiKeyLoaded) {
-      setError('Loading API key...');
-      return;
+  // Type for the stored analysis data
+  type StoredAnalysis = {
+    _id: string;
+    postId: string;
+    userId: string;
+    analysis: any;
+    updatedAt?: number;
+    _creationTime?: number;
+    analysisMarkdown?: string;
+  };
+
+  // Query for stored analysis - only if we have both userId and postId
+  const storedAnalysisQuery = useQuery(
+    api.instagramQueries.getPostAnalysis, 
+    userId && postId ? {
+      userId: userId,
+      postId: postId
+    } : 'skip'
+  ) as StoredAnalysis | null;
+
+  // Mutation to store analysis
+  const storeAnalysisMutation = useMutation(api.instagramMutations.storePostAnalysis);
+
+  // Load stored analysis when component mounts or when storedAnalysisQuery changes
+  useEffect(() => {
+    if (loading || !storedAnalysisQuery || aiAnalysis) return;
+    
+    console.log('Loading stored Instagram analysis:', storedAnalysisQuery);
+    
+    if (storedAnalysisQuery?.analysis || storedAnalysisQuery?.analysisMarkdown) {
+      // Prefer markdown over JSON analysis for display
+      let storedAnalysisContent = '';
+      
+      if (storedAnalysisQuery.analysisMarkdown) {
+        // Use the dedicated markdown field
+        storedAnalysisContent = storedAnalysisQuery.analysisMarkdown;
+        console.log('Using stored markdown analysis');
+      } else if (storedAnalysisQuery.analysis) {
+        const analysisData = storedAnalysisQuery.analysis;
+        
+        // Handle different analysis data formats for backward compatibility
+        if (typeof analysisData === 'string') {
+          // If it's already a string, use it as is
+          storedAnalysisContent = analysisData;
+        } else if (analysisData.markdown) {
+          // Handle legacy format where markdown was stored in analysis object
+          storedAnalysisContent = analysisData.markdown;
+        } else if (analysisData.aiAnalysis) {
+          // Handle old JSON format
+          storedAnalysisContent = typeof analysisData.aiAnalysis === 'string' 
+            ? analysisData.aiAnalysis 
+            : JSON.stringify(analysisData.aiAnalysis, null, 2);
+        } else {
+          // Default case: stringify the entire analysis object
+          storedAnalysisContent = JSON.stringify(analysisData, null, 2);
+        }
+      }
+      
+      if (storedAnalysisContent) {
+        setAiAnalysis(storedAnalysisContent);
+        
+        // Handle the updatedAt timestamp
+        const timestamp = storedAnalysisQuery.updatedAt || storedAnalysisQuery._creationTime || Date.now();
+        setAnalysisTimestamp(typeof timestamp === 'number' ? timestamp : new Date(timestamp).getTime());
+        setIsStoredAnalysis(true);
+      }
     }
-    setLoading(true);
+  }, [storedAnalysisQuery, loading, aiAnalysis]);
+
+  // Store analysis in Convex
+  const storeAnalysisInConvex = async (markdownData: string, analysisData: any = null) => {
     try {
+      if (!userId || !postId) {
+        console.warn('Cannot store analysis: missing userId or postId');
+        return;
+      }
+
+      // Prepare the data to store - include both markdown and analysis data
+      const dataToStore: any = {
+        timestamp: Date.now()
+      };
+
+      if (markdownData) {
+        dataToStore.markdown = markdownData;
+      }
+
+      if (analysisData) {
+        dataToStore.analysis = analysisData;
+      }
+
+      await storeAnalysisMutation({
+        userId: userId,
+        postId: postId,
+        analysisData: dataToStore
+      });
+
+      console.log('Instagram analysis stored successfully in Convex');
+    } catch (error) {
+      console.error('Error storing Instagram analysis in Convex:', error);
+      // Don't throw - storage failure shouldn't break the analysis display
+    }
+  };
+
+  const requestAiAnalysis = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const apiKey = await getApiKey();
       if (!apiKey) {
-        throw new Error('API key not found. Please log in again.');
-      }
-      // Get the post ID from the selected content
-      const postId = selectedContent.id;
-      if (!postId) {
-        throw new Error('Invalid Instagram post ID');
+        throw new Error('Authentication required. Please log in again.');
       }
 
-      if (!userId) {
-        throw new Error('Invalid user ID');
+      // Extract user_id from the API key (similar to YouTube modal)
+      const userIdMatch = apiKey.match(/heycontent_([^_]+)_/);
+      const extractedUserId = userIdMatch ? userIdMatch[1] : null;
+      
+      if (!extractedUserId) {
+        throw new Error('Invalid API key format');
       }
 
-      // Call our API endpoint
+      // Use permalink if available, otherwise construct URL from post ID
+      const postUrl = selectedContent.content.permalink || 
+                     `https://www.instagram.com/p/${postId}/`;
+
       const apiUrl = `${window.location.origin}/api/social/instagram/analyze`;
+      
+      // Prepare the request body
+      const requestBody = {
+        user_id: extractedUserId,
+        post_id: postId, // Backend expects post_id, not post_url
+        format: 'both' // Request both JSON and markdown format
+      };
+      
+      // Debug logging to see exactly what we're sending
+      console.log('🚀 Instagram Analysis Request Debug:');
+      console.log('📡 URL:', apiUrl);
+      console.log('📦 Request Body (before JSON.stringify):', requestBody);
+      console.log('📦 Request Body (after JSON.stringify):', JSON.stringify(requestBody));
+      console.log('🔍 Format field specifically:', {
+        formatValue: requestBody.format,
+        formatType: typeof requestBody.format,
+        hasFormat: 'format' in requestBody
+      });
       
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -70,78 +188,86 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({
-          user_id: userId,
-          post_id: postId
-        })
+        body: JSON.stringify(requestBody)
       });
 
-      // Read the response data once
       const responseData = await response.json();
       
-      // Then check if the response was OK
+      // Comprehensive debug logging to see exactly what we're getting
+      console.log('🔍 FULL Instagram Analysis Response Debug:');
+      console.log('📡 HTTP Status:', response.status, response.ok ? '✅' : '❌');
+      console.log('📦 Raw Response Data:', responseData);
+      console.log('🔍 Response Structure Analysis:', {
+        hasStatus: 'status' in responseData,
+        statusValue: responseData.status,
+        hasData: 'data' in responseData,
+        dataType: responseData.data ? typeof responseData.data : 'undefined',
+        dataKeys: responseData.data ? Object.keys(responseData.data) : null,
+        hasMarkdown: 'markdown' in responseData,
+        markdownType: responseData.markdown ? typeof responseData.markdown : 'undefined',
+        markdownLength: responseData.markdown ? responseData.markdown.length : 0,
+        markdownPreview: responseData.markdown ? responseData.markdown.substring(0, 100) + '...' : 'No markdown',
+        hasAnalysis: 'analysis' in responseData,
+        analysisType: responseData.analysis ? typeof responseData.analysis : 'undefined',
+        hasError: 'error' in responseData,
+        errorValue: responseData.error,
+        allKeys: Object.keys(responseData)
+      });
+      
       if (!response.ok) {
-        throw new Error(responseData.error || `Failed to analyze post: ${response.status} ${response.statusText}`);
+        throw new Error(responseData.error || `Analysis failed: ${response.status}`);
       }
       
-      // Format the analysis for display
-      let formattedAnalysis = `AI Analysis for Instagram Post`;
+      // Handle the response - Instagram API returns both 'data' and 'markdown' when format is 'both'
+      let analysisContent = '';
+      let analysisData = null;
       
-      // Extract analysis from the response
-      const analysis = responseData.analysis;
-      
-      if (analysis) {
-        // Extract the most relevant parts of the analysis
-        if (analysis.content_summary) {
-          formattedAnalysis += '\n\n📝 Content Summary:\n' + analysis.content_summary;
+      if (responseData.status === 'success') {
+        if (responseData.markdown) {
+          // Use markdown for display in modal
+          analysisContent = responseData.markdown;
         }
         
-        if (analysis.performance_analysis) {
-          formattedAnalysis += '\n\n📊 Performance Analysis:\n' + analysis.performance_analysis;
+        if (responseData.data) {
+          // Store the JSON data for Convex
+          analysisData = responseData.data;
         }
         
-        if (analysis.audience_insights) {
-          formattedAnalysis += '\n\n👥 Audience Insights:\n' + analysis.audience_insights;
-        }
-        
-        if (analysis.recommendations) {
-          formattedAnalysis += '\n\n💡 Recommendations:\n' + analysis.recommendations;
-        }
-        
-        // If none of the specific fields are available, show the full analysis
-        if (!analysis.content_summary && !analysis.performance_analysis && 
-            !analysis.audience_insights && !analysis.recommendations) {
-          formattedAnalysis += '\n\n' + JSON.stringify(analysis, null, 2);
+        if (!analysisContent && !analysisData) {
+          throw new Error('No analysis data received');
         }
       } else {
-        // If no specific analysis format, show the raw data
-        formattedAnalysis += '\n\n' + JSON.stringify(responseData, null, 2);
+        throw new Error('Analysis failed');
       }
       
-      // Add metrics summary if not already included in the analysis
-      if (selectedContent.metrics) {
-        formattedAnalysis += '\n\nMetrics Summary:';
-        if (selectedContent.metrics.reach) {
-          formattedAnalysis += `\n- Reach: ${selectedContent.metrics.reach.toLocaleString()}`;
-        }
-        if (selectedContent.metrics.impressions) {
-          formattedAnalysis += `\n- Impressions: ${selectedContent.metrics.impressions.toLocaleString()}`;
-        }
-        if (selectedContent.metrics.likes) {
-          formattedAnalysis += `\n- Likes: ${selectedContent.metrics.likes.toLocaleString()}`;
-        }
-        if (selectedContent.metrics.comments) {
-          formattedAnalysis += `\n- Comments: ${selectedContent.metrics.comments.toLocaleString()}`;
-        }
+      setAiAnalysis(analysisContent);
+      setAnalysisTimestamp(Date.now());
+      setIsStoredAnalysis(false);
+      
+      // Store both the markdown and analysis data in Convex
+      if (analysisContent || analysisData) {
+        storeAnalysisInConvex(analysisContent, analysisData);
       }
       
-      setAiAnalysis(formattedAnalysis);
     } catch (error: any) {
       console.error('Error analyzing Instagram post:', error);
-      setAiAnalysis(`Error: ${error.message || 'Failed to analyze post. Please try again.'}`);
+      setError(error.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const navigateToChat = () => {
+    const context = {
+      platform: 'instagram',
+      contentId: postId,
+      title: selectedContent.content.text,
+      analysis: aiAnalysis,
+      metrics: selectedContent.metrics
+    };
+    
+    const encodedContext = encodeURIComponent(JSON.stringify(context));
+    window.location.href = `/dashboard/chat?contentContext=${encodedContext}`;
   };
 
   const mediaUrl = selectedContent.content.mediaUrl || selectedContent.content.thumbnailUrl;
@@ -172,24 +298,26 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
                <img
                   src={mediaUrl}
                   alt="Instagram content"
-                  className="w-24 h-24 object-cover rounded-lg flex-shrink-0"
+                  className="w-32 h-20 object-cover rounded-lg flex-shrink-0"
                />
             )}
             <div className="flex-grow">
-              <p className="text-sm text-text-gray dark:text-white mb-1 line-clamp-3">{selectedContent.content.text || 'No caption provided.'}</p>
+              <h3 className="font-medium text-black dark:text-white mb-1 line-clamp-2">
+                {selectedContent.content.text || 'No caption provided.'}
+              </h3>
               <p className="text-xs text-text-gray dark:text-gray-400">
                 Published: {new Date(selectedContent.publishedAt).toLocaleString()}
               </p>
-               {selectedContent.content.permalink && (
-                 <a
-                    href={selectedContent.content.permalink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-heycontent-purple hover:underline inline-flex items-center gap-1 mt-1"
-                 >
-                    View on Instagram <ExternalLink className="w-3 h-3" />
-                 </a>
-               )}
+              {selectedContent.content.permalink && (
+                <a
+                  href={selectedContent.content.permalink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-heycontent-purple hover:underline inline-flex items-center gap-1 mt-1"
+                >
+                  View on Instagram <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
             </div>
           </Card>
 
@@ -205,27 +333,41 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
           <div>
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-base font-medium text-black dark:text-white">AI Analysis</h3>
-              <Button size="sm" onClick={requestAiAnalysis} disabled={loading || !!aiAnalysis}>
-                <Sparkles className="w-4 h-4 mr-2" />
-                {loading ? 'Analyzing...' : (aiAnalysis ? 'Analysis Complete' : 'Request Analysis')}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={requestAiAnalysis} disabled={loading}>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  {loading ? 'Analyzing...' : (aiAnalysis ? 'New Analysis' : 'Request Analysis')}
+                </Button>
+                {analysisTimestamp && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {isStoredAnalysis ? 'Saved' : 'Created'}: {new Date(analysisTimestamp).toLocaleString()}
+                  </span>
+                )}
+              </div>
             </div>
-            <Card className="p-4 bg-gradient-to-br from-pink-50 via-purple-50 to-yellow-50 dark:from-gray-800 dark:to-gray-900 min-h-[72px] flex flex-col justify-center">
-              {aiAnalysis ? (
-                <div className="space-y-3">
-                  <p className="text-sm text-black dark:text-white whitespace-pre-line">{aiAnalysis}</p>
-                  <Button variant="outline" size="sm" onClick={() => setChatOpen(!chatOpen)}>
-                    <Bot className="w-4 h-4 mr-2" />
-                    {chatOpen ? 'Close Chat' : 'Chat with Analysis'}
+            
+            <Card className="p-4 bg-gradient-to-br from-pink-50 via-purple-50 to-yellow-50 dark:from-gray-800 dark:to-gray-900 min-h-[120px]">
+              {loading ? (
+                <div className="flex items-center justify-center h-24">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-heycontent-purple"></div>
+                </div>
+              ) : error ? (
+                <div className="text-center text-red-600 dark:text-red-400">
+                  <p className="text-sm mb-2">Error: {error}</p>
+                  <Button size="sm" variant="outline" onClick={requestAiAnalysis}>
+                    Try Again
                   </Button>
-                  {chatOpen && (
-                    <div className="mt-2 p-3 border rounded-lg bg-gray-50 dark:bg-gray-700">
-                      <p className="text-xs text-text-gray italic">Chat interface placeholder...</p>
-                    </div>
-                  )}
+                </div>
+              ) : aiAnalysis ? (
+                <div className="space-y-3">
+                  <MarkdownRenderer content={aiAnalysis} />
                 </div>
               ) : (
-                <p className="text-text-gray text-sm italic text-center">Click 'Request Analysis' to get AI insights.</p>
+                <div className="flex items-center justify-center h-24">
+                  <p className="text-text-gray text-sm italic text-center">
+                    Click 'Request Analysis' to get AI insights about this post content.
+                  </p>
+                </div>
               )}
             </Card>
           </div>
@@ -233,10 +375,21 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
 
         {/* Footer */}
         <div className="px-6 py-4 border-t dark:border-gray-800 flex items-center justify-end gap-3 flex-shrink-0">
-          <Button onClick={() => onDiscussContent(selectedContent)} className="bg-heycontent-light-yellow hover:bg-heycontent-yellow/90 text-black">
+          <Button 
+            onClick={navigateToChat} 
+            disabled={!aiAnalysis}
+            className={`${!aiAnalysis ? 'opacity-50 cursor-not-allowed bg-gray-300 hover:bg-gray-300' : 'bg-heycontent-light-yellow hover:bg-heycontent-yellow/90'} text-black`}
+          >
             <MessageSquare className="w-4 h-4 mr-2" />
-            Discuss with Content
+            {!aiAnalysis ? 'Generate Analysis to Chat' : 'Discuss with Content'}
           </Button>
+          {selectedContent.content.permalink && (
+            <a href={selectedContent.content.permalink} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline">
+                <ExternalLink className="w-4 h-4 mr-2" /> View on Instagram
+              </Button>
+            </a>
+          )}
         </div>
       </div>
     </div>

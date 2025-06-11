@@ -512,3 +512,104 @@ export const storeInstagramTrackerAnalysis = mutation({
     }
   },
 });
+
+// Store Instagram post analysis data directly in instagramPosts table
+export const storePostAnalysis = mutation({
+  args: {
+    userId: v.string(), // Accept userId for compatibility/auditing
+    postId: v.string(),
+    analysisData: v.any(),
+  },
+  handler: async (ctx, args) => {
+    const { userId, postId, analysisData } = args;
+    const now = Date.now();
+
+    // Find the post by postId (similar to YouTube's videoId lookup)
+    const post = await ctx.db
+      .query("instagramPosts")
+      .withIndex("by_postId", (q) => q.eq("postId", postId))
+      .first();
+
+    if (!post) {
+      // Create a minimal post record if it doesn't exist
+      console.log(`Creating new Instagram post record for postId: ${postId}, userId: ${userId}`);
+      const postId_internal = await ctx.db.insert("instagramPosts", {
+        userId,
+        instagramAccountId: "unknown", // Placeholder - should be updated when actual post data is available
+        postId,
+        data: {
+          id: postId,
+          caption: "Instagram Post",
+          media_type: "IMAGE",
+          media_url: "",
+          permalink: "",
+          username: "",
+        },
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      // Store the analysis on the newly created record
+      const updateData: any = { updatedAt: now };
+
+      if (analysisData && typeof analysisData === 'object') {
+        if (analysisData.markdown) {
+          // Store markdown for display
+          updateData.analysisMarkdown = analysisData.markdown;
+          console.log(`Storing markdown analysis for new Instagram post ${postId}`);
+        }
+        
+        if (analysisData.analysis) {
+          // Store JSON analysis data
+          updateData.analysis = analysisData.analysis;
+          console.log(`Storing JSON analysis data for new Instagram post ${postId}`);
+        }
+        
+        // Legacy support: if analysisData has markdown directly (old format)
+        if (!analysisData.markdown && !analysisData.analysis && typeof analysisData === 'string') {
+          updateData.analysisMarkdown = analysisData;
+          console.log(`Storing legacy markdown analysis for new Instagram post ${postId}`);
+        }
+      } else {
+        // Legacy format: Store as JSON analysis
+        updateData.analysis = analysisData;
+        console.log(`Storing legacy JSON analysis for new Instagram post ${postId}`);
+      }
+
+      await ctx.db.patch(postId_internal, updateData);
+
+      return { success: true, status: "created", postId: postId_internal };
+    }
+
+    // Update existing post with analysis
+    const updateData: any = { updatedAt: now };
+
+    if (analysisData && typeof analysisData === 'object') {
+      if (analysisData.markdown) {
+        // Store markdown for display
+        updateData.analysisMarkdown = analysisData.markdown;
+        console.log(`Storing markdown analysis for Instagram post ${postId}`);
+      }
+      
+      if (analysisData.analysis) {
+        // Store JSON analysis data
+        updateData.analysis = analysisData.analysis;
+        console.log(`Storing JSON analysis data for Instagram post ${postId}`);
+      }
+      
+      // Legacy support: if analysisData has markdown directly (old format)
+      if (!analysisData.markdown && !analysisData.analysis && typeof analysisData === 'string') {
+        updateData.analysisMarkdown = analysisData;
+        console.log(`Storing legacy markdown analysis for Instagram post ${postId}`);
+      }
+    } else {
+      // Legacy format: Store as JSON analysis
+      updateData.analysis = analysisData;
+      console.log(`Storing legacy JSON analysis for Instagram post ${postId}`);
+    }
+
+    await ctx.db.patch(post._id, updateData);
+
+    return { success: true, status: "updated", postId: post._id };
+  },
+});

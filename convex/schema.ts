@@ -475,6 +475,8 @@ export default defineSchema({
     instagramAccountId: v.string(),
     userId: (v.string()),
     postId: v.string(),
+    analysis: v.optional(v.any()), // Original JSON analysis data
+    analysisMarkdown: v.optional(v.string()), // Markdown formatted analysis for display
     data: v.object({
       id: v.string(),
       caption: v.string(),

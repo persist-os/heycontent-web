@@ -29,6 +29,8 @@ export interface InstagramContentItem extends BaseContentItem {
   platform: 'instagram';
   content: InstagramContentDetails;
   metrics: InstagramMetrics;
+  analysis?: any; // Analysis data can be any type since it's stored as JSON
+  analysisMarkdown?: string; // Markdown formatted analysis for display
 }
 
 // YouTube Video

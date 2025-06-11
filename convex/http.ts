@@ -1044,6 +1044,29 @@ app.post("/api/users/:id/instagram/post/:postId/comments", async (c) => {
   }
 });
 
+// // Store Instagram post analysis
+// app.post("/api/users/:userId/instagram/posts/:postId/analysis", async (c) => {
+//   const ctx = c.env;
+//   const userId = c.req.param("userId");
+//   const postId = c.req.param("postId");
+//   const { analysisData } = await c.req.json();
+  
+//   try {
+//     const result = await ctx.runMutation(api.instagramMutations.storePostAnalysis, { 
+//       userId, 
+//       postId, 
+//       analysisData 
+//     });
+//     return c.json(result);
+//   } catch (error) {
+//     console.error("Failed to store Instagram post analysis:", error);
+//     return c.json({ 
+//       success: false, 
+//       error: `Failed to store Instagram post analysis: ${error instanceof Error ? error.message : 'Unknown error'}` 
+//     }, 500);
+//   }
+// });
+
 // SUBSCRIPTION ENDPOINTS
 
 // Get user's subscription

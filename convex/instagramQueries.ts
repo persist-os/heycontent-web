@@ -359,3 +359,67 @@ export const getAllPostInsights = query({
     }
   },
 });
+
+// Get analysis for a specific Instagram post
+export const getPostAnalysis = query({
+  args: { 
+    userId: v.string(),
+    postId: v.string() 
+  },
+  handler: async (ctx, args) => {
+    const { userId, postId } = args;
+    try {
+      console.log('[getPostAnalysis] Querying for postId:', postId, 'userId:', userId);
+      // Find the post with the given postId and userId
+      const post = await ctx.db
+        .query("instagramPosts")
+        .withIndex("by_postId", (q) => q.eq("postId", postId))
+        .filter((q) => q.eq(q.field("userId"), userId))
+        .first();
+
+      if (!post) {
+        console.log(`[getPostAnalysis] No post found for postId=${postId} and userId=${userId}`);
+        return null;
+      }
+      
+      console.log('[getPostAnalysis] Post object found:', {
+        postId: post.postId,
+        userId: post.userId,
+        _id: post._id,
+        hasAnalysisMarkdown: !!post.analysisMarkdown,
+        hasAnalysis: !!post.analysis,
+      });
+      
+      if (post.analysisMarkdown || post.analysis) {
+        console.log(`[getPostAnalysis] Returning analysis for postId=${postId}`);
+
+        // Prepare the analysis object - prefer markdown over JSON
+        let analysisToReturn;
+        if (post.analysisMarkdown) {
+          // Return markdown as a string directly
+          analysisToReturn = post.analysisMarkdown;
+          console.log(`[getPostAnalysis] Returning markdown analysis for postId=${postId}`);
+        } else if (post.analysis) {
+          // Return JSON analysis
+          analysisToReturn = post.analysis;
+          console.log(`[getPostAnalysis] Returning JSON analysis for postId=${postId}`);
+        }
+
+        return {
+          _id: post._id,
+          postId: post.postId,
+          userId: post.userId,
+          analysis: analysisToReturn,
+          analysisMarkdown: post.analysisMarkdown,
+          updatedAt: post.updatedAt || post._creationTime
+        };
+      }
+
+      console.log(`[getPostAnalysis] No analysis found for postId=${postId}`);
+      return null;
+    } catch (error) {
+      console.error('Error retrieving Instagram post analysis:', error);
+      return null;
+    }
+  },
+});
