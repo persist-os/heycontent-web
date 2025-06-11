@@ -337,3 +337,25 @@ export const getInstagramTrackerAnalysis = query({
     }
   },
 });
+
+// Get all Instagram post insights for a user
+export const getAllPostInsights = query({
+  args: {
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = args;
+
+    try {
+      const insights = await ctx.db
+        .query("instagramPostInsights")
+        .withIndex("by_userId", q => q.eq("userId", userId))
+        .collect();
+
+      return insights;
+    } catch (error) {
+      console.error(`Error fetching post insights for user ${userId}:`, error);
+      throw new Error(`Failed to fetch post insights: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
