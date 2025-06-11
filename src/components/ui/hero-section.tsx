@@ -17,12 +17,12 @@ const searchSuggestions = [
 ]
 
 export function HeroSection() {
-  console.log('[HeroSection] Function start');
   const [placeholder, setPlaceholder] = useState(searchSuggestions[0])
   const [currentSuggestion, setCurrentSuggestion] = useState(0)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [showFloatingSearch, setShowFloatingSearch] = useState(false)
   const [showWaitlist, setShowWaitlist] = useState(false)
+  const [showCursor, setShowCursor] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
@@ -35,6 +35,14 @@ export function HeroSection() {
     }, 3000)
 
     return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    const cursorInterval = setInterval(() => {
+      setShowCursor(prev => !prev)
+    }, 530)
+
+    return () => clearInterval(cursorInterval)
   }, [])
 
   useEffect(() => {
@@ -55,14 +63,6 @@ export function HeroSection() {
   const handleStageChange = (stage: 'register' | 'queue' | 'card') => {
     console.log('Waitlist stage changed:', stage)
   }
-
-
-
-
-
-
-
-
 
   return (
     <div className="bg-gradient-to-r from-[#F8F0F9] to-blue-50 min-h-[80vh] flex flex-col">
@@ -162,17 +162,25 @@ export function HeroSection() {
 
         <div onClick={() => router.push('/auth/login')} 
              className="w-full relative cursor-pointer group mb-8">
-          <input
-            type="text"
-            placeholder={placeholder}
-            className="w-full py-3 sm:py-4 px-4 sm:px-6 pr-12 bg-white border border-gray-200 rounded-lg 
-                     text-gray-700 placeholder-gray-500 focus:outline-none focus:border-blue-500
-                     cursor-pointer group-hover:border-blue-400 text-base sm:text-lg shadow-sm
-                     transition-all duration-300"
-            readOnly
-          />
-          <ArrowRight className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 
-                                group-hover:text-blue-500 transition-colors w-5 h-5 sm:w-6 sm:h-6" />
+          <div className="relative">
+            <input
+              type="text"
+              placeholder={placeholder}
+              className="w-full py-3 sm:py-4 px-4 sm:px-6 pr-12 bg-white border border-gray-200 rounded-lg 
+                       text-gray-700 placeholder-gray-500 focus:outline-none focus:border-blue-500
+                       cursor-pointer group-hover:border-blue-400 text-base sm:text-lg shadow-sm
+                       transition-all duration-300"
+              readOnly
+            />
+            <div 
+              className={`absolute left-4 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-blue-500 transition-opacity duration-300 ${
+                showCursor ? 'opacity-100' : 'opacity-0'
+              }`}
+              style={{ left: 'calc(1rem + 0.5rem)' }}
+            />
+            <ArrowRight className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 
+                                  group-hover:text-blue-500 transition-colors w-5 h-5 sm:w-6 sm:h-6" />
+          </div>
         </div>
 
         <div className="text-center">

@@ -1,30 +1,108 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Share2, Twitter, Dice6, Linkedin, MessageCircle, Instagram } from 'lucide-react';
 import Tilt from 'react-parallax-tilt';
 import { COLOR_SCHEMES, type ColorScheme } from '@/data/color-schemes';
 
+const COLOR_NAMES: Record<string, string> = {
+  '#7E3AF2': 'purple',
+  '#F43F5E': 'rose',
+  '#0EA5E9': 'sky blue',
+  '#10B981': 'emerald',
+  '#8B5CF6': 'violet',
+  '#EC4899': 'pink',
+  '#06B6D4': 'cyan',
+  '#FB923C': 'orange',
+  '#6366F1': 'indigo',
+  '#14B8A6': 'teal',
+  '#F59E0B': 'amber',
+  '#4F46E5': 'indigo',
+  '#FF6B00': 'orange',
+  '#00C2FF': 'blue',
+  '#FF3CAC': 'magenta',
+  '#00FFB8': 'mint',
+  '#FFD600': 'yellow',
+  '#B388FF': 'lavender',
+  '#FF0000': 'red',
+  '#9147FF': 'purple',
+  '#2196F3': 'blue',
+  '#8E24AA': 'purple'
+};
+
+const CREATIVE_VISIONS: Record<string, string> = {
+  '#7E3AF2': 'my royal creative vision',
+  '#F43F5E': 'my passionate storytelling',
+  '#0EA5E9': 'my limitless imagination',
+  '#10B981': 'my innovative spirit',
+  '#8B5CF6': 'my magical perspective',
+  '#EC4899': 'my vibrant creativity',
+  '#06B6D4': 'my crystal-clear vision',
+  '#FB923C': 'my warm creative energy',
+  '#6366F1': 'my deep creative wisdom',
+  '#14B8A6': 'my fresh perspective',
+  '#F59E0B': 'my golden creative touch',
+  '#4F46E5': 'my bold creative vision',
+  '#FF6B00': 'my fiery passion',
+  '#00C2FF': 'my sky-high dreams',
+  '#FF3CAC': 'my artistic flair',
+  '#00FFB8': 'my refreshing ideas',
+  '#FFD600': 'my bright creative spark',
+  '#B388FF': 'my dreamy vision',
+  '#FF0000': 'my powerful creativity',
+  '#9147FF': 'my creative magic',
+  '#2196F3': 'my ocean of ideas',
+  '#8E24AA': 'my creative depth'
+};
+
 interface CreatorCardProps {
   name: string;
-  title: string;
-  joinDate?: string;
-  onShare?: () => void;
+  onShareAction?: () => void;
 }
 
 export const CreatorCard = ({
   name,
-  title,
-  joinDate,
-  onShare
+  onShareAction
 }: CreatorCardProps) => {
-  const [isFlipped, setIsFlipped] = useState(false);
   const [colorSchemeIndex, setColorSchemeIndex] = useState(0);
+  const [showShareOptions, setShowShareOptions] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [showTapHint, setShowTapHint] = useState(true);
+  const shareMenuRef = useRef<HTMLDivElement>(null);
+  const shareButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showShareOptions &&
+        shareMenuRef.current &&
+        !shareMenuRef.current.contains(event.target as Node) &&
+        shareButtonRef.current &&
+        !shareButtonRef.current.contains(event.target as Node)
+      ) {
+        setShowShareOptions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showShareOptions]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowTapHint(false);
+    }, 3000); // Hide after 3 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleShare = async (platform: 'twitter' | 'linkedin' | 'whatsapp' | 'instagram' | 'general') => {
-    const shareText = `🚀 Just joined the @HeyContent waitlist! Join me in revolutionizing content creation.`;
+    const creativeVision = CREATIVE_VISIONS[currentScheme.primary] || 'my unique creative vision';
+    const shareText = `🎨 I'm joining @HeyContent as a ${currentScheme.title}! Ready to revolutionize content creation with ${creativeVision}. Who's joining me on this journey?`;
     
     switch (platform) {
       case 'twitter':
@@ -71,6 +149,7 @@ export const CreatorCard = ({
         }
         break;
     }
+    setShowShareOptions(false);
   };
 
   const handleColorChange = (e: React.MouseEvent) => {
@@ -83,40 +162,91 @@ export const CreatorCard = ({
   return (
     <div className="max-w-md mx-auto perspective-1000">
       <div className="relative">
+        <div className="absolute -right-12 top-4 flex flex-col gap-2">
         <button
-          aria-label="Change card theme"
           onClick={handleColorChange}
-          className="absolute -right-12 top-4 p-2 rounded-full bg-white shadow-lg hover:shadow-xl transition-all duration-300 group"
+            className="p-2 rounded-full bg-white shadow-lg hover:shadow-xl transition-all duration-300 group"
           style={{ color: currentScheme.primary }}
         >
           <Dice6 className="w-6 h-6 transform group-hover:rotate-180 transition-transform duration-500" />
         </button>
+          <button
+            ref={shareButtonRef}
+            onClick={() => setShowShareOptions(!showShareOptions)}
+            className="p-2 rounded-full bg-white shadow-lg hover:shadow-xl transition-all duration-300 group"
+            style={{ color: currentScheme.primary }}
+          >
+            <Share2 className="w-6 h-6 transform group-hover:scale-110 transition-transform duration-300" />
+          </button>
+        </div>
+
+        {showShareOptions && (
+          <motion.div
+            ref={shareMenuRef}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="absolute -right-48 top-4 bg-white rounded-xl shadow-xl p-3 z-50"
+          >
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => handleShare('twitter')}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Twitter className="w-5 h-5 text-[#1DA1F2]" />
+                <span className="text-sm font-medium">Share on X</span>
+              </button>
+              <button
+                onClick={() => handleShare('linkedin')}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Linkedin className="w-5 h-5 text-[#0077B5]" />
+                <span className="text-sm font-medium">Share on LinkedIn</span>
+              </button>
+              <button
+                onClick={() => handleShare('whatsapp')}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <MessageCircle className="w-5 h-5 text-[#25D366]" />
+                <span className="text-sm font-medium">Share on WhatsApp</span>
+              </button>
+              <button
+                onClick={() => handleShare('instagram')}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Instagram className="w-5 h-5 text-[#E4405F]" />
+                <span className="text-sm font-medium">Share on Instagram</span>
+              </button>
+              <button
+                onClick={() => handleShare('general')}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Share2 className="w-5 h-5 text-gray-600" />
+                <span className="text-sm font-medium">Copy Link</span>
+              </button>
+            </div>
+          </motion.div>
+        )}
+
         <Tilt
           tiltMaxAngleX={10}
           tiltMaxAngleY={10}
           perspective={1000}
           scale={1.05}
           transitionSpeed={2000}
-          glareEnable={true}
-          glareMaxOpacity={0.15}
-          glareColor="#ffffff"
-          glarePosition="all"
-          glareBorderRadius="12px"
           className="will-change-transform card-container"
         >
-          {/* Fixed aspect ratio and height container for flipping faces */}
-          <div className="relative w-full aspect-[3/4] min-h-[420px] max-h-[600px] mx-auto">
-            <motion.div 
-              className="absolute inset-0 w-full h-full cursor-pointer preserve-3d transition-all duration-700"
-              style={{ transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}
-              onClick={() => setIsFlipped(!isFlipped)}
-            >
+          <div 
+            className="relative w-full aspect-[3/4] min-h-[420px] max-h-[600px] mx-auto cursor-pointer"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsFlipped(!isFlipped);
+            }}
+          >
+            <div className={`absolute inset-0 aspect-[3/4] rounded-2xl overflow-hidden shadow-[0_8px_16px_rgba(0,0,0,0.1)] transition-all duration-500 transform-gpu ${isFlipped ? 'rotate-y-180' : ''}`}>
               {/* Front of card */}
-              <div className={`${isFlipped ? 'backface-hidden' : ''} 
-                absolute inset-0 aspect-[3/4] rounded-2xl overflow-hidden
-                shadow-[0_8px_16px_rgba(0,0,0,0.1)]
-                transition-all duration-300`}
-              >
+              <div className={`absolute inset-0 backface-hidden ${isFlipped ? 'opacity-0' : 'opacity-100'}`}>
                 {/* Logo section at the top */}
                 <div className="relative w-[85%] aspect-square mb-8 mt-4 flex items-center justify-center mx-auto z-20">
                   {/* Dramatic animated gradient aura using current color scheme */}
@@ -174,100 +304,39 @@ export const CreatorCard = ({
                   {/* Name and title section */}
                   <div className="text-center">
                     <h3 className="text-2xl font-bold text-black mb-2">{name}</h3>
-                    <p className="text-black/90 text-lg font-semibold">{title}</p>
-                  </div>
-
-                  {/* Queue ID section */}
-                  <div className="mt-auto w-full text-left">
-                    <p className="text-sm text-black/80">Joined on {joinDate}</p>
+                    <p className="text-black/90 text-lg font-semibold">{currentScheme.title}</p>
+                    <motion.p 
+                      initial={{ opacity: 1 }}
+                      animate={{ opacity: showTapHint ? 1 : 0 }}
+                      transition={{ duration: 0.5 }}
+                      className="text-sm text-gray-500 mt-4"
+                    >
+                      Tap to flip
+                    </motion.p>
                   </div>
                 </div>
               </div>
 
               {/* Back of card */}
-              <div className={`${!isFlipped ? 'backface-hidden' : ''} 
-                absolute inset-0 aspect-[3/4] rounded-2xl overflow-hidden transform rotateY-180
-                shadow-[0_8px_16px_rgba(0,0,0,0.1)]
-                transition-all duration-300`}
-              >
-                <div
-                  className="absolute inset-0 rounded-2xl transition-all duration-300"
-                  style={{
-                    background: `radial-gradient(circle at 60% 40%, ${currentScheme.gradient.from.replace(/\/50$/, '')} 0%, ${currentScheme.gradient.via.replace(/\/50$/, '')} 50%, ${currentScheme.gradient.to.replace(/\/50$/, '')} 100%)`
-                  }}
-                />
-                <div className="card-noise-overlay absolute inset-0 rounded-2xl pointer-events-none z-10" />
-                <div className="relative h-full flex flex-col justify-between p-8">
-                  <div className="text-center">
-                    <h3 className="text-2xl font-bold text-black mb-4">Share Your Card</h3>
-                    <p className="text-black/90 text-lg font-semibold mb-6">Invite your friends and help them skip the line</p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleShare('twitter');
-                        }}
-                        className="w-full bg-black/10 backdrop-blur-sm text-black p-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 hover:bg-black/20"
-                      >
-                        <Twitter className="w-5 h-5" />
-                        <span>Twitter</span>
-                      </button>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleShare('linkedin');
-                        }}
-                        className="w-full bg-black/10 backdrop-blur-sm text-black p-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 hover:bg-black/20"
-                      >
-                        <Linkedin className="w-5 h-5" />
-                        <span>LinkedIn</span>
-                      </button>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleShare('whatsapp');
-                        }}
-                        className="w-full bg-black/10 backdrop-blur-sm text-black p-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 hover:bg-black/20"
-                      >
-                        <MessageCircle className="w-5 h-5" />
-                        <span>WhatsApp</span>
-                      </button>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleShare('instagram');
-                        }}
-                        className="w-full bg-black/10 backdrop-blur-sm text-black p-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 hover:bg-black/20"
-                      >
-                        <Instagram className="w-5 h-5" />
-                        <span>Instagram</span>
-                      </button>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleShare('general');
-                        }}
-                        className="w-full bg-black/10 backdrop-blur-sm text-black p-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 hover:bg-black/20 col-span-2"
-                      >
-                        <Share2 className="w-5 h-5" />
-                        <span>Share to Other Apps</span>
-                      </button>
+              <div className={`absolute inset-0 backface-hidden rotate-y-180 ${isFlipped ? 'opacity-100' : 'opacity-0'}`}>
+                <div className="h-full flex flex-col items-center justify-center p-8 text-center">
+                  <h3 className="text-2xl font-bold mb-6" style={{ color: currentScheme.primary }}>Your Share Message</h3>
+                  <div className="mt-4 p-6 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 relative">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-3 py-1 rounded-full text-sm font-medium" style={{ color: currentScheme.primary }}>
+                      Preview
                     </div>
-
-                    <p className="text-center text-sm text-black/75 mt-4">
-                      Tap card to flip back
+                    <p className="text-lg font-medium" style={{ color: currentScheme.primary }}>
+                      {`🎨 I'm joining @HeyContent.Co as a ${currentScheme.title}! Ready to revolutionize content creation with ${CREATIVE_VISIONS[currentScheme.primary] || 'my unique creative vision'}. Who's joining me on this journey?`}
                     </p>
                   </div>
+                  <div className="mt-6 flex items-center gap-2 text-gray-600">
+                    <Share2 className="w-5 h-5" />
+                    <p>Click the share icon above to post this message</p>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-500">Try different colors to customize your message!</p>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         </Tilt>
       </div>
