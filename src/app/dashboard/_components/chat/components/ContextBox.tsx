@@ -41,7 +41,7 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
             </div>
             
             <div className="w-full flex flex-col items-center justify-center">
-              <h3 className="font-semibold text-lg text-[#4E87E3] dark:text-[#4E87E3]">
+              <h3 className="font-semibold text-base text-[#4E87E3] dark:text-[#4E87E3] text-center line-clamp-2 leading-tight px-2">
                 {context.platform === 'ai-insights' ? `AI Insight: ${context.title}` : `Discussing: ${context.title || `${context.platform} content`}`}
               </h3>
               <p className="text-sm text-gray-700 dark:text-gray-300">
@@ -131,7 +131,7 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
       case 'youtube':
         return `https://www.youtube.com/watch?v=${context.contentId}`;
       case 'instagram':
-        return `https://www.instagram.com/p/${context.contentId}`;
+        return (context as any).permalink || `https://www.instagram.com/p/${context.contentId}`;
       default:
         return null;
     }
@@ -147,7 +147,7 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
             {getPlatformIcon()}
           </div>
           <div className="w-full flex flex-col items-center justify-center">
-            <h3 className="font-semibold text-lg text-[#4E87E3] dark:text-[#4E87E3]">
+            <h3 className="font-semibold text-base text-[#4E87E3] dark:text-[#4E87E3] text-center line-clamp-2 leading-tight px-2">
               {context.platform === 'ai-insights' ? `AI Insight: ${context.title}` : `Discussing: ${context.title || `${context.platform} content`}`}
             </h3>
             <p className="text-sm text-gray-700 dark:text-gray-300">
@@ -167,8 +167,33 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
           </div>
         </div>
 
-        {/* Show thumbnail if available */}
-        {context.thumbnailUrl && (
+        {/* Instagram post-like layout */}
+        {context.platform === 'instagram' && (
+          <div className="mt-3">
+            {/* Centered, larger image */}
+            {context.thumbnailUrl && (
+              <div className="flex justify-center mb-3">
+                <img
+                  src={context.thumbnailUrl}
+                  alt="Instagram content"
+                  className="w-48 h-48 object-cover rounded-lg border border-[#D0ECFF] shadow-sm"
+                />
+              </div>
+            )}
+            
+            {/* Caption directly under image (like Instagram) */}
+            {(context as any).fullCaption && (
+              <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded border border-[#D0ECFF]">
+                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed max-h-32 overflow-y-auto">
+                  {(context as any).fullCaption}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Show thumbnail for non-Instagram content */}
+        {context.platform !== 'instagram' && context.thumbnailUrl && (
           <div className="mb-2">
             <img
               src={context.thumbnailUrl}
@@ -238,6 +263,21 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
             {context.metrics.comments && (
               <span>Comments: {context.metrics.comments.toLocaleString()}</span>
             )}
+          </div>
+        )}
+
+        {/* Show external link if available */}
+        {externalLink && (
+          <div className="mt-3">
+            <a
+              href={externalLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-sm text-[#4E87E3] hover:text-[#3A6FBA] transition-colors"
+            >
+              <ExternalLink className="w-4 h-4" />
+              View on {context.platform === 'youtube' ? 'YouTube' : context.platform === 'instagram' ? 'Instagram' : 'Platform'}
+            </a>
           </div>
         )}
       </div>
