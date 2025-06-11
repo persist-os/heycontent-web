@@ -16,6 +16,7 @@ export interface InstagramContentDetails {
   mediaType: 'image' | 'video' | 'carousel'; // More specific type
   thumbnailUrl?: string; // Optional specific thumbnail
   permalink: string; // Direct link to the post
+  timestamp?: number; // Unix timestamp of the post
 }
 export interface InstagramMetrics {
   impressions?: number;

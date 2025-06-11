@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import { BarChart3, Instagram, Eye, Users, RefreshCw, Share2 } from 'lucide-react';
+import { Instagram, Users, RefreshCw, MessageSquare, Heart, Forward } from 'lucide-react';
 
 import { InstagramContentItem } from '../types';
 import { useInstagramRefresh } from '@/app/hooks/useInstagramRefresh';
@@ -44,6 +44,10 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
   const formatNumber = (num: number | undefined) => {
     if (num === undefined) return '0';
     return num.toLocaleString();
+  };
+
+  const formatTimestamp = (timestamp: number) => {
+    return new Date(timestamp).toLocaleDateString();
   };
 
   return (
@@ -94,44 +98,34 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
       <div className="p-4">
         <h3 className="font-semibold text-lg mb-2 line-clamp-2">{content.text}</h3>
         
-        {/* Primary Metrics */}
+        {/* Metrics Grid */}
         <div className="grid grid-cols-2 gap-4 mb-3">
-          <div className="flex items-center gap-2 text-pink-500">
-            <Eye className="w-4 h-4" />
-            <div>
-              <div className="text-sm font-medium">{formatNumber(metrics?.impressions)}</div>
-              <div className="text-xs text-gray-500">Impressions</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 text-purple-500">
+          <div className="flex items-center justify-center gap-2 text-purple-500">
             <Users className="w-4 h-4" />
-            <div>
+            <div className="text-center">
               <div className="text-sm font-medium">{formatNumber(metrics?.reach)}</div>
               <div className="text-xs text-gray-500">Reach</div>
             </div>
           </div>
-        </div>
-
-        {/* Secondary Metrics */}
-        <div className="grid grid-cols-3 gap-2 mb-3">
-          <div className="flex items-center gap-1 text-gray-500">
-            <BarChart3 className="w-4 h-4" />
-            <div>
+          <div className="flex items-center justify-center gap-2 text-gray-500">
+            <Heart className="w-4 h-4" />
+            <div className="text-center">
               <div className="text-sm font-medium">{formatNumber(metrics?.likes)}</div>
-              <div className="text-xs">Likes</div>
+              <div className="text-xs text-gray-500">Likes</div>
             </div>
           </div>
-          <div className="flex items-center gap-1 text-gray-500">
-            <Share2 className="w-4 h-4" />
-            <div>
+          <div className="flex items-center justify-center gap-2 text-gray-500">
+            <Forward className="w-4 h-4" />
+            <div className="text-center">
               <div className="text-sm font-medium">{formatNumber(metrics?.shares)}</div>
-              <div className="text-xs">Shares</div>
+              <div className="text-xs text-gray-500">Shares</div>
             </div>
           </div>
-          <div className="flex items-center gap-1 text-gray-500">
-            <div>
+          <div className="flex items-center justify-center gap-2 text-gray-500">
+            <MessageSquare className="w-4 h-4" />
+            <div className="text-center">
               <div className="text-sm font-medium">{formatNumber(metrics?.comments)}</div>
-              <div className="text-xs">Comments</div>
+              <div className="text-xs text-gray-500">Comments</div>
             </div>
           </div>
         </div>
