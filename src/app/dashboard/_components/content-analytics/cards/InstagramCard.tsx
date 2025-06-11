@@ -46,8 +46,16 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
     return num.toLocaleString();
   };
 
-  const formatTimestamp = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString();
+  const formatTimestamp = (timestamp: string) => {
+    // Ensure we're working with UTC
+    const date = new Date(timestamp);
+    // Format in UTC to avoid timezone issues
+    return date.toLocaleDateString('en-US', { 
+      timeZone: 'UTC',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric'
+    });
   };
 
   return (
@@ -92,7 +100,7 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
           {content.mediaType}
         </div>
         <div className="absolute bottom-2 right-2 bg-white/80 dark:bg-black/60 rounded px-2 py-1 text-xs font-medium">
-          {publishedAt ? new Date(publishedAt).toLocaleDateString() : ''}
+          {publishedAt ? formatTimestamp(publishedAt) : ''}
         </div>
       </div>
       <div className="p-4">
