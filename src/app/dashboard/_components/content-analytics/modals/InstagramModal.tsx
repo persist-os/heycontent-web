@@ -258,12 +258,24 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
   };
 
   const navigateToChat = () => {
+    // Create a more suitable title for Instagram content
+    const caption = selectedContent.content.text || 'Instagram Post';
+    const truncatedTitle = caption.length > 60 
+      ? caption.substring(0, 60) + '...' 
+      : caption;
+    
     const context = {
       platform: 'instagram',
       contentId: postId,
-      title: selectedContent.content.text,
+      title: truncatedTitle, // Use truncated caption as title
+      fullCaption: selectedContent.content.text, // Include full caption separately
       analysis: aiAnalysis,
-      metrics: selectedContent.metrics
+      metrics: selectedContent.metrics,
+      // Additional context for better chat experience
+      mediaType: selectedContent.content.mediaType,
+      publishedAt: selectedContent.publishedAt,
+      thumbnailUrl: selectedContent.content.mediaUrl || selectedContent.content.thumbnailUrl,
+      permalink: selectedContent.content.permalink
     };
     
     const encodedContext = encodeURIComponent(JSON.stringify(context));
@@ -301,8 +313,8 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
                   className="w-32 h-20 object-cover rounded-lg flex-shrink-0"
                />
             )}
-            <div className="flex-grow">
-              <h3 className="font-medium text-black dark:text-white mb-1 line-clamp-2">
+            <div className="flex-grow min-w-0">
+              <h3 className="font-medium text-black dark:text-white mb-1 line-clamp-3 text-sm leading-relaxed">
                 {selectedContent.content.text || 'No caption provided.'}
               </h3>
               <p className="text-xs text-text-gray dark:text-gray-400">
@@ -381,7 +393,7 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
             className={`${!aiAnalysis ? 'opacity-50 cursor-not-allowed bg-gray-300 hover:bg-gray-300' : 'bg-heycontent-light-yellow hover:bg-heycontent-yellow/90'} text-black`}
           >
             <MessageSquare className="w-4 h-4 mr-2" />
-            {!aiAnalysis ? 'Generate Analysis to Chat' : 'Discuss with Content'}
+            {!aiAnalysis ? 'Generate Analysis First' : 'Discuss with AI'}
           </Button>
           {selectedContent.content.permalink && (
             <a href={selectedContent.content.permalink} target="_blank" rel="noopener noreferrer">
