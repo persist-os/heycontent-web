@@ -378,16 +378,23 @@ export function ContentAnalyticsScreen() {
 
   // Apply filtering based on selected platform
   const filteredContent = useMemo(() => {
+    console.log('Debug - selectedPlatform:', selectedPlatform);
+    console.log('Debug - instagramItemsArray length:', instagramItemsArray.length);
+    console.log('Debug - allContentItems length:', allContentItems.length);
+    
     if (selectedPlatform === 'youtube') return youtubeItemsArray;
     if (selectedPlatform === 'gmail') return gmailItemsArray;
     if (selectedPlatform === 'instagram') return instagramItemsArray;
-    return sortAndFilterContent(
+    
+    const filtered = sortAndFilterContent(
       allContentItems,
       selectedPlatform,
       selectedEmailType,
       sortBy,
       timeRange
     );
+    console.log('Debug - filtered content length:', filtered.length);
+    return filtered;
   }, [selectedPlatform, youtubeItemsArray, gmailItemsArray, instagramItemsArray, allContentItems, selectedEmailType, sortBy, timeRange]);
 
   // Final display items
