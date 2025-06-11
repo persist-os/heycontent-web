@@ -91,11 +91,31 @@ const config = {
   				to: {
   					height: '0'
   				}
+  			},
+  			'bounce-delay-1': {
+  				'0%, 100%': { transform: 'translateY(0)' },
+  				'50%': { transform: 'translateY(-15%)' }
+  			},
+  			'bounce-delay-2': {
+  				'0%, 100%': { transform: 'translateY(0)' },
+  				'50%': { transform: 'translateY(-15%)' }
+  			},
+  			'bounce-delay-3': {
+  				'0%, 100%': { transform: 'translateY(0)' },
+  				'50%': { transform: 'translateY(-15%)' }
+  			},
+  			'pulse-slow': {
+  				'0%, 100%': { opacity: '1' },
+  				'50%': { opacity: '0.7' }
   			}
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out'
+  			'accordion-up': 'accordion-up 0.2s ease-out',
+  			'bounce-delay-1': 'bounce-delay-1 1.2s infinite ease-in-out',
+  			'bounce-delay-2': 'bounce-delay-2 1.2s infinite ease-in-out 0.25s',
+  			'bounce-delay-3': 'bounce-delay-3 1.2s infinite ease-in-out 0.5s',
+  			'pulse-slow': 'pulse-slow 2s infinite ease-in-out'
   		}
   	}
   },

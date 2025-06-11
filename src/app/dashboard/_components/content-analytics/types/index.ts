@@ -16,6 +16,7 @@ export interface InstagramContentDetails {
   mediaType: 'image' | 'video' | 'carousel'; // More specific type
   thumbnailUrl?: string; // Optional specific thumbnail
   permalink: string; // Direct link to the post
+  timestamp?: number; // Unix timestamp of the post
 }
 export interface InstagramMetrics {
   impressions?: number;
@@ -28,6 +29,8 @@ export interface InstagramContentItem extends BaseContentItem {
   platform: 'instagram';
   content: InstagramContentDetails;
   metrics: InstagramMetrics;
+  analysis?: any; // Analysis data can be any type since it's stored as JSON
+  analysisMarkdown?: string; // Markdown formatted analysis for display
 }
 
 // YouTube Video

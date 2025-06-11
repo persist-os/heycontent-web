@@ -229,7 +229,6 @@ function InstagramAnalytics({ userId, onDiscussContent }: { userId: string; onDi
       {selectedContent && (
         <InstagramModal
           selectedContent={selectedContent}
-          userId={userId}
           onClose={() => setShowModal(false)}
           onDiscussContent={onDiscussContent}
         />
@@ -268,7 +267,13 @@ export function ContentAnalyticsScreen() {
   );
   const instagramPosts = useQuery(
     api.instagramQueries.getAllInstagramPosts,
-    { userId }
+    userId ? { userId } : undefined
+  );
+
+  // Add this query near the other Convex queries
+  const instagramPostInsights = useQuery(
+    api.instagramQueries.getAllPostInsights,
+    { userId: firebaseUser?.uid || '' }
   );
 
   // Debug log: log the raw gmailThreads value
@@ -372,8 +377,23 @@ export function ContentAnalyticsScreen() {
           mediaUrl = imageChild?.media_url || post.data.children[0]?.media_url || mediaUrl;
         }
 
+        // Get insights for this post
+        const postId = post.postId || post.data.id;
+        const insights = instagramPostInsights?.find(insight => insight?.postId === postId);
+
+        // Extract metrics from both post data and insights
+        const metrics = {
+          // From insights data
+          impressions: insights?.data?.impressions ?? 0,
+          reach: insights?.data?.reach ?? 0,
+          shares: insights?.data?.shares ?? 0,
+          // From post data (these might be more up-to-date)
+          likes: post.data.like_count ?? insights?.data?.likes ?? 0,
+          comments: post.data.comments_count ?? insights?.data?.comments ?? 0
+        };
+
         return {
-          id: post.postId || post.data.id,
+          id: postId,
           platform: 'instagram',
           publishedAt: post.data.timestamp ? new Date(post.data.timestamp).toISOString() : new Date().toISOString(),
           content: {
@@ -383,18 +403,12 @@ export function ContentAnalyticsScreen() {
             thumbnailUrl: post.data.thumbnail_url,
             permalink: post.data.permalink,
           },
-          metrics: {
-            impressions: undefined,
-            reach: undefined,
-            likes: post.data.like_count ?? 0,
-            comments: post.data.comments_count ?? 0,
-            shares: undefined,
-          },
+          metrics,
         };
       });
     }
     return [];
-  }, [instagramPosts]);
+  }, [instagramPosts, instagramPostInsights]);
 
   const allContentItems = useMemo(() => [
     ...mappedYouTubeItems,
@@ -409,16 +423,23 @@ export function ContentAnalyticsScreen() {
 
   // Apply filtering based on selected platform
   const filteredContent = useMemo(() => {
+    console.log('Debug - selectedPlatform:', selectedPlatform);
+    console.log('Debug - instagramItemsArray length:', instagramItemsArray.length);
+    console.log('Debug - allContentItems length:', allContentItems.length);
+    
     if (selectedPlatform === 'youtube') return youtubeItemsArray;
     if (selectedPlatform === 'gmail') return gmailItemsArray;
     if (selectedPlatform === 'instagram') return instagramItemsArray;
-    return sortAndFilterContent(
+    
+    const filtered = sortAndFilterContent(
       allContentItems,
       selectedPlatform,
       selectedEmailType,
       sortBy,
       timeRange
     );
+    console.log('Debug - filtered content length:', filtered.length);
+    return filtered;
   }, [selectedPlatform, youtubeItemsArray, gmailItemsArray, instagramItemsArray, allContentItems, selectedEmailType, sortBy, timeRange]);
 
   // Final display items
@@ -549,7 +570,6 @@ export function ContentAnalyticsScreen() {
               selectedContent={selectedContent as InstagramContentItem}
               onClose={() => setSelectedContent(null)}
               onDiscussContent={() => discussContent(selectedContent)}
-              userId={firebaseUser.uid}
             />
           )}
           {selectedContent.platform === 'youtube' && (

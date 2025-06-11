@@ -6,6 +6,7 @@ import { MessageSquare } from 'lucide-react'
 import { ExpandableInsights } from './expandable-insights'
 import { MarkdownRenderer } from './markdown-renderer'
 import { PersonaCardRenderer } from './components/PersonaCardRenderer'
+import { ThinkingIndicator } from './components/ThinkingIndicator'
 
 interface MessageBubbleProps {
   message: Message
@@ -114,7 +115,9 @@ export function MessageBubble({
               {/* Message Content or Persona Card */}
               <div className="flex-1 min-w-0">
                 <div className="break-words overflow-hidden">
-                  {mightHavePersona ? (
+                  {message.status === 'typing' ? (
+                    <ThinkingIndicator />
+                  ) : mightHavePersona ? (
                     <>
                       <MarkdownRenderer 
                         content={message.chat_response || message.content} 

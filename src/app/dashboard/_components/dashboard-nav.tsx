@@ -184,7 +184,7 @@ export function DashboardNav() {
                         <div className="flex items-center gap-3">
                           {item.id === 'chat' ? (
                               <div className="w-10 h-10 flex items-center justify-center">
-                                <Logo size="medium" />
+                                <Logo size="medium" disableLink />
                               </div>
                           ) : (
                               <item.icon className={`w-5 h-5 ${item.color}`} />

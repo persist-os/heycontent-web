@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { WaitlistQueue } from './_components/WaitlistQueue';
 import { CreatorCard } from './_components/CreatorCard';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Logo } from '@/components/ui/logo';
 
 const generateQueueId = () => {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -38,41 +39,40 @@ export default function WaitlistPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <AnimatePresence mode="wait">
-        {!name ? (
-          <motion.div
-            key="queue"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-          >
-            <WaitlistQueue
-              position={10}
-              queueId={queueId}
-              onQueueComplete={handleQueueComplete}
-            />
-          </motion.div>
-        ) : (
-          <motion.div
-            key="card"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-          >
-            <CreatorCard
-              name={name || 'Creator'}
-              title={generateCreativeTitle(name)}
-              joinDate={new Date().toLocaleDateString('en-US', { 
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric'
-              })}
-              onShare={handleShare}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <div className="min-h-screen bg-gradient-to-b from-[#F8F0F9] to-blue-50">
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <AnimatePresence mode="wait">
+          {!name ? (
+            <motion.div
+              key="queue"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <WaitlistQueue
+                position={10}
+                queueId={queueId}
+                onQueueCompleteAction={handleQueueComplete}
+                onStageChangeAction={(stage) => {
+                  // Handle stage change if needed
+                }}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="card"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <CreatorCard
+                name={name || 'Creator'}
+                onShareAction={handleShare}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 } 

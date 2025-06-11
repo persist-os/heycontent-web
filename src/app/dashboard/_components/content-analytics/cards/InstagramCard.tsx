@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import { BarChart3, Instagram, Eye, Users, RefreshCw } from 'lucide-react';
+import { Instagram, Users, RefreshCw, MessageSquare, Heart, Forward } from 'lucide-react';
 
 import { InstagramContentItem } from '../types';
 import { useInstagramRefresh } from '@/app/hooks/useInstagramRefresh';
@@ -39,6 +39,15 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
 
   const handleRefresh = async () => {
     await refresh(item.id, content.permalink || '');
+  };
+
+  const formatNumber = (num: number | undefined) => {
+    if (num === undefined) return '0';
+    return num.toLocaleString();
+  };
+
+  const formatTimestamp = (timestamp: number) => {
+    return new Date(timestamp).toLocaleDateString();
   };
 
   return (
@@ -88,18 +97,44 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
       </div>
       <div className="p-4">
         <h3 className="font-semibold text-lg mb-2 line-clamp-2">{content.text}</h3>
-        <div className="flex items-center gap-4 mb-2">
-          <span className="flex items-center gap-1 text-pink-500"><Eye className="w-4 h-4" /> {(metrics?.impressions ?? 0).toLocaleString()} Impressions</span>
-          <span className="flex items-center gap-1 text-purple-500"><Users className="w-4 h-4" /> {(metrics?.reach ?? 0).toLocaleString()} Reach</span>
+        
+        {/* Metrics Grid */}
+        <div className="grid grid-cols-2 gap-4 mb-3">
+          <div className="flex items-center justify-center gap-2 text-purple-500">
+            <Users className="w-4 h-4" />
+            <div className="text-center">
+              <div className="text-sm font-medium">{formatNumber(metrics?.reach)}</div>
+              <div className="text-xs text-gray-500">Reach</div>
+            </div>
+          </div>
+          <div className="flex items-center justify-center gap-2 text-gray-500">
+            <Heart className="w-4 h-4" />
+            <div className="text-center">
+              <div className="text-sm font-medium">{formatNumber(metrics?.likes)}</div>
+              <div className="text-xs text-gray-500">Likes</div>
+            </div>
+          </div>
+          <div className="flex items-center justify-center gap-2 text-gray-500">
+            <Forward className="w-4 h-4" />
+            <div className="text-center">
+              <div className="text-sm font-medium">{formatNumber(metrics?.shares)}</div>
+              <div className="text-xs text-gray-500">Shares</div>
+            </div>
+          </div>
+          <div className="flex items-center justify-center gap-2 text-gray-500">
+            <MessageSquare className="w-4 h-4" />
+            <div className="text-center">
+              <div className="text-sm font-medium">{formatNumber(metrics?.comments)}</div>
+              <div className="text-xs text-gray-500">Comments</div>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-4 mb-2 text-sm text-gray-500">
-          <span className="flex items-center gap-1 text-gray-500"><BarChart3 className="w-4 h-4" /> {(metrics?.likes ?? 0).toLocaleString()} Likes</span>
-        </div>
-        <div className="text-xs text-gray-500 mb-2">{(metrics?.comments ?? 0).toLocaleString()} Comments • {(metrics?.shares ?? 0).toLocaleString()} Shares</div>
+
         <div className="text-sm text-purple-700 dark:text-purple-300 mb-2">
           {/* AI-generated insight placeholder */}
           <b>AI Insight:</b> Best time to post for max engagement is 6-8pm. Your carousel posts get 30% more saves!
         </div>
+
         <div className="flex gap-2 mt-2">
           <button
             className="px-3 py-1 rounded text-white hover:opacity-90 text-xs transition-opacity"
