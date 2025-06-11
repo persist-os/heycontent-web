@@ -266,6 +266,12 @@ export function ContentAnalyticsScreen() {
     userId ? { userId } : undefined
   );
 
+  // Add this query near the other Convex queries
+  const instagramPostInsights = useQuery(
+    api.instagramQueries.getAllPostInsights,
+    { userId: firebaseUser?.uid || '' }
+  );
+
   useEffect(() => {
   }, [youtubeVideos, gmailThreads, instagramPosts]);
 
@@ -326,8 +332,23 @@ export function ContentAnalyticsScreen() {
           mediaUrl = imageChild?.media_url || post.data.children[0]?.media_url || mediaUrl;
         }
 
+        // Get insights for this post
+        const postId = post.postId || post.data.id;
+        const insights = instagramPostInsights?.find(insight => insight?.postId === postId);
+
+        // Extract metrics from both post data and insights
+        const metrics = {
+          // From insights data
+          impressions: insights?.data?.impressions ?? 0,
+          reach: insights?.data?.reach ?? 0,
+          shares: insights?.data?.shares ?? 0,
+          // From post data (these might be more up-to-date)
+          likes: post.data.like_count ?? insights?.data?.likes ?? 0,
+          comments: post.data.comments_count ?? insights?.data?.comments ?? 0
+        };
+
         return {
-          id: post.postId || post.data.id,
+          id: postId,
           platform: 'instagram',
           publishedAt: post.data.timestamp ? new Date(post.data.timestamp).toISOString() : new Date().toISOString(),
           content: {
@@ -337,18 +358,12 @@ export function ContentAnalyticsScreen() {
             thumbnailUrl: post.data.thumbnail_url,
             permalink: post.data.permalink,
           },
-          metrics: {
-            impressions: undefined,
-            reach: undefined,
-            likes: post.data.like_count ?? 0,
-            comments: post.data.comments_count ?? 0,
-            shares: undefined,
-          },
+          metrics,
         };
       });
     }
     return [];
-  }, [instagramPosts]);
+  }, [instagramPosts, instagramPostInsights]);
 
   const allContentItems = useMemo(() => [
     ...mappedYouTubeItems,
