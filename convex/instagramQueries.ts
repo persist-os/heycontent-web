@@ -359,3 +359,113 @@ export const getAllPostInsights = query({
     }
   },
 });
+
+// Get analysis for a specific Instagram post
+export const getPostAnalysis = query({
+  args: { 
+    userId: v.string(),
+    postId: v.string() 
+  },
+  handler: async (ctx, args) => {
+    const { userId, postId } = args;
+    try {
+      console.log('[getPostAnalysis] Starting query with params:', { userId, postId });
+      
+      // Check if the postId is valid
+      if (!postId || typeof postId !== 'string') {
+        console.error('[getPostAnalysis] Invalid postId:', postId);
+        throw new Error(`Invalid postId: ${postId}`);
+      }
+      
+      // Check if the userId is valid
+      if (!userId || typeof userId !== 'string') {
+        console.error('[getPostAnalysis] Invalid userId:', userId);
+        throw new Error(`Invalid userId: ${userId}`);
+      }
+      
+      console.log('[getPostAnalysis] Querying for postId:', postId, 'userId:', userId);
+      
+      // First, let's check what posts exist for this user
+      const userPosts = await ctx.db
+        .query("instagramPosts")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .collect();
+      
+      console.log('[getPostAnalysis] Found', userPosts.length, 'posts for userId:', userId);
+      console.log('[getPostAnalysis] User post IDs:', userPosts.map(p => ({ postId: p.postId, dataId: p.data?.id })));
+      
+      // Try to find the post by postId first
+      let post = await ctx.db
+        .query("instagramPosts")
+        .withIndex("by_postId", (q) => q.eq("postId", postId))
+        .filter((q) => q.eq(q.field("userId"), userId))
+        .first();
+
+      if (!post) {
+        console.log(`[getPostAnalysis] No post found by postId=${postId}, trying by data.id...`);
+        
+        // Try to find by data.id as fallback
+        post = await ctx.db
+          .query("instagramPosts")
+          .withIndex("by_userId", (q) => q.eq("userId", userId))
+          .filter((q) => q.eq(q.field("data.id"), postId))
+          .first();
+          
+        if (!post) {
+          console.log(`[getPostAnalysis] No post found by data.id either for postId=${postId} and userId=${userId}`);
+          return null;
+        } else {
+          console.log('[getPostAnalysis] Found post by data.id:', { postId: post.postId, dataId: post.data?.id });
+        }
+      } else {
+        console.log('[getPostAnalysis] Found post by postId:', { postId: post.postId, dataId: post.data?.id });
+      }
+      
+      console.log('[getPostAnalysis] Post object found:', {
+        postId: post.postId,
+        userId: post.userId,
+        _id: post._id,
+        hasAnalysisMarkdown: !!post.analysisMarkdown,
+        hasAnalysis: !!post.analysis,
+      });
+      
+      if (post.analysisMarkdown || post.analysis) {
+        console.log(`[getPostAnalysis] Returning analysis for postId=${postId}`);
+
+        // Prepare the analysis object - prefer markdown over JSON
+        let analysisToReturn;
+        if (post.analysisMarkdown) {
+          // Return markdown as a string directly
+          analysisToReturn = post.analysisMarkdown;
+          console.log(`[getPostAnalysis] Returning markdown analysis for postId=${postId}`);
+        } else if (post.analysis) {
+          // Return JSON analysis
+          analysisToReturn = post.analysis;
+          console.log(`[getPostAnalysis] Returning JSON analysis for postId=${postId}`);
+        }
+
+        return {
+          _id: post._id,
+          postId: post.postId,
+          userId: post.userId,
+          analysis: analysisToReturn,
+          analysisMarkdown: post.analysisMarkdown,
+          updatedAt: post.updatedAt || post._creationTime
+        };
+      }
+
+      console.log(`[getPostAnalysis] No analysis found for postId=${postId}`);
+      return null;
+    } catch (error) {
+      console.error('[getPostAnalysis] Error retrieving Instagram post analysis:', error);
+      console.error('[getPostAnalysis] Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        userId,
+        postId
+      });
+      // Re-throw the error so it propagates to the client
+      throw new Error(`Failed to get post analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});

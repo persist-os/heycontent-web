@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     console.log(`[${requestId}] Cleaned API KEY:`, apiKey);
 
     const body = await request.json();
-    const { post_id } = body;
+    const { post_id, format } = body;
 
     if (!post_id) {
       console.warn(`[${requestId}] Invalid request: Missing post_id`);
@@ -60,6 +60,7 @@ export async function POST(request: Request) {
     // Log request details
     console.info(`[${requestId}] Processing Instagram post analysis`, {
       post_id,
+      format,
       has_api_key: !!apiKey,
       user_id
     });
@@ -77,7 +78,8 @@ export async function POST(request: Request) {
 
     const requestBody = {
       post_id: post_id,
-      user_id: user_id
+      user_id: user_id,
+      ...(format && { format }) // Include format if provided
     };
 
     // Fetch from backend with retry logic
