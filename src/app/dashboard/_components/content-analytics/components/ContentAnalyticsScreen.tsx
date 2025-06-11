@@ -229,7 +229,6 @@ function InstagramAnalytics({ userId, onDiscussContent }: { userId: string; onDi
       {selectedContent && (
         <InstagramModal
           selectedContent={selectedContent}
-          userId={userId}
           onClose={() => setShowModal(false)}
           onDiscussContent={onDiscussContent}
         />
@@ -537,7 +536,6 @@ export function ContentAnalyticsScreen() {
               selectedContent={selectedContent as InstagramContentItem}
               onClose={() => setSelectedContent(null)}
               onDiscussContent={() => discussContent(selectedContent)}
-              userId={firebaseUser.uid}
             />
           )}
           {selectedContent.platform === 'youtube' && (
