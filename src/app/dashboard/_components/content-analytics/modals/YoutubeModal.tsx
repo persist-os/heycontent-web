@@ -310,14 +310,6 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
             <MessageSquare className="w-4 h-4 mr-2" />
             {!aiAnalysis ? 'Generate Analysis to Chat' : 'Discuss with Content'}
           </Button>
-          <Button variant="ghost" onClick={onClose} aria-label="Close">
-            <X className="w-5 h-5" />
-          </Button>
-          <a href={`https://www.youtube.com/watch?v=${videoId}`} target="_blank" rel="noopener noreferrer">
-            <Button variant="outline">
-              <ExternalLink className="w-4 h-4 mr-2" /> View on YouTube
-            </Button>
-          </a>
         </div>
       </div>
     </div>

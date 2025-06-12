@@ -57,27 +57,25 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
 
         {/* Chat input area - always show */}
         <div className="px-4 py-4">
-          <div className="w-full max-w-4xl mx-auto">
-            <ChatInput
-              inputRef={inputRef}
-              onSend={handleSendMessage}
-              isLoading={isLoading}
-              referencedMessage={referencedMessage}
-              onClearReference={handleClearReference}
-              hasContext={!!currentContext}
-              contextPlatform={currentContext?.platform}
-              hasAnalysis={
-                includeAnalysisInQuery && (
-                  !!currentContext?.analysis || 
-                  (currentContext?.platform === 'ai-insights' && (
-                    !!currentContext?.actionStep || 
-                    !!currentContext?.title || 
-                    !!currentContext?.additionalContext
-                  ))
-                )
-              }
-            />
-          </div>
+          <ChatInput
+            inputRef={inputRef}
+            onSend={handleSendMessage}
+            isLoading={isLoading}
+            referencedMessage={referencedMessage}
+            onClearReference={handleClearReference}
+            hasContext={!!currentContext}
+            contextPlatform={currentContext?.platform}
+            hasAnalysis={
+              includeAnalysisInQuery && (
+                !!currentContext?.analysis || 
+                (currentContext?.platform === 'ai-insights' && (
+                  !!currentContext?.actionStep || 
+                  !!currentContext?.title || 
+                  !!currentContext?.additionalContext
+                ))
+              )
+            }
+          />
         </div>
       </div>
     </div>
