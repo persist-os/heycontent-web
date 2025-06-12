@@ -333,11 +333,14 @@ export function ContentAnalyticsScreen() {
               platform: 'gmail',
               publishedAt: getReceivedDate(email, thread),
               content: {
-                subject: email.subject || thread.subject || firstMessage?.subject || thread.data?.subject || 'No Subject',
-                snippet: email.snippet || thread.snippet || thread.data?.snippet || 'No preview available',
-                from: email.sender || thread.from || firstMessage?.from || thread.data?.from || 'Unknown Sender',
-                emailType: email.emailType || 'important',
-                threadId: thread.threadId,
+                data: {
+                  subject: email.subject || thread.subject || firstMessage?.subject || thread.data?.subject || 'No Subject',
+                  snippet: email.snippet || thread.snippet || thread.data?.snippet || 'No preview available',
+                  from: email.sender || thread.from || firstMessage?.from || thread.data?.from || 'Unknown Sender',
+                  emailType: email.emailType || 'important',
+                  threadId: thread.threadId,
+                  emailId: firstMessage?.id,
+                }
               },
               metrics: email.metrics || {},
             });
@@ -352,12 +355,14 @@ export function ContentAnalyticsScreen() {
           platform: 'gmail',
           publishedAt: getReceivedDate(null, thread),
           content: {
-            subject: thread.subject || firstMessage?.subject || thread.data?.subject || 'No Subject',
-            snippet: thread.snippet || thread.data?.snippet || 'No preview available',
-            from: thread.from || firstMessage?.from || thread.data?.from || 'Unknown Sender' ,
-            emailType: thread.emailType || thread.data?.emailType || 'all',
-            threadId: thread.threadId,
-            emailId: firstMessage?.id,
+            data: {
+              subject: thread.data?.subject || 'No Subject',
+              snippet: thread.data?.snippet || 'No preview available',
+              from: thread.data?.from || 'Unknown Sender',
+              emailType: thread.data?.emailType || 'all',
+              threadId: thread.threadId,
+              emailId: firstMessage?.id,
+            }
           },
           metrics: thread.metrics || {},
         };
@@ -455,7 +460,7 @@ export function ContentAnalyticsScreen() {
         ? (item as YouTubeContentItem).content.title
         : item.platform === 'instagram'
           ? (item as InstagramContentItem).content?.text
-          : (item as GmailContentItem).content?.subject,
+          : (item as GmailContentItem).content?.data.subject,
       thumbnailUrl: item.platform === 'youtube'
         ? (item as YouTubeContentItem).content?.thumbnailUrl || `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`
         : item.platform === 'instagram'

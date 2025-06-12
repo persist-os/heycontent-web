@@ -544,7 +544,6 @@ app.post("/api/users/:id/gmail/thread", async (c) => {
     labelIds,
     message_count,
     messages,
-    threadData
   } = await c.req.json();
 
   // Fix: Convex does not accept null for labelIds
@@ -559,12 +558,9 @@ app.post("/api/users/:id/gmail/thread", async (c) => {
       userId,
       email,
       threadId,
-      snippet,
-      historyId,
-      labelIds: safeLabelIds,
       message_count,
       messages,
-      threadData
+      data: { snippet, historyId, labelIds: safeLabelIds },
     });
     return c.json({ success: true, result });
   } catch (error) {

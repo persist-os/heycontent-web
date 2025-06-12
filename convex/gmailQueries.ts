@@ -226,18 +226,8 @@ export const listUserGmailThreads = query({
       // Debug log: log the raw threads from Convex
       console.log('Convex: Raw threads from DB:', JSON.stringify(threads, null, 2));
 
-      // Transform threads to match the GmailContentItem format for UI
-      return threads.map(thread => {
-        const subject = thread.subject || thread.data?.subject || 'No Subject';
-        const from = thread.from || thread.data?.from || 'Unknown Sender';
-        const snippet = thread.snippet || thread.data?.snippet || '';
-        return {
-          ...thread,
-          subject,
-          from,
-          snippet,
-        };
-      });
+      // Return threads as-is (UI should use thread.data for user-visible fields)
+      return threads;
     } catch (error) {
       console.error('Error in listUserGmailThreads:', error);
       return [];
@@ -260,13 +250,8 @@ export const listUserGmailMessages = query({
         .order("desc")
         .collect();
 
-      // Return messages with clean data
-      return messages.map(message => ({
-        ...message,
-        subject: message.subject || 'No Subject',
-        from: message.from || 'Unknown Sender',
-        snippet: message.snippet || 'No preview available',
-      }));
+      // Return messages as-is (UI should use message.data for user-visible fields)
+      return messages;
     } catch (error) {
       console.error('Error in listUserGmailMessages:', error);
       return [];

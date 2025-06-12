@@ -59,28 +59,32 @@ export interface YouTubeContentItem extends BaseContentItem {
 }
 
 // Gmail Email
-export interface GmailContentDetails {
+export interface GmailContentData {
   subject: string;
   snippet?: string; // Body preview
   from?: string; // Sender email/name
   recipients?: number; // Count of recipients
-  emailType: 'newsletter' | 'partnership' | 'individual' | 'other'; // Added 'other'
+  emailType: 'newsletter' | 'partnership' | 'individual' | 'other';
   partnerName?: string;
   thread?: {
-    threadId: string; // Use thread ID
+    threadId: string;
     messageCount: number;
-    lastReplyDate?: string; // Make optional
+    lastReplyDate?: string;
   };
-  labels?: string[]; // Gmail labels
-  threadId?: string; // <-- Add this line to support direct threadId
-  emailId?: string; // <-- Add this line
+  labels?: string[];
+  threadId?: string;
+  emailId?: string;
+}
+export interface GmailContentDetails {
+  data: GmailContentData;
+  // Add any non-user-visible fields here if needed in the future
 }
 export interface GmailMetrics {
-  openRate?: number; // Optional - for tracked emails/campaigns
-  clickRate?: number; // Optional - for tracked emails/campaigns
-  replies?: number; // Count of replies in the thread? Or just to this message?
-  responseTime?: number; // Optional - in hours
-  dealValue?: number; // Optional
+  openRate?: number;
+  clickRate?: number;
+  replies?: number;
+  responseTime?: number;
+  dealValue?: number;
 }
 export interface GmailContentItem extends BaseContentItem {
   platform: 'gmail';

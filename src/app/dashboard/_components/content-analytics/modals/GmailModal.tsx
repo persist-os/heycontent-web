@@ -24,7 +24,7 @@ export const GmailModal: React.FC<GmailModalProps> = ({
     setLoading(true);
     // Simulate API call - TODO: Replace with actual API call
     await new Promise(resolve => setTimeout(resolve, 1200));
-    setAiAnalysis(`AI Analysis for "${selectedContent.content.subject}":\n- Open rate (${selectedContent.metrics.openRate}%) is strong. \n- Click rate (${selectedContent.metrics.clickRate}%) could be improved.\n- Consider A/B testing subject lines or call-to-action placement.`);
+    setAiAnalysis(`AI Analysis for "${selectedContent.content.data.subject}":\n- Open rate (${selectedContent.metrics.openRate}%) is strong. \n- Click rate (${selectedContent.metrics.clickRate}%) could be improved.\n- Consider A/B testing subject lines or call-to-action placement.`);
     setLoading(false);
   };
 
@@ -38,7 +38,7 @@ export const GmailModal: React.FC<GmailModalProps> = ({
               <Mail className="w-5 h-5 text-blue-500" /> Gmail Analytics
             </h2>
             <p className="text-sm text-text-gray dark:text-gray-400">
-              Email • {selectedContent.content.emailType.charAt(0).toUpperCase() + selectedContent.content.emailType.slice(1)}
+              Email • {selectedContent.content.data.emailType.charAt(0).toUpperCase() + selectedContent.content.data.emailType.slice(1)}
             </p>
           </div>
           <Button variant="ghost" onClick={onClose} aria-label="Close">
@@ -50,10 +50,10 @@ export const GmailModal: React.FC<GmailModalProps> = ({
         <div className="p-6 overflow-y-auto flex-grow space-y-6">
           {/* Preview */}
           <Card className="p-4 bg-gray-50 dark:bg-gray-800">
-            <h3 className="font-medium text-black dark:text-white mb-1">{selectedContent.content.subject}</h3>
-            <p className="text-sm text-text-gray dark:text-gray-400 mb-1 line-clamp-2">{selectedContent.content.snippet}</p>
+            <h3 className="font-medium text-black dark:text-white mb-1">{selectedContent.content.data.subject}</h3>
+            <p className="text-sm text-text-gray dark:text-gray-400 mb-1 line-clamp-2">{selectedContent.content.data.snippet}</p>
             <p className="text-xs text-text-gray dark:text-gray-400">
-              From: {selectedContent.content.from || 'Unknown'} | Received: {new Date(selectedContent.publishedAt).toLocaleString()}
+              From: {selectedContent.content.data.from || 'Unknown'} | Received: {new Date(selectedContent.publishedAt).toLocaleString()}
             </p>
           </Card>
 

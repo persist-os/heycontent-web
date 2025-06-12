@@ -60,32 +60,15 @@ export const storeGmailMessage = mutation({
     email: v.string(),
     messageId: v.string(),
     threadId: v.string(),
-    from: v.optional(v.string()),
-    subject: v.optional(v.string()),
-    snippet: v.string(),
+    data: v.any(), // All user-visible info is now inside 'data'
     historyId: v.optional(v.string()),
     internalDate: v.optional(v.number()),
     labelIds: v.optional(v.array(v.string())),
-    payload: v.any(),
     sizeEstimate: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     try {
       const now = Date.now();
-      // Extract the real sender from payload.headers if possible
-      let from = args.from;
-      if (!from && args.payload?.headers) {
-        const headerFrom = args.payload.headers.find((h: any) => h.name && h.name.toLowerCase() === 'from');
-        if (headerFrom && headerFrom.value && headerFrom.value.toLowerCase() !== 'unknown') {
-          from = headerFrom.value;
-        }
-      }
-      if (!from && args.payload?.from && args.payload.from.toLowerCase() !== 'unknown') {
-        from = args.payload.from;
-      }
-      if (!from) {
-        from = 'unknown';
-      }
       // Check if the message already exists
       const existingMessage = await ctx.db
         .query("gmailMessages")
@@ -96,33 +79,25 @@ export const storeGmailMessage = mutation({
         )
         .first();
       if (existingMessage) {
-        // Update existing message
         await ctx.db.patch(existingMessage._id, {
-          from,
-          subject: args.subject,
-          snippet: args.snippet,
+          data: args.data,
           historyId: args.historyId,
           internalDate: args.internalDate ? args.internalDate.toString() : undefined,
           labelIds: args.labelIds,
-          data: args.payload,
           sizeEstimate: args.sizeEstimate,
           updatedAt: now,
         });
         return { status: "updated", messageId: existingMessage._id };
       } else {
-        // Insert new message
         const messageId = await ctx.db.insert("gmailMessages", {
           userId: args.userId,
           email: args.email,
           messageId: args.messageId,
           threadId: args.threadId,
-          from,
-          subject: args.subject,
-          snippet: args.snippet,
+          data: args.data,
           historyId: args.historyId,
           internalDate: args.internalDate ? args.internalDate.toString() : undefined,
           labelIds: args.labelIds,
-          data: args.payload,
           sizeEstimate: args.sizeEstimate,
           createdAt: now,
           updatedAt: now,
@@ -142,30 +117,13 @@ export const storeGmailThread = mutation({
     userId: v.string(),
     email: v.string(),
     threadId: v.string(),
-    snippet: v.optional(v.string()),
-    historyId: v.optional(v.string()),
-    labelIds: v.optional(v.array(v.string())),
+    data: v.any(), // All user-visible info is now inside 'data'
     message_count: v.optional(v.number()),
-    messages: v.optional(v.array(v.object({
-      id: v.string(),
-      from: v.optional(v.string()),
-      subject: v.optional(v.string()),
-      snippet: v.optional(v.string()),
-      label_ids: v.optional(v.array(v.string())),
-    }))),
-    threadData: v.optional(v.any()),
+    messages: v.optional(v.array(v.any())),
   },
   handler: async (ctx, args) => {
     try {
       const now = Date.now();
-      // Prepare data object
-      const data = args.threadData || {};
-      // Get first message for top-level fields
-      const firstMessage = args.messages && args.messages.length > 0 ? args.messages[0] : null;
-      const from = firstMessage?.from || '';
-      const subject = firstMessage?.subject || '';
-      const snippet = firstMessage?.snippet || args.snippet || '';
-      // Check if the thread already exists
       const existingThread = await ctx.db
         .query("gmailThreads")
         .withIndex("by_threadId", (q) => q.eq("threadId", args.threadId))
@@ -175,29 +133,21 @@ export const storeGmailThread = mutation({
         )
         .first();
       if (existingThread) {
-        // Update existing thread
         await ctx.db.patch(existingThread._id, {
-          from,
-          subject,
-          snippet,
+          data: args.data,
           message_count: args.message_count,
           messages: args.messages,
-          data,
           updatedAt: now,
         });
         return { status: "updated", threadId: existingThread._id };
       } else {
-        // Insert new thread
         const threadId = await ctx.db.insert("gmailThreads", {
           userId: args.userId,
           email: args.email,
           threadId: args.threadId,
-          from,
-          subject,
-          snippet,
+          data: args.data,
           message_count: args.message_count,
           messages: args.messages,
-          data,
           createdAt: now,
           updatedAt: now,
         });
@@ -284,13 +234,10 @@ export const storeBatchGmailMessages = mutation({
     messages: v.array(v.object({
       messageId: v.string(),
       threadId: v.string(),
-      from: v.optional(v.string()),
-      subject: v.optional(v.string()),
-      snippet: v.string(),
+      data: v.any(), // All user-visible info is now inside 'data'
       historyId: v.optional(v.string()),
       internalDate: v.optional(v.number()),
       labelIds: v.optional(v.array(v.string())),
-      payload: v.any(),
       sizeEstimate: v.optional(v.number()),
     })),
   },
@@ -298,24 +245,7 @@ export const storeBatchGmailMessages = mutation({
     try {
       const now = Date.now();
       const results = [];
-      
       for (const message of args.messages) {
-        // Derive 'from' field using the same logic as storeGmailMessage
-        let from = undefined;
-        if (message.payload?.headers) {
-          const headerFrom = message.payload.headers.find((h: any) => h.name && h.name.toLowerCase() === 'from');
-          if (headerFrom && headerFrom.value && headerFrom.value.toLowerCase() !== 'unknown') {
-            from = headerFrom.value;
-          }
-        }
-        if (!from && message.payload?.from && message.payload.from.toLowerCase() !== 'unknown') {
-          from = message.payload.from;
-        }
-        if (!from) {
-          from = 'unknown';
-        }
-
-        // Check if the message already exists
         const existingMessage = await ctx.db
           .query("gmailMessages")
           .withIndex("by_messageId", (q) => q.eq("messageId", message.messageId))
@@ -324,35 +254,26 @@ export const storeBatchGmailMessages = mutation({
             q.eq(q.field("email"), args.email)
           )
           .first();
-
         if (existingMessage) {
-          // Update existing message
           await ctx.db.patch(existingMessage._id, {
-            from,
-            subject: message.subject,
-            snippet: message.snippet,
+            data: message.data,
             historyId: message.historyId,
             internalDate: message.internalDate ? message.internalDate.toString() : undefined,
             labelIds: message.labelIds,
-            data: message.payload,
             sizeEstimate: message.sizeEstimate,
             updatedAt: now,
           });
           results.push({ messageId: message.messageId, status: "updated" });
         } else {
-          // Insert new message
           await ctx.db.insert("gmailMessages", {
             userId: args.userId,
             email: args.email,
             messageId: message.messageId,
             threadId: message.threadId,
-            from,
-            subject: message.subject,
-            snippet: message.snippet,
+            data: message.data,
             historyId: message.historyId,
             internalDate: message.internalDate ? message.internalDate.toString() : undefined,
             labelIds: message.labelIds,
-            data: message.payload,
             sizeEstimate: message.sizeEstimate,
             createdAt: now,
             updatedAt: now,
@@ -360,7 +281,6 @@ export const storeBatchGmailMessages = mutation({
           results.push({ messageId: message.messageId, status: "created" });
         }
       }
-      
       return { success: true, results };
     } catch (error) {
       console.error('Error storing batch Gmail messages:', error);
@@ -384,8 +304,6 @@ export const storeGmailFullProfile = mutation({
       if (!account || !account.email) {
         throw new Error("Account and email are required");
       }
-      
-      // Extract fields from account
       const email = account.email;
       const profile = {
         emailAddress: account.email,
@@ -394,16 +312,12 @@ export const storeGmailFullProfile = mutation({
         historyId: account.historyId,
         labelsTotal: account.labelsTotal,
       };
-
-      // Check if the account already exists
       const existingAccount = await ctx.db
         .query("gmailAccounts")
         .withIndex("by_email", (q) => q.eq("email", email))
         .filter(q => q.eq(q.field("userId"), userId))
         .first();
-        
       if (existingAccount) {
-        // Update existing account
         await ctx.db.patch(existingAccount._id, {
           messagesTotal: profile.messagesTotal,
           threadsTotal: profile.threadsTotal,
@@ -412,7 +326,6 @@ export const storeGmailFullProfile = mutation({
           data: account,
           updatedAt: now,
         });
-        
         // Store messages if provided
         if (Array.isArray(messages)) {
           for (const msg of messages) {
@@ -421,12 +334,8 @@ export const storeGmailFullProfile = mutation({
               console.warn(`Skipping message with undefined messageId: ${JSON.stringify(msg)}`);
               continue;
             }
-            
             const threadId = msg.threadId;
-            const from = msg.payload?.headers?.find((h: any) => h.name.toLowerCase() === 'from')?.value;
-            const subject = msg.payload?.headers?.find((h: any) => h.name.toLowerCase() === 'subject')?.value;
-            const snippet = msg.snippet || '';
-            
+            const data = msg.data || msg; // Expect all user-visible info in data
             const existingMsg = await ctx.db
               .query("gmailMessages")
               .withIndex("by_messageId", (q) => q.eq("messageId", messageId))
@@ -435,66 +344,33 @@ export const storeGmailFullProfile = mutation({
                 q.eq(q.field("email"), email)
               )
               .first();
-            
             if (existingMsg) {
-              // Update existing message
               await ctx.db.patch(existingMsg._id, {
-                from,
-                subject,
-                snippet,
-                data: msg,
+                data,
                 updatedAt: now,
               });
             } else {
-              // Insert new message
               await ctx.db.insert("gmailMessages", {
                 userId,
                 email,
                 messageId,
                 threadId,
-                from,
-                subject,
-                snippet,
-                labelIds: msg.labelIds,
-                historyId: msg.historyId,
-                internalDate: msg.internalDate ? msg.internalDate.toString() : undefined,
-                sizeEstimate: msg.sizeEstimate,
-                data: msg,
+                data,
                 createdAt: now,
                 updatedAt: now,
               });
             }
           }
         }
-        
         // Store threads if provided
         if (Array.isArray(threads)) {
           for (const thread of threads) {
-            // Check for threadId in multiple possible locations
             const threadId = thread.id || thread.threadId || thread.data?.thread_id || thread.resourceId;
             if (!threadId) {
               console.warn(`Skipping thread with undefined threadId: ${JSON.stringify(thread)}`);
               continue;
             }
-            
-            // Extract messages from the thread if available
-            const threadMessages = thread.messages || [];
-            const message_count = threadMessages.length;
-            
-            // Map the messages to the correct format
-            const formattedMessages = threadMessages.map((m: any) => {
-              const from = m.payload?.headers?.find((h: any) => h.name.toLowerCase() === 'from')?.value;
-              const subject = m.payload?.headers?.find((h: any) => h.name.toLowerCase() === 'subject')?.value;
-              
-              return {
-                id: m.id,
-                from,
-                subject,
-                snippet: m.snippet,
-                label_ids: m.labelIds
-              };
-            });
-            
+            const data = thread.data || thread; // Expect all user-visible info in data
             const existingThread = await ctx.db
               .query("gmailThreads")
               .withIndex("by_threadId", (q) => q.eq("threadId", threadId))
@@ -503,36 +379,25 @@ export const storeGmailFullProfile = mutation({
                 q.eq(q.field("email"), email)
               )
               .first();
-            
             if (existingThread) {
-              // Update existing thread
               await ctx.db.patch(existingThread._id, {
-                snippet: thread.snippet,
-                message_count,
-                messages: formattedMessages,
-                data: thread,
+                data,
                 updatedAt: now,
               });
             } else {
-              // Insert new thread
               await ctx.db.insert("gmailThreads", {
                 userId,
                 email,
                 threadId,
-                snippet: thread.snippet,
-                message_count,
-                messages: formattedMessages,
-                data: thread,
+                data,
                 createdAt: now,
                 updatedAt: now,
               });
             }
           }
         }
-        
         return { status: "updated", accountId: existingAccount._id };
       } else {
-        // Insert new account
         const accountId = await ctx.db.insert("gmailAccounts", {
           userId,
           email,
@@ -544,8 +409,6 @@ export const storeGmailFullProfile = mutation({
           createdAt: now,
           updatedAt: now,
         });
-        
-        // Store messages and threads if provided (reusing same code as above)
         if (Array.isArray(messages)) {
           for (const msg of messages) {
             const messageId = msg.id || msg.messageId;
@@ -553,32 +416,19 @@ export const storeGmailFullProfile = mutation({
               console.warn(`Skipping message with undefined messageId: ${JSON.stringify(msg)}`);
               continue;
             }
-            
             const threadId = msg.threadId;
-            const from = msg.payload?.headers?.find((h: any) => h.name.toLowerCase() === 'from')?.value;
-            const subject = msg.payload?.headers?.find((h: any) => h.name.toLowerCase() === 'subject')?.value;
-            const snippet = msg.snippet || '';
-            
-            // No need to check for existing message since this is a new account
+            const data = msg.data || msg;
             await ctx.db.insert("gmailMessages", {
               userId,
               email,
               messageId,
               threadId,
-              from,
-              subject,
-              snippet,
-              labelIds: msg.labelIds,
-              historyId: msg.historyId,
-              internalDate: msg.internalDate ? msg.internalDate.toString() : undefined,
-              sizeEstimate: msg.sizeEstimate,
-              data: msg,
+              data,
               createdAt: now,
               updatedAt: now,
             });
           }
         }
-        
         if (Array.isArray(threads)) {
           for (const thread of threads) {
             const threadId = thread.id || thread.threadId;
@@ -586,40 +436,17 @@ export const storeGmailFullProfile = mutation({
               console.warn(`Skipping thread with undefined threadId: ${JSON.stringify(thread)}`);
               continue;
             }
-            
-            // Extract messages from the thread if available
-            const threadMessages = thread.messages || [];
-            const message_count = threadMessages.length;
-            
-            // Map the messages to the correct format
-            const formattedMessages = threadMessages.map((m: any) => {
-              const from = m.payload?.headers?.find((h: any) => h.name.toLowerCase() === 'from')?.value;
-              const subject = m.payload?.headers?.find((h: any) => h.name.toLowerCase() === 'subject')?.value;
-              
-              return {
-                id: m.id,
-                from,
-                subject,
-                snippet: m.snippet,
-                label_ids: m.labelIds
-              };
-            });
-            
-            // No need to check for existing thread since this is a new account
+            const data = thread.data || thread;
             await ctx.db.insert("gmailThreads", {
               userId,
               email,
               threadId,
-              snippet: thread.snippet,
-              message_count,
-              messages: formattedMessages,
-              data: thread,
+              data,
               createdAt: now,
               updatedAt: now,
             });
           }
         }
-        
         return { status: "created", accountId };
       }
     } catch (error) {

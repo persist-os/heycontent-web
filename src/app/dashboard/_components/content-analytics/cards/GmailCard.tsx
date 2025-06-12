@@ -15,9 +15,7 @@ export const GmailCard: React.FC<GmailCardProps> = ({ item, onDiscussContent, on
   const { content, metrics, publishedAt } = item;
 
   // Get the actual data from the Gmail thread
-  const subject = content.subject || 'No Subject';
-  const from = content.from || 'Unknown Sender';
-  const snippet = content.snippet || 'No preview available';
+  const { subject = 'No Subject', from = 'Unknown Sender', snippet = 'No preview available' } = content.data || {};
   const replyCount = metrics?.replies ?? 0;
 
   // Use the Gmail refresh hook
@@ -25,7 +23,7 @@ export const GmailCard: React.FC<GmailCardProps> = ({ item, onDiscussContent, on
 
   const handleRefresh = async () => {
     // Use the real Gmail thread ID and message ID
-    await refresh(item.content.threadId, item.content.emailId);
+    await refresh(item.content.data.threadId, item.content.data.emailId);
   };
 
   return (
