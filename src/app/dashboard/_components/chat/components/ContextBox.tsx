@@ -24,7 +24,7 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
     const originalPlatform = (context as any).originalPlatform;
     let platformIcon = null;
     if (originalPlatform === 'youtube') {
-      platformIcon = <YouTubeBrandIcon href="https://youtube.com/" />;
+      platformIcon = <YouTubeBrandIcon href="https://youtube.com/" className="w-5 h-29 min-w-[20px] min-h-[20px]" />;
     } else if (originalPlatform === 'instagram') {
       platformIcon = <Instagram className="w-6 h-6 text-pink-500" />;
     } else if (originalPlatform === 'gmail') {
@@ -116,7 +116,7 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
   const getPlatformIcon = () => {
     switch (context.platform) {
       case 'youtube':
-        return <YouTubeBrandIcon href="https://youtube.com/" />;
+        return <YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8" />;
       case 'instagram':
         return <Instagram className="w-5 h-5 text-pink-500" />;
       case 'gmail':

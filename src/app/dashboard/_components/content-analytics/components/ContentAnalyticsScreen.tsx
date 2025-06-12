@@ -446,7 +446,7 @@ export function ContentAnalyticsScreen() {
                     onViewDetailedAnalytics: () => setSelectedContent(item)
                   };
                   if (item.platform === 'instagram') {
-                    return <InstagramCard key={item.id} {...commonProps} item={item as InstagramContentItem} />;
+                    return <InstagramCard key={item.id} {...commonProps} item={item as InstagramContentItem} userId={firebaseUser.uid} />;
                   }
                   if (item.platform === 'youtube') {
                     return <YouTubeCard key={item.id} {...commonProps} item={item as YouTubeContentItem} />;
