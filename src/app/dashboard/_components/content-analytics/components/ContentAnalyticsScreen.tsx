@@ -337,7 +337,7 @@ export function ContentAnalyticsScreen() {
                 snippet: email.snippet || thread.snippet || thread.data?.snippet || 'No preview available',
                 from: email.sender || thread.from || firstMessage?.from || thread.data?.from || 'Unknown Sender',
                 emailType: email.emailType || 'important',
-                threadId: thread._id || thread.id,
+                threadId: thread.threadId,
               },
               metrics: email.metrics || {},
             });
@@ -348,7 +348,7 @@ export function ContentAnalyticsScreen() {
       return gmailThreads.map((thread: any): GmailContentItem => {
         const firstMessage = thread.messages && thread.messages.length > 0 ? thread.messages[0] : null;
         return {
-          id: thread._id || thread.id,
+          id: thread.threadId,
           platform: 'gmail',
           publishedAt: getReceivedDate(null, thread),
           content: {
@@ -356,7 +356,8 @@ export function ContentAnalyticsScreen() {
             snippet: thread.snippet || thread.data?.snippet || 'No preview available',
             from: thread.from || firstMessage?.from || thread.data?.from || 'Unknown Sender' ,
             emailType: thread.emailType || thread.data?.emailType || 'all',
-            threadId: thread._id || thread.id,
+            threadId: thread.threadId,
+            emailId: firstMessage?.id,
           },
           metrics: thread.metrics || {},
         };

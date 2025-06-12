@@ -73,6 +73,7 @@ export interface GmailContentDetails {
   };
   labels?: string[]; // Gmail labels
   threadId?: string; // <-- Add this line to support direct threadId
+  emailId?: string; // <-- Add this line
 }
 export interface GmailMetrics {
   openRate?: number; // Optional - for tracked emails/campaigns

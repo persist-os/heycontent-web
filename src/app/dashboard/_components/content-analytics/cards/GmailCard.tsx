@@ -24,8 +24,8 @@ export const GmailCard: React.FC<GmailCardProps> = ({ item, onDiscussContent, on
   const { refresh, loading, error } = useGmailRefresh();
 
   const handleRefresh = async () => {
-    // Use item.id as threadId, and item.id or user's email as emailId
-    await refresh(item.id, item.id);
+    // Use the real Gmail thread ID and message ID
+    await refresh(item.content.threadId, item.content.emailId);
   };
 
   return (

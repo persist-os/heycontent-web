@@ -532,6 +532,47 @@ app.post("/api/users/:id/gmail/full_profile", async (c) => {
   }
 });
 
+// Store a single Gmail thread for a user
+app.post("/api/users/:id/gmail/thread", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const {
+    email,
+    threadId,
+    snippet,
+    historyId,
+    labelIds,
+    message_count,
+    messages,
+    threadData
+  } = await c.req.json();
+
+  // Fix: Convex does not accept null for labelIds
+  const safeLabelIds = Array.isArray(labelIds) ? labelIds : undefined;
+
+  if (!email || !threadId) {
+    return c.json({ success: false, error: "Missing required fields: email, threadId" }, 400);
+  }
+
+  try {
+    const result = await ctx.runMutation(api.gmailMutations.storeGmailThread, {
+      userId,
+      email,
+      threadId,
+      snippet,
+      historyId,
+      labelIds: safeLabelIds,
+      message_count,
+      messages,
+      threadData
+    });
+    return c.json({ success: true, result });
+  } catch (error) {
+    console.error("Failed to store Gmail thread:", error);
+    return c.json({ success: false, error: `Failed to store Gmail thread: ${error instanceof Error ? error.message : 'Unknown error'}` }, 500);
+  }
+});
+
 // YOUTUBE ROUTES
 
 // Get YouTube tokens for a user

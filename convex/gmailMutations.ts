@@ -738,13 +738,13 @@ export const migrateGmailThreadMessages = mutation({
 
 export const migrateThreadTopLevelFields = mutation({
   args: {},
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
     const threads = await ctx.db.query("gmailThreads").collect();
     let updated = 0;
     for (const thread of threads) {
       const firstMessage = thread.messages && thread.messages.length > 0 ? thread.messages[0] : null;
       const from = firstMessage?.from || '';
-      const subject = firstMessage?.subject || '';
+      const subject = thread.data?.subject || firstMessage?.subject || '';
       const snippet = firstMessage?.snippet || thread.snippet || '';
       await ctx.db.patch(thread._id, { from, subject, snippet });
       updated++;
