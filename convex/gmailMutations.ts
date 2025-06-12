@@ -689,3 +689,42 @@ export const deleteAllGmailDataForUser = mutation({
     return { success: true, itemsDeleted: totalDeleted };
   },
 });
+
+// Migration: Move top-level subject/from/snippet into data and remove top-level fields
+export const migrateGmailMessagesToDataOnly = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const messages = await ctx.db.query("gmailMessages").collect();
+    let updated = 0;
+    for (const msg of messages) {
+      const data = { ...(msg.data || {}) };
+      let needsUpdate = false;
+      // Migrate subject
+      if (!data.subject && msg.subject) {
+        data.subject = msg.subject;
+        needsUpdate = true;
+      }
+      // Migrate from
+      if (!data.from && msg.from) {
+        data.from = msg.from;
+        needsUpdate = true;
+      }
+      // Migrate snippet
+      if (!data.snippet && msg.snippet) {
+        data.snippet = msg.snippet;
+        needsUpdate = true;
+      }
+      if (needsUpdate || msg.subject !== undefined || msg.from !== undefined || msg.snippet !== undefined) {
+        // Remove top-level fields
+        await ctx.db.patch(msg._id, {
+          data,
+          subject: undefined,
+          from: undefined,
+          snippet: undefined,
+        });
+        updated++;
+      }
+    }
+    return { updated };
+  },
+});

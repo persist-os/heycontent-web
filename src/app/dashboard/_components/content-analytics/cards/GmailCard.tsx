@@ -14,8 +14,13 @@ export interface GmailCardProps {
 export const GmailCard: React.FC<GmailCardProps> = ({ item, onDiscussContent, onViewDetailedAnalytics }) => {
   const { content, metrics, publishedAt } = item;
 
-  // Get the actual data from the Gmail thread
-  const { subject = 'No Subject', from = 'Unknown Sender', snippet = 'No preview available' } = content.data || {};
+  // Debug: Log the content to verify data presence
+  console.log(item.content);
+
+  // Get the actual data from the Gmail message, with robust fallbacks for empty strings
+  const subject = content.data?.subject && content.data.subject.trim() !== '' ? content.data.subject : 'No Subject';
+  const from = content.data?.from && content.data.from.trim() !== '' ? content.data.from : 'Unknown Sender';
+  const snippet = content.data?.snippet && content.data.snippet.trim() !== '' ? content.data.snippet : 'No preview available';
   const replyCount = metrics?.replies ?? 0;
 
   // Use the Gmail refresh hook
