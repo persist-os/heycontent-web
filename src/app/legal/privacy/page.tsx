@@ -152,6 +152,17 @@ export default function Privacy() {
           <p>We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last updated" date. You are advised to review this Privacy Policy periodically for any changes.</p>
         </section>
 
+        {/* YouTube API & Google Privacy Policy Section */}
+        <section className="space-y-6 border-t border-gray-200 pt-12">
+          <h2 className="text-3xl font-medium text-gray-900 border-b border-gray-100 pb-3">YouTube API & Google Privacy Policy</h2>
+          <p>
+            Our application uses YouTube API Services. By using HeyContent, you are also agreeing to be bound by the <a href="https://www.youtube.com/t/terms" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">YouTube Terms of Service</a> and the <a href="https://www.google.com/policies/privacy" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">Google Privacy Policy</a>.
+          </p>
+          <p>
+            <strong>Data Deletion and Revoking Access:</strong> You can revoke this application's access to your data at any time via the <a href="https://security.google.com/settings/" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">Google security settings page</a>. If you wish to delete any data stored by our app, please contact us at <a href="mailto:hello@divertissement.ai" className="text-blue-600 hover:underline">hello@divertissement.ai</a> and we will promptly delete your information.
+          </p>
+        </section>
+
         {/* Contact Section */}
         <section className="space-y-6 border-t border-gray-200 pt-12">
           <h2 className="text-3xl font-medium text-gray-900 border-b border-gray-100 pb-3">Contact Us</h2>
