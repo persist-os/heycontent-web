@@ -24,10 +24,18 @@ export const InstagramCardPlaceholder: React.FC = () => (
 
 export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDiscussContent, onViewDetailedAnalytics }) => {
   const { content, metrics, publishedAt } = item;
-  // @ts-ignore: allow children on content for carousel support
-  const children = (item as any)?.children || (item as any)?.content?.children || [];
+  // Access children from the item directly (now passed through from mapping)
+  const children = (item as any)?.children || [];
   const isCarousel = content.mediaType === 'carousel' && Array.isArray(children) && children.length > 0;
   const fallbackImg = '/no-image.png';
+
+  // Debug logging
+  console.log('Instagram Card Debug:', {
+    mediaType: content.mediaType,
+    isCarousel,
+    childrenLength: children.length,
+    children: children.slice(0, 2) // Log first 2 children for debugging
+  });
 
   const { refresh, loading, error } = useInstagramRefresh();
 
@@ -63,11 +71,11 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
       <div className="relative aspect-video bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
         {isCarousel ? (
           <div className="flex flex-row gap-2 overflow-x-auto w-full h-full p-2">
-            {children.filter((c: any) => c.media_type === 'IMAGE').map((child: any, idx: number) => (
+            {children.map((child: any, idx: number) => (
               <img
                 key={child.id || idx}
-                src={child.media_url}
-                alt={content.text || `Instagram Carousel Image ${idx + 1}`}
+                src={child.media_type === 'VIDEO' ? child.thumbnail_url : child.media_url}
+                alt={content.text || `Instagram Carousel Item ${idx + 1}`}
                 className="object-cover rounded-xl shadow-sm"
                 style={{ width: '100%', maxWidth: 220, height: '100%', aspectRatio: '16/9', objectFit: 'cover' }}
                 onError={handleImgError}
@@ -163,13 +171,6 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
             onClick={() => onViewDetailedAnalytics(item)}
           >
             View Analytics
-          </button>
-          
-          <button
-            className="flex-1 px-4 py-2.5 rounded-xl bg-white/80 backdrop-blur-sm border border-gray-200 text-gray-700 font-medium text-sm hover:bg-white hover:border-gray-300 transition-all duration-200"
-            onClick={() => onDiscussContent(item)}
-          >
-            Discuss
           </button>
           
           <button

@@ -15,12 +15,9 @@ import { Calendar, Clock, TrendingUp, BarChart3, RefreshCw } from 'lucide-react'
 import { YouTubeCard } from '../cards/YouTubeCard';
 import { InstagramCard } from '../cards/InstagramCard';
 import { GmailCard } from '../cards/GmailCard';
-import { FilterDropdown } from '../filters/FilterDropdown';
-import { EmailTypeFilter } from '../filters/EmailTypeFilter';
 import { GmailModal } from '../modals/GmailModal';
 import { InstagramModal } from '../modals/InstagramModal';
 import { YoutubeModal } from '../modals/YoutubeModal';
-import { Header } from '../header/Header';
 import { LoadingState } from '../loading/LoadingState';
 
 import {
@@ -572,13 +569,8 @@ export function ContentAnalyticsScreen() {
   const userId = firebaseUser?.uid;
   const router = useRouter();
 
+  // Restore platform selection filter
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformType>('all');
-  const [selectedEmailType, setSelectedEmailType] = useState<TEmailTypeFilter>('all');
-  const [timeRange, setTimeRange] = useState<TimeRange>('90d');
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [filterRef, setFilterRef] = useState<HTMLDivElement | null>(null);
-  const [sortBy, setSortBy] = useState<SortOption>('date');
-  const [filterType, setFilterType] = useState<PlatformFilterType>('all');
   const [selectedContent, setSelectedContent] = useState<AnyContentItem | null>(null);
   const [isTabSwitching, setIsTabSwitching] = useState(false);
 
@@ -707,6 +699,8 @@ export function ContentAnalyticsScreen() {
             permalink: post.data.permalink,
           },
           metrics,
+          // Include children array for carousel posts
+          children: post.data.children || [],
         };
       });
     }
@@ -724,29 +718,13 @@ export function ContentAnalyticsScreen() {
   const gmailItemsArray = mappedGmailItems;
   const instagramItemsArray = mappedInstagramItems;
 
-  // Apply filtering based on selected platform
-  const filteredContent = useMemo(() => {
-    console.log('Debug - selectedPlatform:', selectedPlatform);
-    console.log('Debug - instagramItemsArray length:', instagramItemsArray.length);
-    console.log('Debug - allContentItems length:', allContentItems.length);
-    
+  // Filtering by selected platform
+  const displayItems = useMemo(() => {
     if (selectedPlatform === 'youtube') return youtubeItemsArray;
     if (selectedPlatform === 'gmail') return gmailItemsArray;
     if (selectedPlatform === 'instagram') return instagramItemsArray;
-    
-    const filtered = sortAndFilterContent(
-      allContentItems,
-      selectedPlatform,
-      selectedEmailType,
-      sortBy,
-      timeRange
-    );
-    console.log('Debug - filtered content length:', filtered.length);
-    return filtered;
-  }, [selectedPlatform, youtubeItemsArray, gmailItemsArray, instagramItemsArray, allContentItems, selectedEmailType, sortBy, timeRange]);
-
-  // Final display items
-  const displayItems = filteredContent;
+    return allContentItems;
+  }, [selectedPlatform, youtubeItemsArray, gmailItemsArray, instagramItemsArray, allContentItems]);
 
   const discussContent = (item: AnyContentItem) => {
     // Create a context object with comprehensive content info
@@ -776,16 +754,6 @@ export function ContentAnalyticsScreen() {
     router.push(`/dashboard/chat?contentContext=${encodedContext}`);
   };
 
-  const resetFilters = () => {
-    setSortBy('date');
-    setFilterType('all');
-    setTimeRange('90d');
-    setIsFilterOpen(false);
-  };
-
-  // Show a small spinner if auth is loading, but never gate the whole screen
-  // Optionally, you can show a subtle spinner in the header or avatar area
-
   // Show loading state if not logged in
   if (!firebaseUser) {
     return <LoadingState type="auth" />;
@@ -798,35 +766,17 @@ export function ContentAnalyticsScreen() {
 
   return (
     <div className="relative">
-      <Header
-        timeRange={timeRange}
-        isFilterOpen={isFilterOpen}
-        onTimeRangeChange={setTimeRange}
-        onToggleFilter={() => setIsFilterOpen(!isFilterOpen)}
-        filterRef={setFilterRef}
-      />
-
-      <FilterDropdown
-        isOpen={isFilterOpen}
-        timeRange={timeRange}
-        sortBy={sortBy}
-        filterType={filterType}
-        onTimeRangeChange={setTimeRange}
-        onSortByChange={setSortBy}
-        onFilterTypeChange={setFilterType}
-        onReset={resetFilters}
-      />
-
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
           <Tabs defaultValue="all" className="w-full" onValueChange={(value) => handlePlatformChange(value as PlatformType)}>
             <TabsList className="mb-6">
               <TabsTrigger value="all">All Platforms</TabsTrigger>
-              <TabsTrigger value="gmail">Email</TabsTrigger>
+              <TabsTrigger value="gmail">Gmail</TabsTrigger>
               <TabsTrigger value="instagram">Instagram</TabsTrigger>
               <TabsTrigger value="youtube">YouTube</TabsTrigger>
             </TabsList>
 
+            {/* Instagram analytics only for Instagram tab */}
             {selectedPlatform === 'instagram' && userId && (
               <>
                 {isTabSwitching ? (
@@ -859,16 +809,9 @@ export function ContentAnalyticsScreen() {
               </>
             )}
 
-            {selectedPlatform === 'gmail' && (
-              <EmailTypeFilter
-                selectedEmailType={selectedEmailType}
-                onEmailTypeChange={setSelectedEmailType}
-              />
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredContent.length > 0 ? (
-                filteredContent.map(item => {
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+              {displayItems.length > 0 ? (
+                displayItems.map(item => {
                   const commonProps = {
                     onDiscussContent: () => discussContent(item),
                     onViewDetailedAnalytics: () => setSelectedContent(item)
@@ -886,7 +829,7 @@ export function ContentAnalyticsScreen() {
                 })
               ) : (
                 <div className="col-span-full text-center py-10 text-text-gray dark:text-gray-400">
-                  No content found matching your criteria.
+                  No content found.
                 </div>
               )}
             </div>
