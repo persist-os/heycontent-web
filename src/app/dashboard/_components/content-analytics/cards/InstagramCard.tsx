@@ -78,7 +78,7 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
           content.permalink ? (
             <a href={content.permalink} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
               <img
-                src={content.mediaUrl || content.thumbnailUrl || fallbackImg}
+                src={content.mediaType === 'video' ? content.thumbnailUrl : content.mediaUrl || content.thumbnailUrl || fallbackImg}
                 alt={content.text || 'Instagram Post'}
                 className="w-full h-full object-cover"
                 style={{ aspectRatio: '16/9', objectFit: 'cover', borderRadius: '0.5rem' }}
@@ -136,11 +136,6 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
               <div className="text-xs text-gray-500">Comments</div>
             </div>
           </div>
-        </div>
-
-        <div className="text-sm text-purple-700 dark:text-purple-300 mb-2">
-          {/* AI-generated insight placeholder */}
-          <b>AI Insight:</b> Best time to post for max engagement is 6-8pm. Your carousel posts get 30% more saves!
         </div>
 
         <div className="flex gap-2 mt-2">
