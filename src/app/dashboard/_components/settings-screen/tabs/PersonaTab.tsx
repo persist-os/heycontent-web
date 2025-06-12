@@ -4,9 +4,11 @@ import React, { useEffect, useState } from 'react';
 import { PersonaUpdateManager } from './account/PersonaUpdateManager';
 import { getFirebaseAuth } from '@/app/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
 
 const PersonaTab = () => {
   const [userId, setUserId] = useState<string | undefined>();
+  const router = useRouter();
 
   useEffect(() => {
     let auth;
@@ -24,6 +26,11 @@ const PersonaTab = () => {
     return () => unsubscribe();
   }, []);
 
+  const handleNewPersona = () => {
+    // Navigate to chat with ask param to autosend the persona update message
+    router.push('/dashboard/chat?ask=' + encodeURIComponent('hey content update persona'));
+  };
+
   // Show loading if userId is not yet loaded
   if (!userId) {
     return (
@@ -38,7 +45,7 @@ const PersonaTab = () => {
 
   return (
     <div className="w-full max-w-none">
-      <PersonaUpdateManager userId={userId} />
+      <PersonaUpdateManager userId={userId} renderNewPersonaButton={handleNewPersona} />
     </div>
   );
 };

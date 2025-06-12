@@ -10,9 +10,10 @@ import { PersonaHistoryItem } from './PersonaHistoryItem';
 
 interface PersonaUpdateManagerProps {
   userId: string;
+  renderNewPersonaButton?: () => void;
 }
 
-export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ userId }) => {
+export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ userId, renderNewPersonaButton }) => {
   const {
     currentPersona,
     personaHistory,
@@ -127,6 +128,12 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
             {isEditMode && (
               <Button variant="ghost" size="sm" onClick={handleCancel}>
                 Cancel
+              </Button>
+            )}
+            {/* New Persona Button beside Edit, only if not editing and prop provided */}
+            {!isEditMode && renderNewPersonaButton && (
+              <Button onClick={renderNewPersonaButton} variant="outline" className="text-heycontent-purple border-heycontent-purple hover:bg-heycontent-purple/10" size="sm">
+                New Persona
               </Button>
             )}
           </div>
