@@ -22,7 +22,7 @@ interface AIInsightDisplayCardProps {
 }
 
 const platformIcon = {
-  youtube: <YouTubeBrandIcon href="https://youtube.com/" />,
+  youtube: <YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8" />,
   instagram: <Instagram className="w-5 h-5 text-pink-500" />,
   gmail: <Mail className="w-5 h-5 text-blue-500" />,
 };

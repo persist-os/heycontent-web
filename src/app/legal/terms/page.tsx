@@ -38,6 +38,12 @@ export default function Terms() {
             By accessing or using the Services, you agree that you have read, understood, and agree to be bound by all of these Terms. IF YOU DO NOT AGREE WITH ALL OF THESE TERMS, THEN YOU ARE EXPRESSLY PROHIBITED FROM USING THE SERVICES AND YOU MUST DISCONTINUE USE IMMEDIATELY.
           </p>
           <p>
+            <strong>YouTube Terms of Service:</strong> Our Services use YouTube API Services. By using HeyContent, you also agree to be bound by the <a href="https://www.youtube.com/t/terms" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">YouTube Terms of Service</a>.
+          </p>
+          <p>
+            <strong>Instagram/Meta Platform Terms:</strong> Our Services use Instagram API Services. By using HeyContent, you also agree to be bound by the <a href="https://developers.facebook.com/terms" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">Meta Platform Terms</a> and <a href="https://help.instagram.com/581066165581870" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">Instagram Terms of Use</a>.
+          </p>
+          <p>
             We may update these Terms from time to time. We will alert you about any changes by updating the "Last updated" date at the top of these Terms. It is your responsibility to review these Terms periodically. Your continued use of the Services after any changes constitutes your acceptance of those changes.
           </p>
           <p>

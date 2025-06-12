@@ -204,7 +204,7 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
       <div className="bg-white dark:bg-gray-900 rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <ThreeColumnHeader
-          left={<YouTubeBrandIcon href="https://youtube.com/" />}
+          left={<YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8" />}
           center={
             <div>
               <h2 className="text-lg font-medium text-black dark:text-white">YouTube Analytics</h2>

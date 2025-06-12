@@ -26,9 +26,6 @@ export const YouTubeBrandIcon: React.FC<YouTubeBrandIconProps> = ({
   href,
   newTab = true,
 }) => {
-  // Fixed size of 24px wide, always
-  const iconWidth = 24;
-  const iconHeight = 24 * (63 / 90);
   return (
     <a
       href={href}
@@ -40,8 +37,9 @@ export const YouTubeBrandIcon: React.FC<YouTubeBrandIconProps> = ({
     >
       <svg
         viewBox="0 0 90 63"
-        width={iconWidth}
-        height={iconHeight}
+        width="100%"
+        height="100%"
+        style={{ minWidth: 20, minHeight: 20, display: 'block' }}
         xmlns="http://www.w3.org/2000/svg"
         role="img"
         aria-label="YouTube"
