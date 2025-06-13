@@ -27,7 +27,7 @@ import {
   PlatformFilterType
 } from '../types';
 
-import { sortAndFilterContent } from '../utils';
+import { sortAndFilterContent, sortContent } from '../utils';
 import { useAuth } from '@/app/context/auth-context';
 
 // Skeleton Components
@@ -132,7 +132,6 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
   // Memoized fetch function
   const fetchData = useCallback(async () => {
     if (!instagramAccount) {
-      console.log('🚫 [SKELETON DEBUG] No Instagram account, ending skeleton immediately');
       setLoading(false);
       setIsInitialMount(false);
       setRenderComplete(true);
@@ -140,7 +139,6 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
       return;
     }
 
-    console.log('⏳ [SKELETON DEBUG] Starting fetch, skeleton should be showing...');
     const fetchStartTime = Date.now();
     setLoading(true);
     setRenderComplete(false); // Reset render complete state
@@ -153,10 +151,8 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
       // Check if we have data in Convex
       if (trackerAnalysis !== undefined) {
         if (trackerAnalysis) {
-          console.log('💾 [SKELETON DEBUG] Found cached Convex data, waiting minimum time...');
           await minLoadingTime; // Ensure skeleton shows for at least 300ms
           const totalTime = Date.now() - fetchStartTime;
-          console.log(`✅ [SKELETON DEBUG] Using cached data, skeleton was visible for ${totalTime}ms`);
           setAnalysis(trackerAnalysis);
           setLoading(false);
           setIsInitialMount(false);
@@ -165,7 +161,6 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
         }
       }
 
-      console.log('🌐 [SKELETON DEBUG] No cached data, fetching from backend...');
       const response = await fetch(`${window.location.origin}/api/social/instagram/analytics`, {
         method: 'POST',
         headers: {
@@ -182,34 +177,22 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
       }
 
       const data = await response.json();
-      console.log('📊 [SKELETON DEBUG] Received backend data, waiting minimum time...');
-      console.log('🔍 [DATA DEBUG] Full backend response:', data);
-      console.log('🔍 [DATA DEBUG] Checking data.analysis:', data?.analysis);
-      console.log('🔍 [DATA DEBUG] Checking data.analysis.full_analysis:', data?.analysis?.full_analysis);
-      console.log('🔍 [DATA DEBUG] Checking data.analysis.full_analysis.content:', data?.analysis?.full_analysis?.content);
       
       await minLoadingTime; // Ensure skeleton shows for at least 200ms
       const totalTime = Date.now() - fetchStartTime;
-      console.log(`✅ [SKELETON DEBUG] Backend fetch complete, skeleton was visible for ${totalTime}ms`);
       
       if (data?.analysis?.full_analysis?.content) {
-        console.log('✅ [DATA DEBUG] Found expected data structure, setting analysis');
         setAnalysis(data.analysis.full_analysis.content);
       } else if (data?.analysis) {
-        console.log('⚠️ [DATA DEBUG] Found data.analysis but not full_analysis.content, trying data.analysis');
         setAnalysis(data.analysis);
       } else if (data?.content) {
-        console.log('⚠️ [DATA DEBUG] Found data.content, trying that');
         setAnalysis(data.content);
       } else {
-        console.log('❌ [DATA DEBUG] No analysis data found in any expected location');
-        console.log('🔍 [DATA DEBUG] Available keys in response:', Object.keys(data || {}));
+        // No analysis data found
       }
     } catch (err) {
-      console.error('❌ [SKELETON DEBUG] Error occurred:', err);
       await minLoadingTime; // Ensure skeleton shows even on error
       const totalTime = Date.now() - fetchStartTime;
-      console.log(`🚫 [SKELETON DEBUG] Error state, skeleton was visible for ${totalTime}ms`);
       setError(err instanceof Error ? err.message : 'Failed to fetch Instagram analysis');
     } finally {
       setLoading(false);
@@ -219,14 +202,12 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
   }, [userId, instagramAccount, trackerAnalysis]);
 
   useEffect(() => {
-    console.log('🔄 [SKELETON DEBUG] Instagram Analytics component mounted/updated');
     fetchData();
   }, [fetchData]);
 
   // Memoized pie chart data calculation
   const mediaDistributionData = useMemo(() => {
     if (!analysis?.media_distribution) {
-      console.log('📊 [PIE CHART DEBUG] No media distribution data available');
       return [];
     }
     
@@ -236,7 +217,6 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
       { name: 'Reels', value: parseInt(analysis.media_distribution.reel?.replace('%', '') || '0'), color: '#45E290' }
     ].filter(item => item.value > 0);
     
-    console.log('🥧 [PIE CHART DEBUG] Pie chart data calculated:', data);
     return data;
   }, [analysis?.media_distribution]);
 
@@ -253,18 +233,15 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
     if (shouldShowSkeleton && !skeletonStartTime) {
       const startTime = Date.now();
       setSkeletonStartTime(startTime);
-      console.log('💀 [SKELETON DEBUG] Skeleton started showing at:', new Date(startTime).toLocaleTimeString());
     } else if (!shouldShowSkeleton && skeletonStartTime) {
       const endTime = Date.now();
       const duration = endTime - skeletonStartTime;
-      console.log(`💀 [SKELETON DEBUG] Skeleton stopped showing at: ${new Date(endTime).toLocaleTimeString()}, Total duration: ${duration}ms`);
       setSkeletonStartTime(null);
     }
   }, [loading, isInitialMount, renderComplete, contentReady, skeletonStartTime]);
 
   // Handle render completion
   const handleRenderComplete = useCallback(() => {
-    console.log('🎨 [RENDER DEBUG] Render complete - hiding skeleton');
     setRenderComplete(true);
     setContentReady(true);
   }, []);
@@ -274,7 +251,6 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
     if (!loading && !isInitialMount && analysis) {
       if (!analysis.media_distribution || mediaDistributionData.length === 0) {
         // No pie chart to wait for, set content ready after short delay
-        console.log('🎨 [RENDER DEBUG] No pie chart - setting content ready after delay');
         const timer = setTimeout(() => {
           setContentReady(true);
           handleRenderComplete();
@@ -282,7 +258,6 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
         return () => clearTimeout(timer);
       } else {
         // Has pie chart - set content ready immediately, but wait for animation to complete for renderComplete
-        console.log('🎨 [RENDER DEBUG] Has pie chart - setting content ready, waiting for animation');
         setContentReady(true);
       }
     }
@@ -290,7 +265,6 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
 
   // Show skeleton on initial mount, loading, or while render is not complete
   if (loading || isInitialMount || !renderComplete || !contentReady) {
-    console.log('💀 [SKELETON DEBUG] Rendering skeleton - loading:', loading, 'isInitialMount:', isInitialMount, 'renderComplete:', renderComplete, 'contentReady:', contentReady);
     return (
       <div className="space-y-6 mb-8">
         {/* Header with Refresh Button */}
@@ -318,7 +292,6 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
 
   // Show loading state while waiting for Instagram account to load
   if (instagramAccount === undefined) {
-    console.log('⏳ [SKELETON DEBUG] Waiting for Instagram account to load...');
     return (
       <div className="space-y-6 mb-8">
         <div className="flex justify-between items-center">
@@ -342,7 +315,6 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
 
   // Show error if no Instagram account found
   if (instagramAccount === null) {
-    console.log('❌ [SKELETON DEBUG] No Instagram account found');
     return (
       <div className="text-center text-gray-500 p-4 mb-8">
         <p>No Instagram account connected</p>
@@ -353,7 +325,6 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
 
   // Show loading state while waiting for tracker analysis query to complete
   if (trackerAnalysis === undefined) {
-    console.log('⏳ [SKELETON DEBUG] Waiting for tracker analysis query to complete...');
     return (
       <div className="space-y-6 mb-8">
         <div className="flex justify-between items-center">
@@ -376,7 +347,6 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
   }
 
   if (error) {
-    console.log('❌ [SKELETON DEBUG] Rendering error state');
     return (
       <div className="text-center text-red-500 p-4 mb-8">
         <p>Error: {error}</p>
@@ -386,7 +356,6 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
   }
 
   if (!analysis) {
-    console.log('⚠️ [SKELETON DEBUG] Rendering no data state');
     return (
       <div className="text-center text-gray-500 p-4 mb-8">
         <p>No Instagram analysis available</p>
@@ -395,7 +364,6 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
     );
   }
 
-  console.log('✨ [SKELETON DEBUG] Rendering actual content with analysis data');
   return (
     <div className="space-y-6 mb-8">
       {/* Header with Refresh Button */}
@@ -517,9 +485,8 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
                       outerRadius={40}
                       paddingAngle={2}
                       dataKey="value"
-                      onAnimationStart={() => console.log('🥧 [PIE CHART DEBUG] Pie chart animation started')}
+                      onAnimationStart={() => {}}
                       onAnimationEnd={() => {
-                        console.log('🥧 [PIE CHART DEBUG] Pie chart animation completed');
                         handleRenderComplete();
                       }}
                     >
@@ -576,15 +543,11 @@ export function ContentAnalyticsScreen() {
 
   // Handle tab switching with immediate skeleton
   const handlePlatformChange = useCallback((value: PlatformType) => {
-    console.log('🔄 [TAB DEBUG] Switching to platform:', value);
-    
     if (value === 'instagram') {
-      console.log('💀 [TAB DEBUG] Switching to Instagram - showing immediate skeleton');
       setIsTabSwitching(true);
       
       // Show skeleton for minimum time, then let component take over
       setTimeout(() => {
-        console.log('💀 [TAB DEBUG] Tab switching skeleton timeout - letting component take over');
         setIsTabSwitching(false);
       }, 600); // Show for 600ms minimum
     }
@@ -720,10 +683,20 @@ export function ContentAnalyticsScreen() {
 
   // Filtering by selected platform
   const displayItems = useMemo(() => {
-    if (selectedPlatform === 'youtube') return youtubeItemsArray;
-    if (selectedPlatform === 'gmail') return gmailItemsArray;
-    if (selectedPlatform === 'instagram') return instagramItemsArray;
-    return allContentItems;
+    let items: AnyContentItem[] = [];
+    
+    if (selectedPlatform === 'youtube') {
+      items = youtubeItemsArray;
+    } else if (selectedPlatform === 'gmail') {
+      items = gmailItemsArray;
+    } else if (selectedPlatform === 'instagram') {
+      items = instagramItemsArray;
+    } else {
+      items = allContentItems;
+    }
+    
+    // Apply only date sorting without additional filtering since we already filtered by platform above
+    return sortContent(items, 'date');
   }, [selectedPlatform, youtubeItemsArray, gmailItemsArray, instagramItemsArray, allContentItems]);
 
   const discussContent = (item: AnyContentItem) => {
