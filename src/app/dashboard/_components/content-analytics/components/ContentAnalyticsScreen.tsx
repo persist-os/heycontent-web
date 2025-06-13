@@ -279,7 +279,7 @@ export function ContentAnalyticsScreen() {
   const mappedYouTubeItems: YouTubeContentItem[] = useMemo(() => {
     if (youtubeVideos && Array.isArray(youtubeVideos)) {
       return youtubeVideos.map((video: any) => ({
-        id: video.id || '',
+        id: `youtube-${video.id || ''}`,
         platform: 'youtube',
         publishedAt: video.publishedAt || new Date().toISOString(),
         content: {
@@ -317,12 +317,14 @@ export function ContentAnalyticsScreen() {
   const mappedGmailItems = useMemo(() => {
     if (Array.isArray(gmailThreads)) {
       const importantEmails: any[] = [];
-      gmailThreads.forEach((thread: any) => {
+      gmailThreads.forEach((thread: any, threadIndex: number) => {
         if (thread.analysis && Array.isArray(thread.analysis.important_emails)) {
-          thread.analysis.important_emails.forEach((email: any) => {
+          thread.analysis.important_emails.forEach((email: any, emailIndex: number) => {
             const firstMessage = thread.messages && thread.messages.length > 0 ? thread.messages[0] : null;
+            // Ensure unique ID by prefixing with 'important-' and including indices
+            const uniqueId = `gmail-important-${thread.threadId || thread._id || thread.id}-${emailIndex}`;
             importantEmails.push({
-              id: email.id || thread._id || thread.id,
+              id: uniqueId,
               platform: 'gmail',
               publishedAt: getReceivedDate(email, thread),
               content: {
@@ -341,11 +343,13 @@ export function ContentAnalyticsScreen() {
         }
       });
       if (importantEmails.length > 0) return importantEmails;
-      return gmailThreads.map((thread: any): GmailContentItem => {
+      return gmailThreads.map((thread: any, index: number): GmailContentItem => {
         const firstMessage = thread.data?.messages?.[0] || thread.messages?.[0];
         console.log('THREAD DATA:', thread.data, 'TOP-LEVEL:', thread.subject, thread.from, 'FIRST MESSAGE:', firstMessage);
+        // Ensure unique ID by using threadId with fallback to index
+        const uniqueId = `gmail-${thread.threadId || `thread-${thread._id || thread.id || index}`}`;
         return {
-          id: thread.threadId,
+          id: uniqueId,
           platform: 'gmail',
           publishedAt: getReceivedDate(null, thread),
           content: {
@@ -395,7 +399,7 @@ export function ContentAnalyticsScreen() {
         };
 
         return {
-          id: postId,
+          id: `instagram-${postId}`,
           platform: 'instagram',
           publishedAt: post.data.timestamp ? new Date(post.data.timestamp).toISOString() : new Date().toISOString(),
           content: {
@@ -490,19 +494,21 @@ export function ContentAnalyticsScreen() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
               {displayItems.length > 0 ? (
-                displayItems.map(item => {
+                displayItems.map((item, index) => {
+                  // Ensure absolutely unique keys by combining platform, id, and index
+                  const uniqueKey = `${item.platform}-${item.id}-${index}`;
                   const commonProps = {
                     onDiscussContent: () => discussContent(item),
                     onViewDetailedAnalytics: () => setSelectedContent(item)
                   };
                   if (item.platform === 'instagram') {
-                    return <InstagramCard key={item.id} {...commonProps} item={item as InstagramContentItem} userId={firebaseUser.uid} />;
+                    return <InstagramCard key={uniqueKey} {...commonProps} item={item as InstagramContentItem} userId={firebaseUser.uid} />;
                   }
                   if (item.platform === 'youtube') {
-                    return <YouTubeCard key={item.id} {...commonProps} item={item as YouTubeContentItem} />;
+                    return <YouTubeCard key={uniqueKey} {...commonProps} item={item as YouTubeContentItem} />;
                   }
                   if (item.platform === 'gmail') {
-                    return <GmailCard key={item.id} {...commonProps} item={item as GmailContentItem} />;
+                    return <GmailCard key={uniqueKey} {...commonProps} item={item as GmailContentItem} />;
                   }
                   return null;
                 })

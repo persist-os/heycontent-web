@@ -119,13 +119,13 @@ export function ChatInput({
             <div className={`flex items-center gap-2 text-xs p-3 rounded-lg border ${
               hasAnalysis 
                 ? 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-700'
-                : 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-700'
+                : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700'
             }`}>
               <Brain className="w-4 h-4 flex-shrink-0" />
               <span>
                 {hasAnalysis 
                   ? `AI analysis for this ${contextPlatform} content will be included as context`
-                  : `Discussing ${contextPlatform} content (analysis context disabled)`
+                  : `Discussing ${contextPlatform} content`
                 }
               </span>
             </div>
