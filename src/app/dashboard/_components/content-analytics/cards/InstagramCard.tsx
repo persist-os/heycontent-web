@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Instagram, Users, RefreshCw, MessageSquare, Heart, Forward } from 'lucide-react';
 
@@ -28,6 +28,20 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
   const children = (item as any)?.children || [];
   const isCarousel = content.mediaType === 'carousel' && Array.isArray(children) && children.length > 0;
   const fallbackImg = '/no-image.png';
+
+  // Carousel state
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Auto-slide effect for carousels
+  useEffect(() => {
+    if (!isCarousel || children.length <= 1) return;
+
+    const slideInterval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % children.length);
+    }, 3000); // Change slide every 3 seconds
+
+    return () => clearInterval(slideInterval);
+  }, [isCarousel, children.length]);
 
   const { refresh, loading, error } = useInstagramRefresh();
 
@@ -62,17 +76,47 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
     <Card key={item.id} className="overflow-hidden bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl hover:shadow-xl transition-all duration-300 group">
       <div className="relative aspect-video bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
         {isCarousel ? (
-          <div className="flex flex-row gap-2 overflow-x-auto w-full h-full p-2">
+          <div className="relative w-full h-full">
             {children.map((child: any, idx: number) => (
-              <img
+              <div
                 key={child.id || idx}
-                src={child.media_type === 'VIDEO' ? child.thumbnail_url : child.media_url}
-                alt={content.text || `Instagram Carousel Item ${idx + 1}`}
-                className="object-cover rounded-xl shadow-sm"
-                style={{ width: '100%', maxWidth: 220, height: '100%', aspectRatio: '16/9', objectFit: 'cover' }}
-                onError={handleImgError}
-              />
+                className={`absolute inset-0 transition-all duration-500 ease-in-out ${
+                  idx === currentSlide 
+                    ? 'opacity-100 translate-x-0 scale-100' 
+                    : idx < currentSlide 
+                      ? 'opacity-0 -translate-x-full scale-95'
+                      : 'opacity-0 translate-x-full scale-95'
+                }`}
+              >
+                <img
+                  src={child.media_type === 'VIDEO' ? child.thumbnail_url : child.media_url}
+                  alt={content.text || `Instagram Carousel Item ${idx + 1}`}
+                  className="w-full h-full object-cover"
+                  style={{ aspectRatio: '16/9', objectFit: 'cover' }}
+                  onError={handleImgError}
+                />
+              </div>
             ))}
+            
+            {/* Carousel indicators */}
+            <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex gap-2">
+              {children.map((_: any, idx: number) => (
+                <div
+                  key={idx}
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    idx === currentSlide 
+                      ? 'bg-white shadow-lg scale-110' 
+                      : 'bg-white/50 hover:bg-white/70'
+                  }`}
+                  onClick={() => setCurrentSlide(idx)}
+                />
+              ))}
+            </div>
+
+            {/* Slide counter */}
+            <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium text-white">
+              {currentSlide + 1} / {children.length}
+            </div>
           </div>
         ) : (
           content.permalink ? (
@@ -97,14 +141,23 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
         )}
 
         {/* Media Type Badge */}
-        <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium text-white capitalize">
+        <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium text-white capitalize">
           {content.mediaType}
         </div>
         
-        {/* Date Badge */}
-        <div className="absolute top-3 right-3 bg-white/80 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium text-gray-700">
-          {publishedAt ? formatTimestamp(publishedAt) : ''}
-        </div>
+        {/* Date Badge - only show if not carousel (carousel has slide counter) */}
+        {!isCarousel && (
+          <div className="absolute top-3 left-3 bg-white/80 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium text-gray-700">
+            {publishedAt ? formatTimestamp(publishedAt) : ''}
+          </div>
+        )}
+
+        {/* Date Badge for carousel - positioned differently to avoid conflict with slide counter */}
+        {isCarousel && (
+          <div className="absolute bottom-3 right-3 bg-white/80 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium text-gray-700">
+            {publishedAt ? formatTimestamp(publishedAt) : ''}
+          </div>
+        )}
 
         {/* Gradient Overlay for better text readability */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
