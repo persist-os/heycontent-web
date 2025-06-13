@@ -322,6 +322,26 @@ export const getInstagramTrackerAnalysis = query({
     const { userId, instagramAccountId } = args;
 
     try {
+      console.log('[getInstagramTrackerAnalysis] Querying with:', { userId, instagramAccountId });
+      
+      // First check if there are any tracker analyses at all
+      const allAnalyses = await ctx.db
+        .query("instagramTrackerAnalysis")
+        .collect();
+      console.log('[getInstagramTrackerAnalysis] Total analyses in DB:', allAnalyses.length);
+      
+      // Log analyses for this user
+      const userAnalyses = await ctx.db
+        .query("instagramTrackerAnalysis")
+        .withIndex("by_userId", q => q.eq("userId", userId))
+        .collect();
+      console.log('[getInstagramTrackerAnalysis] User analyses:', userAnalyses.length, userAnalyses.map(a => ({
+        userId: a.userId,
+        instagramAccountId: a.instagramAccountId,
+        hasAnalysis: !!a.analysis,
+        createdAt: a.createdAt
+      })));
+
       const analysis = await ctx.db
         .query("instagramTrackerAnalysis")
         .withIndex("by_user_account", q => 
@@ -329,6 +349,15 @@ export const getInstagramTrackerAnalysis = query({
            .eq("instagramAccountId", instagramAccountId)
         )
         .first();
+
+      console.log('[getInstagramTrackerAnalysis] Found analysis:', analysis ? {
+        userId: analysis.userId,
+        instagramAccountId: analysis.instagramAccountId,
+        hasAnalysis: !!analysis.analysis,
+        analysisKeys: analysis.analysis ? Object.keys(analysis.analysis) : null,
+        createdAt: analysis.createdAt,
+        updatedAt: analysis.updatedAt
+      } : 'No analysis found');
 
       return analysis?.analysis || null;
     } catch (error) {
