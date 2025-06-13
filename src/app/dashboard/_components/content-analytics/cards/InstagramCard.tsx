@@ -29,14 +29,6 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
   const isCarousel = content.mediaType === 'carousel' && Array.isArray(children) && children.length > 0;
   const fallbackImg = '/no-image.png';
 
-  // Debug logging
-  console.log('Instagram Card Debug:', {
-    mediaType: content.mediaType,
-    isCarousel,
-    childrenLength: children.length,
-    children: children.slice(0, 2) // Log first 2 children for debugging
-  });
-
   const { refresh, loading, error } = useInstagramRefresh();
 
   const handleImgError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
