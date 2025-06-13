@@ -123,15 +123,23 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
   // Get Instagram tracker analysis from Convex
   const trackerAnalysis = useQuery(
     api.instagramQueries.getInstagramTrackerAnalysis,
-    {
+    instagramAccount?.instagramAccountId ? {
       userId,
-      instagramAccountId: instagramAccount?.instagramAccountId || ""
-    }
+      instagramAccountId: instagramAccount.instagramAccountId
+    } : "skip"
   );
 
   // Memoized fetch function
   const fetchData = useCallback(async () => {
+    console.log('🚀 Instagram Analytics fetchData called with:', {
+      userId,
+      instagramAccount,
+      trackerAnalysis: trackerAnalysis !== undefined ? 'loaded' : 'loading',
+      trackerAnalysisValue: trackerAnalysis
+    });
+    
     if (!instagramAccount) {
+      console.log('⚠️ No Instagram account found, skipping analytics fetch');
       setLoading(false);
       setIsInitialMount(false);
       setRenderComplete(true);
@@ -150,15 +158,29 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
     try {
       // Check if we have data in Convex
       if (trackerAnalysis !== undefined) {
-        if (trackerAnalysis) {
-          await minLoadingTime; // Ensure skeleton shows for at least 300ms
+        if (trackerAnalysis && Object.keys(trackerAnalysis).length > 0) {
+          await minLoadingTime; // Ensure skeleton shows for at least 200ms
           const totalTime = Date.now() - fetchStartTime;
-          setAnalysis(trackerAnalysis);
+          console.log('✅ Using cached tracker analysis from Convex:', trackerAnalysis);
+          
+          // Extract the content from the tracker analysis if it's nested
+          let analysisToSet = trackerAnalysis;
+          if (trackerAnalysis.content && !trackerAnalysis.last_post) {
+            // If the analysis has a 'content' property but no direct 'last_post', extract the content
+            analysisToSet = trackerAnalysis.content;
+            console.log('🔧 Extracted content from nested structure:', analysisToSet);
+          }
+          
+          setAnalysis(analysisToSet);
           setLoading(false);
           setIsInitialMount(false);
           // Don't set renderComplete or contentReady here - let the render finish first
           return;
+        } else {
+          console.log('⚠️ Tracker analysis from Convex is null or empty, falling back to API call');
         }
+      } else {
+        console.log('🔄 Tracker analysis still loading from Convex...');
       }
 
       const response = await fetch(`${window.location.origin}/api/social/instagram/analytics`, {
@@ -181,18 +203,75 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
       await minLoadingTime; // Ensure skeleton shows for at least 200ms
       const totalTime = Date.now() - fetchStartTime;
       
-      if (data?.analysis?.full_analysis?.content) {
-        setAnalysis(data.analysis.full_analysis.content);
-      } else if (data?.analysis) {
-        setAnalysis(data.analysis);
-      } else if (data?.content) {
-        setAnalysis(data.content);
+      // Add detailed debugging for response structure
+      console.log('🔍 Instagram Analytics API Response Debug:', {
+        fullResponse: data,
+        hasAnalysis: !!data?.analysis,
+        hasData: !!data?.data,
+        hasContent: !!data?.content,
+        analysisType: data?.analysis ? typeof data.analysis : 'undefined',
+        dataType: data?.data ? typeof data.data : 'undefined',
+        contentType: data?.content ? typeof data.content : 'undefined',
+        analysisKeys: data?.analysis ? Object.keys(data.analysis) : null,
+        dataKeys: data?.data ? Object.keys(data.data) : null,
+        contentKeys: data?.content ? Object.keys(data.content) : null
+      });
+      
+      // Fixed response processing logic - handle backend response structure correctly
+      let analysisToSet = null;
+      
+      // Backend returns { status: "success", data: {...} } format
+      if (data?.status === 'success' && data?.data) {
+        // Check if data has nested content structure
+        if (data.data.content && !data.data.last_post) {
+          analysisToSet = data.data.content;
+          console.log('✅ Using nested content from status.success response:', analysisToSet);
+        } else {
+          analysisToSet = data.data;
+          console.log('✅ Using data from status.success response:', analysisToSet);
+        }
+      }
+      // Fallback: check for direct analysis property
+      else if (data?.analysis) {
+        // Handle nested analysis structures
+        if (data.analysis.full_analysis?.content) {
+          analysisToSet = data.analysis.full_analysis.content;
+          console.log('✅ Using nested full_analysis.content:', analysisToSet);
+        } else if (data.analysis.content) {
+          analysisToSet = data.analysis.content;
+          console.log('✅ Using analysis.content:', analysisToSet);
+        } else {
+          analysisToSet = data.analysis;
+          console.log('✅ Using direct analysis:', analysisToSet);
+        }
+      }
+      // Fallback: check for direct content property
+      else if (data?.content) {
+        analysisToSet = data.content;
+        console.log('✅ Using direct content:', analysisToSet);
+      }
+      
+      if (analysisToSet) {
+        setAnalysis(analysisToSet);
+        console.log('✅ Successfully set analysis data:', {
+          hasLastPost: !!analysisToSet.last_post,
+          hasPostingFrequency: !!analysisToSet.posting_frequency,
+          hasMediaDistribution: !!analysisToSet.media_distribution,
+          actualStructure: {
+            last_post: analysisToSet.last_post ? 'exists' : 'missing',
+            posting_frequency: analysisToSet.posting_frequency ? 'exists' : 'missing', 
+            media_distribution: analysisToSet.media_distribution ? 'exists' : 'missing',
+            allKeys: Object.keys(analysisToSet)
+          }
+        });
       } else {
-        // No analysis data found
+        console.warn('⚠️ No valid analysis data found in response');
+        setError('No analysis data available');
       }
     } catch (err) {
       await minLoadingTime; // Ensure skeleton shows even on error
       const totalTime = Date.now() - fetchStartTime;
+      console.error('❌ Instagram analytics fetch error:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch Instagram analysis');
     } finally {
       setLoading(false);
@@ -248,23 +327,38 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
 
   // Set content ready and render complete after analysis is available
   useEffect(() => {
+    console.log('🎯 Render completion check:', {
+      loading,
+      isInitialMount,
+      hasAnalysis: !!analysis,
+      analysisKeys: analysis ? Object.keys(analysis) : null,
+      mediaDistributionLength: mediaDistributionData.length,
+      currentContentReady: contentReady,
+      currentRenderComplete: renderComplete
+    });
+    
     if (!loading && !isInitialMount && analysis) {
-      if (!analysis.media_distribution || mediaDistributionData.length === 0) {
-        // No pie chart to wait for, set content ready after short delay
-        const timer = setTimeout(() => {
-          setContentReady(true);
-          handleRenderComplete();
-        }, 100);
-        return () => clearTimeout(timer);
-      } else {
-        // Has pie chart - set content ready immediately, but wait for animation to complete for renderComplete
-        setContentReady(true);
-      }
+      console.log('🚀 Setting content ready and render complete');
+      setContentReady(true);
+      setRenderComplete(true);
     }
-  }, [loading, isInitialMount, analysis, mediaDistributionData.length, handleRenderComplete]);
+  }, [loading, isInitialMount, analysis, mediaDistributionData.length, contentReady, renderComplete]);
 
   // Show skeleton on initial mount, loading, or while render is not complete
   if (loading || isInitialMount || !renderComplete || !contentReady) {
+    console.log('💀 Showing skeleton because:', {
+      loading,
+      isInitialMount,
+      renderComplete,
+      contentReady,
+      hasAnalysis: !!analysis,
+      analysisStructure: analysis ? {
+        hasLastPost: !!analysis.last_post,
+        hasPostingFrequency: !!analysis.posting_frequency,
+        hasMediaDistribution: !!analysis.media_distribution
+      } : null
+    });
+    
     return (
       <div className="space-y-6 mb-8">
         {/* Header with Refresh Button */}
