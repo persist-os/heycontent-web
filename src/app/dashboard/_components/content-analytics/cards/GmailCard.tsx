@@ -15,20 +15,24 @@ export const GmailCard: React.FC<GmailCardProps> = ({ item, onDiscussContent, on
   const { content, metrics, publishedAt } = item;
 
   // Debug: Log the content to verify data presence
-  console.log(item.content);
+  console.log('GmailCard item.content:', item.content);
 
-  // Get the actual data from the Gmail message, with robust fallbacks for empty strings
-  const subject = content.data?.subject && content.data.subject.trim() !== '' ? content.data.subject : 'No Subject';
-  const from = content.data?.from && content.data.from.trim() !== '' ? content.data.from : 'Unknown Sender';
-  const snippet = content.data?.snippet && content.data.snippet.trim() !== '' ? content.data.snippet : 'No preview available';
+  // Access the data that's been properly mapped in ContentAnalyticsScreen
+  const subject = content.data?.subject || 'No Subject';
+  const from = content.data?.from || 'Unknown Sender';
+  const snippet = content.data?.snippet || 'No preview available';
   const replyCount = metrics?.replies ?? 0;
 
   // Use the Gmail refresh hook
   const { refresh, loading, error } = useGmailRefresh();
 
   const handleRefresh = async () => {
-    // Use the real Gmail thread ID and message ID
-    await refresh(item.content.data.threadId, item.content.data.emailId);
+    // Use the correct threadId from the data structure and the first message ID
+    const threadId = content.data?.threadId;
+    const messageId = content.data?.emailId;
+    if (threadId && messageId) {
+      await refresh(threadId, messageId);
+    }
   };
 
   return (

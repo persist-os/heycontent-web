@@ -60,11 +60,11 @@ export interface YouTubeContentItem extends BaseContentItem {
 
 // Gmail Email
 export interface GmailContentData {
-  subject: string;
+  subject?: string; // Making optional since it might be in messages array
   snippet?: string; // Body preview
-  from?: string; // Sender email/name
+  from?: string; // Sender email/name - Making optional since it might be in messages array
   recipients?: number; // Count of recipients
-  emailType: 'newsletter' | 'partnership' | 'individual' | 'other';
+  emailType?: 'newsletter' | 'partnership' | 'individual' | 'other';
   partnerName?: string;
   thread?: {
     threadId: string;
@@ -74,6 +74,15 @@ export interface GmailContentData {
   labels?: string[];
   threadId?: string;
   emailId?: string;
+  // Add the actual structure from Convex
+  messageCount?: number;
+  messages?: Array<{
+    from: string;
+    id: string;
+    label_ids: string[];
+    snippet: string;
+    subject: string;
+  }>;
 }
 export interface GmailContentDetails {
   data: GmailContentData;

@@ -342,20 +342,22 @@ export function ContentAnalyticsScreen() {
       });
       if (importantEmails.length > 0) return importantEmails;
       return gmailThreads.map((thread: any): GmailContentItem => {
-        const firstMessage = thread.messages && thread.messages.length > 0 ? thread.messages[0] : null;
-        console.log('THREAD DATA:', thread.data, 'TOP-LEVEL:', thread.subject, thread.from);
+        const firstMessage = thread.data?.messages?.[0] || thread.messages?.[0];
+        console.log('THREAD DATA:', thread.data, 'TOP-LEVEL:', thread.subject, thread.from, 'FIRST MESSAGE:', firstMessage);
         return {
           id: thread.threadId,
           platform: 'gmail',
           publishedAt: getReceivedDate(null, thread),
           content: {
             data: {
-              subject: thread.data?.subject || thread.subject || firstMessage?.subject || 'No Subject',
+              subject: firstMessage?.subject || thread.data?.subject || thread.subject || 'No Subject',
               snippet: thread.data?.snippet || thread.snippet || 'No preview available',
-              from: thread.data?.from || thread.from || firstMessage?.from || 'Unknown Sender',
+              from: firstMessage?.from || thread.data?.from || thread.from || 'Unknown Sender',
               emailType: thread.data?.emailType || 'all',
               threadId: thread.threadId,
               emailId: firstMessage?.id,
+              messageCount: thread.data?.messageCount || thread.messageCount,
+              messages: thread.data?.messages || thread.messages,
             }
           },
           metrics: thread.metrics || {},
