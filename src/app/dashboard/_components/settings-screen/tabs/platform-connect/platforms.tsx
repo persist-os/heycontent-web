@@ -1,4 +1,10 @@
-import { Instagram, Youtube, Video, Mail } from 'lucide-react';
+import React from 'react';
+import { Instagram, Video, Mail } from 'lucide-react';
+import { YouTubeBrandIcon } from '../../../YoutubeBrandIcon';
+
+function YoutubePlatformIcon(props) {
+  return <YouTubeBrandIcon href="https://youtube.com/" className="w-6 h-6" {...props} />;
+}
 
 export const PLATFORMS = [
   {
@@ -36,7 +42,7 @@ export const PLATFORMS = [
   {
     id: 'youtube',
     name: 'YouTube',
-    icon: Youtube,
+    icon: YoutubePlatformIcon,
     color: 'bg-red-600',
     gradient: '#dc2626',
     description: 'Track channel performance and subscriber growth and more'

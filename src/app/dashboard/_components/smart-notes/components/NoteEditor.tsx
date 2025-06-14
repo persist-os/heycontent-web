@@ -55,17 +55,17 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
   };
 
   // Robust keydown handler to ensure '/' always triggers command menu
-  const handleKeyDownInternal = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === '/') {
+  //const handleKeyDownInternal = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    //if (e.key === '/') {
       // Let the input update first, then handle content change
-      setTimeout(() => {
-        if (textAreaRef.current) {
-          onContentChange(textAreaRef.current.value);
-        }
-      }, 0);
-    }
-    onKeyDown(e);
-  };
+      //setTimeout(() => {
+        //if (textAreaRef.current) {
+          //onContentChange(textAreaRef.current.value);
+        //}
+      //}, 0);
+    //}
+    //onKeyDown(e);
+  //};
 
   return (
     <div className="w-full h-full">

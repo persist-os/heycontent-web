@@ -34,14 +34,12 @@ export async function getApiKey(): Promise<string | null> {
           userMatches = keyUserId === firebaseUserId;
         }
       }
-      console.log('[getApiKey] Firebase user:', firebaseUserId, '| API key:', apiKey, '| Extracted user from key:', keyUserId, '| Match:', userMatches);
       if (!isValid || !userMatches) {
         console.warn('API key in cookies is invalid or does not match current user. Removing and refreshing...');
         Cookies.remove('apiKey');
         needsRefresh = true;
       } else {
         // Valid key found for current user
-        console.log('Retrieved API key from cookies for current user');
         return apiKey;
       }
     } else {
@@ -51,11 +49,9 @@ export async function getApiKey(): Promise<string | null> {
     // If no valid API key and we have a Firebase user, request one from the backend
     if (needsRefresh && auth && auth.currentUser) {
       const userId = auth.currentUser.uid;
-      console.log('No valid API key found, requesting one for user:', userId);
       try {
         // Get a fresh Firebase ID token
         const idToken = await auth.currentUser.getIdToken(true);
-        console.log('Got Firebase ID token, sending to backend to create API key...');
         // Request an API key via our API proxy to avoid CSP issues
         const response = await fetch('/api/auth/key', {
           method: 'POST',
@@ -76,15 +72,8 @@ export async function getApiKey(): Promise<string | null> {
           if (!apiKeyValue && data.data && typeof data.data.key === 'string') {
             apiKeyValue = data.data.key;
           }
-          // Log the full backend response for debugging
-          console.log('[getApiKey] Full backend response:', data);
-          // Log the userId we requested and the key returned
-          console.log('[getApiKey] Requested API key for Firebase user:', userId, '| API key received from backend:', apiKeyValue);
           if (typeof apiKeyValue === 'string' && apiKeyValue.startsWith('heycontent_') && !apiKeyValue.endsWith('_temporary')) {
             Cookies.set('apiKey', JSON.stringify(apiKeyValue), { expires: 7, sameSite: 'Lax', secure: process.env.NODE_ENV === 'production', path: '/' });
-            console.log('API key saved to cookies:', apiKeyValue);
-            // Log what is now in cookies
-            console.log('API key in cookies after save:', Cookies.get('apiKey'));
             return apiKeyValue;
           } else {
             console.warn('Received invalid or temporary API key from backend:', apiKeyValue);
@@ -105,7 +94,6 @@ export async function getApiKey(): Promise<string | null> {
     }
     
     // If we get here, it means needsRefresh is true but no auth/currentUser is available
-    console.log('No valid API key and no authenticated user to request one');
     return null;
   } catch (error) {
     console.error('Error getting API key:', error);
@@ -156,7 +144,6 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
     }
 
     // Get the ID token with force refresh to ensure it's up to date
-    console.log('fetchWithAuth: Getting fresh ID token');
     const token = await user.getIdToken(true);
 
     // Also set the token in a cookie for server-side access
@@ -170,8 +157,6 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
       'Content-Type': 'application/json',
     };
 
-    console.log(`fetchWithAuth: Making request to ${url}`);
-
     // Make the request with the token
     const response = await fetch(url, {
       ...options,
@@ -179,8 +164,6 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
       // Add credentials: 'include' to ensure cookies are sent with the request
       credentials: 'include'
     });
-
-    console.log(`fetchWithAuth: Response status: ${response.status}`);
 
     return response;
   } catch (error) {

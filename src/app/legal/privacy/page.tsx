@@ -152,6 +152,28 @@ export default function Privacy() {
           <p>We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last updated" date. You are advised to review this Privacy Policy periodically for any changes.</p>
         </section>
 
+        {/* YouTube API & Google Privacy Policy Section */}
+        <section className="space-y-6 border-t border-gray-200 pt-12">
+          <h2 className="text-3xl font-medium text-gray-900 border-b border-gray-100 pb-3">Third-Party API Services</h2>
+          
+          <h3 className="text-xl font-medium text-gray-900">YouTube API Services</h3>
+          <p>
+            Our application uses YouTube API Services. By using HeyContent, you are also agreeing to be bound by the <a href="https://www.youtube.com/t/terms" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">YouTube Terms of Service</a> and the <a href="https://www.google.com/policies/privacy" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">Google Privacy Policy</a>.
+          </p>
+          
+          <h3 className="text-xl font-medium text-gray-900">Instagram API Services</h3>
+          <p>
+            Our application uses Instagram API Services provided by Meta. By using HeyContent's Instagram integration, you are also agreeing to be bound by the <a href="https://developers.facebook.com/terms" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">Meta Platform Terms</a>, <a href="https://help.instagram.com/581066165581870" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">Instagram Terms of Use</a>, and <a href="https://www.facebook.com/about/privacy" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">Meta Privacy Policy</a>.
+          </p>
+          <p>
+            When you connect your Instagram account, we may collect and process information such as your Instagram profile information, posts, engagement metrics, and insights data as permitted by your Instagram account settings and Meta's policies.
+          </p>
+          
+          <p>
+            <strong>Data Deletion and Revoking Access:</strong> You can revoke this application's access to your YouTube data at any time via the <a href="https://security.google.com/settings/" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">Google security settings page</a>. For Instagram data, you can revoke access through your Instagram account settings or If you wish to delete any data stored by our app, please delete your account at the bottom of the settings page and <strong>all your data will be permanently deleted</strong>.
+          </p>
+        </section>
+
         {/* Contact Section */}
         <section className="space-y-6 border-t border-gray-200 pt-12">
           <h2 className="text-3xl font-medium text-gray-900 border-b border-gray-100 pb-3">Contact Us</h2>

@@ -19,7 +19,7 @@ export const getPlatformIcon = (platform: string) => {
     case 'instagram':
       return <Instagram className="w-5 h-5" />;
     case 'youtube':
-      return <YouTubeBrandIcon href="https://youtube.com/" />;
+      return <YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8 min-w-[20px] min-h-[20px]" />;
     case 'tiktok':
       return (
         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -36,7 +36,7 @@ export const getPlatformIcon = (platform: string) => {
 // Get metrics display based on content type
 export const getMetricsDisplay = (item: AnyContentItem) => {
   if (item.platform === 'gmail') {
-    if (item.content.emailType === 'partnership' || item.content.emailType === 'individual') {
+    if (item.content.data.emailType === 'partnership' || item.content.data.emailType === 'individual') {
       return (
         <>
           <div>
@@ -48,15 +48,15 @@ export const getMetricsDisplay = (item: AnyContentItem) => {
           <div>
             <p className="text-sm text-text-gray dark:text-gray-400">Thread</p>
             <p className="font-medium dark:text-white">
-              {item.content.thread?.messageCount} messages
+              {item.content.data.messageCount} messages
             </p>
           </div>
           <div>
             <p className="text-sm text-text-gray dark:text-gray-400">
-              {item.content.emailType === 'partnership' ? 'Deal Value' : 'Status'}
+              {item.content.data.emailType === 'partnership' ? 'Deal Value' : 'Status'}
             </p>
             <p className="font-medium dark:text-white">
-              {item.content.emailType === 'partnership' && item.metrics.dealValue 
+              {item.content.data.emailType === 'partnership' && item.metrics.dealValue 
                 ? `$${item.metrics.dealValue.toLocaleString()}`
                 : 'Active'
               }
@@ -273,7 +273,7 @@ export function filterContent(
     // Email type filter - only apply if the item *is* Gmail
     let emailTypeMatch = true; // Default to true for non-Gmail items
     if (item.platform === 'gmail') {
-      emailTypeMatch = emailTypeFilter === 'all' || item.content.emailType === emailTypeFilter;
+      emailTypeMatch = emailTypeFilter === 'all' || item.content.data.emailType === emailTypeFilter;
     }
 
     // Time range filter
@@ -301,7 +301,7 @@ export const getAvailableEmailTypes = (items: AnyContentItem[]): EmailTypeFilter
   items.forEach(item => {
     if (item.platform === 'gmail') {
       const gmailItem = item as GmailContentItem;
-      emailTypes.add(gmailItem.content.emailType);
+      emailTypes.add(gmailItem.content.data.emailType);
     }
   });
   return Array.from(emailTypes);
@@ -402,7 +402,7 @@ export const getMockYouTubeItem = (idSuffix: string): YouTubeContentItem => {
 // Mock Gmail ContentItems for testing
 export const getMockGmailItems = (count: number): GmailContentItem[] => {
   const items: GmailContentItem[] = [];
-  const emailTypes: GmailContentDetails['emailType'][] = ['newsletter', 'partnership', 'individual', 'other'];
+  const emailTypes: ('newsletter' | 'partnership' | 'individual' | 'other')[] = ['newsletter', 'partnership', 'individual', 'other'];
   const subjects = {
     newsletter: [
       `Weekly Update Vol. ${Math.floor(Math.random() * 50) + 1}`,
@@ -494,18 +494,16 @@ export const getMockGmailItems = (count: number): GmailContentItem[] => {
       platform: 'gmail',
       publishedAt: publishedDate.toISOString(),
       content: {
-        subject,
-        snippet,
-        from,
-        recipients: isNewsletter ? Math.floor(Math.random() * 500) + 50 : Math.floor(Math.random() * 5) + 1, // High for N, low otherwise
-        emailType: emailType,
-        partnerName: partnerName,
-        thread: {
+        data: {
+          subject,
+          snippet,
+          from,
+          emailType: emailType,
           threadId: threadId,
+          emailId: `msg-${Math.random().toString(36).substring(2, 10)}`,
           messageCount: messageCount,
-          lastReplyDate: lastReplyDate,
-        },
-        labels: labels,
+          messages: [],
+        }
       },
       metrics: {
         openRate,

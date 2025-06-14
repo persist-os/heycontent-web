@@ -31,6 +31,7 @@ export interface InstagramContentItem extends BaseContentItem {
   metrics: InstagramMetrics;
   analysis?: any; // Analysis data can be any type since it's stored as JSON
   analysisMarkdown?: string; // Markdown formatted analysis for display
+  children?: any[]; // Array of child media items for carousel posts
 }
 
 // YouTube Video
