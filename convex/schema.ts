@@ -353,6 +353,20 @@ export default defineSchema({
       "userId",
       "instagramAccountId",
     ]),
+  instagramBatchAnalysis: defineTable({
+    insights: v.any(),
+    createdAt: v.float64(),
+    instagramAccountId: v.string(),
+    updatedAt: v.float64(),
+    userId: v.string(),
+    analysisType: v.literal("batch"),
+  })
+    .index("by_account", ["instagramAccountId"])
+    .index("by_userId", ["userId"])
+    .index("by_user_account", [
+      "userId",
+      "instagramAccountId",
+    ]),
   notes: defineTable({
     analysis: v.optional(v.string()),
     content: v.optional(v.string()),

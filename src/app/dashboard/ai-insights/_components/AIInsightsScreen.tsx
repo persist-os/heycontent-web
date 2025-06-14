@@ -61,9 +61,27 @@ export function AIInsightsScreen() {
   // Store channel analysis mutation
   const storeChannelAnalysis = useMutation(api.youtubeMutations.storeChannelAnalysis)
 
+  // Add Instagram-specific queries and mutations after YouTube ones
+  const instagramAccount = useQuery(
+    api.instagramQueries.getInstagramAccount,
+    firebaseUser ? { userId: firebaseUser.uid } : "skip"
+  )
+
+  // Fetch Instagram insights
+  const instagramInsights = useQuery(
+    api.instagramQueries.getInstagramBatchAnalysis,
+    instagramAccount && firebaseUser ? { 
+      userId: firebaseUser.uid, 
+      instagramAccountId: instagramAccount.instagramAccountId 
+    } : "skip"
+  )
+
+  // Store Instagram analysis mutation
+  const storeInstagramAnalysis = useMutation(api.instagramMutations.storeInstagramBatchAnalysis)
+
   // Platform-specific insights
   const youtubeInsightsList = youtubeInsights?.analysis?.insights || []
-  const instagramInsights = [] // TODO: Add Instagram insights when available
+  const instagramInsightsList = instagramInsights?.insights?.insights || []
   const gmailInsights = [] // TODO: Add Gmail insights when available
 
   useEffect(() => {
@@ -141,8 +159,8 @@ export function AIInsightsScreen() {
   }
 
   const handleInstagramRefresh = async () => {
-    if (!firebaseUser) {
-      setInstagramError('User not authenticated')
+    if (!firebaseUser || !instagramAccount?.instagramAccountId) {
+      setInstagramError('Instagram account not connected')
       return
     }
 
@@ -150,8 +168,44 @@ export function AIInsightsScreen() {
     setInstagramError(null)
     
     try {
-      // TODO: Implement Instagram insights refresh
-      await new Promise(resolve => setTimeout(resolve, 1000)) // Placeholder
+      const apiKey = await getApiKey()
+      if (!apiKey) {
+        throw new Error('You are not authenticated. Please log in again.')
+      }
+
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'
+      
+      const response = await fetch(`${backendUrl}/api/v1/instagram/account-insights`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          user_id: firebaseUser.uid,
+          instagram_account_id: instagramAccount.instagramAccountId,
+          max_posts: 20,
+          include_stories: true,
+          include_comments: true,
+          force_refresh: true
+        }),
+      })
+
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP error! status: ${response.status}`)
+      }
+      
+      if (data.status === 'success') {
+        await storeInstagramAnalysis({
+          userId: firebaseUser.uid,
+          instagramAccountId: instagramAccount.instagramAccountId,
+          insights: data.data
+        })
+      } else {
+        throw new Error(data.error || 'Failed to refresh Instagram insights')
+      }
     } catch (error: any) {
       console.error('Error refreshing Instagram insights:', error)
       setInstagramError(error.message || 'Failed to refresh Instagram insights')
@@ -264,7 +318,7 @@ export function AIInsightsScreen() {
                   className="flex items-center gap-2"
                 >
                   <Instagram className="w-4 h-4" />
-                  Instagram ({instagramInsights.length})
+                  Instagram ({instagramInsightsList.length})
                 </TabsTrigger>
                 <TabsTrigger 
                   value="gmail" 
@@ -320,22 +374,28 @@ export function AIInsightsScreen() {
                   isRefreshing={instagramRefreshing}
                   error={instagramError}
                   onRefresh={handleInstagramRefresh}
-                  disabled={true} // Disabled until implemented
+                  disabled={!firebaseUser || !instagramAccount?.instagramAccountId}
                 />
                 
                 {instagramRefreshing ? (
-                  <div className="text-center py-12">
-                    <RefreshCw className="w-12 h-12 text-text-gray animate-spin mx-auto mb-4" />
+                  <div className="text-center py-12 px-4">
+                    <RefreshCw className="w-12 h-12 text-text-gray animate-spin mx-auto mb-6" />
                     <h3 className="text-lg font-medium text-text-dark dark:text-white mb-2">
                       Refreshing Instagram insights...
                     </h3>
+                    <p className="text-text-gray dark:text-gray-400 max-w-md mx-auto">
+                      {currentQuote || motivationalQuotes[0]}
+                    </p>
+                    <div className="mt-4 text-sm text-text-gray/60 dark:text-gray-500">
+                      This may take a few moments
+                    </div>
                   </div>
                 ) : (
                   <div className="grid gap-6">
-                    {instagramInsights.length === 0 && !instagramError && (
-                      <div className="text-center text-gray-400">Instagram insights coming soon.</div>
+                    {instagramInsightsList.length === 0 && !instagramError && (
+                      <div className="text-center text-gray-400">No Instagram insights available.</div>
                     )}
-                    {instagramInsights.map((insight, idx) => (
+                    {instagramInsightsList.map((insight, idx) => (
                       <InsightCard
                         key={idx}
                         {...insight}

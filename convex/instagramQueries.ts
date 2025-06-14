@@ -62,24 +62,30 @@ export const getInstagramPost = query({
 export const getAllInstagramPosts = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
-    // First get the account ID for this user
-    const account = await ctx.db
-      .query("instagramAccounts")
-      .withIndex("by_userId", q => q.eq("userId", args.userId))
-      .first();
-    
-    if (!account) {
-      return [];
-    }
+    try {
+      // First get the account ID for this user
+      const account = await ctx.db
+        .query("instagramAccounts")
+        .withIndex("by_userId", q => q.eq("userId", args.userId))
+        .first();
+      
+      if (!account) {
+        return [];
+      }
 
-    // Then get all posts for this account using both userId and instagramAccountId
-    const posts = await ctx.db
-      .query("instagramPosts")
-      .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", account.instagramAccountId))
-      .filter(q => q.eq(q.field("userId"), args.userId))
-      .order("desc")
-      .collect();
-    return posts;
+      // Then get all posts for this account
+      const posts = await ctx.db
+        .query("instagramPosts")
+        .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", account.instagramAccountId))
+        .filter(q => q.eq(q.field("userId"), args.userId))
+        .order("desc")
+        .collect();
+      
+      return posts;
+    } catch (error) {
+      console.error("Error fetching all Instagram posts:", error);
+      throw new Error("Failed to fetch Instagram posts");
+    }
   },
 });
 
@@ -495,6 +501,86 @@ export const getPostAnalysis = query({
       });
       // Re-throw the error so it propagates to the client
       throw new Error(`Failed to get post analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Get Instagram account insights/analysis (similar to YouTube channel analysis)
+export const getInstagramAccountAnalysis = query({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      // Use the existing tracker analysis functionality
+      const analysis = await ctx.db
+        .query("instagramTrackerAnalysis")
+        .withIndex("by_user_account", q => 
+          q.eq("userId", args.userId)
+           .eq("instagramAccountId", args.instagramAccountId)
+        )
+        .first();
+
+      if (!analysis) {
+        return null;
+      }
+
+      return {
+        _id: analysis._id,
+        userId: analysis.userId,
+        instagramAccountId: analysis.instagramAccountId,
+        analysis: analysis.analysis,
+        updatedAt: analysis.updatedAt || analysis._creationTime
+      };
+    } catch (error) {
+      console.error("Error fetching Instagram account analysis:", error);
+      throw new Error("Failed to fetch Instagram account analysis");
+    }
+  },
+});
+
+// Get Instagram batch analysis insights
+export const getInstagramBatchAnalysis = query({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      console.log('[getInstagramBatchAnalysis] Querying with:', { userId: args.userId, instagramAccountId: args.instagramAccountId });
+      
+      const analysis = await ctx.db
+        .query("instagramBatchAnalysis")
+        .withIndex("by_user_account", q => 
+          q.eq("userId", args.userId)
+           .eq("instagramAccountId", args.instagramAccountId)
+        )
+        .first();
+
+      console.log('[getInstagramBatchAnalysis] Found analysis:', analysis ? {
+        userId: analysis.userId,
+        instagramAccountId: analysis.instagramAccountId,
+        hasInsights: !!analysis.insights,
+        insightsKeys: analysis.insights ? Object.keys(analysis.insights) : null,
+        createdAt: analysis.createdAt,
+        updatedAt: analysis.updatedAt
+      } : 'No analysis found');
+
+      if (!analysis) {
+        return null;
+      }
+
+      return {
+        _id: analysis._id,
+        userId: analysis.userId,
+        instagramAccountId: analysis.instagramAccountId,
+        insights: analysis.insights,
+        updatedAt: analysis.updatedAt || analysis._creationTime
+      };
+    } catch (error) {
+      console.error("Error fetching Instagram batch analysis:", error);
+      throw new Error("Failed to fetch Instagram batch analysis");
     }
   },
 });
