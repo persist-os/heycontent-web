@@ -185,7 +185,7 @@ export default defineSchema({
     tokenType: v.string(),
   }).index("by_userId", ["userId"]),
 
-  // Gmail Account Info (from third schema)
+  // Gmail Account Info
   gmailAccounts: defineTable({
     userId: v.string(),
     email: v.string(),
@@ -200,7 +200,7 @@ export default defineSchema({
   .index("by_userId", ["userId"])
   .index("by_email", ["email"]),
 
-  // Gmail Threads (from third schema)
+  // Gmail Threads
   gmailThreads: defineTable({
     userId: v.string(),
     email: v.string(),
@@ -235,7 +235,7 @@ export default defineSchema({
   .index("by_threadId", ["threadId"])
   .index("by_user_email", ["userId", "email"]),
 
-  // Gmail Messages (from third schema)
+  // Gmail Messages
   gmailMessages: defineTable({
     userId: v.string(),
     email: v.string(),
@@ -267,7 +267,7 @@ export default defineSchema({
   .index("by_threadId", ["threadId"])
   .index("by_user_email", ["userId", "email"]),
 
-  // Gmail History (from third schema)
+  // Gmail History
   gmailHistory: defineTable({
     userId: v.string(),
     email: v.string(),
@@ -441,7 +441,7 @@ export default defineSchema({
   .index("by_views", ["statistics.views"])
   .index("by_likes", ["statistics.likes"]),
 
-  // Instagram Tokens (from first schema)
+  // Instagram Tokens
   instagramTokens: defineTable({
     userId: v.string(),
     instagramAccountId: v.string(),
@@ -452,7 +452,7 @@ export default defineSchema({
     lastRefreshed: v.number(),
   }).index("by_userId", ["userId"]),
 
-  // Instagram Accounts (from first schema)
+  // Instagram Accounts
   instagramAccounts: defineTable({
     userId: v.string(),
     instagramAccountId: v.string(),
@@ -472,7 +472,7 @@ export default defineSchema({
   .index("by_userId", ["userId"])
   .index("by_username", ["username"]),
 
-  // Instagram Posts (from first schema, with analysis fields from second schema)
+  // Instagram Posts
   instagramPosts: defineTable({
     instagramAccountId: v.string(),
     userId: v.string(),
@@ -510,7 +510,7 @@ export default defineSchema({
   .index("by_postId", ["postId"])
   .index("by_timestamp", ["data.timestamp"]),
 
-  // Instagram Profile Insights (from first schema)
+  // Instagram Profile Insights
   instagramProfileInsights: defineTable({
     userId: v.string(),
     instagramAccountId: v.string(),
@@ -534,7 +534,7 @@ export default defineSchema({
   .index("by_instagramAccountId", ["instagramAccountId"])
   .index("by_timestamp", ["data.timestamp"]),
 
-  // Instagram Stories (from first schema)
+  // Instagram Stories
   instagramStories: defineTable({
     userId: v.string(),
     instagramAccountId: v.string(),
@@ -564,7 +564,7 @@ export default defineSchema({
   .index("by_userId", ["userId"])
   .index("by_instagramAccountId", ["instagramAccountId"]),
 
-  // Instagram Post Insights (from first schema)
+  // Instagram Post Insights
   instagramPostInsights: defineTable({
     userId: v.string(),
     postId: v.string(),
@@ -590,7 +590,7 @@ export default defineSchema({
   .index("by_postId", ["postId"])
   .index("by_timestamp", ["data.timestamp"]),
 
-  // Instagram Post Comments (from first schema)
+  // Instagram Post Comments
   instagramPostComments: defineTable({
     userId: v.string(),
     postId: v.string(),
@@ -671,4 +671,16 @@ export default defineSchema({
     status: v.string(),
   })
   .index("by_email", ["email"]),
+
+  instagramBatchAnalysis: defineTable({
+    insights: v.any(),
+    createdAt: v.float64(),
+    instagramAccountId: v.string(),
+    updatedAt: v.float64(),
+    userId: v.string(),
+    analysisType: v.literal("batch"),
+  })
+    .index("by_account", ["instagramAccountId"])
+    .index("by_userId", ["userId"])
+    .index("by_user_account", ["userId", "instagramAccountId"]),
 });

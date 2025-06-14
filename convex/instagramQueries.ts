@@ -62,24 +62,41 @@ export const getInstagramPost = query({
 export const getAllInstagramPosts = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
-    // Get all posts for this user
-    const posts = await ctx.db
-      .query("instagramPosts")
-      .withIndex("by_userId", q => q.eq("userId", args.userId))
-      .order("desc")
-      .collect();
-    return posts;
+    try {
+      // First get the account ID for this user
+      const account = await ctx.db
+        .query("instagramAccounts")
+        .withIndex("by_userId", q => q.eq("userId", args.userId))
+        .first();
+      
+      if (!account) {
+        return [];
+      }
+
+      // Then get all posts for this account
+      const posts = await ctx.db
+        .query("instagramPosts")
+        .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", account.instagramAccountId))
+        .filter(q => q.eq(q.field("userId"), args.userId))
+        .order("desc")
+        .collect();
+      
+      return posts;
+    } catch (error) {
+      console.error("Error fetching all Instagram posts:", error);
+      throw new Error("Failed to fetch Instagram posts");
+    }
   },
 });
 
-// Get all Instagram posts for an instagramAccountId (refactored: filter by username if needed)
+// Get all Instagram posts for an instagramAccountId
 export const getInstagramPostsByAccount = query({
-  args: { userId: v.string(), username: v.string() },
+  args: { userId: v.string(), instagramAccountId: v.string() },
   handler: async (ctx, args) => {
     const posts = await ctx.db
       .query("instagramPosts")
-      .withIndex("by_userId", q => q.eq("userId", args.userId))
-      .filter(q => q.eq(q.field("data.username"), args.username))
+      .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", args.instagramAccountId))
+      .filter(q => q.eq(q.field("userId"), args.userId))
       .order("desc")
       .collect();
     return posts;
@@ -90,9 +107,20 @@ export const getInstagramPostsByAccount = query({
 export const getInstagramPostsByTimeRange = query({
   args: { userId: v.string(), start: v.number(), end: v.number() },
   handler: async (ctx, args) => {
+    // First get the account ID for this user
+    const account = await ctx.db
+      .query("instagramAccounts")
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
+      .first();
+    
+    if (!account) {
+      return [];
+    }
+
     const posts = await ctx.db
       .query("instagramPosts")
-      .withIndex("by_userId", q => q.eq("userId", args.userId))
+      .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", account.instagramAccountId))
+      .filter(q => q.eq(q.field("userId"), args.userId))
       .filter(q => q.gte(q.field("data.timestamp"), args.start))
       .filter(q => q.lte(q.field("data.timestamp"), args.end))
       .order("desc")
@@ -105,9 +133,20 @@ export const getInstagramPostsByTimeRange = query({
 export const getLatestInstagramPost = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
+    // First get the account ID for this user
+    const account = await ctx.db
+      .query("instagramAccounts")
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
+      .first();
+    
+    if (!account) {
+      return null;
+    }
+
     const post = await ctx.db
       .query("instagramPosts")
-      .withIndex("by_userId", q => q.eq("userId", args.userId))
+      .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", account.instagramAccountId))
+      .filter(q => q.eq(q.field("userId"), args.userId))
       .order("desc")
       .first();
     return post;
@@ -118,9 +157,20 @@ export const getLatestInstagramPost = query({
 export const getInstagramPostsByUsername = query({
   args: { userId: v.string(), username: v.string() },
   handler: async (ctx, args) => {
+    // First get the account ID for this user
+    const account = await ctx.db
+      .query("instagramAccounts")
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
+      .first();
+    
+    if (!account) {
+      return [];
+    }
+
     const posts = await ctx.db
       .query("instagramPosts")
-      .withIndex("by_userId", q => q.eq("userId", args.userId))
+      .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", account.instagramAccountId))
+      .filter(q => q.eq(q.field("userId"), args.userId))
       .filter(q => q.eq(q.field("data.username"), args.username))
       .order("desc")
       .collect();
@@ -300,10 +350,8 @@ export const getInstagramTrackerAnalysis = query({
 
       const analysis = await ctx.db
         .query("instagramTrackerAnalysis")
-        .withIndex("by_user_account", q => 
-          q.eq("userId", userId)
-           .eq("instagramAccountId", instagramAccountId)
-        )
+        .withIndex("by_userId", q => q.eq("userId", userId))
+        .filter(q => q.eq(q.field("instagramAccountId"), instagramAccountId))
         .first();
 
       console.log('[getInstagramTrackerAnalysis] Found analysis:', analysis ? {
@@ -451,6 +499,84 @@ export const getPostAnalysis = query({
       });
       // Re-throw the error so it propagates to the client
       throw new Error(`Failed to get post analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Get Instagram account insights/analysis (similar to YouTube channel analysis)
+export const getInstagramAccountAnalysis = query({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      // Use the existing tracker analysis functionality
+      const analysis = await ctx.db
+        .query("instagramTrackerAnalysis")
+        .withIndex("by_userId", q => q.eq("userId", args.userId))
+        .filter(q => q.eq(q.field("instagramAccountId"), args.instagramAccountId))
+        .first();
+
+      if (!analysis) {
+        return null;
+      }
+
+      return {
+        _id: analysis._id,
+        userId: analysis.userId,
+        instagramAccountId: analysis.instagramAccountId,
+        analysis: analysis.analysis,
+        updatedAt: analysis.updatedAt || analysis._creationTime
+      };
+    } catch (error) {
+      console.error("Error fetching Instagram account analysis:", error);
+      throw new Error("Failed to fetch Instagram account analysis");
+    }
+  },
+});
+
+// Get Instagram batch analysis insights
+export const getInstagramBatchAnalysis = query({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      console.log('[getInstagramBatchAnalysis] Querying with:', { userId: args.userId, instagramAccountId: args.instagramAccountId });
+      
+      const analysis = await ctx.db
+        .query("instagramBatchAnalysis")
+        .withIndex("by_user_account", q => 
+          q.eq("userId", args.userId)
+           .eq("instagramAccountId", args.instagramAccountId)
+        )
+        .first();
+
+      console.log('[getInstagramBatchAnalysis] Found analysis:', analysis ? {
+        userId: analysis.userId,
+        instagramAccountId: analysis.instagramAccountId,
+        hasInsights: !!analysis.insights,
+        insightsKeys: analysis.insights ? Object.keys(analysis.insights) : null,
+        createdAt: analysis.createdAt,
+        updatedAt: analysis.updatedAt
+      } : 'No analysis found');
+
+      if (!analysis) {
+        return null;
+      }
+
+      return {
+        _id: analysis._id,
+        userId: analysis.userId,
+        instagramAccountId: analysis.instagramAccountId,
+        insights: analysis.insights,
+        updatedAt: analysis.updatedAt || analysis._creationTime
+      };
+    } catch (error) {
+      console.error("Error fetching Instagram batch analysis:", error);
+      throw new Error("Failed to fetch Instagram batch analysis");
     }
   },
 });

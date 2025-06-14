@@ -513,6 +513,53 @@ export const storeInstagramTrackerAnalysis = mutation({
   },
 });
 
+// Store Instagram batch analysis insights
+export const storeInstagramBatchAnalysis = mutation({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+    insights: v.any(),
+  },
+  handler: async (ctx, args) => {
+    const { userId, instagramAccountId, insights } = args;
+    const now = Date.now();
+
+    try {
+      // Check if batch analysis already exists
+      const existingAnalysis = await ctx.db
+        .query("instagramBatchAnalysis")
+        .withIndex("by_user_account", q => 
+          q.eq("userId", userId)
+           .eq("instagramAccountId", instagramAccountId)
+        )
+        .first();
+
+      if (existingAnalysis) {
+        // Update existing batch analysis
+        await ctx.db.patch(existingAnalysis._id, {
+          insights,
+          updatedAt: now,
+        });
+        return { status: "updated", analysisId: existingAnalysis._id };
+      } else {
+        // Insert new batch analysis
+        const id = await ctx.db.insert("instagramBatchAnalysis", {
+          userId,
+          instagramAccountId,
+          insights,
+          analysisType: "batch",
+          createdAt: now,
+          updatedAt: now,
+        });
+        return { status: "created", analysisId: id };
+      }
+    } catch (error) {
+      console.error(`Error storing Instagram batch analysis for user ${userId}:`, error);
+      throw new Error(`Failed to store Instagram batch analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
 // Store Instagram post analysis data directly in instagramPosts table
 export const storePostAnalysis = mutation({
   args: {
