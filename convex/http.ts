@@ -532,6 +532,37 @@ app.post("/api/users/:id/gmail/full_profile", async (c) => {
   }
 });
 
+// Add the missing full-sync route that the backend is calling
+app.post("/api/users/:id/gmail/full-sync", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { data } = await c.req.json();
+  
+  if (!data || !data.account || !data.account.email) {
+    return c.json({ success: false, error: "Data with account and email are required" }, 400);
+  }
+  
+  try {
+    const result = await ctx.runMutation(api.gmailMutations.storeGmailFullProfile, {
+      userId,
+      account: data.account,
+      messages: data.messages || [],
+      threads: data.threads || [],
+    });
+    
+    return c.json({ 
+      success: true,
+      result
+    });
+  } catch (error) {
+    console.error("Error storing Gmail full sync:", error);
+    return c.json({ 
+      success: false, 
+      error: `Failed to store Gmail full sync: ${error instanceof Error ? error.message : 'Unknown error'}`
+    }, 500);
+  }
+});
+
 // Store a single Gmail thread for a user
 app.post("/api/users/:id/gmail/thread", async (c) => {
   const ctx = c.env;
@@ -1609,6 +1640,20 @@ app.get("/api/instagram/tracker_analysis", async (c) => {
     console.error("Failed to fetch Instagram tracker analysis:", error);
     return c.json({ success: false, error: "Failed to fetch Instagram tracker analysis" }, 500);
   }
+});
+
+// In http.ts - The response format stays the same
+app.get("/api/users/:id/gmail/threads", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  
+  // Use the new joined query, but return same format
+  const threads = await ctx.runQuery(api.gmailQueries.getGmailThreadsWithMessages, { 
+    userId 
+  });
+  
+  // Frontend receives the SAME data structure as before
+  return c.json({ success: true, threads });
 });
 
 const router = new HttpRouterWithHono(app);

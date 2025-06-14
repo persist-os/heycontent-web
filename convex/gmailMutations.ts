@@ -2,6 +2,96 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 
+// Helper function to determine if an email is useful for content analysis
+function isEmailUsefulForContentAnalysis(
+  subject: string, 
+  sender: string, 
+  snippet: string, 
+  labelIds: string[] = []
+): { isUseful: boolean; reason: string } {
+  try {
+    // Normalize strings for checking
+    const normalizedSubject = (subject || '').trim().toLowerCase();
+    const normalizedSender = (sender || '').trim().toLowerCase();
+    const normalizedSnippet = (snippet || '').trim().toLowerCase();
+    
+    // 1. Check Gmail labels - filter out spam, promotions, etc.
+    const spamLabels = ['SPAM', 'TRASH', 'CATEGORY_PROMOTIONS', 'CATEGORY_SOCIAL', 'CATEGORY_UPDATES'];
+    const matchedSpamLabels = spamLabels.filter(label => labelIds.includes(label));
+    if (matchedSpamLabels.length > 0) {
+      return { isUseful: false, reason: `Filtered by Gmail labels: ${matchedSpamLabels.join(', ')}` };
+    }
+    
+    // 2. Check if email has no meaningful content
+    const hasNoSubject = !normalizedSubject || 
+                        ['no subject', '(no subject)', 'untitled'].includes(normalizedSubject) ||
+                        normalizedSubject.length <= 3;
+    
+    const hasUnknownSender = !normalizedSender || 
+                            ['unknown sender', 'unknown', 'no-reply', 'noreply'].includes(normalizedSender) ||
+                            normalizedSender.length <= 3;
+    
+    const hasNoSnippet = !normalizedSnippet || 
+                        ['no preview available', 'no content', ''].includes(normalizedSnippet) ||
+                        normalizedSnippet.length < 20;
+    
+    // Filter if email has no subject AND unknown sender AND no snippet
+    if (hasNoSubject && hasUnknownSender && hasNoSnippet) {
+      return { isUseful: false, reason: "No meaningful content (no subject, unknown sender, no snippet)" };
+    }
+    
+    // Filter if email has no subject AND no snippet (even with known sender)
+    if (hasNoSubject && hasNoSnippet) {
+      return { isUseful: false, reason: "No meaningful content (no subject and no snippet)" };
+    }
+    
+    // 3. Check for spam/promotional patterns
+    const spamPatterns = [
+      'unsubscribe', 'click here', 'limited time offer', 'act now', 'buy now',
+      'free trial', 'special offer', 'discount', 'sale ends', 'expires soon',
+      'newsletter', 'promotional', 'marketing', 'advertisement', 'promo',
+      'no-reply', 'noreply', 'donotreply', 'do-not-reply', 'auto-reply',
+      'congratulations', 'you have won', 'claim your', 'exclusive deal',
+      'limited time', 'hurry up', 'don\'t miss out', 'final notice',
+      'automated message', 'system notification', 'delivery failure',
+      'out of office', 'vacation reply', 'auto-generated'
+    ];
+    
+    const spamInSubject = spamPatterns.some(pattern => normalizedSubject.includes(pattern));
+    const spamInSender = spamPatterns.some(pattern => normalizedSender.includes(pattern));
+    const spamInSnippet = spamPatterns.some(pattern => normalizedSnippet.includes(pattern));
+    
+    if (spamInSubject || spamInSender || spamInSnippet) {
+      const matchedPatterns = spamPatterns.filter(pattern => 
+        normalizedSubject.includes(pattern) || 
+        normalizedSender.includes(pattern) || 
+        normalizedSnippet.includes(pattern)
+      ).slice(0, 3);
+      return { isUseful: false, reason: `Spam/promotional patterns detected: ${matchedPatterns.join(', ')}` };
+    }
+    
+    // 4. Quality thresholds - ensure minimum content quality
+    const hasMinimumQuality = (
+      (normalizedSubject.length > 3 && !['no subject', '(no subject)'].includes(normalizedSubject)) ||
+      (normalizedSnippet.length > 20 && !['no preview available', 'no content'].includes(normalizedSnippet))
+    ) && (
+      normalizedSender.length > 3 && !['unknown sender', 'unknown'].includes(normalizedSender)
+    );
+    
+    if (!hasMinimumQuality) {
+      return { isUseful: false, reason: "Below minimum quality threshold" };
+    }
+    
+    // Email passed all filters - it's useful for content analysis
+    return { isUseful: true, reason: "Passed all quality filters" };
+    
+  } catch (error) {
+    console.error('Error in email filtering:', error);
+    // On error, err on the side of inclusion
+    return { isUseful: true, reason: `Error in filtering (included): ${error}` };
+  }
+}
+
 // Update Gmail tokens
 export const updateGmailToken = mutation({
   args: {
@@ -69,6 +159,20 @@ export const storeGmailMessage = mutation({
   handler: async (ctx, args) => {
     try {
       const now = Date.now();
+      
+      // Extract fields for filtering
+      const subject = args.data?.subject || '';
+      const sender = args.data?.from || '';
+      const snippet = args.data?.snippet || '';
+      const labelIds = args.labelIds || args.data?.labelIds || args.data?.label_ids || [];
+      
+      // Apply filtering at Convex level
+      const filterResult = isEmailUsefulForContentAnalysis(subject, sender, snippet, labelIds);
+      if (!filterResult.isUseful) {
+        console.log(`Filtering out message ${args.messageId}: ${filterResult.reason}`);
+        return { status: "filtered", reason: filterResult.reason };
+      }
+      
       // Check if the message already exists
       const existingMessage = await ctx.db
         .query("gmailMessages")
@@ -124,6 +228,29 @@ export const storeGmailThread = mutation({
   handler: async (ctx, args) => {
     try {
       const now = Date.now();
+      
+      // Extract fields for filtering from thread data or first message
+      let subject = args.data?.subject || '';
+      let sender = args.data?.from || '';
+      let snippet = args.data?.snippet || '';
+      let labelIds = args.data?.labelIds || [];
+      
+      // If thread has messages, use first message for filtering
+      if (args.messages && Array.isArray(args.messages) && args.messages.length > 0) {
+        const firstMessage = args.messages[0];
+        subject = firstMessage.subject || subject;
+        sender = firstMessage.from || sender;
+        snippet = firstMessage.snippet || snippet;
+        labelIds = firstMessage.labelIds || firstMessage.label_ids || labelIds;
+      }
+      
+      // Apply filtering at Convex level
+      const filterResult = isEmailUsefulForContentAnalysis(subject, sender, snippet, labelIds);
+      if (!filterResult.isUseful) {
+        console.log(`Filtering out thread ${args.threadId}: ${filterResult.reason}`);
+        return { status: "filtered", reason: filterResult.reason };
+      }
+      
       const existingThread = await ctx.db
         .query("gmailThreads")
         .withIndex("by_threadId", (q) => q.eq("threadId", args.threadId))
@@ -328,7 +455,12 @@ export const storeGmailFullProfile = mutation({
         });
         // Store messages if provided
         if (Array.isArray(messages)) {
+          let totalMessages = 0;
+          let storedMessages = 0;
+          let filteredMessages = 0;
+          
           for (const msg of messages) {
+            totalMessages++;
             const messageId = msg.id || msg.messageId;
             if (!messageId) {
               console.warn(`Skipping message with undefined messageId: ${JSON.stringify(msg)}`);
@@ -336,6 +468,21 @@ export const storeGmailFullProfile = mutation({
             }
             const threadId = msg.threadId;
             const data = msg.data || msg; // Expect all user-visible info in data
+            
+            // Extract fields for filtering
+            const subject = data.subject || '';
+            const sender = data.from || '';
+            const snippet = data.snippet || '';
+            const labelIds = data.labelIds || data.label_ids || [];
+            
+            // Apply filtering at Convex level
+            const filterResult = isEmailUsefulForContentAnalysis(subject, sender, snippet, labelIds);
+            if (!filterResult.isUseful) {
+              filteredMessages++;
+              console.log(`Filtering out message ${messageId}: ${filterResult.reason}`);
+              continue; // Skip storing this message
+            }
+            
             const existingMsg = await ctx.db
               .query("gmailMessages")
               .withIndex("by_messageId", (q) => q.eq("messageId", messageId))
@@ -360,17 +507,66 @@ export const storeGmailFullProfile = mutation({
                 updatedAt: now,
               });
             }
+            storedMessages++;
           }
+          
+          // Log filtering statistics
+          console.log(`Gmail message filtering completed for ${email}:`, {
+            totalMessages,
+            storedMessages,
+            filteredMessages,
+            filterRate: totalMessages > 0 ? `${((filteredMessages / totalMessages) * 100).toFixed(1)}%` : '0%'
+          });
         }
         // Store threads if provided
         if (Array.isArray(threads)) {
+          let totalThreads = 0;
+          let storedThreads = 0;
+          let filteredThreads = 0;
+          
           for (const thread of threads) {
+            totalThreads++;
             const threadId = thread.id || thread.threadId || thread.data?.thread_id || thread.resourceId;
             if (!threadId) {
               console.warn(`Skipping thread with undefined threadId: ${JSON.stringify(thread)}`);
               continue;
             }
             const data = thread.data || thread; // Expect all user-visible info in data
+            
+            // For threads, check if the first message (if available) would be useful
+            let shouldStoreThread = true;
+            if (data.messages && Array.isArray(data.messages) && data.messages.length > 0) {
+              const firstMessage = data.messages[0];
+              const subject = firstMessage.subject || data.subject || '';
+              const sender = firstMessage.from || data.from || '';
+              const snippet = firstMessage.snippet || data.snippet || '';
+              const labelIds = firstMessage.labelIds || firstMessage.label_ids || data.labelIds || [];
+              
+              const filterResult = isEmailUsefulForContentAnalysis(subject, sender, snippet, labelIds);
+              if (!filterResult.isUseful) {
+                filteredThreads++;
+                console.log(`Filtering out thread ${threadId}: ${filterResult.reason}`);
+                shouldStoreThread = false;
+              }
+            } else {
+              // If no messages in thread, check thread-level data
+              const subject = data.subject || '';
+              const sender = data.from || '';
+              const snippet = data.snippet || '';
+              const labelIds = data.labelIds || [];
+              
+              const filterResult = isEmailUsefulForContentAnalysis(subject, sender, snippet, labelIds);
+              if (!filterResult.isUseful) {
+                filteredThreads++;
+                console.log(`Filtering out thread ${threadId}: ${filterResult.reason}`);
+                shouldStoreThread = false;
+              }
+            }
+            
+            if (!shouldStoreThread) {
+              continue; // Skip storing this thread
+            }
+            
             const existingThread = await ctx.db
               .query("gmailThreads")
               .withIndex("by_threadId", (q) => q.eq("threadId", threadId))
@@ -394,7 +590,16 @@ export const storeGmailFullProfile = mutation({
                 updatedAt: now,
               });
             }
+            storedThreads++;
           }
+          
+          // Log thread filtering statistics
+          console.log(`Gmail thread filtering completed for ${email}:`, {
+            totalThreads,
+            storedThreads,
+            filteredThreads,
+            filterRate: totalThreads > 0 ? `${((filteredThreads / totalThreads) * 100).toFixed(1)}%` : '0%'
+          });
         }
         return { status: "updated", accountId: existingAccount._id };
       } else {

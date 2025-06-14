@@ -3,7 +3,6 @@ import { cookies } from 'next/headers';
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { getUserIdFromToken } from '@/app/lib/getUserIdFromToken';
-import { auth } from '@/app/lib/firebase';
 import { getAuth } from 'firebase-admin/auth';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 

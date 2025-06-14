@@ -258,3 +258,91 @@ export const listUserGmailMessages = query({
     }
   }
 });
+
+// In gmailQueries.ts - Enhanced query that returns threads with messages (filtering done at entry level)
+export const getGmailThreadsWithMessages = query({
+  args: { userId: v.string(), limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    try {
+      // Get threads (already filtered at entry level)
+      const threads = await ctx.db
+        .query("gmailThreads")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .order("desc")
+        .take(args.limit || 50);
+      
+      if (threads.length === 0) return [];
+      
+      // Get ALL messages for these threads in ONE query (fixes N+1 problem)
+      const threadIds = threads.map(t => t.threadId);
+      const allMessages = await ctx.db
+        .query("gmailMessages")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .filter((q) => {
+          // Filter to only messages from our threads
+          return threadIds.some(threadId => q.eq(q.field("threadId"), threadId));
+        })
+        .collect();
+      
+      // Group messages by threadId
+      const messagesByThread = allMessages.reduce((acc, msg) => {
+        if (!acc[msg.threadId]) acc[msg.threadId] = [];
+        acc[msg.threadId].push(msg);
+        return acc;
+      }, {} as Record<string, typeof allMessages>);
+      
+      // Build response - maintaining frontend compatibility
+      const enhancedThreads = threads.map(thread => {
+        const threadMessages = messagesByThread[thread.threadId] || [];
+        
+        // Get the FIRST message (original email) for thread summary
+        const firstMessage = threadMessages.sort((a, b) => {
+          const aDate = a.data?.internalDate || a.createdAt || 0;
+          const bDate = b.data?.internalDate || b.createdAt || 0;
+          return aDate - bDate; // Ascending = oldest first
+        })[0];
+        
+        // Get the MOST RECENT message for snippet (better preview)
+        const recentMessage = threadMessages.sort((a, b) => {
+          const aDate = a.data?.internalDate || a.createdAt || 0;
+          const bDate = b.data?.internalDate || b.createdAt || 0;
+          return bDate - aDate; // Descending = newest first
+        })[0];
+        
+        // Try multiple sources for snippet (prioritize most recent message)
+        const snippet = recentMessage?.data?.snippet || 
+                       firstMessage?.data?.snippet || 
+                       thread.data?.snippet || 
+                       thread.snippet || 
+                       // If still no snippet, try to extract from message body
+                       (recentMessage?.data?.body && recentMessage.data.body.substring(0, 150)) ||
+                       'No preview available';
+        
+        const subject = firstMessage?.data?.subject || thread.subject || 'No Subject';
+        const from = firstMessage?.data?.from || thread.from || 'Unknown Sender';
+        
+        // Return the SAME format your frontend expects
+        return {
+          ...thread,
+          data: {
+            ...thread.data,
+            // Ensure first message data is available at thread level
+            subject: subject,
+            from: from,
+            snippet: snippet,
+            threadId: thread.threadId,
+            emailId: firstMessage?.messageId,
+          },
+          messages: threadMessages // Include full message list if needed
+        };
+      });
+      
+      console.log(`📧 Convex Gmail Query: Returning ${enhancedThreads.length} threads (filtering done at entry level)`);
+      
+      return enhancedThreads;
+    } catch (error) {
+      console.error('Error in getGmailThreadsWithMessages:', error);
+      return []; // Return empty array for graceful frontend handling
+    }
+  },
+});
