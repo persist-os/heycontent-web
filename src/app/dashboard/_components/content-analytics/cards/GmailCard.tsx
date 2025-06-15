@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import { MessageSquare, Mail, Users, CheckCircle, MousePointerClick, Eye, RefreshCw } from 'lucide-react';
+import { MessageSquare, Mail, RefreshCw } from 'lucide-react';
+import { useGmailRefresh } from '@/app/hooks/useGmailRefresh';
 
 import { GmailContentItem } from '../types';
 
@@ -12,90 +13,107 @@ export interface GmailCardProps {
 
 export const GmailCard: React.FC<GmailCardProps> = ({ item, onDiscussContent, onViewDetailedAnalytics }) => {
   const { content, metrics, publishedAt } = item;
-  const openRate = ((metrics?.openRate ?? 0) * 100).toFixed(1);
-  const clickRate = ((metrics?.clickRate ?? 0) * 100).toFixed(1);
 
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  // Access the data that's been properly mapped in ContentAnalyticsScreen
+  const subject = content.data?.subject || 'No Subject';
+  const from = content.data?.from || 'Unknown Sender';
+  const snippet = content.data?.snippet || 'No preview available';
+  const replyCount = metrics?.replies ?? 0;
+
+  // Use the Gmail refresh hook
+  const { refresh, loading, error } = useGmailRefresh();
 
   const handleRefresh = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // your refresh logic here
-    } catch (e) {
-      setError('Failed to refresh');
-    } finally {
-      setLoading(false);
+    // Use the correct threadId from the data structure and the first message ID
+    const threadId = content.data?.threadId;
+    const messageId = content.data?.emailId;
+    if (threadId && messageId) {
+      await refresh(threadId, messageId);
     }
   };
 
   return (
-    <Card key={item.id} className="overflow-hidden border-2 border-blue-500 dark:border-blue-400 shadow-lg">
-      <div className="p-4">
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex items-center gap-2">
+    <Card className="p-6 bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl hover:shadow-xl transition-all duration-300">
+      {/* Header with icon and date */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-blue-500/20">
             <Mail className="w-5 h-5 text-blue-500" />
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-lg line-clamp-1" title={content.subject}>{content.subject}</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 truncate" title={content.from}>{content.from}</p>
-            </div>
           </div>
-          <span className="text-xs text-gray-500 whitespace-nowrap">{new Date(publishedAt).toLocaleDateString()}</span>
+          <h3 className="text-lg font-semibold text-gray-900">Email Thread</h3>
+        </div>
+        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+          {new Date(publishedAt).toLocaleDateString()}
+        </span>
+      </div>
+
+      {/* Content Section */}
+      <div className="space-y-4">
+        {/* Subject */}
+        <div className="flex justify-between items-start">
+          <span className="text-sm text-gray-600">Subject</span>
+          <span className="font-medium text-gray-900 text-right max-w-[200px] truncate" title={subject}>
+            {subject}
+          </span>
         </div>
 
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">{content.snippet}</p>
-
-        {/* Metrics */}
-        <div className="grid grid-cols-3 gap-x-2 gap-y-2 text-sm mb-4 text-center">
-          <div className="flex flex-col items-center gap-1 text-gray-600 dark:text-gray-300 p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
-            <Eye className="w-5 h-5 text-blue-500" />
-            <span className="font-medium">{openRate}%</span>
-            <span className="text-xs">Open Rate</span>
-          </div>
-          <div className="flex flex-col items-center gap-1 text-gray-600 dark:text-gray-300 p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
-            <MousePointerClick className="w-5 h-5 text-green-500" />
-            <span className="font-medium">{clickRate}%</span>
-            <span className="text-xs">Click Rate</span>
-          </div>
-          <div className="flex flex-col items-center gap-1 text-gray-600 dark:text-gray-300 p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
-            <MessageSquare className="w-4 h-4 text-orange-500" />
-            <span className="font-medium">{(metrics?.replies ?? 0).toLocaleString()}</span>
-            <span className="text-xs">Replies</span>
-          </div>
+        {/* From */}
+        <div className="flex justify-between items-start">
+          <span className="text-sm text-gray-600">From</span>
+          <span className="font-medium text-gray-900 text-right max-w-[200px] truncate" title={from}>
+            {from}
+          </span>
         </div>
 
-        <div className="flex gap-2 mt-2">
-          <button
-            className="px-3 py-1 rounded text-white hover:opacity-90 text-xs transition-opacity"
-            style={{ backgroundColor: '#4715C8' }}
-            onClick={() => onViewDetailedAnalytics(item)}
-          >
-            View Analytics
-          </button>
-          <button
-            className="px-3 py-1 rounded border text-xs hover:opacity-90 transition-opacity"
-            style={{ borderColor: '#4715C8', color: '#4715C8' }}
-            onClick={() => onDiscussContent(item)}
-          >
-            Discuss
-          </button>
-          <button
-            className="px-3 py-1 rounded text-black hover:opacity-90 text-xs flex items-center gap-1 transition-opacity"
-            style={{ backgroundColor: '#BAA9FC' }}
-            onClick={handleRefresh}
-            disabled={loading}
-          >
-            {loading ? (
-              <svg className="animate-spin h-4 w-4 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
-            ) : (
-              <RefreshCw className="w-4 h-4" />
-            )}
-            Refresh
-          </button>
-          {error && <span className="text-xs text-red-500 ml-2">{error}</span>}
+        {/* Snippet */}
+        <div className="flex justify-between items-start">
+          <span className="text-sm text-gray-600">Preview</span>
+          <span className="text-sm text-gray-700 text-right max-w-[200px] line-clamp-2" title={snippet}>
+            {snippet}
+          </span>
+        </div>
+
+        {/* Replies */}
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-gray-600">Replies</span>
+          <div className="flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-blue-500" />
+            <span className="font-semibold text-gray-900">{replyCount.toLocaleString()}</span>
+          </div>
         </div>
       </div>
+
+      {/* Actions */}
+      <div className="flex gap-3 mt-6">
+        <button
+          className="flex-1 px-4 py-2 rounded-xl border border-blue-500/20 text-blue-600 hover:bg-blue-50 transition-colors duration-200 text-sm font-medium"
+          onClick={() => onDiscussContent(item)}
+        >
+          <MessageSquare className="w-4 h-4 inline mr-2" />
+          Discuss
+        </button>
+        <button
+          className="px-4 py-2 rounded-xl bg-blue-500 text-white hover:bg-blue-600 transition-colors duration-200 text-sm font-medium flex items-center gap-2"
+          onClick={handleRefresh}
+          disabled={loading}
+        >
+          {loading ? (
+            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+            </svg>
+          ) : (
+            <RefreshCw className="w-4 h-4" />
+          )}
+          Refresh
+        </button>
+      </div>
+      
+      {error && (
+        <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-lg">
+          <span className="text-xs text-red-600">{error}</span>
+        </div>
+      )}
     </Card>
   );
 };

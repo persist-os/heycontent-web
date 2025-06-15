@@ -116,6 +116,7 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
   const [skeletonStartTime, setSkeletonStartTime] = useState<number | null>(null);
   const [renderComplete, setRenderComplete] = useState(false);
   const [contentReady, setContentReady] = useState(false);
+  const [hasDataFetched, setHasDataFetched] = useState(false);
 
   // Get Instagram account data from Convex
   const instagramAccount = useQuery(api.instagramQueries.getInstagramAccount, { userId });
@@ -129,34 +130,48 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
     } : "skip"
   );
 
-  // Memoized fetch function
-  const fetchData = useCallback(async (forceRefresh: boolean = false) => {
+  // Memoize the Instagram account ID to prevent unnecessary re-renders
+  const instagramAccountId = useMemo(() => instagramAccount?.instagramAccountId, [instagramAccount?.instagramAccountId]);
+  
+  // Memoize tracker analysis to prevent unnecessary re-renders
+  const memoizedTrackerAnalysis = useMemo(() => trackerAnalysis, [trackerAnalysis]);
+
+  // Memoized fetch function with stable dependencies
+  const fetchData = useCallback(async () => {
+    // Prevent multiple simultaneous fetches
+    if (hasDataFetched && !isInitialMount) {
+      console.log('🛑 Data already fetched, skipping duplicate call');
+      return;
+    }
+
     console.log('🚀 Instagram Analytics fetchData called with:', {
       userId,
-      instagramAccount,
-      trackerAnalysis: trackerAnalysis !== undefined ? 'loaded' : 'loading',
-      trackerAnalysisValue: trackerAnalysis,
-      forceRefresh
+      hasInstagramAccount: !!instagramAccountId,
+      hasTrackerAnalysis: memoizedTrackerAnalysis !== undefined,
+      hasDataFetched
+
     });
     
-    if (!instagramAccount) {
+    if (!instagramAccountId) {
       console.log('⚠️ No Instagram account found, skipping analytics fetch');
       setLoading(false);
       setIsInitialMount(false);
       setRenderComplete(true);
       setContentReady(true);
+      setHasDataFetched(true);
       return;
     }
 
     const fetchStartTime = Date.now();
     setLoading(true);
-    setRenderComplete(false); // Reset render complete state
-    setContentReady(false); // Reset content ready state
+    setRenderComplete(false);
+    setContentReady(false);
     
     // Add minimum loading time to ensure skeleton is visible
     const minLoadingTime = new Promise(resolve => setTimeout(resolve, 200));
     
     try {
+
       // Enhanced Convex data validation - check if we have meaningful data for this specific account
       if (trackerAnalysis !== undefined && !forceRefresh) {
         const hasValidData = trackerAnalysis && 
@@ -169,24 +184,26 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
           console.log('✅ Using cached tracker analysis from Convex:', trackerAnalysis);
           
           // Extract the content from the tracker analysis if it's nested
-          let analysisToSet = trackerAnalysis;
-          if (trackerAnalysis.content && !trackerAnalysis.last_post) {
-            // If the analysis has a 'content' property but no direct 'last_post', extract the content
-            analysisToSet = trackerAnalysis.content;
+          let analysisToSet = memoizedTrackerAnalysis;
+          if (memoizedTrackerAnalysis.content && !memoizedTrackerAnalysis.last_post) {
+            analysisToSet = memoizedTrackerAnalysis.content;
             console.log('🔧 Extracted content from nested structure:', analysisToSet);
           }
           
           setAnalysis(analysisToSet);
           setLoading(false);
           setIsInitialMount(false);
+          setHasDataFetched(true);
           setRenderComplete(true);
           setContentReady(true);
           return; // ✅ RETURN EARLY - Don't make API call when cached data exists
+
         } else {
           console.log('⚠️ Tracker analysis from Convex is null, empty, or lacks meaningful data, falling back to API call');
         }
       } else if (!forceRefresh) {
         console.log('🔄 Tracker analysis still loading from Convex...');
+
         // Don't make API call while Convex is still loading, unless it's a forced refresh
         setLoading(false);
         setIsInitialMount(false);
@@ -217,28 +234,22 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
 
       const data = await response.json();
       
+      await minLoadingTime;
+
       await minLoadingTime; // Ensure skeleton shows for at least 200ms
+
       
-      // Add detailed debugging for response structure
       console.log('🔍 Instagram Analytics API Response Debug:', {
         fullResponse: data,
         hasAnalysis: !!data?.analysis,
         hasData: !!data?.data,
-        hasContent: !!data?.content,
-        analysisType: data?.analysis ? typeof data.analysis : 'undefined',
-        dataType: data?.data ? typeof data.data : 'undefined',
-        contentType: data?.content ? typeof data.content : 'undefined',
-        analysisKeys: data?.analysis ? Object.keys(data.analysis) : null,
-        dataKeys: data?.data ? Object.keys(data.data) : null,
-        contentKeys: data?.content ? Object.keys(data.content) : null
+        hasContent: !!data?.content
       });
       
-      // Fixed response processing logic - handle backend response structure correctly
+      // Fixed response processing logic
       let analysisToSet = null;
       
-      // Backend returns { status: "success", data: {...} } format
       if (data?.status === 'success' && data?.data) {
-        // Check if data has nested content structure
         if (data.data.content && !data.data.last_post) {
           analysisToSet = data.data.content;
           console.log('✅ Using nested content from status.success response:', analysisToSet);
@@ -246,10 +257,7 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
           analysisToSet = data.data;
           console.log('✅ Using data from status.success response:', analysisToSet);
         }
-      }
-      // Fallback: check for direct analysis property
-      else if (data?.analysis) {
-        // Handle nested analysis structures
+      } else if (data?.analysis) {
         if (data.analysis.full_analysis?.content) {
           analysisToSet = data.analysis.full_analysis.content;
           console.log('✅ Using nested full_analysis.content:', analysisToSet);
@@ -260,45 +268,48 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
           analysisToSet = data.analysis;
           console.log('✅ Using direct analysis:', analysisToSet);
         }
-      }
-      // Fallback: check for direct content property
-      else if (data?.content) {
+      } else if (data?.content) {
         analysisToSet = data.content;
         console.log('✅ Using direct content:', analysisToSet);
       }
       
       if (analysisToSet) {
         setAnalysis(analysisToSet);
-        console.log('✅ Successfully set analysis data:', {
-          hasLastPost: !!analysisToSet.last_post,
-          hasPostingFrequency: !!analysisToSet.posting_frequency,
-          hasMediaDistribution: !!analysisToSet.media_distribution,
-          actualStructure: {
-            last_post: analysisToSet.last_post ? 'exists' : 'missing',
-            posting_frequency: analysisToSet.posting_frequency ? 'exists' : 'missing', 
-            media_distribution: analysisToSet.media_distribution ? 'exists' : 'missing',
-            allKeys: Object.keys(analysisToSet)
-          }
-        });
+        console.log('✅ Successfully set analysis data');
       } else {
         console.warn('⚠️ No valid analysis data found in response');
         setError('No analysis data available');
       }
     } catch (err) {
+
       await minLoadingTime; // Ensure skeleton shows even on error
       console.error('❌ Instagram analytics fetch error:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch Instagram analysis');
     } finally {
       setLoading(false);
       setIsInitialMount(false);
+      setHasDataFetched(true);
+
       setRenderComplete(true);
       setContentReady(true);
-    }
-  }, [userId, instagramAccount, trackerAnalysis]);
 
+    }
+  }, [userId, instagramAccountId, memoizedTrackerAnalysis, hasDataFetched, isInitialMount]);
+
+  // Only fetch data when dependencies actually change
   useEffect(() => {
-    fetchData(); // Initial load - will use cached data if available
-  }, [fetchData]);
+
+    if (!hasDataFetched || isInitialMount) {
+      fetchData();
+    }
+  }, [fetchData, hasDataFetched, isInitialMount]);
+
+  // Reset hasDataFetched when userId changes
+  useEffect(() => {
+    setHasDataFetched(false);
+    setIsInitialMount(true);
+  }, [userId]);
+
 
   // Memoized pie chart data calculation
   const mediaDistributionData = useMemo(() => {
@@ -491,7 +502,7 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
       </div>
 
       {/* Analytics Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
         
         {/* Last Post Card */}
         {analysis.last_post && (
@@ -649,6 +660,11 @@ export function ContentAnalyticsScreen() {
   // Restore platform selection filter
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformType>('all');
   const [selectedContent, setSelectedContent] = useState<AnyContentItem | null>(null);
+  const [loadingDiscuss, setLoadingDiscuss] = useState(false);
+
+  if (!firebaseUser || !userId) {
+    return <LoadingState type="auth" />;
+  }
   const [isTabSwitching, setIsTabSwitching] = useState(false);
 
   // Handle tab switching with immediate skeleton
@@ -668,11 +684,11 @@ export function ContentAnalyticsScreen() {
   // Convex queries (never skip, just allow undefined)
   const youtubeVideos = useQuery(
     api.youtubeQueries.listUserYouTubeVideos,
-    userId ? { userId } : undefined
+    { userId }
   );
   const gmailThreads = useQuery(
-    api.gmailQueries.listUserGmailThreads,
-    userId ? { userId } : undefined
+    api.gmailQueries.getGmailThreadsWithMessages,
+    { userId }
   );
   const instagramPosts = useQuery(
     api.instagramQueries.getAllInstagramPosts,
@@ -685,14 +701,11 @@ export function ContentAnalyticsScreen() {
     { userId: firebaseUser?.uid || '' }
   );
 
-  useEffect(() => {
-  }, [youtubeVideos, gmailThreads, instagramPosts]);
-
   // Map YouTube items - using the correctly structured data from listUserYouTubeVideos query
   const mappedYouTubeItems: YouTubeContentItem[] = useMemo(() => {
     if (youtubeVideos && Array.isArray(youtubeVideos)) {
       return youtubeVideos.map((video: any) => ({
-        id: video.id || '',
+        id: `youtube-${video.id || ''}`,
         platform: 'youtube',
         publishedAt: video.publishedAt || new Date().toISOString(),
         content: {
@@ -718,23 +731,113 @@ export function ContentAnalyticsScreen() {
     return [];
   }, [youtubeVideos]);
 
+  // Helper to get the received date for an email/thread
+  const getReceivedDate = (email: any, thread: any) => {
+    if (email && email.internalDate) return new Date(Number(email.internalDate)).toISOString();
+    const firstMessage = thread.messages && thread.messages.length > 0 ? thread.messages[0] : null;
+    if (firstMessage && firstMessage.internalDate) return new Date(Number(firstMessage.internalDate)).toISOString();
+    if (thread.createdAt) return new Date(thread.createdAt).toISOString();
+    return '';
+  };
+
   const mappedGmailItems = useMemo(() => {
     if (Array.isArray(gmailThreads)) {
-      return gmailThreads.map((thread: any): GmailContentItem => ({
-        id: thread._id || thread.id,
-        platform: 'gmail',
-        publishedAt: thread.publishedAt || '',
-        content: {
-          subject: thread.subject || '',
-          snippet: thread.snippet || '',
-          thread: thread.threadId || '',
-          emailType: thread.emailType || 'all',
-        },
-        metrics: thread.metrics || {},
-      }));
+      const importantEmails: any[] = [];
+      gmailThreads.forEach((thread: any, threadIndex: number) => {
+        if (thread.analysis && Array.isArray(thread.analysis.important_emails)) {
+          thread.analysis.important_emails.forEach((email: any, emailIndex: number) => {
+            const firstMessage = thread.messages && thread.messages.length > 0 ? thread.messages[0] : null;
+            // Ensure unique ID by prefixing with 'important-' and including indices
+            const uniqueId = `gmail-important-${thread.threadId || thread._id || thread.id}-${emailIndex}`;
+            importantEmails.push({
+              id: uniqueId,
+              platform: 'gmail',
+              publishedAt: getReceivedDate(email, thread),
+              content: {
+                data: {
+                  subject: email.subject || thread.data?.subject || thread.subject || 'No Subject',
+                  snippet: email.snippet || thread.data?.snippet || thread.snippet || 'No preview available',
+                  from: email.sender || thread.data?.from || thread.from || 'Unknown Sender',
+                  emailType: email.emailType || 'important',
+                  threadId: thread.threadId,
+                  emailId: firstMessage?.messageId || firstMessage?.id,
+                }
+              },
+              metrics: email.metrics || {},
+            });
+          });
+        }
+      });
+      if (importantEmails.length > 0) return importantEmails;
+      
+      // Use the enhanced data structure from getGmailThreadsWithMessages
+      return gmailThreads.map((thread: any, index: number): GmailContentItem => {
+        // Handle different data structures:
+        // 1. thread.data.messages[0] (for gmailThreads with messages array)
+        // 2. thread.data (for individual gmailMessages)
+        // 3. Direct thread properties (fallback)
+        
+        let emailData = null;
+        
+        // Check if thread has data.messages array (from gmailThreads)
+        if (thread.data?.messages && Array.isArray(thread.data.messages) && thread.data.messages.length > 0) {
+          emailData = thread.data.messages[0]; // Get first message from thread
+        }
+        // Check if thread.data has direct email properties (from gmailMessages)
+        else if (thread.data?.subject || thread.data?.from) {
+          emailData = thread.data;
+        }
+        // Fallback to thread.messages if available
+        else if (thread.messages && Array.isArray(thread.messages) && thread.messages.length > 0) {
+          emailData = thread.messages[0];
+        }
+        
+        // Extract data with proper fallbacks
+        const subject = emailData?.subject || 
+                       thread.subject || 
+                       'No Subject';
+                       
+        const snippet = emailData?.snippet || 
+                       emailData?.body || // Sometimes body contains the snippet
+                       thread.snippet || 
+                       'No preview available';
+                       
+        const from = emailData?.from || 
+                    thread.from || 
+                    'Unknown Sender';
+                    
+        // Get thread ID and message count
+        const threadId = thread.threadId || thread.data?.threadId || thread.data?.id || thread._id;
+        const messageCount = thread.data?.messages?.length || thread.messages?.length || 1;
+        
+        // Ensure unique ID
+        const uniqueId = `gmail-${threadId || `thread-${thread._id || thread.id || index}`}`;
+        
+        return {
+          id: uniqueId,
+          platform: 'gmail',
+          publishedAt: getReceivedDate(emailData, thread),
+          content: {
+            data: {
+              subject: subject,
+              snippet: snippet, 
+              from: from,
+              emailType: emailData?.emailType || 'all',
+              threadId: threadId,
+              emailId: emailData?.messageId || emailData?.id || threadId,
+              messageCount: messageCount,
+              messages: thread.data?.messages || thread.messages || [],
+            }
+          },
+          metrics: thread.metrics || { replies: Math.max(0, messageCount - 1) },
+        };
+      });
     }
     return [];
   }, [gmailThreads]);
+
+  // Debug log: log the mappedGmailItems value
+  console.log('ContentAnalyticsScreen: mappedGmailItems:', mappedGmailItems);
 
   const mappedInstagramItems = useMemo(() => {
     if (Array.isArray(instagramPosts)) {
@@ -761,7 +864,7 @@ export function ContentAnalyticsScreen() {
         };
 
         return {
-          id: postId,
+          id: `instagram-${postId}`,
           platform: 'instagram',
           publishedAt: post.data.timestamp ? new Date(post.data.timestamp).toISOString() : new Date().toISOString(),
           content: {
@@ -809,32 +912,68 @@ export function ContentAnalyticsScreen() {
     return sortContent(items, 'date');
   }, [selectedPlatform, youtubeItemsArray, gmailItemsArray, instagramItemsArray, allContentItems]);
 
-  const discussContent = (item: AnyContentItem) => {
-    // Create a context object with comprehensive content info
-    const context = {
-      platform: item.platform,
-      contentId: item.id,
-      analysis: (item as any).aiAnalysis || null,
-      title: item.platform === 'youtube'
-        ? (item as YouTubeContentItem).content.title
-        : item.platform === 'instagram'
-          ? (item as InstagramContentItem).content?.text
-          : (item as GmailContentItem).content?.subject,
-      // Include thumbnail URL for visual context
-      thumbnailUrl: item.platform === 'youtube' 
-        ? (item as YouTubeContentItem).content?.thumbnailUrl || `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`
-        : item.platform === 'instagram'
-          ? (item as InstagramContentItem).content?.mediaUrl
-          : undefined,
-      // Include published date
-      publishedAt: item.publishedAt,
-      // Include metrics for context
-      metrics: item.metrics,
-      // Include full content object for additional context
-      content: item.content
-    };
-    const encodedContext = encodeURIComponent(JSON.stringify(context));
-    router.push(`/dashboard/chat?contentContext=${encodedContext}`);
+  const discussContent = async (item: AnyContentItem) => {
+    try {
+      // Create a compact context object to avoid URL length issues
+      const context = {
+        platform: item.platform,
+        contentId: item.id,
+        analysis: (item as any).aiAnalysis || null,
+        title: item.platform === 'youtube'
+          ? (item as YouTubeContentItem).content.title
+          : item.platform === 'instagram'
+            ? (item as InstagramContentItem).content?.text
+            : (item as GmailContentItem).content?.data?.subject || 'Email Thread',
+        thumbnailUrl: item.platform === 'youtube'
+          ? (item as YouTubeContentItem).content?.thumbnailUrl || `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`
+          : item.platform === 'instagram'
+            ? (item as InstagramContentItem).content?.mediaUrl
+            : undefined,
+        publishedAt: item.publishedAt,
+        metrics: item.metrics,
+        // For Gmail, create a compact content object with only essential fields
+        content: item.platform === 'gmail' ? {
+          data: {
+            subject: (item as GmailContentItem).content?.data?.subject || 'No Subject',
+            from: (item as GmailContentItem).content?.data?.from || 'Unknown Sender',
+            snippet: (item as GmailContentItem).content?.data?.snippet || 'No preview available',
+            threadId: (item as GmailContentItem).content?.data?.threadId || (item as GmailContentItem).id,
+            emailId: (item as GmailContentItem).content?.data?.emailId || (item as GmailContentItem).id,
+            // Don't include the full payload to avoid URL length issues
+          }
+        } : item.content
+      };
+      
+      const encodedContext = encodeURIComponent(JSON.stringify(context));
+      
+      // Check if the URL would be too long (browsers typically limit to ~2000 chars)
+      const baseUrl = `/dashboard/chat?contentContext=`;
+      const fullUrl = baseUrl + encodedContext;
+      
+      if (fullUrl.length > 1900) {
+        // If URL is too long, use a more minimal context
+        const minimalContext = {
+          platform: item.platform,
+          contentId: item.id,
+          title: context.title,
+          publishedAt: item.publishedAt,
+          // For Gmail, include only the most essential data
+          ...(item.platform === 'gmail' && {
+            subject: (item as GmailContentItem).content?.data?.subject || 'No Subject',
+            from: (item as GmailContentItem).content?.data?.from || 'Unknown Sender',
+            threadId: (item as GmailContentItem).content?.data?.threadId || item.id,
+          })
+        };
+        const minimalEncoded = encodeURIComponent(JSON.stringify(minimalContext));
+        router.push(`/dashboard/chat?contentContext=${minimalEncoded}`);
+      } else {
+        router.push(fullUrl);
+      }
+    } catch (error) {
+      console.error('Error creating discussion context:', error);
+      // Fallback: navigate to chat without context
+      router.push('/dashboard/chat');
+    }
   };
 
   // Show loading state if not logged in
@@ -882,7 +1021,7 @@ export function ContentAnalyticsScreen() {
                   </div>
                 ) : (
                   <InstagramAnalytics
-                    key={`instagram-${selectedPlatform}-${Date.now()}`}
+                    key={`instagram-${selectedPlatform}`}
                     userId={userId}
                     onDiscussContent={(item) => {
                       discussContent(item);
@@ -892,9 +1031,11 @@ export function ContentAnalyticsScreen() {
               </>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
               {displayItems.length > 0 ? (
-                displayItems.map(item => {
+                displayItems.map((item, index) => {
+                  // Ensure absolutely unique keys by combining platform, id, and index
+                  const uniqueKey = `${item.platform}-${item.id}-${index}`;
                   const commonProps = {
                     onDiscussContent: () => discussContent(item),
                     onViewDetailedAnalytics: () => setSelectedContent(item)
@@ -903,16 +1044,34 @@ export function ContentAnalyticsScreen() {
                     return <InstagramCard key={item.id} {...commonProps} item={item as InstagramContentItem} userId={firebaseUser.uid} />;
                   }
                   if (item.platform === 'youtube') {
-                    return <YouTubeCard key={item.id} {...commonProps} item={item as YouTubeContentItem} />;
+                    return <YouTubeCard key={uniqueKey} {...commonProps} item={item as YouTubeContentItem} />;
                   }
                   if (item.platform === 'gmail') {
-                    return <GmailCard key={item.id} {...commonProps} item={item as GmailContentItem} />;
+                    return <GmailCard key={uniqueKey} {...commonProps} item={item as GmailContentItem} />;
                   }
                   return null;
                 })
               ) : (
                 <div className="col-span-full text-center py-10 text-text-gray dark:text-gray-400">
-                  No content found.
+                  {selectedPlatform === 'gmail' ? (
+                    <div className="space-y-2">
+                      <p className="text-lg font-medium">No Gmail content found</p>
+                      <p className="text-sm">Connect your Gmail account to see email analytics and insights.</p>
+                      <p className="text-xs text-gray-500">
+                        Only meaningful emails are stored and displayed for better content analysis.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-lg font-medium">No content found</p>
+                      <p className="text-sm">
+                        {selectedPlatform === 'all' 
+                          ? 'Connect your social media accounts to see content analytics.'
+                          : `Connect your ${selectedPlatform} account to see analytics and insights.`
+                        }
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

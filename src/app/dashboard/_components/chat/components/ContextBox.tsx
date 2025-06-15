@@ -102,7 +102,7 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
               }`}>
                 {includeAnalysisInQuery 
                   ? 'Insight included in questions'
-                  : 'Insight context disabled'
+                  : ''
                 }
               </div>
             </div>
@@ -140,31 +140,43 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
   const externalLink = getExternalLink();
 
   return (
-    <Card className="sticky top-0 z-10 border border-[#D0ECFF] bg-white dark:bg-gray-900 shadow-sm">
+    <Card className="sticky top-0 z-10 border border-blue-200 dark:border-blue-700 bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/20 dark:to-gray-900 shadow-sm">
       <div className="p-4">
-        <div className="relative flex items-center mb-2">
-          <div className="absolute left-2 p-2">
-            {getPlatformIcon()}
+        <div className="flex items-center gap-3">
+          {/* Gmail Icon */}
+          <div className="flex-shrink-0">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
           </div>
-          <div className="w-full flex flex-col items-center justify-center">
-            <h3 className="font-semibold text-base text-[#4E87E3] dark:text-[#4E87E3] text-center line-clamp-2 leading-tight px-2">
-              {context.platform === 'ai-insights' ? `AI Insight: ${context.title}` : `Discussing: ${context.title || `${context.platform} content`}`}
-            </h3>
-            <p className="text-sm text-gray-700 dark:text-gray-300">
-              {context.platform === 'ai-insights' ? `From ${(context as any).originalPlatform || 'Dashboard'}` : `${context.platform}${context.contentId ? ` • Content ID: ${context.contentId}` : ''}`}
+
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-semibold text-base text-blue-900 dark:text-blue-100 truncate">
+                Discussing Email
+              </h3>
+              <span className="px-2 py-0.5 bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 text-xs font-medium rounded-full">
+                Gmail
+              </span>
+            </div>
+            <p className="text-sm text-blue-700 dark:text-blue-300 line-clamp-1 leading-relaxed">
+              {context.title || 'Email conversation'}
             </p>
           </div>
-          <div className="absolute right-0">
-            {onRemove && (
+
+          {/* Remove Button */}
+          {onRemove && (
+            <div className="flex-shrink-0">
               <button
                 onClick={onRemove}
-                className="text-gray-400 hover:text-[#4E87E3] dark:hover:text-[#4E87E3] flex-shrink-0"
-                title="Remove context"
+                className="p-1.5 text-blue-400 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-all duration-200"
+                title="Remove email context"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Instagram post-like layout */}
@@ -207,67 +219,46 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
         {context.platform === 'ai-insights' && (context as any).fullInsight ? (
           <AIInsightDisplayCard context={context as any} />
         ) : context.analysis ? (
-          <div className="mt-2 p-3 bg-white dark:bg-gray-900 rounded border border-[#D0ECFF] max-h-64 overflow-y-auto">
+          <div className="mt-3 p-3 bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-900/10 dark:to-gray-900 rounded-lg border border-blue-200 dark:border-blue-700">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-[#4E87E3]" />
-                <h4 className="text-base font-semibold text-gray-900 dark:text-white">
-                  AI Analysis Context
+                <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                  Email Analysis
                 </h4>
               </div>
               {onToggleAnalysis && (
                 <button
                   onClick={() => onToggleAnalysis(!includeAnalysisInQuery)}
-                  className={`flex items-center gap-1 text-sm transition-colors ${includeAnalysisInQuery ? 'text-[#4E87E3]' : 'text-gray-600 dark:text-gray-400'} hover:text-[#4E87E3]`}
+                  className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full transition-all ${
+                    includeAnalysisInQuery 
+                      ? 'text-blue-700 bg-blue-100 dark:text-blue-200 dark:bg-blue-800' 
+                      : 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                  }`}
                   title={includeAnalysisInQuery ? "Disable analysis context" : "Enable analysis context"}
                 >
                   {includeAnalysisInQuery ? (
                     <>
-                      <ToggleRight className="w-4 h-4 text-[#4E87E3]" />
+                      <ToggleRight className="w-3 h-3" />
                       <span>ON</span>
                     </>
                   ) : (
                     <>
-                      <ToggleLeft className="w-4 h-4" />
+                      <ToggleLeft className="w-3 h-3" />
                       <span>OFF</span>
                     </>
                   )}
                 </button>
               )}
             </div>
-            <div className="text-base text-gray-800 dark:text-gray-200 max-h-40 overflow-y-auto">
+            <div className="text-sm text-blue-800 dark:text-blue-200 max-h-32 overflow-y-auto">
               <MarkdownRenderer content={context.analysis} />
-            </div>
-            <div className={`mt-2 text-xs px-2 py-1 rounded ${
-              includeAnalysisInQuery 
-                ? 'text-[#4E87E3] bg-[#D0ECFF]/40' 
-                : 'text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800'
-            }`}>
-              {includeAnalysisInQuery 
-                ? 'Analysis included in questions'
-                : 'Analysis context disabled'
-              }
             </div>
           </div>
         ) : null}
 
-        {/* Show metrics if available */}
-        {context.metrics && (
-          <div className="mt-2 flex gap-4 text-sm text-[#4E87E3]">
-            {context.metrics.views && (
-              <span>Views: {context.metrics.views.toLocaleString()}</span>
-            )}
-            {context.metrics.likes && (
-              <span>Likes: {context.metrics.likes.toLocaleString()}</span>
-            )}
-            {context.metrics.comments && (
-              <span>Comments: {context.metrics.comments.toLocaleString()}</span>
-            )}
-          </div>
-        )}
-
-        {/* Show external link if available */}
-        {externalLink && (
+        {/* Show external link if available - Gmail doesn't have external links so this won't show */}
+        {externalLink && context.platform !== 'gmail' && (
           <div className="mt-3">
             <a
               href={externalLink}

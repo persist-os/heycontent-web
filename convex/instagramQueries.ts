@@ -350,10 +350,8 @@ export const getInstagramTrackerAnalysis = query({
 
       const analysis = await ctx.db
         .query("instagramTrackerAnalysis")
-        .withIndex("by_user_account", q => 
-          q.eq("userId", userId)
-           .eq("instagramAccountId", instagramAccountId)
-        )
+        .withIndex("by_userId", q => q.eq("userId", userId))
+        .filter(q => q.eq(q.field("instagramAccountId"), instagramAccountId))
         .first();
 
       console.log('[getInstagramTrackerAnalysis] Found analysis:', analysis ? {
@@ -516,10 +514,8 @@ export const getInstagramAccountAnalysis = query({
       // Use the existing tracker analysis functionality
       const analysis = await ctx.db
         .query("instagramTrackerAnalysis")
-        .withIndex("by_user_account", q => 
-          q.eq("userId", args.userId)
-           .eq("instagramAccountId", args.instagramAccountId)
-        )
+        .withIndex("by_userId", q => q.eq("userId", args.userId))
+        .filter(q => q.eq(q.field("instagramAccountId"), args.instagramAccountId))
         .first();
 
       if (!analysis) {

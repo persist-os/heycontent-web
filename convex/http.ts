@@ -532,6 +532,74 @@ app.post("/api/users/:id/gmail/full_profile", async (c) => {
   }
 });
 
+// Add the missing full-sync route that the backend is calling
+app.post("/api/users/:id/gmail/full-sync", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { data } = await c.req.json();
+  
+  if (!data || !data.account || !data.account.email) {
+    return c.json({ success: false, error: "Data with account and email are required" }, 400);
+  }
+  
+  try {
+    const result = await ctx.runMutation(api.gmailMutations.storeGmailFullProfile, {
+      userId,
+      account: data.account,
+      messages: data.messages || [],
+      threads: data.threads || [],
+    });
+    
+    return c.json({ 
+      success: true,
+      result
+    });
+  } catch (error) {
+    console.error("Error storing Gmail full sync:", error);
+    return c.json({ 
+      success: false, 
+      error: `Failed to store Gmail full sync: ${error instanceof Error ? error.message : 'Unknown error'}`
+    }, 500);
+  }
+});
+
+// Store a single Gmail thread for a user
+app.post("/api/users/:id/gmail/thread", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const {
+    email,
+    threadId,
+    snippet,
+    historyId,
+    labelIds,
+    message_count,
+    messages,
+  } = await c.req.json();
+
+  // Fix: Convex does not accept null for labelIds
+  const safeLabelIds = Array.isArray(labelIds) ? labelIds : undefined;
+
+  if (!email || !threadId) {
+    return c.json({ success: false, error: "Missing required fields: email, threadId" }, 400);
+  }
+
+  try {
+    const result = await ctx.runMutation(api.gmailMutations.storeGmailThread, {
+      userId,
+      email,
+      threadId,
+      message_count,
+      messages,
+      data: { snippet, historyId, labelIds: safeLabelIds },
+    });
+    return c.json({ success: true, result });
+  } catch (error) {
+    console.error("Failed to store Gmail thread:", error);
+    return c.json({ success: false, error: `Failed to store Gmail thread: ${error instanceof Error ? error.message : 'Unknown error'}` }, 500);
+  }
+});
+
 // YOUTUBE ROUTES
 
 // Get YouTube tokens for a user
@@ -1597,6 +1665,17 @@ app.get("/api/instagram/tracker_analysis", async (c) => {
   }
 });
 
+// In http.ts - The response format stays the same
+app.get("/api/users/:id/gmail/threads", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  // Use the new joined query, but return same format
+  const threads = await ctx.runQuery(api.gmailQueries.getGmailThreadsWithMessages, { 
+    userId 
+  });
+  // Frontend receives the SAME data structure as before
+  return c.json({ success: true, threads });
+});
 // Store Instagram batch analysis
 app.post("/api/instagram/batch_analysis", async (c) => {
   const ctx = c.env;

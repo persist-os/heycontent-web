@@ -38,6 +38,8 @@ export function middleware(request: NextRequest) {
     "https://benevolent-basilisk-784.convex.cloud",
     "wss://whimsical-clownfish-162.convex.cloud",
     "https://whimsical-clownfish-162.convex.cloud",
+    "wss://lovely-koala-465.convex.cloud",
+    "https://lovely-koala-465.convex.cloud",
     "https://backend.hicontent.co",
     "http://127.0.0.1:8000",
     "http://localhost:8000",
