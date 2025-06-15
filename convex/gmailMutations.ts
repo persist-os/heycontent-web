@@ -933,3 +933,50 @@ export const migrateGmailMessagesToDataOnly = mutation({
     return { updated };
   },
 });
+
+// Store Gmail batch analysis insights
+export const storeGmailBatchAnalysis = mutation({
+  args: {
+    userId: v.string(),
+    gmailAccountId: v.string(),
+    insights: v.any(),
+  },
+  handler: async (ctx, args) => {
+    const { userId, gmailAccountId, insights } = args;
+    const now = Date.now();
+
+    try {
+      // Check if batch analysis already exists
+      const existingAnalysis = await ctx.db
+        .query("gmailBatchAnalysis")
+        .withIndex("by_user_account", q => 
+          q.eq("userId", userId)
+           .eq("gmailAccountId", gmailAccountId)
+        )
+        .first();
+
+      if (existingAnalysis) {
+        // Update existing batch analysis
+        await ctx.db.patch(existingAnalysis._id, {
+          insights,
+          updatedAt: now,
+        });
+        return { status: "updated", analysisId: existingAnalysis._id };
+      } else {
+        // Insert new batch analysis
+        const id = await ctx.db.insert("gmailBatchAnalysis", {
+          userId,
+          gmailAccountId,
+          insights,
+          analysisType: "batch",
+          createdAt: now,
+          updatedAt: now,
+        });
+        return { status: "created", analysisId: id };
+      }
+    } catch (error) {
+      console.error(`Error storing Gmail batch analysis for user ${userId}:`, error);
+      throw new Error(`Failed to store Gmail batch analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});

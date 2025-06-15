@@ -346,3 +346,104 @@ export const getGmailThreadsWithMessages = query({
     }
   },
 });
+
+// Get Gmail account for a user
+export const getGmailAccount = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const account = await ctx.db
+      .query("gmailAccounts")
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
+      .first();
+    
+    return account;
+  },
+});
+
+// Get Gmail batch analysis insights
+export const getGmailBatchAnalysis = query({
+  args: {
+    userId: v.string(),
+    gmailAccountId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      console.log('[getGmailBatchAnalysis] Querying with:', { 
+        userId: args.userId, 
+        gmailAccountId: args.gmailAccountId 
+      });
+      
+      const analysis = await ctx.db
+        .query("gmailBatchAnalysis")
+        .withIndex("by_user_account", q => 
+          q.eq("userId", args.userId)
+           .eq("gmailAccountId", args.gmailAccountId)
+        )
+        .first();
+
+      console.log('[getGmailBatchAnalysis] Found analysis:', analysis ? {
+        userId: analysis.userId,
+        gmailAccountId: analysis.gmailAccountId,
+        hasInsights: !!analysis.insights,
+        insightsKeys: analysis.insights ? Object.keys(analysis.insights) : null,
+        createdAt: analysis.createdAt,
+        updatedAt: analysis.updatedAt
+      } : 'No analysis found');
+
+      if (!analysis) {
+        return null;
+      }
+
+      return {
+        _id: analysis._id,
+        userId: analysis.userId,
+        gmailAccountId: analysis.gmailAccountId,
+        insights: analysis.insights,
+        updatedAt: analysis.updatedAt || analysis._creationTime
+      };
+    } catch (error) {
+      console.error("Error fetching Gmail batch analysis:", error);
+      throw new Error("Failed to fetch Gmail batch analysis");
+    }
+  },
+});
+
+// Get Gmail threads for analysis
+export const getGmailThreads = query({
+  args: { 
+    userId: v.string(),
+    email: v.string(),
+    limit: v.optional(v.number())
+  },
+  handler: async (ctx, args) => {
+    const threads = await ctx.db
+      .query("gmailThreads")
+      .withIndex("by_user_email", q => 
+        q.eq("userId", args.userId).eq("email", args.email)
+      )
+      .order("desc")
+      .take(args.limit || 50);
+    
+    return threads;
+  },
+});
+
+// Get Gmail messages for analysis
+export const getGmailMessages = query({
+  args: { 
+    userId: v.string(),
+    email: v.string(),
+    limit: v.optional(v.number())
+  },
+  handler: async (ctx, args) => {
+    const messages = await ctx.db
+      .query("gmailMessages")
+      .withIndex("by_user_email", q => 
+        q.eq("userId", args.userId).eq("email", args.email)
+      )
+      .order("desc")
+      .take(args.limit || 100);
+    
+    return messages;
+  },
+});

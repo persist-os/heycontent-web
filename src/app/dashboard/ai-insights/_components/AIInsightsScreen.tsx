@@ -79,10 +79,28 @@ export function AIInsightsScreen() {
   // Store Instagram analysis mutation
   const storeInstagramAnalysis = useMutation(api.instagramMutations.storeInstagramBatchAnalysis)
 
+  // Add Gmail-specific queries and mutations after Instagram ones
+  const gmailAccount = useQuery(
+    api.gmailQueries.getGmailAccount,
+    firebaseUser ? { userId: firebaseUser.uid } : "skip"
+  )
+
+  // Fetch Gmail insights
+  const gmailBatchInsights = useQuery(
+    api.gmailQueries.getGmailBatchAnalysis,
+    gmailAccount && firebaseUser ? { 
+      userId: firebaseUser.uid, 
+      gmailAccountId: gmailAccount.email 
+    } : "skip"
+  )
+
+  // Store Gmail analysis mutation
+  const storeGmailBatchAnalysis = useMutation(api.gmailMutations.storeGmailBatchAnalysis)
+
   // Platform-specific insights
   const youtubeInsightsList = youtubeInsights?.analysis?.insights || []
   const instagramInsightsList = instagramInsights?.insights?.insights || []
-  const gmailInsights = [] // TODO: Add Gmail insights when available
+  const gmailInsights = gmailBatchInsights?.insights?.insights || []
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -215,8 +233,8 @@ export function AIInsightsScreen() {
   }
 
   const handleGmailRefresh = async () => {
-    if (!firebaseUser) {
-      setGmailError('User not authenticated')
+    if (!firebaseUser || !gmailAccount?.email) {
+      setGmailError('Gmail account not connected')
       return
     }
 
@@ -224,8 +242,44 @@ export function AIInsightsScreen() {
     setGmailError(null)
     
     try {
-      // TODO: Implement Gmail insights refresh
-      await new Promise(resolve => setTimeout(resolve, 1000)) // Placeholder
+      const apiKey = await getApiKey()
+      if (!apiKey) {
+        throw new Error('You are not authenticated. Please log in again.')
+      }
+
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'
+      
+      const response = await fetch(`${backendUrl}/api/v1/gmail/account-insights`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          user_id: firebaseUser.uid,
+          gmail_account_id: gmailAccount.email,
+          max_threads: 50,
+          max_messages: 100,
+          include_spam_analysis: true,
+          force_refresh: true
+        }),
+      })
+
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP error! status: ${response.status}`)
+      }
+      
+      if (data.status === 'success') {
+        await storeGmailBatchAnalysis({
+          userId: firebaseUser.uid,
+          gmailAccountId: gmailAccount.email,
+          insights: data.data
+        })
+      } else {
+        throw new Error(data.error || 'Failed to refresh Gmail insights')
+      }
     } catch (error: any) {
       console.error('Error refreshing Gmail insights:', error)
       setGmailError(error.message || 'Failed to refresh Gmail insights')
@@ -413,20 +467,26 @@ export function AIInsightsScreen() {
                   isRefreshing={gmailRefreshing}
                   error={gmailError}
                   onRefresh={handleGmailRefresh}
-                  disabled={true} // Disabled until implemented
+                  disabled={!firebaseUser || !gmailAccount?.email}
                 />
                 
                 {gmailRefreshing ? (
-                  <div className="text-center py-12">
-                    <RefreshCw className="w-12 h-12 text-text-gray animate-spin mx-auto mb-4" />
+                  <div className="text-center py-12 px-4">
+                    <RefreshCw className="w-12 h-12 text-text-gray animate-spin mx-auto mb-6" />
                     <h3 className="text-lg font-medium text-text-dark dark:text-white mb-2">
                       Refreshing Gmail insights...
                     </h3>
+                    <p className="text-text-gray dark:text-gray-400 max-w-md mx-auto">
+                      {currentQuote || motivationalQuotes[0]}
+                    </p>
+                    <div className="mt-4 text-sm text-text-gray/60 dark:text-gray-500">
+                      This may take a few moments
+                    </div>
                   </div>
                 ) : (
                   <div className="grid gap-6">
                     {gmailInsights.length === 0 && !gmailError && (
-                      <div className="text-center text-gray-400">Gmail insights coming soon.</div>
+                      <div className="text-center text-gray-400">No Gmail insights available.</div>
                     )}
                     {gmailInsights.map((insight, idx) => (
                       <InsightCard

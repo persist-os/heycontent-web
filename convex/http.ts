@@ -1720,5 +1720,51 @@ app.get("/api/instagram/batch_analysis", async (c) => {
   }
 });
 
+// Gmail Analysis Endpoints
+
+// Store Gmail batch analysis
+app.post("/api/gmail/batch_analysis", async (c) => {
+  const ctx = c.env;
+  const { userId, gmailAccountId, insights } = await c.req.json();
+
+  if (!userId || !gmailAccountId || !insights) {
+    return c.json({ success: false, error: "Missing required fields" }, 400);
+  }
+
+  try {
+    const result = await ctx.runMutation(api.gmailMutations.storeGmailBatchAnalysis, {
+      userId,
+      gmailAccountId,
+      insights,
+    });
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error("Failed to store Gmail batch analysis:", error);
+    return c.json({ success: false, error: "Failed to store Gmail batch analysis" }, 500);
+  }
+});
+
+// Get Gmail batch analysis
+app.get("/api/gmail/batch_analysis", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.query("userId");
+  const gmailAccountId = c.req.query("gmailAccountId");
+
+  if (!userId || !gmailAccountId) {
+    return c.json({ success: false, error: "Missing required query parameters" }, 400);
+  }
+
+  try {
+    const result = await ctx.runQuery(api.gmailQueries.getGmailBatchAnalysis, {
+      userId,
+      gmailAccountId,
+    });
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error("Failed to fetch Gmail batch analysis:", error);
+    return c.json({ success: false, error: "Failed to fetch Gmail batch analysis" }, 500);
+  }
+});
+
 const router = new HttpRouterWithHono(app);
 export default router;
