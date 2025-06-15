@@ -149,6 +149,7 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
       hasInstagramAccount: !!instagramAccountId,
       hasTrackerAnalysis: memoizedTrackerAnalysis !== undefined,
       hasDataFetched
+
     });
     
     if (!instagramAccountId) {
@@ -170,11 +171,17 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
     const minLoadingTime = new Promise(resolve => setTimeout(resolve, 200));
     
     try {
-      // Check if we have data in Convex
-      if (memoizedTrackerAnalysis !== undefined) {
-        if (memoizedTrackerAnalysis && Object.keys(memoizedTrackerAnalysis).length > 0) {
-          await minLoadingTime;
-          console.log('✅ Using cached tracker analysis from Convex:', memoizedTrackerAnalysis);
+
+      // Enhanced Convex data validation - check if we have meaningful data for this specific account
+      if (trackerAnalysis !== undefined && !forceRefresh) {
+        const hasValidData = trackerAnalysis && 
+          Object.keys(trackerAnalysis).length > 0 &&
+          (trackerAnalysis.last_post || trackerAnalysis.posting_frequency || trackerAnalysis.media_distribution ||
+           (trackerAnalysis.content && (trackerAnalysis.content.last_post || trackerAnalysis.content.posting_frequency || trackerAnalysis.content.media_distribution)));
+        
+        if (hasValidData) {
+          await minLoadingTime; // Ensure skeleton shows for at least 200ms
+          console.log('✅ Using cached tracker analysis from Convex:', trackerAnalysis);
           
           // Extract the content from the tracker analysis if it's nested
           let analysisToSet = memoizedTrackerAnalysis;
@@ -187,25 +194,37 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
           setLoading(false);
           setIsInitialMount(false);
           setHasDataFetched(true);
-          return;
+          setRenderComplete(true);
+          setContentReady(true);
+          return; // ✅ RETURN EARLY - Don't make API call when cached data exists
+
         } else {
-          console.log('⚠️ Tracker analysis from Convex is null or empty, falling back to API call');
+          console.log('⚠️ Tracker analysis from Convex is null, empty, or lacks meaningful data, falling back to API call');
         }
-      } else {
+      } else if (!forceRefresh) {
         console.log('🔄 Tracker analysis still loading from Convex...');
-        // If tracker analysis is still loading, don't make API call yet
+
+        // Don't make API call while Convex is still loading, unless it's a forced refresh
         setLoading(false);
+        setIsInitialMount(false);
         return;
       }
 
-      const response = await fetch(`${window.location.origin}/api/social/instagram/analytics`, {
+      // Only make API call if:
+      // 1. forceRefresh is true (refresh button clicked), OR
+      // 2. No valid cached data exists
+      console.log('🔄 Making API call to refresh Instagram data...', { forceRefresh, hasValidCachedData: false });
+
+      // Enhanced refresh: Call full-profile-collect to refresh both analytics and posts
+      const response = await fetch(`${window.location.origin}/api/social/instagram/full-refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${await getApiKey()}`,
         },
         body: JSON.stringify({
-          user_id: userId
+          user_id: userId,
+          instagram_account_id: instagramAccount.instagramAccountId
         })
       });
 
@@ -216,6 +235,9 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
       const data = await response.json();
       
       await minLoadingTime;
+
+      await minLoadingTime; // Ensure skeleton shows for at least 200ms
+
       
       console.log('🔍 Instagram Analytics API Response Debug:', {
         fullResponse: data,
@@ -259,18 +281,24 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
         setError('No analysis data available');
       }
     } catch (err) {
-      await minLoadingTime;
+
+      await minLoadingTime; // Ensure skeleton shows even on error
       console.error('❌ Instagram analytics fetch error:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch Instagram analysis');
     } finally {
       setLoading(false);
       setIsInitialMount(false);
       setHasDataFetched(true);
+
+      setRenderComplete(true);
+      setContentReady(true);
+
     }
   }, [userId, instagramAccountId, memoizedTrackerAnalysis, hasDataFetched, isInitialMount]);
 
   // Only fetch data when dependencies actually change
   useEffect(() => {
+
     if (!hasDataFetched || isInitialMount) {
       fetchData();
     }
@@ -281,6 +309,7 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
     setHasDataFetched(false);
     setIsInitialMount(true);
   }, [userId]);
+
 
   // Memoized pie chart data calculation
   const mediaDistributionData = useMemo(() => {
@@ -363,12 +392,12 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
         <div className="flex justify-between items-center">
           <Button 
             size="sm" 
-            onClick={fetchData} 
+            onClick={() => fetchData(true)}
             disabled={loading}
             className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm ml-auto"
           >
             <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-            Refreshing...
+            Refreshing Analytics & Posts...
           </Button>
         </div>
 
@@ -393,7 +422,7 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
             className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm ml-auto"
           >
             <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-            Loading account...
+            Loading Analytics & Posts...
           </Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -426,7 +455,7 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
             className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm ml-auto"
           >
             <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-            Loading analytics...
+            Loading Analytics & Posts...
           </Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -442,7 +471,7 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
     return (
       <div className="text-center text-red-500 p-4 mb-8">
         <p>Error: {error}</p>
-        <Button onClick={fetchData} className="mt-2">Try Again</Button>
+        <Button onClick={() => fetchData(true)} className="mt-2">Try Again</Button>
       </div>
     );
   }
@@ -451,7 +480,7 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
     return (
       <div className="text-center text-gray-500 p-4 mb-8">
         <p>No Instagram analysis available</p>
-        <Button onClick={fetchData} className="mt-2">Load Analytics</Button>
+        <Button onClick={() => fetchData(true)} className="mt-2">Load Analytics</Button>
       </div>
     );
   }
@@ -463,12 +492,12 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
         <div></div> {/* Empty div to push button to the right */}
         <Button 
           size="sm" 
-          onClick={fetchData} 
+          onClick={() => fetchData(true)}
           disabled={loading}
           className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm"
         >
           <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          {loading ? 'Refreshing...' : 'Refresh'}
+          {loading ? 'Refreshing Analytics & Posts...' : 'Refresh Analytics & Posts'}
         </Button>
       </div>
 
@@ -981,7 +1010,7 @@ export function ContentAnalyticsScreen() {
                         className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm ml-auto"
                       >
                         <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                        Loading...
+                        Loading Analytics & Posts...
                       </Button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
