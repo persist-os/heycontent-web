@@ -3,9 +3,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, Loader2, MessageSquare, Brain } from 'lucide-react'
 import { Message } from '@/app/types'
+import { MentionInput } from '@/components/ui/mention-input'
 
 interface ChatInputProps {
-  onSend: (message: string) => void
+  onSend: (message: string, mentions?: Array<{id: string, type: 'platform' | 'content', subtype: string, title: string}>) => void
   isLoading?: boolean
   inputRef?: React.RefObject<HTMLInputElement>
   maxLength?: number
@@ -15,10 +16,11 @@ interface ChatInputProps {
   hasContext?: boolean
   contextPlatform?: string
   hasAnalysis?: boolean
+  userId?: string
 }
 
 const placeholders = [
-  "Ask about content strategy...",
+  "Ask about content strategy... (Try @ for emails, # for videos)",
   "Analyze audience growth...",
   "Get partnership recommendations...",
   "Optimize engagement...",
@@ -41,11 +43,13 @@ export function ChatInput({
   autoFocus = true,
   hasContext = false,
   contextPlatform,
-  hasAnalysis = false
+  hasAnalysis = false,
+  userId
 }: ChatInputProps) {
   const [input, setInput] = useState('')
   const [placeholder, setPlaceholder] = useState(placeholders[0])
   const [showFullReply, setShowFullReply] = useState(false)
+  const [mentions, setMentions] = useState<Array<{id: string, type: 'platform' | 'content', subtype: string, title: string}>>([])
   const textAreaRef = useRef<HTMLTextAreaElement>(null)
 
   // Use context-aware placeholders when analysis is available
@@ -86,24 +90,36 @@ export function ChatInput({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (input.trim() && !isLoading && input.length <= maxLength) {
-      onSend(input.trim())
+      onSend(input.trim(), mentions.length > 0 ? mentions : undefined)
       setInput('')
-      // Reset textarea height
-      if (textAreaRef.current) {
-        textAreaRef.current.style.height = 'auto'
-        // Auto-focus after sending
-        setTimeout(() => {
-          textAreaRef.current?.focus()
-        }, 0)
-      }
+      setMentions([])
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSubmit(e)
     }
+  }
+
+  const handleMentionSelect = (mentionItem: any) => {
+    // Map MentionItem to our expected mention structure
+    const mention = {
+      id: mentionItem.id,
+      type: 'type' in mentionItem && ['gmail', 'youtube', 'instagram'].includes(mentionItem.type) ? 'platform' as const : 'content' as const,
+      subtype: mentionItem.type,
+      title: mentionItem.title || mentionItem.name
+    }
+    
+    // Add to mentions array if not already present
+    setMentions(prev => {
+      const exists = prev.find(m => m.id === mention.id && m.type === mention.type && m.subtype === mention.subtype)
+      if (!exists) {
+        return [...prev, mention]
+      }
+      return prev
+    })
   }
 
   const characterCount = input.length
@@ -163,28 +179,51 @@ export function ChatInput({
           </div>
         )}
 
+        {/* Mention references preview */}
+        {mentions.length > 0 && (
+          <div className="w-full mb-3">
+            <div className="flex flex-wrap gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="text-xs text-blue-600 font-medium">Referenced:</div>
+              {mentions.map((mention) => (
+                <div
+                  key={`${mention.type}-${mention.id}-${mention.subtype}`}
+                  className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs"
+                >
+                  <span>{mention.type === 'platform' ? '📦' : '📄'}</span>
+                  <span className="truncate max-w-[200px]">{mention.title}</span>
+                  <button
+                    onClick={() => setMentions(prev => prev.filter(m => !(m.id === mention.id && m.type === mention.type && m.subtype === mention.subtype)))}
+                    className="ml-1 text-blue-500 hover:text-blue-700"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="flex gap-2 items-end w-full relative">
           <div className="flex-1 relative">
-            <textarea
-              ref={textAreaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={placeholder}
-              className={`w-full rounded-xl border px-4 py-3
-                focus:outline-none focus:ring-2 focus:ring-heycontent-yellow focus:border-transparent
-                resize-none overflow-y-auto min-h-[48px] max-h-[300px] sm:max-h-[400px]
-                text-sm leading-relaxed
-                ${isAtLimit ? 'border-red-500 focus:ring-red-500' : ''}
-                ${isNearLimit && !isAtLimit ? 'border-yellow-500 focus:ring-yellow-500' : ''}
-                transition-all duration-200
-                bg-white shadow-sm
-                scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100
-              `}
-              disabled={isLoading}
-              rows={1}
-              maxLength={maxLength}
-            />
+            <div className={`rounded-xl border
+              focus-within:ring-2 focus-within:ring-heycontent-yellow focus-within:border-transparent
+              ${isAtLimit ? 'border-red-500 focus-within:ring-red-500' : ''}
+              ${isNearLimit && !isAtLimit ? 'border-yellow-500 focus-within:ring-yellow-500' : ''}
+              transition-all duration-200
+              bg-white shadow-sm
+              px-4 py-3
+            `}>
+              <MentionInput
+                value={input}
+                onChange={setInput}
+                onMentionSelect={handleMentionSelect}
+                placeholder={placeholder}
+                className="text-sm leading-relaxed"
+                userId={userId}
+                disabled={isLoading}
+                onKeyPress={handleKeyDown}
+              />
+            </div>
             {/* Character count */}
             <div className={`absolute right-3 bottom-2 text-xs
               ${isAtLimit ? 'text-red-500 font-medium' : ''}

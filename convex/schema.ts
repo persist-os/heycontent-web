@@ -445,6 +445,8 @@ export default defineSchema({
     ),
     referralCode: v.optional(v.string()),
     referredBy: v.optional(v.string()),
+    referredByEmail: v.optional(v.string()),
+    referredAt: v.optional(v.float64()),
     stripeCustomerId: v.optional(v.string()),
     stripeSubscriptionId: v.optional(v.string()),
     subscription: v.optional(
@@ -498,6 +500,59 @@ export default defineSchema({
     .index("by_stripeCustomerId", ["stripeCustomerId"])
     .index("by_userId", ["userId"])
     .index("by_username", ["username"]),
+  usersFiles: defineTable({
+    userId: v.string(),
+    fileName: v.string(),
+    fileType: v.union(
+      v.literal("email"),
+      v.literal("email_thread"),
+      v.literal("video"),
+      v.literal("instagram_post"),
+      v.literal("note"),
+      v.literal("insight"),
+      v.literal("analytics"),
+      v.literal("platform_gmail"),
+      v.literal("platform_youtube"),
+      v.literal("platform_instagram")
+    ),
+    platform: v.union(
+      v.literal("gmail"),
+      v.literal("youtube"),
+      v.literal("instagram"),
+      v.literal("smart-notes"),
+      v.literal("ai-insights"),
+      v.literal("analytics")
+    ),
+    fileId: v.string(),
+    sourceTable: v.string(),
+    metadata: v.object({
+      subject: v.optional(v.string()),
+      snippet: v.optional(v.string()),
+      thumbnailUrl: v.optional(v.string()),
+      from: v.optional(v.string()),
+      date: v.optional(v.string()),
+      stats: v.optional(v.object({
+        views: v.optional(v.number()),
+        likes: v.optional(v.number()),
+        comments: v.optional(v.number()),
+        messages: v.optional(v.number()),
+        threads: v.optional(v.number()),
+      })),
+    }),
+    searchKeywords: v.array(v.string()),
+    createdAt: v.float64(),
+    updatedAt: v.float64(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_fileName", ["fileName"])
+    .index("by_fileType", ["fileType"])
+    .index("by_platform", ["platform"])
+    .index("by_user_type", ["userId", "fileType"])
+    .index("by_user_platform", ["userId", "platform"])
+    .searchIndex("search_fileName", {
+      searchField: "fileName",
+      filterFields: ["userId", "fileType", "platform"]
+    }),
   waitlist: defineTable({
     email: v.string(),
     name: v.string(),

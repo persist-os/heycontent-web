@@ -7,12 +7,13 @@ interface ChatInputAreaProps {
   showAmbient: boolean;
   currentContext: any;
   handleActionClick: (action: string) => void;
-  handleSendMessage: (msg: string) => void;
+  handleSendMessage: (msg: string, mentions?: Array<{id: string, type: 'platform' | 'content', subtype: string, title: string}>) => void;
   inputRef: React.RefObject<HTMLInputElement>;
   isLoading: boolean;
   referencedMessage: any;
   handleClearReference: () => void;
   includeAnalysisInQuery: boolean;
+  userId?: string;
 }
 
 const ChatInputArea: React.FC<ChatInputAreaProps> = ({
@@ -25,6 +26,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   referencedMessage,
   handleClearReference,
   includeAnalysisInQuery,
+  userId,
 }) => {
   // Only show ambient content when there are no messages
   const showAmbientContent = showAmbient && !currentContext;
@@ -75,6 +77,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
                 ))
               )
             }
+            userId={userId}
           />
         </div>
       </div>

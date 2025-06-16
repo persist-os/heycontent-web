@@ -483,6 +483,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           referencedMessage={referencedMessage}
           handleClearReference={handleClearReference}
           includeAnalysisInQuery={includeAnalysisInQuery}
+          userId={userId}
         />
       </div>
     </div>
