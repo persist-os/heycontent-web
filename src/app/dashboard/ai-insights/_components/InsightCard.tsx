@@ -54,14 +54,32 @@ export const InsightCard: React.FC<InsightCardProps> = ({
 }) => {
   const { discussActionStep } = useActionStepDiscussion();
 
+  // Validate platform prop to ensure it's one of the expected values
+  const validatedPlatform = ['youtube', 'instagram', 'gmail'].includes(platform) ? platform : 'gmail';
+  
+  // Add platform-specific validation for content
+  const validatePlatformContent = () => {
+    if (validatedPlatform === 'gmail' && !title.toLowerCase().includes('email') && !title.toLowerCase().includes('gmail') && !title.toLowerCase().includes('partnership') && !title.toLowerCase().includes('media') && !title.toLowerCase().includes('business')) {
+      console.warn(`Gmail insight with unexpected title: ${title}`);
+    }
+    if (validatedPlatform === 'youtube' && title.toLowerCase().includes('email')) {
+      console.warn(`YouTube insight with email-related title: ${title}`);
+    }
+  };
+
+  // Run validation in development
+  if (process.env.NODE_ENV === 'development') {
+    validatePlatformContent();
+  }
+
   // Function to navigate to chat with Gmail thread content
   const discussGmailThread = (thread: any) => {
     const context = {
-      platform: 'gmail',
+      platform: 'gmail', // Explicitly set to gmail
       contentId: thread.threadId,
       title: thread.subject || 'Email Thread',
       source: 'AI Insights - Gmail Thread',
-      originalPlatform: 'gmail',
+      originalPlatform: 'gmail', // Ensure original platform is set
       publishedAt: thread.date,
       content: {
         data: {
@@ -98,7 +116,7 @@ This email thread was identified as part of your ${title.toLowerCase()} opportun
       contentId: `insight-${Date.now()}`,
       title: title,
       source: 'AI Insights Dashboard',
-      originalPlatform: platform,
+      originalPlatform: validatedPlatform, // Use validated platform
       fullInsight: {
         title,
         impact: cleanImpact,
@@ -109,12 +127,22 @@ This email thread was identified as part of your ${title.toLowerCase()} opportun
         relatedItems
       },
       // Create a formatted analysis of the insight (no title at the top)
-      analysis: `**Impact:** ${cleanImpact}
-\n### Why Now?\n${whyNow.map(reason => `• ${reason}`).join('\n')}
-\n### Action Steps\n${actionSteps.map((step, idx) => `${idx + 1}. ${step}`).join('\n')}
-\n### Expected Outcome\n${expectedOutcome}
-\n### Source Details\n${sourceDetails.join('\n')}
-\n${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.map(item => `• ${item.label}: ${item.value}`).join('\n')}` : ''}`
+      analysis: `**Platform:** ${validatedPlatform.toUpperCase()}
+**Impact:** ${cleanImpact}
+
+### Why Now?
+${whyNow.map(reason => `• ${reason}`).join('\n')}
+
+### Action Steps
+${actionSteps.map((step, idx) => `${idx + 1}. ${step}`).join('\n')}
+
+### Expected Outcome
+${expectedOutcome}
+
+### Source Details
+${sourceDetails.join('\n')}
+
+${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.map(item => `• ${item.label}: ${item.value}`).join('\n')}` : ''}`
     };
     
     const encodedContext = encodeURIComponent(JSON.stringify(fullInsightContext));
@@ -128,15 +156,20 @@ This email thread was identified as part of your ${title.toLowerCase()} opportun
         className={`flex items-center justify-between p-4 ${highlightColor} ${expanded ? 'rounded-t-lg' : 'rounded-lg'}`}
       >
         <div className="flex items-center gap-3">
-          {platform === 'youtube' ? (
-            <div>{platformIcon[platform]}</div>
+          {validatedPlatform === 'youtube' ? (
+            <div>{platformIcon[validatedPlatform]}</div>
           ) : (
             <div className="p-2 rounded-lg bg-white/80 dark:bg-black/30">
-              {platformIcon[platform]}
+              {platformIcon[validatedPlatform]}
             </div>
           )}
           <div>
-            <h3 className="font-medium text-text-dark dark:text-white">{title}</h3>
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-medium text-text-dark dark:text-white">{title}</h3>
+              <span className="px-2 py-0.5 bg-white/60 dark:bg-black/40 text-xs font-medium rounded-full capitalize text-text-dark dark:text-white">
+                {validatedPlatform}
+              </span>
+            </div>
             <p className="text-sm text-text-gray dark:text-gray-400">{impact}</p>
           </div>
         </div>
@@ -161,8 +194,8 @@ This email thread was identified as part of your ${title.toLowerCase()} opportun
             </ul>
           </div>
 
-          {/* Thread Details */}
-          {platform === 'gmail' && threadDetails && threadDetails.length > 0 && (
+          {/* Thread Details - Only show for Gmail platform */}
+          {validatedPlatform === 'gmail' && threadDetails && threadDetails.length > 0 && (
             <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-3">
               <h4 className="font-medium dark:text-white">Email Threads ({threadDetails.length})</h4>
               <div className="space-y-3 max-h-64 overflow-y-auto">
@@ -207,6 +240,7 @@ This email thread was identified as part of your ${title.toLowerCase()} opportun
                     } else {
                       // Get additional context from why now and expected outcome
                       const additionalContext = [
+                        `Platform: ${validatedPlatform.toUpperCase()}`,
                         `Insight: ${title}`,
                         `Impact: ${impact}`,
                         `Why Now: ${whyNow.join(', ')}`,
@@ -214,7 +248,7 @@ This email thread was identified as part of your ${title.toLowerCase()} opportun
                       ].join('\n');
                       
                       // Use the custom hook to navigate to chat with rich context
-                      discussActionStep(step, title, platform, additionalContext);
+                      discussActionStep(step, title, validatedPlatform, additionalContext);
                     }
                   }}
                 >
@@ -234,6 +268,11 @@ This email thread was identified as part of your ${title.toLowerCase()} opportun
           {/* Source Details Section */}
           <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
             <h4 className="font-medium dark:text-white mb-2">Source Details</h4>
+            <div className="mb-2">
+              <span className="inline-flex items-center px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-xs font-medium rounded-full capitalize">
+                {validatedPlatform} Insight
+              </span>
+            </div>
             {sourceDetails.map((detail, idx) => (
               <p key={idx} className="text-sm text-text-gray dark:text-gray-400 mb-1">{detail}</p>
             ))}

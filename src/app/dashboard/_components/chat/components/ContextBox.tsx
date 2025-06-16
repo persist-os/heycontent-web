@@ -224,7 +224,7 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                  Email Analysis
+                  {context.platform} Analysis
                 </h4>
               </div>
               {onToggleAnalysis && (
