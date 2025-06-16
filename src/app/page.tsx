@@ -54,6 +54,89 @@ export default function LandingPage() {
       <div className="relative flex-shrink-0">
         <HeroSection />
       </div>
+      
+      {/* Section Title */}
+      <section className="bg-gradient-to-r from-[#F8F0F9] to-blue-50 pt-0 pb-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 text-center">
+          <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-500/10 to-blue-500/10 backdrop-blur-sm rounded-full border border-white/20 mb-6">
+            <span className="text-sm font-medium bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              ✨ The Future of Content Creation
+            </span>
+          </div>
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-gray-900 via-purple-800 to-blue-800 bg-clip-text text-transparent leading-relaxed tracking-tight py-2">
+            Where Creativity Meets Intelligence
+          </h2>
+          <p className="text-xl sm:text-2xl text-gray-600 leading-relaxed mt-6 max-w-4xl mx-auto">
+            Experience the perfect blend of human creativity and AI intelligence. 
+            Transform your ideas into engaging content that resonates with your audience.
+          </p>
+          
+          {/* Compact Feature Badges */}
+          <div className="flex flex-wrap justify-center gap-3 mt-8">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/30 backdrop-blur-sm rounded-full border border-white/40 text-sm font-medium text-gray-700">
+              <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+              Smart Content Analysis
+            </div>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/30 backdrop-blur-sm rounded-full border border-white/40 text-sm font-medium text-gray-700">
+              <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full"></div>
+              Personalized Insights
+            </div>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/30 backdrop-blur-sm rounded-full border border-white/40 text-sm font-medium text-gray-700">
+              <div className="w-2 h-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full"></div>
+              Growth Optimization
+            </div>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/30 backdrop-blur-sm rounded-full border border-white/40 text-sm font-medium text-gray-700">
+              <div className="w-2 h-2 bg-gradient-to-r from-orange-500 to-red-500 rounded-full"></div>
+              Real-time Feedback
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      {/* Modern Image Section */}
+      <section className="relative py-8 sm:py-12 bg-gradient-to-r from-[#F8F0F9] to-blue-50 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="relative">
+            {/* Background decorative elements */}
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-100/20 to-blue-100/20 rounded-3xl blur-3xl"></div>
+            <div className="absolute top-0 left-1/4 w-72 h-72 bg-gradient-to-r from-pink-200/30 to-purple-200/30 rounded-full blur-2xl"></div>
+            <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-gradient-to-r from-blue-200/30 to-cyan-200/30 rounded-full blur-2xl"></div>
+            
+            {/* Image container - Now much bigger and centered */}
+            <div className="relative max-w-6xl mx-auto">
+              <div className="relative group">
+                {/* Glow effect behind image */}
+                <div className="absolute -inset-10 bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-500"></div>
+                
+                {/* Image wrapper with tilt effect */}
+                <Tilt
+                  tiltMaxAngleX={4}
+                  tiltMaxAngleY={4}
+                  perspective={1000}
+                  scale={1.02}
+                  transitionSpeed={1500}
+                  className="relative"
+                >
+                  <div className="relative overflow-hidden rounded-3xl bg-white/60 backdrop-blur-sm p-8 sm:p-10 shadow-xl">
+                    <Image
+                      src="/0093.png"
+                      alt="Creative Content Vision"
+                      width={1200}
+                      height={720}
+                      className="w-full h-auto rounded-2xl object-cover transition-transform duration-700 group-hover:scale-105"
+                      priority
+                    />
+                    
+                    {/* Overlay gradient */}
+                    <div className="absolute inset-8 sm:inset-10 rounded-2xl bg-gradient-to-t from-black/5 via-transparent to-transparent pointer-events-none"></div>
+                  </div>
+                </Tilt>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
       <section className="flex-1 flex flex-col justify-center bg-gradient-to-r from-[#F8F0F9] to-blue-50">
         {/* Featured Influencers */}
         <div className="relative">

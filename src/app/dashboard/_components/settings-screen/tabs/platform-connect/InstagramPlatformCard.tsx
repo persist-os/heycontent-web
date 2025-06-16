@@ -2,6 +2,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Instagram } from 'lucide-react';
 import { ConnectedAccount } from './platform-utils';
+import { fetchWithApiKey } from '@/app/lib/api-helpers';
 
 interface InstagramPlatformCardProps {
   userId: string;
@@ -28,9 +29,8 @@ export function InstagramPlatformCard({
   // Instagram OAuth using backend API (POST with userId)
   const handleInstagramConnect = async () => {
     try {
-      const res = await fetch('/api/social/instagram/auth-url', {
+      const res = await fetchWithApiKey('/api/social/instagram/auth-url', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId }),
       });
       const data = await res.json();
