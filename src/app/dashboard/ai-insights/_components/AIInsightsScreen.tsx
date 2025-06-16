@@ -23,8 +23,11 @@ export function AIInsightsScreen() {
   
   // Post limit selection state
   const [instagramPostLimit, setInstagramPostLimit] = useState<number | 'all'>(50)
+  const [gmailThreadLimit, setGmailThreadLimit] = useState<number | 'all'>(50)
   const [customPostLimit, setCustomPostLimit] = useState<string>('')
+  const [customGmailLimit, setCustomGmailLimit] = useState<string>('')
   const [showCustomInput, setShowCustomInput] = useState(false)
+  const [showGmailCustomInput, setShowGmailCustomInput] = useState(false)
   
   // Separate state for each platform
   const [youtubeRefreshing, setYoutubeRefreshing] = useState(false)
@@ -86,16 +89,16 @@ export function AIInsightsScreen() {
 
   // Add Gmail-specific queries and mutations after Instagram ones
   const gmailAccount = useQuery(
-    api.gmailQueries.getGmailAccount,
+    api.gmailQueries.getGmailAccounts,
     firebaseUser ? { userId: firebaseUser.uid } : "skip"
   )
 
   // Fetch Gmail insights
   const gmailBatchInsights = useQuery(
     api.gmailQueries.getGmailBatchAnalysis,
-    gmailAccount && firebaseUser ? { 
+    gmailAccount && gmailAccount.length > 0 && firebaseUser ? { 
       userId: firebaseUser.uid, 
-      gmailAccountId: gmailAccount.email 
+      gmailAccountId: gmailAccount[0].email 
     } : "skip"
   )
 
@@ -106,6 +109,18 @@ export function AIInsightsScreen() {
   const youtubeInsightsList = youtubeInsights?.analysis?.insights || []
   const instagramInsightsList = instagramInsights?.insights?.insights || []
   const gmailInsights = gmailBatchInsights?.insights?.insights || []
+
+  // Debug logging for Gmail insights
+  useEffect(() => {
+    if (gmailBatchInsights) {
+      console.log('🔍 Gmail Batch Insights Raw Data:', gmailBatchInsights)
+      console.log('🔍 Gmail Insights Array:', gmailInsights)
+      console.log('🔍 Gmail Insights Count:', gmailInsights.length)
+      if (gmailInsights.length > 0) {
+        console.log('🔍 Gmail Insight Titles:', gmailInsights.map(insight => insight.title))
+      }
+    }
+  }, [gmailBatchInsights, gmailInsights])
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -238,7 +253,7 @@ export function AIInsightsScreen() {
   }
 
   const handleGmailRefresh = async () => {
-    if (!firebaseUser || !gmailAccount?.email) {
+    if (!firebaseUser || !gmailAccount || gmailAccount.length === 0) {
       setGmailError('Gmail account not connected')
       return
     }
@@ -262,8 +277,8 @@ export function AIInsightsScreen() {
         },
         body: JSON.stringify({
           user_id: firebaseUser.uid,
-          gmail_account_id: gmailAccount.email,
-          max_threads: 50,
+          gmail_account_id: gmailAccount[0].email,
+          max_threads: gmailThreadLimit === 'all' ? 1000 : gmailThreadLimit,
           max_messages: 100,
           include_spam_analysis: true,
           force_refresh: true
@@ -279,7 +294,7 @@ export function AIInsightsScreen() {
       if (data.status === 'success') {
         await storeGmailBatchAnalysis({
           userId: firebaseUser.uid,
-          gmailAccountId: gmailAccount.email,
+          gmailAccountId: gmailAccount[0].email,
           insights: data.data
         })
       } else {
@@ -300,7 +315,8 @@ export function AIInsightsScreen() {
     error, 
     onRefresh, 
     disabled = false,
-    showPostLimitSelector = false 
+    showPostLimitSelector = false,
+    isGmail = false
   }: {
     platform: string
     isRefreshing: boolean
@@ -308,6 +324,7 @@ export function AIInsightsScreen() {
     onRefresh: () => void
     disabled?: boolean
     showPostLimitSelector?: boolean
+    isGmail?: boolean
   }) => {
     const presetOptions = [
       { value: 10, label: '10', time: '~1 min', icon: '⚡' },
@@ -317,12 +334,20 @@ export function AIInsightsScreen() {
       { value: 'all' as const, label: 'All', time: 'varies', icon: '🌟' }
     ]
 
+    // Use Gmail-specific state if it's Gmail platform
+    const currentLimit = isGmail ? gmailThreadLimit : instagramPostLimit
+    const setCurrentLimit = isGmail ? setGmailThreadLimit : setInstagramPostLimit
+    const customLimit = isGmail ? customGmailLimit : customPostLimit
+    const setCustomLimit = isGmail ? setCustomGmailLimit : setCustomPostLimit
+    const showCustom = isGmail ? showGmailCustomInput : showCustomInput
+    const setShowCustom = isGmail ? setShowGmailCustomInput : setShowCustomInput
+
     const handleCustomSubmit = () => {
-      const customValue = parseInt(customPostLimit)
+      const customValue = parseInt(customLimit)
       if (customValue && customValue > 0 && customValue <= 1000) {
-        setInstagramPostLimit(customValue)
-        setShowCustomInput(false)
-        setCustomPostLimit('')
+        setCurrentLimit(customValue)
+        setShowCustom(false)
+        setCustomLimit('')
       }
     }
 
@@ -352,12 +377,12 @@ export function AIInsightsScreen() {
                   <button
                     key={option.value}
                     onClick={() => {
-                      setInstagramPostLimit(option.value)
-                      setShowCustomInput(false)
+                      setCurrentLimit(option.value)
+                      setShowCustom(false)
                     }}
                     disabled={isRefreshing}
                     className={`relative group p-2 rounded-lg border transition-all duration-200 ${
-                      instagramPostLimit === option.value
+                      currentLimit === option.value
                         ? 'border-heycontent-yellow bg-heycontent-light-yellow/20'
                         : 'border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 hover:border-heycontent-yellow/50'
                     } ${isRefreshing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
@@ -365,7 +390,7 @@ export function AIInsightsScreen() {
                     <div className="text-center">
                       <div className="text-sm mb-0.5">{option.icon}</div>
                       <div className={`font-medium text-xs ${
-                        instagramPostLimit === option.value 
+                        currentLimit === option.value 
                           ? 'text-gray-900 dark:text-white' 
                           : 'text-gray-700 dark:text-gray-300'
                       }`}>
@@ -374,7 +399,7 @@ export function AIInsightsScreen() {
                     </div>
                     
                     {/* Selection indicator */}
-                    {instagramPostLimit === option.value && (
+                    {currentLimit === option.value && (
                       <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-heycontent-yellow rounded-full flex items-center justify-center">
                         <div className="w-1 h-1 bg-white rounded-full"></div>
                       </div>
@@ -386,10 +411,10 @@ export function AIInsightsScreen() {
               {/* Custom Input Toggle */}
               <div className="flex items-center justify-between mb-2">
                 <button
-                  onClick={() => setShowCustomInput(!showCustomInput)}
+                  onClick={() => setShowCustom(!showCustom)}
                   disabled={isRefreshing}
                   className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors ${
-                    showCustomInput
+                    showCustom
                       ? 'bg-heycontent-light-yellow text-gray-900'
                       : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                   } ${isRefreshing ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -402,13 +427,13 @@ export function AIInsightsScreen() {
                 <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 dark:bg-gray-800 rounded text-xs">
                   <Zap className="w-3 h-3 text-heycontent-yellow" />
                   <span className="font-medium text-gray-900 dark:text-white">
-                    {instagramPostLimit === 'all' ? 'All posts' : `${instagramPostLimit} posts`}
+                    {currentLimit === 'all' ? 'All items' : `${currentLimit} items`}
                   </span>
                 </div>
               </div>
 
               {/* Custom Input Field */}
-              {showCustomInput && (
+              {showCustom && (
                 <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
                   <div className="flex items-center gap-2">
                     <input
@@ -416,8 +441,8 @@ export function AIInsightsScreen() {
                       type="number"
                       min="1"
                       max="1000"
-                      value={customPostLimit}
-                      onChange={(e) => setCustomPostLimit(e.target.value)}
+                      value={customLimit}
+                      onChange={(e) => setCustomLimit(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && handleCustomSubmit()}
                       placeholder="e.g., 75"
                       disabled={isRefreshing}
@@ -425,7 +450,7 @@ export function AIInsightsScreen() {
                     />
                     <button
                       onClick={handleCustomSubmit}
-                      disabled={!customPostLimit || isRefreshing || parseInt(customPostLimit) < 1 || parseInt(customPostLimit) > 1000}
+                      disabled={!customLimit || isRefreshing || parseInt(customLimit) < 1 || parseInt(customLimit) > 1000}
                       className="px-3 py-1 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black text-sm font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Apply
@@ -604,7 +629,9 @@ export function AIInsightsScreen() {
                   isRefreshing={gmailRefreshing}
                   error={gmailError}
                   onRefresh={handleGmailRefresh}
-                  disabled={!firebaseUser || !gmailAccount?.email}
+                  disabled={!firebaseUser || !gmailAccount || gmailAccount.length === 0}
+                  showPostLimitSelector={true}
+                  isGmail={true}
                 />
                 
                 {gmailRefreshing ? (
@@ -622,17 +649,35 @@ export function AIInsightsScreen() {
                   </div>
                 ) : (
                   <div className="grid gap-6">
-                    {gmailInsights.length === 0 && !gmailError && (
+                    {!gmailAccount || gmailAccount.length === 0 ? (
+                      <div className="text-center py-12 px-4">
+                        <Mail className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                          Gmail Not Connected
+                        </h3>
+                        <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-4">
+                          Connect your Gmail account to get strategic insights about brand partnerships, media opportunities, and business inquiries in your inbox.
+                        </p>
+                        <button 
+                          onClick={() => window.location.href = '/dashboard/settings'}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black rounded-lg font-medium transition-colors"
+                        >
+                          <Mail className="w-4 h-4" />
+                          Connect Gmail
+                        </button>
+                      </div>
+                    ) : gmailInsights.length === 0 && !gmailError ? (
                       <div className="text-center text-gray-400">No Gmail insights available.</div>
+                    ) : (
+                      gmailInsights.map((insight, idx) => (
+                        <InsightCard
+                          key={idx}
+                          {...insight}
+                          expanded={expandedGmail === idx}
+                          onExpand={() => setExpandedGmail(expandedGmail === idx ? null : idx)}
+                        />
+                      ))
                     )}
-                    {gmailInsights.map((insight, idx) => (
-                      <InsightCard
-                        key={idx}
-                        {...insight}
-                        expanded={expandedGmail === idx}
-                        onExpand={() => setExpandedGmail(expandedGmail === idx ? null : idx)}
-                      />
-                    ))}
                   </div>
                 )}
               </TabsContent>

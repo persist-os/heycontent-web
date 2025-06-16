@@ -351,12 +351,36 @@ export const getGmailThreadsWithMessages = query({
 export const getGmailAccount = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
-    const account = await ctx.db
-      .query("gmailAccounts")
-      .withIndex("by_userId", q => q.eq("userId", args.userId))
-      .first();
-    
-    return account;
+    // Always return null on any error to prevent frontend crashes
+    try {
+      // Validate input
+      if (!args.userId || typeof args.userId !== 'string' || args.userId.trim() === '') {
+        console.log('[getGmailAccount] Invalid userId provided:', args.userId);
+        return null;
+      }
+
+      console.log('[getGmailAccount] Querying for userId:', args.userId);
+      
+      // Try to get account with index
+      const account = await ctx.db
+        .query("gmailAccounts")
+        .withIndex("by_userId", q => q.eq("userId", args.userId))
+        .first();
+      
+      console.log('[getGmailAccount] Found account:', account ? {
+        userId: account.userId,
+        email: account.email,
+        hasData: !!account.data,
+        createdAt: account.createdAt,
+        updatedAt: account.updatedAt
+      } : 'No account found');
+      
+      return account || null;
+    } catch (error) {
+      console.error('[getGmailAccount] Error (returning null to prevent crashes):', error);
+      // ALWAYS return null instead of throwing to prevent frontend crashes
+      return null;
+    }
   },
 });
 
@@ -368,6 +392,17 @@ export const getGmailBatchAnalysis = query({
   },
   handler: async (ctx, args) => {
     try {
+      // Validate inputs
+      if (!args.userId || typeof args.userId !== 'string' || args.userId.trim() === '') {
+        console.log('[getGmailBatchAnalysis] Invalid userId provided:', args.userId);
+        return null;
+      }
+      
+      if (!args.gmailAccountId || typeof args.gmailAccountId !== 'string' || args.gmailAccountId.trim() === '') {
+        console.log('[getGmailBatchAnalysis] Invalid gmailAccountId provided:', args.gmailAccountId);
+        return null;
+      }
+
       console.log('[getGmailBatchAnalysis] Querying with:', { 
         userId: args.userId, 
         gmailAccountId: args.gmailAccountId 
@@ -403,7 +438,8 @@ export const getGmailBatchAnalysis = query({
       };
     } catch (error) {
       console.error("Error fetching Gmail batch analysis:", error);
-      throw new Error("Failed to fetch Gmail batch analysis");
+      // Return null instead of throwing to prevent frontend crashes
+      return null;
     }
   },
 });
@@ -445,5 +481,72 @@ export const getGmailMessages = query({
       .take(args.limit || 100);
     
     return messages;
+  },
+});
+
+// Debug query to check Gmail data for a user
+export const debugGmailData = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    try {
+      console.log('[debugGmailData] Checking Gmail data for userId:', args.userId);
+      
+      // Check Gmail accounts
+      const accounts = await ctx.db
+        .query("gmailAccounts")
+        .filter(q => q.eq(q.field("userId"), args.userId))
+        .collect();
+      
+      // Check Gmail tokens
+      const tokens = await ctx.db
+        .query("gmailTokens")
+        .filter(q => q.eq(q.field("userId"), args.userId))
+        .collect();
+      
+      // Check Gmail threads
+      const threads = await ctx.db
+        .query("gmailThreads")
+        .filter(q => q.eq(q.field("userId"), args.userId))
+        .take(5); // Just first 5 for debugging
+      
+      // Check Gmail messages
+      const messages = await ctx.db
+        .query("gmailMessages")
+        .filter(q => q.eq(q.field("userId"), args.userId))
+        .take(5); // Just first 5 for debugging
+      
+      const result = {
+        userId: args.userId,
+        accounts: accounts.length,
+        tokens: tokens.length,
+        threads: threads.length,
+        messages: messages.length,
+        accountDetails: accounts.map(acc => ({
+          email: acc.email,
+          createdAt: acc.createdAt,
+          updatedAt: acc.updatedAt,
+          hasData: !!acc.data
+        })),
+        tokenDetails: tokens.map(token => ({
+          hasAccessToken: !!token.accessToken,
+          hasRefreshToken: !!token.refreshToken,
+          expiryDate: token.expiryDate,
+          lastRefreshed: token.lastRefreshed
+        }))
+      };
+      
+      console.log('[debugGmailData] Result:', result);
+      return result;
+    } catch (error) {
+      console.error('[debugGmailData] Error:', error);
+      return {
+        userId: args.userId,
+        error: error.message,
+        accounts: 0,
+        tokens: 0,
+        threads: 0,
+        messages: 0
+      };
+    }
   },
 });

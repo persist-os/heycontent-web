@@ -980,3 +980,64 @@ export const storeGmailBatchAnalysis = mutation({
     }
   },
 });
+
+// Debug mutation to manually create Gmail account record
+export const createDebugGmailAccount = mutation({
+  args: {
+    userId: v.string(),
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const now = Date.now();
+      
+      // Check if account already exists
+      const existing = await ctx.db
+        .query("gmailAccounts")
+        .filter(q => 
+          q.eq(q.field("userId"), args.userId) && 
+          q.eq(q.field("email"), args.email)
+        )
+        .first();
+      
+      if (existing) {
+        return { 
+          success: true, 
+          message: "Account already exists", 
+          accountId: existing._id 
+        };
+      }
+      
+      // Create new account record
+      const accountId = await ctx.db.insert("gmailAccounts", {
+        userId: args.userId,
+        email: args.email,
+        messagesTotal: 100, // Placeholder
+        threadsTotal: 35,   // Based on your logs
+        historyId: "12345",
+        labelsTotal: 10,
+        data: {
+          email: args.email,
+          messagesTotal: 100,
+          threadsTotal: 35,
+          historyId: "12345",
+          labelsTotal: 10,
+        },
+        createdAt: now,
+        updatedAt: now,
+      });
+      
+      return { 
+        success: true, 
+        message: "Gmail account record created", 
+        accountId 
+      };
+    } catch (error) {
+      console.error("Error creating debug Gmail account:", error);
+      return { 
+        success: false, 
+        error: error.message 
+      };
+    }
+  },
+});

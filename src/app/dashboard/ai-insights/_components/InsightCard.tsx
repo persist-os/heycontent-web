@@ -16,6 +16,13 @@ export interface InsightCardProps {
   outcomeColor?: string;
   sourceDetails: string[];
   relatedItems?: Array<{ label: string; value: string }>;
+  threadDetails?: Array<{
+    threadId: string;
+    subject: string;
+    from: string;
+    snippet: string;
+    date: string;
+  }>;
   onDiscuss?: () => void;
   onActionStepClick?: (actionStep: string) => void;
   expanded?: boolean;
@@ -39,12 +46,49 @@ export const InsightCard: React.FC<InsightCardProps> = ({
   outcomeColor = 'bg-heycontent-light-green',
   sourceDetails,
   relatedItems,
+  threadDetails,
   onDiscuss,
   onActionStepClick,
   expanded = false,
   onExpand,
 }) => {
   const { discussActionStep } = useActionStepDiscussion();
+
+  // Function to navigate to chat with Gmail thread content
+  const discussGmailThread = (thread: any) => {
+    const context = {
+      platform: 'gmail',
+      contentId: thread.threadId,
+      title: thread.subject || 'Email Thread',
+      source: 'AI Insights - Gmail Thread',
+      originalPlatform: 'gmail',
+      publishedAt: thread.date,
+      content: {
+        data: {
+          subject: thread.subject || 'No Subject',
+          from: thread.from || 'Unknown Sender',
+          snippet: thread.snippet || 'No preview available',
+          threadId: thread.threadId,
+          // Add the full thread content for context
+          fullContent: thread.snippet || 'No content available'
+        }
+      },
+      // Create a formatted analysis of the email thread
+      analysis: `**Email Thread Analysis**
+
+**Subject:** ${thread.subject || 'No Subject'}
+**From:** ${thread.from || 'Unknown Sender'}
+**Date:** ${thread.date || 'Unknown Date'}
+
+**Content Preview:**
+${thread.snippet || 'No preview available'}
+
+This email thread was identified as part of your ${title.toLowerCase()} opportunities. You can discuss strategies, draft responses, or analyze the content with AI assistance.`
+    };
+    
+    const encodedContext = encodeURIComponent(JSON.stringify(context));
+    window.location.href = `/dashboard/chat?contentContext=${encodedContext}`;
+  };
 
   // Function to navigate to chat with the full insight context
   const discussFullInsight = () => {
@@ -116,6 +160,37 @@ export const InsightCard: React.FC<InsightCardProps> = ({
               ))}
             </ul>
           </div>
+
+          {/* Thread Details */}
+          {platform === 'gmail' && threadDetails && threadDetails.length > 0 && (
+            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-3">
+              <h4 className="font-medium dark:text-white">Email Threads ({threadDetails.length})</h4>
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {threadDetails.map((thread, idx) => (
+                  <div 
+                    key={idx} 
+                    className="bg-white dark:bg-gray-700 p-3 rounded-lg border dark:border-gray-600 hover:shadow-sm transition-shadow cursor-pointer"
+                    onClick={() => discussGmailThread(thread)}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <h5 className="font-medium text-sm text-text-dark dark:text-white truncate flex-1 mr-2">
+                        {thread.subject}
+                      </h5>
+                      <span className="text-xs text-text-gray dark:text-gray-400 whitespace-nowrap">
+                        {thread.date}
+                      </span>
+                    </div>
+                    <p className="text-xs text-text-gray dark:text-gray-400 mb-2">
+                      From: {thread.from}
+                    </p>
+                    <p className="text-xs text-text-gray dark:text-gray-400 line-clamp-2">
+                      {thread.snippet}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Action Steps */}
           <div>

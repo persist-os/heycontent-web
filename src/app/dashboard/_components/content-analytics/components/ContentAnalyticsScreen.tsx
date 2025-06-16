@@ -137,11 +137,11 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
   const memoizedTrackerAnalysis = useMemo(() => trackerAnalysis, [trackerAnalysis]);
 
   // Memoized fetch function with stable dependencies
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (forceRefresh = false) => {
     // Prevent multiple simultaneous fetches
-    if (hasDataFetched && !isInitialMount) {
-      console.log('🛑 Data already fetched, skipping duplicate call');
-      return;
+    if (hasDataFetched && !isInitialMount && !forceRefresh) {
+      console.log('🛑 Data already fetched, skipping duplicate call')
+      return
     }
 
     console.log('🚀 Instagram Analytics fetchData called with:', {
@@ -298,9 +298,8 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
 
   // Only fetch data when dependencies actually change
   useEffect(() => {
-
     if (!hasDataFetched || isInitialMount) {
-      fetchData();
+      fetchData(); // Don't pass forceRefresh here - this is automatic loading
     }
   }, [fetchData, hasDataFetched, isInitialMount]);
 
