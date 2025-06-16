@@ -27,7 +27,7 @@ import {
   PlatformFilterType
 } from '../types';
 
-import { sortAndFilterContent } from '../utils';
+import { sortAndFilterContent, sortContent } from '../utils';
 import { useAuth } from '@/app/context/auth-context';
 
 // Skeleton Components
@@ -116,6 +116,7 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
   const [skeletonStartTime, setSkeletonStartTime] = useState<number | null>(null);
   const [renderComplete, setRenderComplete] = useState(false);
   const [contentReady, setContentReady] = useState(false);
+  const [hasDataFetched, setHasDataFetched] = useState(false);
 
   // Get Instagram account data from Convex
   const instagramAccount = useQuery(api.instagramQueries.getInstagramAccount, { userId });
@@ -123,57 +124,107 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
   // Get Instagram tracker analysis from Convex
   const trackerAnalysis = useQuery(
     api.instagramQueries.getInstagramTrackerAnalysis,
-    {
+    instagramAccount?.instagramAccountId ? {
       userId,
-      instagramAccountId: instagramAccount?.instagramAccountId || ""
-    }
+      instagramAccountId: instagramAccount.instagramAccountId
+    } : "skip"
   );
 
-  // Memoized fetch function
+  // Memoize the Instagram account ID to prevent unnecessary re-renders
+  const instagramAccountId = useMemo(() => instagramAccount?.instagramAccountId, [instagramAccount?.instagramAccountId]);
+  
+  // Memoize tracker analysis to prevent unnecessary re-renders
+  const memoizedTrackerAnalysis = useMemo(() => trackerAnalysis, [trackerAnalysis]);
+
+  // Memoized fetch function with stable dependencies
   const fetchData = useCallback(async () => {
-    if (!instagramAccount) {
-      console.log('🚫 [SKELETON DEBUG] No Instagram account, ending skeleton immediately');
+    // Prevent multiple simultaneous fetches
+    if (hasDataFetched && !isInitialMount) {
+      console.log('🛑 Data already fetched, skipping duplicate call');
+      return;
+    }
+
+    console.log('🚀 Instagram Analytics fetchData called with:', {
+      userId,
+      hasInstagramAccount: !!instagramAccountId,
+      hasTrackerAnalysis: memoizedTrackerAnalysis !== undefined,
+      hasDataFetched
+
+    });
+    
+    if (!instagramAccountId) {
+      console.log('⚠️ No Instagram account found, skipping analytics fetch');
       setLoading(false);
       setIsInitialMount(false);
       setRenderComplete(true);
       setContentReady(true);
+      setHasDataFetched(true);
       return;
     }
 
-    console.log('⏳ [SKELETON DEBUG] Starting fetch, skeleton should be showing...');
     const fetchStartTime = Date.now();
     setLoading(true);
-    setRenderComplete(false); // Reset render complete state
-    setContentReady(false); // Reset content ready state
+    setRenderComplete(false);
+    setContentReady(false);
     
     // Add minimum loading time to ensure skeleton is visible
     const minLoadingTime = new Promise(resolve => setTimeout(resolve, 200));
     
     try {
-      // Check if we have data in Convex
-      if (trackerAnalysis !== undefined) {
-        if (trackerAnalysis) {
-          console.log('💾 [SKELETON DEBUG] Found cached Convex data, waiting minimum time...');
-          await minLoadingTime; // Ensure skeleton shows for at least 300ms
-          const totalTime = Date.now() - fetchStartTime;
-          console.log(`✅ [SKELETON DEBUG] Using cached data, skeleton was visible for ${totalTime}ms`);
-          setAnalysis(trackerAnalysis);
+
+      // Enhanced Convex data validation - check if we have meaningful data for this specific account
+      if (trackerAnalysis !== undefined && !forceRefresh) {
+        const hasValidData = trackerAnalysis && 
+          Object.keys(trackerAnalysis).length > 0 &&
+          (trackerAnalysis.last_post || trackerAnalysis.posting_frequency || trackerAnalysis.media_distribution ||
+           (trackerAnalysis.content && (trackerAnalysis.content.last_post || trackerAnalysis.content.posting_frequency || trackerAnalysis.content.media_distribution)));
+        
+        if (hasValidData) {
+          await minLoadingTime; // Ensure skeleton shows for at least 200ms
+          console.log('✅ Using cached tracker analysis from Convex:', trackerAnalysis);
+          
+          // Extract the content from the tracker analysis if it's nested
+          let analysisToSet = memoizedTrackerAnalysis;
+          if (memoizedTrackerAnalysis.content && !memoizedTrackerAnalysis.last_post) {
+            analysisToSet = memoizedTrackerAnalysis.content;
+            console.log('🔧 Extracted content from nested structure:', analysisToSet);
+          }
+          
+          setAnalysis(analysisToSet);
           setLoading(false);
           setIsInitialMount(false);
-          // Don't set renderComplete or contentReady here - let the render finish first
-          return;
+          setHasDataFetched(true);
+          setRenderComplete(true);
+          setContentReady(true);
+          return; // ✅ RETURN EARLY - Don't make API call when cached data exists
+
+        } else {
+          console.log('⚠️ Tracker analysis from Convex is null, empty, or lacks meaningful data, falling back to API call');
         }
+      } else if (!forceRefresh) {
+        console.log('🔄 Tracker analysis still loading from Convex...');
+
+        // Don't make API call while Convex is still loading, unless it's a forced refresh
+        setLoading(false);
+        setIsInitialMount(false);
+        return;
       }
 
-      console.log('🌐 [SKELETON DEBUG] No cached data, fetching from backend...');
-      const response = await fetch(`${window.location.origin}/api/social/instagram/analytics`, {
+      // Only make API call if:
+      // 1. forceRefresh is true (refresh button clicked), OR
+      // 2. No valid cached data exists
+      console.log('🔄 Making API call to refresh Instagram data...', { forceRefresh, hasValidCachedData: false });
+
+      // Enhanced refresh: Call full-profile-collect to refresh both analytics and posts
+      const response = await fetch(`${window.location.origin}/api/social/instagram/full-refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${await getApiKey()}`,
         },
         body: JSON.stringify({
-          user_id: userId
+          user_id: userId,
+          instagram_account_id: instagramAccount.instagramAccountId
         })
       });
 
@@ -182,51 +233,87 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
       }
 
       const data = await response.json();
-      console.log('📊 [SKELETON DEBUG] Received backend data, waiting minimum time...');
-      console.log('🔍 [DATA DEBUG] Full backend response:', data);
-      console.log('🔍 [DATA DEBUG] Checking data.analysis:', data?.analysis);
-      console.log('🔍 [DATA DEBUG] Checking data.analysis.full_analysis:', data?.analysis?.full_analysis);
-      console.log('🔍 [DATA DEBUG] Checking data.analysis.full_analysis.content:', data?.analysis?.full_analysis?.content);
       
+      await minLoadingTime;
+
       await minLoadingTime; // Ensure skeleton shows for at least 200ms
-      const totalTime = Date.now() - fetchStartTime;
-      console.log(`✅ [SKELETON DEBUG] Backend fetch complete, skeleton was visible for ${totalTime}ms`);
+
       
-      if (data?.analysis?.full_analysis?.content) {
-        console.log('✅ [DATA DEBUG] Found expected data structure, setting analysis');
-        setAnalysis(data.analysis.full_analysis.content);
+      console.log('🔍 Instagram Analytics API Response Debug:', {
+        fullResponse: data,
+        hasAnalysis: !!data?.analysis,
+        hasData: !!data?.data,
+        hasContent: !!data?.content
+      });
+      
+      // Fixed response processing logic
+      let analysisToSet = null;
+      
+      if (data?.status === 'success' && data?.data) {
+        if (data.data.content && !data.data.last_post) {
+          analysisToSet = data.data.content;
+          console.log('✅ Using nested content from status.success response:', analysisToSet);
+        } else {
+          analysisToSet = data.data;
+          console.log('✅ Using data from status.success response:', analysisToSet);
+        }
       } else if (data?.analysis) {
-        console.log('⚠️ [DATA DEBUG] Found data.analysis but not full_analysis.content, trying data.analysis');
-        setAnalysis(data.analysis);
+        if (data.analysis.full_analysis?.content) {
+          analysisToSet = data.analysis.full_analysis.content;
+          console.log('✅ Using nested full_analysis.content:', analysisToSet);
+        } else if (data.analysis.content) {
+          analysisToSet = data.analysis.content;
+          console.log('✅ Using analysis.content:', analysisToSet);
+        } else {
+          analysisToSet = data.analysis;
+          console.log('✅ Using direct analysis:', analysisToSet);
+        }
       } else if (data?.content) {
-        console.log('⚠️ [DATA DEBUG] Found data.content, trying that');
-        setAnalysis(data.content);
+        analysisToSet = data.content;
+        console.log('✅ Using direct content:', analysisToSet);
+      }
+      
+      if (analysisToSet) {
+        setAnalysis(analysisToSet);
+        console.log('✅ Successfully set analysis data');
       } else {
-        console.log('❌ [DATA DEBUG] No analysis data found in any expected location');
-        console.log('🔍 [DATA DEBUG] Available keys in response:', Object.keys(data || {}));
+        console.warn('⚠️ No valid analysis data found in response');
+        setError('No analysis data available');
       }
     } catch (err) {
-      console.error('❌ [SKELETON DEBUG] Error occurred:', err);
+
       await minLoadingTime; // Ensure skeleton shows even on error
-      const totalTime = Date.now() - fetchStartTime;
-      console.log(`🚫 [SKELETON DEBUG] Error state, skeleton was visible for ${totalTime}ms`);
+      console.error('❌ Instagram analytics fetch error:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch Instagram analysis');
     } finally {
       setLoading(false);
       setIsInitialMount(false);
-      // Don't set renderComplete or contentReady here - let the render finish first
-    }
-  }, [userId, instagramAccount, trackerAnalysis]);
+      setHasDataFetched(true);
 
+      setRenderComplete(true);
+      setContentReady(true);
+
+    }
+  }, [userId, instagramAccountId, memoizedTrackerAnalysis, hasDataFetched, isInitialMount]);
+
+  // Only fetch data when dependencies actually change
   useEffect(() => {
-    console.log('🔄 [SKELETON DEBUG] Instagram Analytics component mounted/updated');
-    fetchData();
-  }, [fetchData]);
+
+    if (!hasDataFetched || isInitialMount) {
+      fetchData();
+    }
+  }, [fetchData, hasDataFetched, isInitialMount]);
+
+  // Reset hasDataFetched when userId changes
+  useEffect(() => {
+    setHasDataFetched(false);
+    setIsInitialMount(true);
+  }, [userId]);
+
 
   // Memoized pie chart data calculation
   const mediaDistributionData = useMemo(() => {
     if (!analysis?.media_distribution) {
-      console.log('📊 [PIE CHART DEBUG] No media distribution data available');
       return [];
     }
     
@@ -236,7 +323,6 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
       { name: 'Reels', value: parseInt(analysis.media_distribution.reel?.replace('%', '') || '0'), color: '#45E290' }
     ].filter(item => item.value > 0);
     
-    console.log('🥧 [PIE CHART DEBUG] Pie chart data calculated:', data);
     return data;
   }, [analysis?.media_distribution]);
 
@@ -253,56 +339,65 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
     if (shouldShowSkeleton && !skeletonStartTime) {
       const startTime = Date.now();
       setSkeletonStartTime(startTime);
-      console.log('💀 [SKELETON DEBUG] Skeleton started showing at:', new Date(startTime).toLocaleTimeString());
     } else if (!shouldShowSkeleton && skeletonStartTime) {
       const endTime = Date.now();
       const duration = endTime - skeletonStartTime;
-      console.log(`💀 [SKELETON DEBUG] Skeleton stopped showing at: ${new Date(endTime).toLocaleTimeString()}, Total duration: ${duration}ms`);
       setSkeletonStartTime(null);
     }
   }, [loading, isInitialMount, renderComplete, contentReady, skeletonStartTime]);
 
   // Handle render completion
   const handleRenderComplete = useCallback(() => {
-    console.log('🎨 [RENDER DEBUG] Render complete - hiding skeleton');
     setRenderComplete(true);
     setContentReady(true);
   }, []);
 
   // Set content ready and render complete after analysis is available
   useEffect(() => {
+    console.log('🎯 Render completion check:', {
+      loading,
+      isInitialMount,
+      hasAnalysis: !!analysis,
+      analysisKeys: analysis ? Object.keys(analysis) : null,
+      mediaDistributionLength: mediaDistributionData.length,
+      currentContentReady: contentReady,
+      currentRenderComplete: renderComplete
+    });
+    
     if (!loading && !isInitialMount && analysis) {
-      if (!analysis.media_distribution || mediaDistributionData.length === 0) {
-        // No pie chart to wait for, set content ready after short delay
-        console.log('🎨 [RENDER DEBUG] No pie chart - setting content ready after delay');
-        const timer = setTimeout(() => {
-          setContentReady(true);
-          handleRenderComplete();
-        }, 100);
-        return () => clearTimeout(timer);
-      } else {
-        // Has pie chart - set content ready immediately, but wait for animation to complete for renderComplete
-        console.log('🎨 [RENDER DEBUG] Has pie chart - setting content ready, waiting for animation');
-        setContentReady(true);
-      }
+      console.log('🚀 Setting content ready and render complete');
+      setContentReady(true);
+      setRenderComplete(true);
     }
-  }, [loading, isInitialMount, analysis, mediaDistributionData.length, handleRenderComplete]);
+  }, [loading, isInitialMount, analysis, mediaDistributionData.length, contentReady, renderComplete]);
 
   // Show skeleton on initial mount, loading, or while render is not complete
   if (loading || isInitialMount || !renderComplete || !contentReady) {
-    console.log('💀 [SKELETON DEBUG] Rendering skeleton - loading:', loading, 'isInitialMount:', isInitialMount, 'renderComplete:', renderComplete, 'contentReady:', contentReady);
+    console.log('💀 Showing skeleton because:', {
+      loading,
+      isInitialMount,
+      renderComplete,
+      contentReady,
+      hasAnalysis: !!analysis,
+      analysisStructure: analysis ? {
+        hasLastPost: !!analysis.last_post,
+        hasPostingFrequency: !!analysis.posting_frequency,
+        hasMediaDistribution: !!analysis.media_distribution
+      } : null
+    });
+    
     return (
       <div className="space-y-6 mb-8">
         {/* Header with Refresh Button */}
         <div className="flex justify-between items-center">
           <Button 
             size="sm" 
-            onClick={fetchData} 
+            onClick={() => fetchData(true)}
             disabled={loading}
             className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm ml-auto"
           >
             <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-            Refreshing...
+            Refreshing Analytics & Posts...
           </Button>
         </div>
 
@@ -318,7 +413,6 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
 
   // Show loading state while waiting for Instagram account to load
   if (instagramAccount === undefined) {
-    console.log('⏳ [SKELETON DEBUG] Waiting for Instagram account to load...');
     return (
       <div className="space-y-6 mb-8">
         <div className="flex justify-between items-center">
@@ -328,7 +422,7 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
             className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm ml-auto"
           >
             <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-            Loading account...
+            Loading Analytics & Posts...
           </Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -342,7 +436,6 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
 
   // Show error if no Instagram account found
   if (instagramAccount === null) {
-    console.log('❌ [SKELETON DEBUG] No Instagram account found');
     return (
       <div className="text-center text-gray-500 p-4 mb-8">
         <p>No Instagram account connected</p>
@@ -353,7 +446,6 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
 
   // Show loading state while waiting for tracker analysis query to complete
   if (trackerAnalysis === undefined) {
-    console.log('⏳ [SKELETON DEBUG] Waiting for tracker analysis query to complete...');
     return (
       <div className="space-y-6 mb-8">
         <div className="flex justify-between items-center">
@@ -363,7 +455,7 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
             className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm ml-auto"
           >
             <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-            Loading analytics...
+            Loading Analytics & Posts...
           </Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -376,26 +468,23 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
   }
 
   if (error) {
-    console.log('❌ [SKELETON DEBUG] Rendering error state');
     return (
       <div className="text-center text-red-500 p-4 mb-8">
         <p>Error: {error}</p>
-        <Button onClick={fetchData} className="mt-2">Try Again</Button>
+        <Button onClick={() => fetchData(true)} className="mt-2">Try Again</Button>
       </div>
     );
   }
 
   if (!analysis) {
-    console.log('⚠️ [SKELETON DEBUG] Rendering no data state');
     return (
       <div className="text-center text-gray-500 p-4 mb-8">
         <p>No Instagram analysis available</p>
-        <Button onClick={fetchData} className="mt-2">Load Analytics</Button>
+        <Button onClick={() => fetchData(true)} className="mt-2">Load Analytics</Button>
       </div>
     );
   }
 
-  console.log('✨ [SKELETON DEBUG] Rendering actual content with analysis data');
   return (
     <div className="space-y-6 mb-8">
       {/* Header with Refresh Button */}
@@ -403,17 +492,17 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
         <div></div> {/* Empty div to push button to the right */}
         <Button 
           size="sm" 
-          onClick={fetchData} 
+          onClick={() => fetchData(true)}
           disabled={loading}
           className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm"
         >
           <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          {loading ? 'Refreshing...' : 'Refresh'}
+          {loading ? 'Refreshing Analytics & Posts...' : 'Refresh Analytics & Posts'}
         </Button>
       </div>
 
       {/* Analytics Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
         
         {/* Last Post Card */}
         {analysis.last_post && (
@@ -517,9 +606,8 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
                       outerRadius={40}
                       paddingAngle={2}
                       dataKey="value"
-                      onAnimationStart={() => console.log('🥧 [PIE CHART DEBUG] Pie chart animation started')}
+                      onAnimationStart={() => {}}
                       onAnimationEnd={() => {
-                        console.log('🥧 [PIE CHART DEBUG] Pie chart animation completed');
                         handleRenderComplete();
                       }}
                     >
@@ -572,19 +660,20 @@ export function ContentAnalyticsScreen() {
   // Restore platform selection filter
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformType>('all');
   const [selectedContent, setSelectedContent] = useState<AnyContentItem | null>(null);
+  const [loadingDiscuss, setLoadingDiscuss] = useState(false);
+
+  if (!firebaseUser || !userId) {
+    return <LoadingState type="auth" />;
+  }
   const [isTabSwitching, setIsTabSwitching] = useState(false);
 
   // Handle tab switching with immediate skeleton
   const handlePlatformChange = useCallback((value: PlatformType) => {
-    console.log('🔄 [TAB DEBUG] Switching to platform:', value);
-    
     if (value === 'instagram') {
-      console.log('💀 [TAB DEBUG] Switching to Instagram - showing immediate skeleton');
       setIsTabSwitching(true);
       
       // Show skeleton for minimum time, then let component take over
       setTimeout(() => {
-        console.log('💀 [TAB DEBUG] Tab switching skeleton timeout - letting component take over');
         setIsTabSwitching(false);
       }, 600); // Show for 600ms minimum
     }
@@ -595,11 +684,11 @@ export function ContentAnalyticsScreen() {
   // Convex queries (never skip, just allow undefined)
   const youtubeVideos = useQuery(
     api.youtubeQueries.listUserYouTubeVideos,
-    userId ? { userId } : undefined
+    { userId }
   );
   const gmailThreads = useQuery(
-    api.gmailQueries.listUserGmailThreads,
-    userId ? { userId } : undefined
+    api.gmailQueries.getGmailThreadsWithMessages,
+    { userId }
   );
   const instagramPosts = useQuery(
     api.instagramQueries.getAllInstagramPosts,
@@ -612,14 +701,11 @@ export function ContentAnalyticsScreen() {
     { userId: firebaseUser?.uid || '' }
   );
 
-  useEffect(() => {
-  }, [youtubeVideos, gmailThreads, instagramPosts]);
-
   // Map YouTube items - using the correctly structured data from listUserYouTubeVideos query
   const mappedYouTubeItems: YouTubeContentItem[] = useMemo(() => {
     if (youtubeVideos && Array.isArray(youtubeVideos)) {
       return youtubeVideos.map((video: any) => ({
-        id: video.id || '',
+        id: `youtube-${video.id || ''}`,
         platform: 'youtube',
         publishedAt: video.publishedAt || new Date().toISOString(),
         content: {
@@ -645,23 +731,113 @@ export function ContentAnalyticsScreen() {
     return [];
   }, [youtubeVideos]);
 
+  // Helper to get the received date for an email/thread
+  const getReceivedDate = (email: any, thread: any) => {
+    if (email && email.internalDate) return new Date(Number(email.internalDate)).toISOString();
+    const firstMessage = thread.messages && thread.messages.length > 0 ? thread.messages[0] : null;
+    if (firstMessage && firstMessage.internalDate) return new Date(Number(firstMessage.internalDate)).toISOString();
+    if (thread.createdAt) return new Date(thread.createdAt).toISOString();
+    return '';
+  };
+
   const mappedGmailItems = useMemo(() => {
     if (Array.isArray(gmailThreads)) {
-      return gmailThreads.map((thread: any): GmailContentItem => ({
-        id: thread._id || thread.id,
-        platform: 'gmail',
-        publishedAt: thread.publishedAt || '',
-        content: {
-          subject: thread.subject || '',
-          snippet: thread.snippet || '',
-          thread: thread.threadId || '',
-          emailType: thread.emailType || 'all',
-        },
-        metrics: thread.metrics || {},
-      }));
+      const importantEmails: any[] = [];
+      gmailThreads.forEach((thread: any, threadIndex: number) => {
+        if (thread.analysis && Array.isArray(thread.analysis.important_emails)) {
+          thread.analysis.important_emails.forEach((email: any, emailIndex: number) => {
+            const firstMessage = thread.messages && thread.messages.length > 0 ? thread.messages[0] : null;
+            // Ensure unique ID by prefixing with 'important-' and including indices
+            const uniqueId = `gmail-important-${thread.threadId || thread._id || thread.id}-${emailIndex}`;
+            importantEmails.push({
+              id: uniqueId,
+              platform: 'gmail',
+              publishedAt: getReceivedDate(email, thread),
+              content: {
+                data: {
+                  subject: email.subject || thread.data?.subject || thread.subject || 'No Subject',
+                  snippet: email.snippet || thread.data?.snippet || thread.snippet || 'No preview available',
+                  from: email.sender || thread.data?.from || thread.from || 'Unknown Sender',
+                  emailType: email.emailType || 'important',
+                  threadId: thread.threadId,
+                  emailId: firstMessage?.messageId || firstMessage?.id,
+                }
+              },
+              metrics: email.metrics || {},
+            });
+          });
+        }
+      });
+      if (importantEmails.length > 0) return importantEmails;
+      
+      // Use the enhanced data structure from getGmailThreadsWithMessages
+      return gmailThreads.map((thread: any, index: number): GmailContentItem => {
+        // Handle different data structures:
+        // 1. thread.data.messages[0] (for gmailThreads with messages array)
+        // 2. thread.data (for individual gmailMessages)
+        // 3. Direct thread properties (fallback)
+        
+        let emailData = null;
+        
+        // Check if thread has data.messages array (from gmailThreads)
+        if (thread.data?.messages && Array.isArray(thread.data.messages) && thread.data.messages.length > 0) {
+          emailData = thread.data.messages[0]; // Get first message from thread
+        }
+        // Check if thread.data has direct email properties (from gmailMessages)
+        else if (thread.data?.subject || thread.data?.from) {
+          emailData = thread.data;
+        }
+        // Fallback to thread.messages if available
+        else if (thread.messages && Array.isArray(thread.messages) && thread.messages.length > 0) {
+          emailData = thread.messages[0];
+        }
+        
+        // Extract data with proper fallbacks
+        const subject = emailData?.subject || 
+                       thread.subject || 
+                       'No Subject';
+                       
+        const snippet = emailData?.snippet || 
+                       emailData?.body || // Sometimes body contains the snippet
+                       thread.snippet || 
+                       'No preview available';
+                       
+        const from = emailData?.from || 
+                    thread.from || 
+                    'Unknown Sender';
+                    
+        // Get thread ID and message count
+        const threadId = thread.threadId || thread.data?.threadId || thread.data?.id || thread._id;
+        const messageCount = thread.data?.messages?.length || thread.messages?.length || 1;
+        
+        // Ensure unique ID
+        const uniqueId = `gmail-${threadId || `thread-${thread._id || thread.id || index}`}`;
+        
+        return {
+          id: uniqueId,
+          platform: 'gmail',
+          publishedAt: getReceivedDate(emailData, thread),
+          content: {
+            data: {
+              subject: subject,
+              snippet: snippet, 
+              from: from,
+              emailType: emailData?.emailType || 'all',
+              threadId: threadId,
+              emailId: emailData?.messageId || emailData?.id || threadId,
+              messageCount: messageCount,
+              messages: thread.data?.messages || thread.messages || [],
+            }
+          },
+          metrics: thread.metrics || { replies: Math.max(0, messageCount - 1) },
+        };
+      });
     }
     return [];
   }, [gmailThreads]);
+
+  // Debug log: log the mappedGmailItems value
+  console.log('ContentAnalyticsScreen: mappedGmailItems:', mappedGmailItems);
 
   const mappedInstagramItems = useMemo(() => {
     if (Array.isArray(instagramPosts)) {
@@ -688,7 +864,7 @@ export function ContentAnalyticsScreen() {
         };
 
         return {
-          id: postId,
+          id: `instagram-${postId}`,
           platform: 'instagram',
           publishedAt: post.data.timestamp ? new Date(post.data.timestamp).toISOString() : new Date().toISOString(),
           content: {
@@ -720,38 +896,84 @@ export function ContentAnalyticsScreen() {
 
   // Filtering by selected platform
   const displayItems = useMemo(() => {
-    if (selectedPlatform === 'youtube') return youtubeItemsArray;
-    if (selectedPlatform === 'gmail') return gmailItemsArray;
-    if (selectedPlatform === 'instagram') return instagramItemsArray;
-    return allContentItems;
+    let items: AnyContentItem[] = [];
+    
+    if (selectedPlatform === 'youtube') {
+      items = youtubeItemsArray;
+    } else if (selectedPlatform === 'gmail') {
+      items = gmailItemsArray;
+    } else if (selectedPlatform === 'instagram') {
+      items = instagramItemsArray;
+    } else {
+      items = allContentItems;
+    }
+    
+    // Apply only date sorting without additional filtering since we already filtered by platform above
+    return sortContent(items, 'date');
   }, [selectedPlatform, youtubeItemsArray, gmailItemsArray, instagramItemsArray, allContentItems]);
 
-  const discussContent = (item: AnyContentItem) => {
-    // Create a context object with comprehensive content info
-    const context = {
-      platform: item.platform,
-      contentId: item.id,
-      analysis: (item as any).aiAnalysis || null,
-      title: item.platform === 'youtube'
-        ? (item as YouTubeContentItem).content.title
-        : item.platform === 'instagram'
-          ? (item as InstagramContentItem).content?.text
-          : (item as GmailContentItem).content?.subject,
-      // Include thumbnail URL for visual context
-      thumbnailUrl: item.platform === 'youtube' 
-        ? (item as YouTubeContentItem).content?.thumbnailUrl || `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`
-        : item.platform === 'instagram'
-          ? (item as InstagramContentItem).content?.mediaUrl
-          : undefined,
-      // Include published date
-      publishedAt: item.publishedAt,
-      // Include metrics for context
-      metrics: item.metrics,
-      // Include full content object for additional context
-      content: item.content
-    };
-    const encodedContext = encodeURIComponent(JSON.stringify(context));
-    router.push(`/dashboard/chat?contentContext=${encodedContext}`);
+  const discussContent = async (item: AnyContentItem) => {
+    try {
+      // Create a compact context object to avoid URL length issues
+      const context = {
+        platform: item.platform,
+        contentId: item.id,
+        analysis: (item as any).aiAnalysis || null,
+        title: item.platform === 'youtube'
+          ? (item as YouTubeContentItem).content.title
+          : item.platform === 'instagram'
+            ? (item as InstagramContentItem).content?.text
+            : (item as GmailContentItem).content?.data?.subject || 'Email Thread',
+        thumbnailUrl: item.platform === 'youtube'
+          ? (item as YouTubeContentItem).content?.thumbnailUrl || `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`
+          : item.platform === 'instagram'
+            ? (item as InstagramContentItem).content?.mediaUrl
+            : undefined,
+        publishedAt: item.publishedAt,
+        metrics: item.metrics,
+        // For Gmail, create a compact content object with only essential fields
+        content: item.platform === 'gmail' ? {
+          data: {
+            subject: (item as GmailContentItem).content?.data?.subject || 'No Subject',
+            from: (item as GmailContentItem).content?.data?.from || 'Unknown Sender',
+            snippet: (item as GmailContentItem).content?.data?.snippet || 'No preview available',
+            threadId: (item as GmailContentItem).content?.data?.threadId || (item as GmailContentItem).id,
+            emailId: (item as GmailContentItem).content?.data?.emailId || (item as GmailContentItem).id,
+            // Don't include the full payload to avoid URL length issues
+          }
+        } : item.content
+      };
+      
+      const encodedContext = encodeURIComponent(JSON.stringify(context));
+      
+      // Check if the URL would be too long (browsers typically limit to ~2000 chars)
+      const baseUrl = `/dashboard/chat?contentContext=`;
+      const fullUrl = baseUrl + encodedContext;
+      
+      if (fullUrl.length > 1900) {
+        // If URL is too long, use a more minimal context
+        const minimalContext = {
+          platform: item.platform,
+          contentId: item.id,
+          title: context.title,
+          publishedAt: item.publishedAt,
+          // For Gmail, include only the most essential data
+          ...(item.platform === 'gmail' && {
+            subject: (item as GmailContentItem).content?.data?.subject || 'No Subject',
+            from: (item as GmailContentItem).content?.data?.from || 'Unknown Sender',
+            threadId: (item as GmailContentItem).content?.data?.threadId || item.id,
+          })
+        };
+        const minimalEncoded = encodeURIComponent(JSON.stringify(minimalContext));
+        router.push(`/dashboard/chat?contentContext=${minimalEncoded}`);
+      } else {
+        router.push(fullUrl);
+      }
+    } catch (error) {
+      console.error('Error creating discussion context:', error);
+      // Fallback: navigate to chat without context
+      router.push('/dashboard/chat');
+    }
   };
 
   // Show loading state if not logged in
@@ -788,7 +1010,7 @@ export function ContentAnalyticsScreen() {
                         className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm ml-auto"
                       >
                         <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                        Loading...
+                        Loading Analytics & Posts...
                       </Button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -799,7 +1021,7 @@ export function ContentAnalyticsScreen() {
                   </div>
                 ) : (
                   <InstagramAnalytics
-                    key={`instagram-${selectedPlatform}-${Date.now()}`}
+                    key={`instagram-${selectedPlatform}`}
                     userId={userId}
                     onDiscussContent={(item) => {
                       discussContent(item);
@@ -809,9 +1031,11 @@ export function ContentAnalyticsScreen() {
               </>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
               {displayItems.length > 0 ? (
-                displayItems.map(item => {
+                displayItems.map((item, index) => {
+                  // Ensure absolutely unique keys by combining platform, id, and index
+                  const uniqueKey = `${item.platform}-${item.id}-${index}`;
                   const commonProps = {
                     onDiscussContent: () => discussContent(item),
                     onViewDetailedAnalytics: () => setSelectedContent(item)
@@ -820,16 +1044,34 @@ export function ContentAnalyticsScreen() {
                     return <InstagramCard key={item.id} {...commonProps} item={item as InstagramContentItem} userId={firebaseUser.uid} />;
                   }
                   if (item.platform === 'youtube') {
-                    return <YouTubeCard key={item.id} {...commonProps} item={item as YouTubeContentItem} />;
+                    return <YouTubeCard key={uniqueKey} {...commonProps} item={item as YouTubeContentItem} />;
                   }
                   if (item.platform === 'gmail') {
-                    return <GmailCard key={item.id} {...commonProps} item={item as GmailContentItem} />;
+                    return <GmailCard key={uniqueKey} {...commonProps} item={item as GmailContentItem} />;
                   }
                   return null;
                 })
               ) : (
                 <div className="col-span-full text-center py-10 text-text-gray dark:text-gray-400">
-                  No content found.
+                  {selectedPlatform === 'gmail' ? (
+                    <div className="space-y-2">
+                      <p className="text-lg font-medium">No Gmail content found</p>
+                      <p className="text-sm">Connect your Gmail account to see email analytics and insights.</p>
+                      <p className="text-xs text-gray-500">
+                        Only meaningful emails are stored and displayed for better content analysis.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-lg font-medium">No content found</p>
+                      <p className="text-sm">
+                        {selectedPlatform === 'all' 
+                          ? 'Connect your social media accounts to see content analytics.'
+                          : `Connect your ${selectedPlatform} account to see analytics and insights.`
+                        }
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

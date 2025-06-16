@@ -2,6 +2,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { MessageSquare, ThumbsUp, PlayCircle, Eye, Clock, BarChart3, RefreshCw } from 'lucide-react';
 import { useYouTubeRefresh } from '@/app/hooks/useYouTubeRefresh';
+import { YouTubeBrandIcon } from '../../YoutubeBrandIcon';
 
 import { YouTubeContentItem } from '../types';
 
@@ -85,7 +86,10 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
       </div>
       {/* Video Info */}
       <div className="p-4">
-        <h3 className="font-semibold text-lg mb-1 line-clamp-2">{content.title || 'Untitled Video'}</h3>
+        <div className="flex items-center gap-2 mb-1">
+          <YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8" />
+          <h3 className="font-semibold text-lg line-clamp-2">{content.title || 'Untitled Video'}</h3>
+        </div>
         <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-2">
           <span>{new Date(publishedAt).toLocaleDateString()}</span>
         </div>

@@ -194,66 +194,155 @@ export const getRecentGmailThreads = query({
   },
 });
 
+// Fetch a batch of unreviewed Gmail threads for spam review
+export const getUnreviewedGmailThreads = query({
+  args: { userId: v.string(), limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    let q = ctx.db
+      .query("gmailThreads")
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
+      .filter(q => q.eq(q.field("spamStatus"), "unreviewed"))
+      .order("desc");
+    const threads = args.limit ? await q.take(args.limit) : await q.collect();
+    return threads;
+  },
+});
+
+function isNonEmptyString(val) {
+  return typeof val === 'string' && val.trim().length > 0;
+}
+
 // List Gmail threads for content analytics page - compatible with UI components
 export const listUserGmailThreads = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
     try {
-      // Fetch threads from the gmailThreads table
       const threads = await ctx.db
         .query("gmailThreads")
         .withIndex("by_userId", (q) => q.eq("userId", args.userId))
         .order("desc")
         .collect();
+
+      // Debug log: log the raw threads from Convex
+      console.log('Convex: Raw threads from DB:', JSON.stringify(threads, null, 2));
+
+      // Return threads as-is (UI should use thread.data for user-visible fields)
+      return threads;
+    } catch (error) {
+      console.error('Error in listUserGmailThreads:', error);
+      return [];
+    }
+  }
+});
+
+// List Gmail messages for content analytics page - fetches individual messages with clean data
+export const listUserGmailMessages = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    try {
+      const messages = await ctx.db
+        .query("gmailMessages")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .filter((q) => 
+          // Filter out spam messages
+          q.neq(q.field("labelIds"), ["SPAM"])
+        )
+        .order("desc")
+        .collect();
+
+      // Return messages as-is (UI should use message.data for user-visible fields)
+      return messages;
+    } catch (error) {
+      console.error('Error in listUserGmailMessages:', error);
+      return [];
+    }
+  }
+});
+
+// In gmailQueries.ts - Enhanced query that returns threads with messages (filtering done at entry level)
+export const getGmailThreadsWithMessages = query({
+  args: { userId: v.string(), limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    try {
+      // Get threads (already filtered at entry level)
+      const threads = await ctx.db
+        .query("gmailThreads")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .order("desc")
+        .take(args.limit || 50);
       
-      // Transform threads to match the GmailContentItem format for UI
-      return threads.map(thread => {
-        // Extract the first message in the thread for display
-        const firstMessage = thread.messages && thread.messages.length > 0 ? thread.messages[0] : null;
+      if (threads.length === 0) return [];
+      
+      // Get ALL messages for these threads in ONE query (fixes N+1 problem)
+      const threadIds = threads.map(t => t.threadId);
+      const allMessages = await ctx.db
+        .query("gmailMessages")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .filter((q) => {
+          // Filter to only messages from our threads
+          return threadIds.some(threadId => q.eq(q.field("threadId"), threadId));
+        })
+        .collect();
+      
+      // Group messages by threadId
+      const messagesByThread = allMessages.reduce((acc, msg) => {
+        if (!acc[msg.threadId]) acc[msg.threadId] = [];
+        acc[msg.threadId].push(msg);
+        return acc;
+      }, {} as Record<string, typeof allMessages>);
+      
+      // Build response - maintaining frontend compatibility
+      const enhancedThreads = threads.map(thread => {
+        const threadMessages = messagesByThread[thread.threadId] || [];
         
-        // Determine if this is a newsletter or regular email (basic logic - can be enhanced)
-        let emailType: 'newsletter' | 'partnership' | 'individual' | 'other' = 'individual';
-        const from = firstMessage?.from || thread.data?.from || '';
-        const subject = firstMessage?.subject || thread.data?.subject || 'No Subject';
+        // Get the FIRST message (original email) for thread summary
+        const firstMessage = threadMessages.sort((a, b) => {
+          const aDate = a.data?.internalDate || a.createdAt || 0;
+          const bDate = b.data?.internalDate || b.createdAt || 0;
+          return aDate - bDate; // Ascending = oldest first
+        })[0];
         
-        // Simple heuristic to guess email type - could be improved with more sophisticated logic
-        if (from.toLowerCase().includes('newsletter') || subject.toLowerCase().includes('newsletter')) {
-          emailType = 'newsletter';
-        } else if (from.toLowerCase().includes('partner') || subject.toLowerCase().includes('partner')) {
-          emailType = 'partnership';
-        } else if ((thread.message_count && thread.message_count > 3) || (thread.messages && thread.messages.length > 3)) {
-          // Longer threads are more likely to be individual conversations
-          emailType = 'individual';
-        } else {
-          emailType = 'other';
-        }
+        // Get the MOST RECENT message for snippet (better preview)
+        const recentMessage = threadMessages.sort((a, b) => {
+          const aDate = a.data?.internalDate || a.createdAt || 0;
+          const bDate = b.data?.internalDate || b.createdAt || 0;
+          return bDate - aDate; // Descending = newest first
+        })[0];
         
+        // Try multiple sources for snippet (prioritize most recent message)
+        const snippet = recentMessage?.data?.snippet || 
+                       firstMessage?.data?.snippet || 
+                       thread.data?.snippet || 
+                       thread.snippet || 
+                       // If still no snippet, try to extract from message body
+                       (recentMessage?.data?.body && recentMessage.data.body.substring(0, 150)) ||
+                       'No preview available';
+        
+        const subject = firstMessage?.data?.subject || thread.subject || 'No Subject';
+        const from = firstMessage?.data?.from || thread.from || 'Unknown Sender';
+        
+        // Return the SAME format your frontend expects
         return {
-          id: thread.threadId || '',
-          platform: 'gmail' as const,
-          publishedAt: thread.createdAt ? new Date(thread.createdAt).toISOString() : new Date().toISOString(),
-          content: {
+          ...thread,
+          data: {
+            ...thread.data,
+            // Ensure first message data is available at thread level
             subject: subject,
             from: from,
-            snippet: thread.snippet || firstMessage?.snippet || '',
+            snippet: snippet,
             threadId: thread.threadId,
-            messageCount: thread.message_count || (thread.messages?.length || 0),
-            emailType: emailType, // Add required emailType property
-            // Use default value for recipients as it's optional in the interface
-            recipients: 1 // Default to 1 recipient
+            emailId: firstMessage?.messageId,
           },
-          metrics: {
-            // These would normally come from Gmail analytics data
-            // For now, we'll use placeholders or default values
-            replies: thread.message_count ? thread.message_count - 1 : 0,
-            openRate: 0.75, // Placeholder
-            clickRate: 0.25, // Placeholder
-          }
+          messages: threadMessages // Include full message list if needed
         };
       });
+      
+      console.log(`📧 Convex Gmail Query: Returning ${enhancedThreads.length} threads (filtering done at entry level)`);
+      
+      return enhancedThreads;
     } catch (error) {
-      console.error('Error listing Gmail threads:', error);
-      throw new Error(`Failed to list Gmail threads: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Error in getGmailThreadsWithMessages:', error);
+      return []; // Return empty array for graceful frontend handling
     }
   },
 });

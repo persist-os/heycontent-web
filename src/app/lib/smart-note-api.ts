@@ -2,6 +2,8 @@
  * Smart Note API client functions
  */
 
+import { getApiKey } from '@/app/lib/api-helpers';
+
 /**
  * Generate content ideas for a note using the SmartNoteGemini agent
  *
@@ -10,11 +12,15 @@
  * @returns The generated ideas
  */
 export async function analyzeNoteContent(platform: string = 'general', limit: number = 5) {
+  const apiKey = await getApiKey();
+  if (!apiKey) throw new Error('No API key found. Please log in.');
+
   try {
     const response = await fetch('/api/smart-note/ideas', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({ platform, limit }),
     });

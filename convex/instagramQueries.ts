@@ -62,24 +62,30 @@ export const getInstagramPost = query({
 export const getAllInstagramPosts = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
-    // First get the account ID for this user
-    const account = await ctx.db
-      .query("instagramAccounts")
-      .withIndex("by_userId", q => q.eq("userId", args.userId))
-      .first();
-    
-    if (!account) {
-      return [];
-    }
+    try {
+      // First get the account ID for this user
+      const account = await ctx.db
+        .query("instagramAccounts")
+        .withIndex("by_userId", q => q.eq("userId", args.userId))
+        .first();
+      
+      if (!account) {
+        return [];
+      }
 
-    // Then get all posts for this account using both userId and instagramAccountId
-    const posts = await ctx.db
-      .query("instagramPosts")
-      .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", account.instagramAccountId))
-      .filter(q => q.eq(q.field("userId"), args.userId))
-      .order("desc")
-      .collect();
-    return posts;
+      // Then get all posts for this account
+      const posts = await ctx.db
+        .query("instagramPosts")
+        .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", account.instagramAccountId))
+        .filter(q => q.eq(q.field("userId"), args.userId))
+        .order("desc")
+        .collect();
+      
+      return posts;
+    } catch (error) {
+      console.error("Error fetching all Instagram posts:", error);
+      throw new Error("Failed to fetch Instagram posts");
+    }
   },
 });
 
@@ -322,13 +328,40 @@ export const getInstagramTrackerAnalysis = query({
     const { userId, instagramAccountId } = args;
 
     try {
+      console.log('[getInstagramTrackerAnalysis] Querying with:', { userId, instagramAccountId });
+      
+      // First check if there are any tracker analyses at all
+      const allAnalyses = await ctx.db
+        .query("instagramTrackerAnalysis")
+        .collect();
+      console.log('[getInstagramTrackerAnalysis] Total analyses in DB:', allAnalyses.length);
+      
+      // Log analyses for this user
+      const userAnalyses = await ctx.db
+        .query("instagramTrackerAnalysis")
+        .withIndex("by_userId", q => q.eq("userId", userId))
+        .collect();
+      console.log('[getInstagramTrackerAnalysis] User analyses:', userAnalyses.length, userAnalyses.map(a => ({
+        userId: a.userId,
+        instagramAccountId: a.instagramAccountId,
+        hasAnalysis: !!a.analysis,
+        createdAt: a.createdAt
+      })));
+
       const analysis = await ctx.db
         .query("instagramTrackerAnalysis")
-        .withIndex("by_user_account", q => 
-          q.eq("userId", userId)
-           .eq("instagramAccountId", instagramAccountId)
-        )
+        .withIndex("by_userId", q => q.eq("userId", userId))
+        .filter(q => q.eq(q.field("instagramAccountId"), instagramAccountId))
         .first();
+
+      console.log('[getInstagramTrackerAnalysis] Found analysis:', analysis ? {
+        userId: analysis.userId,
+        instagramAccountId: analysis.instagramAccountId,
+        hasAnalysis: !!analysis.analysis,
+        analysisKeys: analysis.analysis ? Object.keys(analysis.analysis) : null,
+        createdAt: analysis.createdAt,
+        updatedAt: analysis.updatedAt
+      } : 'No analysis found');
 
       return analysis?.analysis || null;
     } catch (error) {
@@ -466,6 +499,84 @@ export const getPostAnalysis = query({
       });
       // Re-throw the error so it propagates to the client
       throw new Error(`Failed to get post analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Get Instagram account insights/analysis (similar to YouTube channel analysis)
+export const getInstagramAccountAnalysis = query({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      // Use the existing tracker analysis functionality
+      const analysis = await ctx.db
+        .query("instagramTrackerAnalysis")
+        .withIndex("by_userId", q => q.eq("userId", args.userId))
+        .filter(q => q.eq(q.field("instagramAccountId"), args.instagramAccountId))
+        .first();
+
+      if (!analysis) {
+        return null;
+      }
+
+      return {
+        _id: analysis._id,
+        userId: analysis.userId,
+        instagramAccountId: analysis.instagramAccountId,
+        analysis: analysis.analysis,
+        updatedAt: analysis.updatedAt || analysis._creationTime
+      };
+    } catch (error) {
+      console.error("Error fetching Instagram account analysis:", error);
+      throw new Error("Failed to fetch Instagram account analysis");
+    }
+  },
+});
+
+// Get Instagram batch analysis insights
+export const getInstagramBatchAnalysis = query({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      console.log('[getInstagramBatchAnalysis] Querying with:', { userId: args.userId, instagramAccountId: args.instagramAccountId });
+      
+      const analysis = await ctx.db
+        .query("instagramBatchAnalysis")
+        .withIndex("by_user_account", q => 
+          q.eq("userId", args.userId)
+           .eq("instagramAccountId", args.instagramAccountId)
+        )
+        .first();
+
+      console.log('[getInstagramBatchAnalysis] Found analysis:', analysis ? {
+        userId: analysis.userId,
+        instagramAccountId: analysis.instagramAccountId,
+        hasInsights: !!analysis.insights,
+        insightsKeys: analysis.insights ? Object.keys(analysis.insights) : null,
+        createdAt: analysis.createdAt,
+        updatedAt: analysis.updatedAt
+      } : 'No analysis found');
+
+      if (!analysis) {
+        return null;
+      }
+
+      return {
+        _id: analysis._id,
+        userId: analysis.userId,
+        instagramAccountId: analysis.instagramAccountId,
+        insights: analysis.insights,
+        updatedAt: analysis.updatedAt || analysis._creationTime
+      };
+    } catch (error) {
+      console.error("Error fetching Instagram batch analysis:", error);
+      throw new Error("Failed to fetch Instagram batch analysis");
     }
   },
 });

@@ -63,7 +63,7 @@ export function YouTubePlatformCard({
       )}
       <div className="flex items-center gap-3 mb-2">
         <div className="flex items-center justify-center">
-          <YouTubeBrandIcon href="https://youtube.com/" />
+          <YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8" />
         </div>
         <div>
           <h3 className="text-lg font-semibold">YouTube</h3>

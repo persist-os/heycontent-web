@@ -60,26 +60,41 @@ export interface YouTubeContentItem extends BaseContentItem {
 }
 
 // Gmail Email
-export interface GmailContentDetails {
-  subject: string;
+export interface GmailContentData {
+  subject?: string; // Making optional since it might be in messages array
   snippet?: string; // Body preview
-  from?: string; // Sender email/name
+  from?: string; // Sender email/name - Making optional since it might be in messages array
   recipients?: number; // Count of recipients
-  emailType: 'newsletter' | 'partnership' | 'individual' | 'other'; // Added 'other'
+  emailType?: 'newsletter' | 'partnership' | 'individual' | 'other';
   partnerName?: string;
   thread?: {
-    threadId: string; // Use thread ID
+    threadId: string;
     messageCount: number;
-    lastReplyDate?: string; // Make optional
+    lastReplyDate?: string;
   };
-  labels?: string[]; // Gmail labels
+  labels?: string[];
+  threadId?: string;
+  emailId?: string;
+  // Add the actual structure from Convex
+  messageCount?: number;
+  messages?: Array<{
+    from: string;
+    id: string;
+    label_ids: string[];
+    snippet: string;
+    subject: string;
+  }>;
+}
+export interface GmailContentDetails {
+  data: GmailContentData;
+  // Add any non-user-visible fields here if needed in the future
 }
 export interface GmailMetrics {
-  openRate?: number; // Optional - for tracked emails/campaigns
-  clickRate?: number; // Optional - for tracked emails/campaigns
-  replies?: number; // Count of replies in the thread? Or just to this message?
-  responseTime?: number; // Optional - in hours
-  dealValue?: number; // Optional
+  openRate?: number;
+  clickRate?: number;
+  replies?: number;
+  responseTime?: number;
+  dealValue?: number;
 }
 export interface GmailContentItem extends BaseContentItem {
   platform: 'gmail';
