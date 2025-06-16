@@ -143,10 +143,10 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
     <Card className="sticky top-0 z-10 border border-blue-200 dark:border-blue-700 bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/20 dark:to-gray-900 shadow-sm">
       <div className="p-4">
         <div className="flex items-center gap-3">
-          {/* Gmail Icon */}
+          {/* Platform Icon */}
           <div className="flex-shrink-0">
             <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              {getPlatformIcon()}
             </div>
           </div>
 
@@ -154,14 +154,14 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-semibold text-base text-blue-900 dark:text-blue-100 truncate">
-                Discussing Email
+                Discussing {context.platform === 'gmail' ? 'Email' : context.platform === 'youtube' ? 'Video' : context.platform === 'instagram' ? 'Post' : 'Content'}
               </h3>
-              <span className="px-2 py-0.5 bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 text-xs font-medium rounded-full">
-                Gmail
+              <span className="px-2 py-0.5 bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 text-xs font-medium rounded-full capitalize">
+                {context.platform}
               </span>
             </div>
             <p className="text-sm text-blue-700 dark:text-blue-300 line-clamp-1 leading-relaxed">
-              {context.title || 'Email conversation'}
+              {context.title || `${context.platform} content`}
             </p>
           </div>
 
@@ -171,7 +171,7 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
               <button
                 onClick={onRemove}
                 className="p-1.5 text-blue-400 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-all duration-200"
-                title="Remove email context"
+                title={`Remove ${context.platform} context`}
               >
                 <X className="w-4 h-4" />
               </button>
