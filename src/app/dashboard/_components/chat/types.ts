@@ -69,6 +69,16 @@ export interface ContentContext {
   content?: any;
   actionStep?: string;  // Add this for AI Insights action steps
   source?: string;      // Add this to track the source of the context
+  originalPlatform?: 'youtube' | 'instagram' | 'gmail'; // Add this for AI insights
+  fullInsight?: {       // Add this for full AI insight context
+    title: string;
+    impact: string;
+    whyNow: string[];
+    actionSteps: string[];
+    expectedOutcome: string;
+    sourceDetails: string[];
+    relatedItems?: Array<{ label: string; value: string }>;
+  };
 }
 
 export interface ChatScreenProps {

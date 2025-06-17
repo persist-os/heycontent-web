@@ -15,75 +15,40 @@ function isEmailUsefulForContentAnalysis(
     const normalizedSender = (sender || '').trim().toLowerCase();
     const normalizedSnippet = (snippet || '').trim().toLowerCase();
     
-    // 1. Check Gmail labels - filter out spam, promotions, etc.
-    const spamLabels = ['SPAM', 'TRASH', 'CATEGORY_PROMOTIONS', 'CATEGORY_SOCIAL', 'CATEGORY_UPDATES'];
-    const matchedSpamLabels = spamLabels.filter(label => labelIds.includes(label));
+    // 1. Only filter out SPAM and TRASH - keep promotions/social for AI analysis
+    const hardSpamLabels = ['SPAM', 'TRASH'];
+    const matchedSpamLabels = hardSpamLabels.filter(label => labelIds.includes(label));
     if (matchedSpamLabels.length > 0) {
-      return { isUseful: false, reason: `Filtered by Gmail labels: ${matchedSpamLabels.join(', ')}` };
+      return { isUseful: false, reason: `Hard spam/trash: ${matchedSpamLabels.join(', ')}` };
     }
     
-    // 2. Check if email has no meaningful content
-    const hasNoSubject = !normalizedSubject || 
-                        ['no subject', '(no subject)', 'untitled'].includes(normalizedSubject) ||
-                        normalizedSubject.length <= 3;
-    
-    const hasUnknownSender = !normalizedSender || 
-                            ['unknown sender', 'unknown', 'no-reply', 'noreply'].includes(normalizedSender) ||
-                            normalizedSender.length <= 3;
-    
-    const hasNoSnippet = !normalizedSnippet || 
-                        ['no preview available', 'no content', ''].includes(normalizedSnippet) ||
-                        normalizedSnippet.length < 20;
-    
-    // Filter if email has no subject AND unknown sender AND no snippet
-    if (hasNoSubject && hasUnknownSender && hasNoSnippet) {
-      return { isUseful: false, reason: "No meaningful content (no subject, unknown sender, no snippet)" };
-    }
-    
-    // Filter if email has no subject AND no snippet (even with known sender)
-    if (hasNoSubject && hasNoSnippet) {
-      return { isUseful: false, reason: "No meaningful content (no subject and no snippet)" };
-    }
-    
-    // 3. Check for spam/promotional patterns
-    const spamPatterns = [
-      'unsubscribe', 'click here', 'limited time offer', 'act now', 'buy now',
-      'free trial', 'special offer', 'discount', 'sale ends', 'expires soon',
-      'newsletter', 'promotional', 'marketing', 'advertisement', 'promo',
-      'no-reply', 'noreply', 'donotreply', 'do-not-reply', 'auto-reply',
-      'congratulations', 'you have won', 'claim your', 'exclusive deal',
-      'limited time', 'hurry up', 'don\'t miss out', 'final notice',
-      'automated message', 'system notification', 'delivery failure',
-      'out of office', 'vacation reply', 'auto-generated'
-    ];
-    
-    const spamInSubject = spamPatterns.some(pattern => normalizedSubject.includes(pattern));
-    const spamInSender = spamPatterns.some(pattern => normalizedSender.includes(pattern));
-    const spamInSnippet = spamPatterns.some(pattern => normalizedSnippet.includes(pattern));
-    
-    if (spamInSubject || spamInSender || spamInSnippet) {
-      const matchedPatterns = spamPatterns.filter(pattern => 
-        normalizedSubject.includes(pattern) || 
-        normalizedSender.includes(pattern) || 
-        normalizedSnippet.includes(pattern)
-      ).slice(0, 3);
-      return { isUseful: false, reason: `Spam/promotional patterns detected: ${matchedPatterns.join(', ')}` };
-    }
-    
-    // 4. Quality thresholds - ensure minimum content quality
-    const hasMinimumQuality = (
-      (normalizedSubject.length > 3 && !['no subject', '(no subject)'].includes(normalizedSubject)) ||
-      (normalizedSnippet.length > 20 && !['no preview available', 'no content'].includes(normalizedSnippet))
-    ) && (
-      normalizedSender.length > 3 && !['unknown sender', 'unknown'].includes(normalizedSender)
+    // 2. Only filter completely empty emails (no content at all)
+    const hasNoContent = (
+      (!normalizedSubject || normalizedSubject.length <= 1) &&
+      (!normalizedSender || normalizedSender.length <= 1) &&
+      (!normalizedSnippet || normalizedSnippet.length <= 5)
     );
     
-    if (!hasMinimumQuality) {
-      return { isUseful: false, reason: "Below minimum quality threshold" };
+    if (hasNoContent) {
+      return { isUseful: false, reason: "Completely empty email (no subject, sender, or content)" };
     }
     
-    // Email passed all filters - it's useful for content analysis
-    return { isUseful: true, reason: "Passed all quality filters" };
+    // 3. Only filter obvious automated system emails (much more restrictive)
+    const systemPatterns = [
+      'mailer-daemon', 'postmaster', 'delivery-failure', 'mail-delivery-subsystem'
+    ];
+    
+    const isSystemEmail = systemPatterns.some(pattern => 
+      normalizedSender.includes(pattern) || normalizedSubject.includes(pattern)
+    );
+    
+    if (isSystemEmail) {
+      return { isUseful: false, reason: `System email detected: ${systemPatterns.find(p => normalizedSender.includes(p) || normalizedSubject.includes(p))}` };
+    }
+    
+    // Email passed minimal filters - allow it for AI analysis
+    // AI can decide if it's a partnership opportunity or not
+    return { isUseful: true, reason: "Passed minimal quality filters - AI will analyze" };
     
   } catch (error) {
     console.error('Error in email filtering:', error);
@@ -931,5 +896,113 @@ export const migrateGmailMessagesToDataOnly = mutation({
       }
     }
     return { updated };
+  },
+});
+
+// Store Gmail batch analysis insights
+export const storeGmailBatchAnalysis = mutation({
+  args: {
+    userId: v.string(),
+    gmailAccountId: v.string(),
+    insights: v.any(),
+  },
+  handler: async (ctx, args) => {
+    const { userId, gmailAccountId, insights } = args;
+    const now = Date.now();
+
+    try {
+      // Check if batch analysis already exists
+      const existingAnalysis = await ctx.db
+        .query("gmailBatchAnalysis")
+        .withIndex("by_user_account", q => 
+          q.eq("userId", userId)
+           .eq("gmailAccountId", gmailAccountId)
+        )
+        .first();
+
+      if (existingAnalysis) {
+        // Update existing batch analysis
+        await ctx.db.patch(existingAnalysis._id, {
+          insights,
+          updatedAt: now,
+        });
+        return { status: "updated", analysisId: existingAnalysis._id };
+      } else {
+        // Insert new batch analysis
+        const id = await ctx.db.insert("gmailBatchAnalysis", {
+          userId,
+          gmailAccountId,
+          insights,
+          analysisType: "batch",
+          createdAt: now,
+          updatedAt: now,
+        });
+        return { status: "created", analysisId: id };
+      }
+    } catch (error) {
+      console.error(`Error storing Gmail batch analysis for user ${userId}:`, error);
+      throw new Error(`Failed to store Gmail batch analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Debug mutation to manually create Gmail account record
+export const createDebugGmailAccount = mutation({
+  args: {
+    userId: v.string(),
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const now = Date.now();
+      
+      // Check if account already exists
+      const existing = await ctx.db
+        .query("gmailAccounts")
+        .filter(q => 
+          q.eq(q.field("userId"), args.userId) && 
+          q.eq(q.field("email"), args.email)
+        )
+        .first();
+      
+      if (existing) {
+        return { 
+          success: true, 
+          message: "Account already exists", 
+          accountId: existing._id 
+        };
+      }
+      
+      // Create new account record
+      const accountId = await ctx.db.insert("gmailAccounts", {
+        userId: args.userId,
+        email: args.email,
+        messagesTotal: 100, // Placeholder
+        threadsTotal: 35,   // Based on your logs
+        historyId: "12345",
+        labelsTotal: 10,
+        data: {
+          email: args.email,
+          messagesTotal: 100,
+          threadsTotal: 35,
+          historyId: "12345",
+          labelsTotal: 10,
+        },
+        createdAt: now,
+        updatedAt: now,
+      });
+      
+      return { 
+        success: true, 
+        message: "Gmail account record created", 
+        accountId 
+      };
+    } catch (error) {
+      console.error("Error creating debug Gmail account:", error);
+      return { 
+        success: false, 
+        error: error.message 
+      };
+    }
   },
 });

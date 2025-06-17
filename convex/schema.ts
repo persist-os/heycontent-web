@@ -683,4 +683,17 @@ export default defineSchema({
     .index("by_account", ["instagramAccountId"])
     .index("by_userId", ["userId"])
     .index("by_user_account", ["userId", "instagramAccountId"]),
+
+  // Gmail Batch Analysis
+  gmailBatchAnalysis: defineTable({
+    insights: v.any(),
+    createdAt: v.number(),
+    gmailAccountId: v.string(),
+    updatedAt: v.number(),
+    userId: v.string(),
+    analysisType: v.literal("batch"),
+  })
+    .index("by_account", ["gmailAccountId"])
+    .index("by_userId", ["userId"])
+    .index("by_user_account", ["userId", "gmailAccountId"]),
 });

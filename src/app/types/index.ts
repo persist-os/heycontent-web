@@ -17,6 +17,13 @@ export interface InsightContext {
     views: string | number;
     engagement: string | number;
   }>;
+  threadDetails?: Array<{
+    threadId: string;
+    subject: string;
+    from: string;
+    snippet: string;
+    date: string;
+  }>;
 }
 
 export interface AIActionableInsight {
