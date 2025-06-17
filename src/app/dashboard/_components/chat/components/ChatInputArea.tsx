@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ChatInput } from '../chat-input';
 import { AmbientInsights } from './AmbientInsights';
 import { BottomBarActions } from './BottomBarActions';
@@ -13,6 +13,9 @@ interface ChatInputAreaProps {
   referencedMessage: any;
   handleClearReference: () => void;
   includeAnalysisInQuery: boolean;
+  inputValue?: string;
+  onInputChange?: (value: string) => void;
+  onInputPopulate?: (action: string) => void;
 }
 
 const ChatInputArea: React.FC<ChatInputAreaProps> = ({
@@ -25,22 +28,25 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   referencedMessage,
   handleClearReference,
   includeAnalysisInQuery,
+  inputValue,
+  onInputChange,
+  onInputPopulate,
 }) => {
   // Only show ambient content when there are no messages
   const showAmbientContent = showAmbient && !currentContext;
   
   return (
     <div className={`bg-white border-t border-gray-200 ${showAmbientContent ? 'h-full flex flex-col' : ''}`}>
-      <div className="max-w-7xl mx-auto w-full h-full flex flex-col">
+      <div className="max-w-4xl sm:max-w-5xl lg:max-w-7xl mx-auto w-full h-full flex flex-col">
         {/* Show ambient content when there are no messages */}
         {showAmbientContent && (
           <div className="w-full bg-white flex-1 flex flex-col">
-            <div className="px-4 pt-6 pb-2 flex-shrink-0">
+            <div className="px-3 sm:px-4 pt-6 pb-2 flex-shrink-0">
               {/* Empty header for consistent spacing */}
             </div>
             
             {/* Ambient Insights component - handles its own data fetching */}
-            <div className="flex-1 overflow-y-auto px-4 pb-4">
+            <div className="flex-1 overflow-y-auto px-3 sm:px-4 pb-4">
               <AmbientInsights
                 onInsightClick={(action, insight) => handleSendMessage(action)}
               />
@@ -48,15 +54,15 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
 
             {/* Bottom bar actions */}
             <div className="border-t border-gray-100 flex-shrink-0">
-              <div className="px-4 py-3">
-                <BottomBarActions onActionClick={handleActionClick} />
+              <div className="px-3 sm:px-4 py-3">
+                <BottomBarActions onActionClick={handleActionClick} onInputPopulate={onInputPopulate} />
               </div>
             </div>
           </div>
         )}
 
         {/* Chat input area - always show */}
-        <div className="px-4 py-4">
+        <div className="px-3 sm:px-4 py-4">
           <ChatInput
             inputRef={inputRef}
             onSend={handleSendMessage}
@@ -75,6 +81,8 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
                 ))
               )
             }
+            inputValue={inputValue}
+            onInputChange={onInputChange}
           />
         </div>
       </div>

@@ -9,6 +9,7 @@ interface ChatContextBoxProps {
   includeAnalysisInQuery: boolean;
   onToggleAnalysis: (val: boolean) => void;
   onSendMessage: (msg: string) => void;
+  onInputPopulate?: (msg: string) => void;
 }
 
 const ChatContextBox: React.FC<ChatContextBoxProps> = ({
@@ -18,8 +19,13 @@ const ChatContextBox: React.FC<ChatContextBoxProps> = ({
   includeAnalysisInQuery,
   onToggleAnalysis,
   onSendMessage,
+  onInputPopulate,
 }) => {
   if (!currentContext) return null;
+  
+  // Use onInputPopulate if available, otherwise fall back to onSendMessage
+  const handleSuggestionClick = onInputPopulate || onSendMessage;
+  
   return (
     <div className="shrink-0">
       <ContextBox 
@@ -30,11 +36,11 @@ const ChatContextBox: React.FC<ChatContextBoxProps> = ({
       />
       {/* Context-aware suggestions */}
       {currentContext.analysis && messages.length === 0 && (
-        <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="mt-4 p-3 sm:p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 mx-3 sm:mx-0">
           <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
             Questions about the analysis
           </h4>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
             {[
               "What are the key takeaways?",
               "How can I improve performance?",
@@ -44,8 +50,8 @@ const ChatContextBox: React.FC<ChatContextBoxProps> = ({
             ].map((suggestion, index) => (
               <button
                 key={index}
-                onClick={() => onSendMessage(suggestion)}
-                className="px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                onClick={() => handleSuggestionClick(suggestion)}
+                className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors break-words"
               >
                 {suggestion}
               </button>

@@ -173,26 +173,26 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto pb-32">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-4xl sm:max-w-5xl lg:max-w-7xl mx-auto pb-32 px-4 sm:px-0">
       {insights.map((insight) => (
         <div
           key={insight.id}
           onClick={() => onInsightClick?.(insight.action, insight)}
-          className="bg-white border border-gray-200 shadow-sm p-4 rounded-xl cursor-pointer \
+          className="bg-white border border-gray-200 shadow-sm p-3 sm:p-4 rounded-xl cursor-pointer \
             hover:shadow-md transition-all duration-200 hover:scale-[1.02]"
           tabIndex={0}
           role="button"
           aria-label={`${insight.title}: ${insight.description}`}
         >
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-gray-50">
+          <div className="flex items-start gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-gray-50 flex-shrink-0">
               <InsightIcon icon={insight.icon} type={insight.type} />
             </div>
-            <div className="flex-1">
-              <h3 className="font-medium text-sm text-gray-900 mb-1">{insight.title}</h3>
-              <p className="text-sm text-gray-600">{insight.description}</p>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-medium text-sm text-gray-900 mb-1 line-clamp-2">{insight.title}</h3>
+              <p className="text-sm text-gray-600 line-clamp-3">{insight.description}</p>
               {insight.action && (
-                <p className="mt-2 text-sm text-blue-600 font-medium">
+                <p className="mt-2 text-sm text-blue-600 font-medium line-clamp-2">
                   {insight.action}
                 </p>
               )}
