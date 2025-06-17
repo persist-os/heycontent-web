@@ -79,8 +79,9 @@ export function HeroSection() {
             {/* Mobile Menu Button */}
             <button 
               aria-label="Toggle menu"
-              className="sm:hidden p-2 rounded-lg hover:bg-gray-100"
+              className="sm:hidden p-3 rounded-lg hover:bg-gray-100 transition-colors"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              style={{ minWidth: '44px', minHeight: '44px' }}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {isMobileMenuOpen ? (

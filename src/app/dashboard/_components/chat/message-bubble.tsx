@@ -7,6 +7,7 @@ import { ExpandableInsights } from './expandable-insights'
 import { MarkdownRenderer } from './markdown-renderer'
 import { PersonaCardRenderer } from './components/PersonaCardRenderer'
 import { ThinkingIndicator } from './components/ThinkingIndicator'
+import { CopyButton } from '@/components/ui/copy-button'
 
 interface MessageBubbleProps {
   message: Message
@@ -63,6 +64,15 @@ export function MessageBubble({
     });
   }
 
+  // Get the text content to copy
+  const getTextToCopy = () => {
+    if (isUser) {
+      return message.content;
+    } else {
+      return message.chat_response || message.content;
+    }
+  };
+
   return (
     <div className={`w-full ${className}`}>
       <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-2 sm:mb-4`}>
@@ -116,7 +126,10 @@ export function MessageBubble({
               <div className="flex-1 min-w-0">
                 <div className="break-words overflow-hidden">
                   {message.status === 'typing' ? (
-                    <ThinkingIndicator />
+                    <ThinkingIndicator 
+                      steps={message.metadata?.thinking_steps} 
+                      showExpanded={false}
+                    />
                   ) : mightHavePersona ? (
                     <>
                       <MarkdownRenderer 
@@ -131,6 +144,19 @@ export function MessageBubble({
                       className=""
                     />
                   )}
+                  
+                  {/* Show thinking process for completed assistant messages if available */}
+                  {!isUser && 
+                   message.status !== 'typing' && 
+                   message.metadata?.thinking_steps && 
+                   message.metadata.thinking_steps.length > 0 && (
+                    <div className="mt-3 border-t border-gray-100 pt-3">
+                      <ThinkingIndicator 
+                        steps={message.metadata.thinking_steps} 
+                        showExpanded={false}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {message.status === 'failed' && onRetry && (
@@ -142,6 +168,25 @@ export function MessageBubble({
                   </button>
                 )}
               </div>
+
+              {/* Copy button for messages - visible on hover for desktop */}
+              {message.status !== 'typing' && (
+                <div className="flex items-center gap-1">
+                  <CopyButton
+                    text={getTextToCopy()}
+                    className={`
+                      hidden sm:block
+                      opacity-0 group-hover:opacity-100
+                      transition-opacity duration-200
+                      mt-0.5
+                      flex-shrink-0
+                    `}
+                    size="md"
+                    variant="ghost"
+                    tooltipText={`Copy ${isUser ? 'your message' : 'AI response'}`}
+                  />
+                </div>
+              )}
 
               {/* Expandable Insights for assistant messages with suggestions */}
               {!isUser && message.metadata?.suggestions && message.metadata.suggestions.length > 0 && (
@@ -176,8 +221,23 @@ export function MessageBubble({
               )}
             </div>
 
-            {/* Mobile-only reference buttons - always visible at bottom of message */}
-            <div className="sm:hidden flex justify-end mt-1">
+            {/* Mobile-only buttons - always visible at bottom of message */}
+            <div className="sm:hidden flex justify-between items-center mt-1">
+              <div className="flex items-center gap-1">
+                {/* Mobile copy button */}
+                {message.status !== 'typing' && (
+                  <CopyButton
+                    text={getTextToCopy()}
+                    className="scale-90"
+                    size="md"
+                    variant="subtle"
+                    showText={false}
+                    tooltipText={`Copy ${isUser ? 'your message' : 'AI response'}`}
+                  />
+                )}
+              </div>
+              
+              {/* Mobile reference button */}
               {onReference && (
                 <button
                   onClick={() => onReference(message)}

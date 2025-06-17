@@ -13,6 +13,18 @@ export interface InteractiveResponse {
   contextualSuggestions?: string[];
 }
 
+export interface ThinkingStep {
+  id: string;
+  title: string;
+  description: string;
+  status: 'pending' | 'processing' | 'completed' | 'error';
+  duration?: number;
+  details?: string[];
+  data?: any;
+  startTime?: number;
+  endTime?: number;
+}
+
 export interface Message {
   id: string;
   content: string;
@@ -28,6 +40,8 @@ export interface Message {
   sessionId?: string;
   metadata?: {
     suggestions?: any[];
+    thinking_steps?: ThinkingStep[];
+    processing_time_ms?: number;
     [key: string]: any;
   };
   relatedInsights?: {

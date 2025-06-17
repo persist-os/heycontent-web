@@ -1,5 +1,6 @@
 import React from 'react';
 import { ContextBox } from './ContextBox';
+import { SuggestionButton } from './SuggestionButton';
 
 interface AIInsightsContextBoxProps {
   currentContext: any;
@@ -44,13 +45,12 @@ const AIInsightsContextBox: React.FC<AIInsightsContextBoxProps> = ({
               "How do I measure success?",
               "What are the potential risks?"
             ].map((suggestion, index) => (
-              <button
+              <SuggestionButton
                 key={index}
+                suggestion={suggestion}
                 onClick={() => onSendMessage(suggestion)}
-                className="px-3 py-1 text-sm bg-white border border-[#D0ECFF] rounded text-[#4E87E3] hover:bg-[#D0ECFF] hover:text-[#4E87E3] transition-colors"
-              >
-                {suggestion}
-              </button>
+                variant="blue"
+              />
             ))}
           </div>
         </div>
@@ -71,13 +71,12 @@ const AIInsightsContextBox: React.FC<AIInsightsContextBoxProps> = ({
               "Common mistakes to avoid?",
               "Break into smaller steps?"
             ].map((suggestion, index) => (
-              <button
+              <SuggestionButton
                 key={index}
+                suggestion={suggestion}
                 onClick={() => onSendMessage(suggestion)}
-                className="px-3 py-1 text-sm bg-white border border-[#D0ECFF] rounded text-[#4E87E3] hover:bg-[#D0ECFF] hover:text-[#4E87E3] transition-colors"
-              >
-                {suggestion}
-              </button>
+                variant="blue"
+              />
             ))}
           </div>
         </div>
@@ -98,13 +97,12 @@ const AIInsightsContextBox: React.FC<AIInsightsContextBoxProps> = ({
               "What competitors are doing this?",
               "What's the market opportunity?"
             ].map((suggestion, index) => (
-              <button
+              <SuggestionButton
                 key={index}
+                suggestion={suggestion}
                 onClick={() => onSendMessage(suggestion)}
-                className="px-3 py-1 text-sm bg-white border border-[#D0ECFF] rounded text-[#4E87E3] hover:bg-[#D0ECFF] hover:text-[#4E87E3] transition-colors"
-              >
-                {suggestion}
-              </button>
+                variant="blue"
+              />
             ))}
           </div>
         </div>

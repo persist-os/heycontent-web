@@ -383,7 +383,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   }
 
   return (
-    <div className="flex flex-col h-screen bg-white w-full overflow-hidden">
+    <div className="flex flex-col h-screen bg-gray-50/30 dark:bg-gray-900 w-full overflow-hidden">
       {/* Header */}
       <ChatHeader isRefreshing={isRefreshing} onRefresh={handleRefresh} onNewChat={handleNewChat} />
 
@@ -437,11 +437,11 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                 )}
 
                 {error && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-4">
-                    <p className="text-red-600 text-sm">{error}</p>
+                  <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/50 rounded-lg p-3 mt-4">
+                    <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
                     <button
                       onClick={() => chatState.setError(null)}
-                      className="text-xs text-red-500 hover:text-red-700 mt-1"
+                      className="text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 mt-1 transition-colors"
                     >
                       Dismiss
                     </button>
@@ -472,7 +472,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       )}
 
       {/* Input Bar */}
-      <div className="flex-shrink-0 border-t border-gray-100">
+      <div className="flex-shrink-0 border-t border-gray-200/50 dark:border-gray-700/50 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
         <ChatInputArea
           showAmbient={false}
           currentContext={currentContext}

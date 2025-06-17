@@ -1,6 +1,7 @@
 import React from 'react';
 import { ContextBox } from './ContextBox';
 import { Brain } from 'lucide-react';
+import { SuggestionButton } from './SuggestionButton';
 
 interface ChatContextBoxProps {
   currentContext: any;
@@ -42,13 +43,12 @@ const ChatContextBox: React.FC<ChatContextBoxProps> = ({
               "What's my next priority?",
               "What are the main recommendations?"
             ].map((suggestion, index) => (
-              <button
+              <SuggestionButton
                 key={index}
+                suggestion={suggestion}
                 onClick={() => onSendMessage(suggestion)}
-                className="px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
-              >
-                {suggestion}
-              </button>
+                variant="default"
+              />
             ))}
           </div>
         </div>

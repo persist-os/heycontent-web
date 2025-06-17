@@ -107,9 +107,9 @@ export function ChatInput({
     // Map MentionItem to our expected mention structure
     const mention = {
       id: mentionItem.id,
-      type: 'type' in mentionItem && ['gmail', 'youtube', 'instagram'].includes(mentionItem.type) ? 'platform' as const : 'content' as const,
-      subtype: mentionItem.type,
-      title: mentionItem.title || mentionItem.name
+      type: mentionItem.type, // This is already 'platform' or 'content'
+      subtype: mentionItem.subtype,
+      title: mentionItem.title || mentionItem.fileName
     }
     
     // Add to mentions array if not already present
@@ -132,10 +132,10 @@ export function ChatInput({
         {/* Context indicator */}
         {hasContext && (
           <div className="w-full mb-3">
-            <div className={`flex items-center gap-2 text-xs p-3 rounded-lg border ${
+            <div className={`flex items-center gap-2 text-xs p-3 rounded-lg border transition-all ${
               hasAnalysis 
-                ? 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-700'
-                : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700'
+                ? 'text-violet-700 dark:text-violet-300 bg-violet-50/50 dark:bg-violet-950/20 border-violet-200/50 dark:border-violet-800/50'
+                : 'text-gray-700 dark:text-gray-300 bg-gray-50/80 dark:bg-gray-800/40 border-gray-200/50 dark:border-gray-700/50'
             }`}>
               <Brain className="w-4 h-4 flex-shrink-0" />
               <span>
@@ -151,11 +151,11 @@ export function ChatInput({
         {/* Referenced message preview - mobile responsive */}
         {referencedMessage && (
           <div className="w-full mb-3">
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-50 p-2 sm:p-3 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400 bg-gray-50/80 dark:bg-gray-800/40 p-2 sm:p-3 rounded-lg border border-gray-200/50 dark:border-gray-700/50">
               <MessageSquare className="w-4 h-4 flex-shrink-0" />
               <button 
                 onClick={() => setShowFullReply(!showFullReply)}
-                className="flex-1 text-left hover:text-gray-700 transition-colors"
+                className="flex-1 text-left hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
               >
                 <span className={showFullReply ? "break-words whitespace-pre-wrap" : "truncate block"}>
                   Replying to: {showFullReply 
@@ -170,7 +170,7 @@ export function ChatInput({
                   setShowFullReply(false)
                   onClearReference?.()
                 }}
-                className="text-gray-600 hover:text-gray-800 p-1.5 rounded-full hover:bg-gray-200 flex-shrink-0 transition-colors"
+                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1.5 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700/50 flex-shrink-0 transition-colors"
                 aria-label="Clear reply"
               >
                 <span className="text-base font-medium">×</span>
@@ -182,18 +182,18 @@ export function ChatInput({
         {/* Mention references preview */}
         {mentions.length > 0 && (
           <div className="w-full mb-3">
-            <div className="flex flex-wrap gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="text-xs text-blue-600 font-medium">Referenced:</div>
+            <div className="flex flex-wrap gap-2 p-3 bg-gray-50/80 dark:bg-gray-800/40 border border-gray-200/50 dark:border-gray-700/50 rounded-lg">
+              <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Referenced:</div>
               {mentions.map((mention) => (
                 <div
                   key={`${mention.type}-${mention.id}-${mention.subtype}`}
-                  className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs"
+                  className="flex items-center gap-1 px-2 py-1 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md text-xs border border-gray-200 dark:border-gray-600 shadow-sm"
                 >
                   <span>{mention.type === 'platform' ? '📦' : '📄'}</span>
                   <span className="truncate max-w-[200px]">{mention.title}</span>
                   <button
                     onClick={() => setMentions(prev => prev.filter(m => !(m.id === mention.id && m.type === mention.type && m.subtype === mention.subtype)))}
-                    className="ml-1 text-blue-500 hover:text-blue-700"
+                    className="ml-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
                   >
                     ×
                   </button>
@@ -203,54 +203,56 @@ export function ChatInput({
           </div>
         )}
 
-        <div className="flex gap-2 items-end w-full relative">
+        <div className="flex gap-3 items-end w-full relative">
           <div className="flex-1 relative">
-            <div className={`rounded-xl border
-              focus-within:ring-2 focus-within:ring-heycontent-yellow focus-within:border-transparent
-              ${isAtLimit ? 'border-red-500 focus-within:ring-red-500' : ''}
-              ${isNearLimit && !isAtLimit ? 'border-yellow-500 focus-within:ring-yellow-500' : ''}
-              transition-all duration-200
-              bg-white shadow-sm
-              px-4 py-3
+            <div className={`flex items-center rounded-2xl transition-all duration-200 bg-gray-50 dark:bg-gray-800 border-2
+              ${isAtLimit ? 'border-red-400 dark:border-red-500' : ''}
+              ${isNearLimit && !isAtLimit ? 'border-amber-400 dark:border-amber-500' : ''}
+              ${!isAtLimit && !isNearLimit ? 'border-transparent hover:border-gray-200 dark:hover:border-gray-600' : ''}
+              focus-within:border-heycontent-yellow focus-within:bg-white dark:focus-within:bg-gray-700
+              px-4 py-3 pr-16
             `}>
               <MentionInput
                 value={input}
                 onChange={setInput}
                 onMentionSelect={handleMentionSelect}
                 placeholder={placeholder}
-                className="text-sm leading-relaxed"
+                className="text-sm leading-relaxed flex-1 bg-transparent border-0 outline-0 resize-none placeholder:text-gray-500 dark:placeholder:text-gray-400"
                 userId={userId}
                 disabled={isLoading}
                 onKeyPress={handleKeyDown}
               />
+              
+              {/* Character count - positioned inside the input */}
+              {!isLoading && (
+                <div className={`absolute right-14 bottom-3 text-xs pointer-events-none
+                  ${isAtLimit ? 'text-red-500 font-medium' : ''}
+                  ${isNearLimit && !isAtLimit ? 'text-amber-500 font-medium' : 'text-gray-400 dark:text-gray-500'}
+                  transition-colors duration-200
+                `}>
+                  {characterCount.toLocaleString()}/{maxLength.toLocaleString()}
+                </div>
+              )}
+              
+              {/* Send button - positioned inside the input */}
+              <button
+                type="submit"
+                aria-label="Send message"
+                disabled={isLoading || !input.trim() || isAtLimit}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200
+                  ${isLoading || !input.trim() || isAtLimit 
+                    ? 'bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-500 cursor-not-allowed' 
+                    : 'bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black shadow-sm hover:shadow-md hover:scale-105 active:scale-95'
+                  }`}
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </button>
             </div>
-            {/* Character count */}
-            <div className={`absolute right-3 bottom-2 text-xs
-              ${isAtLimit ? 'text-red-500 font-medium' : ''}
-              ${isNearLimit && !isAtLimit ? 'text-yellow-500 font-medium' : 'text-gray-400'}
-              ${isLoading ? 'hidden' : ''}
-              transition-colors duration-200
-            `}>
-              {characterCount.toLocaleString()}/{maxLength.toLocaleString()}
-            </div>
-            {/* Loading indicator */}
-            {isLoading && (
-              <div className="absolute right-3 bottom-3">
-                <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-              </div>
-            )}
           </div>
-          <button
-            type="submit"
-            aria-label="Send message"
-            disabled={isLoading || !input.trim() || isAtLimit}
-            className="bg-heycontent-yellow text-black px-4 py-3 rounded-xl
-              hover:bg-heycontent-yellow/90 transition-colors disabled:opacity-50
-              disabled:cursor-not-allowed h-[48px] flex items-center flex-shrink-0
-              shadow-sm hover:shadow-md font-medium"
-          >
-            <Send className="w-4 h-4" />
-          </button>
         </div>
         <div className="mt-2 text-xs text-gray-500 text-center">
           Press Enter to send, Shift+Enter for new line

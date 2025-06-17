@@ -281,6 +281,18 @@ export default defineSchema({
   .index("by_historyId", ["historyId"])
   .index("by_timestamp", ["timestamp"]),
 
+  gmailBatchAnalysis: defineTable({
+    analysisType: v.literal("batch"),
+    createdAt: v.float64(),
+    gmailAccountId: v.string(),
+    insights: v.any(),
+    updatedAt: v.float64(),
+    userId: v.string(),
+  })
+    .index("by_account", ["gmailAccountId"])
+    .index("by_userId", ["userId"])
+    .index("by_user_account", ["userId", "gmailAccountId"]),
+
   // YouTube Tokens
   youtubeTokens: defineTable({
     userId: v.string(),
@@ -303,6 +315,8 @@ export default defineSchema({
       v.literal("note"),
       v.literal("insight"),
       v.literal("analytics"),
+      v.literal("persona"),
+      v.literal("conversation"),
       v.literal("platform_gmail"),
       v.literal("platform_youtube"),
       v.literal("platform_instagram")
@@ -313,7 +327,9 @@ export default defineSchema({
       v.literal("instagram"),
       v.literal("smart-notes"),
       v.literal("ai-insights"),
-      v.literal("analytics")
+      v.literal("analytics"),
+      v.literal("personas"),
+      v.literal("conversations")
     ),
     fileId: v.string(),
     sourceTable: v.string(),

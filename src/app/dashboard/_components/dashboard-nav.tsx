@@ -145,12 +145,17 @@ export function DashboardNav() {
         {/* Menu toggle button */}
         <div
             ref={toggleButtonRef}
-            className={`fixed top-7 left-5 z-50 ${isViewingNote ? 'hidden' : 'block'}`}
+            className={`fixed top-4 left-4 z-50 ${isViewingNote ? 'hidden' : 'block'}`}
         >
-          <div className="flex flex-col gap-1 cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
+          <button 
+            className="flex flex-col gap-1 cursor-pointer p-3 hover:bg-gray-100 rounded-lg transition-colors"
+            onClick={() => setIsExpanded(!isExpanded)}
+            aria-label="Toggle navigation menu"
+            style={{ minWidth: '44px', minHeight: '44px' }}
+          >
             <div className="w-4 h-0.5 bg-black rounded-full"></div>
             <div className="w-3 h-0.5 bg-black rounded-full"></div>
-          </div>
+          </button>
         </div>
 
         {/* Expanded state */}

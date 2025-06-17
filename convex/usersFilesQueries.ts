@@ -1,5 +1,6 @@
-import { query } from "./_generated/server";
+import { query, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 
 // Search files for mentions (@ and # commands)
 export const searchFiles = query({
@@ -15,6 +16,8 @@ export const searchFiles = query({
       v.literal("note"),
       v.literal("insight"),
       v.literal("analytics"),
+      v.literal("persona"),
+      v.literal("conversation"),
       v.literal("platform_gmail"),
       v.literal("platform_youtube"),
       v.literal("platform_instagram")
@@ -25,7 +28,9 @@ export const searchFiles = query({
       v.literal("instagram"),
       v.literal("smart-notes"),
       v.literal("ai-insights"),
-      v.literal("analytics")
+      v.literal("analytics"),
+      v.literal("personas"),
+      v.literal("conversations")
     )),
   },
   handler: async (ctx, args) => {
@@ -52,13 +57,16 @@ export const searchFiles = query({
 
     // Also search by keywords if the search index doesn't return enough results
     if (searchResults.length < limit) {
+      const validTerms = searchTerm.split(' ').filter(term => term.length > 2);
+      
+      if (validTerms.length > 0) {
       const keywordResults = await ctx.db
         .query("usersFiles")
         .withIndex("by_userId", (q) => q.eq("userId", args.userId))
         .filter((q) => 
           // Search in keywords array
           q.or(
-            ...searchTerm.split(' ').map(term => 
+              ...validTerms.map(term => 
               q.gte(q.field("searchKeywords"), [term])
             )
           )
@@ -72,6 +80,7 @@ export const searchFiles = query({
       );
       
       searchResults = uniqueResults;
+      }
     }
 
     // Sort by relevance (exact match first, then by recency)
@@ -193,7 +202,7 @@ export const getFileData = query({
           break;
 
         case "notes":
-          actualData = await ctx.db.get(fileRef.fileId);
+          actualData = await ctx.db.get(fileRef.fileId as any);
           // Verify ownership
           if (actualData && actualData.userId !== args.userId) {
             actualData = null;
@@ -258,7 +267,9 @@ export const getUserFiles = query({
       v.literal("instagram"),
       v.literal("smart-notes"),
       v.literal("ai-insights"),
-      v.literal("analytics")
+      v.literal("analytics"),
+      v.literal("personas"),
+      v.literal("conversations")
     )),
   },
   handler: async (ctx, args) => {
@@ -305,15 +316,109 @@ export const searchPlatforms = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const results = await ctx.runQuery("usersFilesQueries:searchFiles", {
-      userId: args.userId,
-      query: args.query,
-      limit: args.limit,
-      fileType: undefined, // Will include platform_* types
-    });
+    const limit = args.limit || 10;
+    const searchTerm = args.query.toLowerCase().trim();
+    
+    // Search for platform types using the same logic as searchFiles
+    let searchResults;
+    
+    if (searchTerm) {
+      // If there's a search term, use search index
+      searchResults = await ctx.db
+        .query("usersFiles")
+        .withSearchIndex("search_fileName", (q) => 
+          q.search("fileName", searchTerm)
+            .eq("userId", args.userId)
+        )
+        .take(limit * 2);
 
     // Filter to only platform types
-    return results.filter(file => file.type === 'platform');
+      searchResults = searchResults.filter(file => 
+        file.fileType.startsWith('platform_') || 
+        file.platform === 'gmail' || 
+        file.platform === 'youtube' || 
+        file.platform === 'instagram'
+      );
+
+      // Also search by keywords if needed and we have valid search terms
+      if (searchResults.length < limit && searchTerm.length > 2) {
+        const validTerms = searchTerm.split(' ').filter(term => term.length > 2);
+        
+        if (validTerms.length > 0) {
+          const keywordResults = await ctx.db
+            .query("usersFiles")
+            .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+            .filter((q) => 
+              q.and(
+                // Search in keywords array
+                q.or(
+                  ...validTerms.map(term => 
+                    q.gte(q.field("searchKeywords"), [term])
+                  )
+                ),
+                // Only platform types
+                q.or(
+                  q.eq(q.field("platform"), "gmail"),
+                  q.eq(q.field("platform"), "youtube"),
+                  q.eq(q.field("platform"), "instagram")
+                )
+              )
+            )
+            .take(limit * 2);
+
+          const allResults = [...searchResults, ...keywordResults];
+          const uniqueResults = allResults.filter((file, index, self) => 
+            index === self.findIndex(f => f._id === file._id)
+          );
+          
+          searchResults = uniqueResults;
+        }
+      }
+    } else {
+      // If no search term, just get recent platform files
+      searchResults = await ctx.db
+        .query("usersFiles")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .filter((q) => 
+          q.or(
+            q.eq(q.field("platform"), "gmail"),
+            q.eq(q.field("platform"), "youtube"),
+            q.eq(q.field("platform"), "instagram")
+          )
+        )
+        .order("desc")
+        .take(limit);
+    }
+
+    // Sort by relevance
+    if (searchTerm) {
+      searchResults.sort((a, b) => {
+        const aExactMatch = a.fileName.toLowerCase().includes(searchTerm);
+        const bExactMatch = b.fileName.toLowerCase().includes(searchTerm);
+        
+        if (aExactMatch && !bExactMatch) return -1;
+        if (!aExactMatch && bExactMatch) return 1;
+        
+        return b.updatedAt - a.updatedAt;
+      });
+    }
+
+    return searchResults.slice(0, limit).map(file => ({
+      id: file.fileId,
+      type: 'platform' as const,
+      subtype: file.fileType,
+      platform: file.platform,
+      fileName: file.fileName,
+      title: file.fileName,
+      snippet: file.metadata.snippet,
+      thumbnailUrl: file.metadata.thumbnailUrl,
+      from: file.metadata.from,
+      date: file.metadata.date,
+      stats: file.metadata.stats,
+      sourceTable: file.sourceTable,
+      _createdAt: file.createdAt,
+      _updatedAt: file.updatedAt,
+    }));
   },
 });
 
@@ -325,15 +430,118 @@ export const searchContent = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const results = await ctx.runQuery("usersFilesQueries:searchFiles", {
-      userId: args.userId,
-      query: args.query,
-      limit: args.limit,
-      fileType: undefined, // Will include content types
-    });
+    const limit = args.limit || 10;
+    const searchTerm = args.query.toLowerCase().trim();
+    
+    // Search for content types using the same logic as searchFiles
+    let searchResults;
+    
+    if (searchTerm) {
+      // If there's a search term, use search index
+      searchResults = await ctx.db
+        .query("usersFiles")
+        .withSearchIndex("search_fileName", (q) => 
+          q.search("fileName", searchTerm)
+            .eq("userId", args.userId)
+        )
+        .take(limit * 2);
 
-    // Filter to only content types
-    return results.filter(file => file.type === 'content');
+      // Filter to only content types (not platform types)
+      searchResults = searchResults.filter(file => 
+        !file.fileType.startsWith('platform_') &&
+        ['email', 'email_thread', 'video', 'instagram_post', 'note', 'insight', 'analytics'].includes(file.fileType)
+      );
+
+      // Also search by keywords if needed and we have valid search terms
+      if (searchResults.length < limit && searchTerm.length > 2) {
+        const validTerms = searchTerm.split(' ').filter(term => term.length > 2);
+        
+        if (validTerms.length > 0) {
+          const keywordResults = await ctx.db
+            .query("usersFiles")
+            .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+            .filter((q) => 
+              q.and(
+                // Search in keywords array
+                q.or(
+                  ...validTerms.map(term => 
+                    q.gte(q.field("searchKeywords"), [term])
+                  )
+                ),
+                // Only content types
+                q.or(
+                  q.eq(q.field("fileType"), "email"),
+                  q.eq(q.field("fileType"), "email_thread"),
+                  q.eq(q.field("fileType"), "video"),
+                  q.eq(q.field("fileType"), "instagram_post"),
+                  q.eq(q.field("fileType"), "note"),
+                  q.eq(q.field("fileType"), "insight"),
+                  q.eq(q.field("fileType"), "analytics")
+                )
+              )
+            )
+            .take(limit * 2);
+
+          const allResults = [...searchResults, ...keywordResults];
+          const uniqueResults = allResults.filter((file, index, self) => 
+            index === self.findIndex(f => f._id === file._id)
+          );
+          
+          searchResults = uniqueResults;
+        }
+      }
+    } else {
+      // If no search term, just get recent content files
+      searchResults = await ctx.db
+        .query("usersFiles")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .filter((q) => 
+          q.and(
+            // Only content types
+            q.or(
+              q.eq(q.field("fileType"), "email"),
+              q.eq(q.field("fileType"), "email_thread"),
+              q.eq(q.field("fileType"), "video"),
+              q.eq(q.field("fileType"), "instagram_post"),
+              q.eq(q.field("fileType"), "note"),
+              q.eq(q.field("fileType"), "insight"),
+              q.eq(q.field("fileType"), "analytics")
+            )
+          )
+        )
+        .order("desc")
+        .take(limit);
+    }
+
+    // Sort by relevance
+    if (searchTerm) {
+      searchResults.sort((a, b) => {
+        const aExactMatch = a.fileName.toLowerCase().includes(searchTerm);
+        const bExactMatch = b.fileName.toLowerCase().includes(searchTerm);
+        
+        if (aExactMatch && !bExactMatch) return -1;
+        if (!aExactMatch && bExactMatch) return 1;
+        
+        return b.updatedAt - a.updatedAt;
+      });
+    }
+
+    return searchResults.slice(0, limit).map(file => ({
+      id: file.fileId,
+      type: 'content' as const,
+      subtype: file.fileType,
+      platform: file.platform,
+      fileName: file.fileName,
+      title: file.fileName,
+      snippet: file.metadata.snippet,
+      thumbnailUrl: file.metadata.thumbnailUrl,
+      from: file.metadata.from,
+      date: file.metadata.date,
+      stats: file.metadata.stats,
+      sourceTable: file.sourceTable,
+      _createdAt: file.createdAt,
+      _updatedAt: file.updatedAt,
+    }));
   },
 });
 
