@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import { Instagram, Mail, X, ExternalLink, Brain, Sparkles, ToggleLeft, ToggleRight, Target } from 'lucide-react';
+import { Instagram, Mail, X, ExternalLink, Brain, Sparkles, ToggleLeft, ToggleRight, Target, MessageSquare } from 'lucide-react';
 import { YouTubeBrandIcon } from '../../YoutubeBrandIcon';
 import { ContentContext } from '../types';
 import { MarkdownRenderer } from '../markdown-renderer';
@@ -212,6 +212,48 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
               alt="Content thumbnail"
               className="w-28 h-20 object-cover rounded-lg border border-[#D0ECFF]"
             />
+          </div>
+        )}
+
+        {/* Gmail-specific thread information */}
+        {context.platform === 'gmail' && (
+          <div className="mt-3 p-3 bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-900/10 dark:to-gray-900 rounded-lg border border-blue-200 dark:border-blue-700">
+            <div className="flex items-center gap-2 mb-2">
+              <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                Email Thread Details
+              </h4>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-blue-700 dark:text-blue-300">Thread ID:</span>
+                <span className="text-blue-900 dark:text-blue-100 font-mono text-xs">
+                  {context.contentId ? `${context.contentId.substring(0, 8)}...` : 'Unknown'}
+                </span>
+              </div>
+              {/* Show message count if available from backend metadata */}
+              {(context as any).messageCount && (
+                <div className="flex justify-between">
+                  <span className="text-blue-700 dark:text-blue-300">Messages:</span>
+                  <span className="text-blue-900 dark:text-blue-100 font-semibold">
+                    {(context as any).messageCount}
+                  </span>
+                </div>
+              )}
+              {/* Show thread status if available */}
+              {(context as any).hasFullThread !== undefined && (
+                <div className="flex justify-between">
+                  <span className="text-blue-700 dark:text-blue-300">Thread Data:</span>
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    (context as any).hasFullThread 
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                      : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                  }`}>
+                    {(context as any).hasFullThread ? 'Complete Thread' : 'Basic Info Only'}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
