@@ -56,10 +56,10 @@ export function AmbientInsightsContainer({ handleSendMessage }: { handleSendMess
 
   // For simplicity, AmbientInsights manages its own loading and error states
   return (
-    <div className="h-full flex flex-col px-4 sm:px-6 lg:px-8">
+    <div className="h-full flex flex-col px-3 sm:px-4 lg:px-6 overflow-hidden">
       {/* Compact Header with Just Refresh Button */}
       <div className="flex-shrink-0 pt-4 pb-3">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-4xl sm:max-w-5xl lg:max-w-7xl mx-auto">
           {/* Refresh Button - Compact and Right-aligned */}
           <div className="flex justify-end">
             <Button 
@@ -79,8 +79,8 @@ export function AmbientInsightsContainer({ handleSendMessage }: { handleSendMess
       </div>
 
       {/* Insights Content - Full Available Space */}
-      <div className="flex-1 overflow-y-auto pb-4 min-h-0">
-        <div className="max-w-7xl mx-auto">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden pb-4 min-h-0">
+        <div className="max-w-4xl sm:max-w-5xl lg:max-w-7xl mx-auto">
           <AmbientInsights 
             key={refreshKey}
             onInsightClick={handleInsightClick}

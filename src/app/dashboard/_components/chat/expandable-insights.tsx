@@ -22,6 +22,14 @@ interface ExpandableInsightsProps {
   onSuggestionPress?: (suggestion: string) => void;
 }
 
+// Utility function to clean bullet points from suggestions
+const cleanSuggestionText = (text: string): string => {
+  return text
+    .replace(/^[\s]*[-*•]\s*/, '') // Remove leading bullet points (-, *, •)
+    .replace(/^[\s]*\*\s*/, '') // Remove leading asterisks
+    .trim();
+};
+
 export function ExpandableInsights({ 
   message, 
   onReferenceClick, 
@@ -53,7 +61,7 @@ export function ExpandableInsights({
 
       {/* Expandable Content */}
       {isExpanded && (
-        <div className="mt-2 space-y-4 pt-2 bg-gray-50 p-4 rounded-lg">
+        <div className="mt-2 space-y-4 pt-2 bg-gray-50 p-3 sm:p-4 rounded-lg">
           {/* Related Insights Section */}
           {message.relatedInsights && message.relatedInsights.length > 0 && (
             <div className="space-y-2">
@@ -76,14 +84,14 @@ export function ExpandableInsights({
           {/* Interactive Options Section */}
           <div className="space-y-2">
             <h4 className="text-sm font-medium text-gray-700">Options</h4>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
               {(message.interactiveResponse?.options || placeholderOptions).map((option, index) => (
                 <button
                   key={index}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200 break-words"
                   onClick={() => onOptionPress?.(option)}
                 >
-                  <span>{option.text}</span>
+                  <span>{cleanSuggestionText(option.text)}</span>
                 </button>
               ))}
             </div>
@@ -93,14 +101,14 @@ export function ExpandableInsights({
           {(message.suggestions?.length ?? 0) > 0 && (
             <div className="space-y-2">
               <h4 className="text-sm font-medium text-gray-700">Suggestions</h4>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {message.suggestions?.map((suggestion, index) => (
                   <button
                     key={index}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200 break-words"
                     onClick={() => onSuggestionPress?.(suggestion)}
                   >
-                    <span>{suggestion}</span>
+                    <span>{cleanSuggestionText(suggestion)}</span>
                   </button>
                 ))}
               </div>

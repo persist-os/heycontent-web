@@ -15,6 +15,8 @@ interface ChatInputProps {
   hasContext?: boolean
   contextPlatform?: string
   hasAnalysis?: boolean
+  inputValue?: string
+  onInputChange?: (value: string) => void
 }
 
 const placeholders = [
@@ -41,12 +43,24 @@ export function ChatInput({
   autoFocus = true,
   hasContext = false,
   contextPlatform,
-  hasAnalysis = false
+  hasAnalysis = false,
+  inputValue,
+  onInputChange
 }: ChatInputProps) {
   const [input, setInput] = useState('')
   const [placeholder, setPlaceholder] = useState(placeholders[0])
   const [showFullReply, setShowFullReply] = useState(false)
   const textAreaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Use external input value if provided, otherwise use internal state
+  const currentInput = inputValue !== undefined ? inputValue : input
+  const setCurrentInput = (value: string) => {
+    if (inputValue !== undefined) {
+      onInputChange?.(value)
+    } else {
+      setInput(value)
+    }
+  }
 
   // Use context-aware placeholders when analysis is available
   const activePlaceholders = hasAnalysis ? contextPlaceholders : placeholders
@@ -74,7 +88,7 @@ export function ChatInput({
       textAreaRef.current.style.height = 'auto'
       textAreaRef.current.style.height = `${textAreaRef.current.scrollHeight}px`
     }
-  }, [input])
+  }, [currentInput])
 
   // Auto-focus effect
   useEffect(() => {
@@ -85,9 +99,9 @@ export function ChatInput({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (input.trim() && !isLoading && input.length <= maxLength) {
-      onSend(input.trim())
-      setInput('')
+    if (currentInput.trim() && !isLoading && currentInput.length <= maxLength) {
+      onSend(currentInput.trim())
+      setCurrentInput('')
       // Reset textarea height
       if (textAreaRef.current) {
         textAreaRef.current.style.height = 'auto'
@@ -106,23 +120,23 @@ export function ChatInput({
     }
   }
 
-  const characterCount = input.length
+  const characterCount = currentInput.length
   const isNearLimit = characterCount > maxLength * 0.8
   const isAtLimit = characterCount >= maxLength
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className="w-full max-w-3xl sm:max-w-4xl mx-auto">
       <form onSubmit={handleSubmit} className="py-3 w-full">
         {/* Context indicator */}
         {hasContext && (
           <div className="w-full mb-3">
-            <div className={`flex items-center gap-2 text-xs p-3 rounded-lg border ${
+            <div className={`flex items-center gap-2 text-xs p-2 sm:p-3 rounded-lg border ${
               hasAnalysis 
                 ? 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-700'
                 : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700'
             }`}>
               <Brain className="w-4 h-4 flex-shrink-0" />
-              <span>
+              <span className="break-words">
                 {hasAnalysis 
                   ? `AI analysis for this ${contextPlatform} content will be included as context`
                   : `Discussing ${contextPlatform} content`
@@ -139,7 +153,7 @@ export function ChatInput({
               <MessageSquare className="w-4 h-4 flex-shrink-0" />
               <button 
                 onClick={() => setShowFullReply(!showFullReply)}
-                className="flex-1 text-left hover:text-gray-700 transition-colors"
+                className="flex-1 text-left hover:text-gray-700 transition-colors min-w-0"
               >
                 <span className={showFullReply ? "break-words whitespace-pre-wrap" : "truncate block"}>
                   Replying to: {showFullReply 
@@ -167,11 +181,11 @@ export function ChatInput({
           <div className="flex-1 relative">
             <textarea
               ref={textAreaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
+              value={currentInput}
+              onChange={(e) => setCurrentInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
-              className={`w-full rounded-xl border px-4 py-3
+              className={`w-full rounded-xl border px-3 sm:px-4 py-3
                 focus:outline-none focus:ring-2 focus:ring-heycontent-yellow focus:border-transparent
                 resize-none overflow-y-auto min-h-[48px] max-h-[300px] sm:max-h-[400px]
                 text-sm leading-relaxed
@@ -204,8 +218,8 @@ export function ChatInput({
           <button
             type="submit"
             aria-label="Send message"
-            disabled={isLoading || !input.trim() || isAtLimit}
-            className="bg-heycontent-yellow text-black px-4 py-3 rounded-xl
+            disabled={isLoading || !currentInput.trim() || isAtLimit}
+            className="bg-heycontent-yellow text-black px-3 sm:px-4 py-3 rounded-xl
               hover:bg-heycontent-yellow/90 transition-colors disabled:opacity-50
               disabled:cursor-not-allowed h-[48px] flex items-center flex-shrink-0
               shadow-sm hover:shadow-md font-medium"
