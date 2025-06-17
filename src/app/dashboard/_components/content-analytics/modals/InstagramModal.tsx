@@ -158,29 +158,24 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
         throw new Error('Invalid API key format');
       }
 
-      // Use permalink if available, otherwise construct URL from post ID
-      const postUrl = selectedContent.content.permalink || 
-                     `https://www.instagram.com/p/${postId}/`;
+      // Strip "instagram-" prefix from post ID for backend compatibility
+      const cleanPostId = postId.startsWith('instagram-') ? postId.replace('instagram-', '') : postId;
 
       const apiUrl = `${window.location.origin}/api/social/instagram/analyze`;
       
       // Prepare the request body
       const requestBody = {
         user_id: extractedUserId,
-        post_id: postId, // Backend expects post_id, not post_url
+        post_id: cleanPostId, // Use cleaned post ID without "instagram-" prefix
         format: 'both' // Request both JSON and markdown format
       };
       
       // Debug logging to see exactly what we're sending
       console.log('🚀 Instagram Analysis Request Debug:');
       console.log('📡 URL:', apiUrl);
-      console.log('📦 Request Body (before JSON.stringify):', requestBody);
-      console.log('📦 Request Body (after JSON.stringify):', JSON.stringify(requestBody));
-      console.log('🔍 Format field specifically:', {
-        formatValue: requestBody.format,
-        formatType: typeof requestBody.format,
-        hasFormat: 'format' in requestBody
-      });
+      console.log('📦 Original Post ID:', postId);
+      console.log('🧹 Cleaned Post ID:', cleanPostId);
+      console.log('📦 Request Body:', requestBody);
       
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -193,25 +188,12 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
 
       const responseData = await response.json();
       
-      // Comprehensive debug logging to see exactly what we're getting
-      console.log('🔍 FULL Instagram Analysis Response Debug:');
-      console.log('📡 HTTP Status:', response.status, response.ok ? '✅' : '❌');
-      console.log('📦 Raw Response Data:', responseData);
-      console.log('🔍 Response Structure Analysis:', {
-        hasStatus: 'status' in responseData,
-        statusValue: responseData.status,
-        hasData: 'data' in responseData,
-        dataType: responseData.data ? typeof responseData.data : 'undefined',
-        dataKeys: responseData.data ? Object.keys(responseData.data) : null,
-        hasMarkdown: 'markdown' in responseData,
-        markdownType: responseData.markdown ? typeof responseData.markdown : 'undefined',
-        markdownLength: responseData.markdown ? responseData.markdown.length : 0,
-        markdownPreview: responseData.markdown ? responseData.markdown.substring(0, 100) + '...' : 'No markdown',
-        hasAnalysis: 'analysis' in responseData,
-        analysisType: responseData.analysis ? typeof responseData.analysis : 'undefined',
-        hasError: 'error' in responseData,
-        errorValue: responseData.error,
-        allKeys: Object.keys(responseData)
+      // Debug logging to see the response
+      console.log('🔍 Instagram Analysis Response:', {
+        status: response.status,
+        responseData: responseData,
+        hasMarkdown: !!responseData.data?.markdown,
+        hasJson: !!responseData.data?.json || !!responseData.data
       });
       
       if (!response.ok) {
@@ -223,21 +205,28 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
       let analysisData = null;
       
       if (responseData.status === 'success') {
-        if (responseData.markdown) {
-          // Use markdown for display in modal
-          analysisContent = responseData.markdown;
+        // For 'both' format, check for nested data structure
+        if (responseData.data?.markdown) {
+          analysisContent = responseData.data.markdown;
+        } else if (responseData.data?.json) {
+          // If we have separate json/markdown fields
+          analysisData = responseData.data.json;
+          analysisContent = responseData.data.markdown || '';
+        } else if (responseData.data) {
+          // If data field contains the analysis directly
+          analysisData = responseData.data;
         }
         
-        if (responseData.data) {
-          // Store the JSON data for Convex
-          analysisData = responseData.data;
+        // Also check for direct markdown field (backup)
+        if (!analysisContent && responseData.markdown) {
+          analysisContent = responseData.markdown;
         }
         
         if (!analysisContent && !analysisData) {
           throw new Error('No analysis data received');
         }
       } else {
-        throw new Error('Analysis failed');
+        throw new Error(responseData.error || 'Analysis failed');
       }
       
       setAiAnalysis(analysisContent);
