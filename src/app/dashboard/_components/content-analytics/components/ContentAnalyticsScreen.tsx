@@ -112,11 +112,6 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
   const [analysis, setAnalysis] = useState<InstagramAnalysis | null>(null);
   const [selectedContent, setSelectedContent] = useState<InstagramContentItem | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const [isInitialMount, setIsInitialMount] = useState(true);
-  const [skeletonStartTime, setSkeletonStartTime] = useState<number | null>(null);
-  const [renderComplete, setRenderComplete] = useState(false);
-  const [contentReady, setContentReady] = useState(false);
-  const [hasDataFetched, setHasDataFetched] = useState(false);
 
   // Get Instagram account data from Convex
   const instagramAccount = useQuery(api.instagramQueries.getInstagramAccount, { userId });
@@ -137,51 +132,46 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
   const memoizedTrackerAnalysis = useMemo(() => trackerAnalysis, [trackerAnalysis]);
 
   // Memoized fetch function with stable dependencies
-  const fetchData = useCallback(async (forceRefresh = false) => {
-    // Prevent multiple simultaneous fetches
-    if (hasDataFetched && !isInitialMount && !forceRefresh) {
-      console.log('🛑 Data already fetched, skipping duplicate call')
-      return
-    }
-
+  const fetchData = useCallback(async (forceRefresh: boolean = false) => {
     console.log('🚀 Instagram Analytics fetchData called with:', {
       userId,
       hasInstagramAccount: !!instagramAccountId,
       hasTrackerAnalysis: memoizedTrackerAnalysis !== undefined,
-      hasDataFetched
-
+      forceRefresh
     });
     
+    // STEP 1: Wait for Instagram account to exist before proceeding
     if (!instagramAccountId) {
       console.log('⚠️ No Instagram account found, skipping analytics fetch');
       setLoading(false);
-      setIsInitialMount(false);
-      setRenderComplete(true);
-      setContentReady(true);
-      setHasDataFetched(true);
+      setError('No Instagram account connected');
       return;
     }
 
-    const fetchStartTime = Date.now();
+    // STEP 2: If NOT force refresh, wait for Convex tracker analysis to complete loading
+    if (!forceRefresh && memoizedTrackerAnalysis === undefined) {
+      console.log('🔄 Tracker analysis still loading from Convex, waiting...');
+      setLoading(true); // Keep showing skeleton while waiting
+      return;
+    }
+
     setLoading(true);
-    setRenderComplete(false);
-    setContentReady(false);
+    setError(null);
     
     // Add minimum loading time to ensure skeleton is visible
     const minLoadingTime = new Promise(resolve => setTimeout(resolve, 200));
     
     try {
-
-      // Enhanced Convex data validation - check if we have meaningful data for this specific account
-      if (trackerAnalysis !== undefined && !forceRefresh) {
-        const hasValidData = trackerAnalysis && 
-          Object.keys(trackerAnalysis).length > 0 &&
-          (trackerAnalysis.last_post || trackerAnalysis.posting_frequency || trackerAnalysis.media_distribution ||
-           (trackerAnalysis.content && (trackerAnalysis.content.last_post || trackerAnalysis.content.posting_frequency || trackerAnalysis.content.media_distribution)));
+      // STEP 3: Check if we have valid cached data from Convex (unless force refresh)
+      if (!forceRefresh && memoizedTrackerAnalysis !== undefined) {
+        const hasValidData = memoizedTrackerAnalysis && 
+          Object.keys(memoizedTrackerAnalysis).length > 0 &&
+          (memoizedTrackerAnalysis.last_post || memoizedTrackerAnalysis.posting_frequency || memoizedTrackerAnalysis.media_distribution ||
+           (memoizedTrackerAnalysis.content && (memoizedTrackerAnalysis.content.last_post || memoizedTrackerAnalysis.content.posting_frequency || memoizedTrackerAnalysis.content.media_distribution)));
         
         if (hasValidData) {
           await minLoadingTime; // Ensure skeleton shows for at least 200ms
-          console.log('✅ Using cached tracker analysis from Convex:', trackerAnalysis);
+          console.log('✅ Using cached tracker analysis from Convex:', memoizedTrackerAnalysis);
           
           // Extract the content from the tracker analysis if it's nested
           let analysisToSet = memoizedTrackerAnalysis;
@@ -192,30 +182,15 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
           
           setAnalysis(analysisToSet);
           setLoading(false);
-          setIsInitialMount(false);
-          setHasDataFetched(true);
-          setRenderComplete(true);
-          setContentReady(true);
-          return; // ✅ RETURN EARLY - Don't make API call when cached data exists
-
+          return; // ✅ SUCCESS - Using Convex data
         } else {
-          console.log('⚠️ Tracker analysis from Convex is null, empty, or lacks meaningful data, falling back to API call');
+          console.log('⚠️ Tracker analysis from Convex is null or empty, making backend API call');
         }
-      } else if (!forceRefresh) {
-        console.log('🔄 Tracker analysis still loading from Convex...');
-
-        // Don't make API call while Convex is still loading, unless it's a forced refresh
-        setLoading(false);
-        setIsInitialMount(false);
-        return;
       }
 
-      // Only make API call if:
-      // 1. forceRefresh is true (refresh button clicked), OR
-      // 2. No valid cached data exists
-      console.log('🔄 Making API call to refresh Instagram data...', { forceRefresh, hasValidCachedData: false });
+      // STEP 4: Make backend API call (only if no valid Convex data OR force refresh)
+      console.log('🔄 Making backend API call to refresh Instagram data...', { forceRefresh });
 
-      // Enhanced refresh: Call full-profile-collect to refresh both analytics and posts
       const response = await fetch(`${window.location.origin}/api/social/instagram/full-refresh`, {
         method: 'POST',
         headers: {
@@ -224,7 +199,7 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
         },
         body: JSON.stringify({
           user_id: userId,
-          instagram_account_id: instagramAccount.instagramAccountId
+          instagram_account_id: instagramAccountId
         })
       });
 
@@ -233,82 +208,62 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
       }
 
       const data = await response.json();
-      
-      await minLoadingTime;
-
       await minLoadingTime; // Ensure skeleton shows for at least 200ms
-
       
-      console.log('🔍 Instagram Analytics API Response Debug:', {
-        fullResponse: data,
-        hasAnalysis: !!data?.analysis,
-        hasData: !!data?.data,
-        hasContent: !!data?.content
-      });
+      console.log('🔍 Instagram Analytics API Response:', data);
       
-      // Fixed response processing logic
+      // Process response data
       let analysisToSet = null;
       
       if (data?.status === 'success' && data?.data) {
         if (data.data.content && !data.data.last_post) {
           analysisToSet = data.data.content;
-          console.log('✅ Using nested content from status.success response:', analysisToSet);
+          console.log('✅ Using nested content from API response:', analysisToSet);
         } else {
           analysisToSet = data.data;
-          console.log('✅ Using data from status.success response:', analysisToSet);
+          console.log('✅ Using data from API response:', analysisToSet);
         }
       } else if (data?.analysis) {
-        if (data.analysis.full_analysis?.content) {
-          analysisToSet = data.analysis.full_analysis.content;
-          console.log('✅ Using nested full_analysis.content:', analysisToSet);
-        } else if (data.analysis.content) {
+        if (data.analysis.content) {
           analysisToSet = data.analysis.content;
           console.log('✅ Using analysis.content:', analysisToSet);
         } else {
           analysisToSet = data.analysis;
           console.log('✅ Using direct analysis:', analysisToSet);
         }
-      } else if (data?.content) {
-        analysisToSet = data.content;
-        console.log('✅ Using direct content:', analysisToSet);
       }
       
       if (analysisToSet) {
         setAnalysis(analysisToSet);
-        console.log('✅ Successfully set analysis data');
+        console.log('✅ Successfully set analysis data from API');
       } else {
-        console.warn('⚠️ No valid analysis data found in response');
+        console.warn('⚠️ No valid analysis data found in API response');
         setError('No analysis data available');
       }
     } catch (err) {
-
       await minLoadingTime; // Ensure skeleton shows even on error
       console.error('❌ Instagram analytics fetch error:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch Instagram analysis');
     } finally {
       setLoading(false);
-      setIsInitialMount(false);
-      setHasDataFetched(true);
-
-      setRenderComplete(true);
-      setContentReady(true);
-
     }
-  }, [userId, instagramAccountId, memoizedTrackerAnalysis, hasDataFetched, isInitialMount]);
+  }, [userId, instagramAccountId, memoizedTrackerAnalysis]);
 
   // Only fetch data when dependencies actually change
   useEffect(() => {
-    if (!hasDataFetched || isInitialMount) {
-      fetchData(); // Don't pass forceRefresh here - this is automatic loading
+    // Run fetchData when:
+    // 1. We have an Instagram account AND
+    // 2. Tracker analysis query has completed (either with data or null)
+    if (instagramAccountId && memoizedTrackerAnalysis !== undefined) {
+      fetchData(false);
     }
-  }, [fetchData, hasDataFetched, isInitialMount]);
+  }, [fetchData, instagramAccountId, memoizedTrackerAnalysis]);
 
-  // Reset hasDataFetched when userId changes
+  // Reset analysis when userId changes
   useEffect(() => {
-    setHasDataFetched(false);
-    setIsInitialMount(true);
+    setAnalysis(null);
+    setError(null);
   }, [userId]);
-
 
   // Memoized pie chart data calculation
   const mediaDistributionData = useMemo(() => {
@@ -331,52 +286,10 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
     return Math.max(0, Math.min(100, 100 - ((analysis.posting_frequency.average_days_between_posts || 0) / 365 * 100)));
   }, [analysis?.posting_frequency?.average_days_between_posts]);
 
-  // Track skeleton start time and render completion
-  useEffect(() => {
-    const shouldShowSkeleton = loading || isInitialMount || !renderComplete || !contentReady;
-    
-    if (shouldShowSkeleton && !skeletonStartTime) {
-      const startTime = Date.now();
-      setSkeletonStartTime(startTime);
-    } else if (!shouldShowSkeleton && skeletonStartTime) {
-      const endTime = Date.now();
-      const duration = endTime - skeletonStartTime;
-      setSkeletonStartTime(null);
-    }
-  }, [loading, isInitialMount, renderComplete, contentReady, skeletonStartTime]);
-
-  // Handle render completion
-  const handleRenderComplete = useCallback(() => {
-    setRenderComplete(true);
-    setContentReady(true);
-  }, []);
-
-  // Set content ready and render complete after analysis is available
-  useEffect(() => {
-    console.log('🎯 Render completion check:', {
-      loading,
-      isInitialMount,
-      hasAnalysis: !!analysis,
-      analysisKeys: analysis ? Object.keys(analysis) : null,
-      mediaDistributionLength: mediaDistributionData.length,
-      currentContentReady: contentReady,
-      currentRenderComplete: renderComplete
-    });
-    
-    if (!loading && !isInitialMount && analysis) {
-      console.log('🚀 Setting content ready and render complete');
-      setContentReady(true);
-      setRenderComplete(true);
-    }
-  }, [loading, isInitialMount, analysis, mediaDistributionData.length, contentReady, renderComplete]);
-
   // Show skeleton on initial mount, loading, or while render is not complete
-  if (loading || isInitialMount || !renderComplete || !contentReady) {
+  if (loading || !analysis) {
     console.log('💀 Showing skeleton because:', {
       loading,
-      isInitialMount,
-      renderComplete,
-      contentReady,
       hasAnalysis: !!analysis,
       analysisStructure: analysis ? {
         hasLastPost: !!analysis.last_post,
@@ -471,15 +384,6 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
       <div className="text-center text-red-500 p-4 mb-8">
         <p>Error: {error}</p>
         <Button onClick={() => fetchData(true)} className="mt-2">Try Again</Button>
-      </div>
-    );
-  }
-
-  if (!analysis) {
-    return (
-      <div className="text-center text-gray-500 p-4 mb-8">
-        <p>No Instagram analysis available</p>
-        <Button onClick={() => fetchData(true)} className="mt-2">Load Analytics</Button>
       </div>
     );
   }
@@ -606,9 +510,7 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
                       paddingAngle={2}
                       dataKey="value"
                       onAnimationStart={() => {}}
-                      onAnimationEnd={() => {
-                        handleRenderComplete();
-                      }}
+                      onAnimationEnd={() => {}}
                     >
                       {mediaDistributionData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
