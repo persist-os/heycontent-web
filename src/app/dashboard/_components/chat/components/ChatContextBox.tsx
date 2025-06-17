@@ -41,7 +41,6 @@ const ChatContextBox: React.FC<ChatContextBoxProps> = ({
       };
     }
   }
-  
   return (
     <div className="shrink-0">
       <ContextBox 
