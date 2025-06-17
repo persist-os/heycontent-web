@@ -29,6 +29,7 @@ export function AIInsightsScreen() {
   const [showCustomInput, setShowCustomInput] = useState(false)
   const [showGmailCustomInput, setShowGmailCustomInput] = useState(false)
   
+
   // Separate state for each platform
   const [youtubeRefreshing, setYoutubeRefreshing] = useState(false)
   const [instagramRefreshing, setInstagramRefreshing] = useState(false)
@@ -281,7 +282,8 @@ export function AIInsightsScreen() {
           max_threads: gmailThreadLimit === 'all' ? 1000 : gmailThreadLimit,
           max_messages: 100,
           include_spam_analysis: true,
-          force_refresh: true
+          force_refresh: true,
+          analysis_mode: "individual"
         }),
       })
 
@@ -659,7 +661,7 @@ export function AIInsightsScreen() {
                           Connect your Gmail account to get strategic insights about brand partnerships, media opportunities, and business inquiries in your inbox.
                         </p>
                         <button 
-                          onClick={() => window.location.href = '/dashboard/settings'}
+                          onClick={() => window.location.href = '/dashboard/settings/integrations'}
                           className="inline-flex items-center gap-2 px-4 py-2 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black rounded-lg font-medium transition-colors"
                         >
                           <Mail className="w-4 h-4" />

@@ -197,28 +197,22 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
           {/* Thread Details - Only show for Gmail platform */}
           {validatedPlatform === 'gmail' && threadDetails && threadDetails.length > 0 && (
             <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-3">
-              <h4 className="font-medium dark:text-white">Email Threads ({threadDetails.length})</h4>
-              <div className="space-y-3 max-h-64 overflow-y-auto">
+              <h4 className="font-medium dark:text-white">Related Emails</h4>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
                 {threadDetails.map((thread, idx) => (
                   <div 
                     key={idx} 
-                    className="bg-white dark:bg-gray-700 p-3 rounded-lg border dark:border-gray-600 hover:shadow-sm transition-shadow cursor-pointer"
+                    className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 cursor-pointer transition-colors"
                     onClick={() => discussGmailThread(thread)}
                   >
-                    <div className="flex items-start justify-between mb-2">
-                      <h5 className="font-medium text-sm text-text-dark dark:text-white truncate flex-1 mr-2">
-                        {thread.subject}
-                      </h5>
-                      <span className="text-xs text-text-gray dark:text-gray-400 whitespace-nowrap">
-                        {thread.date}
+                    <div className="flex items-start justify-between">
+                      <span className="flex-1 mr-2">
+                        • {thread.subject.startsWith('Re: ') ? thread.subject : `Re: ${thread.subject}`}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-500 whitespace-nowrap">
+                        ({thread.date})
                       </span>
                     </div>
-                    <p className="text-xs text-text-gray dark:text-gray-400 mb-2">
-                      From: {thread.from}
-                    </p>
-                    <p className="text-xs text-text-gray dark:text-gray-400 line-clamp-2">
-                      {thread.snippet}
-                    </p>
                   </div>
                 ))}
               </div>

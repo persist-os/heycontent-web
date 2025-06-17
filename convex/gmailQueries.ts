@@ -269,7 +269,7 @@ export const getGmailThreadsWithMessages = query({
         .query("gmailThreads")
         .withIndex("by_userId", (q) => q.eq("userId", args.userId))
         .order("desc")
-        .take(args.limit || 50);
+        .take(args.limit || 100);
       
       if (threads.length === 0) return [];
       

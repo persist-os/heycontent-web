@@ -1669,9 +1669,13 @@ app.get("/api/instagram/tracker_analysis", async (c) => {
 app.get("/api/users/:id/gmail/threads", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  // Use the new joined query, but return same format
+  const limitParam = c.req.query("limit");
+  const limit = limitParam ? parseInt(limitParam, 10) : undefined;
+  
+  // Use the new joined query with limit parameter
   const threads = await ctx.runQuery(api.gmailQueries.getGmailThreadsWithMessages, { 
-    userId 
+    userId,
+    limit
   });
   // Frontend receives the SAME data structure as before
   return c.json({ success: true, threads });
