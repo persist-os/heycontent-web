@@ -125,11 +125,11 @@ export function DashboardNav() {
         });
         const data = await response.json()
         if (data.conversations) {
-          setRecentChats(data.conversations.map((conv: any) => ({
-            id: conv.id,
+          setRecentChats(data.conversations.map((conv: any, index: number) => ({
+            id: conv.id || `conv-${index}`,
             topic: conv.topic || 'Untitled Chat',
-            lastMessage: conv.messages[conv.messages.length - 1]?.content || '',
-            timestamp: new Date(conv.updatedAt).toLocaleDateString()
+            lastMessage: conv.messages?.[conv.messages.length - 1]?.content || '',
+            timestamp: new Date(conv.updatedAt || Date.now()).toLocaleDateString()
           })))
         }
       } catch (error) {
@@ -216,9 +216,9 @@ export function DashboardNav() {
                     </Link>
                   </div>
                   <div className="space-y-1">
-                    {recentChats.map((chat) => (
+                    {recentChats.map((chat, index) => (
                         <Link
-                            key={chat.id}
+                            key={chat.id || `chat-${index}`}
                             href={`/dashboard/chat?id=${chat.id}`}
                             onClick={() => setIsExpanded(false)}
                             className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg"

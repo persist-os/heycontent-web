@@ -1669,9 +1669,13 @@ app.get("/api/instagram/tracker_analysis", async (c) => {
 app.get("/api/users/:id/gmail/threads", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  // Use the new joined query, but return same format
+  const limitParam = c.req.query("limit");
+  const limit = limitParam ? parseInt(limitParam, 10) : undefined;
+  
+  // Use the new joined query with limit parameter
   const threads = await ctx.runQuery(api.gmailQueries.getGmailThreadsWithMessages, { 
-    userId 
+    userId,
+    limit
   });
   // Frontend receives the SAME data structure as before
   return c.json({ success: true, threads });
@@ -1717,6 +1721,52 @@ app.get("/api/instagram/batch_analysis", async (c) => {
   } catch (error) {
     console.error("Failed to fetch Instagram batch analysis:", error);
     return c.json({ success: false, error: "Failed to fetch Instagram batch analysis" }, 500);
+  }
+});
+
+// Gmail Analysis Endpoints
+
+// Store Gmail batch analysis
+app.post("/api/gmail/batch_analysis", async (c) => {
+  const ctx = c.env;
+  const { userId, gmailAccountId, insights } = await c.req.json();
+
+  if (!userId || !gmailAccountId || !insights) {
+    return c.json({ success: false, error: "Missing required fields" }, 400);
+  }
+
+  try {
+    const result = await ctx.runMutation(api.gmailMutations.storeGmailBatchAnalysis, {
+      userId,
+      gmailAccountId,
+      insights,
+    });
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error("Failed to store Gmail batch analysis:", error);
+    return c.json({ success: false, error: "Failed to store Gmail batch analysis" }, 500);
+  }
+});
+
+// Get Gmail batch analysis
+app.get("/api/gmail/batch_analysis", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.query("userId");
+  const gmailAccountId = c.req.query("gmailAccountId");
+
+  if (!userId || !gmailAccountId) {
+    return c.json({ success: false, error: "Missing required query parameters" }, 400);
+  }
+
+  try {
+    const result = await ctx.runQuery(api.gmailQueries.getGmailBatchAnalysis, {
+      userId,
+      gmailAccountId,
+    });
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error("Failed to fetch Gmail batch analysis:", error);
+    return c.json({ success: false, error: "Failed to fetch Gmail batch analysis" }, 500);
   }
 });
 
