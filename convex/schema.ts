@@ -629,8 +629,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
   .index("by_userId", ["userId"])
-  .index("by_instagramAccountId", ["instagramAccountId"])
-  .index("by_user_account", ["userId", "instagramAccountId"]),
+  .index("by_instagramAccountId", ["instagramAccountId"]),
 
   instagramTrackerAnalysis: defineTable({
     userId: v.string(),
@@ -640,8 +639,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
   .index("by_userId", ["userId"])
-  .index("by_account", ["instagramAccountId"])
-  .index("by_user_account", ["userId", "instagramAccountId"]),
+  .index("by_account", ["instagramAccountId"]),
 
   // Usage Events
   usageEvents: defineTable({
@@ -696,4 +694,47 @@ export default defineSchema({
     .index("by_account", ["gmailAccountId"])
     .index("by_userId", ["userId"])
     .index("by_user_account", ["userId", "gmailAccountId"]),
+
+  // Vector Search - RAG embeddings table
+  vectorSearch: defineTable({
+    userId: v.string(),
+    contentId: v.string(), // ID of the original content
+    contentType: v.union(
+      v.literal("instagram_post"),
+      v.literal("youtube_video"), 
+      v.literal("gmail_message"),
+      v.literal("gmail_thread"),
+      v.literal("persona"),
+      v.literal("note"),
+      v.literal("conversation"),
+      v.literal("ambient_insight")
+    ),
+    embedding: v.array(v.float64()), // The vector embedding
+    text: v.string(), // Original text for reference
+    metadata: v.object({
+      title: v.string(),
+      platform: v.optional(v.string()),
+      createdAt: v.number(),
+      tags: v.optional(v.array(v.string())),
+      snippet: v.optional(v.string()),
+      url: v.optional(v.string()),
+      from: v.optional(v.string()), // For emails
+      subject: v.optional(v.string()), // For emails
+      // Multimodal metadata
+      imageUrl: v.optional(v.string()), // For images in posts/videos
+      thumbnailUrl: v.optional(v.string()), // For video thumbnails
+    }),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_userId", ["userId"])
+  .index("by_contentType", ["contentType"])
+  .index("by_user_type", ["userId", "contentType"])
+  .index("by_contentId", ["contentId"])
+  .index("by_user_content", ["userId", "contentId"])
+  .vectorIndex("by_embedding", {
+    vectorField: "embedding",
+    dimensions: 1408, // Google Cloud multimodal embedding size
+    filterFields: ["userId", "contentType"],
+  }),
 });
