@@ -8,6 +8,7 @@ interface AIInsightsContextBoxProps {
   includeAnalysisInQuery: boolean;
   onToggleAnalysis: (val: boolean) => void;
   onSendMessage: (msg: string) => void;
+  onInputPopulate?: (msg: string) => void;
 }
 
 const AIInsightsContextBox: React.FC<AIInsightsContextBoxProps> = ({
@@ -17,8 +18,12 @@ const AIInsightsContextBox: React.FC<AIInsightsContextBoxProps> = ({
   includeAnalysisInQuery,
   onToggleAnalysis,
   onSendMessage,
+  onInputPopulate,
 }) => {
   if (!currentContext || currentContext.platform !== 'ai-insights') return null;
+  
+  // Use onInputPopulate if available, otherwise fall back to onSendMessage
+  const handleSuggestionClick = onInputPopulate || onSendMessage;
   
   return (
     <div className="shrink-0">
@@ -31,7 +36,7 @@ const AIInsightsContextBox: React.FC<AIInsightsContextBoxProps> = ({
       
       {/* Full insight suggestions - when discussing the complete insight */}
       {currentContext.fullInsight && messages.length === 0 && (
-        <div className="mt-3 p-3 bg-white rounded border border-[#D0ECFF]">
+        <div className="mt-3 p-3 bg-white rounded border border-[#D0ECFF] mx-3 sm:mx-0">
           <h4 className="text-sm font-semibold text-[#4E87E3] mb-2">
             Suggested questions
           </h4>
@@ -46,8 +51,8 @@ const AIInsightsContextBox: React.FC<AIInsightsContextBoxProps> = ({
             ].map((suggestion, index) => (
               <button
                 key={index}
-                onClick={() => onSendMessage(suggestion)}
-                className="px-3 py-1 text-sm bg-white border border-[#D0ECFF] rounded text-[#4E87E3] hover:bg-[#D0ECFF] hover:text-[#4E87E3] transition-colors"
+                onClick={() => handleSuggestionClick(suggestion)}
+                className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-white border border-[#D0ECFF] rounded text-[#4E87E3] hover:bg-[#D0ECFF] hover:text-[#4E87E3] transition-colors break-words"
               >
                 {suggestion}
               </button>
@@ -58,7 +63,7 @@ const AIInsightsContextBox: React.FC<AIInsightsContextBoxProps> = ({
       
       {/* Individual action step suggestions - when discussing a specific action */}
       {currentContext.actionStep && !currentContext.fullInsight && messages.length === 0 && (
-        <div className="mt-3 p-3 bg-white rounded border border-[#D0ECFF]">
+        <div className="mt-3 p-3 bg-white rounded border border-[#D0ECFF] mx-3 sm:mx-0">
           <h4 className="text-sm font-semibold text-[#4E87E3] mb-2">
             Questions about this action
           </h4>
@@ -73,8 +78,8 @@ const AIInsightsContextBox: React.FC<AIInsightsContextBoxProps> = ({
             ].map((suggestion, index) => (
               <button
                 key={index}
-                onClick={() => onSendMessage(suggestion)}
-                className="px-3 py-1 text-sm bg-white border border-[#D0ECFF] rounded text-[#4E87E3] hover:bg-[#D0ECFF] hover:text-[#4E87E3] transition-colors"
+                onClick={() => handleSuggestionClick(suggestion)}
+                className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-white border border-[#D0ECFF] rounded text-[#4E87E3] hover:bg-[#D0ECFF] hover:text-[#4E87E3] transition-colors break-words"
               >
                 {suggestion}
               </button>
@@ -85,7 +90,7 @@ const AIInsightsContextBox: React.FC<AIInsightsContextBoxProps> = ({
       
       {/* General AI insights suggestions when no specific action step or full insight */}
       {currentContext.source === 'AI Insights Dashboard' && !currentContext.actionStep && !currentContext.fullInsight && messages.length === 0 && (
-        <div className="mt-3 p-3 bg-white rounded border border-[#D0ECFF]">
+        <div className="mt-3 p-3 bg-white rounded border border-[#D0ECFF] mx-3 sm:mx-0">
           <h4 className="text-sm font-semibold text-[#4E87E3] mb-2">
             Learn more about this insight
           </h4>
@@ -100,8 +105,8 @@ const AIInsightsContextBox: React.FC<AIInsightsContextBoxProps> = ({
             ].map((suggestion, index) => (
               <button
                 key={index}
-                onClick={() => onSendMessage(suggestion)}
-                className="px-3 py-1 text-sm bg-white border border-[#D0ECFF] rounded text-[#4E87E3] hover:bg-[#D0ECFF] hover:text-[#4E87E3] transition-colors"
+                onClick={() => handleSuggestionClick(suggestion)}
+                className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-white border border-[#D0ECFF] rounded text-[#4E87E3] hover:bg-[#D0ECFF] hover:text-[#4E87E3] transition-colors break-words"
               >
                 {suggestion}
               </button>

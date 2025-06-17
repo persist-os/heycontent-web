@@ -99,6 +99,13 @@
 /* Custom Scrollbar Styles */
 @layer utilities {
   /* Line clamp utilities for consistent text truncation */
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
   .line-clamp-3 {
     overflow: hidden;
     display: -webkit-box;
@@ -111,6 +118,52 @@
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 4;
+  }
+
+  /* Mobile-first responsive utilities */
+  .text-wrap-balance {
+    text-wrap: balance;
+  }
+
+  .overflow-wrap-anywhere {
+    overflow-wrap: anywhere;
+  }
+
+  .word-break-keep-all {
+    word-break: keep-all;
+  }
+
+  /* Prevent horizontal scrolling on mobile */
+  .prevent-horizontal-scroll {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  /* Responsive container utilities */
+  .container-mobile {
+    max-width: 100%;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  @media (min-width: 640px) {
+    .container-mobile {
+      max-width: 36rem;
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .container-mobile {
+      max-width: 42rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container-mobile {
+      max-width: 48rem;
+    }
   }
 
   /* For Webkit browsers (Chrome, Safari) */
