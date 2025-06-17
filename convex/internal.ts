@@ -60,27 +60,4 @@ export const updateUserInternal = internalMutation({
       userId: args.userId,
     });
   },
-});
-
-// Internal query to get embedding documents by IDs for vector search
-export const getEmbeddingsByIds = internalQuery({
-  args: { ids: v.array(v.id("vectorSearch")) },
-  handler: async ({ db }, args) => {
-    const results = [];
-    for (const id of args.ids) {
-      const doc = await db.get(id);
-      if (doc !== null) {
-        results.push(doc);
-      }
-    }
-    return results;
-  },
-});
-
-// Internal query to get single embedding by ID
-export const getEmbeddingById = internalQuery({
-  args: { id: v.id("vectorSearch") },
-  handler: async ({ db }, args) => {
-    return await db.get(args.id);
-  },
 }); 
