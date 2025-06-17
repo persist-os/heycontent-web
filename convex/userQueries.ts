@@ -92,4 +92,28 @@ export const getUserByStripeSubscriptionId = query({
       .first()
   }
 })
+
+export const getUserInfo = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+    
+    if (!user) return null;
+    
+    return {
+      id: user._id,
+      email: user.email,
+      name: user.name,
+      image: user.image,
+      userId: user.userId,
+      username: user.username || '',
+      referralCode: user.referralCode || '',
+      referredBy: user.referredBy || '',
+      createdAt: new Date(user._creationTime).toISOString()
+    };
+  },
+});
   
