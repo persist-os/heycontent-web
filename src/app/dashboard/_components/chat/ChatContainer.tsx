@@ -60,6 +60,17 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     setIncludeAnalysisInQuery
   } = chatState
 
+  // Add input state management
+  const [inputValue, setInputValue] = useState('')
+
+  // Utility function to clean bullet points from suggestions
+  const cleanSuggestionText = (text: string): string => {
+    return text
+      .replace(/^[\s]*[-*•]\s*/, '') // Remove leading bullet points (-, *, •)
+      .replace(/^[\s]*\*\s*/, '') // Remove leading asterisks
+      .trim();
+  };
+
   // Check if user has an existing persona
   const { hasPersona } = usePersonaData(userId, !!userId)
 
@@ -137,7 +148,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   // Use a separate loading state for auth
   const [authLoading, setAuthLoading] = useState(true)
 
-
   // Handle bottom bar action click
   const handleActionClick = (action: string) => {
     handleSendMessage(action);
@@ -172,6 +182,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
     // Reset askQuery processing to allow new auto-sends
     askQueryProcessedRef.current = null;
+    
+    // Clear input value
+    setInputValue('');
     
     console.log('Started new chat with fresh state:', {
       sessionId: null,
@@ -284,7 +297,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     }
   }, [user, chatId, authLoading, handleLoadConversation]);
 
-  // Move handleSuggestionClick definition outside of any conditional or loading block, so it is only defined once and used throughout
+  // Modified handleSuggestionClick to populate input instead of sending
   const handleSuggestionClick = (suggestion, onSendMessage) => {
     // If we're in the welcome step flow, advance the step
     if (
@@ -336,9 +349,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         return;
       }
     }
-    // Otherwise, normal suggestion click
+    // Otherwise, populate the input instead of sending
     const message = typeof suggestion === 'string' ? suggestion : suggestion.description;
-    onSendMessage(message);
+    setInputValue(cleanSuggestionText(message));
   };
 
   // Autoscroll functionality
@@ -378,21 +391,26 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   // Show messages if there are any, or if there is a context
   const hasMessagesOrContext = currentContext || messages.length > 0;
 
+  // Create a function to populate input instead of sending for expandable insights
+  const handleFollowUpPopulate = useCallback((choice: string) => {
+    setInputValue(cleanSuggestionText(choice));
+  }, []);
+
   if (!user) {
     return null
   }
 
   return (
-    <div className="flex flex-col h-screen bg-white w-full overflow-hidden">
+    <div className="flex flex-col h-screen bg-white w-full overflow-hidden prevent-horizontal-scroll">
       {/* Header */}
       <ChatHeader isRefreshing={isRefreshing} onRefresh={handleRefresh} onNewChat={handleNewChat} />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {hasMessagesOrContext ? (
-          <div ref={chatContainerRef} className="flex-1 overflow-y-auto">
-            <div className="p-6">
-              <div className="max-w-5xl mx-auto space-y-4">
+          <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
+            <div className="p-3 sm:p-6">
+              <div className="max-w-4xl sm:max-w-5xl mx-auto space-y-4">
                 {/* Show context box when context is available */}
                 {currentContext && (
                   currentContext.platform === 'ai-insights' ? (
@@ -403,6 +421,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                       includeAnalysisInQuery={includeAnalysisInQuery}
                       onToggleAnalysis={setIncludeAnalysisInQuery}
                       onSendMessage={handleSendMessage}
+                      onInputPopulate={setInputValue}
                     />
                   ) : (
                     <ChatContextBox
@@ -412,6 +431,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                       includeAnalysisInQuery={includeAnalysisInQuery}
                       onToggleAnalysis={setIncludeAnalysisInQuery}
                       onSendMessage={handleSendMessage}
+                      onInputPopulate={setInputValue}
                     />
                   )
                 )}
@@ -422,7 +442,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                   handleMessageReference={handleMessageReference}
                   handleReferenceClick={handleReferenceClick}
                   handleOptionClick={handleOptionClick}
-                  handleFollowUpClick={handleFollowUpClick}
+                  handleFollowUpClick={handleFollowUpPopulate}
                   handleSendMessage={handleSendMessage}
                   userId={userId}
                   handleSuggestionClick={handleSuggestionClick}
@@ -451,7 +471,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             </div>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col overflow-hidden">
             <AmbientInsightsContainer 
               handleSendMessage={(msg, context) => {
                 // Start a new chat with the context from the insight
@@ -468,7 +488,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
       {/* Bottom Bar Actions - Only show when there are no messages */}
       {messages.length === 0 && (
-        <BottomBarActions onActionClick={handleActionClick} />
+        <BottomBarActions onActionClick={handleActionClick} onInputPopulate={setInputValue} />
       )}
 
       {/* Input Bar */}
@@ -483,6 +503,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           referencedMessage={referencedMessage}
           handleClearReference={handleClearReference}
           includeAnalysisInQuery={includeAnalysisInQuery}
+          inputValue={inputValue}
+          onInputChange={setInputValue}
+          onInputPopulate={setInputValue}
         />
       </div>
     </div>

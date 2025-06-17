@@ -52,6 +52,19 @@ export const useChat = (
     // Update last sent message tracking
     lastSentMessageRef.current = { content: trimmedContent, timestamp: now };
 
+    // Clear all assistant message suggestions immediately when user sends a message
+    setMessages(prev => {
+      const hasSuggestionsToClear = prev.some(msg => msg.role === 'assistant' && msg.suggestions && msg.suggestions.length > 0);
+      if (!hasSuggestionsToClear) return prev;
+      
+      return prev.map(msg => {
+        if (msg.role === 'assistant' && msg.suggestions) {
+          return { ...msg, suggestions: [] };
+        }
+        return msg;
+      });
+    });
+
     // Check for help command (case-insensitive, exact match)
     if (content.trim().toLowerCase() === 'hey content help') {
       const helpMsg = getHelpMessage();
