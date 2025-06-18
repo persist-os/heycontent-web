@@ -12,9 +12,40 @@ interface YouTubeCardProps {
   onViewDetailedAnalytics: (item: YouTubeContentItem) => void;
 }
 
+// Utility function to extract clean YouTube video ID
+const extractVideoId = (videoId: string, videoUrl?: string): string => {
+  // If videoId starts with youtube- prefix, try to extract the actual ID
+  if (videoId.startsWith('youtube-')) {
+    // Remove the youtube- prefix and any additional prefixes
+    const cleaned = videoId.replace(/^youtube-+/, '');
+    if (cleaned && cleaned.length >= 11) {
+      return cleaned;
+    }
+  }
+  
+  // If we have a video URL, try to extract ID from it
+  if (videoUrl) {
+    const urlMatch = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    if (urlMatch && urlMatch[1]) {
+      return urlMatch[1];
+    }
+  }
+  
+  // If videoId looks like a valid YouTube ID (11 characters, alphanumeric + _-), return as is
+  if (videoId && /^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+    return videoId;
+  }
+  
+  // Fallback: return the original videoId
+  return videoId;
+};
+
 export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent, onViewDetailedAnalytics }) => {
   // Extract data with type safety
   const { content, metrics, publishedAt = new Date().toISOString() } = item;
+  
+  // Extract clean video ID
+  const cleanVideoId = extractVideoId(item.id, content.videoUrl);
   
   // Create a direct thumbnail URL - prioritize our stored data first
   let thumbnailUrl = '';
@@ -24,8 +55,8 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
     thumbnailUrl = content.thumbnailUrl;
   } 
   // Fall back to constructing from video ID if no stored thumbnail
-  else if (item.id) {
-    thumbnailUrl = `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`;
+  else if (cleanVideoId) {
+    thumbnailUrl = `https://i.ytimg.com/vi/${cleanVideoId}/hqdefault.jpg`;
   }
   
   // Format metrics for display with fallbacks
@@ -33,10 +64,11 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
   const likes = metrics?.likes ? Number(metrics.likes) : 0;
   const comments = metrics?.comments ? Number(metrics.comments) : 0;
 
-  const { refresh, loading, error } = useYouTubeRefresh();
+  const { refresh, loading, error, success } = useYouTubeRefresh();
 
   const handleRefresh = async () => {
-    await refresh(item.id, content.videoUrl || `https://www.youtube.com/watch?v=${item.id}`);
+    const videoUrl = content.videoUrl || `https://www.youtube.com/watch?v=${cleanVideoId}`;
+    await refresh(cleanVideoId, videoUrl);
   };
 
   return (
@@ -56,9 +88,9 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
                 e.currentTarget.style.display = 'none'; // Hide the broken image
                 
                 // Try fallback image with direct YouTube URL pattern if needed
-                if (item.id && !thumbnailUrl.includes('i.ytimg.com')) {
+                if (cleanVideoId && !thumbnailUrl.includes('i.ytimg.com')) {
                   const fallbackImg = document.createElement('img');
-                  fallbackImg.src = `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`;
+                  fallbackImg.src = `https://i.ytimg.com/vi/${cleanVideoId}/hqdefault.jpg`;
                   fallbackImg.alt = content?.title || 'YouTube Video';
                   fallbackImg.className = 'w-full h-full object-cover';
                   e.currentTarget.parentElement?.appendChild(fallbackImg);
@@ -146,8 +178,42 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
             )}
             Refresh
           </button>
-          {error && <span className="text-xs text-red-500 ml-2">{error}</span>}
         </div>
+        {success && (
+          <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+            <div className="flex items-start gap-2">
+              <div className="flex-shrink-0 mt-0.5">
+                <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-medium text-green-800 dark:text-green-200">Video Updated!</p>
+                <p className="text-xs text-green-600 dark:text-green-300 mt-1">Latest data has been fetched successfully.</p>
+              </div>
+            </div>
+          </div>
+        )}
+        {error && (
+          <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <div className="flex items-start gap-2">
+              <div className="flex-shrink-0 mt-0.5">
+                <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-medium text-red-800 dark:text-red-200">Refresh Failed</p>
+                <p className="text-xs text-red-600 dark:text-red-300 mt-1">{error}</p>
+                {error.includes('connect') && (
+                  <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                    Go to <span className="font-medium">Settings → Platforms</span> to reconnect your YouTube account.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Card>
   );
