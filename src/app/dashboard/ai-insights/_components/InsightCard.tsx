@@ -147,8 +147,21 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
     window.location.href = `/dashboard/chat?contentContext=${encodedContext}`;
   };
 
+  const getPlatformShadow = () => {
+    switch (validatedPlatform) {
+      case 'youtube':
+        return 'hover:shadow-xl hover:shadow-red-500/25 border-2 border-transparent hover:border-red-500/30';
+      case 'instagram':
+        return 'hover:shadow-xl hover:shadow-pink-500/25 border-2 border-transparent hover:border-pink-500/30';
+      case 'gmail':
+        return 'hover:shadow-xl hover:shadow-blue-500/25 border-2 border-transparent hover:border-blue-500/30';
+      default:
+        return 'hover:shadow-xl hover:shadow-heycontent-yellow/25 border-2 border-transparent hover:border-heycontent-yellow/30';
+    }
+  };
+
   return (
-    <Card className="overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-lg hover:shadow-heycontent-yellow/20 border-2 border-transparent hover:border-heycontent-yellow/30" onClick={onExpand}>
+    <Card className={`overflow-hidden transition-all duration-300 cursor-pointer ${getPlatformShadow()}`} onClick={onExpand}>
       {/* Collapsed Header */}
       <div
         className={`flex items-center justify-between p-4 transition-all duration-200 ${

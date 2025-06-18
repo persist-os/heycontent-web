@@ -409,30 +409,41 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
         
         {/* Last Post Card */}
         {analysis.last_post && (
-          <Card className="p-6 bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl hover:shadow-xl transition-all duration-300">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-heycontent-yellow/20">
-                  <Calendar className="w-5 h-5 text-heycontent-yellow" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900">Last Post</h3>
-              </div>
-            </div>
+          <Card className="group relative overflow-hidden bg-gradient-to-br from-white via-white to-gray-50/50 dark:from-gray-800 dark:via-gray-800 dark:to-gray-900/50 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg hover:shadow-xl hover:shadow-heycontent-yellow/10 transition-all duration-300 hover:scale-[1.01] hover:-translate-y-0.5">
+            {/* Subtle gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-heycontent-yellow/5 via-transparent to-heycontent-purple/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Date</span>
-                <span className="font-medium text-gray-900">{analysis.last_post.date || 'N/A'}</span>
+            <div className="relative p-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-heycontent-yellow/20 rounded-xl blur-sm group-hover:blur-md transition-all duration-300" />
+                  <div className="relative p-2 rounded-xl bg-gradient-to-br from-heycontent-yellow/10 to-heycontent-yellow/20 backdrop-blur-sm border border-heycontent-yellow/30">
+                    <Calendar className="w-4 h-4 text-heycontent-yellow" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Last Post</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Most recent content</p>
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Type</span>
-                <span className="px-2 py-1 bg-heycontent-purple/10 text-heycontent-purple rounded-lg text-sm font-medium">
-                  {analysis.last_post.type || 'N/A'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Time Ago</span>
-                <span className="font-medium text-gray-900">{analysis.last_post.time_ago || 'N/A'}</span>
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between py-2 px-3 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700/50 backdrop-blur-sm">
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Date</span>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">{analysis.last_post.date || 'N/A'}</span>
+                </div>
+                
+                <div className="flex items-center justify-between py-2 px-3 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700/50 backdrop-blur-sm">
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Type</span>
+                  <div className="px-2 py-1 bg-gradient-to-r from-heycontent-purple/10 to-heycontent-purple/20 text-heycontent-purple rounded-full text-xs font-semibold border border-heycontent-purple/20 backdrop-blur-sm">
+                    {analysis.last_post.type || 'N/A'}
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between py-2 px-3 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700/50 backdrop-blur-sm">
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Time Ago</span>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">{analysis.last_post.time_ago || 'N/A'}</span>
+                </div>
               </div>
             </div>
           </Card>
@@ -440,43 +451,50 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
 
         {/* Posting Frequency Card */}
         {analysis.posting_frequency && (
-          <Card className="p-6 bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl hover:shadow-xl transition-all duration-300">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-heycontent-green/20">
-                  <Clock className="w-5 h-5 text-heycontent-green" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900">Posting Frequency</h3>
-              </div>
-            </div>
+          <Card className="group relative overflow-hidden bg-gradient-to-br from-white via-white to-gray-50/50 dark:from-gray-800 dark:via-gray-800 dark:to-gray-900/50 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg hover:shadow-xl hover:shadow-heycontent-green/10 transition-all duration-300 hover:scale-[1.01] hover:-translate-y-0.5">
+            {/* Subtle gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-heycontent-green/5 via-transparent to-heycontent-yellow/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-gray-600">Average Days Between Posts</span>
-                  <span className="text-2xl font-bold text-heycontent-green">
-                    {analysis.posting_frequency.average_days_between_posts || 'N/A'}
-                  </span>
+            <div className="relative p-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-heycontent-green/20 rounded-xl blur-sm group-hover:blur-md transition-all duration-300" />
+                  <div className="relative p-2 rounded-xl bg-gradient-to-br from-heycontent-green/10 to-heycontent-green/20 backdrop-blur-sm border border-heycontent-green/30">
+                    <Clock className="w-4 h-4 text-heycontent-green" />
+                  </div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-heycontent-green h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${progressBarWidth}%` }}
-                  />
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Posting Frequency</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Content consistency</p>
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-3 bg-white/50 rounded-xl">
-                  <div className="text-sm text-gray-600">Recent Posts</div>
-                  <div className={`text-lg font-semibold ${analysis.posting_frequency.has_recent_posts ? 'text-heycontent-green' : 'text-gray-400'}`}>
-                    {analysis.posting_frequency.has_recent_posts ? 'Yes' : 'No'}
+              <div className="space-y-3">
+                <div className="text-center py-3 px-3 bg-gradient-to-br from-heycontent-green/5 to-heycontent-green/10 rounded-xl border border-heycontent-green/20 backdrop-blur-sm">
+                  <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Average Days Between Posts</div>
+                  <div className="text-2xl font-bold text-heycontent-green mb-2">
+                    {analysis.posting_frequency.average_days_between_posts || 'N/A'}
+                  </div>
+                  <div className="w-full bg-gray-200/50 dark:bg-gray-700/50 rounded-full h-2 backdrop-blur-sm">
+                    <div 
+                      className="bg-gradient-to-r from-heycontent-green to-heycontent-green/80 h-2 rounded-full transition-all duration-1000 ease-out shadow-sm"
+                      style={{ width: `${progressBarWidth}%` }}
+                    />
                   </div>
                 </div>
-                <div className="text-center p-3 bg-white/50 rounded-xl">
-                  <div className="text-sm text-gray-600">Last 7 Days</div>
-                  <div className="text-lg font-semibold text-gray-900">
-                    {analysis.posting_frequency.total_posts_last_7_days || '0'}
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="text-center p-2 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700/50 backdrop-blur-sm">
+                    <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Recent Posts</div>
+                    <div className={`text-lg font-bold ${analysis.posting_frequency.has_recent_posts ? 'text-heycontent-green' : 'text-gray-400'}`}>
+                      {analysis.posting_frequency.has_recent_posts ? 'Yes' : 'No'}
+                    </div>
+                  </div>
+                  <div className="text-center p-2 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700/50 backdrop-blur-sm">
+                    <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Last 7 Days</div>
+                    <div className="text-lg font-bold text-gray-900 dark:text-white">
+                      {analysis.posting_frequency.total_posts_last_7_days || '0'}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -486,54 +504,72 @@ const InstagramAnalytics = memo(({ userId, onDiscussContent }: { userId: string;
 
         {/* Media Distribution Card with Pie Chart */}
         {analysis.media_distribution && mediaDistributionData.length > 0 && (
-          <Card className="p-6 bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl hover:shadow-xl transition-all duration-300">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-heycontent-purple/20">
-                  <BarChart3 className="w-5 h-5 text-heycontent-purple" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900">Media Distribution</h3>
-              </div>
-            </div>
+          <Card className="group relative overflow-hidden bg-gradient-to-br from-white via-white to-gray-50/50 dark:from-gray-800 dark:via-gray-800 dark:to-gray-900/50 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg hover:shadow-xl hover:shadow-heycontent-purple/10 transition-all duration-300 hover:scale-[1.01] hover:-translate-y-0.5">
+            {/* Subtle gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-heycontent-purple/5 via-transparent to-heycontent-yellow/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             
-            <div className="flex flex-col sm:flex-row items-center justify-between">
-              {/* Pie Chart */}
-              <div className="w-28 h-28 sm:w-32 sm:h-32 mb-4 sm:mb-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={mediaDistributionData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={15}
-                      outerRadius={40}
-                      paddingAngle={2}
-                      dataKey="value"
-                      onAnimationStart={() => {}}
-                      onAnimationEnd={() => {}}
-                    >
-                      {mediaDistributionData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
+            <div className="relative p-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-heycontent-purple/20 rounded-xl blur-sm group-hover:blur-md transition-all duration-300" />
+                  <div className="relative p-2 rounded-xl bg-gradient-to-br from-heycontent-purple/10 to-heycontent-purple/20 backdrop-blur-sm border border-heycontent-purple/30">
+                    <BarChart3 className="w-4 h-4 text-heycontent-purple" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Media Distribution</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Content type breakdown</p>
+                </div>
               </div>
               
-              {/* Legend */}
-              <div className="flex-1 sm:ml-4 space-y-3 w-full sm:w-auto">
-                {mediaDistributionData.map((entry, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-3 h-3 rounded-full" 
-                        style={{ backgroundColor: entry.color }}
-                      />
-                      <span className="text-sm text-gray-600">{entry.name}</span>
-                    </div>
-                    <span className="font-semibold text-gray-900">{entry.value}%</span>
+              <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
+                {/* Pie Chart */}
+                <div className="relative">
+                  <div className="w-24 h-24 lg:w-28 lg:h-28">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={mediaDistributionData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={25}
+                          outerRadius={45}
+                          paddingAngle={1}
+                          dataKey="value"
+                          onAnimationStart={() => {}}
+                          onAnimationEnd={() => {}}
+                        >
+                          {mediaDistributionData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
                   </div>
-                ))}
+                  {/* Clean center text for donut chart */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-sm font-bold text-gray-900 dark:text-white">100%</div>
+                      <div className="text-[10px] font-medium text-gray-500 dark:text-gray-400 -mt-1">Total</div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Legend */}
+                <div className="flex-1 space-y-2 w-full lg:w-auto">
+                  {mediaDistributionData.map((entry, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700/50 backdrop-blur-sm">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full shadow-sm" 
+                          style={{ backgroundColor: entry.color }}
+                        />
+                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{entry.name}</span>
+                      </div>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">{entry.value}%</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </Card>

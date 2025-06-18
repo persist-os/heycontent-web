@@ -73,7 +73,7 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
   };
 
   return (
-    <Card key={item.id} className="overflow-hidden bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl hover:shadow-xl transition-all duration-300 group">
+    <Card key={item.id} className="overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-pink-500/25 border-2 border-transparent hover:border-pink-500/30 bg-white dark:bg-gray-800">
       <div className="relative aspect-video bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
         {isCarousel ? (
           <div className="relative w-full h-full">
@@ -164,47 +164,55 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
       </div>
       
       <div className="p-6">
-        <h3 className="font-semibold text-lg mb-4 line-clamp-2 text-gray-900">{content.text}</h3>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700">
+            <Instagram className="w-8 h-8 text-[#C13584]" />
+          </div>
+          <div>
+            <h3 className="font-medium text-text-dark dark:text-white line-clamp-2">{content.text}</h3>
+            <p className="text-sm text-text-gray dark:text-gray-400">{publishedAt ? formatTimestamp(publishedAt) : ''}</p>
+          </div>
+        </div>
         
         {/* Metrics Grid */}
         <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="flex items-center gap-3 p-3 bg-white/50 rounded-xl backdrop-blur-sm">
-            <div className="p-2 rounded-lg bg-purple-100">
-              <Users className="w-4 h-4 text-purple-600" />
+          <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <div className="p-2 rounded-lg bg-heycontent-light-purple">
+              <Users className="w-4 h-4 text-heycontent-purple" />
             </div>
             <div>
-              <div className="text-sm font-semibold text-gray-900">{formatNumber(metrics?.reach)}</div>
-              <div className="text-xs text-gray-500">Reach</div>
+              <div className="text-sm font-semibold text-gray-900 dark:text-white">{formatNumber(metrics?.reach)}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Reach</div>
             </div>
           </div>
           
-          <div className="flex items-center gap-3 p-3 bg-white/50 rounded-xl backdrop-blur-sm">
-            <div className="p-2 rounded-lg bg-red-100">
+          <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
               <Heart className="w-4 h-4 text-red-500" />
             </div>
             <div>
-              <div className="text-sm font-semibold text-gray-900">{formatNumber(metrics?.likes)}</div>
-              <div className="text-xs text-gray-500">Likes</div>
+              <div className="text-sm font-semibold text-gray-900 dark:text-white">{formatNumber(metrics?.likes)}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Likes</div>
             </div>
           </div>
           
-          <div className="flex items-center gap-3 p-3 bg-white/50 rounded-xl backdrop-blur-sm">
-            <div className="p-2 rounded-lg bg-blue-100">
+          <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
               <Forward className="w-4 h-4 text-blue-600" />
             </div>
             <div>
-              <div className="text-sm font-semibold text-gray-900">{formatNumber(metrics?.shares)}</div>
-              <div className="text-xs text-gray-500">Shares</div>
+              <div className="text-sm font-semibold text-gray-900 dark:text-white">{formatNumber(metrics?.shares)}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Shares</div>
             </div>
           </div>
           
-          <div className="flex items-center gap-3 p-3 bg-white/50 rounded-xl backdrop-blur-sm">
-            <div className="p-2 rounded-lg bg-green-100">
-              <MessageSquare className="w-4 h-4 text-green-600" />
+          <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <div className="p-2 rounded-lg bg-heycontent-light-green">
+              <MessageSquare className="w-4 h-4 text-heycontent-green" />
             </div>
             <div>
-              <div className="text-sm font-semibold text-gray-900">{formatNumber(metrics?.comments)}</div>
-              <div className="text-xs text-gray-500">Comments</div>
+              <div className="text-sm font-semibold text-gray-900 dark:text-white">{formatNumber(metrics?.comments)}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Comments</div>
             </div>
           </div>
         </div>
@@ -212,29 +220,40 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
         {/* Action Buttons */}
         <div className="flex gap-3">
           <button
-            className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 text-white font-medium text-sm hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-lg hover:shadow-xl"
-            onClick={() => onViewDetailedAnalytics(item)}
+            className="flex-1 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black px-4 py-2.5 rounded-lg font-medium text-sm transition-colors"
+            onClick={() => onDiscussContent(item)}
           >
-            View Analytics
+            <MessageSquare className="w-4 h-4 inline mr-2" />
+            Discuss With Content
           </button>
           
           <button
-            className="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium text-sm flex items-center gap-2 transition-all duration-200 disabled:opacity-50"
+            className="px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 text-text-dark dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 font-medium text-sm transition-colors"
+            onClick={() => onViewDetailedAnalytics(item)}
+          >
+            Analytics
+          </button>
+          
+          <button
+            className={`relative px-3 py-2.5 rounded-lg font-medium text-sm flex items-center gap-2 transition-colors disabled:opacity-50 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-text-dark dark:text-white`}
             onClick={handleRefresh}
             disabled={loading}
+            title={error ? `Refresh needed: ${error}` : "Refresh data"}
           >
+            {/* Subtle error indicator dot */}
+            {error && (
+              <div className="absolute -top-1 -right-1 w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+            )}
             {loading ? (
               <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
               </svg>
             ) : (
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className={`w-4 h-4 ${error ? 'text-amber-600 dark:text-amber-400' : ''}`} />
             )}
           </button>
         </div>
-        
-        {error && <div className="mt-3 text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</div>}
       </div>
     </Card>
   );
