@@ -297,7 +297,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     }
   }, [user, chatId, authLoading, handleLoadConversation]);
 
-  // Modified handleSuggestionClick to populate input instead of sending
+  // Modified handleSuggestionClick to send messages automatically
   const handleSuggestionClick = (suggestion, onSendMessage) => {
     // If we're in the welcome step flow, advance the step
     if (
@@ -349,9 +349,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         return;
       }
     }
-    // Otherwise, populate the input instead of sending
+    // Auto-send the suggestion message
     const message = typeof suggestion === 'string' ? suggestion : suggestion.description;
-    setInputValue(cleanSuggestionText(message));
+    onSendMessage(cleanSuggestionText(message));
   };
 
   // Autoscroll functionality
@@ -409,8 +409,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       <div className="flex-1 flex flex-col overflow-hidden">
         {hasMessagesOrContext ? (
           <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
-            <div className="p-3 sm:p-6">
-              <div className="max-w-4xl sm:max-w-5xl mx-auto space-y-4">
+            <div className="p-2 sm:p-4">
+              <div className="max-w-4xl sm:max-w-6xl mx-auto space-y-3">
                 {/* Show context box when context is available */}
                 {currentContext && (
                   currentContext.platform === 'ai-insights' ? (
@@ -443,9 +443,10 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                   handleReferenceClick={handleReferenceClick}
                   handleOptionClick={handleOptionClick}
                   handleFollowUpClick={handleFollowUpPopulate}
-                  handleSendMessage={handleSendMessage}
                   userId={userId}
                   handleSuggestionClick={handleSuggestionClick}
+                  handleSendMessage={handleSendMessage}
+                  onInputPopulate={setInputValue}
                 />
 
                 {/* Show persona tip in onboarding flow when ready and at least 4 messages exist */}

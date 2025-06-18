@@ -94,6 +94,31 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* ChatGPT-inspired font stack for chat interface */
+  .chat-font {
+    font-family: "Söhne", ui-sans-serif, system-ui, -apple-system, 
+                 BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, Cantarell, 
+                 "Noto Sans", sans-serif, "Helvetica Neue", Arial, 
+                 "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", 
+                 "Noto Color Emoji";
+  }
+  
+  /* Ensure proper text wrapping in chat messages */
+  .markdown-content {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    -webkit-hyphens: auto;
+    -moz-hyphens: auto;
+    -ms-hyphens: auto;
+  }
+  
+  .markdown-content * {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+  }
 }
 
 /* Custom Scrollbar Styles */

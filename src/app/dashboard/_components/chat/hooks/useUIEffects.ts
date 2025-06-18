@@ -8,7 +8,7 @@ export const useUIEffects = (
   isExpanded: boolean
 ) => {
   const chatContainerRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const [showAmbient, setShowAmbient] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
