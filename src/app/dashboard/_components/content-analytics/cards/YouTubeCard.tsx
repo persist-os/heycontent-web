@@ -120,7 +120,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
       <div className="p-4">
         <div className="flex items-center gap-2 mb-1">
           <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700">
-            <YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8" />
+            <YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8 flex-shrink-0" />
           </div>
           <div>
             <h3 className="font-medium text-text-dark dark:text-white line-clamp-2">{content.title || 'Untitled Video'}</h3>

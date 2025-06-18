@@ -161,9 +161,14 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
   };
 
   return (
-    <Card className={`overflow-hidden transition-all duration-300 cursor-pointer ${getPlatformShadow()}`} onClick={onExpand}>
+    <Card className="overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-lg hover:shadow-heycontent-yellow/20 border-2 border-transparent hover:border-heycontent-yellow/30" onClick={onExpand}>
       {/* Collapsed Header */}
       <div
+        className={`flex items-center justify-between p-4 transition-all duration-200 ${
+          expanded 
+            ? 'bg-heycontent-yellow/10 rounded-t-lg border-b border-heycontent-yellow/20'
+            : 'bg-white dark:bg-gray-800' // Clean white background for all cards
+        }`}
         className={`flex items-center justify-between p-4 transition-all duration-200 ${
           expanded 
             ? 'bg-heycontent-yellow/10 rounded-t-lg border-b border-heycontent-yellow/20'
@@ -179,7 +184,19 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
             }`}>
               {platformIcon[validatedPlatform]}
             </div>
+            <div className={`p-2 rounded-lg transition-all duration-200 ${
+              expanded 
+                ? 'bg-heycontent-yellow/20 dark:bg-heycontent-yellow/10'
+                : 'bg-gray-100 dark:bg-gray-700' // Consistent styling for all platforms
+            }`}>
+              {platformIcon[validatedPlatform]}
+            </div>
           ) : (
+            <div className={`p-2 rounded-lg transition-all duration-200 ${
+              expanded 
+                ? 'bg-heycontent-yellow/20 dark:bg-heycontent-yellow/10' 
+                : 'bg-gray-100 dark:bg-gray-700' // Consistent styling for all platforms
+            }`}>
             <div className={`p-2 rounded-lg transition-all duration-200 ${
               expanded 
                 ? 'bg-heycontent-yellow/20 dark:bg-heycontent-yellow/10' 
@@ -191,6 +208,11 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
           <div>
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-medium text-text-dark dark:text-white">{title}</h3>
+              <span className={`px-2 py-0.5 text-xs font-medium rounded-full capitalize transition-all duration-200 ${
+                expanded 
+                  ? 'bg-heycontent-yellow/30 dark:bg-heycontent-yellow/20 text-text-dark dark:text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-text-dark dark:text-white' // Consistent badge styling
+              }`}>
               <span className={`px-2 py-0.5 text-xs font-medium rounded-full capitalize transition-all duration-200 ${
                 expanded 
                   ? 'bg-heycontent-yellow/30 dark:bg-heycontent-yellow/20 text-text-dark dark:text-white'
@@ -321,8 +343,10 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
                 discussFullInsight();
               }}
               className="flex-1 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black"
+              className="flex-1 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black"
             >
               <MessageSquare className="w-4 h-4 mr-2" />
+              Discuss With Content
               Discuss With Content
             </Button>
             
