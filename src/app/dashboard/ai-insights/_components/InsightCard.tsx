@@ -161,7 +161,7 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
   };
 
   return (
-    <Card className="overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-lg hover:shadow-heycontent-yellow/20 border-2 border-transparent hover:border-heycontent-yellow/30" onClick={onExpand}>
+    <Card className={`overflow-hidden transition-all duration-300 cursor-pointer ${getPlatformShadow()}`} onClick={onExpand}>
       {/* Collapsed Header */}
       <div
         className={`flex items-center justify-between p-4 transition-all duration-200 ${

@@ -73,6 +73,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
 
   return (
     <Card key={item.id} className="overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-red-500/25 border-2 border-transparent hover:border-red-500/30 bg-white dark:bg-gray-800">
+    <Card key={item.id} className="overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-red-500/25 border-2 border-transparent hover:border-red-500/30 bg-white dark:bg-gray-800">
       {/* Thumbnail */}
       <div className="relative aspect-video bg-gray-100 dark:bg-gray-800 overflow-hidden">
         {thumbnailUrl ? (
@@ -120,7 +121,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
       <div className="p-4">
         <div className="flex items-center gap-2 mb-1">
           <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700">
-            <YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8 flex-shrink-0" />
+            <YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8" />
           </div>
           <div>
             <h3 className="font-medium text-text-dark dark:text-white line-clamp-2">{content.title || 'Untitled Video'}</h3>
