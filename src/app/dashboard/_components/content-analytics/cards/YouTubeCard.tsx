@@ -87,7 +87,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
       {/* Video Info */}
       <div className="p-4">
         <div className="flex items-center gap-2 mb-1">
-          <YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8" />
+          <YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8 flex-shrink-0" />
           <h3 className="font-semibold text-lg line-clamp-2">{content.title || 'Untitled Video'}</h3>
         </div>
         <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-2">

@@ -3,7 +3,7 @@ import { Instagram, Video, Mail } from 'lucide-react';
 import { YouTubeBrandIcon } from '../../../YoutubeBrandIcon';
 
 function YoutubePlatformIcon(props) {
-  return <YouTubeBrandIcon href="https://youtube.com/" className="w-6 h-6" {...props} />;
+  return <YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8" {...props} />;
 }
 
 export const PLATFORMS = [

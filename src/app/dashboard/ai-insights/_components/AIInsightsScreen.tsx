@@ -24,11 +24,18 @@ export function AIInsightsScreen() {
   // Post limit selection state
   const [instagramPostLimit, setInstagramPostLimit] = useState<number | 'all'>(50)
   const [gmailThreadLimit, setGmailThreadLimit] = useState<number | 'all'>(50)
+  const [youtubeVideoLimit, setYoutubeVideoLimit] = useState<number | 'all'>(10)
   const [customPostLimit, setCustomPostLimit] = useState<string>('')
   const [customGmailLimit, setCustomGmailLimit] = useState<string>('')
+  const [customYoutubeLimit, setCustomYoutubeLimit] = useState<string>('')
   const [showCustomInput, setShowCustomInput] = useState(false)
   const [showGmailCustomInput, setShowGmailCustomInput] = useState(false)
+  const [showYoutubeCustomInput, setShowYoutubeCustomInput] = useState(false)
   
+  // Analysis Depth expandable state
+  const [isAnalysisDepthExpanded, setIsAnalysisDepthExpanded] = useState(false)
+  const [isGmailAnalysisDepthExpanded, setIsGmailAnalysisDepthExpanded] = useState(false)
+  const [isYoutubeAnalysisDepthExpanded, setIsYoutubeAnalysisDepthExpanded] = useState(false)
 
   // Separate state for each platform
   const [youtubeRefreshing, setYoutubeRefreshing] = useState(false)
@@ -318,7 +325,8 @@ export function AIInsightsScreen() {
     onRefresh, 
     disabled = false,
     showPostLimitSelector = false,
-    isGmail = false
+    isGmail = false,
+    isYoutube = false
   }: {
     platform: string
     isRefreshing: boolean
@@ -327,6 +335,7 @@ export function AIInsightsScreen() {
     disabled?: boolean
     showPostLimitSelector?: boolean
     isGmail?: boolean
+    isYoutube?: boolean
   }) => {
     const presetOptions = [
       { value: 10, label: '10', time: '~1 min', icon: '⚡' },
@@ -336,13 +345,13 @@ export function AIInsightsScreen() {
       { value: 'all' as const, label: 'All', time: 'varies', icon: '🌟' }
     ]
 
-    // Use Gmail-specific state if it's Gmail platform
-    const currentLimit = isGmail ? gmailThreadLimit : instagramPostLimit
-    const setCurrentLimit = isGmail ? setGmailThreadLimit : setInstagramPostLimit
-    const customLimit = isGmail ? customGmailLimit : customPostLimit
-    const setCustomLimit = isGmail ? setCustomGmailLimit : setCustomPostLimit
-    const showCustom = isGmail ? showGmailCustomInput : showCustomInput
-    const setShowCustom = isGmail ? setShowGmailCustomInput : setShowCustomInput
+    // Use platform-specific state
+    const currentLimit = isGmail ? gmailThreadLimit : isYoutube ? youtubeVideoLimit : instagramPostLimit
+    const setCurrentLimit = isGmail ? setGmailThreadLimit : isYoutube ? setYoutubeVideoLimit : setInstagramPostLimit
+    const customLimit = isGmail ? customGmailLimit : isYoutube ? customYoutubeLimit : customPostLimit
+    const setCustomLimit = isGmail ? setCustomGmailLimit : isYoutube ? setCustomYoutubeLimit : setCustomPostLimit
+    const showCustom = isGmail ? showGmailCustomInput : isYoutube ? showYoutubeCustomInput : showCustomInput
+    const setShowCustom = isGmail ? setShowGmailCustomInput : isYoutube ? setShowYoutubeCustomInput : setShowCustomInput
 
     const handleCustomSubmit = () => {
       const customValue = parseInt(customLimit)
@@ -364,100 +373,128 @@ export function AIInsightsScreen() {
     return (
       <div className="space-y-6">
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-6">
-          {/* Post limit selector for Instagram */}
+          {/* Post limit selector for all platforms */}
           {showPostLimitSelector && (
-            <div className="flex-1 max-w-xl">
-              <div className="mb-2">
-                <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                  Analysis Depth
-                </h3>
-              </div>
+            <div className="flex-1 max-w-lg">
+              {/* Collapsible Header */}
+              <button
+                onClick={() => {
+                  if (isGmail) {
+                    setIsGmailAnalysisDepthExpanded(!isGmailAnalysisDepthExpanded)
+                  } else if (isYoutube) {
+                    setIsYoutubeAnalysisDepthExpanded(!isYoutubeAnalysisDepthExpanded)
+                  } else {
+                    setIsAnalysisDepthExpanded(!isAnalysisDepthExpanded)
+                  }
+                }}
+                className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-all duration-200 mb-3"
+              >
+                <div className="flex items-center gap-2">
+                  <Settings className="w-4 h-4 text-gray-500" />
+                  <div className="text-left">
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-white">
+                      Analysis Depth
+                    </h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {(isGmail ? isGmailAnalysisDepthExpanded : isYoutube ? isYoutubeAnalysisDepthExpanded : isAnalysisDepthExpanded) 
+                        ? `Choose how many ${isGmail ? 'emails' : isYoutube ? 'videos' : 'posts'} to analyze` 
+                        : `Currently: ${currentLimit === 'all' ? `All ${isGmail ? 'emails' : isYoutube ? 'videos' : 'posts'}` : `${currentLimit} ${isGmail ? 'emails' : isYoutube ? 'videos' : 'posts'}`}`}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${(isGmail ? isGmailAnalysisDepthExpanded : isYoutube ? isYoutubeAnalysisDepthExpanded : isAnalysisDepthExpanded) ? 'rotate-90' : ''}`} />
+              </button>
               
-              {/* Preset Options - Liquid Glass inspired design */}
-              <div className="grid grid-cols-5 gap-1.5 mb-3">
-                {presetOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => {
-                      setCurrentLimit(option.value)
-                      setShowCustom(false)
-                    }}
-                    disabled={isRefreshing}
-                    className={`relative group p-2 rounded-lg border transition-all duration-200 ${
-                      currentLimit === option.value
-                        ? 'border-heycontent-yellow bg-heycontent-light-yellow/20'
-                        : 'border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 hover:border-heycontent-yellow/50'
-                    } ${isRefreshing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                  >
-                    <div className="text-center">
-                      <div className="text-sm mb-0.5">{option.icon}</div>
-                      <div className={`font-medium text-xs ${
-                        currentLimit === option.value 
-                          ? 'text-gray-900 dark:text-white' 
-                          : 'text-gray-700 dark:text-gray-300'
-                      }`}>
-                        {option.label}
+              {/* Expandable Content */}
+              {(isGmail ? isGmailAnalysisDepthExpanded : isYoutube ? isYoutubeAnalysisDepthExpanded : isAnalysisDepthExpanded) && (
+                <div className="space-y-3 animate-in slide-in-from-top-2 duration-200">
+                  {/* Compact Preset Options */}
+                  <div className="grid grid-cols-5 gap-2">
+                    {presetOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          setCurrentLimit(option.value)
+                          setShowCustom(false)
+                        }}
+                        disabled={isRefreshing}
+                        className={`relative group p-2 rounded-lg border transition-all duration-200 hover:scale-105 ${
+                          currentLimit === option.value
+                            ? 'border-heycontent-yellow bg-gradient-to-br from-heycontent-yellow/20 to-heycontent-yellow/10 shadow-md shadow-heycontent-yellow/20'
+                            : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-heycontent-yellow/40'
+                        } ${isRefreshing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                      >
+                        <div className="text-center">
+                          <div className="text-sm mb-1">{option.icon}</div>
+                          <div className={`font-semibold text-xs ${
+                            currentLimit === option.value 
+                              ? 'text-gray-900 dark:text-white' 
+                              : 'text-gray-700 dark:text-gray-300'
+                          }`}>
+                            {option.label}
+                          </div>
+                        </div>
+                        
+                        {/* Compact Selection Indicator */}
+                        {currentLimit === option.value && (
+                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-heycontent-yellow rounded-full flex items-center justify-center">
+                            <div className="w-1 h-1 bg-white rounded-full"></div>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Compact Control Row */}
+                  <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                    <button
+                      onClick={() => setShowCustom(!showCustom)}
+                      disabled={isRefreshing}
+                      className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-all duration-200 ${
+                        showCustom
+                          ? 'bg-heycontent-yellow text-gray-900'
+                          : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
+                      } ${isRefreshing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <Settings className="w-3 h-3" />
+                      Custom
+                    </button>
+
+                    {/* Compact Selection Display */}
+                    <div className="flex items-center gap-2 px-2 py-1 bg-white dark:bg-gray-700 rounded text-xs">
+                      <Zap className="w-3 h-3 text-heycontent-yellow" />
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {currentLimit === 'all' ? 'All' : `${currentLimit}`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Compact Custom Input */}
+                  {showCustom && (
+                    <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 animate-in slide-in-from-top-1 duration-200">
+                      <div className="flex items-center gap-2">
+                        <input
+                          id="custom-limit"
+                          type="number"
+                          min="1"
+                          max="1000"
+                          value={customLimit}
+                          onChange={(e) => setCustomLimit(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && handleCustomSubmit()}
+                          placeholder="e.g., 75"
+                          disabled={isRefreshing}
+                          className="flex-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-1 focus:ring-heycontent-yellow focus:border-heycontent-yellow transition-all duration-200 disabled:opacity-50"
+                        />
+                        <button
+                          onClick={handleCustomSubmit}
+                          disabled={!customLimit || isRefreshing || parseInt(customLimit) < 1 || parseInt(customLimit) > 1000}
+                          className="px-3 py-1.5 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black text-sm font-medium rounded transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Apply
+                        </button>
                       </div>
                     </div>
-                    
-                    {/* Selection indicator */}
-                    {currentLimit === option.value && (
-                      <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-heycontent-yellow rounded-full flex items-center justify-center">
-                        <div className="w-1 h-1 bg-white rounded-full"></div>
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              {/* Custom Input Toggle */}
-              <div className="flex items-center justify-between mb-2">
-                <button
-                  onClick={() => setShowCustom(!showCustom)}
-                  disabled={isRefreshing}
-                  className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors ${
-                    showCustom
-                      ? 'bg-heycontent-light-yellow text-gray-900'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                  } ${isRefreshing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  <Settings className="w-3 h-3" />
-                  Custom
-                </button>
-
-                {/* Current Selection Display */}
-                <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 dark:bg-gray-800 rounded text-xs">
-                  <Zap className="w-3 h-3 text-heycontent-yellow" />
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    {currentLimit === 'all' ? 'All items' : `${currentLimit} items`}
-                  </span>
-                </div>
-              </div>
-
-              {/* Custom Input Field */}
-              {showCustom && (
-                <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center gap-2">
-                    <input
-                      id="custom-limit"
-                      type="number"
-                      min="1"
-                      max="1000"
-                      value={customLimit}
-                      onChange={(e) => setCustomLimit(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleCustomSubmit()}
-                      placeholder="e.g., 75"
-                      disabled={isRefreshing}
-                      className="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-1 focus:ring-heycontent-yellow focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-                    />
-                    <button
-                      onClick={handleCustomSubmit}
-                      disabled={!customLimit || isRefreshing || parseInt(customLimit) < 1 || parseInt(customLimit) > 1000}
-                      className="px-3 py-1 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black text-sm font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Apply
-                    </button>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
@@ -471,7 +508,7 @@ export function AIInsightsScreen() {
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isRefreshing || disabled
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500'
-                  : 'bg-gray-100 hover:bg-heycontent-light-yellow text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                  : 'bg-gray-100 hover:bg-heycontent-yellow text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
               }`}
             >
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -553,6 +590,8 @@ export function AIInsightsScreen() {
                   error={youtubeError}
                   onRefresh={handleYoutubeRefresh}
                   disabled={!firebaseUser || !youtubeChannel?.id}
+                  showPostLimitSelector={true}
+                  isYoutube={true}
                 />
                 
                 {youtubeRefreshing ? (

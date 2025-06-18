@@ -9,7 +9,6 @@ export interface InsightCardProps {
   platform: 'youtube' | 'instagram' | 'gmail';
   title: string;
   impact: string;
-  highlightColor?: string;
   whyNow: string[];
   actionSteps: string[];
   expectedOutcome: string;
@@ -39,7 +38,6 @@ export const InsightCard: React.FC<InsightCardProps> = ({
   platform,
   title,
   impact,
-  highlightColor = 'bg-heycontent-light-yellow',
   whyNow,
   actionSteps,
   expectedOutcome,
@@ -150,23 +148,41 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
   };
 
   return (
-    <Card className="overflow-hidden transition-shadow cursor-pointer hover:shadow-lg" onClick={onExpand}>
+    <Card className="overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-lg hover:shadow-heycontent-yellow/20 border-2 border-transparent hover:border-heycontent-yellow/30" onClick={onExpand}>
       {/* Collapsed Header */}
       <div
-        className={`flex items-center justify-between p-4 ${highlightColor} ${expanded ? 'rounded-t-lg' : 'rounded-lg'}`}
+        className={`flex items-center justify-between p-4 transition-all duration-200 ${
+          expanded 
+            ? 'bg-heycontent-yellow/10 rounded-t-lg border-b border-heycontent-yellow/20'
+            : 'bg-white dark:bg-gray-800' // Clean white background for all cards
+        }`}
       >
         <div className="flex items-center gap-3">
           {validatedPlatform === 'youtube' ? (
-            <div>{platformIcon[validatedPlatform]}</div>
+            <div className={`p-2 rounded-lg transition-all duration-200 ${
+              expanded 
+                ? 'bg-heycontent-yellow/20 dark:bg-heycontent-yellow/10'
+                : 'bg-gray-100 dark:bg-gray-700' // Consistent styling for all platforms
+            }`}>
+              {platformIcon[validatedPlatform]}
+            </div>
           ) : (
-            <div className="p-2 rounded-lg bg-white/80 dark:bg-black/30">
+            <div className={`p-2 rounded-lg transition-all duration-200 ${
+              expanded 
+                ? 'bg-heycontent-yellow/20 dark:bg-heycontent-yellow/10' 
+                : 'bg-gray-100 dark:bg-gray-700' // Consistent styling for all platforms
+            }`}>
               {platformIcon[validatedPlatform]}
             </div>
           )}
           <div>
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-medium text-text-dark dark:text-white">{title}</h3>
-              <span className="px-2 py-0.5 bg-white/60 dark:bg-black/40 text-xs font-medium rounded-full capitalize text-text-dark dark:text-white">
+              <span className={`px-2 py-0.5 text-xs font-medium rounded-full capitalize transition-all duration-200 ${
+                expanded 
+                  ? 'bg-heycontent-yellow/30 dark:bg-heycontent-yellow/20 text-text-dark dark:text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-text-dark dark:text-white' // Consistent badge styling
+              }`}>
                 {validatedPlatform}
               </span>
             </div>
@@ -291,10 +307,10 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
                 e.stopPropagation();
                 discussFullInsight();
               }}
-              className="flex-1 bg-heycontent-light-yellow hover:bg-heycontent-yellow/90 text-black"
+              className="flex-1 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black"
             >
               <MessageSquare className="w-4 h-4 mr-2" />
-              Discuss Full Insight
+              Discuss With Content
             </Button>
             
             {/* Legacy discuss button if provided */}
