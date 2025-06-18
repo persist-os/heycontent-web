@@ -136,7 +136,7 @@ export function ContentAnalyticsScreen() {
   };
 
   // Show loading state if data failed to load
-  if (youtubeData.loading || gmailData.loading) {
+  if (youtubeData.loading || gmailData.loading || (instagramData.loading && instagramData.isConnected)) {
     return <LoadingState type="content" />;
   }
 
@@ -171,38 +171,65 @@ export function ContentAnalyticsScreen() {
 
             {/* "All" tab content */}
             {selectedPlatform === 'all' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
+              <>
                 {allDisplayItems.length > 0 ? (
-                  allDisplayItems.map((item, index) => {
-                    // Ensure absolutely unique keys by combining platform, id, and index
-                    const uniqueKey = `${item.platform}-${item.id}-${index}`;
-                    const commonProps = {
-                      onDiscussContent: () => discussContent(item),
-                      onViewDetailedAnalytics: () => setSelectedContent(item)
-                    };
-                    
-                    if (item.platform === 'instagram') {
-                      return <InstagramCard key={item.id} {...commonProps} item={item as InstagramContentItem} userId={firebaseUser.uid} />;
-                    }
-                    if (item.platform === 'youtube') {
-                      return <YouTubeCard key={uniqueKey} {...commonProps} item={item as YouTubeContentItem} />;
-                    }
-                    if (item.platform === 'gmail') {
-                      return <GmailCard key={uniqueKey} {...commonProps} item={item as GmailContentItem} />;
-                    }
-                    return null;
-                  })
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
+                    {allDisplayItems.map((item, index) => {
+                      // Ensure absolutely unique keys by combining platform, id, and index
+                      const uniqueKey = `${item.platform}-${item.id}-${index}`;
+                      const commonProps = {
+                        onDiscussContent: () => discussContent(item),
+                        onViewDetailedAnalytics: () => setSelectedContent(item)
+                      };
+                      
+                      if (item.platform === 'instagram') {
+                        return <InstagramCard key={item.id} {...commonProps} item={item as InstagramContentItem} userId={firebaseUser.uid} />;
+                      }
+                      if (item.platform === 'youtube') {
+                        return <YouTubeCard key={uniqueKey} {...commonProps} item={item as YouTubeContentItem} />;
+                      }
+                      if (item.platform === 'gmail') {
+                        return <GmailCard key={uniqueKey} {...commonProps} item={item as GmailContentItem} />;
+                      }
+                      return null;
+                    })}
+                  </div>
                 ) : (
-                  <div className="col-span-full text-center py-10 text-text-gray dark:text-gray-400">
-                    <div className="space-y-2">
-                      <p className="text-lg font-medium">No content found</p>
-                      <p className="text-sm">
-                        Connect your social media accounts to see content analytics.
+                  <div className="flex items-center justify-center min-h-[400px] px-4">
+                    <div className="p-6 sm:p-8 max-w-md w-full bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl text-center">
+                      <div className="flex justify-center mb-4 sm:mb-6">
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 text-white font-bold text-lg sm:text-xl">
+                            ∞
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
+                        No Content Found
+                      </h3>
+                      
+                      <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
+                        Connect your social media accounts to unlock powerful analytics and insights across all your platforms.
                       </p>
+                      
+                      <button 
+                        onClick={() => router.push('/settings?tab=integrations')}
+                        className="w-full py-3 px-4 sm:px-6 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                        </svg>
+                        Connect Platforms
+                      </button>
+                      
+                      <div className="mt-3 sm:mt-4 text-xs text-gray-500">
+                        Connect YouTube, Instagram, and Gmail in Settings
+                      </div>
                     </div>
                   </div>
                 )}
-              </div>
+              </>
             )}
           </Tabs>
         </div>
@@ -236,4 +263,4 @@ export function ContentAnalyticsScreen() {
       )}
     </div>
   );
-}
+} 

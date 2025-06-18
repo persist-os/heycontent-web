@@ -2,6 +2,9 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Settings, Mail } from 'lucide-react';
 import { GmailCard } from '../cards/GmailCard';
 import { GmailModal } from '../modals/GmailModal';
 import { LoadingState } from '../loading/LoadingState';
@@ -58,9 +61,8 @@ export function GmailPlatform({ userId, selectedPlatform }: GmailPlatformProps) 
         const minimalContext = {
           platform: item.platform,
           contentId: item.id,
-          title: context.title,
+          title: (item as GmailContentItem).content?.data?.subject || 'Email Thread',
           publishedAt: item.publishedAt,
-          // For Gmail, include only the most essential data
           subject: (item as GmailContentItem).content?.data?.subject || 'No Subject',
           from: (item as GmailContentItem).content?.data?.from || 'Unknown Sender',
           threadId: (item as GmailContentItem).content?.data?.threadId || item.id,
@@ -82,11 +84,56 @@ export function GmailPlatform({ userId, selectedPlatform }: GmailPlatformProps) 
     return <LoadingState type="content" />;
   }
 
+  // Show Gmail connect card if no Gmail account found
+  if (!isConnected) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px] px-4">
+        <Card className="p-6 sm:p-8 max-w-md w-full bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl text-center">
+          <div className="flex justify-center mb-4 sm:mb-6">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-red-500 flex items-center justify-center">
+              <Mail className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+            </div>
+          </div>
+          
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
+            Connect Your Gmail Account
+          </h3>
+          
+          <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
+            Connect your Gmail account to view email analytics, track business communications, 
+            and get insights on partnership opportunities.
+          </p>
+          
+          <Button 
+            onClick={() => router.push('/settings?tab=integrations')}
+            className="w-full py-3 px-4 sm:px-6 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
+          >
+            <Settings className="w-4 h-4" />
+            Go to Integrations
+          </Button>
+          
+          <div className="mt-3 sm:mt-4 text-xs text-gray-500">
+            You can connect Gmail in Settings → Integrations
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center text-red-500 p-4 mb-8">
+        <p>Error: {error}</p>
+        <Button onClick={() => window.location.reload()} className="mt-2">Try Again</Button>
+      </div>
+    );
+  }
+
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
-        {displayItems.length > 0 ? (
-          displayItems.map((item, index) => {
+      {displayItems.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
+          {displayItems.map((item, index) => {
             const uniqueKey = `${item.platform}-${item.id}-${index}`;
             return (
               <GmailCard
@@ -96,19 +143,40 @@ export function GmailPlatform({ userId, selectedPlatform }: GmailPlatformProps) 
                 onViewDetailedAnalytics={() => setSelectedContent(item as GmailContentItem)}
               />
             );
-          })
-        ) : (
-          <div className="col-span-full text-center py-10 text-text-gray dark:text-gray-400">
-            <div className="space-y-2">
-              <p className="text-lg font-medium">No Gmail content found</p>
-              <p className="text-sm">Connect your Gmail account to see email analytics and insights.</p>
-              <p className="text-xs text-gray-500">
-                Only meaningful emails are stored and displayed for better content analysis.
-              </p>
+          })}
+        </div>
+      ) : (
+        <div className="flex items-center justify-center min-h-[400px] px-4">
+          <Card className="p-6 sm:p-8 max-w-md w-full bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl text-center">
+            <div className="flex justify-center mb-4 sm:mb-6">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-red-500 flex items-center justify-center">
+                <Mail className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+            
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
+              Connect Your Gmail Account
+            </h3>
+            
+            <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
+              Connect your Gmail account to view email analytics, track business communications, 
+              and get insights on partnership opportunities.
+            </p>
+            
+            <Button 
+              onClick={() => router.push('/settings?tab=integrations')}
+              className="w-full py-3 px-4 sm:px-6 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
+            >
+              <Settings className="w-4 h-4" />
+              Go to Integrations
+            </Button>
+            
+            <div className="mt-3 sm:mt-4 text-xs text-gray-500">
+              You can connect Gmail in Settings → Integrations
+            </div>
+          </Card>
+        </div>
+      )}
 
       {selectedContent && (
         <GmailModal

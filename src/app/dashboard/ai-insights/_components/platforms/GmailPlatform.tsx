@@ -199,7 +199,7 @@ export function GmailPlatform({ userId, currentQuote }: GmailPlatformProps) {
           Connect your Gmail account to get strategic insights about brand partnerships, media opportunities, and business inquiries in your inbox.
         </p>
         <button 
-          onClick={() => window.location.href = '/dashboard/settings/integrations'}
+          onClick={() => window.location.href = '/settings?tab=integrations'}
           className="inline-flex items-center gap-2 px-4 py-2 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black rounded-lg font-medium transition-colors"
         >
           <Mail className="w-4 h-4" />
