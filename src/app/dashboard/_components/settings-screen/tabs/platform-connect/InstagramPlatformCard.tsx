@@ -46,9 +46,9 @@ export function InstagramPlatformCard({
 
 
   // Facebook Business Connect (if needed, can also be routed through backend for consistency)
-  const handleFacebookConnect = () => {
-    alert('Facebook Business connect coming soon!');
-  };
+  // const handleFacebookConnect = () => {
+  //   alert('Facebook Business connect coming soon!');
+  // };
 
   return (
     <Card className="p-6 relative">
@@ -88,7 +88,7 @@ export function InstagramPlatformCard({
                 >
                   Connect Instagram
                 </button>
-                <button
+                {/* <button
                   type="button"
                   onClick={handleFacebookConnect}
                   className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50"
@@ -96,7 +96,7 @@ export function InstagramPlatformCard({
                   disabled={isLoading}
                 >
                   Connect via Facebook Business
-                </button>
+                </button> */}
                 <button
                   type="button"
                   onClick={() => setShowInstagramOptions(false)}
