@@ -67,7 +67,7 @@ const ChatContextBox: React.FC<ChatContextBoxProps> = ({
             ].map((suggestion, index) => (
               <button
                 key={index}
-                onClick={() => handleSuggestionClick(suggestion)}
+                onClick={() => onSendMessage(suggestion)}
                 className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors break-words"
               >
                 {suggestion}
