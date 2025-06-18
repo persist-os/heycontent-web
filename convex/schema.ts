@@ -155,6 +155,24 @@ export default defineSchema({
   .index("by_creation", ["createdAt"])
   .index("by_type", ["type"]),
 
+  // Note Images
+  noteImages: defineTable({
+    noteId: v.optional(v.id("notes")),
+    userId: v.string(),
+    storageId: v.id("_storage"),
+    filename: v.string(),
+    contentType: v.string(),
+    size: v.number(),
+    uploadedAt: v.number(),
+    caption: v.optional(v.string()),
+    order: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_note", ["noteId"])
+  .index("by_user", ["userId"])
+  .index("by_storage", ["storageId"]),
+
   // API Keys
   api_keys: defineTable({
     user_id: v.string(),
@@ -629,8 +647,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
   .index("by_userId", ["userId"])
-  .index("by_instagramAccountId", ["instagramAccountId"])
-  .index("by_user_account", ["userId", "instagramAccountId"]),
+  .index("by_instagramAccountId", ["instagramAccountId"]),
 
   instagramTrackerAnalysis: defineTable({
     userId: v.string(),
@@ -640,8 +657,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
   .index("by_userId", ["userId"])
-  .index("by_account", ["instagramAccountId"])
-  .index("by_user_account", ["userId", "instagramAccountId"]),
+  .index("by_account", ["instagramAccountId"]),
 
   // Usage Events
   usageEvents: defineTable({

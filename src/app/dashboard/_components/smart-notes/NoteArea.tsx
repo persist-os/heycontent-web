@@ -12,7 +12,10 @@ import IdeasPanel from "./components/IdeasPanel";
 import { AnalysisSection } from "./AnalysisSection";
 import type { Id } from "@/convex/_generated/dataModel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Brain, Lightbulb, Edit } from 'lucide-react';
+import { Brain, Lightbulb, Edit, Upload, Image as ImageIcon } from 'lucide-react';
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import ImageDisplay from "@/components/ImageDisplay";
 
 
 interface NoteAreaProps {
@@ -38,6 +41,14 @@ export function NoteArea({
   const [activeTab, setActiveTab] = useState<string>("editor");
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
+  
+  // Drag and drop state
+  const [isDragActive, setIsDragActive] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  
+  // Image upload mutations
+  const generateUploadUrl = useMutation(api.images.generateImageUploadUrl);
+  const saveImageMetadata = useMutation(api.images.saveImageMetadata);
   
   // Add event listener to switch to editor tab when an idea is applied
   React.useEffect(() => {
@@ -93,8 +104,123 @@ export function NoteArea({
     console.log('[NoteArea] handleMetaTitleChange: received new title', title);
   };
 
+  // Drag and drop handlers
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Check if dragged items contain files
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      const hasFiles = Array.from(e.dataTransfer.items).some(
+        item => item.kind === 'file' && item.type.startsWith('image/')
+      );
+      if (hasFiles) {
+        setIsDragActive(true);
+      }
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Only hide if we're leaving the main container
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragActive(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+    
+    const files = Array.from(e.dataTransfer.files).filter(file => 
+      file.type.startsWith('image/')
+    );
+    
+    if (files.length === 0) return;
+    
+    setIsUploading(true);
+    
+    try {
+      for (const file of files) {
+        // Validate file size (10MB limit)
+        if (file.size > 10 * 1024 * 1024) {
+          console.warn(`Skipping ${file.name}: File too large (max 10MB)`);
+          continue;
+        }
+        
+        // Get upload URL
+        const uploadUrl = await generateUploadUrl();
+        
+        // Upload file
+        const uploadResponse = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+        
+        if (!uploadResponse.ok) {
+          throw new Error(`Upload failed for ${file.name}`);
+        }
+        
+        const { storageId } = await uploadResponse.json();
+        
+        // Save metadata with note association
+        await saveImageMetadata({
+          noteId: note._id as any,
+          storageId,
+          filename: file.name,
+          contentType: file.type,
+          size: file.size,
+        });
+      }
+      
+      console.log(`Successfully uploaded ${files.length} image(s) to note`);
+      
+    } catch (error) {
+      console.error("Upload failed:", error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full w-full">
+    <div 
+      className="flex flex-col h-full w-full relative"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* Drag & Drop Overlay */}
+      {(isDragActive || isUploading) && (
+        <div className="absolute inset-0 bg-blue-50/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center border-2 border-dashed border-blue-400 rounded-lg">
+          <div className="text-center p-8">
+            {isUploading ? (
+              <>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <h3 className="text-xl font-semibold text-blue-900 mb-2">Uploading Images...</h3>
+                <p className="text-blue-700">Please wait while your images are being processed.</p>
+              </>
+            ) : (
+              <>
+                <ImageIcon className="w-16 h-16 text-blue-600 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-blue-900 mb-2">Drop Images Here</h3>
+                <p className="text-blue-700">Images will be attached to this note</p>
+                <p className="text-sm text-blue-600 mt-2">Supports PNG, JPG, GIF up to 10MB each</p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <NoteHeader 
         note={note}
@@ -148,6 +274,19 @@ export function NoteArea({
                 cursorPosition={cursorPosition}
                 setCursorPosition={setCursorPosition}
               />
+              
+              {/* Image Display */}
+              <ImageDisplay 
+                noteId={String(note._id)}
+                className="p-4 border-4 border-green-500"
+              />
+              
+              {/* Debug info */}
+              <div className="p-2 text-xs text-gray-500 border-t">
+                Debug: Note ID = {note._id}
+                <br />
+                ImageDisplay should be rendering above this line
+              </div>
               
               {/* Command menu */}
               {showCommands && (

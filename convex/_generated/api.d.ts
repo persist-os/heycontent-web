@@ -23,6 +23,7 @@ import type * as chatQueries from "../chatQueries.js";
 import type * as gmailMutations from "../gmailMutations.js";
 import type * as gmailQueries from "../gmailQueries.js";
 import type * as http from "../http.js";
+import type * as images from "../images.js";
 import type * as instagramMutations from "../instagramMutations.js";
 import type * as instagramQueries from "../instagramQueries.js";
 import type * as internal_ from "../internal.js";
@@ -59,6 +60,7 @@ declare const fullApi: ApiFromModules<{
   gmailMutations: typeof gmailMutations;
   gmailQueries: typeof gmailQueries;
   http: typeof http;
+  images: typeof images;
   instagramMutations: typeof instagramMutations;
   instagramQueries: typeof instagramQueries;
   internal: typeof internal_;
