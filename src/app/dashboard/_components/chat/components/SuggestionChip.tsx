@@ -54,10 +54,7 @@ export const SuggestionChip = ({ suggestion, onClick, onInputPopulate }: Suggest
           <InputButton
             text={displayText}
             onInputPopulate={onInputPopulate}
-            className="bg-white shadow-sm border border-gray-200"
-            size="sm"
-            variant="outline"
-            tooltipText="Input suggestion to chat"
+            tooltipText="Add suggestion to input"
           />
         </div>
       )}

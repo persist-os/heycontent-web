@@ -103,10 +103,7 @@ export function ExpandableInsights({
                       <InputButton
                         text={cleanSuggestionText(option.text)}
                         onInputPopulate={onInputPopulate}
-                        className="bg-white shadow-sm border border-gray-200"
-                        size="sm"
-                        variant="outline"
-                        tooltipText="Input option to chat"
+                        tooltipText="Add option to input"
                       />
                     </div>
                   )}
@@ -135,10 +132,7 @@ export function ExpandableInsights({
                         <InputButton
                           text={cleanSuggestionText(suggestion)}
                           onInputPopulate={onInputPopulate}
-                          className="bg-white shadow-sm border border-gray-200"
-                          size="sm"
-                          variant="outline"
-                          tooltipText="Input suggestion to chat"
+                          tooltipText="Add suggestion to input"
                         />
                       </div>
                     )}

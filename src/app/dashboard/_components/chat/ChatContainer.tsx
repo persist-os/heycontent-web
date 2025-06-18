@@ -396,6 +396,18 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     setInputValue(cleanSuggestionText(choice));
   }, []);
 
+  // Create a function to append text to existing input instead of replacing it
+  const handleInputAppend = useCallback((text: string) => {
+    setInputValue(currentValue => {
+      // If there's existing text, add a space before the new text
+      const cleanText = cleanSuggestionText(text);
+      if (currentValue.trim()) {
+        return `${currentValue} ${cleanText}`;
+      }
+      return cleanText;
+    });
+  }, []);
+
   if (!user) {
     return null
   }
@@ -421,7 +433,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                       includeAnalysisInQuery={includeAnalysisInQuery}
                       onToggleAnalysis={setIncludeAnalysisInQuery}
                       onSendMessage={handleSendMessage}
-                      onInputPopulate={setInputValue}
+                      onInputPopulate={handleInputAppend}
                     />
                   ) : (
                     <ChatContextBox
@@ -431,7 +443,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                       includeAnalysisInQuery={includeAnalysisInQuery}
                       onToggleAnalysis={setIncludeAnalysisInQuery}
                       onSendMessage={handleSendMessage}
-                      onInputPopulate={setInputValue}
+                      onInputPopulate={handleInputAppend}
                     />
                   )
                 )}
@@ -446,7 +458,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                   userId={userId}
                   handleSuggestionClick={handleSuggestionClick}
                   handleSendMessage={handleSendMessage}
-                  onInputPopulate={setInputValue}
+                  onInputPopulate={handleInputAppend}
                 />
 
                 {/* Show persona tip in onboarding flow when ready and at least 4 messages exist */}
@@ -489,7 +501,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
       {/* Bottom Bar Actions - Only show when there are no messages */}
       {messages.length === 0 && (
-        <BottomBarActions onActionClick={handleActionClick} onInputPopulate={setInputValue} />
+        <BottomBarActions onActionClick={handleActionClick} onInputPopulate={handleInputAppend} />
       )}
 
       {/* Input Bar */}
@@ -506,7 +518,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           includeAnalysisInQuery={includeAnalysisInQuery}
           inputValue={inputValue}
           onInputChange={setInputValue}
-          onInputPopulate={setInputValue}
+          onInputPopulate={handleInputAppend}
         />
       </div>
     </div>

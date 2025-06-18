@@ -18,7 +18,7 @@ export const InputButton: React.FC<InputButtonProps> = ({
   size = 'sm',
   variant = 'ghost',
   showText = false,
-  tooltipText = 'Input to chat'
+  tooltipText = 'Add to input'
 }) => {
   const [populated, setPopulated] = useState(false);
 
@@ -28,18 +28,6 @@ export const InputButton: React.FC<InputButtonProps> = ({
     setTimeout(() => setPopulated(false), 2000);
   };
 
-  const sizeClasses = {
-    sm: 'w-3 h-3 p-1',
-    md: 'w-4 h-4 p-1.5',
-    lg: 'w-5 h-5 p-2'
-  };
-
-  const variantClasses = {
-    ghost: 'hover:bg-gray-100 dark:hover:bg-gray-700',
-    outline: 'border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700',
-    subtle: 'bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
-  };
-
   return (
     <button
       onClick={(e) => {
@@ -47,22 +35,20 @@ export const InputButton: React.FC<InputButtonProps> = ({
         handleInputPopulate();
       }}
       className={`
-        inline-flex items-center gap-1.5 rounded-md transition-all duration-200
-        ${sizeClasses[size]} ${variantClasses[variant]}
-        ${populated ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}
-        hover:text-gray-700 dark:hover:text-gray-300
+        opacity-60 hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700
+        ${populated ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}
         ${className}
       `}
       title={populated ? 'Added to input!' : tooltipText}
       disabled={populated}
     >
       {populated ? (
-        <Check className={size === 'sm' ? 'w-3 h-3' : size === 'md' ? 'w-4 h-4' : 'w-5 h-5'} />
+        <Check className="w-4 h-4" />
       ) : (
-        <Edit3 className={size === 'sm' ? 'w-3 h-3' : size === 'md' ? 'w-4 h-4' : 'w-5 h-5'} />
+        <Edit3 className="w-4 h-4" />
       )}
       {showText && (
-        <span className="text-xs font-medium">
+        <span className="text-xs font-medium ml-1">
           {populated ? 'Added' : 'Input'}
         </span>
       )}

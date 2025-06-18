@@ -36,10 +36,7 @@ export const SuggestionButton: React.FC<SuggestionButtonProps> = ({
           <InputButton
             text={suggestion}
             onInputPopulate={onInputPopulate}
-            className="bg-white shadow-sm border border-gray-200"
-            size="sm"
-            variant="outline"
-            tooltipText="Input suggestion to chat"
+            tooltipText="Add suggestion to input"
           />
         </div>
       )}
