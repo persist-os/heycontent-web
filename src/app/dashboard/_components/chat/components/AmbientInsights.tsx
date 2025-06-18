@@ -189,10 +189,10 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
               <InsightIcon icon={insight.icon} type={insight.type} />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-medium text-sm text-gray-900 mb-1 line-clamp-2">{insight.title}</h3>
-              <p className="text-sm text-gray-600 line-clamp-3">{insight.description}</p>
+              <h3 className="font-medium text-sm text-gray-900 mb-1">{insight.title}</h3>
+              <p className="text-sm text-gray-600">{insight.description}</p>
               {insight.action && (
-                <p className="mt-2 text-sm text-blue-600 font-medium line-clamp-2">
+                <p className="mt-2 text-sm text-blue-600 font-medium">
                   {insight.action}
                 </p>
               )}
