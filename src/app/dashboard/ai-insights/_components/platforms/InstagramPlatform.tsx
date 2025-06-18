@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { RefreshCw, AlertCircle, Settings, Zap } from 'lucide-react'
+import { RefreshCw, AlertCircle, Settings, Zap, Instagram } from 'lucide-react'
 import { InsightCard } from '../InsightCard'
 import { useInstagramInsights } from '../hooks/useInstagramInsights'
 
@@ -182,6 +182,29 @@ export function InstagramPlatform({ userId, currentQuote }: InstagramPlatformPro
             <p className="text-sm text-red-600 dark:text-red-400 mt-1">{error}</p>
           </div>
         )}
+      </div>
+    )
+  }
+
+  // Handle Instagram not connected state
+  if (!isConnected) {
+    return (
+      <div className="text-center py-12 px-4">
+        <Instagram className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          Instagram Not Connected
+        </h3>
+        <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-4">
+          Connect your Instagram account to get strategic insights about post performance, 
+          audience engagement, and growth opportunities.
+        </p>
+        <button 
+          onClick={() => window.location.href = '/settings?tab=integrations'}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg font-medium transition-colors"
+        >
+          <Instagram className="w-4 h-4" />
+          Connect Instagram
+        </button>
       </div>
     )
   }
