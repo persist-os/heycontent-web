@@ -465,7 +465,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                       includeAnalysisInQuery={includeAnalysisInQuery}
                       onToggleAnalysis={setIncludeAnalysisInQuery}
                       onSendMessage={handleSendMessage}
-                      onInputPopulate={appendToInput}
+                      onInputPopulate={handleInputAppend}
                     />
                   ) : (
                     <ChatContextBox
@@ -475,7 +475,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                       includeAnalysisInQuery={includeAnalysisInQuery}
                       onToggleAnalysis={setIncludeAnalysisInQuery}
                       onSendMessage={handleSendMessage}
-                      onInputPopulate={appendToInput}
+                      onInputPopulate={handleInputAppend}
                     />
                   )
                 )}
@@ -490,7 +490,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                   userId={userId}
                   handleSuggestionClick={handleSuggestionClick}
                   handleSendMessage={handleSendMessage}
-                  onInputPopulate={appendToInput}
+                  onInputPopulate={handleInputAppend}
                 />
 
                 {/* Show persona tip in onboarding flow when ready and at least 4 messages exist */}
@@ -556,7 +556,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
       {/* Bottom Bar Actions - Only show when there are no messages */}
       {messages.length === 0 && (
-        <BottomBarActions onActionClick={handleActionClick} onInputPopulate={appendToInput} />
+        <BottomBarActions onActionClick={handleActionClick} onInputPopulate={handleInputAppend} />
       )}
 
       {/* Input Bar */}
