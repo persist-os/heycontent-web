@@ -64,6 +64,14 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Add input state management
   const [inputValue, setInputValue] = useState('')
+  
+  // Function to append text to the input value
+  const appendToInput = useCallback((newText: string) => {
+    setInputValue(prevValue => {
+      const separator = prevValue && !prevValue.endsWith(' ') && !prevValue.endsWith('\n') ? ' ' : ''
+      return prevValue + separator + newText
+    })
+  }, [])
   const [useContextSearch, setUseContextSearch] = useState(true); // New state for context toggle
 
   // Utility function to clean bullet points from suggestions
@@ -301,6 +309,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   }, [user, chatId, authLoading, handleLoadConversation]);
 
   // Modified handleSuggestionClick to send messages automatically
+  // Modified handleSuggestionClick to send messages automatically
   const handleSuggestionClick = (suggestion, onSendMessage) => {
     // If we're in the welcome step flow, advance the step
     if (
@@ -353,7 +362,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       }
     }
     // Auto-send the suggestion message
+    // Auto-send the suggestion message
     const message = typeof suggestion === 'string' ? suggestion : suggestion.description;
+    onSendMessage(cleanSuggestionText(message));
     onSendMessage(cleanSuggestionText(message));
   };
 
@@ -442,6 +453,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
             <div className="p-2 sm:p-4">
               <div className="max-w-4xl sm:max-w-6xl mx-auto space-y-3">
+            <div className="p-2 sm:p-4">
+              <div className="max-w-4xl sm:max-w-6xl mx-auto space-y-3">
                 {/* Show context box when context is available */}
                 {currentContext && (
                   currentContext.platform === 'ai-insights' ? (
@@ -452,7 +465,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                       includeAnalysisInQuery={includeAnalysisInQuery}
                       onToggleAnalysis={setIncludeAnalysisInQuery}
                       onSendMessage={handleSendMessage}
-                      onInputPopulate={handleInputAppend}
+                      onInputPopulate={appendToInput}
                     />
                   ) : (
                     <ChatContextBox
@@ -462,7 +475,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                       includeAnalysisInQuery={includeAnalysisInQuery}
                       onToggleAnalysis={setIncludeAnalysisInQuery}
                       onSendMessage={handleSendMessage}
-                      onInputPopulate={handleInputAppend}
+                      onInputPopulate={appendToInput}
                     />
                   )
                 )}
@@ -477,7 +490,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                   userId={userId}
                   handleSuggestionClick={handleSuggestionClick}
                   handleSendMessage={handleSendMessage}
-                  onInputPopulate={handleInputAppend}
+                  onInputPopulate={appendToInput}
                 />
 
                 {/* Show persona tip in onboarding flow when ready and at least 4 messages exist */}
@@ -543,7 +556,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
       {/* Bottom Bar Actions - Only show when there are no messages */}
       {messages.length === 0 && (
-        <BottomBarActions onActionClick={handleActionClick} onInputPopulate={handleInputAppend} />
+        <BottomBarActions onActionClick={handleActionClick} onInputPopulate={appendToInput} />
       )}
 
       {/* Input Bar */}
@@ -560,7 +573,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           includeAnalysisInQuery={includeAnalysisInQuery}
           inputValue={inputValue}
           onInputChange={setInputValue}
-          onInputPopulate={handleInputAppend}
+          onInputPopulate={appendToInput}
           useContextSearch={useContextSearch}
           onToggleContextSearch={setUseContextSearch}
           embeddingInfo={embeddingInfo}

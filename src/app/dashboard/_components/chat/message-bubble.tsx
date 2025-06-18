@@ -2,12 +2,14 @@
 
 import type { Message } from '@/app/types/chat'
 import type { InteractiveOption } from './interactive-response'
-import { MessageSquare, Search, CheckCircle, Database, Quote } from 'lucide-react'
+import { MessageSquare, Quote, Search, CheckCircle, Database, Quote } from 'lucide-react'
 // import { MessageSquare, Quote } from 'lucide-react'
 import { ExpandableInsights } from './expandable-insights'
 import { MarkdownRenderer } from './markdown-renderer'
 import { PersonaCardRenderer } from './components/PersonaCardRenderer'
 import { ThinkingIndicator } from './components/ThinkingIndicator'
+import { CopyButton } from '@/components/ui/copy-button'
+import React, { useState, useEffect } from 'react'
 import { CopyButton } from '@/components/ui/copy-button'
 import React, { useState, useEffect } from 'react'
 
@@ -24,6 +26,7 @@ interface MessageBubbleProps {
   className?: string
   userId?: string
   onInputPopulate?: (text: string) => void
+  onInputPopulate?: (text: string) => void
 }
 
 export function MessageBubble({
@@ -38,9 +41,130 @@ export function MessageBubble({
   onScrollToMessage,
   className = '',
   userId,
+  onInputPopulate,
   onInputPopulate
 }: MessageBubbleProps) {
   const isUser = message.role === 'user'
+  const [selectedText, setSelectedText] = useState('')
+  const [showQuoteButton, setShowQuoteButton] = useState(false)
+  const [selectionRect, setSelectionRect] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+    viewportTop: number;
+    viewportLeft: number;
+  } | null>(null)
+  const [highlightRects, setHighlightRects] = useState<DOMRect[]>([])
+
+  // Simple selection handler
+  useEffect(() => {
+    const messageElement = document.getElementById(`message-${message.id}`)
+    if (!messageElement) return
+
+    const handleMouseUp = () => {
+      setTimeout(() => {
+        const selection = window.getSelection()
+        const text = selection?.toString().trim()
+        
+        if (!text || text.length === 0) {
+          setShowQuoteButton(false)
+          setHighlightRects([])
+          return
+        }
+
+        if (!selection || selection.rangeCount === 0) return
+        
+        const range = selection.getRangeAt(0)
+        
+        // Simple check: is the selection in this message?
+        const isInMessage = messageElement.contains(range.startContainer) && 
+                           messageElement.contains(range.endContainer)
+        
+        if (!isInMessage) return
+
+        // Get all client rects for multi-line selections
+        const rects = Array.from(range.getClientRects())
+        const mainRect = rects.length > 0 ? rects[0] : range.getBoundingClientRect()
+        
+        // Simple validation
+        if (mainRect.width <= 0 || mainRect.height <= 0) return
+
+        console.log('✅ Selection captured:', text)
+
+        setSelectedText(text)
+        setSelectionRect({
+          top: mainRect.top,
+          left: mainRect.left,
+          width: mainRect.width,
+          height: mainRect.height,
+          viewportTop: mainRect.top,
+          viewportLeft: mainRect.left
+        })
+        setHighlightRects(rects)
+        setShowQuoteButton(true)
+
+        // Don't clear the browser selection immediately - let user see it briefly
+        setTimeout(() => {
+          window.getSelection()?.removeAllRanges()
+        }, 100)
+
+        // Auto-hide after 10 seconds
+        setTimeout(() => {
+          setShowQuoteButton(false)
+          setHighlightRects([])
+        }, 10000)
+      }, 100)
+    }
+
+    // Clear selection on click elsewhere
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!messageElement.contains(event.target as Node)) {
+        setShowQuoteButton(false)
+        setHighlightRects([])
+      }
+    }
+
+    messageElement.addEventListener('mouseup', handleMouseUp)
+    document.addEventListener('click', handleClickOutside)
+    
+    return () => {
+      messageElement.removeEventListener('mouseup', handleMouseUp)
+      document.removeEventListener('click', handleClickOutside)
+    }
+  }, [message.id])
+
+  // Handle quote button click
+  const handleQuoteText = () => {
+    if (selectedText && onInputPopulate) {
+      // Get the current value from the input
+      const input = document.querySelector('textarea[data-testid="chat-input"]') as HTMLTextAreaElement;
+      const currentValue = input?.value || '';
+      const separator = currentValue && !currentValue.endsWith(' ') && !currentValue.endsWith('\n') ? ' ' : '';
+      
+      // Prepare the quoted text
+      const quotedText = `"${selectedText}"`;
+      
+      // Combine with existing text
+      const newValue = currentValue + separator + quotedText;
+      
+      // Update through the callback
+      onInputPopulate(newValue);
+      
+      // Update the input value directly
+      if (input) {
+        input.value = newValue;
+        // Trigger any React state updates by dispatching an input event
+        const event = new Event('input', { bubbles: true });
+        input.dispatchEvent(event);
+      }
+      
+      setSelectedText('')
+      setSelectionRect(null)
+      setHighlightRects([])
+      setShowQuoteButton(false)
+    }
+  }
   const [selectedText, setSelectedText] = useState('')
   const [showQuoteButton, setShowQuoteButton] = useState(false)
   const [selectionRect, setSelectionRect] = useState<{
@@ -213,11 +337,49 @@ export function MessageBubble({
 
       {/* Chat Bubble Container */}
       <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-1`}>
+      {/* Persistent Highlight Overlays - like ChatGPT */}
+      {highlightRects.map((rect, index) => (
         <div
+          key={index}
+          className="fixed pointer-events-none z-30 bg-blue-200/40 dark:bg-blue-400/30"
+          style={{
+            left: rect.left,
+            top: rect.top,
+            width: rect.width,
+            height: rect.height,
+          }}
+        />
+      ))}
+
+      {/* Floating Quote Button - clean and simple */}
+      {showQuoteButton && selectionRect && onInputPopulate && (
+        <div
+          className="fixed z-50 pointer-events-none"
+          style={{
+            left: selectionRect.viewportLeft + (selectionRect.width / 2) - 20,
+            top: selectionRect.viewportTop - 45,
+          }}
+        >
+          <button
+            onClick={handleQuoteText}
+            className="pointer-events-auto bg-gray-900 text-white p-2 rounded-lg shadow-lg hover:bg-gray-800 transition-all duration-200 transform hover:scale-105"
+            title={`Quote "${selectedText.length > 20 ? selectedText.substring(0, 20) + '...' : selectedText}"`}
+          >
+            <Quote className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Chat Bubble Container */}
+      <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-1`}>
+        <div
+          id={`message-${message.id}`}
           id={`message-${message.id}`}
           className={`
             ${isUser ? 'max-w-[80%]' : 'max-w-[90%]'}
+            ${isUser ? 'max-w-[80%]' : 'max-w-[90%]'}
             rounded-2xl
+            ${isUser ? 'px-3 sm:px-4 py-2 sm:py-3' : 'px-4 sm:px-6 py-3 sm:py-4'}
             ${isUser ? 'px-3 sm:px-4 py-2 sm:py-3' : 'px-4 sm:px-6 py-3 sm:py-4'}
             ${isUser ? 'bg-heycontent-yellow text-black' : 'bg-white border'}
             relative
@@ -234,37 +396,6 @@ export function MessageBubble({
               <div className="line-clamp-2">{message.referencedMessage.content}</div>
             </button>
           )}
-
-            {/* Vector Search Status Indicator (for typing messages with search status) */}
-            {message.status === 'typing' && message.searchStatus && (
-              <div className="flex items-center gap-2 text-xs text-gray-600 bg-blue-50 p-2 rounded-lg mb-2 border-l-2 border-blue-400">
-                <Search className="w-3 h-3 animate-pulse text-blue-500" />
-                <span>{message.searchStatus}</span>
-              </div>
-            )}
-
-            {/* Vector Search Results Summary (for completed messages) */}
-            {!isUser && message.vectorSearchMetadata?.foundRelevantContent && (
-              <div className="bg-green-50 border-l-2 border-green-400 p-2 rounded-lg mb-2">
-                <div className="flex items-center gap-2 text-xs text-green-700 font-medium mb-1">
-                  <Database className="w-3 h-3" />
-                  <span>Found {message.vectorSearchMetadata.relevantItemsCount} relevant items from your content</span>
-                </div>
-                <div className="text-xs text-gray-600">
-                  {message.vectorSearchMetadata.relevantContent.slice(0, 3).map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-1">
-                      <CheckCircle className="w-2 h-2 text-green-500" />
-                      <span className="truncate">{item.title} ({item.contentType})</span>
-                    </div>
-                  ))}
-                  {message.vectorSearchMetadata.relevantContent.length > 3 && (
-                    <div className="text-gray-500 mt-1">
-                      +{message.vectorSearchMetadata.relevantContent.length - 3} more items
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           
           {/* Message Content - Full Width */}
           <div className="w-full">
