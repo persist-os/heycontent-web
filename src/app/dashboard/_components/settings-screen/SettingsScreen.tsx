@@ -25,6 +25,7 @@ const SettingsScreen = () => {
   const [isFirstTimeSetup, setIsFirstTimeSetup] = useState(false)
   const [isResending, setIsResending] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [activeTab, setActiveTab] = useState('persona')
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -41,6 +42,13 @@ const SettingsScreen = () => {
 
   useEffect(() => {
     setIsFirstTimeSetup(window.location.search.includes('newUser=true'))
+    
+    // Check for tab parameter in URL
+    const urlParams = new URLSearchParams(window.location.search)
+    const tabParam = urlParams.get('tab')
+    if (tabParam && ['persona', 'account', 'subscription', 'notifications', 'integrations', 'ai-preferences', 'data'].includes(tabParam)) {
+      setActiveTab(tabParam)
+    }
   }, [])
 
   useEffect(() => {
@@ -126,7 +134,7 @@ const SettingsScreen = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="persona" className="space-y-4 sm:space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
           <TabsList className="w-full md:w-auto flex flex-nowrap px-3 sm:px-0">
             <TabsTrigger value="persona" className="flex-1 sm:flex-none"><User className="w-4 h-4 mr-2" /><span className="hidden sm:inline">Persona</span></TabsTrigger>
             <TabsTrigger value="account" className="flex-1 sm:flex-none"><Users className="w-4 h-4 mr-2" /><span className="hidden sm:inline">Account</span></TabsTrigger>
