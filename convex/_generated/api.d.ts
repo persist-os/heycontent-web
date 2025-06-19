@@ -36,6 +36,7 @@ import type * as subscriptionQueries from "../subscriptionQueries.js";
 import type * as usageEvents from "../usageEvents.js";
 import type * as userMutations from "../userMutations.js";
 import type * as userQueries from "../userQueries.js";
+import type * as vectorSearch from "../vectorSearch.js";
 import type * as waitlist from "../waitlist.js";
 import type * as youtubeMutations from "../youtubeMutations.js";
 import type * as youtubeQueries from "../youtubeQueries.js";
@@ -72,6 +73,7 @@ declare const fullApi: ApiFromModules<{
   usageEvents: typeof usageEvents;
   userMutations: typeof userMutations;
   userQueries: typeof userQueries;
+  vectorSearch: typeof vectorSearch;
   waitlist: typeof waitlist;
   youtubeMutations: typeof youtubeMutations;
   youtubeQueries: typeof youtubeQueries;

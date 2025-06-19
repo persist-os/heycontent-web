@@ -27,6 +27,7 @@ export const useChat = (
     includeAnalysisInQuery,
   } = chatState
   const [referencedMessage, setReferencedMessage] = useState<Message | null>(null)
+  const [searchStatus, setSearchStatus] = useState<string>('')
   
   // Add ref to track last sent message to prevent rapid duplicates
   const lastSentMessageRef = useRef<{ content: string; timestamp: number } | null>(null);
@@ -106,20 +107,39 @@ export const useChat = (
     try {
       setIsLoading(true)
       setError(null)
+      setSearchStatus('') // Clear previous search status
 
-      // Add user message and typing indicator
+      // Add user message and enhanced typing indicator with search status
+      const typingMessage: Message = {
+        id: uuidv4(),
+        content: '...',
+        role: 'assistant',
+        timestamp: new Date().toISOString(),
+        status: 'typing',
+        chat_response: '',
+        searchStatus: ''
+      };
+
       setMessages(prev => [
         ...prev,
         newMessage,
-        {
-          id: uuidv4(),
-          content: '...',
-          role: 'assistant',
-          timestamp: new Date().toISOString(),
-          status: 'typing',
-          chat_response: ''
-        }
+        typingMessage
       ]);
+
+      // Status update callback to show search progress
+      const handleStatusUpdate = (status: string) => {
+        setSearchStatus(status);
+        console.log('🔍 Vector Search Status:', status);
+        
+        // Update the typing message with search status
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.status === 'typing' && msg.role === 'assistant' 
+              ? { ...msg, searchStatus: status }
+              : msg
+          )
+        );
+      };
 
       // Save persona conversations separately
       if (sessionId && sessionId.startsWith('persona_')) {
@@ -152,10 +172,27 @@ export const useChat = (
       console.log('Sending message with isFirstMessage:', isFirstMessage, 'backendSessionId:', backendSessionId);
 
       // Send the enhanced query to the backend (with analysis injected if enabled)
-      const data = await sendChatMessage(enhancedQuery, isFirstMessage, backendSessionId, contentContext, includeAnalysisInQuery && !!contentContext?.analysis);
+      // Now includes vector search with status updates
+      const data = await sendChatMessage(
+        enhancedQuery, 
+        isFirstMessage, 
+        backendSessionId, 
+        contentContext, 
+        includeAnalysisInQuery && !!contentContext?.analysis,
+        handleStatusUpdate // Pass status update callback
+      );
 
       // CRITICAL DEBUG: Check the raw backend response for persona flags
       console.log('🔍 useChat: RAW BACKEND RESPONSE:', JSON.stringify(data, null, 2));
+      
+      // Log vector search results if available
+      if (data.vector_search_metadata) {
+        console.log('📊 Vector Search Results Applied:', {
+          foundRelevantContent: data.vector_search_metadata.foundRelevantContent,
+          relevantItemsCount: data.vector_search_metadata.relevantItemsCount,
+          relevantContent: data.vector_search_metadata.relevantContent
+        });
+      }
       
       // Handle session ID from backend response
       console.log('[useChat] Received response:', {
@@ -163,6 +200,7 @@ export const useChat = (
         currentSessionId: sessionId,
         isFirstMessage,
         isPersonaFlow: data.metadata?.is_persona_flow,
+        hasVectorContext: !!data.vector_search_metadata,
         responseData: data
       });
 
@@ -190,6 +228,7 @@ export const useChat = (
         isFirstMessage,
         isPersonaFlow: data.metadata?.is_persona_flow,
         hasMetadata: !!data.metadata,
+        hasVectorSearchMetadata: !!data.vector_search_metadata,
         metadata: data.metadata
       });
 
@@ -198,56 +237,54 @@ export const useChat = (
         const withoutTyping = prev.filter(msg => msg.status !== 'typing');
         const newMessage: Message = {
           id: uuidv4(),
-          content: data.chat_response || data.response || '',
-          chat_response: data.chat_response || data.response || '',
-          role: 'assistant' as const,
+          content: data.chat_response,
+          role: 'assistant',
           timestamp: new Date().toISOString(),
-          // Use the most reliable session ID in this order: 
-          // 1. From backend response
-          // 2. Current session ID in state
-          // 3. Undefined as last resort
-          sessionId: data.session_id || sessionId || undefined,
-          // Get suggestions from either the root level or metadata
-          suggestions: data.suggestions || data.metadata?.suggestions || [],
-          // Properly transfer metadata from API response
-          metadata: data.metadata
+          chat_response: data.chat_response,
+          sessionId: data.session_id || sessionId,
+          metadata: data.metadata,
+          vectorSearchMetadata: data.vector_search_metadata, // Add vector search metadata
+          suggestions: data.suggestions || []
         };
-
-        // DEBUG: Log the message being added to check persona flags
-        console.log('🔍 useChat: Adding new message to state:', {
-          messageId: newMessage.id,
-          hasMetadata: !!newMessage.metadata,
-          metadata: newMessage.metadata,
-          is_persona_complete: (newMessage.metadata as any)?.is_persona_complete,
-          persona_created: (newMessage.metadata as any)?.persona_created,
-          content: newMessage.content?.substring(0, 100) + '...'
-        });
-
+        
         return [...withoutTyping, newMessage];
       });
 
-      // Only update sessionId from backend (never generate a local one for persistence)
-      // Only set sessionId if we don't already have a valid one
-      const isValidBackendSession = typeof sessionId === 'string' && sessionId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
-      if (data.session_id && !isValidBackendSession) {
-        console.log('Received session ID from API:', data.session_id);
-        setSessionId(data.session_id);
-        // Do NOT set conversationSaved(false) here; already set above after user message
-      } else if (!sessionId) {
-        // If the backend fails to return a sessionId, do not attempt to save or persist
-        console.warn('No session ID received from API. Will not persist conversation until backend provides one.');
-      } // else: do not set conversationSaved(false) again
+      // Clear search status after completion
+      setSearchStatus('');
 
-      setReferencedMessage(null)
+      // Update first message state after first successful response
+      if (isFirstMessage) {
+        console.log('[useChat] First message completed successfully, setting isFirstMessage to false');
+        setIsFirstMessage(false);
+      }
 
     } catch (error) {
-      console.error('Failed to send message:', error)
-      setMessages(prev => prev.filter(msg => msg.status !== 'typing'))
-      setError((error as Error).message)
+      console.error('Chat error:', error);
+      setError(error instanceof Error ? error.message : 'An error occurred');
+      
+      // Remove typing indicator on error
+      setMessages(prev => prev.filter(msg => msg.status !== 'typing'));
+      setSearchStatus(''); // Clear search status on error
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [referencedMessage, sessionId, messages.length, setMessages, setSessionId, setIsLoading, setError, contentContext, includeAnalysisInQuery, userId, createConversationMutation, addMessageToConversationMutation])
+  }, [
+    sessionId,
+    setSessionId,
+    messages,
+    setMessages,
+    setIsLoading,
+    setError,
+    isFirstMessage,
+    setIsFirstMessage,
+    contentContext,
+    includeAnalysisInQuery,
+    referencedMessage,
+    userId,
+    createConversationMutation,
+    addMessageToConversationMutation
+  ]);
 
   const handleMessageReference = useCallback((message: Message) => {
     setReferencedMessage(message)

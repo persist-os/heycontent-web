@@ -33,6 +33,8 @@ import { useUIEffects } from './hooks/useUIEffects'
 import { useOnboardingState } from './hooks/useOnboardingState'
 import { usePersonaData } from './hooks/usePersonaData'
 import { useAuth } from '@/app/context/auth-context'
+import { generateEmbeddingsForUser, checkUserEmbeddings, deleteAllUserEmbeddings } from './utils/api-utils';
+import { getCurrentUserId } from '@/app/lib/api-helpers';
 
 
 const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery }) => {
@@ -396,6 +398,98 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     setInputValue(cleanSuggestionText(choice));
   }, []);
 
+  const [hasStartedNewChat, setHasStartedNewChat] = useState(false);
+  const [embeddingStatus, setEmbeddingStatus] = useState<string>('');
+  const [isGeneratingEmbeddings, setIsGeneratingEmbeddings] = useState(false);
+  const [isDeletingEmbeddings, setIsDeletingEmbeddings] = useState(false);
+  const [embeddingInfo, setEmbeddingInfo] = useState<{ hasEmbeddings: boolean; count: number }>({ hasEmbeddings: false, count: 0 });
+
+  // Check for existing embeddings when component mounts or user changes
+  useEffect(() => {
+    const checkEmbeddings = async () => {
+      const currentUserId = getCurrentUserId();
+      if (currentUserId) {
+        const info = await checkUserEmbeddings(currentUserId);
+        setEmbeddingInfo(info);
+        if (info.hasEmbeddings) {
+          setEmbeddingStatus(`✅ Found ${info.count} existing embeddings`);
+        }
+      }
+    };
+
+    checkEmbeddings();
+  }, [userId]);
+
+  // Function to generate embeddings for user content
+  const handleGenerateEmbeddings = async () => {
+    const currentUserId = getCurrentUserId();
+    if (!currentUserId) {
+      setEmbeddingStatus('❌ No user ID found');
+      return;
+    }
+
+    setIsGeneratingEmbeddings(true);
+    setEmbeddingStatus('🚀 Starting embedding generation...');
+    
+    try {
+      const results = await generateEmbeddingsForUser(currentUserId);
+      
+      const convStats = `Conversations: ${results.conversations.succeeded}/${results.conversations.processed} (${results.conversations.skipped} skipped)`;
+      const noteStats = `Notes: ${results.notes.succeeded}/${results.notes.processed} (${results.notes.skipped} skipped)`;
+      
+      setEmbeddingStatus(`✅ Complete! ${convStats}, ${noteStats}`);
+      
+      // Refresh embedding info
+      const info = await checkUserEmbeddings(currentUserId);
+      setEmbeddingInfo(info);
+      
+      if (results.errors.length > 0) {
+        console.error('Embedding errors:', results.errors);
+        setEmbeddingStatus(prev => prev + ` (${results.errors.length} errors - check console)`);
+      }
+    } catch (error: any) {
+      setEmbeddingStatus(`❌ Failed: ${error.message}`);
+      console.error('Embedding generation failed:', error);
+    } finally {
+      setIsGeneratingEmbeddings(false);
+    }
+  };
+
+  // Function to delete all embeddings
+  const handleDeleteEmbeddings = async () => {
+    const currentUserId = getCurrentUserId();
+    if (!currentUserId) {
+      setEmbeddingStatus('❌ No user ID found');
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete all ${embeddingInfo.count} embeddings? This action cannot be undone.`)) {
+      return;
+    }
+
+    setIsDeletingEmbeddings(true);
+    setEmbeddingStatus('🗑️ Deleting embeddings...');
+    
+    try {
+      const result = await deleteAllUserEmbeddings(currentUserId);
+      
+      if (result.success) {
+        setEmbeddingStatus(`✅ Deleted ${result.deletedCount} embeddings`);
+        
+        // Refresh embedding info
+        const info = await checkUserEmbeddings(currentUserId);
+        setEmbeddingInfo(info);
+      } else {
+        setEmbeddingStatus(`❌ ${result.message}`);
+      }
+    } catch (error: any) {
+      setEmbeddingStatus(`❌ Failed: ${error.message}`);
+      console.error('Embedding deletion failed:', error);
+    } finally {
+      setIsDeletingEmbeddings(false);
+    }
+  };
+
   if (!user) {
     return null
   }
@@ -472,6 +566,66 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           </div>
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Embedding Generation Debug Section (temporary) */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 m-4 mb-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium text-blue-800">🔬 Vector Search Setup</h3>
+                  <p className="text-xs text-blue-600">
+                    {embeddingInfo.hasEmbeddings 
+                      ? `You have ${embeddingInfo.count} embeddings for AI-powered semantic search`
+                      : 'Generate embeddings to enable AI-powered semantic search'
+                    }
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  {embeddingInfo.hasEmbeddings ? (
+                    <>
+                      <button
+                        onClick={handleGenerateEmbeddings}
+                        disabled={isGeneratingEmbeddings}
+                        className={`px-3 py-1 text-xs rounded ${
+                          isGeneratingEmbeddings 
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                            : 'bg-green-600 text-white hover:bg-green-700'
+                        }`}
+                      >
+                        {isGeneratingEmbeddings ? 'Updating...' : 'Update Embeddings'}
+                      </button>
+                      <button
+                        onClick={handleDeleteEmbeddings}
+                        disabled={isDeletingEmbeddings || isGeneratingEmbeddings}
+                        className={`px-3 py-1 text-xs rounded ${
+                          isDeletingEmbeddings || isGeneratingEmbeddings
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                            : 'bg-red-600 text-white hover:bg-red-700'
+                        }`}
+                      >
+                        {isDeletingEmbeddings ? 'Deleting...' : 'Delete All'}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={handleGenerateEmbeddings}
+                      disabled={isGeneratingEmbeddings}
+                      className={`px-3 py-1 text-xs rounded ${
+                        isGeneratingEmbeddings 
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                    >
+                      {isGeneratingEmbeddings ? 'Generating...' : 'Generate Embeddings'}
+                    </button>
+                  )}
+                </div>
+              </div>
+              {embeddingStatus && (
+                <div className="mt-2 text-xs text-blue-700 bg-blue-100 rounded p-2">
+                  {embeddingStatus}
+                </div>
+              )}
+            </div>
+            
             <AmbientInsightsContainer 
               handleSendMessage={(msg, context) => {
                 // Start a new chat with the context from the insight

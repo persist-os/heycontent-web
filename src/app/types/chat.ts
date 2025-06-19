@@ -26,9 +26,19 @@ export interface Message {
   chat_response: string;
   suggestions?: any[];
   sessionId?: string;
+  searchStatus?: string;
   metadata?: {
     suggestions?: any[];
     [key: string]: any;
+  };
+  vectorSearchMetadata?: {
+    foundRelevantContent: boolean;
+    relevantItemsCount: number;
+    relevantContent: Array<{
+      title: string;
+      contentType: string;
+      score: number;
+    }>;
   };
   relatedInsights?: {
     type: string;
