@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AmbientInsight } from '../types';
-import { InsightIcon } from './InsightIcon';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { getApiKey } from '@/app/lib/api-helpers';
 import { Id } from '@/convex/_generated/dataModel';
-import { Lightbulb, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 // Type for the Convex response
 type ConvexInsight = {
@@ -73,7 +72,6 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
         title: item.title,
         description: item.content,
         action: item.recommendation || '',
-        icon: Lightbulb,
         id: Math.random().toString()
       }));
     }
@@ -185,9 +183,6 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
           aria-label={`${insight.title}: ${insight.description}`}
         >
           <div className="flex items-start gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 rounded-lg bg-gray-50 flex-shrink-0">
-              <InsightIcon icon={insight.icon} type={insight.type} />
-            </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-medium text-sm text-gray-900 mb-1">{insight.title}</h3>
               <p className="text-sm text-gray-600">{insight.description}</p>
