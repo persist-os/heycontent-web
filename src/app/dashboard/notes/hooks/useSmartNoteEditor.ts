@@ -201,7 +201,7 @@ export function useSmartNoteEditor({
     if (!textAreaRef.current) return;
     const start = textAreaRef.current.selectionStart || 0;
     const end = textAreaRef.current.selectionEnd || 0;
-    let newCursorPosition = start + text.length;
+    const newCursorPosition = start + text.length;
     const newContent = content.substring(0, start) + text + content.substring(end);
     setContent(newContent);
     setCursorPosition(newCursorPosition);

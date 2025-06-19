@@ -23,6 +23,8 @@ interface MessageBubbleProps {
   className?: string
   userId?: string
   onInputPopulate?: (text: string) => void
+  notepadOpen?: boolean
+  onQuoteToNotepad?: (text: string) => void
 }
 
 export function MessageBubble({
@@ -37,7 +39,9 @@ export function MessageBubble({
   onScrollToMessage,
   className = '',
   userId,
-  onInputPopulate
+  onInputPopulate,
+  notepadOpen,
+  onQuoteToNotepad
 }: MessageBubbleProps) {
   const isUser = message.role === 'user'
   const [selectedText, setSelectedText] = useState('')
@@ -131,8 +135,12 @@ export function MessageBubble({
 
   // Handle quote button click
   const handleQuoteText = () => {
-    if (selectedText && onInputPopulate) {
-      onInputPopulate(`"${selectedText}"`)
+    if (selectedText) {
+      if (notepadOpen && onQuoteToNotepad) {
+        onQuoteToNotepad(`"${selectedText}"`)
+      } else if (onInputPopulate) {
+        onInputPopulate(`"${selectedText}"`)
+      }
       setSelectedText('')
       setSelectionRect(null)
       setHighlightRects([])
@@ -192,7 +200,7 @@ export function MessageBubble({
       ))}
 
       {/* Floating Quote Button - clean and simple */}
-      {showQuoteButton && selectionRect && onInputPopulate && (
+      {showQuoteButton && selectionRect && (onInputPopulate || (notepadOpen && onQuoteToNotepad)) && (
         <div
           className="fixed z-50 pointer-events-none"
           style={{

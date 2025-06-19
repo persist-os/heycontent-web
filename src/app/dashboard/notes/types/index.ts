@@ -20,6 +20,7 @@ export interface Note {
   fields?: any;
   analysis?: any;
   titleGenerated?: boolean;
+  isLocal?: boolean;
 }
 
 export interface NoteUpdate {

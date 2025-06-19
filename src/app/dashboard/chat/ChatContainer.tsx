@@ -4,11 +4,11 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { MessageBubble } from './message-bubble'
 import { ChatInput } from './chat-input'
-import { RefreshCw, Brain, CheckCircle } from 'lucide-react'
+import { RefreshCw, Brain, CheckCircle, FileText } from 'lucide-react'
 import { useSidebar } from '@/app/context/sidebar-context'
 
 // Import types
-import { ChatScreenProps, SuggestedAction } from './types'
+import { ChatScreenProps } from './types'
 import { Message } from '@/app/types/chat'
 
 // Import components 
@@ -22,19 +22,23 @@ import ChatMessagesList from './components/ChatMessagesList'
 import ChatInputArea from './components/ChatInputArea'
 import { AmbientInsightsContainer } from './components/AmbientInsightsContainer'
 
-import { welcomeMessageSteps, getWelcomeStepMessage, welcomeSuggestions, welcomeSuggestionsWithPersona } from './data/welcome-message'
-
 // Import custom hooks
 import { useChatState } from './hooks/useChatState'
 import { useChat } from './hooks/useChat'
 import { useConversation } from './hooks/useConversation'
 import { useUIEffects } from './hooks/useUIEffects'
-
+import { useWelcomeMessage } from './hooks/useWelcomeMessage'
 import { useOnboardingState } from './hooks/useOnboardingState'
 import { usePersonaData } from './hooks/usePersonaData'
 import { useAuth } from '@/app/context/auth-context'
 import { checkUserEmbeddings } from './utils/api-utils';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
+import { useMarkdownNotepad } from './hooks/useMarkdownNotepad'
+import { useChatHandlers } from './hooks/useChatHandlers'
+import { MarkdownNotepad } from './components/MarkdownNotepad'
+import { useNotepadUI } from './hooks/useNotepadUI'
+import { NotepadToggle } from './components/NotepadToggle'
+import { useNotes } from '@/app/context/notes-context'
 
 
 const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery }) => {
@@ -48,6 +52,10 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   
   // Track which conversation has been loaded to prevent infinite loops
   const loadedConversationRef = useRef<string | null>(null)
+  const askQueryProcessedRef = useRef<string | null>(null)
+
+  // Notes context for creating local notes
+  const { createLocalNote, setActiveNoteId } = useNotes();
 
   // Initialize shared state
   const chatState = useChatState()
@@ -64,7 +72,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Add input state management
   const [inputValue, setInputValue] = useState('')
-  
+  const [useContextSearch, setUseContextSearch] = useState(true)
+
   // Function to append text to the input value
   const appendToInput = useCallback((newText: string) => {
     setInputValue(prevValue => {
@@ -72,13 +81,12 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       return prevValue + separator + newText
     })
   }, [])
-  const [useContextSearch, setUseContextSearch] = useState(true); // New state for context toggle
 
   // Utility function to clean bullet points from suggestions
   const cleanSuggestionText = (text: string): string => {
     return text
-      .replace(/^[\s]*[-*•]\s*/, '') // Remove leading bullet points (-, *, •)
-      .replace(/^[\s]*\*\s*/, '') // Remove leading asterisks
+      .replace(/^[\s]*[-*•]\s*/, '')
+      .replace(/^[\s]*\*\s*/, '')
       .trim();
   };
 
@@ -138,15 +146,38 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     }
   }, [messages, userId]);
 
-  // Track which welcome step the user is on
-  const [welcomeStep, setWelcomeStep] = useState(0);
-  
-  // Add a ref to track if askQuery has been processed to prevent duplicates
-  const askQueryProcessedRef = useRef<string | null>(null);
-
+  // Base reference click handler
   const handleReferenceClick = (messageId: string) => {
     handleReferenceClickProp(messageId)
   }
+
+  // Initialize welcome message hook
+  const {
+    welcomeStep,
+    setWelcomeStep,
+    handleSuggestionClick: handleWelcomeSuggestionClick
+  } = useWelcomeMessage(
+    welcome,
+    messages,
+    isLoading,
+    user,
+    setMessages,
+    hasPersona
+  )
+
+  // Modified suggestion click handler to use welcome message hook
+  const handleSuggestionClick = (suggestion: any, onSendMessage: (msg: string) => void) => {
+    handleWelcomeSuggestionClick(suggestion, handleSendMessage);
+  };
+
+  // Clear welcome parameter from URL
+  useEffect(() => {
+    if (welcome && messages.length === 0 && !isLoading && user) {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('welcome')
+      window.history.replaceState({}, '', url.toString())
+    }
+  }, [welcome, messages.length, isLoading, user]);
 
   // Initialize conversation hook with shared state
   const {
@@ -296,78 +327,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     }
   }, [chatId, user, authLoading, handleLoadConversation, chatState]);
 
-  // Handle welcome message for new users (multi-step)
-  useEffect(() => {
-    if (welcome && messages.length === 0 && !isLoading && user) {
-      setWelcomeStep(0);
-      setMessages([getWelcomeStepMessage(0)]);
-      // Clear the welcome parameter from URL without causing a reload
-      const url = new URL(window.location.href)
-      url.searchParams.delete('welcome')
-      window.history.replaceState({}, '', url.toString())
-    }
-  }, [user, chatId, authLoading, handleLoadConversation]);
-
-  // Modified handleSuggestionClick to send messages automatically
-  // Modified handleSuggestionClick to send messages automatically
-  const handleSuggestionClick = (suggestion, onSendMessage) => {
-    // If we're in the welcome step flow, advance the step
-    if (
-      messages.length > 0 &&
-      messages[messages.length - 1].id.startsWith('welcome-step-') &&
-      messages[messages.length - 1].role === 'assistant'
-    ) {
-      const currentStep = messages[messages.length - 1].metadata?.step || 0;
-      const isLastStep = currentStep === welcomeMessageSteps.length - 1;
-      const lastWelcomeWithSuggestions = messages[messages.length - 1].suggestions &&
-        Array.isArray(messages[messages.length - 1].suggestions) &&
-        messages[messages.length - 1].suggestions.length > 1 &&
-        messages[messages.length - 1].suggestions.includes('hey content persona');
-      // Prevent duplicate appending after the last step
-      if (isLastStep && lastWelcomeWithSuggestions) {
-        // After the last step, treat as a normal suggestion click
-        const message = typeof suggestion === 'string' ? suggestion : suggestion.description;
-        onSendMessage(message);
-        return;
-      }
-      const userMessage: Message = {
-        id: `welcome-user-${currentStep}`,
-        content: suggestion,
-        chat_response: suggestion,
-        role: 'user',
-        timestamp: new Date().toISOString(),
-        suggestions: [],
-      };
-      if (currentStep < welcomeMessageSteps.length - 1) {
-        const nextStep = currentStep + 1;
-        setWelcomeStep(nextStep);
-        setMessages(prev => [
-          ...prev,
-          userMessage,
-          { ...getWelcomeStepMessage(nextStep), role: 'assistant' }
-        ]);
-        return;
-      } else {
-        // Last step: show normal suggestions only once
-        setMessages(prev => [
-          ...prev,
-          userMessage,
-          {
-            ...getWelcomeStepMessage(currentStep),
-            role: 'assistant',
-            suggestions: hasPersona ? welcomeSuggestionsWithPersona : welcomeSuggestions,
-          },
-        ]);
-        return;
-      }
-    }
-    // Auto-send the suggestion message
-    // Auto-send the suggestion message
-    const message = typeof suggestion === 'string' ? suggestion : suggestion.description;
-    onSendMessage(cleanSuggestionText(message));
-    onSendMessage(cleanSuggestionText(message));
-  };
-
   // Autoscroll functionality
   useEffect(() => {
     if (chatContainerRef.current && messages.length > 0) {
@@ -412,6 +371,27 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   const [hasStartedNewChat, setHasStartedNewChat] = useState(false);
   const [embeddingInfo, setEmbeddingInfo] = useState<{ hasEmbeddings: boolean; count: number }>({ hasEmbeddings: false, count: 0 });
+  
+  // Replace existing notepad state with useNotepadUI
+  const {
+    isOpen: notepadOpen,
+    width: notepadWidth,
+    toggleNotepad,
+    updateWidth,
+    getMainContentStyle,
+    getNotepadStyle
+  } = useNotepadUI()
+
+  const { 
+    quotedForNotepad, 
+    handleClearQuoted, 
+    handleQuoteToNotepad, 
+    handleNotepadSendToChat,
+    createReferenceClickHandler 
+  } = useChatHandlers(handleSendMessage, handleClearReference, messages)
+
+  // Create notepad-aware reference handler
+  const notepadReferenceHandler = createReferenceClickHandler(notepadOpen, handleReferenceClick)
 
   // Check for existing embeddings when component mounts or user changes
   useEffect(() => {
@@ -438,124 +418,160 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     });
   }, []);
 
+  const handleCreateNoteFromNotepad = (content: string) => {
+    const newNoteId = createLocalNote(content);
+    if (newNoteId) {
+      setActiveNoteId(newNoteId);
+      router.push('/dashboard/notes');
+    }
+  };
+
   if (!user) {
     return null
   }
 
   return (
-    <div className="flex flex-col h-screen bg-white w-full overflow-hidden prevent-horizontal-scroll">
-      {/* Header */}
-      <ChatHeader isRefreshing={isRefreshing} onRefresh={handleRefresh} onNewChat={handleNewChat} />
+    <>
+      <div 
+        data-chat-container
+        className="flex flex-col h-screen bg-white overflow-hidden"
+        style={getMainContentStyle()}
+      >
+        {/* Header */}
+        <ChatHeader 
+          isRefreshing={isRefreshing} 
+          onNewChat={handleNewChat}
+        />
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {hasMessagesOrContext ? (
-          <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
-            <div className="p-2 sm:p-4">
-              <div className="max-w-4xl sm:max-w-6xl mx-auto space-y-3">
-                {/* Show context box when context is available */}
-                {currentContext && (
-                  currentContext.platform === 'ai-insights' ? (
-                    <AIInsightsContextBox
-                      currentContext={currentContext}
-                      messages={messages}
-                      onRemove={handleRemoveContext}
-                      includeAnalysisInQuery={includeAnalysisInQuery}
-                      onToggleAnalysis={setIncludeAnalysisInQuery}
-                      onSendMessage={handleSendMessage}
-                      onInputPopulate={handleInputAppend}
-                    />
-                  ) : (
-                    <ChatContextBox
-                      currentContext={currentContext}
-                      messages={messages}
-                      onRemove={handleRemoveContext}
-                      includeAnalysisInQuery={includeAnalysisInQuery}
-                      onToggleAnalysis={setIncludeAnalysisInQuery}
-                      onSendMessage={handleSendMessage}
-                      onInputPopulate={handleInputAppend}
-                    />
-                  )
-                )}
-                
-                <ChatMessagesList
-                  messages={messages}
-                  referencedMessage={referencedMessage}
-                  handleMessageReference={handleMessageReference}
-                  handleReferenceClick={handleReferenceClick}
-                  handleOptionClick={handleOptionClick}
-                  handleFollowUpClick={handleFollowUpPopulate}
-                  userId={userId}
-                  handleSuggestionClick={handleSuggestionClick}
-                  handleSendMessage={handleSendMessage}
-                  onInputPopulate={handleInputAppend}
-                />
-
-                {/* Show persona tip in onboarding flow when ready and at least 4 messages exist */}
-                {onboardingState.shouldShowPersonaTip && messages.length >= 4 && !onboardingState.hasCompletedPersona && (
-                  <PersonaTip
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {hasMessagesOrContext ? (
+            <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
+              <div className="p-2 sm:p-4">
+                <div className="max-w-4xl sm:max-w-6xl mx-auto space-y-3">
+                  {/* Show context box when context is available */}
+                  {currentContext && (
+                    currentContext.platform === 'ai-insights' ? (
+                      <AIInsightsContextBox
+                        currentContext={currentContext}
+                        messages={messages}
+                        onRemove={handleRemoveContext}
+                        includeAnalysisInQuery={includeAnalysisInQuery}
+                        onToggleAnalysis={setIncludeAnalysisInQuery}
+                        onSendMessage={handleSendMessage}
+                        onInputPopulate={handleInputAppend}
+                      />
+                    ) : (
+                      <ChatContextBox
+                        currentContext={currentContext}
+                        messages={messages}
+                        onRemove={handleRemoveContext}
+                        includeAnalysisInQuery={includeAnalysisInQuery}
+                        onToggleAnalysis={setIncludeAnalysisInQuery}
+                        onSendMessage={handleSendMessage}
+                        onInputPopulate={handleInputAppend}
+                      />
+                    )
+                  )}
+                  
+                  <ChatMessagesList
+                    messages={messages}
+                    referencedMessage={referencedMessage}
+                    handleMessageReference={handleMessageReference}
+                    handleReferenceClick={notepadReferenceHandler}
+                    handleOptionClick={handleOptionClick}
+                    handleFollowUpClick={handleFollowUpPopulate}
                     userId={userId}
-                    onTipClick={handleSendMessage}
+                    handleSuggestionClick={handleSuggestionClick}
+                    handleSendMessage={handleSendMessage}
+                    onInputPopulate={handleInputAppend}
+                    notepadOpen={notepadOpen}
+                    onQuoteToNotepad={handleQuoteToNotepad}
                   />
-                )}
 
-                {error && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-4">
-                    <p className="text-red-600 text-sm">{error}</p>
-                    <button
-                      onClick={() => chatState.setError(null)}
-                      className="text-xs text-red-500 hover:text-red-700 mt-1"
-                    >
-                      Dismiss
-                    </button>
-                  </div>
-                )}
+                  {/* Show persona tip in onboarding flow when ready and at least 4 messages exist */}
+                  {onboardingState.shouldShowPersonaTip && messages.length >= 4 && !onboardingState.hasCompletedPersona && (
+                    <PersonaTip
+                      userId={userId}
+                      onTipClick={handleSendMessage}
+                    />
+                  )}
+
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-4">
+                      <p className="text-red-600 text-sm">{error}</p>
+                      <button
+                        onClick={() => chatState.setError(null)}
+                        className="text-xs text-red-500 hover:text-red-700 mt-1"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* AI Intelligence Status Display (user-friendly) - Only show when no embeddings */}
-            <AmbientInsightsContainer 
-              handleSendMessage={(msg, context) => {
-                // Start a new chat with the context from the insight
-                handleNewChat();
-                setTimeout(() => {
-                  if (context) setContentContext(context);
-                  handleSendMessage(msg);
-                }, 0);
-              }}
-            />
-          </div>
+          ) : (
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {/* AI Intelligence Status Display (user-friendly) - Only show when no embeddings */}
+              <AmbientInsightsContainer 
+                handleSendMessage={(msg, context) => {
+                  // Start a new chat with the context from the insight
+                  handleNewChat();
+                  setTimeout(() => {
+                    if (context) setContentContext(context);
+                    handleSendMessage(msg);
+                  }, 0);
+                }}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Bottom Bar Actions - Only show when there are no messages */}
+        {messages.length === 0 && (
+          <BottomBarActions onActionClick={handleActionClick} onInputPopulate={handleInputAppend} />
         )}
+
+        {/* Input Bar */}
+        <div className="flex-shrink-0 border-t border-gray-100">
+          <ChatInputArea
+            showAmbient={false}
+            currentContext={currentContext}
+            handleActionClick={handleActionClick}
+            handleSendMessage={handleSendMessage}
+            inputRef={inputRef}
+            isLoading={isLoading}
+            referencedMessage={referencedMessage}
+            handleClearReference={handleClearReference}
+            includeAnalysisInQuery={includeAnalysisInQuery}
+            inputValue={inputValue}
+            onInputChange={setInputValue}
+            onInputPopulate={handleInputAppend}
+            useContextSearch={useContextSearch}
+            onToggleContextSearch={setUseContextSearch}
+            embeddingInfo={embeddingInfo}
+            notepadOpen={notepadOpen}
+            openNotepad={toggleNotepad}
+            quotedForNotepad={quotedForNotepad}
+            onClearQuoted={handleClearQuoted}
+          />
+        </div>
       </div>
 
-      {/* Bottom Bar Actions - Only show when there are no messages */}
-      {messages.length === 0 && (
-        <BottomBarActions onActionClick={handleActionClick} onInputPopulate={handleInputAppend} />
-      )}
-
-      {/* Input Bar */}
-      <div className="flex-shrink-0 border-t border-gray-100">
-        <ChatInputArea
-          showAmbient={false}
-          currentContext={currentContext}
-          handleActionClick={handleActionClick}
-          handleSendMessage={handleSendMessage}
-          inputRef={inputRef}
-          isLoading={isLoading}
-          referencedMessage={referencedMessage}
-          handleClearReference={handleClearReference}
-          includeAnalysisInQuery={includeAnalysisInQuery}
-          inputValue={inputValue}
-          onInputChange={setInputValue}
-          onInputPopulate={appendToInput}
-          useContextSearch={useContextSearch}
-          onToggleContextSearch={setUseContextSearch}
-          embeddingInfo={embeddingInfo}
-        />
-      </div>
-    </div>
+      {/* Markdown Notepad */}
+      <MarkdownNotepad
+        isOpen={notepadOpen}
+        onClose={toggleNotepad}
+        onSendToChat={handleNotepadSendToChat}
+        onCreateNote={handleCreateNoteFromNotepad}
+        quotedContent={quotedForNotepad}
+        onClearQuoted={handleClearQuoted}
+        width={notepadWidth}
+        onWidthChange={updateWidth}
+        style={getNotepadStyle()}
+      />
+    </>
   );
 }
 

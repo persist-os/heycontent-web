@@ -118,4 +118,3 @@ Follow the shared PR template.
 - PRs must be clear, linked, and reviewed
 
 Stick to the rules. Keep it clean.
-

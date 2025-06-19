@@ -2,23 +2,28 @@ import React, { useState } from 'react';
 import { ChatInput } from '../chat-input';
 import { AmbientInsights } from './AmbientInsights';
 import { BottomBarActions } from './BottomBarActions';
+import { Message } from '@/app/types/chat';
 
 interface ChatInputAreaProps {
   showAmbient: boolean;
   currentContext: any;
   handleActionClick: (action: string) => void;
-  handleSendMessage: (msg: string) => void;
+  handleSendMessage: (message: string) => void;
   inputRef: React.RefObject<HTMLTextAreaElement>;
   isLoading: boolean;
-  referencedMessage: any;
+  referencedMessage: Message | null;
   handleClearReference: () => void;
   includeAnalysisInQuery: boolean;
-  inputValue?: string;
-  onInputChange?: (value: string) => void;
-  onInputPopulate?: (action: string) => void;
-  useContextSearch?: boolean;
-  onToggleContextSearch?: (enabled: boolean) => void;
-  embeddingInfo?: { hasEmbeddings: boolean; count: number };
+  inputValue: string;
+  onInputChange: (value: string) => void;
+  onInputPopulate: (text: string) => void;
+  useContextSearch: boolean;
+  onToggleContextSearch: (enabled: boolean) => void;
+  embeddingInfo: { hasEmbeddings: boolean; count: number };
+  notepadOpen: boolean;
+  openNotepad: () => void;
+  quotedForNotepad: string | null;
+  onClearQuoted: () => void;
 }
 
 const ChatInputArea: React.FC<ChatInputAreaProps> = ({
@@ -37,6 +42,10 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   useContextSearch,
   onToggleContextSearch,
   embeddingInfo,
+  notepadOpen,
+  openNotepad,
+  quotedForNotepad,
+  onClearQuoted,
 }) => {
   // Only show ambient content when there are no messages
   const showAmbientContent = showAmbient && !currentContext;
@@ -92,6 +101,10 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
             useContextSearch={useContextSearch}
             onToggleContextSearch={onToggleContextSearch}
             embeddingInfo={embeddingInfo}
+            notepadOpen={notepadOpen}
+            openNotepad={openNotepad}
+            quotedForNotepad={quotedForNotepad}
+            onClearQuoted={onClearQuoted}
           />
         </div>
       </div>
