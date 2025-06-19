@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Instagram, Mail } from 'lucide-react';
-import { YouTubeBrandIcon } from '../../YoutubeBrandIcon';
+import { YouTubeBrandIcon } from '../../../../lib/YoutubeBrandIcon';
 
 interface AIInsightDisplayCardProps {
   context: {

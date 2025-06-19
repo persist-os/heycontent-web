@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Brain, RefreshCw, Trash2, Database, CheckCircle, Info } from 'lucide-react';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
-import { generateEmbeddingsForUser, checkUserEmbeddings, deleteAllUserEmbeddings } from '../../../chat/utils/api-utils';
+import { generateEmbeddingsForUser, checkUserEmbeddings, deleteAllUserEmbeddings } from '../../../dashboard/chat/utils/api-utils';
 
 interface EmbeddingManagementProps {
   userId?: string;

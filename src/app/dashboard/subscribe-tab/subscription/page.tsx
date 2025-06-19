@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/context/auth-context';
-import SubscriptionOverview from '@/app/dashboard/_components/settings-screen/tabs/subscription/subscription-overview';
+import SubscriptionOverview from '@/app/settings/tabs/subscription/subscription-overview';
 import { RefreshState } from '@/components/ui/refresh-state';
 
 export default function SubscriptionPage() {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Instagram, Video, Mail } from 'lucide-react';
-import { YouTubeBrandIcon } from '../../../YoutubeBrandIcon';
+import { YouTubeBrandIcon } from '../../../../lib/YoutubeBrandIcon';
 
 function YoutubePlatformIcon(props) {
   return <YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8" {...props} />;

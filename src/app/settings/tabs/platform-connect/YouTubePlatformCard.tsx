@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ConnectedAccount } from './platform-utils';
-import { YouTubeBrandIcon } from '../../../YoutubeBrandIcon';
+import { YouTubeBrandIcon } from '../../../../lib/YoutubeBrandIcon';
 
 interface YouTubePlatformCardProps {
   account: ConnectedAccount | undefined;

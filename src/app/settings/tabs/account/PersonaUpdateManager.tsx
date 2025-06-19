@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { PersonaCard } from '../../../chat/components/PersonaCard';
-import { usePersonaManager } from '../../../chat/hooks/usePersonaData';
-import { PersonaData } from '../../../chat/types';
+import { PersonaCard } from '../../../dashboard/chat/components/PersonaCard';
+import { usePersonaManager } from '../../../dashboard/chat/hooks/usePersonaData';
+import { PersonaData } from '../../../dashboard/chat/types';
 import { Edit2, Plus } from 'lucide-react';
 import { Id } from '@/convex/_generated/dataModel';
 import { PersonaEditForm } from './PersonaEditForm';

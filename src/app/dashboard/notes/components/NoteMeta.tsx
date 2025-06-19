@@ -55,6 +55,7 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onEditingTitleChange }
     <div className="pb-3">
       {isEditing ? (
         <input
+          title="Note Title"
           type="text"
           value={title}
           onChange={handleTitleChange}

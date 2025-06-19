@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import ChatScreen from '../_components/chat-screen'
+import ChatScreen from './utils/chat-screen'
 
 export default function ChatPage() {
   const searchParams = useSearchParams()
