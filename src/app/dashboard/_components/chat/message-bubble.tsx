@@ -2,7 +2,7 @@
 
 import type { Message } from '@/app/types/chat'
 import type { InteractiveOption } from './interactive-response'
-import { MessageSquare, Quote } from 'lucide-react'
+import { MessageSquare, Search, CheckCircle, Database, Quote } from 'lucide-react'
 // import { MessageSquare, Quote } from 'lucide-react'
 import { ExpandableInsights } from './expandable-insights'
 import { MarkdownRenderer } from './markdown-renderer'
@@ -234,6 +234,37 @@ export function MessageBubble({
               <div className="line-clamp-2">{message.referencedMessage.content}</div>
             </button>
           )}
+
+            {/* Vector Search Status Indicator (for typing messages with search status) */}
+            {message.status === 'typing' && message.searchStatus && (
+              <div className="flex items-center gap-2 text-xs text-gray-600 bg-blue-50 p-2 rounded-lg mb-2 border-l-2 border-blue-400">
+                <Search className="w-3 h-3 animate-pulse text-blue-500" />
+                <span>{message.searchStatus}</span>
+              </div>
+            )}
+
+            {/* Vector Search Results Summary (for completed messages) */}
+            {!isUser && message.vectorSearchMetadata?.foundRelevantContent && (
+              <div className="bg-green-50 border-l-2 border-green-400 p-2 rounded-lg mb-2">
+                <div className="flex items-center gap-2 text-xs text-green-700 font-medium mb-1">
+                  <Database className="w-3 h-3" />
+                  <span>Found {message.vectorSearchMetadata.relevantItemsCount} relevant items from your content</span>
+                </div>
+                <div className="text-xs text-gray-600">
+                  {message.vectorSearchMetadata.relevantContent.slice(0, 3).map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-1">
+                      <CheckCircle className="w-2 h-2 text-green-500" />
+                      <span className="truncate">{item.title} ({item.contentType})</span>
+                    </div>
+                  ))}
+                  {message.vectorSearchMetadata.relevantContent.length > 3 && (
+                    <div className="text-gray-500 mt-1">
+                      +{message.vectorSearchMetadata.relevantContent.length - 3} more items
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           
           {/* Message Content - Full Width */}
           <div className="w-full">

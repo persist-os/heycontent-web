@@ -359,6 +359,8 @@ export default defineSchema({
     url: v.optional(v.string()),
     analysis: v.optional(v.any()),
     analysisMarkdown: v.optional(v.string()),
+    analytics: v.optional(v.any()),
+    public_stats: v.optional(v.any()),
     snippet: v.optional(v.object({
       title: v.optional(v.string()),
       description: v.optional(v.string()),
@@ -696,4 +698,30 @@ export default defineSchema({
     .index("by_account", ["gmailAccountId"])
     .index("by_userId", ["userId"])
     .index("by_user_account", ["userId", "gmailAccountId"]),
+
+  // Vector embeddings for search
+  contentEmbeddings: defineTable({
+    userId: v.string(),
+    contentId: v.string(), // ID of the original content (conversation, post, etc.)
+    contentType: v.union(
+      v.literal("conversation"),
+      v.literal("instagram_post"),
+      v.literal("youtube_video"),
+      v.literal("gmail_thread"),
+      v.literal("note")
+    ),
+    title: v.string(),
+    content: v.string(),
+    embedding: v.array(v.float64()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_userId", ["userId"])
+  .index("by_contentType", ["contentType"])
+  .index("by_user_type", ["userId", "contentType"])
+  .vectorIndex("by_embedding", {
+    vectorField: "embedding",
+    dimensions: 768, // text-embedding-004 dimension
+    filterFields: ["userId", "contentType"],
+  }),
 });
