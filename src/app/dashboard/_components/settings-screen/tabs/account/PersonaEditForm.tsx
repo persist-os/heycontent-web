@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { PersonaData } from '../../../chat/types';
 import { Badge } from '@/components/ui/badge';
 
@@ -38,9 +38,38 @@ const EditableField = React.memo(({ label, value, onChange, isArray = false }: {
   isArray?: boolean;
 }) => {
   const displayValue = isArray && Array.isArray(value) ? value.join(', ') : String(value || '');
+  
+  // Add local state for array inputs to prevent cursor jumping
+  const [localValue, setLocalValue] = useState(displayValue);
+  
+  // Use ref to track if user is actively typing
+  const isUserTypingRef = useRef(false);
+  
+  // Update local value when external value changes (but not during user typing)
+  useEffect(() => {
+    // Only update if user is not actively typing
+    if (!isUserTypingRef.current) {
+      const newDisplayValue = isArray && Array.isArray(value) ? value.join(', ') : String(value || '');
+      setLocalValue(newDisplayValue);
+    }
+  }, [value, isArray]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(e.target.value);
+    const inputValue = e.target.value;
+    
+    // Mark that user is actively typing
+    isUserTypingRef.current = true;
+    
+    // Update local state immediately for responsive typing
+    setLocalValue(inputValue);
+    
+    // Debounce the actual state update to prevent excessive re-renders
+    onChange(inputValue);
+    
+    // Reset typing flag after a short delay
+    setTimeout(() => {
+      isUserTypingRef.current = false;
+    }, 100);
   }, [onChange]);
 
   return (
@@ -54,7 +83,7 @@ const EditableField = React.memo(({ label, value, onChange, isArray = false }: {
             <input
               id={label}
               type="text"
-              value={displayValue}
+              value={localValue} // Use local value instead of computed displayValue
               onChange={handleChange}
               className="w-full px-4 py-3 text-base bg-white border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4715C8] focus:border-[#4715C8] transition-colors"
               placeholder="Separate items with commas"
