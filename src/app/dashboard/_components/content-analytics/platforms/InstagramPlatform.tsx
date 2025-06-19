@@ -9,6 +9,7 @@ import { Calendar, Clock, BarChart3, RefreshCw, Instagram, Settings } from 'luci
 import { InstagramCard } from '../cards/InstagramCard';
 import { InstagramModal } from '../modals/InstagramModal';
 import { LoadingState } from '../loading/LoadingState';
+import { PlatformEmbeddingStatus } from '../components/PlatformEmbeddingStatus';
 import { useInstagramAnalytics } from '../hooks/useInstagramAnalytics';
 import { InstagramContentItem, AnyContentItem } from '../types';
 import { sortContent } from '../utils';
@@ -235,6 +236,13 @@ export function InstagramPlatform({ userId, selectedPlatform, isTabSwitching }: 
             {refreshing ? 'Refreshing Analytics & Posts...' : 'Refresh Analytics & Posts'}
           </Button>
         </div>
+
+        {/* Platform Embedding Status */}
+        <PlatformEmbeddingStatus 
+          platform="instagram" 
+          contentCount={displayItems.length} 
+          userId={userId} 
+        />
 
         {/* Analytics Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">

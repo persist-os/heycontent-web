@@ -16,6 +16,9 @@ interface ChatInputAreaProps {
   inputValue?: string;
   onInputChange?: (value: string) => void;
   onInputPopulate?: (action: string) => void;
+  useContextSearch?: boolean;
+  onToggleContextSearch?: (enabled: boolean) => void;
+  embeddingInfo?: { hasEmbeddings: boolean; count: number };
 }
 
 const ChatInputArea: React.FC<ChatInputAreaProps> = ({
@@ -31,6 +34,9 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   inputValue,
   onInputChange,
   onInputPopulate,
+  useContextSearch,
+  onToggleContextSearch,
+  embeddingInfo,
 }) => {
   // Only show ambient content when there are no messages
   const showAmbientContent = showAmbient && !currentContext;
@@ -83,6 +89,9 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
             }
             inputValue={inputValue}
             onInputChange={onInputChange}
+            useContextSearch={useContextSearch}
+            onToggleContextSearch={onToggleContextSearch}
+            embeddingInfo={embeddingInfo}
           />
         </div>
       </div>

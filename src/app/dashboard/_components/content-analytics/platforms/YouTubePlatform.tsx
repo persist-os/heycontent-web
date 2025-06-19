@@ -8,6 +8,7 @@ import { Settings } from 'lucide-react';
 import { YouTubeCard } from '../cards/YouTubeCard';
 import { YoutubeModal } from '../modals/YoutubeModal';
 import { LoadingState } from '../loading/LoadingState';
+import { PlatformEmbeddingStatus } from '../components/PlatformEmbeddingStatus';
 import { useYouTubeAnalytics } from '../hooks/useYouTubeAnalytics';
 import { YouTubeContentItem, AnyContentItem } from '../types';
 import { sortContent } from '../utils';
@@ -114,6 +115,13 @@ export function YouTubePlatform({ userId, selectedPlatform }: YouTubePlatformPro
 
   return (
     <>
+      {/* Platform Embedding Status */}
+      <PlatformEmbeddingStatus 
+        platform="youtube" 
+        contentCount={displayItems.length} 
+        userId={userId} 
+      />
+
       {displayItems.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
           {displayItems.map((item, index) => {
