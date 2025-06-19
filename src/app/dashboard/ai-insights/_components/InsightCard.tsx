@@ -73,11 +73,11 @@ export const InsightCard: React.FC<InsightCardProps> = ({
   // Function to navigate to chat with Gmail thread content
   const discussGmailThread = (thread: any) => {
     const context = {
-      platform: 'gmail', // Explicitly set to gmail
+      platform: 'gmail',
       contentId: thread.threadId,
       title: thread.subject || 'Email Thread',
       source: 'AI Insights - Gmail Thread',
-      originalPlatform: 'gmail', // Ensure original platform is set
+      originalPlatform: 'gmail',
       publishedAt: thread.date,
       content: {
         data: {
@@ -85,11 +85,9 @@ export const InsightCard: React.FC<InsightCardProps> = ({
           from: thread.from || 'Unknown Sender',
           snippet: thread.snippet || 'No preview available',
           threadId: thread.threadId,
-          // Add the full thread content for context
           fullContent: thread.snippet || 'No content available'
         }
       },
-      // Create a formatted analysis of the email thread
       analysis: `**Email Thread Analysis**
 
 **Subject:** ${thread.subject || 'No Subject'}
@@ -114,7 +112,7 @@ This email thread was identified as part of your ${title.toLowerCase()} opportun
       contentId: `insight-${Date.now()}`,
       title: title,
       source: 'AI Insights Dashboard',
-      originalPlatform: validatedPlatform, // Use validated platform
+      originalPlatform: validatedPlatform,
       fullInsight: {
         title,
         impact: cleanImpact,
@@ -124,7 +122,6 @@ This email thread was identified as part of your ${title.toLowerCase()} opportun
         sourceDetails,
         relatedItems
       },
-      // Create a formatted analysis of the insight (no title at the top)
       analysis: `**Platform:** ${validatedPlatform.toUpperCase()}
 **Impact:** ${cleanImpact}
 
@@ -167,56 +164,24 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
         className={`flex items-center justify-between p-4 transition-all duration-200 ${
           expanded 
             ? 'bg-heycontent-yellow/10 rounded-t-lg border-b border-heycontent-yellow/20'
-            : 'bg-white dark:bg-gray-800' // Clean white background for all cards
-        }`}
-        className={`flex items-center justify-between p-4 transition-all duration-200 ${
-          expanded 
-            ? 'bg-heycontent-yellow/10 rounded-t-lg border-b border-heycontent-yellow/20'
-            : 'bg-white dark:bg-gray-800' // Clean white background for all cards
+            : 'bg-white dark:bg-gray-800'
         }`}
       >
         <div className="flex items-center gap-3">
-          {validatedPlatform === 'youtube' ? (
-            <div className={`p-2 rounded-lg transition-all duration-200 ${
-              expanded 
-                ? 'bg-heycontent-yellow/20 dark:bg-heycontent-yellow/10'
-                : 'bg-gray-100 dark:bg-gray-700' // Consistent styling for all platforms
-            }`}>
-              {platformIcon[validatedPlatform]}
-            </div>
-            <div className={`p-2 rounded-lg transition-all duration-200 ${
-              expanded 
-                ? 'bg-heycontent-yellow/20 dark:bg-heycontent-yellow/10'
-                : 'bg-gray-100 dark:bg-gray-700' // Consistent styling for all platforms
-            }`}>
-              {platformIcon[validatedPlatform]}
-            </div>
-          ) : (
-            <div className={`p-2 rounded-lg transition-all duration-200 ${
-              expanded 
-                ? 'bg-heycontent-yellow/20 dark:bg-heycontent-yellow/10' 
-                : 'bg-gray-100 dark:bg-gray-700' // Consistent styling for all platforms
-            }`}>
-            <div className={`p-2 rounded-lg transition-all duration-200 ${
-              expanded 
-                ? 'bg-heycontent-yellow/20 dark:bg-heycontent-yellow/10' 
-                : 'bg-gray-100 dark:bg-gray-700' // Consistent styling for all platforms
-            }`}>
-              {platformIcon[validatedPlatform]}
-            </div>
-          )}
+          <div className={`p-2 rounded-lg transition-all duration-200 ${
+            expanded 
+              ? 'bg-heycontent-yellow/20 dark:bg-heycontent-yellow/10'
+              : 'bg-gray-100 dark:bg-gray-700'
+          }`}>
+            {platformIcon[validatedPlatform]}
+          </div>
           <div>
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-medium text-text-dark dark:text-white">{title}</h3>
               <span className={`px-2 py-0.5 text-xs font-medium rounded-full capitalize transition-all duration-200 ${
                 expanded 
                   ? 'bg-heycontent-yellow/30 dark:bg-heycontent-yellow/20 text-text-dark dark:text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-text-dark dark:text-white' // Consistent badge styling
-              }`}>
-              <span className={`px-2 py-0.5 text-xs font-medium rounded-full capitalize transition-all duration-200 ${
-                expanded 
-                  ? 'bg-heycontent-yellow/30 dark:bg-heycontent-yellow/20 text-text-dark dark:text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-text-dark dark:text-white' // Consistent badge styling
+                  : 'bg-gray-100 dark:bg-gray-700 text-text-dark dark:text-white'
               }`}>
                 {validatedPlatform}
               </span>
@@ -283,7 +248,6 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
                     if (onActionStepClick) {
                       onActionStepClick(step);
                     } else {
-                      // Get additional context from why now and expected outcome
                       const additionalContext = [
                         `Platform: ${validatedPlatform.toUpperCase()}`,
                         `Insight: ${title}`,
@@ -292,7 +256,6 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
                         `Expected Outcome: ${expectedOutcome}`
                       ].join('\n');
                       
-                      // Use the custom hook to navigate to chat with rich context
                       discussActionStep(step, title, validatedPlatform, additionalContext);
                     }
                   }}
@@ -343,10 +306,8 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
                 discussFullInsight();
               }}
               className="flex-1 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black"
-              className="flex-1 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black"
             >
               <MessageSquare className="w-4 h-4 mr-2" />
-              Discuss With Content
               Discuss With Content
             </Button>
             

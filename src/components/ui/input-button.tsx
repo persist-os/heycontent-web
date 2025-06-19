@@ -19,7 +19,6 @@ export const InputButton: React.FC<InputButtonProps> = ({
   variant = 'ghost',
   showText = false,
   tooltipText = 'Add to input'
-  tooltipText = 'Add to input'
 }) => {
   const [populated, setPopulated] = useState(false);
 
@@ -36,9 +35,8 @@ export const InputButton: React.FC<InputButtonProps> = ({
         handleInputPopulate();
       }}
       className={`
-        opacity-60 hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700
-        ${populated ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}
-        opacity-60 hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700
+        opacity-60 hover:opacity-100 transition-opacity duration-200 
+        p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700
         ${populated ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}
         ${className}
       `}

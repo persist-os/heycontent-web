@@ -453,8 +453,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
             <div className="p-2 sm:p-4">
               <div className="max-w-4xl sm:max-w-6xl mx-auto space-y-3">
-            <div className="p-2 sm:p-4">
-              <div className="max-w-4xl sm:max-w-6xl mx-auto space-y-3">
                 {/* Show context box when context is available */}
                 {currentContext && (
                   currentContext.platform === 'ai-insights' ? (
@@ -580,7 +578,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         />
       </div>
     </div>
-  )
+  );
 }
 
-export default ChatContainer 
+export default ChatContainer; 
