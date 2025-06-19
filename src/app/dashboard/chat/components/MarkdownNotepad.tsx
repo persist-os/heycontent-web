@@ -184,7 +184,7 @@ export function MarkdownNotepad({ isOpen, onClose, onSendToChat, quotedContent, 
       </div>
 
       {/* Editor */}
-      <div className="flex-1 p-4">
+      <div className="flex-1">
         <textarea
           ref={textareaRef}
           value={content}
@@ -195,7 +195,7 @@ export function MarkdownNotepad({ isOpen, onClose, onSendToChat, quotedContent, 
 > quotes and lists supported
 
 Referenced messages appear here when notepad is open."
-          className="w-full h-full bg-transparent border-0 outline-0 resize-none font-mono text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 leading-relaxed"
+          className="w-full h-full resize-none p-4 text-base leading-relaxed border-0 focus:outline-none focus:ring-0 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
         />
       </div>
 
