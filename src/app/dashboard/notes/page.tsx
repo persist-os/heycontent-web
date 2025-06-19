@@ -1,4 +1,4 @@
-import SmartNotes from '../_components/smart-notes';
+import SmartNotes from './index';
 
 export default function NotesPage() {
   return <SmartNotes />;

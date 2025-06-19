@@ -8,7 +8,7 @@ import { YouTubeContentItem } from '../types';
 import { getMetricsDisplay } from '../utils';
 import { Button } from '@/components/ui/button';
 import { MarkdownRenderer } from '../../chat/markdown-renderer';
-import { YouTubeBrandIcon } from '../../YoutubeBrandIcon';
+import { YouTubeBrandIcon } from '../../../../lib/YoutubeBrandIcon';
 import { ThreeColumnHeader } from '@/components/ui/ThreeColumnHeader';
 
 interface YoutubeModalProps {

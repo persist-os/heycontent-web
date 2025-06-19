@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { RefreshCw, AlertCircle, Settings } from 'lucide-react'
 import { InsightCard } from '../InsightCard'
 import { useYouTubeInsights } from '../hooks/useYouTubeInsights'
-import { YouTubeBrandIcon } from '../../../_components/YoutubeBrandIcon'
+import { YouTubeBrandIcon } from '../../../../../lib/YoutubeBrandIcon'
 import { RefreshState } from '@/components/ui/refresh-state'
 
 interface YouTubePlatformProps {

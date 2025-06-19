@@ -12,7 +12,7 @@ import { PlatformEmbeddingStatus } from '../components/PlatformEmbeddingStatus';
 import { useYouTubeAnalytics } from '../hooks/useYouTubeAnalytics';
 import { YouTubeContentItem, AnyContentItem } from '../types';
 import { sortContent } from '../utils';
-import { YouTubeBrandIcon } from '../../YoutubeBrandIcon';
+import { YouTubeBrandIcon } from '../../../../lib/YoutubeBrandIcon';
 
 interface YouTubePlatformProps {
   userId: string;

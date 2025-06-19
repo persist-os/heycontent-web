@@ -6,7 +6,7 @@ import { useAuth } from '@/app/context/auth-context';
 import { WaitlistButton } from '@/app/waitlist/_components/WaitlistButton';
 
 import WaitlistScreen from "./waitlist-screen";
-import UpgradeModal from "@/app/dashboard/_components/settings-screen/tabs/subscription/upgrade-modal";
+import UpgradeModal from "@/app/settings/tabs/subscription/upgrade-modal";
 import { RegistrationForm } from './steps/RegistrationForm';
 
 interface RegisterScreenProps {

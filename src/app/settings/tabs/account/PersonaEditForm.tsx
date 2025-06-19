@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
-import { PersonaData } from '../../../chat/types';
+import { PersonaData } from '../../../dashboard/chat/types';
 import { Badge } from '@/components/ui/badge';
 
 interface PersonaEditFormProps {

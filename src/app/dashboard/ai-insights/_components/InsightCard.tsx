@@ -1,6 +1,6 @@
 import React from 'react';
 import { Instagram, Mail, ChevronRight, ArrowRight, MessageSquare } from 'lucide-react';
-import { YouTubeBrandIcon } from '../../_components/YoutubeBrandIcon';
+import { YouTubeBrandIcon } from '../../../../lib/YoutubeBrandIcon';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useActionStepDiscussion } from './hooks/useActionStepDiscussion';

@@ -2,7 +2,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { MessageSquare, ThumbsUp, PlayCircle, Eye, Clock, BarChart3, RefreshCw } from 'lucide-react';
 import { useYouTubeRefresh } from '@/app/hooks/useYouTubeRefresh';
-import { YouTubeBrandIcon } from '../../YoutubeBrandIcon';
+import { YouTubeBrandIcon } from '../../../../lib/YoutubeBrandIcon';
 
 import { YouTubeContentItem } from '../types';
 

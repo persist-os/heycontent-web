@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import SettingScreen from './settings-screen/SettingsScreen'
+import SettingScreen from '../SettingsScreen'
 
 const SettingsScreen: React.FC = () => {
   return <SettingScreen/>

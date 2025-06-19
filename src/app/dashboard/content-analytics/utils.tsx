@@ -1,6 +1,6 @@
 import React from 'react';
 import { Instagram, Mail } from 'lucide-react';
-import { YouTubeBrandIcon } from '../YoutubeBrandIcon';
+import { YouTubeBrandIcon } from '../../../lib/YoutubeBrandIcon';
 import { 
   AnyContentItem, 
   SortOption, 
