@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2 } from 'lucide-react';
+import { RefreshState } from '@/components/ui/refresh-state';
 
 interface LoadingStateProps {
   type: 'auth' | 'content' | 'error';
@@ -14,27 +14,36 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
     switch(type) {
       case 'auth':
         return (
-          <>
-            <Loader2 className="w-8 h-8 animate-spin" />
-            <span className="ml-2">Authenticating...</span>
-          </>
+          <RefreshState
+            title="Authenticating..."
+            quote="Verifying your credentials"
+          />
         );
       case 'content':
         return (
-          <>
-            <Loader2 className="w-8 h-8 animate-spin" />
-            <span className="ml-2">Loading content...</span>
-          </>
+          <RefreshState
+            title="Loading content..."
+            quote={message || "Fetching your content"}
+          />
         );
       case 'error':
-        return <span>{message || 'Please log in to view content analytics.'}</span>;
+        return (
+          <div className="text-center text-gray-600">
+            {message || 'Please log in to view content analytics.'}
+          </div>
+        );
       default:
-        return <span>Loading...</span>;
+        return (
+          <RefreshState
+            title="Loading..."
+            quote="Please wait"
+          />
+        );
     }
   };
 
   return (
-    <div className="flex items-center justify-center h-screen">
+    <div className="h-screen flex items-center justify-center">
       {getContent()}
     </div>
   );

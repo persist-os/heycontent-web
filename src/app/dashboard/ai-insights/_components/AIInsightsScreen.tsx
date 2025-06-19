@@ -15,6 +15,9 @@ import { useYouTubeInsights } from './hooks/useYouTubeInsights'
 import { useInstagramInsights } from './hooks/useInstagramInsights'
 import { useGmailInsights } from './hooks/useGmailInsights'
 
+// Import RefreshState component
+import { RefreshState } from '@/components/ui/refresh-state'
+
 export function AIInsightsScreen() {
   const [activeTab, setActiveTab] = useState('youtube')
   const [currentQuote, setCurrentQuote] = useState<string>('')
@@ -34,7 +37,6 @@ export function AIInsightsScreen() {
     "The artists today that are making it realize that it's about creating a continuous engagement with their fans. — Daniel Ek",
     "Without big data, you are blind and deaf and in the middle of a freeway. — Geoffrey Moore",
     "Data is the new oil. — Clive Humby",
-    "Data are just summaries of thousands of stories—tell a few of those stories to help make the data meaningful. — Dan Heath",
     "Data helps solve problems. — Anne Wojcicki",
     "Data visualization is language. It's a means to convey an opinion or argument. — Kim Rees"
   ];  
@@ -52,6 +54,36 @@ export function AIInsightsScreen() {
       if (interval) clearInterval(interval);
     };
   }, []);
+
+  // Check if any platform is loading
+  const isLoading = youtubeHook.loading || instagramHook.loading || gmailHook.loading;
+
+  if (isLoading) {
+    return (
+      <div className="relative h-full">
+        <div className="shrink-0 px-6 py-4 bg-white dark:bg-gray-900">
+          <div className="flex justify-between items-center">
+            <div className="w-[100px] sm:w-[24px]"></div>
+            <div className="flex-1 flex justify-center sm:justify-start">
+              <div className="text-center sm:text-left">
+                <h1 className="text-base font-medium text-black dark:text-white">AI Insights</h1>
+                <p className="text-text-gray dark:text-gray-400">
+                  <span className="hidden sm:inline">Personalized recommendations for your content strategy</span>
+                </p>
+              </div>
+            </div>
+            <div className="w-[100px] sm:w-auto"></div>
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <RefreshState
+            title="Loading insights..."
+            quote={currentQuote}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative">

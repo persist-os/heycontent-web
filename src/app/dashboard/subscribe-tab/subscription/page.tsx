@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/context/auth-context';
 import SubscriptionOverview from '@/app/dashboard/_components/settings-screen/tabs/subscription/subscription-overview';
+import { RefreshState } from '@/components/ui/refresh-state';
 
 export default function SubscriptionPage() {
   const router = useRouter();
@@ -19,8 +20,11 @@ export default function SubscriptionPage() {
   // Show loading state while checking auth
   if (authLoading || !firebaseUser) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
+      <div className="min-h-screen">
+        <RefreshState
+          title="Loading subscription..."
+          quote="Checking your subscription status"
+        />
       </div>
     );
   }

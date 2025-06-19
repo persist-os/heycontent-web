@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AmbientInsight } from '../types';
-import { InsightIcon } from './InsightIcon';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { getApiKey } from '@/app/lib/api-helpers';
 import { Id } from '@/convex/_generated/dataModel';
-import { Lightbulb, Loader2 } from 'lucide-react';
+import { RefreshState } from '@/components/ui/refresh-state';
 
 // Type for the Convex response
 type ConvexInsight = {
@@ -15,12 +14,16 @@ type ConvexInsight = {
   recommendation: string;
 };
 
-
+// Extend AmbientInsight to make icon optional
+type InsightWithOptionalIcon = Omit<AmbientInsight, 'icon'> & { 
+  icon?: AmbientInsight['icon'];
+  id: string;
+};
 
 interface AmbientInsightsProps {
   loading?: boolean;
   error?: string | null;
-  onInsightClick?: (action: string, insight: AmbientInsight) => void;
+  onInsightClick?: (action: string, insight: InsightWithOptionalIcon) => void;
 }
 
 export const AmbientInsights: React.FC<AmbientInsightsProps> = ({ 
@@ -63,7 +66,7 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
   console.log('AmbientInsights: Current userId:', userId);
 
   // Map Convex data to insights format
-  const insights = useMemo<Array<AmbientInsight & { id: string }>>(() => {
+  const insights = useMemo<InsightWithOptionalIcon[]>(() => {
     console.log('AmbientInsights: Mapping insights. Convex data:', convexInsights);
 
     if (convexInsights && Array.isArray(convexInsights.data) && convexInsights.data.length > 0) {
@@ -73,7 +76,6 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
         title: item.title,
         description: item.content,
         action: item.recommendation || '',
-        icon: Lightbulb,
         id: Math.random().toString()
       }));
     }
@@ -159,15 +161,11 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
   if (!insights || insights.length === 0) {
     console.log('AmbientInsights: No insights available, showing loading state');
     return (
-      <div className="flex flex-col items-center justify-center py-12 px-4 max-w-5xl mx-auto">
-        <div className="flex items-center justify-center mb-4">
-          <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
-        </div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2 text-center">Generating insights for you...</h3>
-        <p className="text-sm text-gray-600 text-center max-w-md">
-          We're analyzing your content and preferences to create personalized insights.
-          This may take a moment.
-        </p>
+      <div className="max-w-5xl mx-auto">
+        <RefreshState
+          title="Generating insights for you..."
+          quote="We're analyzing your content and preferences to create personalized insights."
+        />
       </div>
     );
   }
@@ -185,9 +183,6 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
           aria-label={`${insight.title}: ${insight.description}`}
         >
           <div className="flex items-start gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 rounded-lg bg-gray-50 flex-shrink-0">
-              <InsightIcon icon={insight.icon} type={insight.type} />
-            </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-medium text-sm text-gray-900 mb-1">{insight.title}</h3>
               <p className="text-sm text-gray-600">{insight.description}</p>
