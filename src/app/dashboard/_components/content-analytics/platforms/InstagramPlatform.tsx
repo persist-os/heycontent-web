@@ -16,7 +16,6 @@ import { sortContent } from '../utils';
 interface InstagramPlatformProps {
   userId: string;
   selectedPlatform: 'instagram' | 'all';
-  isTabSwitching?: boolean;
 }
 
 // Skeleton Components
@@ -74,7 +73,7 @@ const PieChartSkeleton = memo(() => (
   </Card>
 ));
 
-export function InstagramPlatform({ userId, selectedPlatform, isTabSwitching }: InstagramPlatformProps) {
+export function InstagramPlatform({ userId, selectedPlatform }: InstagramPlatformProps) {
   const router = useRouter();
   const [selectedContent, setSelectedContent] = useState<InstagramContentItem | null>(null);
   
@@ -176,8 +175,22 @@ export function InstagramPlatform({ userId, selectedPlatform, isTabSwitching }: 
     }
   };
 
-  // Show skeleton on initial tab switch or while loading (only if connected)
-  if (isTabSwitching || (loading && instagramAccount !== null)) {
+  // Show skeleton only when we're loading and have no cached data to display
+  const shouldShowSkeleton = loading && !analysis && instagramAccount !== null;
+  
+  // Debug: Log analysis data to see what's cached
+  console.log('🔍 Instagram Platform Debug:', {
+    loading,
+    hasAnalysis: !!analysis,
+    analysis,
+    shouldShowSkeleton,
+    hasLastPost: !!analysis?.last_post,
+    hasPostingFreq: !!analysis?.posting_frequency,
+    hasMediaDist: !!analysis?.media_distribution,
+    instagramAccount: !!instagramAccount
+  });
+  
+  if (shouldShowSkeleton) {
     return (
       <div className="space-y-6 mb-8">
         {/* Header with Refresh Button */}
@@ -188,7 +201,7 @@ export function InstagramPlatform({ userId, selectedPlatform, isTabSwitching }: 
             className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm ml-auto"
           >
             <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-            Loading Analytics & Posts...
+            Loading Analytics...
           </Button>
         </div>
 
@@ -240,7 +253,7 @@ export function InstagramPlatform({ userId, selectedPlatform, isTabSwitching }: 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
           
           {/* Last Post Card */}
-          {analysis.last_post && (
+          {analysis?.last_post && (
             <Card className="p-6 bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl hover:shadow-xl transition-all duration-300">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -271,7 +284,7 @@ export function InstagramPlatform({ userId, selectedPlatform, isTabSwitching }: 
           )}
 
           {/* Posting Frequency Card */}
-          {analysis.posting_frequency && (
+          {analysis?.posting_frequency && (
             <Card className="p-6 bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl hover:shadow-xl transition-all duration-300">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -317,7 +330,7 @@ export function InstagramPlatform({ userId, selectedPlatform, isTabSwitching }: 
           )}
 
           {/* Media Distribution Card with Pie Chart */}
-          {analysis.media_distribution && mediaDistributionData.length > 0 && (
+          {analysis?.media_distribution && mediaDistributionData.length > 0 && (
             <Card className="p-6 bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl hover:shadow-xl transition-all duration-300">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
