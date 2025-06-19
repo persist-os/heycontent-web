@@ -734,6 +734,32 @@ app.post("/api/users/:id/youtube/channel", async (c) => {
   }
 });
 
+// Store individual YouTube video data
+app.post("/api/users/:id/youtube/videos", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { videoId, videoData } = await c.req.json();
+  
+  if (!videoId || !videoData) {
+    return c.json({ success: false, error: "Missing required fields: videoId and videoData" }, 400);
+  }
+
+  try {
+    const result = await ctx.runMutation(api.youtubeMutations.storeVideoData, { 
+      userId, 
+      videoId, 
+      videoData 
+    });
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error("Failed to store YouTube video data:", error);
+    return c.json({ 
+      success: false, 
+      error: `Failed to store YouTube video data: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    }, 500);
+  }
+});
+
 // Get stored videos for a channel
 app.get("/api/users/:id/youtube/channels/:channelId/videos", async (c) => {
   const ctx = c.env;
@@ -829,6 +855,19 @@ try {
 }
 });
 
+// Get Instagram account data for a user
+app.get("/api/users/:id/instagram/account", async (c) => {
+const ctx = c.env;
+const userId = c.req.param("id");
+try {
+    const account = await ctx.runQuery(api.instagramQueries.getInstagramAccount, { userId });
+    return c.json({ success: true, account });
+} catch (error) {
+    console.error("Failed to get Instagram account:", error);
+    return c.json({ success: false, error: "Failed to retrieve Instagram account" }, 500);
+}
+});
+
 // Update Instagram token
 app.post("/api/users/:id/instagram/token", async (c) => {
 const ctx = c.env;
@@ -892,6 +931,48 @@ app.post("/api/users/:id/instagram/posts/bulk", async (c) => {
   }
 
   return c.json({ success: true, results });
+});
+
+// Store a single Instagram post
+app.post("/api/users/:id/instagram/posts/single", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { instagramAccountId, postData } = await c.req.json();
+
+  if (!postData || typeof postData !== 'object') {
+    return c.json({ success: false, error: "No post data provided" }, 400);
+  }
+
+  if (!postData.id) {
+    return c.json({ success: false, error: "Missing post id" }, 400);
+  }
+
+  if (!instagramAccountId) {
+    return c.json({ success: false, error: "Missing instagramAccountId" }, 400);
+  }
+
+  try {
+    const result = await ctx.runMutation(api.instagramMutations.storePostData, {
+      userId,
+      postId: postData.id,
+      instagramAccountId,
+      postData,
+    });
+    
+    return c.json({ 
+      success: true, 
+      status: result.status, 
+      postId: postData.id,
+      internalId: result.postId 
+    });
+  } catch (error) {
+    console.error(`Error storing single Instagram post ${postData.id}:`, error);
+    return c.json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : "Unknown error",
+      postId: postData.id 
+    }, 500);
+  }
 });
 
 // Store Instagram profile data

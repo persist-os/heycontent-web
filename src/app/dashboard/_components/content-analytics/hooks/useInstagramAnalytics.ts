@@ -89,7 +89,7 @@ export function useInstagramAnalytics(userId?: string) {
         };
 
         return {
-          id: `instagram-${postId}`,
+          id: postId,
           platform: 'instagram',
           publishedAt: post.data.timestamp ? new Date(post.data.timestamp).toISOString() : new Date().toISOString(),
           content: {

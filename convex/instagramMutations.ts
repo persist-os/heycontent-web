@@ -559,10 +559,8 @@ export const storeInstagramTrackerAnalysis = mutation({
       // Check if analysis already exists
       const existingAnalysis = await ctx.db
         .query("instagramTrackerAnalysis")
-        .withIndex("by_user_account", q => 
-          q.eq("userId", userId)
-           .eq("instagramAccountId", instagramAccountId)
-        )
+        .withIndex("by_userId", q => q.eq("userId", userId))
+        .filter(q => q.eq(q.field("instagramAccountId"), instagramAccountId))
         .first();
 
       if (existingAnalysis) {
@@ -605,10 +603,8 @@ export const storeInstagramBatchAnalysis = mutation({
       // Check if batch analysis already exists
       const existingAnalysis = await ctx.db
         .query("instagramBatchAnalysis")
-        .withIndex("by_user_account", q => 
-          q.eq("userId", userId)
-           .eq("instagramAccountId", instagramAccountId)
-        )
+        .withIndex("by_userId", q => q.eq("userId", userId))
+        .filter(q => q.eq(q.field("instagramAccountId"), instagramAccountId))
         .first();
 
       if (existingAnalysis) {

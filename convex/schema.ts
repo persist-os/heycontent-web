@@ -433,6 +433,8 @@ export default defineSchema({
         })),
       }))),
     })),
+    analytics: v.optional(v.any()),
+    public_stats: v.optional(v.any()),
     createdAt: v.optional(v.float64()),
     updatedAt: v.optional(v.float64()),
   })
@@ -631,8 +633,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
   .index("by_userId", ["userId"])
-  .index("by_instagramAccountId", ["instagramAccountId"])
-  .index("by_user_account", ["userId", "instagramAccountId"]),
+  .index("by_instagramAccountId", ["instagramAccountId"]),
 
   instagramTrackerAnalysis: defineTable({
     userId: v.string(),
@@ -642,8 +643,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
   .index("by_userId", ["userId"])
-  .index("by_account", ["instagramAccountId"])
-  .index("by_user_account", ["userId", "instagramAccountId"]),
+  .index("by_account", ["instagramAccountId"]),
 
   // Usage Events
   usageEvents: defineTable({

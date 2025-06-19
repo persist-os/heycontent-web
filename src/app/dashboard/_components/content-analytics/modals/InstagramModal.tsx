@@ -53,7 +53,7 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
     api.instagramQueries.getPostAnalysis, 
     userId && postId ? {
       userId: userId,
-      postId: postId
+      postId: postId // Use post ID directly - no prefix logic needed
     } : 'skip'
   ) as StoredAnalysis | null;
 
@@ -121,19 +121,29 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
 
       if (markdownData) {
         dataToStore.markdown = markdownData;
+        console.log('📝 Storing markdown data:', markdownData.substring(0, 100) + '...');
       }
 
       if (analysisData) {
         dataToStore.analysis = analysisData;
+        console.log('📊 Storing analysis data:', analysisData);
       }
+
+      console.log('💾 Final data structure being stored:', {
+        hasMarkdown: !!dataToStore.markdown,
+        hasAnalysis: !!dataToStore.analysis,
+        markdownLength: dataToStore.markdown?.length || 0,
+        analysisKeys: dataToStore.analysis ? Object.keys(dataToStore.analysis) : 'none',
+        dataToStore: dataToStore
+      });
 
       await storeAnalysisMutation({
         userId: userId,
-        postId: postId,
+        postId: postId, // Use post ID directly - no prefix needed since we have dedicated table
         analysisData: dataToStore
       });
 
-      console.log('Instagram analysis stored successfully in Convex');
+      console.log('Instagram analysis stored successfully in Convex with post ID:', postId);
     } catch (error) {
       console.error('Error storing Instagram analysis in Convex:', error);
       // Don't throw - storage failure shouldn't break the analysis display
@@ -158,23 +168,19 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
         throw new Error('Invalid API key format');
       }
 
-      // Strip "instagram-" prefix from post ID for backend compatibility
-      const cleanPostId = postId.startsWith('instagram-') ? postId.replace('instagram-', '') : postId;
-
       const apiUrl = `${window.location.origin}/api/social/instagram/analyze`;
       
       // Prepare the request body
       const requestBody = {
         user_id: extractedUserId,
-        post_id: cleanPostId, // Use cleaned post ID without "instagram-" prefix
+        post_id: postId, // Use post ID directly - no cleaning needed
         format: 'both' // Request both JSON and markdown format
       };
       
       // Debug logging to see exactly what we're sending
       console.log('🚀 Instagram Analysis Request Debug:');
       console.log('📡 URL:', apiUrl);
-      console.log('📦 Original Post ID:', postId);
-      console.log('🧹 Cleaned Post ID:', cleanPostId);
+      console.log('📦 Post ID:', postId);
       console.log('📦 Request Body:', requestBody);
       
       const response = await fetch(apiUrl, {
@@ -193,7 +199,14 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
         status: response.status,
         responseData: responseData,
         hasMarkdown: !!responseData.data?.markdown,
-        hasJson: !!responseData.data?.json || !!responseData.data
+        hasJson: !!responseData.data?.json || !!responseData.data,
+        dataStructure: {
+          topLevel: Object.keys(responseData),
+          dataLevel: responseData.data ? Object.keys(responseData.data) : 'no data field',
+          markdownType: typeof responseData.data?.markdown,
+          jsonType: typeof responseData.data?.json,
+          directAnalysisType: typeof responseData.analysis
+        }
       });
       
       if (!response.ok) {
@@ -206,23 +219,39 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
       
       if (responseData.status === 'success') {
         // For 'both' format, check for nested data structure
-        if (responseData.data?.markdown) {
-          analysisContent = responseData.data.markdown;
-        } else if (responseData.data?.json) {
-          // If we have separate json/markdown fields
+        if (responseData.data?.markdown && responseData.data?.json) {
+          // Expected format for 'both': { data: { json: {...}, markdown: "..." } }
           analysisData = responseData.data.json;
-          analysisContent = responseData.data.markdown || '';
-        } else if (responseData.data) {
-          // If data field contains the analysis directly
+          analysisContent = responseData.data.markdown;
+          console.log('✅ Found both JSON and markdown in responseData.data');
+        } else if (responseData.data?.markdown) {
+          // Markdown only format
+          analysisContent = responseData.data.markdown;
+          console.log('✅ Found markdown in responseData.data');
+        } else if (responseData.data?.json) {
+          // JSON only format  
+          analysisData = responseData.data.json;
+          console.log('✅ Found JSON in responseData.data');
+        } else if (responseData.data && typeof responseData.data === 'object' && !responseData.data.markdown && !responseData.data.json) {
+          // If data field contains the analysis directly (fallback for JSON format)
           analysisData = responseData.data;
+          console.log('✅ Using responseData.data directly as analysis');
         }
         
-        // Also check for direct markdown field (backup)
+        // Also check for direct markdown field at top level (backup)
         if (!analysisContent && responseData.markdown) {
           analysisContent = responseData.markdown;
+          console.log('✅ Found markdown at top level');
+        }
+        
+        // Also check for direct data as analysis at top level (backup)
+        if (!analysisData && responseData.analysis) {
+          analysisData = responseData.analysis;
+          console.log('✅ Found analysis at top level');
         }
         
         if (!analysisContent && !analysisData) {
+          console.error('❌ No valid analysis data found in response:', responseData);
           throw new Error('No analysis data received');
         }
       } else {
