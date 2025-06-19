@@ -7,7 +7,7 @@ import { Message } from '@/app/types'
 interface ChatInputProps {
   onSend: (message: string) => void
   isLoading?: boolean
-  inputRef?: React.RefObject<HTMLInputElement>
+  inputRef?: React.RefObject<HTMLTextAreaElement>
   maxLength?: number
   referencedMessage?: Message | null
   onClearReference?: () => void
@@ -56,7 +56,8 @@ export function ChatInput({
   const [input, setInput] = useState('')
   const [placeholder, setPlaceholder] = useState(placeholders[0])
   const [showFullReply, setShowFullReply] = useState(false)
-  const textAreaRef = useRef<HTMLTextAreaElement>(null)
+  const internalInputRef = useRef<HTMLTextAreaElement>(null)
+  const textareaRef = inputRef || internalInputRef
 
   // Use external input value if provided, otherwise use internal state
   const currentInput = inputValue !== undefined ? inputValue : input
@@ -90,39 +91,41 @@ export function ChatInput({
 
   // Auto-resize textarea
   useEffect(() => {
-    if (textAreaRef.current) {
-      textAreaRef.current.style.height = 'auto'
-      textAreaRef.current.style.height = `${textAreaRef.current.scrollHeight}px`
+    const textarea = textareaRef.current
+    if (textarea) {
+      textarea.style.height = 'auto'
+      const scrollHeight = Math.min(textarea.scrollHeight, 120) // Max height of ~3 lines
+      textarea.style.height = `${scrollHeight}px`
     }
-  }, [currentInput])
+  }, [currentInput, textareaRef])
 
   // Auto-focus effect
   useEffect(() => {
-    if (autoFocus && textAreaRef.current && !isLoading) {
-      textAreaRef.current.focus()
+    if (autoFocus && textareaRef.current && !isLoading) {
+      textareaRef.current.focus()
     }
-  }, [autoFocus, isLoading, referencedMessage])
+  }, [autoFocus, isLoading, referencedMessage, textareaRef])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (currentInput.trim() && !isLoading && currentInput.length <= maxLength) {
       onSend(currentInput.trim())
       setCurrentInput('')
-      // Reset textarea height
-      if (textAreaRef.current) {
-        textAreaRef.current.style.height = 'auto'
-        // Auto-focus after sending
-        setTimeout(() => {
-          textAreaRef.current?.focus()
-        }, 0)
-      }
     }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSubmit(e)
+    if (e.key === 'Enter') {
+      if (e.shiftKey) {
+        // Allow new line with Shift+Enter
+        return
+      } else {
+        // Send message with Enter
+        e.preventDefault()
+        if (!currentInput.trim() || isLoading || characterCount >= maxLength) return
+        onSend(currentInput.trim())
+        setCurrentInput('')
+      }
     }
   }
 
@@ -130,9 +133,23 @@ export function ChatInput({
   const isNearLimit = characterCount > maxLength * 0.8
   const isAtLimit = characterCount >= maxLength
 
+  // Dynamic placeholder based on context
+  let contextPlaceholder = placeholder
+  if (hasContext && contextPlatform) {
+    if (contextPlatform === 'ai-insights') {
+      contextPlaceholder = "Ask about these insights..."
+    } else if (contextPlatform === 'smart-notes') {
+      contextPlaceholder = "Ask about your notes..."
+    } else {
+      contextPlaceholder = `Ask about your ${contextPlatform} content...`
+    }
+  } else if (hasAnalysis) {
+    contextPlaceholder = "Ask me anything about your content..."
+  }
+
   return (
-    <div className="w-full max-w-3xl sm:max-w-4xl mx-auto">
-      <form onSubmit={handleSubmit} className="py-3 w-full">
+    <div className="shrink-0 bg-white dark:bg-gray-800">
+      <form onSubmit={handleSubmit} className="p-2 sm:p-3">
         {/* Context Search Toggle - Only show when embeddings are available */}
         {embeddingInfo?.hasEmbeddings && (
           <div className="w-full mb-3">
@@ -174,8 +191,8 @@ export function ChatInput({
 
         {/* Context indicator */}
         {hasContext && (
-          <div className="w-full mb-3">
-            <div className={`flex items-center gap-2 text-xs p-2 sm:p-3 rounded-lg border ${
+          <div className="w-full mb-2">
+            <div className={`flex items-center gap-2 text-xs p-2 rounded-lg border ${
               hasAnalysis 
                 ? 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-700'
                 : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700'
@@ -191,14 +208,14 @@ export function ChatInput({
           </div>
         )}
 
-        {/* Referenced message preview - mobile responsive */}
+        {/* Reference preview */}
         {referencedMessage && (
-          <div className="w-full mb-3">
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-50 p-2 sm:p-3 rounded-lg border border-gray-200">
+          <div className="w-full mb-2">
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400 bg-gray-50/80 dark:bg-gray-800/40 p-2 rounded-lg border border-gray-200/50 dark:border-gray-700/50">
               <MessageSquare className="w-4 h-4 flex-shrink-0" />
               <button 
                 onClick={() => setShowFullReply(!showFullReply)}
-                className="flex-1 text-left hover:text-gray-700 transition-colors min-w-0"
+                className="flex-1 text-left hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
               >
                 <span className={showFullReply ? "break-words whitespace-pre-wrap" : "truncate block"}>
                   Replying to: {showFullReply 
@@ -213,7 +230,7 @@ export function ChatInput({
                   setShowFullReply(false)
                   onClearReference?.()
                 }}
-                className="text-gray-600 hover:text-gray-800 p-1.5 rounded-full hover:bg-gray-200 flex-shrink-0 transition-colors"
+                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1.5 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700/50 flex-shrink-0 transition-colors"
                 aria-label="Clear reply"
               >
                 <span className="text-base font-medium">×</span>
@@ -224,55 +241,56 @@ export function ChatInput({
 
         <div className="flex gap-2 items-end w-full relative">
           <div className="flex-1 relative">
-            <textarea
-              ref={textAreaRef}
-              value={currentInput}
-              onChange={(e) => setCurrentInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={placeholder}
-              className={`w-full rounded-xl border px-3 sm:px-4 py-3
-                focus:outline-none focus:ring-2 focus:ring-heycontent-yellow focus:border-transparent
-                resize-none overflow-y-auto min-h-[48px] max-h-[300px] sm:max-h-[400px]
-                text-sm leading-relaxed
-                ${isAtLimit ? 'border-red-500 focus:ring-red-500' : ''}
-                ${isNearLimit && !isAtLimit ? 'border-yellow-500 focus:ring-yellow-500' : ''}
-                transition-all duration-200
-                bg-white shadow-sm
-                scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100
-              `}
-              disabled={isLoading}
-              rows={1}
-              maxLength={maxLength}
-            />
-            {/* Character count */}
-            <div className={`absolute right-3 bottom-2 text-xs
-              ${isAtLimit ? 'text-red-500 font-medium' : ''}
-              ${isNearLimit && !isAtLimit ? 'text-yellow-500 font-medium' : 'text-gray-400'}
-              ${isLoading ? 'hidden' : ''}
-              transition-colors duration-200
+            <div className={`flex items-center rounded-xl transition-all duration-200 bg-gray-50 dark:bg-gray-800 border-2
+              ${isAtLimit ? 'border-red-400 dark:border-red-500' : ''}
+              ${isNearLimit && !isAtLimit ? 'border-amber-400 dark:border-amber-500' : ''}
+              ${!isAtLimit && !isNearLimit ? 'border-transparent hover:border-gray-200 dark:hover:border-gray-600' : ''}
+              focus-within:border-heycontent-yellow focus-within:bg-white dark:focus-within:bg-gray-700
+              px-3 py-2 pr-12
             `}>
-              {characterCount.toLocaleString()}/{maxLength.toLocaleString()}
+              <textarea
+                ref={textareaRef}
+                value={currentInput}
+                onChange={(e) => setCurrentInput(e.target.value)}
+                placeholder={contextPlaceholder}
+                className="text-base leading-relaxed flex-1 bg-transparent border-0 outline-0 resize-none placeholder:text-gray-500 dark:placeholder:text-gray-400 chat-font"
+                disabled={isLoading}
+                onKeyDown={handleKeyDown}
+                maxLength={maxLength}
+              />
+              
+              {/* Character count - positioned inside the input */}
+              {!isLoading && (
+                <div className={`absolute right-10 bottom-2 text-xs pointer-events-none
+                  ${isAtLimit ? 'text-red-500 font-medium' : ''}
+                  ${isNearLimit && !isAtLimit ? 'text-amber-500 font-medium' : 'text-gray-400 dark:text-gray-500'}
+                  transition-colors duration-200
+                `}>
+                  {characterCount.toLocaleString()}/{maxLength.toLocaleString()}
+                </div>
+              )}
+              
+              {/* Send button - positioned inside the input */}
+              <button
+                type="submit"
+                aria-label="Send message"
+                disabled={isLoading || !currentInput.trim() || isAtLimit}
+                className={`absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200
+                  ${isLoading || !currentInput.trim() || isAtLimit 
+                    ? 'bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-500 cursor-not-allowed' 
+                    : 'bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black shadow-sm hover:shadow-md hover:scale-105 active:scale-95'
+                  }`}
+              >
+                {isLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Send className="w-3.5 h-3.5" />
+                )}
+              </button>
             </div>
-            {/* Loading indicator */}
-            {isLoading && (
-              <div className="absolute right-3 bottom-3">
-                <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-              </div>
-            )}
           </div>
-          <button
-            type="submit"
-            aria-label="Send message"
-            disabled={isLoading || !currentInput.trim() || isAtLimit}
-            className="bg-heycontent-yellow text-black px-3 sm:px-4 py-3 rounded-xl
-              hover:bg-heycontent-yellow/90 transition-colors disabled:opacity-50
-              disabled:cursor-not-allowed h-[48px] flex items-center flex-shrink-0
-              shadow-sm hover:shadow-md font-medium"
-          >
-            <Send className="w-4 h-4" />
-          </button>
         </div>
-        <div className="mt-2 text-xs text-gray-500 text-center">
+        <div className="mt-1.5 text-xs text-gray-500 text-center">
           Press Enter to send, Shift+Enter for new line
         </div>
       </form>

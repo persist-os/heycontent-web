@@ -33,21 +33,16 @@ export const YouTubeBrandIcon: React.FC<YouTubeBrandIconProps> = ({
       rel={newTab ? 'noopener noreferrer' : undefined}
       aria-label="YouTube"
       style={{ display: 'inline-block', lineHeight: 0 }}
-      className={className}
+      className={`min-w-[20px] min-h-[20px] ${className}`}
     >
-      <svg
-        viewBox="0 0 90 63"
-        width="100%"
-        height="100%"
-        style={{ minWidth: 20, minHeight: 20, display: 'block' }}
-        xmlns="http://www.w3.org/2000/svg"
+      <img
+        src="/youtube-logo.svg"
+        alt="YouTube"
+        className="w-full h-full"
+        style={{ display: 'block' }}
         role="img"
         aria-label="YouTube"
-        focusable="false"
-      >
-        <rect x="0" y="0" width="90" height="63" rx="14" fill="#FF0000" />
-        <polygon points="36,16 36,47 67,31.5" fill="#FFFFFF" />
-      </svg>
+      />
     </a>
   );
 };

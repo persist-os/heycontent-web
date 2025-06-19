@@ -8,7 +8,7 @@ interface ChatInputAreaProps {
   currentContext: any;
   handleActionClick: (action: string) => void;
   handleSendMessage: (msg: string) => void;
-  inputRef: React.RefObject<HTMLInputElement>;
+  inputRef: React.RefObject<HTMLTextAreaElement>;
   isLoading: boolean;
   referencedMessage: any;
   handleClearReference: () => void;
@@ -42,8 +42,8 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   const showAmbientContent = showAmbient && !currentContext;
   
   return (
-    <div className={`bg-white border-t border-gray-200 ${showAmbientContent ? 'h-full flex flex-col' : ''}`}>
-      <div className="max-w-4xl sm:max-w-5xl lg:max-w-7xl mx-auto w-full h-full flex flex-col">
+    <div className={`bg-white ${showAmbientContent ? 'h-full flex flex-col' : ''}`}>
+      <div className="max-w-3xl sm:max-w-4xl mx-auto w-full h-full flex flex-col">
         {/* Show ambient content when there are no messages */}
         {showAmbientContent && (
           <div className="w-full bg-white flex-1 flex flex-col">
@@ -68,7 +68,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
         )}
 
         {/* Chat input area - always show */}
-        <div className="px-3 sm:px-4 py-4">
+        <div className="px-2 sm:px-3 py-2">
           <ChatInput
             inputRef={inputRef}
             onSend={handleSendMessage}

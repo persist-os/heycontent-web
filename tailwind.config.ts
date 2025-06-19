@@ -107,6 +107,10 @@ const config = {
   			'pulse-slow': {
   				'0%, 100%': { opacity: '1' },
   				'50%': { opacity: '0.7' }
+  			},
+  			'shine': {
+  				'0%': { transform: 'translateX(-100%)' },
+  				'100%': { transform: 'translateX(100%)' }
   			}
   		},
   		animation: {
@@ -115,7 +119,8 @@ const config = {
   			'bounce-delay-1': 'bounce-delay-1 1.2s infinite ease-in-out',
   			'bounce-delay-2': 'bounce-delay-2 1.2s infinite ease-in-out 0.25s',
   			'bounce-delay-3': 'bounce-delay-3 1.2s infinite ease-in-out 0.5s',
-  			'pulse-slow': 'pulse-slow 2s infinite ease-in-out'
+  			'pulse-slow': 'pulse-slow 2s infinite ease-in-out',
+  			'shine': 'shine 2s infinite ease-in-out'
   		}
   	}
   },

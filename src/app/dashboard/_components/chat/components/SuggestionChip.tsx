@@ -1,10 +1,12 @@
 import React from 'react';
 import { Brain, MessageSquare, Target, Zap } from 'lucide-react';
 import { SuggestedAction } from '../types';
+import { InputButton } from '@/components/ui/input-button';
 
 interface SuggestionChipProps {
   suggestion: SuggestedAction | string;
   onClick: () => void;
+  onInputPopulate?: (text: string) => void;
 }
 
 // Utility function to clean bullet points from suggestions
@@ -15,7 +17,7 @@ const cleanSuggestionText = (text: string): string => {
     .trim();
 };
 
-export const SuggestionChip = ({ suggestion, onClick }: SuggestionChipProps) => {
+export const SuggestionChip = ({ suggestion, onClick, onInputPopulate }: SuggestionChipProps) => {
   // Handle both string suggestions and structured SuggestedAction objects
   const isStringType = typeof suggestion === 'string';
   
@@ -25,21 +27,37 @@ export const SuggestionChip = ({ suggestion, onClick }: SuggestionChipProps) => 
     : cleanSuggestionText((suggestion as SuggestedAction).description);
   
   return (
-    <button
-      onClick={onClick}
-      className="px-2 sm:px-3 py-1.5 text-xs sm:text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg flex items-center gap-1 sm:gap-2 transition-colors max-w-full"
-    >
-      {!isStringType && (
-        <>
-          {(suggestion as SuggestedAction).type === 'explore' && <Brain className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />}
-          {(suggestion as SuggestedAction).type === 'clarify' && <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />}
-          {(suggestion as SuggestedAction).type === 'action' && <Zap className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />}
-          {(suggestion as SuggestedAction).type === 'strategic' && <Target className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />}
-        </>
+    <div className="group relative">
+      <button
+        onClick={onClick}
+        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-black 
+          bg-heycontent-yellow hover:bg-heycontent-yellow/90 
+          rounded-lg transition-all duration-200 hover:shadow-sm hover:-translate-y-0.5 
+          active:translate-y-0 active:shadow-none select-none max-w-full chat-font"
+      >
+        {!isStringType && (
+          <span className="text-black/70 group-hover:text-black transition-colors duration-200">
+            {(suggestion as SuggestedAction).type === 'explore' && <Brain className="w-3.5 h-3.5 flex-shrink-0" />}
+            {(suggestion as SuggestedAction).type === 'clarify' && <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />}
+            {(suggestion as SuggestedAction).type === 'action' && <Zap className="w-3.5 h-3.5 flex-shrink-0" />}
+            {(suggestion as SuggestedAction).type === 'strategic' && <Target className="w-3.5 h-3.5 flex-shrink-0" />}
+          </span>
+        )}
+        <span className="break-words min-w-0 text-left whitespace-nowrap">
+          {displayText}
+        </span>
+      </button>
+      
+      {/* Input button - appears on hover */}
+      {onInputPopulate && (
+        <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 -mt-1 -mr-1">
+          <InputButton
+            text={displayText}
+            onInputPopulate={onInputPopulate}
+            tooltipText="Add suggestion to input"
+          />
+        </div>
       )}
-      <span className="break-words min-w-0 text-left">
-        {displayText}
-      </span>
-    </button>
+    </div>
   );
 };

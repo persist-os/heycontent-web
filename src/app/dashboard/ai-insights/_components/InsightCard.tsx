@@ -9,7 +9,6 @@ export interface InsightCardProps {
   platform: 'youtube' | 'instagram' | 'gmail';
   title: string;
   impact: string;
-  highlightColor?: string;
   whyNow: string[];
   actionSteps: string[];
   expectedOutcome: string;
@@ -39,7 +38,6 @@ export const InsightCard: React.FC<InsightCardProps> = ({
   platform,
   title,
   impact,
-  highlightColor = 'bg-heycontent-light-yellow',
   whyNow,
   actionSteps,
   expectedOutcome,
@@ -75,11 +73,11 @@ export const InsightCard: React.FC<InsightCardProps> = ({
   // Function to navigate to chat with Gmail thread content
   const discussGmailThread = (thread: any) => {
     const context = {
-      platform: 'gmail', // Explicitly set to gmail
+      platform: 'gmail',
       contentId: thread.threadId,
       title: thread.subject || 'Email Thread',
       source: 'AI Insights - Gmail Thread',
-      originalPlatform: 'gmail', // Ensure original platform is set
+      originalPlatform: 'gmail',
       publishedAt: thread.date,
       content: {
         data: {
@@ -87,11 +85,9 @@ export const InsightCard: React.FC<InsightCardProps> = ({
           from: thread.from || 'Unknown Sender',
           snippet: thread.snippet || 'No preview available',
           threadId: thread.threadId,
-          // Add the full thread content for context
           fullContent: thread.snippet || 'No content available'
         }
       },
-      // Create a formatted analysis of the email thread
       analysis: `**Email Thread Analysis**
 
 **Subject:** ${thread.subject || 'No Subject'}
@@ -116,7 +112,7 @@ This email thread was identified as part of your ${title.toLowerCase()} opportun
       contentId: `insight-${Date.now()}`,
       title: title,
       source: 'AI Insights Dashboard',
-      originalPlatform: validatedPlatform, // Use validated platform
+      originalPlatform: validatedPlatform,
       fullInsight: {
         title,
         impact: cleanImpact,
@@ -126,7 +122,6 @@ This email thread was identified as part of your ${title.toLowerCase()} opportun
         sourceDetails,
         relatedItems
       },
-      // Create a formatted analysis of the insight (no title at the top)
       analysis: `**Platform:** ${validatedPlatform.toUpperCase()}
 **Impact:** ${cleanImpact}
 
@@ -149,24 +144,45 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
     window.location.href = `/dashboard/chat?contentContext=${encodedContext}`;
   };
 
+  const getPlatformShadow = () => {
+    switch (validatedPlatform) {
+      case 'youtube':
+        return 'hover:shadow-xl hover:shadow-red-500/25 border-2 border-transparent hover:border-red-500/30';
+      case 'instagram':
+        return 'hover:shadow-xl hover:shadow-pink-500/25 border-2 border-transparent hover:border-pink-500/30';
+      case 'gmail':
+        return 'hover:shadow-xl hover:shadow-blue-500/25 border-2 border-transparent hover:border-blue-500/30';
+      default:
+        return 'hover:shadow-xl hover:shadow-heycontent-yellow/25 border-2 border-transparent hover:border-heycontent-yellow/30';
+    }
+  };
+
   return (
-    <Card className="overflow-hidden transition-shadow cursor-pointer hover:shadow-lg" onClick={onExpand}>
+    <Card className={`overflow-hidden transition-all duration-300 cursor-pointer ${getPlatformShadow()}`} onClick={onExpand}>
       {/* Collapsed Header */}
       <div
-        className={`flex items-center justify-between p-4 ${highlightColor} ${expanded ? 'rounded-t-lg' : 'rounded-lg'}`}
+        className={`flex items-center justify-between p-4 transition-all duration-200 ${
+          expanded 
+            ? 'bg-heycontent-yellow/10 rounded-t-lg border-b border-heycontent-yellow/20'
+            : 'bg-white dark:bg-gray-800'
+        }`}
       >
         <div className="flex items-center gap-3">
-          {validatedPlatform === 'youtube' ? (
-            <div>{platformIcon[validatedPlatform]}</div>
-          ) : (
-            <div className="p-2 rounded-lg bg-white/80 dark:bg-black/30">
-              {platformIcon[validatedPlatform]}
-            </div>
-          )}
+          <div className={`p-2 rounded-lg transition-all duration-200 ${
+            expanded 
+              ? 'bg-heycontent-yellow/20 dark:bg-heycontent-yellow/10'
+              : 'bg-gray-100 dark:bg-gray-700'
+          }`}>
+            {platformIcon[validatedPlatform]}
+          </div>
           <div>
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-medium text-text-dark dark:text-white">{title}</h3>
-              <span className="px-2 py-0.5 bg-white/60 dark:bg-black/40 text-xs font-medium rounded-full capitalize text-text-dark dark:text-white">
+              <span className={`px-2 py-0.5 text-xs font-medium rounded-full capitalize transition-all duration-200 ${
+                expanded 
+                  ? 'bg-heycontent-yellow/30 dark:bg-heycontent-yellow/20 text-text-dark dark:text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-text-dark dark:text-white'
+              }`}>
                 {validatedPlatform}
               </span>
             </div>
@@ -232,7 +248,6 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
                     if (onActionStepClick) {
                       onActionStepClick(step);
                     } else {
-                      // Get additional context from why now and expected outcome
                       const additionalContext = [
                         `Platform: ${validatedPlatform.toUpperCase()}`,
                         `Insight: ${title}`,
@@ -241,7 +256,6 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
                         `Expected Outcome: ${expectedOutcome}`
                       ].join('\n');
                       
-                      // Use the custom hook to navigate to chat with rich context
                       discussActionStep(step, title, validatedPlatform, additionalContext);
                     }
                   }}
@@ -291,10 +305,10 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
                 e.stopPropagation();
                 discussFullInsight();
               }}
-              className="flex-1 bg-heycontent-light-yellow hover:bg-heycontent-yellow/90 text-black"
+              className="flex-1 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black"
             >
               <MessageSquare className="w-4 h-4 mr-2" />
-              Discuss Full Insight
+              Discuss With Content
             </Button>
             
             {/* Legacy discuss button if provided */}

@@ -7,26 +7,47 @@ interface BottomBarActionsProps {
 }
 
 export const BottomBarActions: React.FC<BottomBarActionsProps> = ({ onActionClick, onInputPopulate }) => {
-  // Use onInputPopulate if available, otherwise fall back to onActionClick
-  const handleActionClick = onInputPopulate || onActionClick;
+  // Always use onActionClick to auto-send messages
+  const handleActionClick = onActionClick;
   
   return (
-    <div className="border-t border-gray-200 bg-white">
-      <div className="max-w-4xl sm:max-w-5xl mx-auto px-3 sm:px-4 py-2">
-        <div className="flex flex-wrap gap-1.5 sm:gap-2">
-          {bottomBarActions.map((action) => (
-            <button
-              key={action.id}
-              onClick={() => handleActionClick(action.action)}
-              className="px-2 sm:px-4 h-7 sm:h-8 text-xs text-gray-600 bg-gray-50 hover:bg-blue-50 hover:text-blue-600 
-                rounded-full flex items-center transition-colors break-words"
-            >
-              {action.text}
-            </button>
-          ))}
+    <>
+      {/* CSS to hide scrollbar */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          .hide-scrollbar {
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* Internet Explorer 10+ */
+          }
+          
+          .hide-scrollbar::-webkit-scrollbar {
+            display: none; /* Safari and Chrome */
+          }
+        `
+      }} />
+      
+      <div className="bg-white border-t border-gray-100">
+        <div className="max-w-3xl sm:max-w-4xl mx-auto px-3 sm:px-4 py-2">
+          {/* Horizontal scrollable container */}
+          <div className="overflow-x-auto overflow-y-hidden hide-scrollbar">
+            <div className="flex gap-2 min-w-max pb-1">
+              {bottomBarActions.map((action) => (
+                <button
+                  key={action.id}
+                  onClick={() => handleActionClick(action.action)}
+                  className="flex-shrink-0 px-3 py-1.5 text-sm font-medium text-black 
+                    bg-heycontent-yellow hover:bg-heycontent-yellow/90 
+                    rounded-full transition-all duration-200 hover:shadow-sm
+                    whitespace-nowrap select-none chat-font"
+                >
+                  {action.text}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

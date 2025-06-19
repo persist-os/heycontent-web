@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { ChevronUp, ChevronDown } from 'lucide-react'
+import { InputButton } from '@/components/ui/input-button'
 
 interface ExpandableInsightsProps {
   message: {
@@ -20,6 +21,7 @@ interface ExpandableInsightsProps {
   onReferenceClick?: (messageId: string) => void;
   onOptionPress?: (option: { text: string }) => void;
   onSuggestionPress?: (suggestion: string) => void;
+  onInputPopulate?: (text: string) => void;
 }
 
 // Utility function to clean bullet points from suggestions
@@ -34,7 +36,8 @@ export function ExpandableInsights({
   message, 
   onReferenceClick, 
   onOptionPress, 
-  onSuggestionPress 
+  onSuggestionPress,
+  onInputPopulate 
 }: ExpandableInsightsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   
@@ -86,13 +89,25 @@ export function ExpandableInsights({
             <h4 className="text-sm font-medium text-gray-700">Options</h4>
             <div className="flex flex-wrap gap-1.5 sm:gap-2">
               {(message.interactiveResponse?.options || placeholderOptions).map((option, index) => (
-                <button
-                  key={index}
-                  className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200 break-words"
-                  onClick={() => onOptionPress?.(option)}
-                >
-                  <span>{cleanSuggestionText(option.text)}</span>
-                </button>
+                <div key={index} className="group relative">
+                  <button
+                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200 break-words"
+                    onClick={() => onOptionPress?.(option)}
+                  >
+                    <span>{cleanSuggestionText(option.text)}</span>
+                  </button>
+                  
+                  {/* Input button for option */}
+                  {onInputPopulate && (
+                    <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 -mt-1 -mr-1">
+                      <InputButton
+                        text={cleanSuggestionText(option.text)}
+                        onInputPopulate={onInputPopulate}
+                        tooltipText="Add option to input"
+                      />
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           </div>
@@ -103,13 +118,25 @@ export function ExpandableInsights({
               <h4 className="text-sm font-medium text-gray-700">Suggestions</h4>
               <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {message.suggestions?.map((suggestion, index) => (
-                  <button
-                    key={index}
-                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200 break-words"
-                    onClick={() => onSuggestionPress?.(suggestion)}
-                  >
-                    <span>{cleanSuggestionText(suggestion)}</span>
-                  </button>
+                  <div key={index} className="group relative">
+                    <button
+                      className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200 break-words"
+                      onClick={() => onSuggestionPress?.(suggestion)}
+                    >
+                      <span>{cleanSuggestionText(suggestion)}</span>
+                    </button>
+                    
+                    {/* Input button for suggestion */}
+                    {onInputPopulate && (
+                      <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 -mt-1 -mr-1">
+                        <InputButton
+                          text={cleanSuggestionText(suggestion)}
+                          onInputPopulate={onInputPopulate}
+                          tooltipText="Add suggestion to input"
+                        />
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
