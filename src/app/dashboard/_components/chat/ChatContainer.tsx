@@ -516,28 +516,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* AI Intelligence Status Display (user-friendly) - Only show when no embeddings */}
-            {!embeddingInfo.hasEmbeddings && (
-              <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4 m-4 mb-2">
-                <div className="flex items-center gap-3">
-                  <div className="bg-purple-100 p-2 rounded-lg">
-                    <Brain className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-sm font-medium text-purple-900">AI Content Intelligence</h3>
-                    <p className="text-xs text-purple-700 mt-1">
-                      Connect your platforms and create an AI search index to enable intelligent content discovery and personalized insights.
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="mt-3 pt-3 border-t border-purple-200">
-                  <p className="text-xs text-purple-600">
-                    💡 <strong>Get started:</strong> Go to Settings → Integrations to create your AI search index and unlock intelligent content discovery.
-                  </p>
-                </div>
-              </div>
-            )}
-            
             <AmbientInsightsContainer 
               handleSendMessage={(msg, context) => {
                 // Start a new chat with the context from the insight

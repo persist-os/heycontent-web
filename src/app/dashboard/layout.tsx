@@ -6,7 +6,7 @@ import { useAuth } from '@/app/context/auth-context';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSidebar } from '@/app/context/sidebar-context';
 import { useSubscriptionCheck } from '@/app/hooks/useSubscriptionCheck';
-import { Loader2 } from 'lucide-react';
+import { RefreshState } from '@/components/ui/refresh-state';
 
 // Pages that don't require a subscription
 const PUBLIC_PATHS = [
@@ -59,17 +59,11 @@ export default function DashboardLayout({
   // Show loading state while checking auth and subscription
   if (authLoading || (isSubscriptionLoading && !isPublicPath)) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  // Show loading state while checking auth or subscription
-  if (authLoading || (isSubscriptionLoading && !isPublicPath)) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      <div className="min-h-screen">
+        <RefreshState
+          title="Loading..."
+          quote="Setting up your dashboard"
+        />
       </div>
     );
   }

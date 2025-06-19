@@ -2,8 +2,8 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LoadingState } from '../loading/LoadingState';
 import { useAuth } from '@/app/context/auth-context';
+import { RefreshState } from '@/components/ui/refresh-state';
 
 // Platform-specific components
 import { YouTubePlatform } from '../platforms/YouTubePlatform';
@@ -63,21 +63,29 @@ export function ContentAnalyticsScreen() {
     gmailData.loading, gmailData.items.length, gmailData.isCached
   ]);
 
-  if (!firebaseUser || !userId) {
-    return <LoadingState type="auth" />;
-  }
-
   // Combined data for "all" tab
-  const allContentItems = useMemo(() => [
-    ...youtubeData.items,
-    ...gmailData.items,
-    ...instagramData.items,
-  ], [youtubeData.items, gmailData.items, instagramData.items]);
+  const allContentItems = useMemo(() => {
+    if (!userId) return [];
+    return [
+      ...youtubeData.items,
+      ...gmailData.items,
+      ...instagramData.items,
+    ];
+  }, [userId, youtubeData.items, gmailData.items, instagramData.items]);
 
   // Sort items by date for "all" tab
   const allDisplayItems = useMemo(() => {
     return sortContent(allContentItems, 'date');
   }, [allContentItems]);
+
+  if (!firebaseUser || !userId) {
+    return (
+      <RefreshState
+        title="Authenticating..."
+        quote="Verifying your credentials"
+      />
+    );
+  }
 
   const discussContent = async (item: AnyContentItem) => {
     try {
@@ -165,7 +173,10 @@ export function ContentAnalyticsScreen() {
             {selectedPlatform === 'all' && (
               <>
                 {isAllPlatformsLoading ? (
-                  <LoadingState type="content" />
+                  <RefreshState
+                    title="Loading content..."
+                    quote="Gathering your content from all platforms"
+                  />
                 ) : allDisplayItems.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
                     {allDisplayItems.map((item, index) => {

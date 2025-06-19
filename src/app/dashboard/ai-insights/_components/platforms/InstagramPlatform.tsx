@@ -4,6 +4,8 @@ import React, { useState } from 'react'
 import { RefreshCw, AlertCircle, Settings, Zap, Instagram } from 'lucide-react'
 import { InsightCard } from '../InsightCard'
 import { useInstagramInsights } from '../hooks/useInstagramInsights'
+import { InstagramBrandIcon } from '../../../_components/InstagramBrandIcon'
+import { RefreshState } from '@/components/ui/refresh-state'
 
 interface InstagramPlatformProps {
   userId?: string
@@ -220,18 +222,10 @@ export function InstagramPlatform({ userId, currentQuote }: InstagramPlatformPro
       />
       
       {refreshing ? (
-        <div className="text-center py-12 px-4">
-          <RefreshCw className="w-12 h-12 text-text-gray animate-spin mx-auto mb-6" />
-          <h3 className="text-lg font-medium text-text-dark dark:text-white mb-2">
-            Refreshing Instagram insights...
-          </h3>
-          <p className="text-text-gray dark:text-gray-400 max-w-md mx-auto">
-            {currentQuote}
-          </p>
-          <div className="mt-4 text-sm text-text-gray/60 dark:text-gray-500">
-            This may take a few moments
-          </div>
-        </div>
+        <RefreshState
+          title="Refreshing Instagram insights..."
+          quote={currentQuote}
+        />
       ) : (
         <div className="grid gap-6">
           {insights.length === 0 && !error && (
