@@ -17,6 +17,9 @@ interface ChatInputProps {
   hasAnalysis?: boolean
   inputValue?: string
   onInputChange?: (value: string) => void
+  useContextSearch?: boolean
+  onToggleContextSearch?: (enabled: boolean) => void
+  embeddingInfo?: { hasEmbeddings: boolean; count: number }
 }
 
 const placeholders = [
@@ -45,7 +48,10 @@ export function ChatInput({
   contextPlatform,
   hasAnalysis = false,
   inputValue,
-  onInputChange
+  onInputChange,
+  useContextSearch,
+  onToggleContextSearch,
+  embeddingInfo
 }: ChatInputProps) {
   const [input, setInput] = useState('')
   const [placeholder, setPlaceholder] = useState(placeholders[0])
@@ -144,6 +150,45 @@ export function ChatInput({
   return (
     <div className="shrink-0 bg-white dark:bg-gray-800">
       <form onSubmit={handleSubmit} className="p-2 sm:p-3">
+        {/* Context Search Toggle - Only show when embeddings are available */}
+        {embeddingInfo?.hasEmbeddings && (
+          <div className="w-full mb-3">
+            <div className="flex items-center justify-between p-2 sm:p-3 rounded-lg border border-gray-200 bg-gray-50">
+              <div className="flex items-center gap-2">
+                <Brain className="w-4 h-4 text-gray-600" />
+                <span className="text-xs sm:text-sm font-medium text-gray-700">
+                  Smart Search
+                </span>
+                <span className="text-xs text-gray-500">
+                  ({embeddingInfo.count} items indexed)
+                </span>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useContextSearch}
+                  onChange={(e) => onToggleContextSearch?.(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div>
+                <span className="ml-2 text-xs text-gray-600">
+                  {useContextSearch ? 'ON' : 'OFF'}
+                </span>
+              </label>
+            </div>
+            {useContextSearch && (
+              <div className="mt-1 text-xs text-gray-500 text-center">
+                💡 AI will search your content for relevant context
+              </div>
+            )}
+            {!useContextSearch && (
+              <div className="mt-1 text-xs text-gray-500 text-center">
+                🔒 Chat without searching your content
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Context indicator */}
         {hasContext && (
           <div className="w-full mb-2">

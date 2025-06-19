@@ -4,7 +4,7 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { MessageBubble } from './message-bubble'
 import { ChatInput } from './chat-input'
-import { RefreshCw, Brain } from 'lucide-react'
+import { RefreshCw, Brain, CheckCircle } from 'lucide-react'
 import { useSidebar } from '@/app/context/sidebar-context'
 
 // Import types
@@ -33,7 +33,7 @@ import { useUIEffects } from './hooks/useUIEffects'
 import { useOnboardingState } from './hooks/useOnboardingState'
 import { usePersonaData } from './hooks/usePersonaData'
 import { useAuth } from '@/app/context/auth-context'
-import { generateEmbeddingsForUser, checkUserEmbeddings, deleteAllUserEmbeddings } from './utils/api-utils';
+import { checkUserEmbeddings } from './utils/api-utils';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 
 
@@ -64,6 +64,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Add input state management
   const [inputValue, setInputValue] = useState('')
+  const [useContextSearch, setUseContextSearch] = useState(true); // New state for context toggle
 
   // Utility function to clean bullet points from suggestions
   const cleanSuggestionText = (text: string): string => {
@@ -105,7 +106,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     handleOptionClick,
     handleFollowUpClick,
     handleReferenceClick: handleReferenceClickProp
-  } = useChat(chatState, userId)
+  } = useChat(chatState, userId, useContextSearch)
 
   // Initialize ambient insights actions
   const ambientInsightsActions = useAmbientInsightsActions(handleSendMessage);
@@ -399,9 +400,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   }, []);
 
   const [hasStartedNewChat, setHasStartedNewChat] = useState(false);
-  const [embeddingStatus, setEmbeddingStatus] = useState<string>('');
-  const [isGeneratingEmbeddings, setIsGeneratingEmbeddings] = useState(false);
-  const [isDeletingEmbeddings, setIsDeletingEmbeddings] = useState(false);
   const [embeddingInfo, setEmbeddingInfo] = useState<{ hasEmbeddings: boolean; count: number }>({ hasEmbeddings: false, count: 0 });
 
   // Check for existing embeddings when component mounts or user changes
@@ -411,84 +409,11 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       if (currentUserId) {
         const info = await checkUserEmbeddings(currentUserId);
         setEmbeddingInfo(info);
-        if (info.hasEmbeddings) {
-          setEmbeddingStatus(`✅ Found ${info.count} existing embeddings`);
-        }
       }
     };
 
     checkEmbeddings();
   }, [userId]);
-
-  // Function to generate embeddings for user content
-  const handleGenerateEmbeddings = async () => {
-    const currentUserId = getCurrentUserId();
-    if (!currentUserId) {
-      setEmbeddingStatus('❌ No user ID found');
-      return;
-    }
-
-    setIsGeneratingEmbeddings(true);
-    setEmbeddingStatus('🚀 Starting embedding generation...');
-    
-    try {
-      const results = await generateEmbeddingsForUser(currentUserId);
-      
-      const convStats = `Conversations: ${results.conversations.succeeded}/${results.conversations.processed} (${results.conversations.skipped} skipped)`;
-      const noteStats = `Notes: ${results.notes.succeeded}/${results.notes.processed} (${results.notes.skipped} skipped)`;
-      
-      setEmbeddingStatus(`✅ Complete! ${convStats}, ${noteStats}`);
-      
-      // Refresh embedding info
-      const info = await checkUserEmbeddings(currentUserId);
-      setEmbeddingInfo(info);
-      
-      if (results.errors.length > 0) {
-        console.error('Embedding errors:', results.errors);
-        setEmbeddingStatus(prev => prev + ` (${results.errors.length} errors - check console)`);
-      }
-    } catch (error: any) {
-      setEmbeddingStatus(`❌ Failed: ${error.message}`);
-      console.error('Embedding generation failed:', error);
-    } finally {
-      setIsGeneratingEmbeddings(false);
-    }
-  };
-
-  // Function to delete all embeddings
-  const handleDeleteEmbeddings = async () => {
-    const currentUserId = getCurrentUserId();
-    if (!currentUserId) {
-      setEmbeddingStatus('❌ No user ID found');
-      return;
-    }
-
-    if (!confirm(`Are you sure you want to delete all ${embeddingInfo.count} embeddings? This action cannot be undone.`)) {
-      return;
-    }
-
-    setIsDeletingEmbeddings(true);
-    setEmbeddingStatus('🗑️ Deleting embeddings...');
-    
-    try {
-      const result = await deleteAllUserEmbeddings(currentUserId);
-      
-      if (result.success) {
-        setEmbeddingStatus(`✅ Deleted ${result.deletedCount} embeddings`);
-        
-        // Refresh embedding info
-        const info = await checkUserEmbeddings(currentUserId);
-        setEmbeddingInfo(info);
-      } else {
-        setEmbeddingStatus(`❌ ${result.message}`);
-      }
-    } catch (error: any) {
-      setEmbeddingStatus(`❌ Failed: ${error.message}`);
-      console.error('Embedding deletion failed:', error);
-    } finally {
-      setIsDeletingEmbeddings(false);
-    }
-  };
 
   // Create a function to append text to existing input instead of replacing it
   const handleInputAppend = useCallback((text: string) => {
@@ -579,65 +504,28 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           </div>
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Embedding Generation Debug Section (temporary) */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 m-4 mb-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-blue-800">🔬 Vector Search Setup</h3>
-                  <p className="text-xs text-blue-600">
-                    {embeddingInfo.hasEmbeddings 
-                      ? `You have ${embeddingInfo.count} embeddings for AI-powered semantic search`
-                      : 'Generate embeddings to enable AI-powered semantic search'
-                    }
+            {/* AI Intelligence Status Display (user-friendly) - Only show when no embeddings */}
+            {!embeddingInfo.hasEmbeddings && (
+              <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4 m-4 mb-2">
+                <div className="flex items-center gap-3">
+                  <div className="bg-purple-100 p-2 rounded-lg">
+                    <Brain className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-medium text-purple-900">AI Content Intelligence</h3>
+                    <p className="text-xs text-purple-700 mt-1">
+                      Connect your platforms and create an AI search index to enable intelligent content discovery and personalized insights.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="mt-3 pt-3 border-t border-purple-200">
+                  <p className="text-xs text-purple-600">
+                    💡 <strong>Get started:</strong> Go to Settings → Integrations to create your AI search index and unlock intelligent content discovery.
                   </p>
                 </div>
-                <div className="flex gap-2">
-                  {embeddingInfo.hasEmbeddings ? (
-                    <>
-                      <button
-                        onClick={handleGenerateEmbeddings}
-                        disabled={isGeneratingEmbeddings}
-                        className={`px-3 py-1 text-xs rounded ${
-                          isGeneratingEmbeddings 
-                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                            : 'bg-green-600 text-white hover:bg-green-700'
-                        }`}
-                      >
-                        {isGeneratingEmbeddings ? 'Updating...' : 'Update Embeddings'}
-                      </button>
-                      <button
-                        onClick={handleDeleteEmbeddings}
-                        disabled={isDeletingEmbeddings || isGeneratingEmbeddings}
-                        className={`px-3 py-1 text-xs rounded ${
-                          isDeletingEmbeddings || isGeneratingEmbeddings
-                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                            : 'bg-red-600 text-white hover:bg-red-700'
-                        }`}
-                      >
-                        {isDeletingEmbeddings ? 'Deleting...' : 'Delete All'}
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={handleGenerateEmbeddings}
-                      disabled={isGeneratingEmbeddings}
-                      className={`px-3 py-1 text-xs rounded ${
-                        isGeneratingEmbeddings 
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                          : 'bg-blue-600 text-white hover:bg-blue-700'
-                      }`}
-                    >
-                      {isGeneratingEmbeddings ? 'Generating...' : 'Generate Embeddings'}
-                    </button>
-                  )}
-                </div>
               </div>
-              {embeddingStatus && (
-                <div className="mt-2 text-xs text-blue-700 bg-blue-100 rounded p-2">
-                  {embeddingStatus}
-                </div>
-              )}
-            </div>
+            )}
             
             <AmbientInsightsContainer 
               handleSendMessage={(msg, context) => {
@@ -673,6 +561,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           inputValue={inputValue}
           onInputChange={setInputValue}
           onInputPopulate={handleInputAppend}
+          useContextSearch={useContextSearch}
+          onToggleContextSearch={setUseContextSearch}
+          embeddingInfo={embeddingInfo}
         />
       </div>
     </div>

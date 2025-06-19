@@ -7,6 +7,63 @@ import { api } from "./_generated/api";
 const GOOGLE_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent";
 
 /**
+ * Enhance search query to improve matching
+ */
+function enhanceSearchQuery(query: string): string {
+  console.log('🔍 [QUERY ENHANCEMENT] Original query:', query);
+  
+  let enhancedQuery = query.toLowerCase();
+  
+  // Common abbreviations and expansions
+  const abbreviations: Record<string, string> = {
+    'gbm': 'general body meeting gbm',
+    'gm': 'general meeting gm',
+    'exec': 'executive board exec',
+    'e-board': 'executive board eboard e-board',
+    'eboard': 'executive board eboard e-board',
+    'mtg': 'meeting mtg',
+    'event': 'event gathering activity',
+    'club': 'club organization group',
+    'org': 'organization club org',
+    'social': 'social event gathering party',
+    'networking': 'networking professional career connect',
+    'email': 'email thread message gmail',
+    'mail': 'email thread message gmail mail',
+    'thread': 'email thread conversation gmail',
+    'partnership': 'partnership collaboration sponsor business email',
+    'newsletter': 'newsletter email subscription marketing',
+    'collab': 'collaboration partnership email business',
+  };
+  
+  // Expand abbreviations
+  for (const [abbrev, expansion] of Object.entries(abbreviations)) {
+    if (enhancedQuery.includes(abbrev)) {
+      enhancedQuery = enhancedQuery.replace(new RegExp(`\\b${abbrev}\\b`, 'gi'), expansion);
+    }
+  }
+  
+  // Add context for better semantic understanding
+  if (enhancedQuery.includes('meeting') || enhancedQuery.includes('gbm') || enhancedQuery.includes('general body')) {
+    enhancedQuery += ' meeting event organization club announcement';
+  }
+  
+  if (enhancedQuery.includes('post') && enhancedQuery.includes('club')) {
+    enhancedQuery += ' instagram social media announcement update';
+  }
+  
+  if (enhancedQuery.includes('email') || enhancedQuery.includes('mail') || enhancedQuery.includes('thread')) {
+    enhancedQuery += ' email gmail correspondence communication message';
+  }
+  
+  if (enhancedQuery.includes('partnership') || enhancedQuery.includes('collab') || enhancedQuery.includes('sponsor')) {
+    enhancedQuery += ' partnership collaboration business email professional opportunity';
+  }
+  
+  console.log('🔍 [QUERY ENHANCEMENT] Enhanced query:', enhancedQuery);
+  return enhancedQuery;
+}
+
+/**
  * Generate embeddings using Google's text-embedding-004 model
  */
 async function generateEmbedding(text: string): Promise<number[]> {
@@ -281,36 +338,69 @@ export const searchRelevantContent = action({
       v.literal("gmail_thread"),
       v.literal("note")
     ))),
+    minSimilarity: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     console.log('🎯 [TRUE VECTOR SEARCH DEBUG] REAL vector search with embeddings called!');
     console.log('🎯 [TRUE VECTOR SEARCH DEBUG] Query:', args.query);
     console.log('🎯 [TRUE VECTOR SEARCH DEBUG] User ID:', args.userId);
+    console.log('🎯 [TRUE VECTOR SEARCH DEBUG] Content types:', args.contentTypes);
+    console.log('🎯 [TRUE VECTOR SEARCH DEBUG] Min similarity threshold:', args.minSimilarity || 0.3);
     console.log('🎯 [TRUE VECTOR SEARCH DEBUG] This function uses Google embeddings and cosine similarity!');
     console.log('🎯 [TRUE VECTOR SEARCH DEBUG] If you see this log, then REAL vector search is being used.');
     
     try {
-      // Generate embedding for query
-      const queryEmbedding = await generateEmbedding(args.query);
+      // Enhance the query for better matching
+      const enhancedQuery = enhanceSearchQuery(args.query);
+      
+      // Generate embedding for the enhanced query
+      const queryEmbedding = await generateEmbedding(enhancedQuery);
+      console.log('🎯 [TRUE VECTOR SEARCH DEBUG] Generated query embedding with dimension:', queryEmbedding.length);
 
       // Get all user embeddings
       const userEmbeddings = await ctx.runQuery(internal.vectorSearch.getAllUserEmbeddings, {
         userId: args.userId,
         contentTypes: args.contentTypes,
       });
+      
+      console.log('🎯 [TRUE VECTOR SEARCH DEBUG] Found', userEmbeddings.length, 'user embeddings to compare against');
 
       // Calculate similarities and sort
-      const similarities = userEmbeddings.map((doc) => ({
-        ...doc,
-        score: cosineSimilarity(queryEmbedding, doc.embedding),
-      }));
+      const similarities = userEmbeddings.map((doc) => {
+        const score = cosineSimilarity(queryEmbedding, doc.embedding);
+        return {
+          ...doc,
+          score,
+        };
+      });
+
+      // Apply similarity threshold (default: 0.3, which is decent for semantic similarity)
+      const minThreshold = args.minSimilarity || 0.3;
+      const filteredSimilarities = similarities.filter(item => item.score >= minThreshold);
+      
+      console.log('🎯 [TRUE VECTOR SEARCH DEBUG] After similarity threshold (>= ' + minThreshold + '):', filteredSimilarities.length, 'results remain');
+      
+      // Log score distribution for debugging
+      const scoreDistribution = similarities
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 10)
+        .map(item => ({
+          title: item.title.substring(0, 50) + '...',
+          contentType: item.contentType,
+          score: Math.round(item.score * 1000) / 1000
+        }));
+      console.log('🎯 [TRUE VECTOR SEARCH DEBUG] Top 10 similarity scores:', scoreDistribution);
 
       // Sort by similarity and take top results
-      similarities.sort((a, b) => b.score - a.score);
+      filteredSimilarities.sort((a, b) => b.score - a.score);
+      const topResults = filteredSimilarities.slice(0, args.limit || 5);
       
-      return similarities.slice(0, args.limit || 5);
+      console.log('🎯 [TRUE VECTOR SEARCH DEBUG] Returning', topResults.length, 'top results');
+      console.log('🎯 [TRUE VECTOR SEARCH DEBUG] Result content types:', topResults.map(r => r.contentType));
+      
+      return topResults;
     } catch (error) {
-      console.error("Error searching content:", error);
+      console.error("❌ [TRUE VECTOR SEARCH DEBUG] Error searching content:", error);
       throw error;
     }
   },
@@ -533,6 +623,208 @@ export const deleteAllUserEmbeddings = mutation({
       };
     } catch (error: any) {
       console.error('❌ [EMBEDDING DELETE] Error deleting embeddings:', error);
+      throw error;
+    }
+  },
+});
+
+/**
+ * Hybrid search that combines vector similarity with keyword matching
+ */
+export const hybridSearchContent = action({
+  args: {
+    userId: v.string(),
+    query: v.string(),
+    limit: v.optional(v.number()),
+    contentTypes: v.optional(v.array(v.union(
+      v.literal("conversation"),
+      v.literal("instagram_post"),
+      v.literal("youtube_video"),
+      v.literal("gmail_thread"),
+      v.literal("note")
+    ))),
+    minSimilarity: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    console.log('🔀 [HYBRID SEARCH DEBUG] Starting hybrid search with vector + keyword matching');
+    console.log('🔀 [HYBRID SEARCH DEBUG] Query:', args.query);
+    
+    try {
+      // First try pure vector search
+      const vectorResults = await ctx.runAction(api.vectorSearch.searchRelevantContent, args);
+      
+      if (vectorResults.length > 0) {
+        console.log('🔀 [HYBRID SEARCH DEBUG] Vector search found', vectorResults.length, 'results');
+        return vectorResults;
+      }
+      
+      console.log('🔀 [HYBRID SEARCH DEBUG] Vector search found no results, trying keyword fallback');
+      
+      // If vector search fails, fall back to keyword search
+      const userEmbeddings = await ctx.runQuery(internal.vectorSearch.getAllUserEmbeddings, {
+        userId: args.userId,
+        contentTypes: args.contentTypes,
+      });
+      
+      // Extract keywords from query
+      const queryLower = args.query.toLowerCase();
+      const keywords = queryLower.split(/\s+/).filter(word => word.length > 2);
+      
+      console.log('🔀 [HYBRID SEARCH DEBUG] Searching for keywords:', keywords);
+      
+      // Score based on keyword matches
+      const keywordResults = userEmbeddings
+        .map(doc => {
+          const contentLower = (doc.title + ' ' + doc.content).toLowerCase();
+          let keywordScore = 0;
+          
+          keywords.forEach(keyword => {
+            if (contentLower.includes(keyword)) {
+              keywordScore += 0.3; // Base score per keyword match
+              
+              // Bonus for title matches
+              if (doc.title.toLowerCase().includes(keyword)) {
+                keywordScore += 0.2;
+              }
+              
+              // Bonus for exact phrase matches
+              if (contentLower.includes(queryLower)) {
+                keywordScore += 0.5;
+              }
+            }
+          });
+          
+          return {
+            ...doc,
+            score: keywordScore,
+          };
+        })
+        .filter(item => item.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, args.limit || 5);
+      
+      console.log('🔀 [HYBRID SEARCH DEBUG] Keyword search found', keywordResults.length, 'results');
+      console.log('🔀 [HYBRID SEARCH DEBUG] Keyword scores:', keywordResults.map(r => ({ 
+        title: r.title.substring(0, 30) + '...', 
+        score: Math.round(r.score * 100) / 100 
+      })));
+      
+      return keywordResults;
+      
+    } catch (error) {
+      console.error("❌ [HYBRID SEARCH DEBUG] Error in hybrid search:", error);
+      throw error;
+    }
+  },
+});
+
+/**
+ * Get embedding count for a specific platform/content type
+ */
+export const getPlatformEmbeddingCount = query({
+  args: {
+    userId: v.string(),
+    contentType: v.union(
+      v.literal("conversation"),
+      v.literal("instagram_post"),
+      v.literal("youtube_video"),
+      v.literal("gmail_thread"),
+      v.literal("note")
+    ),
+  },
+  handler: async (ctx, args) => {
+    console.log(`🔍 [PLATFORM COUNT] Checking ${args.contentType} embeddings for user:`, args.userId);
+    
+    try {
+      const embeddings = await ctx.db
+        .query("contentEmbeddings")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .filter((q) => q.eq(q.field("contentType"), args.contentType))
+        .collect();
+
+      const count = embeddings.length;
+      const hasEmbeddings = count > 0;
+      
+      console.log(`✅ [PLATFORM COUNT] Found ${count} ${args.contentType} embeddings`);
+      
+      return {
+        hasEmbeddings,
+        count
+      };
+    } catch (error: any) {
+      console.error(`❌ [PLATFORM COUNT] Error checking ${args.contentType} embeddings:`, error);
+      return { hasEmbeddings: false, count: 0 };
+    }
+  },
+});
+
+/**
+ * Debug function to analyze embeddings and similarity scores
+ */
+export const debugSearchQuery = action({
+  args: {
+    userId: v.string(),
+    query: v.string(),
+  },
+  handler: async (ctx, args) => {
+    console.log('🐛 [DEBUG SEARCH] Analyzing search for query:', args.query);
+    
+    try {
+      // Get all user embeddings
+      const userEmbeddings = await ctx.runQuery(internal.vectorSearch.getAllUserEmbeddings, {
+        userId: args.userId,
+      });
+      
+      console.log('🐛 [DEBUG SEARCH] Total embeddings for user:', userEmbeddings.length);
+      
+      // Show content type distribution
+      const contentTypes = userEmbeddings.reduce((acc: Record<string, number>, doc) => {
+        acc[doc.contentType] = (acc[doc.contentType] || 0) + 1;
+        return acc;
+      }, {});
+      console.log('🐛 [DEBUG SEARCH] Content type distribution:', contentTypes);
+      
+      // Show some sample content
+      console.log('🐛 [DEBUG SEARCH] Sample Instagram posts:');
+      userEmbeddings
+        .filter(doc => doc.contentType === 'instagram_post')
+        .slice(0, 3)
+        .forEach((doc, i) => {
+          console.log(`🐛 [DEBUG SEARCH] Instagram Post ${i + 1}:`, {
+            title: doc.title,
+            contentPreview: doc.content.substring(0, 200) + '...'
+          });
+        });
+      
+      // Test similarity with the query
+      const enhancedQuery = enhanceSearchQuery(args.query);
+      const queryEmbedding = await generateEmbedding(enhancedQuery);
+      
+      console.log('🐛 [DEBUG SEARCH] Enhanced query:', enhancedQuery);
+      
+      // Calculate similarities for Instagram posts specifically
+      const instagramPosts = userEmbeddings.filter(doc => doc.contentType === 'instagram_post');
+      const instagramSimilarities = instagramPosts.map(doc => ({
+        title: doc.title,
+        content: doc.content.substring(0, 100) + '...',
+        score: cosineSimilarity(queryEmbedding, doc.embedding)
+      })).sort((a, b) => b.score - a.score);
+      
+      console.log('🐛 [DEBUG SEARCH] Top 5 Instagram post similarities:');
+      instagramSimilarities.slice(0, 5).forEach((item, i) => {
+        console.log(`🐛 [DEBUG SEARCH] ${i + 1}. Score: ${Math.round(item.score * 1000) / 1000}, Title: ${item.title}`);
+      });
+      
+      return {
+        totalEmbeddings: userEmbeddings.length,
+        contentTypes,
+        instagramPostCount: instagramPosts.length,
+        topInstagramSimilarities: instagramSimilarities.slice(0, 5),
+        enhancedQuery
+      };
+      
+    } catch (error) {
+      console.error('🐛 [DEBUG SEARCH] Error:', error);
       throw error;
     }
   },

@@ -10,7 +10,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 export const useChat = (
   chatState: ChatStateReturnType,
-  userId?: string
+  userId?: string,
+  useContextSearch: boolean = true
 ) => {
   const {
     sessionId,
@@ -179,7 +180,8 @@ export const useChat = (
         backendSessionId, 
         contentContext, 
         includeAnalysisInQuery && !!contentContext?.analysis,
-        handleStatusUpdate // Pass status update callback
+        handleStatusUpdate, // Pass status update callback
+        useContextSearch // Pass context search toggle
       );
 
       // CRITICAL DEBUG: Check the raw backend response for persona flags
@@ -283,7 +285,8 @@ export const useChat = (
     referencedMessage,
     userId,
     createConversationMutation,
-    addMessageToConversationMutation
+    addMessageToConversationMutation,
+    useContextSearch
   ]);
 
   const handleMessageReference = useCallback((message: Message) => {
