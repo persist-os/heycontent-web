@@ -38,6 +38,7 @@ import { useChatHandlers } from './hooks/useChatHandlers'
 import { MarkdownNotepad } from './components/MarkdownNotepad'
 import { useNotepadUI } from './hooks/useNotepadUI'
 import { NotepadToggle } from './components/NotepadToggle'
+import { useNotes } from '@/app/context/notes-context'
 
 
 const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery }) => {
@@ -52,6 +53,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   // Track which conversation has been loaded to prevent infinite loops
   const loadedConversationRef = useRef<string | null>(null)
   const askQueryProcessedRef = useRef<string | null>(null)
+
+  // Notes context for creating local notes
+  const { createLocalNote, setActiveNoteId } = useNotes();
 
   // Initialize shared state
   const chatState = useChatState()
@@ -414,6 +418,14 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     });
   }, []);
 
+  const handleCreateNoteFromNotepad = (content: string) => {
+    const newNoteId = createLocalNote(content);
+    if (newNoteId) {
+      setActiveNoteId(newNoteId);
+      router.push('/dashboard/notes');
+    }
+  };
+
   if (!user) {
     return null
   }
@@ -429,13 +441,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         <ChatHeader 
           isRefreshing={isRefreshing} 
           onNewChat={handleNewChat}
-          rightContent={
-            <NotepadToggle
-              isOpen={notepadOpen}
-              onClick={toggleNotepad}
-              className="mr-2"
-            />
-          }
         />
 
         {/* Main Content */}
@@ -559,6 +564,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         isOpen={notepadOpen}
         onClose={toggleNotepad}
         onSendToChat={handleNotepadSendToChat}
+        onCreateNote={handleCreateNoteFromNotepad}
         quotedContent={quotedForNotepad}
         onClearQuoted={handleClearQuoted}
         width={notepadWidth}

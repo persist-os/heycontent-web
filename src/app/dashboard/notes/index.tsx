@@ -10,7 +10,8 @@ import { FileText, Plus, Lightbulb, ArrowLeft } from 'lucide-react';
 import { useSidebar } from '@/app/context/sidebar-context';
 import { useAuth } from '@/app/context/auth-context';
 import { useRouter } from 'next/navigation';
-import type { Id } from '../../../../../convex/_generated/dataModel'; // Import Id type from Convex generated data model
+import type { Id } from '@/convex/_generated/dataModel'; // Import Id type from Convex generated data model
+import { useNotes } from '@/app/context/notes-context';
 
 function EmptyState({ onCreateNote }: { onCreateNote: () => void }) {
   return (
@@ -69,12 +70,21 @@ function SelectNotePrompt({ onCreateNote }: { onCreateNote: () => void }) {
 export default function SmartNotes() {
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid;
-  const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true); // Make sidebar visible by default
   
-  // Get notes and mutations from useSmartNotes hook
-  const { notes, isLoading, saveNote, updateNote, deleteNote, saveNoteContent, setNotes } = useSmartNotes(userId);
+  // Get notes and mutations from useNotes context
+  const { 
+    notes, 
+    isLoading, 
+    saveNote, 
+    updateNote, 
+    deleteNote, 
+    saveNoteContent, 
+    setNotes,
+    activeNoteId,
+    setActiveNoteId,
+  } = useNotes();
   
   const { requestAIInsights } = useAIInsights(updateNote); // updateNote from useSmartNotes is passed here
   const { setIsViewingNote } = useSidebar();
@@ -99,7 +109,7 @@ export default function SmartNotes() {
       setActiveNoteId(result.noteId.toString()); // Convex IDs are objects, convert to string for activeNoteId state
       setShowSidebar(false);
     } 
-  }, [userId, saveNote]);
+  }, [saveNote, setActiveNoteId]);
 
 
   // Update isViewingNote when showSidebar changes
@@ -141,6 +151,17 @@ export default function SmartNotes() {
   const handleSave = async (latestContent: string, latestTitle?: string) => {
     if (!activeNote || !activeNoteId) return;
     
+    // If the note is local, we need to save it for the first time
+    if (activeNote.isLocal) {
+      // remove the local note from state
+      setNotes(notes => notes.filter(n => n._id !== activeNoteId));
+      const result = await saveNote(latestContent, { title: latestTitle });
+      if (result.success && result.noteId) {
+        setActiveNoteId(result.noteId.toString());
+      }
+      return;
+    }
+
     // Log the active note for debugging
     console.log('Saving note content:', { 
       id: activeNote._id, 
@@ -189,6 +210,7 @@ export default function SmartNotes() {
       <div className="flex-1 relative">
         {activeNote ? (
           <NoteArea
+            key={activeNoteId}
             note={activeNote}
             onUpdate={async (noteId, updates) => {
               // Optimistically update the note in local state

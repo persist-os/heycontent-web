@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, FileText, Send, Copy } from 'lucide-react'
+import { X, FileText, Send, Copy, FilePlus } from 'lucide-react'
 
 interface MarkdownNotepadProps {
   isOpen: boolean
   onClose: () => void
   onSendToChat?: (content: string) => void
+  onCreateNote?: (content: string) => void
   quotedContent?: string
   onClearQuoted?: () => void
   width: number
@@ -14,7 +15,7 @@ interface MarkdownNotepadProps {
   style: React.CSSProperties
 }
 
-export function MarkdownNotepad({ isOpen, onClose, onSendToChat, quotedContent, onClearQuoted, width, onWidthChange, style }: MarkdownNotepadProps) {
+export function MarkdownNotepad({ isOpen, onClose, onSendToChat, onCreateNote, quotedContent, onClearQuoted, width, onWidthChange, style }: MarkdownNotepadProps) {
   const [content, setContent] = useState('')
   const [isResizing, setIsResizing] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -100,6 +101,13 @@ export function MarkdownNotepad({ isOpen, onClose, onSendToChat, quotedContent, 
     }
   }
 
+  const handleCreateNote = () => {
+    if (content.trim() && onCreateNote) {
+      onCreateNote(content.trim());
+      onClose();
+    }
+  };
+
   const handleCopy = async () => {
     if (content.trim()) {
       try {
@@ -138,6 +146,19 @@ export function MarkdownNotepad({ isOpen, onClose, onSendToChat, quotedContent, 
         </div>
         
         <div className="flex items-center gap-1">
+          {/* Create Note Button */}
+          {onCreateNote && (
+            <button
+              onClick={handleCreateNote}
+              disabled={!content.trim()}
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-purple-500 hover:bg-purple-600 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Create a new smart note"
+            >
+              <FilePlus className="w-3 h-3" />
+              Create Note
+            </button>
+          )}
+
           {/* Copy Button */}
           <button
             onClick={handleCopy}
