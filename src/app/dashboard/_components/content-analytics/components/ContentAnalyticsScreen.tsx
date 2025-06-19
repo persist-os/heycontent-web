@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LoadingState } from '../loading/LoadingState';
 import { useAuth } from '@/app/context/auth-context';
@@ -34,30 +34,38 @@ export function ContentAnalyticsScreen() {
 
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformType>('all');
   const [selectedContent, setSelectedContent] = useState<AnyContentItem | null>(null);
-  const [isTabSwitching, setIsTabSwitching] = useState(false);
 
-  // Platform hooks for "all" tab data
+  // Platform hooks for "all" tab data - now with cache support
   const youtubeData = useYouTubeAnalytics(userId);
   const instagramData = useInstagramAnalytics(userId);
   const gmailData = useGmailAnalytics(userId);
 
+  // Smart loading state for "all platforms" - only show loading if no cached data exists
+  const isAllPlatformsLoading = useMemo(() => {
+    if (!userId) return true;
+    
+    // If any platform has cached data, don't show loading
+    if (youtubeData.isCached || instagramData.isCached || gmailData.isCached) {
+      return false;
+    }
+    
+    // If we have any items from any platform, don't show loading
+    if (youtubeData.items.length > 0 || instagramData.items.length > 0 || gmailData.items.length > 0) {
+      return false;
+    }
+    
+    // Only show loading if all platforms are still loading and have no data
+    return (youtubeData.loading || instagramData.loading || gmailData.loading);
+  }, [
+    userId,
+    youtubeData.loading, youtubeData.items.length, youtubeData.isCached,
+    instagramData.loading, instagramData.items.length, instagramData.isCached,
+    gmailData.loading, gmailData.items.length, gmailData.isCached
+  ]);
+
   if (!firebaseUser || !userId) {
     return <LoadingState type="auth" />;
   }
-
-  // Handle tab switching with immediate skeleton for Instagram
-  const handlePlatformChange = useCallback((value: PlatformType) => {
-    if (value === 'instagram') {
-      setIsTabSwitching(true);
-      
-      // Show skeleton for minimum time, then let component take over
-      setTimeout(() => {
-        setIsTabSwitching(false);
-      }, 600); // Show for 600ms minimum
-    }
-    
-    setSelectedPlatform(value);
-  }, []);
 
   // Combined data for "all" tab
   const allContentItems = useMemo(() => [
@@ -110,18 +118,12 @@ export function ContentAnalyticsScreen() {
       const fullUrl = baseUrl + encodedContext;
       
       if (fullUrl.length > 1900) {
-        // If URL is too long, use a more minimal context
+        // If URL is too long, create a minimal context
         const minimalContext = {
           platform: item.platform,
           contentId: item.id,
           title: context.title,
           publishedAt: item.publishedAt,
-          // For Gmail, include only the most essential data
-          ...(item.platform === 'gmail' && {
-            subject: (item as GmailContentItem).content?.data?.subject || 'No Subject',
-            from: (item as GmailContentItem).content?.data?.from || 'Unknown Sender',
-            threadId: (item as GmailContentItem).content?.data?.threadId || item.id,
-          })
         };
         const minimalEncoded = encodeURIComponent(JSON.stringify(minimalContext));
         router.push(`/dashboard/chat?contentContext=${minimalEncoded}`);
@@ -130,21 +132,15 @@ export function ContentAnalyticsScreen() {
       }
     } catch (error) {
       console.error('Error creating discussion context:', error);
-      // Fallback: navigate to chat without context
       router.push('/dashboard/chat');
     }
   };
-
-  // Show loading state if data failed to load
-  if (youtubeData.loading || gmailData.loading || (instagramData.loading && instagramData.isConnected)) {
-    return <LoadingState type="content" />;
-  }
 
   return (
     <div className="relative">
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
-          <Tabs defaultValue="all" className="w-full" onValueChange={(value) => handlePlatformChange(value as PlatformType)}>
+          <Tabs defaultValue="all" className="w-full" onValueChange={(value) => setSelectedPlatform(value as PlatformType)}>
             <TabsList className="mb-6">
               <TabsTrigger value="all">All Platforms</TabsTrigger>
               <TabsTrigger value="gmail">Gmail</TabsTrigger>
@@ -158,11 +154,7 @@ export function ContentAnalyticsScreen() {
             )}
             
             {selectedPlatform === 'instagram' && (
-              <InstagramPlatform 
-                userId={userId} 
-                selectedPlatform={selectedPlatform}
-                isTabSwitching={isTabSwitching}
-              />
+              <InstagramPlatform userId={userId} selectedPlatform={selectedPlatform} />
             )}
             
             {selectedPlatform === 'gmail' && (
@@ -172,7 +164,9 @@ export function ContentAnalyticsScreen() {
             {/* "All" tab content */}
             {selectedPlatform === 'all' && (
               <>
-                {allDisplayItems.length > 0 ? (
+                {isAllPlatformsLoading ? (
+                  <LoadingState type="content" />
+                ) : allDisplayItems.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
                     {allDisplayItems.map((item, index) => {
                       // Ensure absolutely unique keys by combining platform, id, and index
