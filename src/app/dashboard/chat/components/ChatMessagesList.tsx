@@ -13,6 +13,8 @@ interface ChatMessagesListProps {
   handleSuggestionClick: (suggestion: any, onSendMessage: (msg: string) => void) => void;
   handleSendMessage: (msg: string) => void;
   onInputPopulate?: (text: string) => void;
+  notepadOpen?: boolean;
+  onQuoteToNotepad?: (text: string) => void;
 }
 
 const ChatMessagesList: React.FC<ChatMessagesListProps> = ({
@@ -26,6 +28,8 @@ const ChatMessagesList: React.FC<ChatMessagesListProps> = ({
   handleSuggestionClick,
   handleSendMessage,
   onInputPopulate,
+  notepadOpen,
+  onQuoteToNotepad,
 }) => (
   <>
     {messages.map((message, index) => (
@@ -44,6 +48,8 @@ const ChatMessagesList: React.FC<ChatMessagesListProps> = ({
           onFollowUpClick={handleFollowUpClick}
           userId={userId}
           onInputPopulate={onInputPopulate}
+          notepadOpen={notepadOpen}
+          onQuoteToNotepad={onQuoteToNotepad}
         />
         {message.role === 'assistant' && message.suggestions && (
           <div className="mt-3 flex flex-wrap gap-2 pl-4 sm:pl-12 pr-4 sm:pr-0">

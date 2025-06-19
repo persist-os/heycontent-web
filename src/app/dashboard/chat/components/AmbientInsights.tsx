@@ -163,7 +163,7 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
     return (
       <div className="max-w-5xl mx-auto">
         <RefreshState
-          title="Generating insights for you..."
+          title="Generating insights..."
           quote="We're analyzing your content and preferences to create personalized insights."
         />
       </div>

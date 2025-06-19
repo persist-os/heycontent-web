@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Send, Loader2, MessageSquare, Brain } from 'lucide-react'
+import { Send, Loader2, MessageSquare, Brain, FileText } from 'lucide-react'
 import { Message } from '@/app/types'
 
 interface ChatInputProps {
@@ -20,6 +20,10 @@ interface ChatInputProps {
   useContextSearch?: boolean
   onToggleContextSearch?: (enabled: boolean) => void
   embeddingInfo?: { hasEmbeddings: boolean; count: number }
+  notepadOpen?: boolean
+  openNotepad?: () => void
+  quotedForNotepad?: string
+  onClearQuoted?: () => void
 }
 
 const placeholders = [
@@ -51,7 +55,11 @@ export function ChatInput({
   onInputChange,
   useContextSearch,
   onToggleContextSearch,
-  embeddingInfo
+  embeddingInfo,
+  notepadOpen = false,
+  openNotepad,
+  quotedForNotepad,
+  onClearQuoted
 }: ChatInputProps) {
   const [input, setInput] = useState('')
   const [placeholder, setPlaceholder] = useState(placeholders[0])
@@ -111,6 +119,17 @@ export function ChatInput({
     if (currentInput.trim() && !isLoading && currentInput.length <= maxLength) {
       onSend(currentInput.trim())
       setCurrentInput('')
+    }
+  }
+
+  // Override reference handling when notepad is open
+  const handleReferenceClick = () => {
+    if (notepadOpen && referencedMessage && quotedForNotepad !== undefined) {
+      // Add to notepad logic is handled by parent
+      if (onClearQuoted) {
+        onClearQuoted()
+      }
+      onClearReference?.()
     }
   }
 
@@ -194,7 +213,7 @@ export function ChatInput({
         )}
 
         {/* Reference preview */}
-        {referencedMessage && (
+        {referencedMessage && !notepadOpen && (
           <div className="w-full mb-2">
             <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400 bg-gray-50/80 dark:bg-gray-800/40 p-2 rounded-lg border border-gray-200/50 dark:border-gray-700/50">
               <MessageSquare className="w-4 h-4 flex-shrink-0" />
@@ -224,6 +243,31 @@ export function ChatInput({
           </div>
         )}
 
+        {/* Reference notification when notepad is open */}
+        {referencedMessage && notepadOpen && (
+          <div className="w-full mb-2">
+            <div className="flex items-center gap-3 text-xs text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-200/50 dark:border-gray-700/50">
+              <FileText className="w-4 h-4 flex-shrink-0 text-gray-500 dark:text-gray-400" />
+              <button 
+                onClick={handleReferenceClick}
+                className="flex-1 text-left hover:text-gray-900 dark:hover:text-gray-100 transition-colors font-medium"
+              >
+                Add quote to notepad
+              </button>
+              <button
+                onClick={() => {
+                  setShowFullReply(false)
+                  onClearReference?.()
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded transition-colors"
+                aria-label="Clear reply"
+              >
+                <span className="text-sm">×</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="flex gap-2 items-end w-full relative">
           <div className="flex-1 relative">
             <div className={`flex items-center rounded-xl transition-all duration-200 bg-gray-50 dark:bg-gray-800 border-2
@@ -246,7 +290,7 @@ export function ChatInput({
               
               {/* Character count - positioned inside the input */}
               {!isLoading && (
-                <div className={`absolute right-10 bottom-2 text-xs pointer-events-none
+                <div className={`absolute right-[4.5rem] bottom-2 text-xs pointer-events-none
                   ${isAtLimit ? 'text-red-500 font-medium' : ''}
                   ${isNearLimit && !isAtLimit ? 'text-amber-500 font-medium' : 'text-gray-400 dark:text-gray-500'}
                   transition-colors duration-200
@@ -255,6 +299,19 @@ export function ChatInput({
                 </div>
               )}
               
+              {/* Notepad button - positioned inside the input */}
+              {openNotepad && (
+                <button
+                  type="button"
+                  onClick={openNotepad}
+                  aria-label="Open markdown notepad"
+                  title="Open markdown notepad"
+                  className="absolute right-[2.5rem] top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                </button>
+              )}
+
               {/* Send button - positioned inside the input */}
               <button
                 type="submit"
