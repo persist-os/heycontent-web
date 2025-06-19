@@ -8,6 +8,7 @@ import { Settings, Mail } from 'lucide-react';
 import { GmailCard } from '../cards/GmailCard';
 import { GmailModal } from '../modals/GmailModal';
 import { LoadingState } from '../loading/LoadingState';
+import { PlatformEmbeddingStatus } from '../components/PlatformEmbeddingStatus';
 import { useGmailAnalytics } from '../hooks/useGmailAnalytics';
 import { GmailContentItem, AnyContentItem } from '../types';
 import { sortContent } from '../utils';
@@ -131,6 +132,13 @@ export function GmailPlatform({ userId, selectedPlatform }: GmailPlatformProps) 
 
   return (
     <>
+      {/* Platform Embedding Status */}
+      <PlatformEmbeddingStatus 
+        platform="gmail" 
+        contentCount={displayItems.length} 
+        userId={userId} 
+      />
+
       {displayItems.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
           {displayItems.map((item, index) => {

@@ -35,6 +35,15 @@ export interface ChatResponseData {
     is_persona_complete?: boolean; // Indicates if persona creation is complete
     persona?: PersonaData; // The completed persona data
   };
+  vector_search_metadata?: { // Add vector search metadata
+    foundRelevantContent: boolean;
+    relevantItemsCount: number;
+    relevantContent: Array<{
+      title: string;
+      contentType: string;
+      score: number;
+    }>;
+  };
 }
 
 export interface SuggestedAction {

@@ -1,5 +1,6 @@
-import { mutation } from "./_generated/server";
+import { mutation, action } from "./_generated/server";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
 
 export const createConversation = mutation({
     args: {
@@ -138,3 +139,198 @@ handler: async (ctx, args) => {
     return { success: true, starred: !conversation.starred };
 },
 });
+
+/**
+ * Enhanced chat action that searches for relevant content before responding
+ */
+export const chatWithContext = action({
+  args: {
+    userId: v.string(),
+    query: v.string(),
+    conversationId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    console.log("🔍 [VECTOR SEARCH DEBUG] Starting chatWithContext");
+    console.log("🔍 [VECTOR SEARCH DEBUG] Input query:", args.query);
+    console.log("🔍 [VECTOR SEARCH DEBUG] User ID:", args.userId);
+    
+    try {
+      // Try to use REAL vector search first (with embeddings)
+      console.log("🔍 [VECTOR SEARCH DEBUG] Attempting REAL vector search with embeddings...");
+      let relevantContent: any[] = [];
+      
+      try {
+        const vectorResults = await ctx.runAction(api.vectorSearch.searchRelevantContent, {
+          userId: args.userId,
+          query: args.query,
+          limit: 5
+        });
+        
+        if (vectorResults && vectorResults.length > 0) {
+          console.log("🎯 [VECTOR SEARCH SUCCESS] Found", vectorResults.length, "results using embeddings!");
+          relevantContent = vectorResults.map((item: any) => ({
+            contentType: item.contentType,
+            title: item.title,
+            content: item.content,
+            score: item.score,
+            _id: item.contentId
+          }));
+        } else {
+          console.log("🎯 [VECTOR SEARCH] No results from embedding search, checking if embeddings exist...");
+          
+          // Check if user has any embeddings
+          const userEmbeddings = await ctx.runQuery(api.vectorSearch.getUserEmbeddings, { userId: args.userId, limit: 1 });
+          if (!userEmbeddings || userEmbeddings.length === 0) {
+            console.log("⚠️ [VECTOR SEARCH] No embeddings found for user. Falling back to text search.");
+            console.log("💡 [VECTOR SEARCH] Hint: Run embedding generation first!");
+            relevantContent = await searchUserContentTextBased(ctx, args.userId, args.query);
+          } else {
+            console.log("🔍 [VECTOR SEARCH] User has embeddings but no matches found for this query");
+            relevantContent = [];
+          }
+        }
+      } catch (embeddingError) {
+        console.error("❌ [VECTOR SEARCH] Error with embedding search, falling back to text search:", embeddingError);
+        relevantContent = await searchUserContentTextBased(ctx, args.userId, args.query);
+      }
+      
+      console.log("🔍 [VECTOR SEARCH DEBUG] Search completed!");
+      console.log("🔍 [VECTOR SEARCH DEBUG] Found", relevantContent.length, "relevant items");
+      console.log("🔍 [VECTOR SEARCH DEBUG] Relevant content details:");
+      relevantContent.forEach((item, index) => {
+        console.log(`🔍 [VECTOR SEARCH DEBUG] Item ${index + 1}:`, {
+          contentType: item.contentType,
+          title: item.title,
+          score: item.score,
+          contentPreview: item.content.substring(0, 100) + "...",
+          contentLength: item.content.length
+        });
+      });
+      
+      // Build context string from relevant content
+      const contextString = relevantContent
+        .map(item => `${item.contentType}: ${item.title}\n${item.content.substring(0, 500)}...`)
+        .join('\n\n');
+      
+      console.log("🔍 [VECTOR SEARCH DEBUG] Built context string:");
+      console.log("🔍 [VECTOR SEARCH DEBUG] Context length:", contextString.length);
+      console.log("🔍 [VECTOR SEARCH DEBUG] Context preview:", contextString.substring(0, 200) + "...");
+      
+      // Create a contextual prompt
+      const contextualPrompt = `Based on the user's previous content:\n${contextString}\n\nUser query: ${args.query}\n\nPlease provide a helpful response that takes into account the user's existing content and context.`;
+      
+      console.log("🔍 [VECTOR SEARCH DEBUG] Final prompt length:", contextualPrompt.length);
+      
+      // Here you would integrate with your preferred LLM
+      // For now, return the context and query for integration
+      const result = {
+        context: contextString,
+        query: args.query,
+        relevantContent: relevantContent.map(item => ({
+          title: item.title,
+          contentType: item.contentType,
+          score: item.score || 0
+        })),
+        prompt: contextualPrompt
+      };
+      
+      console.log("🔍 [VECTOR SEARCH DEBUG] Returning result with", result.relevantContent.length, "items");
+      return result;
+    } catch (error) {
+      console.error("🔍 [VECTOR SEARCH DEBUG] Error in chatWithContext:", error);
+      return {
+        context: "",
+        query: args.query,
+        relevantContent: [],
+        prompt: args.query,
+        error: "Failed to search for relevant content"
+      };
+    }
+  },
+});
+
+/**
+ * Simple content search using basic text matching (FALLBACK)
+ */
+async function searchUserContentTextBased(ctx: any, userId: string, query: string) {
+  console.log("📝 [TEXT SEARCH FALLBACK] Using text-based search as fallback");
+  console.log("📝 [TEXT SEARCH FALLBACK] Original query:", query);
+  
+  const queryLower = query.toLowerCase();
+  console.log("📝 [TEXT SEARCH FALLBACK] Lowercase query:", queryLower);
+  
+  const results: any[] = [];
+  
+  try {
+    console.log("📝 [TEXT SEARCH FALLBACK] Searching conversations...");
+    // Search conversations
+    const conversations = await ctx.runQuery(api.chatQueries.getHistory, { userId, limit: 20 });
+    console.log("📝 [TEXT SEARCH FALLBACK] Found", conversations.length, "conversations to search");
+    
+    for (const conv of conversations) {
+      const content = conv.messages.map((m: any) => m.content).join(' ').toLowerCase();
+      const titleMatches = conv.title.toLowerCase().includes(queryLower);
+      const contentMatches = content.includes(queryLower);
+      
+      if (contentMatches || titleMatches) {
+        console.log("📝 [TEXT SEARCH FALLBACK] MATCH FOUND in conversation:");
+        console.log("📝 [TEXT SEARCH FALLBACK] - Title:", conv.title);
+        console.log("📝 [TEXT SEARCH FALLBACK] - Title matches:", titleMatches);
+        console.log("📝 [TEXT SEARCH FALLBACK] - Content matches:", contentMatches);
+        console.log("📝 [TEXT SEARCH FALLBACK] - Content preview:", content.substring(0, 100) + "...");
+        
+        results.push({
+          contentType: 'conversation',
+          title: conv.title,
+          content: conv.messages.map((m: any) => `${m.role}: ${m.content}`).join('\n'),
+          score: 0.8,
+          _id: conv._id
+        });
+      }
+    }
+    console.log("📝 [TEXT SEARCH FALLBACK] Conversation search complete. Found", results.filter(r => r.contentType === 'conversation').length, "matches");
+  } catch (error) {
+    console.error("📝 [TEXT SEARCH FALLBACK] Error searching conversations:", error);
+  }
+  
+  try {
+    console.log("📝 [TEXT SEARCH FALLBACK] Searching notes...");
+    // Search notes - using the correct query name
+    const notes = await ctx.runQuery(api.notes.getNotesByUser, { userId });
+    console.log("📝 [TEXT SEARCH FALLBACK] Found", notes.length, "notes to search");
+    
+    for (const note of notes) {
+      const titleMatches = note.title.toLowerCase().includes(queryLower);
+      const contentMatches = note.content && note.content.toLowerCase().includes(queryLower);
+      
+      if (titleMatches || contentMatches) {
+        console.log("📝 [TEXT SEARCH FALLBACK] MATCH FOUND in note:");
+        console.log("📝 [TEXT SEARCH FALLBACK] - Title:", note.title);
+        console.log("📝 [TEXT SEARCH FALLBACK] - Title matches:", titleMatches);
+        console.log("📝 [TEXT SEARCH FALLBACK] - Content matches:", contentMatches);
+        console.log("📝 [TEXT SEARCH FALLBACK] - Content preview:", (note.content || '').substring(0, 100) + "...");
+        
+        results.push({
+          contentType: 'note',
+          title: note.title,
+          content: note.content || '',
+          score: 0.9,
+          _id: note._id
+        });
+      }
+    }
+    console.log("📝 [TEXT SEARCH FALLBACK] Notes search complete. Found", results.filter(r => r.contentType === 'note').length, "matches");
+  } catch (error) {
+    console.error("📝 [TEXT SEARCH FALLBACK] Error searching notes:", error);
+  }
+  
+  console.log("📝 [TEXT SEARCH FALLBACK] Total results before slicing:", results.length);
+  console.log("📝 [TEXT SEARCH FALLBACK] All results summary:");
+  results.forEach((result, index) => {
+    console.log(`📝 [TEXT SEARCH FALLBACK] Result ${index + 1}: ${result.contentType} - "${result.title}" (score: ${result.score})`);
+  });
+  
+  const finalResults = results.slice(0, 5); // Return top 5 results
+  console.log("📝 [TEXT SEARCH FALLBACK] Returning", finalResults.length, "results (top 5)");
+  return finalResults;
+}

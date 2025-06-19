@@ -189,6 +189,33 @@ app.get("/api/users/:id/conversations", async (c) => {
   return c.json(result);
 });
 
+// Chat with context - Enhanced chat that searches for relevant content
+app.post("/api/users/:id/chat_with_context", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { query, conversationId } = await c.req.json();
+
+  if (!query) {
+    return c.json({ error: "Missing query in request body" }, 400);
+  }
+
+  try {
+    const result = await ctx.runAction(api.chatMutations.chatWithContext, {
+      userId,
+      query,
+      conversationId,
+    });
+    return c.json({ success: true, ...result });
+  } catch (error: any) {
+    console.error("Failed to execute chat with context:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to process chat with context",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
 // Save insights for a user
 app.post("/api/users/:id/save_insights", async (c) => {
   const ctx = c.env;

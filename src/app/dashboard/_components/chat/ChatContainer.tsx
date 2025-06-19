@@ -4,7 +4,7 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { MessageBubble } from './message-bubble'
 import { ChatInput } from './chat-input'
-import { RefreshCw, Brain } from 'lucide-react'
+import { RefreshCw, Brain, CheckCircle } from 'lucide-react'
 import { useSidebar } from '@/app/context/sidebar-context'
 
 // Import types
@@ -33,6 +33,8 @@ import { useUIEffects } from './hooks/useUIEffects'
 import { useOnboardingState } from './hooks/useOnboardingState'
 import { usePersonaData } from './hooks/usePersonaData'
 import { useAuth } from '@/app/context/auth-context'
+import { checkUserEmbeddings } from './utils/api-utils';
+import { getCurrentUserId } from '@/app/lib/api-helpers';
 
 
 const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery }) => {
@@ -62,6 +64,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Add input state management
   const [inputValue, setInputValue] = useState('')
+  const [useContextSearch, setUseContextSearch] = useState(true); // New state for context toggle
 
   // Utility function to clean bullet points from suggestions
   const cleanSuggestionText = (text: string): string => {
@@ -103,7 +106,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     handleOptionClick,
     handleFollowUpClick,
     handleReferenceClick: handleReferenceClickProp
-  } = useChat(chatState, userId)
+  } = useChat(chatState, userId, useContextSearch)
 
   // Initialize ambient insights actions
   const ambientInsightsActions = useAmbientInsightsActions(handleSendMessage);
@@ -396,6 +399,22 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     setInputValue(cleanSuggestionText(choice));
   }, []);
 
+  const [hasStartedNewChat, setHasStartedNewChat] = useState(false);
+  const [embeddingInfo, setEmbeddingInfo] = useState<{ hasEmbeddings: boolean; count: number }>({ hasEmbeddings: false, count: 0 });
+
+  // Check for existing embeddings when component mounts or user changes
+  useEffect(() => {
+    const checkEmbeddings = async () => {
+      const currentUserId = getCurrentUserId();
+      if (currentUserId) {
+        const info = await checkUserEmbeddings(currentUserId);
+        setEmbeddingInfo(info);
+      }
+    };
+
+    checkEmbeddings();
+  }, [userId]);
+
   if (!user) {
     return null
   }
@@ -472,6 +491,29 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           </div>
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden">
+            {/* AI Intelligence Status Display (user-friendly) - Only show when no embeddings */}
+            {!embeddingInfo.hasEmbeddings && (
+              <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4 m-4 mb-2">
+                <div className="flex items-center gap-3">
+                  <div className="bg-purple-100 p-2 rounded-lg">
+                    <Brain className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-medium text-purple-900">AI Content Intelligence</h3>
+                    <p className="text-xs text-purple-700 mt-1">
+                      Connect your platforms and create an AI search index to enable intelligent content discovery and personalized insights.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="mt-3 pt-3 border-t border-purple-200">
+                  <p className="text-xs text-purple-600">
+                    💡 <strong>Get started:</strong> Go to Settings → Integrations to create your AI search index and unlock intelligent content discovery.
+                  </p>
+                </div>
+              </div>
+            )}
+            
             <AmbientInsightsContainer 
               handleSendMessage={(msg, context) => {
                 // Start a new chat with the context from the insight
@@ -506,6 +548,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           inputValue={inputValue}
           onInputChange={setInputValue}
           onInputPopulate={setInputValue}
+          useContextSearch={useContextSearch}
+          onToggleContextSearch={setUseContextSearch}
+          embeddingInfo={embeddingInfo}
         />
       </div>
     </div>

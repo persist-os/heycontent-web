@@ -9,6 +9,7 @@ import { PLATFORMS } from './platforms';
 import { YouTubePlatformCard } from './YouTubePlatformCard';
 import { GmailPlatformCard } from './GmailPlatformCard';
 import { InstagramPlatformCard } from './InstagramPlatformCard';
+import { EmbeddingManagement } from './EmbeddingManagement';
 import { isError, getAccountDetails, ConnectedAccount } from './platform-utils';
 
 export function PlatformConnect() {
@@ -253,6 +254,9 @@ export function PlatformConnect() {
           return null;
         })}
       </div>
+      
+      {/* AI Search Intelligence Section */}
+      <EmbeddingManagement userId={firebaseUser?.uid} />
     </div>
   );
 }
