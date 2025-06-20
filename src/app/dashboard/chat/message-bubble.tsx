@@ -244,8 +244,8 @@ export function MessageBubble({
           )}
           
           {/* Vector Search Context */}
-          {message.role === 'assistant' && message.vector_search_metadata && (
-            <VectorSearchContext vectorSearchMetadata={message.vector_search_metadata} />
+          {message.role === 'assistant' && message.vectorSearchMetadata && (
+            <VectorSearchContext vectorSearchMetadata={message.vectorSearchMetadata} />
           )}
 
           {/* Message Content - Full Width */}
