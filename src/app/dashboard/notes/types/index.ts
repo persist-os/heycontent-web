@@ -1,6 +1,6 @@
 import { Id } from "@/convex/_generated/dataModel";
 
-export type NoteType = 'ai_insight' | 'conversation' | 'idea' | 'url' | 'date' | 'brainstorm' | 'click';
+export type NoteType = 'idea_bank' | 'content_script' | 'collaboration_note' | 'analytics_insight' | 'reflection_journal' | 'task_checklist';
 
 
 export interface Note {
