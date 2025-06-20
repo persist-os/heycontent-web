@@ -245,7 +245,7 @@ export const useChat = (
           chat_response: data.chat_response,
           sessionId: data.session_id || sessionId,
           metadata: data.metadata,
-          vectorSearchMetadata: data.vector_search_metadata, // Add vector search metadata
+          vector_search_metadata: data.vector_search_metadata, // Add vector search metadata
           suggestions: data.suggestions || []
         };
         

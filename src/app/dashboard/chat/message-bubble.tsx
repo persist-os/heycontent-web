@@ -9,6 +9,7 @@ import { PersonaCardRenderer } from './components/PersonaCardRenderer'
 import { ThinkingIndicator } from './components/ThinkingIndicator'
 import { CopyButton } from '@/components/ui/copy-button'
 import React, { useState, useEffect } from 'react'
+import VectorSearchContext from './components/VectorSearchContext'
 
 interface MessageBubbleProps {
   message: Message
@@ -242,11 +243,24 @@ export function MessageBubble({
             </button>
           )}
           
+          {/* Vector Search Context */}
+          {message.role === 'assistant' && message.vector_search_metadata && (
+            <VectorSearchContext vectorSearchMetadata={message.vector_search_metadata} />
+          )}
+
           {/* Message Content - Full Width */}
           <div className="w-full">
             <div className="break-words chat-font">
               {message.status === 'typing' ? (
-                <ThinkingIndicator />
+                <div className="space-y-2">
+                  <ThinkingIndicator />
+                  {message.searchStatus && (
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center">
+                      <Search className="w-3 h-3 mr-1.5 flex-shrink-0" />
+                      <span>{message.searchStatus}</span>
+                    </div>
+                  )}
+                </div>
               ) : mightHavePersona ? (
                 <>
                   <MarkdownRenderer 

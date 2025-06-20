@@ -82,3 +82,5 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
     </div>
   );
 });
+
+NoteEditor.displayName = 'NoteEditor';

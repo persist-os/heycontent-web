@@ -29,6 +29,7 @@ interface VectorSearchResponse {
     title: string;
     contentType: string;
     score: number;
+    summary?: string;
   }>;
   prompt: string;
   error?: string;
@@ -819,17 +820,16 @@ async function searchRelevantContent(
           }).join('\n\n')}\n\nUser query: ${query}\n\nPlease provide a helpful response that takes into account the user's existing content and context.`
         };
 
-        onStatusUpdate?.(`✅ Found ${vectorResults.length} relevant items using smart search`);
+        onStatusUpdate?.(`Found ${vectorResults.length} relevant items using smart search`);
         return result;
       } else {
-        console.log('🔍 [FRONTEND DEBUG] Hybrid search returned no results');
+        console.log('[FRONTEND DEBUG] Hybrid search returned no results');
       }
     } catch (vectorError) {
-      console.error('❌ [FRONTEND DEBUG] Hybrid search failed, falling back to text search:', vectorError);
+      console.error('[FRONTEND DEBUG] Hybrid search failed, falling back to text search:', vectorError);
     }
 
-    // Fall back to text-based search if vector search fails
-    console.log('🚨 [FRONTEND DEBUG] Falling back to text-based search via chatWithContext');
+    
     
     const result = await convex.action(api.chatMutations.chatWithContext, {
       userId,
@@ -849,7 +849,7 @@ async function searchRelevantContent(
         }))
       });
       
-      onStatusUpdate?.(`✅ Found ${result.relevantContent.length} relevant items using text search`);
+      onStatusUpdate?.(`Found ${result.relevantContent.length} relevant items using text search`);
       
       return {
         success: true,
@@ -859,11 +859,11 @@ async function searchRelevantContent(
       };
     }
 
-    console.log('🔍 No relevant content found for query:', query);
+    console.log('No relevant content found for query:', query);
     return null;
   } catch (error) {
     console.error('🚨 [FRONTEND DEBUG] All search methods failed:', error);
-    onStatusUpdate?.('⚠️ Search completed with errors');
+    onStatusUpdate?.('Search completed with errors');
     return null;
   }
 }
@@ -934,7 +934,7 @@ export async function sendChatMessage(
       // Inject the vector search context into the query
       enhancedQuery = `Based on the user's previous content and context:\n\n${vectorSearchResults.context}\n\n---\n\nUser query: ${content}\n\nPlease provide a helpful response that takes into account the user's existing content and context. If the retrieved content is relevant, reference it naturally in your response.`;
       
-      console.log('💡 Enhanced Query with Vector Context:', {
+      console.log('Enhanced Query with Vector Context:', {
         originalQuery: content,
         contextLength: vectorSearchResults.context.length,
         relevantItems: vectorSearchResults.relevantContent.length,

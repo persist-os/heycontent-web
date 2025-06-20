@@ -36,6 +36,16 @@ export interface Message {
     ambientInsight?: any
     [key: string]: any
   }
+  vector_search_metadata?: {
+    foundRelevantContent: boolean
+    relevantItemsCount: number
+    relevantContent: Array<{
+      title: string
+      contentType: string
+      score: number
+      summary?: string
+    }>
+  }
 }
 
 export interface ChatHistory {
