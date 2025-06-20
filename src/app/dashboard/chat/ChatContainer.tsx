@@ -426,9 +426,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     }
   };
 
-  if (!user) {
-    return null
-  }
+  // Always render the static UI shell, even when authentication is in progress
+  // User-dependent content will be conditionally rendered
 
   return (
     <>
@@ -437,15 +436,25 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         className="flex flex-col h-screen bg-white overflow-hidden"
         style={getMainContentStyle()}
       >
-        {/* Header */}
+        {/* Header - Always render this static element */}
         <ChatHeader 
           isRefreshing={isRefreshing} 
           onNewChat={handleNewChat}
+          isAuthenticated={!!user}
         />
 
-        {/* Main Content */}
+        {/* Main Content - Always render the container, conditionally render content */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {hasMessagesOrContext ? (
+          {!user ? (
+            // Static placeholder for unauthenticated state
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center p-4">
+                <div className="h-12 w-12 rounded-full bg-gray-100 mx-auto mb-4"></div>
+                <div className="h-4 w-48 bg-gray-100 rounded mx-auto mb-2"></div>
+                <div className="h-3 w-32 bg-gray-100 rounded mx-auto"></div>
+              </div>
+            </div>
+          ) : hasMessagesOrContext ? (
             <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
               <div className="p-2 sm:p-4">
                 <div className="max-w-4xl sm:max-w-6xl mx-auto space-y-3">
@@ -528,12 +537,12 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           )}
         </div>
 
-        {/* Bottom Bar Actions - Only show when there are no messages */}
-        {messages.length === 0 && (
+        {/* Bottom Bar Actions - Only show when authenticated and there are no messages */}
+        {user && messages.length === 0 && (
           <BottomBarActions onActionClick={handleActionClick} onInputPopulate={handleInputAppend} />
         )}
 
-        {/* Input Bar */}
+        {/* Input Bar - Always render the container, but conditionally enable functionality */}
         <div className="flex-shrink-0 border-t border-gray-100">
           <ChatInputArea
             showAmbient={false}
@@ -555,6 +564,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             openNotepad={toggleNotepad}
             quotedForNotepad={quotedForNotepad}
             onClearQuoted={handleClearQuoted}
+            isAuthenticated={!!user}
           />
         </div>
       </div>

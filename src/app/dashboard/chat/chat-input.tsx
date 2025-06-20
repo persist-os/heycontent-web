@@ -24,6 +24,7 @@ interface ChatInputProps {
   openNotepad?: () => void
   quotedForNotepad?: string
   onClearQuoted?: () => void
+  disabled?: boolean
 }
 
 const placeholders = [
@@ -59,7 +60,8 @@ export function ChatInput({
   notepadOpen = false,
   openNotepad,
   quotedForNotepad,
-  onClearQuoted
+  onClearQuoted,
+  disabled = false
 }: ChatInputProps) {
   const [input, setInput] = useState('')
   const [placeholder, setPlaceholder] = useState(placeholders[0])
@@ -276,7 +278,7 @@ export function ChatInput({
                 [scrollbar-width:thin]
                 [scrollbar-color:rgb(209_213_219)_transparent]
                 dark:[scrollbar-color:rgb(75_85_99)_transparent]"
-                disabled={isLoading}
+                disabled={isLoading || disabled}
                 onKeyDown={handleKeyDown}
                 maxLength={maxLength}
               />
@@ -359,9 +361,9 @@ export function ChatInput({
                 <button
                   type="submit"
                   aria-label="Send message"
-                  disabled={isLoading || !currentInput.trim() || isAtLimit}
+                  disabled={isLoading || !currentInput.trim() || isAtLimit || disabled}
                   className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200
-                    ${isLoading || !currentInput.trim() || isAtLimit 
+                    ${isLoading || !currentInput.trim() || isAtLimit || disabled 
                       ? 'bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-500 cursor-not-allowed' 
                       : 'bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black shadow-sm hover:shadow-md hover:scale-105 active:scale-95'
                     }`}

@@ -56,27 +56,9 @@ export default function DashboardLayout({
  
   }, [isPublicPath, isSubscriptionLoading, isSubscribed, pathname, router]);
 
-  // Show loading state while checking auth and subscription
-  if (authLoading || (isSubscriptionLoading && !isPublicPath)) {
-    return (
-      <div className="min-h-screen">
-        <RefreshState
-          title="Loading..."
-          quote="Setting up your dashboard"
-        />
-      </div>
-    );
-  }
-
-  // Don't render anything if not authenticated
-  if (!firebaseUser) {
-    return null;
-  }
-
-  // If user needs to subscribe and isn't on the subscription page, don't render the layout
-  if (!isPublicPath && !isSubscriptionLoading && isSubscribed === false) {
-    return null;
-  }
+  // Immediately render the layout and let children handle their own loading states.
+  // The auth and subscription checks will run in the background and trigger redirects
+  // or state updates without blocking the initial render.
 
   return (
     <div className="relative flex min-h-screen">

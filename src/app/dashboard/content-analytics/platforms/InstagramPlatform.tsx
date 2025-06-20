@@ -8,7 +8,6 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Calendar, Clock, BarChart3, RefreshCw, Instagram, Settings } from 'lucide-react';
 import { InstagramCard } from '../cards/InstagramCard';
 import { InstagramModal } from '../modals/InstagramModal';
-import { LoadingState } from '../loading/LoadingState';
 import { PlatformEmbeddingStatus } from '../components/PlatformEmbeddingStatus';
 import { useInstagramAnalytics } from '../hooks/useInstagramAnalytics';
 import { InstagramContentItem, AnyContentItem } from '../types';
@@ -46,6 +45,7 @@ const CardSkeleton = memo(() => (
     </div>
   </Card>
 ));
+CardSkeleton.displayName = 'CardSkeleton';
 
 const PieChartSkeleton = memo(() => (
   <Card className="p-6 bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl">
@@ -73,12 +73,34 @@ const PieChartSkeleton = memo(() => (
     </div>
   </Card>
 ));
+PieChartSkeleton.displayName = 'PieChartSkeleton';
 
 export function InstagramPlatform({ userId, selectedPlatform }: InstagramPlatformProps) {
   const router = useRouter();
   const [selectedContent, setSelectedContent] = useState<InstagramContentItem | null>(null);
   
   const { items, analysis, loading, error, isConnected, refresh, refreshing, instagramAccount } = useInstagramAnalytics(userId);
+
+  // Memoized pie chart data calculation
+  const mediaDistributionData = useMemo(() => {
+    if (!analysis?.media_distribution) {
+      return [];
+    }
+    
+    const data = [
+      { name: 'Regular Posts', value: parseInt(analysis.media_distribution.regular_post?.replace('%', '') || '0'), color: '#FFDF39' },
+      { name: 'Carousels', value: parseInt(analysis.media_distribution.carousel?.replace('%', '') || '0'), color: '#9046FF' },
+      { name: 'Reels', value: parseInt(analysis.media_distribution.reel?.replace('%', '') || '0'), color: '#45E290' }
+    ].filter(item => item.value > 0);
+    
+    return data;
+  }, [analysis?.media_distribution]);
+
+  // Memoized progress bar width calculation
+  const progressBarWidth = useMemo(() => {
+    if (!analysis?.posting_frequency?.average_days_between_posts) return 0;
+    return Math.max(0, Math.min(100, 100 - ((analysis.posting_frequency.average_days_between_posts || 0) / 365 * 100)));
+  }, [analysis?.posting_frequency?.average_days_between_posts]);
 
   // Check connection status first, before any loading states
   // Show Instagram connect card if no Instagram account found
@@ -119,27 +141,6 @@ export function InstagramPlatform({ userId, selectedPlatform }: InstagramPlatfor
 
   // Sort items by date
   const displayItems = sortContent(items, 'date');
-
-  // Memoized pie chart data calculation
-  const mediaDistributionData = useMemo(() => {
-    if (!analysis?.media_distribution) {
-      return [];
-    }
-    
-    const data = [
-      { name: 'Regular Posts', value: parseInt(analysis.media_distribution.regular_post?.replace('%', '') || '0'), color: '#FFDF39' },
-      { name: 'Carousels', value: parseInt(analysis.media_distribution.carousel?.replace('%', '') || '0'), color: '#9046FF' },
-      { name: 'Reels', value: parseInt(analysis.media_distribution.reel?.replace('%', '') || '0'), color: '#45E290' }
-    ].filter(item => item.value > 0);
-    
-    return data;
-  }, [analysis?.media_distribution]);
-
-  // Memoized progress bar width calculation
-  const progressBarWidth = useMemo(() => {
-    if (!analysis?.posting_frequency?.average_days_between_posts) return 0;
-    return Math.max(0, Math.min(100, 100 - ((analysis.posting_frequency.average_days_between_posts || 0) / 365 * 100)));
-  }, [analysis?.posting_frequency?.average_days_between_posts]);
 
   const discussContent = async (item: AnyContentItem) => {
     try {

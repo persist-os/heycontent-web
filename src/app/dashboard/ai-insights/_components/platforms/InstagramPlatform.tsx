@@ -4,20 +4,20 @@ import React, { useState } from 'react'
 import { RefreshCw, AlertCircle, Settings, Zap, Instagram } from 'lucide-react'
 import { InsightCard } from '../InsightCard'
 import { useInstagramInsights } from '../hooks/useInstagramInsights'
-import { InstagramBrandIcon } from '../../../_components/InstagramBrandIcon'
 import { RefreshState } from '@/components/ui/refresh-state'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface InstagramPlatformProps {
   userId?: string
   currentQuote: string
+  loading: boolean
 }
 
-export function InstagramPlatform({ userId, currentQuote }: InstagramPlatformProps) {
+export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPlatformProps) {
   const [expandedInsight, setExpandedInsight] = useState<number | null>(null)
   
   const { 
     insights, 
-    loading, 
     refreshing, 
     error, 
     isConnected, 
@@ -221,7 +221,19 @@ export function InstagramPlatform({ userId, currentQuote }: InstagramPlatformPro
         disabled={!userId || !isConnected}
       />
       
-      {refreshing ? (
+      {loading ? (
+        <div className="grid gap-6">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 flex flex-col space-y-4">
+              <Skeleton className="h-5 w-3/4" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : refreshing ? (
         <RefreshState
           title="Refreshing Instagram insights..."
           quote={currentQuote}
