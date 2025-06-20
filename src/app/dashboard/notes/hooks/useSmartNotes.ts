@@ -6,6 +6,7 @@ import { Note, NoteUpdate, NoteType } from "../types";
 import { getApiKey } from "@/app/lib/api-helpers";
 import { formatAnalysisToMarkdown } from '../utils/format-utils';
 import { useTitleGeneration } from './useTitleGeneration';
+import { useTypeClassification } from './useTypeClassification';
 
 interface SmartNoteIdea {
   id: string;
@@ -46,6 +47,9 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
   // Title generation hook
   const { generateTitle } = useTitleGeneration();
   
+  // Type classification hook
+  const { classifyType } = useTypeClassification();
+
   // Define isLoading based on query status
   const isLoading = notesFromConvex === undefined && userId !== undefined;
 
@@ -91,6 +95,14 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
 
     const { title = "Untitled Note", type = "idea_bank", platform = "general" } = options;
 
+    console.log("🚀 [saveNote] Starting note creation:", {
+      contentLength: content?.length || 0,
+      title,
+      initialType: type,
+      platform,
+      userId
+    });
+
     try {
       setIsSaving(true);
       console.log("Creating new note:", { title, contentLength: content?.length || 0 });
@@ -106,7 +118,14 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
       });
 
       if (noteId) {
-        console.log("Note created successfully:", noteId);
+        console.log("✅ [saveNote] Note created successfully:", noteId);
+        console.log("📝 [saveNote] Initial note data:", {
+          noteId,
+          title,
+          type,
+          platform,
+          contentPreview: content?.substring(0, 100) + "..."
+        });
         
         // 2. Auto-generate title if content is substantial and title is generic
         const shouldGenerateTitle = (
@@ -115,8 +134,15 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
           (title === "Untitled Note" || !title || title.trim() === "")
         );
 
+        console.log("🔍 [saveNote] Title generation check:", {
+          shouldGenerateTitle,
+          contentLength: content?.trim().length || 0,
+          currentTitle: title,
+          titleIsGeneric: title === "Untitled Note" || !title || title.trim() === ""
+        });
+
         if (shouldGenerateTitle) {
-          console.log("Auto-generating title for new note:", noteId);
+          console.log("🎯 [saveNote] Auto-generating title for new note:", noteId);
           try {
             const titleResult = await generateTitle({
               content: content.trim(),
@@ -125,26 +151,97 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
             });
             
             if (titleResult.title) {
-              console.log("Title auto-generated successfully:", titleResult.title);
+              console.log("✅ [saveNote] Title auto-generated successfully:", titleResult.title);
             }
           } catch (titleError) {
             // Don't fail the save if title generation fails
-            console.warn("Title generation failed, but note was saved:", titleError);
+            console.warn("⚠️ [saveNote] Title generation failed, but note was saved:", titleError);
           }
         }
 
+        // 3. Auto-classify type if content is substantial and type is default
+        const shouldClassifyType = (
+          content && 
+          content.trim().length >= 10 && 
+          type === "idea_bank" // Only classify if using default type
+        );
+
+        console.log("🔍 [saveNote] Type classification check:", {
+          shouldClassifyType,
+          contentLength: content?.trim().length || 0,
+          currentType: type,
+          isDefaultType: type === "idea_bank",
+          contentPreview: content?.trim().substring(0, 50) + "..."
+        });
+
+        if (shouldClassifyType) {
+          console.log("🎯 [saveNote] Auto-classifying type for new note:", noteId);
+          console.log("📤 [saveNote] Sending to type classifier:", {
+            content: content.trim().substring(0, 100) + "...",
+            platform: platform || "general",
+            noteId: noteId as string
+          });
+          
+          try {
+            const typeResult = await classifyType({
+              content: content.trim(),
+              platform: platform || "general",
+              noteId: noteId as string,
+            });
+            
+            console.log("📥 [saveNote] Type classification result:", {
+              success: typeResult.success,
+              classifiedType: typeResult.type,
+              confidence: typeResult.confidence,
+              reasoning: typeResult.reasoning,
+              typeGenerated: typeResult.typeGenerated,
+              originalType: type
+            });
+            
+            if (typeResult.typeGenerated && typeResult.type !== "idea_bank") {
+              console.log("✅ [saveNote] Type auto-classified successfully:", {
+                oldType: type,
+                newType: typeResult.type,
+                confidence: typeResult.confidence,
+                reasoning: typeResult.reasoning
+              });
+            } else {
+              console.log("ℹ️ [saveNote] Type classification completed but no change:", {
+                resultType: typeResult.type,
+                confidence: typeResult.confidence,
+                typeGenerated: typeResult.typeGenerated,
+                reason: typeResult.reasoning
+              });
+            }
+          } catch (typeError) {
+            // Don't fail the save if type classification fails
+            console.warn("⚠️ [saveNote] Type classification failed, but note was saved:", typeError);
+          }
+        } else {
+          console.log("⏭️ [saveNote] Skipping type classification:", {
+            reason: !shouldClassifyType ? "Conditions not met" : "Unknown",
+            contentTooShort: !content || content.trim().length < 10,
+            notDefaultType: type !== "idea_bank"
+          });
+        }
+
+        console.log("🎉 [saveNote] Note creation process completed:", {
+          noteId,
+          finalStatus: "success"
+        });
+
         return { success: true, noteId };
       } else {
-        console.error("Failed to create note - no ID returned");
+        console.error("❌ [saveNote] Failed to create note - no ID returned");
         return { success: false, error: "Failed to create note" };
       }
     } catch (error) {
-      console.error("Error creating note:", error);
+      console.error("💥 [saveNote] Error creating note:", error);
       return { success: false, error: String(error) };
     } finally {
       setIsSaving(false);
     }
-  }, [userId, createNoteConvex, generateTitle]);
+  }, [userId, createNoteConvex, generateTitle, classifyType]);
 
   /**
    * Delete a note by ID
@@ -190,6 +287,13 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
     // Always use Convex IDs
     const convexNoteId = noteId as Id<"notes">;
     
+    console.log("💾 [saveNoteContent] Starting content save:", {
+      noteId: String(convexNoteId),
+      title,
+      contentLength: content?.length || 0,
+      contentPreview: content?.substring(0, 50) + "..."
+    });
+    
     setIsSaving(true);
     try {
       console.log("About to save note with title:", title);
@@ -207,6 +311,7 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
         title: title || ''
       });
       console.log('Raw response from updateNoteContentConvex:', updatedNote);
+      
       if (updatedNote) {
         console.log('Note content saved successfully:', updatedNote);
         setNotes(prev => {
@@ -214,6 +319,76 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
           console.log("Notes after update:", updated);
           return updated;
         });
+
+        // 🎯 AUTO-CLASSIFY TYPE if conditions are met
+        const shouldClassifyType = (
+          content && 
+          content.trim().length >= 10 && 
+          updatedNote.type === "idea_bank" && // Only classify if still default type
+          !updatedNote.typeGenerated // Only classify if not already classified
+        );
+
+        console.log("🔍 [saveNoteContent] Type classification check:", {
+          shouldClassifyType,
+          contentLength: content?.trim().length || 0,
+          currentType: updatedNote.type,
+          isDefaultType: updatedNote.type === "idea_bank",
+          alreadyClassified: updatedNote.typeGenerated,
+          contentPreview: content?.trim().substring(0, 50) + "..."
+        });
+
+        if (shouldClassifyType) {
+          console.log("🎯 [saveNoteContent] Auto-classifying type for updated note:", convexNoteId);
+          console.log("📤 [saveNoteContent] Sending to type classifier:", {
+            content: content.trim().substring(0, 100) + "...",
+            platform: updatedNote.platform || "general",
+            noteId: String(convexNoteId)
+          });
+          
+          try {
+            const typeResult = await classifyType({
+              content: content.trim(),
+              platform: updatedNote.platform || "general",
+              noteId: String(convexNoteId),
+            });
+            
+            console.log("📥 [saveNoteContent] Type classification result:", {
+              success: typeResult.success,
+              classifiedType: typeResult.type,
+              confidence: typeResult.confidence,
+              reasoning: typeResult.reasoning,
+              typeGenerated: typeResult.typeGenerated,
+              originalType: updatedNote.type
+            });
+            
+            if (typeResult.typeGenerated && typeResult.type !== "idea_bank") {
+              console.log("✅ [saveNoteContent] Type auto-classified successfully:", {
+                oldType: updatedNote.type,
+                newType: typeResult.type,
+                confidence: typeResult.confidence,
+                reasoning: typeResult.reasoning
+              });
+            } else {
+              console.log("ℹ️ [saveNoteContent] Type classification completed but no change:", {
+                resultType: typeResult.type,
+                confidence: typeResult.confidence,
+                typeGenerated: typeResult.typeGenerated,
+                reason: typeResult.reasoning
+              });
+            }
+          } catch (typeError) {
+            // Don't fail the save if type classification fails
+            console.warn("⚠️ [saveNoteContent] Type classification failed, but note was saved:", typeError);
+          }
+        } else {
+          console.log("⏭️ [saveNoteContent] Skipping type classification:", {
+            reason: !shouldClassifyType ? "Conditions not met" : "Unknown",
+            contentTooShort: !content || content.trim().length < 10,
+            notDefaultType: updatedNote.type !== "idea_bank",
+            alreadyClassified: updatedNote.typeGenerated
+          });
+        }
+        
         return updatedNote;
       } else {
         console.warn('updateNoteContentConvex returned null or invalid note!', {
@@ -230,7 +405,7 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
     } finally {
       setIsSaving(false);
     }
-  }, [userId, updateNoteContentConvex, setNotes]);
+  }, [userId, updateNoteContentConvex, setNotes, classifyType]);
 
   /**
    * Update a note with various fields
@@ -244,6 +419,14 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
 
     // Always use Convex IDs
     const convexNoteId = noteId as Id<"notes">;
+    
+    console.log("🔄 [updateNote] Starting note update:", {
+      noteId: String(convexNoteId),
+      updateFields: Object.keys(updateFields),
+      userId,
+      hasContent: 'content' in updateFields,
+      contentLength: updateFields.content?.length || 0
+    });
     
     setIsSaving(true);
     try {
@@ -261,6 +444,7 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
         updates: updateFields,
       });
       console.log('Raw response from updateNoteConvex:', updatedNote);
+      
       if (updatedNote) {
         console.log('Note updated successfully:', updatedNote);
         setNotes(prev => {
@@ -270,6 +454,78 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
           console.log('[useSmartNotes] Notes after update:', updated);
           return updated;
         });
+
+        // 🎯 AUTO-CLASSIFY TYPE if content was updated and conditions are met
+        const shouldClassifyType = (
+          updateFields.content && 
+          updateFields.content.trim().length >= 10 && 
+          updatedNote.type === "idea_bank" && // Only classify if still default type
+          !updatedNote.typeGenerated // Only classify if not already classified
+        );
+
+        console.log("🔍 [updateNote] Type classification check:", {
+          shouldClassifyType,
+          hasContentUpdate: !!updateFields.content,
+          contentLength: updateFields.content?.trim().length || 0,
+          currentType: updatedNote.type,
+          isDefaultType: updatedNote.type === "idea_bank",
+          alreadyClassified: updatedNote.typeGenerated,
+          contentPreview: updateFields.content?.trim().substring(0, 50) + "..."
+        });
+
+        if (shouldClassifyType) {
+          console.log("🎯 [updateNote] Auto-classifying type for updated note:", convexNoteId);
+          console.log("📤 [updateNote] Sending to type classifier:", {
+            content: updateFields.content!.trim().substring(0, 100) + "...",
+            platform: updatedNote.platform || "general",
+            noteId: String(convexNoteId)
+          });
+          
+          try {
+            const typeResult = await classifyType({
+              content: updateFields.content!.trim(),
+              platform: updatedNote.platform || "general",
+              noteId: String(convexNoteId),
+            });
+            
+            console.log("📥 [updateNote] Type classification result:", {
+              success: typeResult.success,
+              classifiedType: typeResult.type,
+              confidence: typeResult.confidence,
+              reasoning: typeResult.reasoning,
+              typeGenerated: typeResult.typeGenerated,
+              originalType: updatedNote.type
+            });
+            
+            if (typeResult.typeGenerated && typeResult.type !== "idea_bank") {
+              console.log("✅ [updateNote] Type auto-classified successfully:", {
+                oldType: updatedNote.type,
+                newType: typeResult.type,
+                confidence: typeResult.confidence,
+                reasoning: typeResult.reasoning
+              });
+            } else {
+              console.log("ℹ️ [updateNote] Type classification completed but no change:", {
+                resultType: typeResult.type,
+                confidence: typeResult.confidence,
+                typeGenerated: typeResult.typeGenerated,
+                reason: typeResult.reasoning
+              });
+            }
+          } catch (typeError) {
+            // Don't fail the save if type classification fails
+            console.warn("⚠️ [updateNote] Type classification failed, but note was saved:", typeError);
+          }
+        } else {
+          console.log("⏭️ [updateNote] Skipping type classification:", {
+            reason: !shouldClassifyType ? "Conditions not met" : "Unknown",
+            noContentUpdate: !updateFields.content,
+            contentTooShort: !updateFields.content || updateFields.content.trim().length < 10,
+            notDefaultType: updatedNote.type !== "idea_bank",
+            alreadyClassified: updatedNote.typeGenerated
+          });
+        }
+        
         return updatedNote;
       } else {
         console.warn('updateNoteConvex returned null or invalid note!', {
@@ -285,7 +541,7 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
     } finally {
       setIsSaving(false);
     }
-  }, [userId, updateNoteConvex, setNotes]);
+  }, [userId, updateNoteConvex, setNotes, classifyType]);
 
 
   // Return all functions and state from the hook

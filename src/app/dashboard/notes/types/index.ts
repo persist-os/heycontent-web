@@ -20,6 +20,7 @@ export interface Note {
   fields?: any;
   analysis?: any;
   titleGenerated?: boolean;
+  typeGenerated?: boolean;
   isLocal?: boolean;
 }
 
@@ -38,6 +39,7 @@ export interface NoteUpdate {
 
   analysis?: any;
   titleGenerated?: boolean;
+  typeGenerated?: boolean;
 }
 
 export interface Command {
