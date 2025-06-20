@@ -72,6 +72,18 @@ const saveCachedData = (userId: string, data: GmailContentItem[]) => {
   }
 };
 
+// Clear cache for debugging
+const clearCachedData = (userId: string) => {
+  const cacheKey = getCacheKey(userId);
+  memoryCache.delete(cacheKey);
+  try {
+    localStorage.removeItem(cacheKey);
+    console.log('📧 Gmail: Cache cleared for userId:', userId);
+  } catch (error) {
+    console.warn('Failed to clear Gmail cache:', error);
+  }
+};
+
 export function useGmailAnalytics(userId?: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -88,9 +100,18 @@ export function useGmailAnalytics(userId?: string) {
     const cached = loadCachedData(userId);
     const isCacheValid = cached && (Date.now() - cached.timestamp < CACHE_DURATION);
     
-    // Only fetch if cache is invalid/expired
-    return !isCacheValid;
+    // FIXED: Also fetch if cache is valid but empty (no data)
+    const hasValidData = cached && cached.data && cached.data.length > 0;
+    
+    // Only fetch if cache is invalid/expired OR if cache is empty
+    return !isCacheValid || !hasValidData;
   }, [userId]);
+
+  // FIXED: Query for Gmail accounts to check connection status
+  const gmailAccounts = useQuery(
+    api.gmailQueries.getGmailAccounts,
+    userId ? { userId } : "skip"
+  );
 
   // Convex query for Gmail threads (only when cache expired)
   const gmailThreads = useQuery(
@@ -215,7 +236,9 @@ export function useGmailAnalytics(userId?: string) {
       
       return mappedItems;
     }
-    return cachedItems; // Return cached items if Convex data is not available
+    
+    // Return cached items if Convex data is not available
+    return cachedItems;
   }, [gmailThreads, cachedItems, userId]);
 
   // Initialize with cached data on mount
@@ -272,18 +295,17 @@ export function useGmailAnalytics(userId?: string) {
     }
   }, [gmailThreads, userId]);
 
-  // Reset cache when userId changes
+  // Reset cache when userId changes (but not when it becomes undefined)
   useEffect(() => {
-    setCachedItems([]);
-    setError(null);
-    setLastFetchTime(null);
+    // Don't reset cache - let the cache loading effect handle it
+    // This was causing the cache to be cleared immediately after loading
   }, [userId]);
 
   return {
     items: mappedGmailItems,
     loading: loading,
     error,
-    isConnected: !!gmailThreads || cachedItems.length > 0,
+    isConnected: !!gmailAccounts && gmailAccounts.length > 0 && !!gmailAccounts[0]?.email,
     rawData: gmailThreads,
     lastFetchTime: lastFetchTime ? new Date(lastFetchTime) : null,
     isCached: !!lastFetchTime && (Date.now() - lastFetchTime < CACHE_DURATION)

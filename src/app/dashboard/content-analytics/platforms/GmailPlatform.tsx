@@ -157,30 +157,30 @@ export function GmailPlatform({ userId, selectedPlatform }: GmailPlatformProps) 
         <div className="flex items-center justify-center min-h-[400px] px-4">
           <Card className="p-6 sm:p-8 max-w-md w-full bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl text-center">
             <div className="flex justify-center mb-4 sm:mb-6">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-red-500 flex items-center justify-center">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-blue-500 flex items-center justify-center">
                 <Mail className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
               </div>
             </div>
             
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
-              Connect Your Gmail Account
+              No Content Found
             </h3>
             
             <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
-              Connect your Gmail account to view email analytics, track business communications, 
-              and get insights on partnership opportunities.
+              Connect your social media accounts to unlock powerful
+              analytics and insights across all your platforms.
             </p>
             
             <Button 
               onClick={() => router.push('/settings?tab=integrations')}
-              className="w-full py-3 px-4 sm:px-6 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
+              className="w-full py-3 px-4 sm:px-6 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
             >
               <Settings className="w-4 h-4" />
-              Go to Integrations
+              Connect Platforms
             </Button>
             
             <div className="mt-3 sm:mt-4 text-xs text-gray-500">
-              You can connect Gmail in Settings → Integrations
+              Connect YouTube, Instagram, and Gmail in Settings → Integrations
             </div>
           </Card>
         </div>

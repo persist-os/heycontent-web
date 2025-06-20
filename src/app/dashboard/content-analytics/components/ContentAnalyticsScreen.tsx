@@ -36,6 +36,7 @@ export function ContentAnalyticsScreen() {
   const [selectedContent, setSelectedContent] = useState<AnyContentItem | null>(null);
 
   // Platform hooks for "all" tab data - now with cache support
+  // FIXED: Always call hooks with userId, don't make them conditional
   const youtubeData = useYouTubeAnalytics(userId);
   const instagramData = useInstagramAnalytics(userId);
   const gmailData = useGmailAnalytics(userId);

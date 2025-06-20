@@ -88,9 +88,18 @@ export function useYouTubeAnalytics(userId?: string) {
     const cached = loadCachedData(userId);
     const isCacheValid = cached && (Date.now() - cached.timestamp < CACHE_DURATION);
     
-    // Only fetch if cache is invalid/expired
-    return !isCacheValid;
+    // FIXED: Also fetch if cache is valid but empty (no data)
+    const hasValidData = cached && cached.data && cached.data.length > 0;
+    
+    // Only fetch if cache is invalid/expired OR if cache is empty
+    return !isCacheValid || !hasValidData;
   }, [userId]);
+
+  // FIXED: Query for YouTube channel data to check connection status
+  const youtubeChannel = useQuery(
+    api.youtubeQueries.getYouTubeChannelData,
+    userId ? { userId } : "skip"
+  );
 
   // Convex query for YouTube videos (only when cache expired)
   const youtubeVideos = useQuery(
@@ -192,16 +201,15 @@ export function useYouTubeAnalytics(userId?: string) {
 
   // Reset cache when userId changes
   useEffect(() => {
-    setCachedItems([]);
-    setError(null);
-    setLastFetchTime(null);
+    // Don't reset cache - let the cache loading effect handle it
+    // This was causing the cache to be cleared immediately after loading
   }, [userId]);
 
   return {
     items: mappedYouTubeItems,
     loading: loading,
     error,
-    isConnected: !!youtubeVideos || cachedItems.length > 0,
+    isConnected: !!youtubeChannel?.id,
     rawData: youtubeVideos,
     lastFetchTime: lastFetchTime ? new Date(lastFetchTime) : null,
     isCached: !!lastFetchTime && (Date.now() - lastFetchTime < CACHE_DURATION)
