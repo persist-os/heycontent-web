@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
-import { Note, NoteUpdate } from './types';
+import { Note, NoteUpdate, NoteType } from './types';
 import { CommandMenu } from './CommandMenu';
 import { NoteHeader } from './components/NoteHeader';
 import { NoteEditor } from './components/NoteEditor';
 import { NoteMeta } from './components/NoteMeta';
+import { TypeSelector } from './components/TypeSelector';
 import { useSmartNoteEditor } from './hooks/useSmartNoteEditor';
 import { FullAnalysisModal } from './components/FullAnalysisModal';
 import IdeasPanel from "./components/IdeasPanel";
@@ -17,7 +18,7 @@ import { Brain, Lightbulb, Edit } from 'lucide-react';
 
 interface NoteAreaProps {
   note: Note;
-  onUpdate: (noteId: string, updates: NoteUpdate) => Promise<Note>;
+  onUpdate: (noteId: string | Id<"notes">, updates: NoteUpdate) => Promise<Note>;
   onSave: (content: string, title?: string) => void;
   onToggleShortcuts: () => void;
   onRequestAIInsights: (noteId: string, note: Note) => Promise<void>;
@@ -93,6 +94,11 @@ export function NoteArea({
     console.log('[NoteArea] handleMetaTitleChange: received new title', title);
   };
 
+  const handleTypeChange = async (newType: NoteType) => {
+    console.log('[NoteArea] handleTypeChange: updating type', { noteId: note._id, newType });
+    await onUpdate(note._id, { type: newType, typeGenerated: false });
+  };
+
   return (
     <div className="flex flex-col h-full w-full">
       {/* Header */}
@@ -122,19 +128,30 @@ export function NoteArea({
           onValueChange={setActiveTab}
           className="flex flex-col flex-1 overflow-hidden"
         >
-          <TabsList className="bg-white border-b border-gray-200 px-2 mb-0 w-full justify-start">
-            <TabsTrigger value="editor" className="flex items-center gap-1 data-[state=active]:text-purple-700">
-              <Edit size={16} />
-              <span>Editor</span>
-            </TabsTrigger>
-            <TabsTrigger value="analysis" className="flex items-center gap-1 data-[state=active]:text-purple-700">
-              <Brain size={16} />
-              <span>Analysis</span>
-            </TabsTrigger>
-            <TabsTrigger value="ideas" className="flex items-center gap-1 data-[state=active]:text-purple-700">
-              <Lightbulb size={16} />
-              <span>Ideas</span>
-            </TabsTrigger>
+          <TabsList className="bg-white border-b border-gray-200 px-2 mb-0 w-full justify-between">
+            <div className="flex items-center">
+              <TabsTrigger value="editor" className="flex items-center gap-1 data-[state=active]:text-purple-700">
+                <Edit size={16} />
+                <span>Editor</span>
+              </TabsTrigger>
+              <TabsTrigger value="analysis" className="flex items-center gap-1 data-[state=active]:text-purple-700">
+                <Brain size={16} />
+                <span>Analysis</span>
+              </TabsTrigger>
+              <TabsTrigger value="ideas" className="flex items-center gap-1 data-[state=active]:text-purple-700">
+                <Lightbulb size={16} />
+                <span>Ideas</span>
+              </TabsTrigger>
+            </div>
+            
+            {/* Type Selector aligned with tabs */}
+            <div className="flex items-center mr-4">
+              <TypeSelector
+                currentType={note.type || 'idea_bank'}
+                typeGenerated={note.typeGenerated}
+                onTypeChange={handleTypeChange}
+              />
+            </div>
           </TabsList>
           
           <div className="flex flex-1 overflow-hidden">
