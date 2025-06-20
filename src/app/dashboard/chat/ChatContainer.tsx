@@ -418,14 +418,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     });
   }, []);
 
-  const handleCreateNoteFromNotepad = (content: string) => {
-    const newNoteId = createLocalNote(content);
-    if (newNoteId) {
-      setActiveNoteId(newNoteId);
-      router.push('/dashboard/notes');
-    }
-  };
-
   // Always render the static UI shell, even when authentication is in progress
   // User-dependent content will be conditionally rendered
 
@@ -574,7 +566,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         isOpen={notepadOpen}
         onClose={toggleNotepad}
         onSendToChat={handleNotepadSendToChat}
-        onCreateNote={handleCreateNoteFromNotepad}
         quotedContent={quotedForNotepad}
         onClearQuoted={handleClearQuoted}
         width={notepadWidth}
