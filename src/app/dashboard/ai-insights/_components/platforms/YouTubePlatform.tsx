@@ -1,12 +1,13 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { RefreshCw, AlertCircle, Settings } from 'lucide-react'
 import { InsightCard } from '../InsightCard'
 import { useYouTubeInsights } from '../hooks/useYouTubeInsights'
-import { YouTubeBrandIcon } from '../../../../../lib/YoutubeBrandIcon'
 import { RefreshState } from '@/components/ui/refresh-state'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AnalysisDepthPicker } from '../AnalysisDepthPicker'
+import { YouTubeBrandIcon } from '../../../../../lib/YoutubeBrandIcon'
+import { Button } from '@/components/ui/button'
 
 interface YouTubePlatformProps {
   userId?: string
@@ -17,56 +18,31 @@ interface YouTubePlatformProps {
 export function YouTubePlatform({ userId, currentQuote, loading }: YouTubePlatformProps) {
   const [expandedInsight, setExpandedInsight] = useState<number | null>(null)
   
-  const { insights, refreshing, error, isConnected, refresh } = useYouTubeInsights(userId)
+  const { 
+    insights, 
+    refreshing, 
+    error, 
+    isConnected, 
+    refresh,
+    postLimit,
+    setPostLimit,
+    customPostLimit,
+    setCustomPostLimit,
+    showCustomInput,
+    setShowCustomInput,
+    handleCustomSubmit
+  } = useYouTubeInsights(userId)
+
+  const handleRefreshOrConnect = () => {
+    if (!isConnected) {
+      window.location.href = '/settings?tab=integrations';
+    } else {
+      refresh();
+    }
+  };
 
   // Tab-specific refresh controls component
-  const TabRefreshControls = ({ 
-    platform, 
-    isRefreshing, 
-    error, 
-    onRefresh, 
-    disabled = false
-  }: {
-    platform: string
-    isRefreshing: boolean
-    error: string | null
-    onRefresh: () => void
-    disabled?: boolean
-  }) => (
-    <div className="space-y-6">
-      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-6">
-        {/* Refresh Button */}
-        <div className="flex-shrink-0 ml-auto">
-          <button
-            onClick={onRefresh}
-            disabled={isRefreshing || disabled}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              isRefreshing || disabled
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500'
-                : 'bg-gray-100 hover:bg-heycontent-light-yellow text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-            }`}
-          >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span>
-              {isRefreshing ? 'Analyzing...' : 
-               disabled ? 'Coming Soon' :
-               `Refresh ${platform}`}
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-          <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
-            <AlertCircle className="w-4 h-4" />
-            <span className="font-medium">Error</span>
-          </div>
-          <p className="text-sm text-red-600 dark:text-red-400 mt-1">{error}</p>
-        </div>
-      )}
-    </div>
-  )
+  
 
   // Handle YouTube not connected state
   if (!isConnected) {
@@ -93,15 +69,40 @@ export function YouTubePlatform({ userId, currentQuote, loading }: YouTubePlatfo
 
   return (
     <div className="space-y-6">
-      <TabRefreshControls
+      <AnalysisDepthPicker
         platform="YouTube"
         isRefreshing={refreshing}
         error={error}
-        onRefresh={refresh}
-        disabled={!userId || !isConnected}
+        onRefresh={handleRefreshOrConnect}
+        disabled={!userId}
+        postLimit={postLimit}
+        setPostLimit={setPostLimit}
+        customPostLimit={customPostLimit}
+        setCustomPostLimit={setCustomPostLimit}
+        showCustomInput={showCustomInput}
+        setShowCustomInput={setShowCustomInput}
+        handleCustomSubmit={handleCustomSubmit}
       />
       
-      {loading ? (
+      {!isConnected ? (
+        <div className="text-center py-12 px-4">
+          <YouTubeBrandIcon href="https://youtube.com/" className="w-16 h-16 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            Connect Your YouTube Channel
+          </h3>
+          <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-4">
+            Connect your YouTube channel to view detailed analytics, track video performance, 
+            and get insights on your content strategy.
+          </p>
+          <Button 
+            onClick={() => window.location.href = '/settings?tab=integrations'}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+          >
+            <YouTubeBrandIcon href={null} className="w-4 h-4" />
+            Connect YouTube
+          </Button>
+        </div>
+      ) : loading ? (
         <div className="grid gap-6">
           {Array.from({ length: 3 }).map((_, index) => (
             <div key={index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 flex flex-col space-y-4">
