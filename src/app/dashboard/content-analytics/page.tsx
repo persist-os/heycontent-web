@@ -1,8 +1,7 @@
-import React from "react";
-import { ContentAnalyticsScreen } from "@/app/dashboard/content-analytics";
+import { redirect } from 'next/navigation'
 
 const ContentAnalyticsPage = () => {
-  return <ContentAnalyticsScreen />;
-};
+  redirect('/dashboard/content-hub?tab=posts')
+}
 
-export default ContentAnalyticsPage;
+export default ContentAnalyticsPage

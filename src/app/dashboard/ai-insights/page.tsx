@@ -1,5 +1,5 @@
-import { AIInsightsScreen } from './_components/AIInsightsScreen'
+import { redirect } from 'next/navigation'
 
 export default function AIInsightsPage() {
-  return <AIInsightsScreen />
+  redirect('/dashboard/content-hub?tab=insights')
 } 
