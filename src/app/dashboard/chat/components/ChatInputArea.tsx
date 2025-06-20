@@ -77,7 +77,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
         )}
 
         {/* Chat input area - always show */}
-        <div className="px-2 sm:px-3 py-2">
+        <div className="px-2 sm:px-3 pt-1 pb-2">
           <ChatInput
             inputRef={inputRef}
             onSend={handleSendMessage}
