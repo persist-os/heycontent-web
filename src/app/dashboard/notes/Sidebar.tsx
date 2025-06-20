@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { FileText, Star, Clock, Lightbulb, Trash2, Search, Plus, SortDesc, PenLine } from 'lucide-react';
-import type { Note } from './types';
+import { FileText, Star, Clock, Lightbulb, Trash2, Search, Plus, SortDesc, PenLine, Users, BarChart3, BookOpen, CheckSquare } from 'lucide-react';
+import type { Note, NoteType } from './types';
+import { TypeTabs } from './components/TypeTabs';
+import { useNoteTypeStats } from './hooks/useNoteTypeStats';
 
 interface SidebarProps {
   notes: Note[];
@@ -12,10 +14,13 @@ interface SidebarProps {
 }
 
 export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDeleteNote, onHideSidebar }: SidebarProps) {
-  const [selectedSection, setSelectedSection] = useState<'all' | 'important' | 'brainstorm' | 'ideas'>('all');
+  const [selectedSection, setSelectedSection] = useState<'all' | 'important' | NoteType>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'title' | 'importance'>('date');
   const [showSortOptions, setShowSortOptions] = useState(false);
+
+  // Get dynamic type statistics
+  const { stats: typeStats, totalNotes, importantCount } = useNoteTypeStats(notes);
 
   // Filter notes based on section and search query
   const filteredNotes = notes.filter(note => {
@@ -23,9 +28,8 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
     const sectionMatches =
       selectedSection === 'all' ? true :
       selectedSection === 'important' ? note.important :
-      selectedSection === 'ideas' ? note.type === 'idea' :
-      selectedSection === 'brainstorm' ? note.type === 'brainstorm' :
-      true; // fallback
+      // For type filtering, use the note's actual type
+      selectedSection === (note.type || 'idea_bank');
 
     // Then apply search filter if there's a query
     if (!sectionMatches) return false;
@@ -34,7 +38,7 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
       const query = searchQuery.toLowerCase();
       return (
         note.title.toLowerCase().includes(query) ||
-        note.content.toLowerCase().includes(query) ||
+        note.content?.toLowerCase().includes(query) ||
         (note.tags ?? []).some(tag => tag.toLowerCase().includes(query))
       );
     }
@@ -57,16 +61,29 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
   });
 
   const handleCreateNote = async () => {
-    // If we're in the brainstorm section, create a brainstorm note directly
-    if (selectedSection === 'brainstorm') {
+    // If we're in a specific type section, create a note of that type
+    if (selectedSection !== 'all' && selectedSection !== 'important') {
       onHideSidebar();
-      // Pass signal to parent to create an empty brainstorm note
-      onCreateNote({ type: 'brainstorm', skipWizard: true });
+      onCreateNote({ type: selectedSection, skipWizard: true });
     } else {
       // Regular note creation flow with wizard
       onHideSidebar();
       onCreateNote();
     }
+  };
+
+  // Get icon for note type
+  const getNoteIcon = (note: Note) => {
+    const typeIcons: Record<NoteType, React.ReactNode> = {
+      idea_bank: <Lightbulb size={16} className="text-yellow-500 shrink-0" />,
+      content_script: <FileText size={16} className="text-blue-500 shrink-0" />,
+      collaboration_note: <Users size={16} className="text-green-500 shrink-0" />,
+      analytics_insight: <BarChart3 size={16} className="text-purple-500 shrink-0" />,
+      reflection_journal: <BookOpen size={16} className="text-indigo-500 shrink-0" />,
+      task_checklist: <CheckSquare size={16} className="text-emerald-500 shrink-0" />,
+    };
+    
+    return typeIcons[note.type || 'idea_bank'] || <FileText size={16} className="text-gray-500 shrink-0" />;
   };
 
   return (
@@ -85,7 +102,7 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
           <div className="w-[100px] sm:w-auto flex justify-end">
             <button
               onClick={handleCreateNote}
-              className="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-600 flex items-center justify-center"
+              className="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-600 flex items-center justify-center transition-colors"
               title="Create new note"
             >
               <PenLine size={18} />
@@ -101,46 +118,20 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
             placeholder="Search notes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-gray-100 rounded-lg py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-full bg-gray-100 rounded-lg py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
           />
           <Search className="w-4 h-4 text-gray-500 absolute left-3 top-2.5" />
         </div>
       </div>
 
-      <div className="flex border-b border-gray-100">
-        <button
-          onClick={() => setSelectedSection('all')}
-          className={`flex-1 py-2 text-sm font-medium text-center ${
-            selectedSection === 'all' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          All
-        </button>
-        <button
-          onClick={() => setSelectedSection('important')}
-          className={`flex-1 py-2 text-sm font-medium text-center ${
-            selectedSection === 'important' ? 'text-yellow-600 border-b-2 border-yellow-500' : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Important
-        </button>
-        <button
-          onClick={() => setSelectedSection('ideas')}
-          className={`flex-1 py-2 text-sm font-medium text-center ${
-            selectedSection === 'ideas' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Ideas
-        </button>
-        <button
-          onClick={() => setSelectedSection('brainstorm')}
-          className={`flex-1 py-2 text-sm font-medium text-center ${
-            selectedSection === 'brainstorm' ? 'text-green-600 border-b-2 border-green-500' : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Brainstorm
-        </button>
-      </div>
+      {/* Modern Type Tabs */}
+      <TypeTabs
+        typeStats={typeStats}
+        totalNotes={totalNotes}
+        importantCount={importantCount}
+        selectedSection={selectedSection}
+        onSectionChange={setSelectedSection}
+      />
 
       <div className="px-4 py-2 border-b border-gray-100 flex justify-between items-center">
         <div className="text-xs text-gray-500">
@@ -149,7 +140,7 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
         <div className="relative">
           <button
             onClick={() => setShowSortOptions(!showSortOptions)}
-            className="p-1 rounded hover:bg-gray-100"
+            className="p-1 rounded hover:bg-gray-100 transition-colors"
             title="Sort notes"
           >
             <SortDesc className="w-4 h-4 text-gray-500" />
@@ -159,19 +150,19 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
             <div className="absolute right-0 mt-1 w-32 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
               <button
                 onClick={() => {setSortBy('date'); setShowSortOptions(false);}}
-                className={`w-full text-left px-3 py-2 text-sm ${sortBy === 'date' ? 'text-purple-600' : 'text-gray-700'} hover:bg-gray-50`}
+                className={`w-full text-left px-3 py-2 text-sm ${sortBy === 'date' ? 'text-purple-600' : 'text-gray-700'} hover:bg-gray-50 transition-colors`}
               >
                 By date
               </button>
               <button
                 onClick={() => {setSortBy('title'); setShowSortOptions(false);}}
-                className={`w-full text-left px-3 py-2 text-sm ${sortBy === 'title' ? 'text-purple-600' : 'text-gray-700'} hover:bg-gray-50`}
+                className={`w-full text-left px-3 py-2 text-sm ${sortBy === 'title' ? 'text-purple-600' : 'text-gray-700'} hover:bg-gray-50 transition-colors`}
               >
                 By title
               </button>
               <button
                 onClick={() => {setSortBy('importance'); setShowSortOptions(false);}}
-                className={`w-full text-left px-3 py-2 text-sm ${sortBy === 'importance' ? 'text-purple-600' : 'text-gray-700'} hover:bg-gray-50`}
+                className={`w-full text-left px-3 py-2 text-sm ${sortBy === 'importance' ? 'text-purple-600' : 'text-gray-700'} hover:bg-gray-50 transition-colors`}
               >
                 By importance
               </button>
@@ -187,21 +178,17 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
               <div
                 key={note._id}
                 onClick={() => onNoteSelect(note._id)}
-                className={`p-2 rounded-lg cursor-pointer group ${
-                  activeNoteId === note._id ? 'bg-purple-50' : 'hover:bg-gray-50'
+                className={`p-3 rounded-lg cursor-pointer group transition-all duration-200 ${
+                  activeNoteId === note._id ? 'bg-purple-50 border border-purple-200' : 'hover:bg-gray-50 border border-transparent'
                 }`}
                 title={`Open note: ${note.title}`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      {note.type === 'idea' ? (
-                        <Lightbulb size={16} className="text-yellow-500 shrink-0" />
-                      ) : (
-                        <FileText size={16} className="text-gray-500 shrink-0" />
-                      )}
+                    <div className="flex items-center gap-2 mb-1">
+                      {getNoteIcon(note)}
                       <h3 className={`font-medium truncate ${
-                        note.important ? 'text-yellow-700' : ''
+                        note.important ? 'text-yellow-700' : 'text-gray-900'
                       }`}>
                         {note.title || 'Untitled Note'}
                         {note.important && (
@@ -209,7 +196,7 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
                         )}
                       </h3>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1 truncate">
+                    <p className="text-xs text-gray-500 truncate">
                       {new Date(note.updatedAt).toLocaleDateString()} • {note.tags?.length > 0 ? (
                         <span>
                           {note.tags.map((tag, tagIndex) => (
@@ -224,7 +211,7 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
                       e.stopPropagation();
                       onDeleteNote(note._id);
                     }}
-                    className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-red-500"
+                    className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                     title={`Delete note: ${note.title}`}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -241,7 +228,7 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
                 <p className="text-sm">No notes match your search</p>
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="text-xs text-purple-500 mt-2"
+                  className="text-xs text-purple-500 mt-2 hover:text-purple-600 transition-colors"
                 >
                   Clear search
                 </button>
@@ -251,7 +238,7 @@ export function Sidebar({ notes, activeNoteId, onNoteSelect, onCreateNote, onDel
                 <p className="text-sm">No notes yet</p>
                 <button
                   onClick={handleCreateNote}
-                  className="text-xs text-purple-500 mt-2"
+                  className="text-xs text-purple-500 mt-2 hover:text-purple-600 transition-colors"
                 >
                   Create your first note
                 </button>

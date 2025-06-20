@@ -52,7 +52,7 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onEditingTitleChange }
   };
 
   return (
-    <div className="pb-3">
+    <div className="pb-3 px-6">
       {isEditing ? (
         <input
           title="Note Title"
