@@ -24,6 +24,7 @@ interface ChatInputAreaProps {
   openNotepad: () => void;
   quotedForNotepad: string | null;
   onClearQuoted: () => void;
+  isAuthenticated?: boolean;
 }
 
 const ChatInputArea: React.FC<ChatInputAreaProps> = ({
@@ -46,6 +47,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   openNotepad,
   quotedForNotepad,
   onClearQuoted,
+  isAuthenticated = true,
 }) => {
   // Only show ambient content when there are no messages
   const showAmbientContent = showAmbient && !currentContext;
@@ -77,11 +79,12 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
         )}
 
         {/* Chat input area - always show */}
-        <div className="px-2 sm:px-3 py-2">
+        <div className="px-2 sm:px-3 pt-1 pb-2">
           <ChatInput
             inputRef={inputRef}
             onSend={handleSendMessage}
-            isLoading={isLoading}
+            isLoading={isLoading || !isAuthenticated}
+            disabled={!isAuthenticated}
             referencedMessage={referencedMessage}
             onClearReference={handleClearReference}
             hasContext={!!currentContext}

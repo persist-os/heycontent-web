@@ -8,7 +8,7 @@ import { adminAuth } from '@/app/lib/firebase-admin'
 export async function POST(req: Request) {
   try {
     // Try session-based authentication first
-    let session = await getServerSession();
+    const session = await getServerSession();
     let userId: string | null = session?.user?.id || null;
 
     // If no session, try to extract and verify the token directly

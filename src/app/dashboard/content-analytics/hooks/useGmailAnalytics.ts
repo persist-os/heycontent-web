@@ -116,7 +116,7 @@ export function useGmailAnalytics(userId?: string) {
   // Convex query for Gmail threads (only when cache expired)
   const gmailThreads = useQuery(
     api.gmailQueries.getGmailThreadsWithMessages,
-    shouldFetchFromConvex && userId ? { userId } : "skip"
+    userId ? { userId } : "skip"
   );
 
   // Helper to get the received date for an email/thread
@@ -128,7 +128,7 @@ export function useGmailAnalytics(userId?: string) {
     return '';
   };
 
-  // Map Gmail items with caching
+  // Map Gmail items
   const mappedGmailItems = useMemo(() => {
     if (Array.isArray(gmailThreads)) {
       const importantEmails: any[] = [];
@@ -303,11 +303,11 @@ export function useGmailAnalytics(userId?: string) {
 
   return {
     items: mappedGmailItems,
-    loading: loading,
+    loading: gmailThreads === undefined,
     error,
     isConnected: !!gmailAccounts && gmailAccounts.length > 0 && !!gmailAccounts[0]?.email,
     rawData: gmailThreads,
-    lastFetchTime: lastFetchTime ? new Date(lastFetchTime) : null,
-    isCached: !!lastFetchTime && (Date.now() - lastFetchTime < CACHE_DURATION)
+    lastFetchTime: null,
+    isCached: false
   };
 } 

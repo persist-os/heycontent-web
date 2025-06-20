@@ -8,77 +8,58 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Calendar, Clock, BarChart3, RefreshCw, Instagram, Settings } from 'lucide-react';
 import { InstagramCard } from '../cards/InstagramCard';
 import { InstagramModal } from '../modals/InstagramModal';
-import { LoadingState } from '../loading/LoadingState';
 import { PlatformEmbeddingStatus } from '../components/PlatformEmbeddingStatus';
-import { useInstagramAnalytics } from '../hooks/useInstagramAnalytics';
 import { InstagramContentItem, AnyContentItem } from '../types';
 import { sortContent } from '../utils';
+import CardSkeleton from './components/CardSkeleton';
+import PieChartSkeleton from './components/PieChartSkeleton';
 
 interface InstagramPlatformProps {
   userId: string;
-  selectedPlatform: 'instagram' | 'all';
+  items: InstagramContentItem[];
+  analysis: any; // Can be more specific if you have the analysis type
+  loading: boolean;
+  error: string | null;
+  isConnected: boolean;
+  refresh: () => void;
+  refreshing: boolean;
+  instagramAccount: any; // Can be more specific
 }
 
-// Skeleton Components
-const CardSkeleton = memo(() => (
-  <Card className="p-6 bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl">
-    <div className="flex items-center justify-between mb-4">
-      <div className="flex items-center gap-3">
-        <div className="p-2 rounded-xl bg-gray-200 animate-pulse">
-          <div className="w-5 h-5 bg-gray-300 rounded"></div>
-        </div>
-        <div className="h-5 bg-gray-200 rounded w-24 animate-pulse"></div>
-      </div>
-    </div>
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <div className="h-4 bg-gray-200 rounded w-16 animate-pulse"></div>
-        <div className="h-4 bg-gray-200 rounded w-20 animate-pulse"></div>
-      </div>
-      <div className="flex justify-between items-center">
-        <div className="h-4 bg-gray-200 rounded w-12 animate-pulse"></div>
-        <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
-      </div>
-      <div className="flex justify-between items-center">
-        <div className="h-4 bg-gray-200 rounded w-18 animate-pulse"></div>
-        <div className="h-4 bg-gray-200 rounded w-20 animate-pulse"></div>
-      </div>
-    </div>
-  </Card>
-));
-
-const PieChartSkeleton = memo(() => (
-  <Card className="p-6 bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl">
-    <div className="flex items-center justify-between mb-4">
-      <div className="flex items-center gap-3">
-        <div className="p-2 rounded-xl bg-gray-200 animate-pulse">
-          <div className="w-5 h-5 bg-gray-300 rounded"></div>
-        </div>
-        <div className="h-5 bg-gray-200 rounded w-32 animate-pulse"></div>
-      </div>
-    </div>
-    <div className="flex flex-col sm:flex-row items-center justify-between">
-      <div className="w-28 h-28 sm:w-32 sm:h-32 mb-4 sm:mb-0 bg-gray-200 rounded-full animate-pulse"></div>
-      <div className="flex-1 sm:ml-4 space-y-3 w-full sm:w-auto">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-gray-200 animate-pulse"></div>
-              <div className="h-4 bg-gray-200 rounded w-16 animate-pulse"></div>
-            </div>
-            <div className="h-4 bg-gray-200 rounded w-8 animate-pulse"></div>
-          </div>
-        ))}
-      </div>
-    </div>
-  </Card>
-));
-
-export function InstagramPlatform({ userId, selectedPlatform }: InstagramPlatformProps) {
+export function InstagramPlatform({ 
+  userId,
+  items,
+  analysis,
+  loading,
+  error,
+  isConnected,
+  refresh,
+  refreshing,
+  instagramAccount,
+}: InstagramPlatformProps) {
   const router = useRouter();
   const [selectedContent, setSelectedContent] = useState<InstagramContentItem | null>(null);
   
-  const { items, analysis, loading, error, isConnected, refresh, refreshing, instagramAccount } = useInstagramAnalytics(userId);
+  // Memoized pie chart data calculation
+  const mediaDistributionData = useMemo(() => {
+    if (!analysis?.media_distribution) {
+      return [];
+    }
+    
+    const data = [
+      { name: 'Regular Posts', value: parseInt(analysis.media_distribution.regular_post?.replace('%', '') || '0'), color: '#FFDF39' },
+      { name: 'Carousels', value: parseInt(analysis.media_distribution.carousel?.replace('%', '') || '0'), color: '#9046FF' },
+      { name: 'Reels', value: parseInt(analysis.media_distribution.reel?.replace('%', '') || '0'), color: '#45E290' }
+    ].filter(item => item.value > 0);
+    
+    return data;
+  }, [analysis?.media_distribution]);
+
+  // Memoized progress bar width calculation
+  const progressBarWidth = useMemo(() => {
+    if (!analysis?.posting_frequency?.average_days_between_posts) return 0;
+    return Math.max(0, Math.min(100, 100 - ((analysis.posting_frequency.average_days_between_posts || 0) / 365 * 100)));
+  }, [analysis?.posting_frequency?.average_days_between_posts]);
 
   // Check connection status first, before any loading states
   // Show Instagram connect card if no Instagram account found
@@ -120,27 +101,6 @@ export function InstagramPlatform({ userId, selectedPlatform }: InstagramPlatfor
   // Sort items by date
   const displayItems = sortContent(items, 'date');
 
-  // Memoized pie chart data calculation
-  const mediaDistributionData = useMemo(() => {
-    if (!analysis?.media_distribution) {
-      return [];
-    }
-    
-    const data = [
-      { name: 'Regular Posts', value: parseInt(analysis.media_distribution.regular_post?.replace('%', '') || '0'), color: '#FFDF39' },
-      { name: 'Carousels', value: parseInt(analysis.media_distribution.carousel?.replace('%', '') || '0'), color: '#9046FF' },
-      { name: 'Reels', value: parseInt(analysis.media_distribution.reel?.replace('%', '') || '0'), color: '#45E290' }
-    ].filter(item => item.value > 0);
-    
-    return data;
-  }, [analysis?.media_distribution]);
-
-  // Memoized progress bar width calculation
-  const progressBarWidth = useMemo(() => {
-    if (!analysis?.posting_frequency?.average_days_between_posts) return 0;
-    return Math.max(0, Math.min(100, 100 - ((analysis.posting_frequency.average_days_between_posts || 0) / 365 * 100)));
-  }, [analysis?.posting_frequency?.average_days_between_posts]);
-
   const discussContent = async (item: AnyContentItem) => {
     try {
       const context = {
@@ -178,18 +138,6 @@ export function InstagramPlatform({ userId, selectedPlatform }: InstagramPlatfor
 
   // Show skeleton only when we're loading and have no cached data to display
   const shouldShowSkeleton = loading && !analysis && instagramAccount !== null;
-  
-  // Debug: Log analysis data to see what's cached
-  console.log('🔍 Instagram Platform Debug:', {
-    loading,
-    hasAnalysis: !!analysis,
-    analysis,
-    shouldShowSkeleton,
-    hasLastPost: !!analysis?.last_post,
-    hasPostingFreq: !!analysis?.posting_frequency,
-    hasMediaDist: !!analysis?.media_distribution,
-    instagramAccount: !!instagramAccount
-  });
   
   if (shouldShowSkeleton) {
     return (

@@ -6,6 +6,9 @@ import { getApiKey } from '@/app/lib/api-helpers';
 export function useYouTubeInsights(userId?: string) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [postLimit, setPostLimit] = useState<number | 'all'>(10);
+  const [customPostLimit, setCustomPostLimit] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
 
   // Fetch YouTube channel data
   const youtubeChannel = useQuery(
@@ -51,7 +54,7 @@ export function useYouTubeInsights(userId?: string) {
         body: JSON.stringify({
           user_id: userId,
           channel_id: youtubeChannel.id,
-          max_videos: 10,
+          max_videos: postLimit === 'all' ? 1000 : postLimit,
           include_captions: true,
           include_comments: true,
           force_refresh: true
@@ -79,7 +82,15 @@ export function useYouTubeInsights(userId?: string) {
     } finally {
       setRefreshing(false);
     }
-  }, [userId, youtubeChannel?.id, storeChannelAnalysis]);
+  }, [userId, youtubeChannel?.id, storeChannelAnalysis, postLimit]);
+
+  const handleCustomSubmit = useCallback(() => {
+    const limit = parseInt(customPostLimit, 10);
+    if (!isNaN(limit) && limit > 0) {
+      setPostLimit(limit);
+      setShowCustomInput(false);
+    }
+  }, [customPostLimit]);
 
   return {
     insights: insightsList,
@@ -88,6 +99,13 @@ export function useYouTubeInsights(userId?: string) {
     error,
     isConnected: !!youtubeChannel?.id,
     refresh,
-    channel: youtubeChannel
+    channel: youtubeChannel,
+    postLimit,
+    setPostLimit,
+    customPostLimit,
+    setCustomPostLimit,
+    showCustomInput,
+    setShowCustomInput,
+    handleCustomSubmit,
   };
 } 

@@ -4,6 +4,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/app/context/auth-context';
 import { RefreshState } from '@/components/ui/refresh-state';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Platform-specific components
 import { YouTubePlatform } from '../platforms/YouTubePlatform';
@@ -41,29 +42,6 @@ export function ContentAnalyticsScreen() {
   const instagramData = useInstagramAnalytics(userId);
   const gmailData = useGmailAnalytics(userId);
 
-  // Smart loading state for "all platforms" - only show loading if no cached data exists
-  const isAllPlatformsLoading = useMemo(() => {
-    if (!userId) return true;
-    
-    // If any platform has cached data, don't show loading
-    if (youtubeData.isCached || instagramData.isCached || gmailData.isCached) {
-      return false;
-    }
-    
-    // If we have any items from any platform, don't show loading
-    if (youtubeData.items.length > 0 || instagramData.items.length > 0 || gmailData.items.length > 0) {
-      return false;
-    }
-    
-    // Only show loading if all platforms are still loading and have no data
-    return (youtubeData.loading || instagramData.loading || gmailData.loading);
-  }, [
-    userId,
-    youtubeData.loading, youtubeData.items.length, youtubeData.isCached,
-    instagramData.loading, instagramData.items.length, instagramData.isCached,
-    gmailData.loading, gmailData.items.length, gmailData.isCached
-  ]);
-
   // Combined data for "all" tab
   const allContentItems = useMemo(() => {
     if (!userId) return [];
@@ -78,6 +56,8 @@ export function ContentAnalyticsScreen() {
   const allDisplayItems = useMemo(() => {
     return sortContent(allContentItems, 'date');
   }, [allContentItems]);
+
+  const isLoading = youtubeData.loading || instagramData.loading || gmailData.loading;
 
   if (!firebaseUser || !userId) {
     return (
@@ -101,7 +81,7 @@ export function ContentAnalyticsScreen() {
             ? (item as InstagramContentItem).content?.text
             : (item as GmailContentItem).content?.data?.subject || 'Email Thread',
         thumbnailUrl: item.platform === 'youtube'
-          ? (item as YouTubeContentItem).content?.thumbnailUrl || `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`
+          ? (item as YouTubeContentItem).content?.thumbnailUrl
           : item.platform === 'instagram'
             ? (item as InstagramContentItem).content?.mediaUrl
             : undefined,
@@ -159,25 +139,41 @@ export function ContentAnalyticsScreen() {
 
             {/* Platform-specific content */}
             {selectedPlatform === 'youtube' && (
-              <YouTubePlatform userId={userId} selectedPlatform={selectedPlatform} />
+              <YouTubePlatform 
+                userId={userId} 
+                {...youtubeData} 
+              />
             )}
             
             {selectedPlatform === 'instagram' && (
-              <InstagramPlatform userId={userId} selectedPlatform={selectedPlatform} />
+              <InstagramPlatform 
+                userId={userId} 
+                {...instagramData}
+              />
             )}
             
             {selectedPlatform === 'gmail' && (
-              <GmailPlatform userId={userId} selectedPlatform={selectedPlatform} />
+              <GmailPlatform 
+                userId={userId}
+                {...gmailData}
+              />
             )}
 
             {/* "All" tab content */}
             {selectedPlatform === 'all' && (
               <>
-                {isAllPlatformsLoading ? (
-                  <RefreshState
-                    title="Loading content..."
-                    quote="Gathering your content from all platforms"
-                  />
+                {(isLoading && allDisplayItems.length === 0) ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
+                    {Array.from({ length: 6 }).map((_, index) => (
+                      <div key={index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 flex flex-col space-y-4">
+                        <Skeleton className="h-40 w-full rounded-lg" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-4/5" />
+                          <Skeleton className="h-4 w-3/5" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 ) : allDisplayItems.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
                     {allDisplayItems.map((item, index) => {
@@ -206,7 +202,7 @@ export function ContentAnalyticsScreen() {
                       <div className="flex justify-center mb-4 sm:mb-6">
                         <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
                           <div className="w-6 h-6 sm:w-8 sm:h-8 text-white font-bold text-lg sm:text-xl">
-                            ∞
+                            
                           </div>
                         </div>
                       </div>

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { ChatHistory } from '@/app/types/chat'
 import { getApiKey } from '@/app/lib/api-helpers'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function HistoryPage() {
   const router = useRouter()
@@ -102,7 +103,23 @@ export default function HistoryPage() {
 
       {/* Chat List */}
       {isLoading ? (
-        <div className="text-center text-gray-500">Loading...</div>
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="group bg-white border rounded-xl p-4">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="w-5 h-5 rounded" />
+                    <div className="w-full">
+                      <Skeleton className="h-4 w-1/2 mb-2" />
+                      <Skeleton className="h-3 w-full" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : filteredChats.length === 0 ? (
         <div className="text-center py-12">
           <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />

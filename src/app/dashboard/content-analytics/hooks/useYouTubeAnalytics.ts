@@ -111,7 +111,7 @@ export function useYouTubeAnalytics(userId?: string) {
   const mappedYouTubeItems: YouTubeContentItem[] = useMemo(() => {
     if (youtubeVideos && Array.isArray(youtubeVideos)) {
       const mapped = youtubeVideos.map((video: any): YouTubeContentItem => ({
-        id: `youtube-${video.id || ''}`,
+        id: video.id || '',
         platform: 'youtube' as const,
         publishedAt: video.publishedAt || new Date().toISOString(),
         content: {
