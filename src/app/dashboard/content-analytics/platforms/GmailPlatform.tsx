@@ -7,22 +7,29 @@ import { Button } from '@/components/ui/button';
 import { Settings, Mail } from 'lucide-react';
 import { GmailCard } from '../cards/GmailCard';
 import { GmailModal } from '../modals/GmailModal';
-import { LoadingState } from '../loading/LoadingState';
 import { PlatformEmbeddingStatus } from '../components/PlatformEmbeddingStatus';
 import { useGmailAnalytics } from '../hooks/useGmailAnalytics';
 import { GmailContentItem, AnyContentItem } from '../types';
 import { sortContent } from '../utils';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface GmailPlatformProps {
   userId: string;
-  selectedPlatform: 'gmail' | 'all';
+  items: GmailContentItem[];
+  loading: boolean;
+  isConnected: boolean;
+  error: string | null;
 }
 
-export function GmailPlatform({ userId, selectedPlatform }: GmailPlatformProps) {
+export function GmailPlatform({ 
+  userId,
+  items,
+  loading,
+  isConnected,
+  error,
+}: GmailPlatformProps) {
   const router = useRouter();
   const [selectedContent, setSelectedContent] = useState<GmailContentItem | null>(null);
-  
-  const { items, loading, error, isConnected } = useGmailAnalytics(userId);
 
   // Sort items by date
   const displayItems = sortContent(items, 'date');
@@ -80,11 +87,6 @@ export function GmailPlatform({ userId, selectedPlatform }: GmailPlatformProps) 
     }
   };
 
-  // Show loading state if data is still loading
-  if (loading) {
-    return <LoadingState type="content" />;
-  }
-
   // Show Gmail connect card if no Gmail account found
   if (!isConnected) {
     return (
@@ -139,7 +141,25 @@ export function GmailPlatform({ userId, selectedPlatform }: GmailPlatformProps) 
         userId={userId} 
       />
 
-      {displayItems.length > 0 ? (
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 flex flex-col space-y-4">
+              <div className="flex justify-between items-start">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-1/4" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+              </div>
+              <div className="flex justify-end items-center pt-4">
+                <Skeleton className="h-8 w-24" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : displayItems.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
           {displayItems.map((item, index) => {
             const uniqueKey = `${item.platform}-${item.id}-${index}`;

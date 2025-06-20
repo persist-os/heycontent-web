@@ -36,7 +36,7 @@ export function FullAnalysisModal({
             {selectedInsight ? (
               selectedInsight?.split('\n')?.map((line: string, i: number, arr: string[]) => {
                 if (line.startsWith('```json')) {
-                  let codeContent = [];
+                  const codeContent = [];
                   let endIndex = i;
                   for (let j = i + 1; j < arr.length; j++) {
                     if (arr[j] === '```') {

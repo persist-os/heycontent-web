@@ -55,36 +55,6 @@ export function AIInsightsScreen() {
     };
   }, []);
 
-  // Check if any platform is loading
-  const isLoading = youtubeHook.loading || instagramHook.loading || gmailHook.loading;
-
-  if (isLoading) {
-    return (
-      <div className="relative h-full">
-        <div className="shrink-0 px-6 py-4 bg-white dark:bg-gray-900">
-          <div className="flex justify-between items-center">
-            <div className="w-[100px] sm:w-[24px]"></div>
-            <div className="flex-1 flex justify-center sm:justify-start">
-              <div className="text-center sm:text-left">
-                <h1 className="text-base font-medium text-black dark:text-white">AI Insights</h1>
-                <p className="text-text-gray dark:text-gray-400">
-                  <span className="hidden sm:inline">Personalized recommendations for your content strategy</span>
-                </p>
-              </div>
-            </div>
-            <div className="w-[100px] sm:w-auto"></div>
-          </div>
-        </div>
-        <div className="flex-1 flex items-center justify-center">
-          <RefreshState
-            title="Loading insights..."
-            quote={currentQuote}
-          />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="relative">
       {/* Fixed Header */}
@@ -134,15 +104,15 @@ export function AIInsightsScreen() {
               </TabsList>
 
               <TabsContent value="youtube" className="space-y-6">
-                <YouTubePlatform userId={firebaseUser?.uid} currentQuote={currentQuote} />
+                <YouTubePlatform userId={firebaseUser?.uid} currentQuote={currentQuote} loading={youtubeHook.loading} />
               </TabsContent>
 
               <TabsContent value="instagram" className="space-y-6">
-                <InstagramPlatform userId={firebaseUser?.uid} currentQuote={currentQuote} />
+                <InstagramPlatform userId={firebaseUser?.uid} currentQuote={currentQuote} loading={instagramHook.loading} />
               </TabsContent>
 
               <TabsContent value="gmail" className="space-y-6">
-                <GmailPlatform userId={firebaseUser?.uid} currentQuote={currentQuote} />
+                <GmailPlatform userId={firebaseUser?.uid} currentQuote={currentQuote} loading={gmailHook.loading} />
               </TabsContent>
             </Tabs>
           </div>

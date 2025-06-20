@@ -32,9 +32,9 @@ export function PlatformConnect() {
   }, []);
 
   // Use Convex queries for all platform data
-  const youtubeData = firebaseUser?.uid ? useQuery(api.youtubeQueries.getYouTubeChannelData, { userId: firebaseUser.uid }) : undefined;
-  const instagramData = firebaseUser?.uid ? useQuery(api.instagramQueries.getInstagramAccount, { userId: firebaseUser.uid }) : undefined;
-  const gmailAccounts = firebaseUser?.uid ? useQuery(api.gmailQueries.getGmailAccounts, { userId: firebaseUser.uid }) : undefined;
+  const youtubeData = useQuery(api.youtubeQueries.getYouTubeChannelData, firebaseUser?.uid ? { userId: firebaseUser.uid } : 'skip');
+  const instagramData = useQuery(api.instagramQueries.getInstagramAccount, firebaseUser?.uid ? { userId: firebaseUser.uid } : 'skip');
+  const gmailAccounts = useQuery(api.gmailQueries.getGmailAccounts, firebaseUser?.uid ? { userId: firebaseUser.uid } : 'skip');
 
   // Add console logging for Convex responses
   useEffect(() => {

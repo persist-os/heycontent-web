@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     }
     
     // Extract the API key
-    let apiKey = authHeader.substring(7).replace(/"/g, '');
+    const apiKey = authHeader.substring(7).replace(/"/g, '');
     console.log(`[${requestId}] Cleaned API KEY:`, apiKey);
 
     const body = await request.json();
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
 
     // Extract user ID from API key
     const apiKeyParts = apiKey.split('_');
-    let user_id = apiKeyParts.length >= 2 && apiKeyParts[0] === 'heycontent' ? apiKeyParts[1] : "default_user_id";
+    const user_id = apiKeyParts.length >= 2 && apiKeyParts[0] === 'heycontent' ? apiKeyParts[1] : "default_user_id";
     console.log(`[${requestId}] Extracted user_id: ${user_id}`);
 
     // Log request details

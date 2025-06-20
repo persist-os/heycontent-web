@@ -6,16 +6,18 @@ import { InsightCard } from '../InsightCard'
 import { useYouTubeInsights } from '../hooks/useYouTubeInsights'
 import { YouTubeBrandIcon } from '../../../../../lib/YoutubeBrandIcon'
 import { RefreshState } from '@/components/ui/refresh-state'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface YouTubePlatformProps {
   userId?: string
   currentQuote: string
+  loading: boolean
 }
 
-export function YouTubePlatform({ userId, currentQuote }: YouTubePlatformProps) {
+export function YouTubePlatform({ userId, currentQuote, loading }: YouTubePlatformProps) {
   const [expandedInsight, setExpandedInsight] = useState<number | null>(null)
   
-  const { insights, loading, refreshing, error, isConnected, refresh } = useYouTubeInsights(userId)
+  const { insights, refreshing, error, isConnected, refresh } = useYouTubeInsights(userId)
 
   // Tab-specific refresh controls component
   const TabRefreshControls = ({ 
@@ -69,24 +71,22 @@ export function YouTubePlatform({ userId, currentQuote }: YouTubePlatformProps) 
   // Handle YouTube not connected state
   if (!isConnected) {
     return (
-      <div className="text-center py-12 px-4">
-        <div className="w-12 h-12 text-gray-300 mx-auto mb-4 flex items-center justify-center">
-          <YouTubeBrandIcon href="https://youtube.com/" className="w-12 h-12" />
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-10 w-32" />
         </div>
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-          YouTube Not Connected
-        </h3>
-        <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-4">
-          Connect your YouTube channel to get strategic insights about content performance, 
-          audience engagement, and growth opportunities.
-        </p>
-        <button 
-          onClick={() => window.location.href = '/settings?tab=integrations'}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
-        >
-          <YouTubeBrandIcon href="https://youtube.com/" className="w-4 h-4" />
-          Connect YouTube
-        </button>
+        <div className="grid gap-6">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 flex flex-col space-y-4">
+              <Skeleton className="h-5 w-3/4" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
@@ -101,7 +101,19 @@ export function YouTubePlatform({ userId, currentQuote }: YouTubePlatformProps) 
         disabled={!userId || !isConnected}
       />
       
-      {refreshing ? (
+      {loading ? (
+        <div className="grid gap-6">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 flex flex-col space-y-4">
+              <Skeleton className="h-5 w-3/4" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : refreshing ? (
         <RefreshState
           title="Refreshing YouTube insights..."
           quote={currentQuote}

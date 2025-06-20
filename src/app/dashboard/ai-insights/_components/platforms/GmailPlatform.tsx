@@ -5,18 +5,19 @@ import { RefreshCw, AlertCircle, Settings, Zap, Mail } from 'lucide-react'
 import { InsightCard } from '../InsightCard'
 import { useGmailInsights } from '../hooks/useGmailInsights'
 import { RefreshState } from '@/components/ui/refresh-state'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface GmailPlatformProps {
   userId?: string
   currentQuote: string
+  loading: boolean
 }
 
-export function GmailPlatform({ userId, currentQuote }: GmailPlatformProps) {
+export function GmailPlatform({ userId, currentQuote, loading }: GmailPlatformProps) {
   const [expandedInsight, setExpandedInsight] = useState<number | null>(null)
   
   const { 
     insights, 
-    loading, 
     refreshing, 
     error, 
     isConnected, 
@@ -220,7 +221,19 @@ export function GmailPlatform({ userId, currentQuote }: GmailPlatformProps) {
         disabled={!userId || !isConnected}
       />
       
-      {refreshing ? (
+      {loading ? (
+        <div className="grid gap-6">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 flex flex-col space-y-4">
+              <Skeleton className="h-5 w-3/4" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : refreshing ? (
         <RefreshState
           title="Refreshing Gmail insights..."
           quote={currentQuote}

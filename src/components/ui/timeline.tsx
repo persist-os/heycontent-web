@@ -47,13 +47,13 @@ export const Timeline: React.FC<TimelineProps> = ({ clips, setClips }) => {
 
   // Snapping helper
   const getSnap = (val: number, excludeId?: string) => {
-    let snapPoints = rulerMarks.map(t => t * 1);
+    const snapPoints = rulerMarks.map(t => t * 1);
     clips.forEach(c => {
       if (c.id !== excludeId) {
         snapPoints.push(c.start, c.end);
       }
     });
-    let closest = snapPoints.reduce((a, b) => Math.abs(b - val) < Math.abs(a - val) ? b : a, val);
+    const closest = snapPoints.reduce((a, b) => Math.abs(b - val) < Math.abs(a - val) ? b : a, val);
     return Math.abs(closest - val) < 0.15 ? closest : val;
   };
 
@@ -63,30 +63,30 @@ export const Timeline: React.FC<TimelineProps> = ({ clips, setClips }) => {
       if (dragging) {
         setClips(prev => prev.map(clip => {
           if (clip.id !== dragging.id) return clip;
-          let newStart = Math.max(0, (e.clientX - dragging.offset) / pixelsPerSecond);
-          let duration = clip.end - clip.start;
-          let snapped = getSnap(newStart, clip.id);
+          const newStart = Math.max(0, (e.clientX - dragging.offset) / pixelsPerSecond);
+          const duration = clip.end - clip.start;
+          const snapped = getSnap(newStart, clip.id);
           return { ...clip, start: snapped, end: snapped + duration };
         }));
       } else if (resizing) {
         setClips(prev => prev.map(clip => {
           if (clip.id !== resizing.id) return clip;
-          let delta = (e.clientX - resizing.startX) / pixelsPerSecond;
+          const delta = (e.clientX - resizing.startX) / pixelsPerSecond;
           if (resizing.edge === 'left') {
             let newStart = Math.max(0, resizing.origStart + delta);
             if (newStart >= clip.end - MIN_CLIP_LENGTH) newStart = clip.end - MIN_CLIP_LENGTH;
-            let snapped = getSnap(newStart, clip.id);
+            const snapped = getSnap(newStart, clip.id);
             return { ...clip, start: snapped };
           } else {
-            let newEnd = Math.max(clip.start + MIN_CLIP_LENGTH, resizing.origEnd + delta);
-            let snapped = getSnap(newEnd, clip.id);
+            const newEnd = Math.max(clip.start + MIN_CLIP_LENGTH, resizing.origEnd + delta);
+            const snapped = getSnap(newEnd, clip.id);
             return { ...clip, end: snapped };
           }
         }));
       } else if (playheadDrag.current && scrollRef.current) {
         const rect = scrollRef.current.getBoundingClientRect();
-        let x = e.clientX - rect.left;
-        let t = Math.max(0, Math.min(timelineLength, x / pixelsPerSecond));
+        const x = e.clientX - rect.left;
+        const t = Math.max(0, Math.min(timelineLength, x / pixelsPerSecond));
         setCurrentTime(t);
       }
     };
@@ -111,10 +111,10 @@ export const Timeline: React.FC<TimelineProps> = ({ clips, setClips }) => {
     let raf: number;
     let last = performance.now();
     const step = (now: number) => {
-      let dt = (now - last) / 1000;
+      const dt = (now - last) / 1000;
       last = now;
       setCurrentTime(t => {
-        let next = t + dt;
+        const next = t + dt;
         if (next >= timelineLength) {
           setPlaying(false);
           return timelineLength;
@@ -137,7 +137,7 @@ export const Timeline: React.FC<TimelineProps> = ({ clips, setClips }) => {
     const width = (clip.end - clip.start) * pixelsPerSecond;
     const left = clip.start * pixelsPerSecond;
     let className = "absolute h-7 rounded-lg cursor-pointer flex items-center text-xs font-bold select-none shadow-md transition-transform duration-75 ";
-    let style: React.CSSProperties = { width, left, top: 2, background: BG_CLIP, color: '#111' };
+    const style: React.CSSProperties = { width, left, top: 2, background: BG_CLIP, color: '#111' };
     if (clip.type === 'video') {
       style.background = BRAND_GRADIENT;
       className += " text-white hover:brightness-110 border-2 border-[#a259ff]/40 ";
@@ -245,8 +245,8 @@ export const Timeline: React.FC<TimelineProps> = ({ clips, setClips }) => {
   const handleSeek = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     if (!scrollRef.current) return;
     const rect = scrollRef.current.getBoundingClientRect();
-    let x = e.clientX - rect.left;
-    let t = Math.max(0, Math.min(timelineLength, x / pixelsPerSecond));
+    const x = e.clientX - rect.left;
+    const t = Math.max(0, Math.min(timelineLength, x / pixelsPerSecond));
     setCurrentTime(t);
   };
 

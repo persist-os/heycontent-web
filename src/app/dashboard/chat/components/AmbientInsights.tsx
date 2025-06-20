@@ -157,19 +157,6 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
     requestNewInsights();
   }, [userId, convexInsights, isRequestingInsights]);
 
-  // Show loading state if we don't have any insights yet
-  if (!insights || insights.length === 0) {
-    console.log('AmbientInsights: No insights available, showing loading state');
-    return (
-      <div className="max-w-5xl mx-auto">
-        <RefreshState
-          title="Generating insights..."
-          quote="We're analyzing your content and preferences to create personalized insights."
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-4xl sm:max-w-5xl lg:max-w-7xl mx-auto pb-32 px-4 sm:px-0">
       {insights.map((insight) => (
