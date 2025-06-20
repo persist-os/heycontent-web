@@ -5,6 +5,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { Note, NoteUpdate, NoteType } from "../types";
 import { getApiKey } from "@/app/lib/api-helpers";
 import { formatAnalysisToMarkdown } from '../utils/format-utils';
+import { useTitleGeneration } from './useTitleGeneration';
 
 interface SmartNoteIdea {
   id: string;
@@ -42,6 +43,9 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
   const [notes, setNotes] = useState<Note[]>([]);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   
+  // Title generation hook
+  const { generateTitle } = useTitleGeneration();
+  
   // Define isLoading based on query status
   const isLoading = notesFromConvex === undefined && userId !== undefined;
 
@@ -70,7 +74,7 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
   }, [notesFromConvex]);
 
   /**
-   * Save a new note with content
+   * Save a new note with content and automatic title generation
    */
   const saveNote = useCallback(async (
     content: string,
@@ -78,29 +82,57 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
       title?: string;
       type?: NoteType;
       references?: string[];
+      platform?: string;
     } = {}
   ): Promise<{ success: boolean; noteId?: Id<"notes">; error?: string }> => {
     if (!userId) {
       return { success: false, error: "User not authenticated" };
     }
 
-    const { title = "Untitled Note", type = "idea" } = options;
+    const { title = "Untitled Note", type = "idea_bank", platform = "general" } = options;
 
     try {
       setIsSaving(true);
       console.log("Creating new note:", { title, contentLength: content?.length || 0 });
 
+      // 1. Create the note first
       const noteId = await createNoteConvex({
         userId,
         title,
         content: content || "",
         type,
         tags: [],
+        platform,
       });
 
       if (noteId) {
         console.log("Note created successfully:", noteId);
-        // No optimistic update, rely on Convex query
+        
+        // 2. Auto-generate title if content is substantial and title is generic
+        const shouldGenerateTitle = (
+          content && 
+          content.trim().length >= 10 && 
+          (title === "Untitled Note" || !title || title.trim() === "")
+        );
+
+        if (shouldGenerateTitle) {
+          console.log("Auto-generating title for new note:", noteId);
+          try {
+            const titleResult = await generateTitle({
+              content: content.trim(),
+              platform: platform || "general",
+              noteId: noteId as string,
+            });
+            
+            if (titleResult.title) {
+              console.log("Title auto-generated successfully:", titleResult.title);
+            }
+          } catch (titleError) {
+            // Don't fail the save if title generation fails
+            console.warn("Title generation failed, but note was saved:", titleError);
+          }
+        }
+
         return { success: true, noteId };
       } else {
         console.error("Failed to create note - no ID returned");
@@ -112,7 +144,7 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
     } finally {
       setIsSaving(false);
     }
-  }, [userId, createNoteConvex]);
+  }, [userId, createNoteConvex, generateTitle]);
 
   /**
    * Delete a note by ID
