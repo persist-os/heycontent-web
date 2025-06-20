@@ -74,9 +74,7 @@ export function YouTubePlatform({ userId, selectedPlatform }: YouTubePlatformPro
       <div className="flex items-center justify-center min-h-[400px] px-4">
         <Card className="p-6 sm:p-8 max-w-md w-full bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl text-center">
           <div className="flex justify-center mb-4 sm:mb-6">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-red-600 flex items-center justify-center">
-              <YouTubeBrandIcon href="https://youtube.com/" className="w-6 h-6 sm:w-8 sm:h-8" />
-            </div>
+            <YouTubeBrandIcon href="https://youtube.com/" className="w-16 h-16" />
           </div>
           
           <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
@@ -140,9 +138,7 @@ export function YouTubePlatform({ userId, selectedPlatform }: YouTubePlatformPro
         <div className="flex items-center justify-center min-h-[400px] px-4">
           <Card className="p-6 sm:p-8 max-w-md w-full bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl text-center">
             <div className="flex justify-center mb-4 sm:mb-6">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-red-600 flex items-center justify-center">
-                <YouTubeBrandIcon href="https://youtube.com/" className="w-6 h-6 sm:w-8 sm:h-8" />
-              </div>
+              <YouTubeBrandIcon href="https://youtube.com/" className="w-16 h-16" />
             </div>
             
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
