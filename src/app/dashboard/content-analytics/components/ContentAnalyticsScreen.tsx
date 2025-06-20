@@ -80,7 +80,7 @@ export function ContentAnalyticsScreen() {
             ? (item as InstagramContentItem).content?.text
             : (item as GmailContentItem).content?.data?.subject || 'Email Thread',
         thumbnailUrl: item.platform === 'youtube'
-          ? (item as YouTubeContentItem).content?.thumbnailUrl || `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`
+          ? (item as YouTubeContentItem).content?.thumbnailUrl
           : item.platform === 'instagram'
             ? (item as InstagramContentItem).content?.mediaUrl
             : undefined,
@@ -138,15 +138,24 @@ export function ContentAnalyticsScreen() {
 
             {/* Platform-specific content */}
             {selectedPlatform === 'youtube' && (
-              <YouTubePlatform userId={userId} selectedPlatform={selectedPlatform} />
+              <YouTubePlatform 
+                userId={userId} 
+                {...youtubeData} 
+              />
             )}
             
             {selectedPlatform === 'instagram' && (
-              <InstagramPlatform userId={userId} selectedPlatform={selectedPlatform} />
+              <InstagramPlatform 
+                userId={userId} 
+                {...instagramData}
+              />
             )}
             
             {selectedPlatform === 'gmail' && (
-              <GmailPlatform userId={userId} selectedPlatform={selectedPlatform} />
+              <GmailPlatform 
+                userId={userId}
+                {...gmailData}
+              />
             )}
 
             {/* "All" tab content */}

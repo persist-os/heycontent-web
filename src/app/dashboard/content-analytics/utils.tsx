@@ -454,8 +454,8 @@ export const getMockGmailItems = (count: number): GmailContentItem[] => {
     }
 
     // Select Subject & Sender
-    let currentSubjects = subjects[emailType];
-    let currentSenders = senders[emailType];
+    const currentSubjects = subjects[emailType];
+    const currentSenders = senders[emailType];
     let subject = currentSubjects[Math.floor(Math.random() * currentSubjects.length)];
     const from = currentSenders[Math.floor(Math.random() * currentSenders.length)];
     const partnerName = isPartnership ? partnerNames[Math.floor(Math.random() * partnerNames.length)] : undefined;

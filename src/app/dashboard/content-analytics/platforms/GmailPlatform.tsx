@@ -15,14 +15,21 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 interface GmailPlatformProps {
   userId: string;
-  selectedPlatform: 'gmail' | 'all';
+  items: GmailContentItem[];
+  loading: boolean;
+  isConnected: boolean;
+  error: string | null;
 }
 
-export function GmailPlatform({ userId, selectedPlatform }: GmailPlatformProps) {
+export function GmailPlatform({ 
+  userId,
+  items,
+  loading,
+  isConnected,
+  error,
+}: GmailPlatformProps) {
   const router = useRouter();
   const [selectedContent, setSelectedContent] = useState<GmailContentItem | null>(null);
-  
-  const { items, loading, error, isConnected } = useGmailAnalytics(userId);
 
   // Sort items by date
   const displayItems = sortContent(items, 'date');

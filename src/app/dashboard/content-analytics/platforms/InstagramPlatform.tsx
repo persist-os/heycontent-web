@@ -9,13 +9,19 @@ import { Calendar, Clock, BarChart3, RefreshCw, Instagram, Settings } from 'luci
 import { InstagramCard } from '../cards/InstagramCard';
 import { InstagramModal } from '../modals/InstagramModal';
 import { PlatformEmbeddingStatus } from '../components/PlatformEmbeddingStatus';
-import { useInstagramAnalytics } from '../hooks/useInstagramAnalytics';
 import { InstagramContentItem, AnyContentItem } from '../types';
 import { sortContent } from '../utils';
 
 interface InstagramPlatformProps {
   userId: string;
-  selectedPlatform: 'instagram' | 'all';
+  items: InstagramContentItem[];
+  analysis: any; // Can be more specific if you have the analysis type
+  loading: boolean;
+  error: string | null;
+  isConnected: boolean;
+  refresh: () => void;
+  refreshing: boolean;
+  instagramAccount: any; // Can be more specific
 }
 
 // Skeleton Components
@@ -75,12 +81,20 @@ const PieChartSkeleton = memo(() => (
 ));
 PieChartSkeleton.displayName = 'PieChartSkeleton';
 
-export function InstagramPlatform({ userId, selectedPlatform }: InstagramPlatformProps) {
+export function InstagramPlatform({ 
+  userId,
+  items,
+  analysis,
+  loading,
+  error,
+  isConnected,
+  refresh,
+  refreshing,
+  instagramAccount,
+}: InstagramPlatformProps) {
   const router = useRouter();
   const [selectedContent, setSelectedContent] = useState<InstagramContentItem | null>(null);
   
-  const { items, analysis, loading, error, isConnected, refresh, refreshing, instagramAccount } = useInstagramAnalytics(userId);
-
   // Memoized pie chart data calculation
   const mediaDistributionData = useMemo(() => {
     if (!analysis?.media_distribution) {
