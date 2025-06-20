@@ -4,6 +4,7 @@ import { YouTubeBrandIcon } from '../../../../lib/YoutubeBrandIcon';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useActionStepDiscussion } from './hooks/useActionStepDiscussion';
+import { CreateNoteButton } from '@/components/ui/CreateNoteButton';
 
 export interface InsightCardProps {
   platform: 'youtube' | 'instagram' | 'gmail';
@@ -142,6 +143,30 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
     
     const encodedContext = encodeURIComponent(JSON.stringify(fullInsightContext));
     window.location.href = `/dashboard/chat?contentContext=${encodedContext}`;
+  };
+
+  const formatInsightForNote = () => {
+    const cleanImpact = impact.replace(/^Impact:\s*/i, '');
+    return `
+# ${title}
+
+**Platform:** ${validatedPlatform.toUpperCase()}
+**Impact:** ${cleanImpact}
+
+### Why Now?
+${whyNow.map(reason => `• ${reason}`).join('\n')}
+
+### Action Steps
+${actionSteps.map((step, idx) => `${idx + 1}. ${step}`).join('\n')}
+
+### Expected Outcome
+${expectedOutcome}
+
+### Source Details
+${sourceDetails.join('\n')}
+
+${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.map(item => `• ${item.label}: ${item.value}`).join('\n')}` : ''}
+    `.trim();
   };
 
   const getPlatformShadow = () => {
@@ -310,6 +335,18 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
               <MessageSquare className="w-4 h-4 mr-2" />
               Discuss With Content
             </Button>
+
+            <CreateNoteButton
+              content={formatInsightForNote()}
+              onNoteCreate={() => {
+                // Optionally add some feedback to the user, like a toast.
+                // For now, it just creates the note and navigates.
+              }}
+              className="flex-1"
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            >
+              Create Note
+            </CreateNoteButton>
             
             {/* Legacy discuss button if provided */}
             {onDiscuss && (
