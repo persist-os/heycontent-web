@@ -5,23 +5,21 @@ import { error } from "console";
 
 // Type definition for note types and reference types
 const noteType = v.union(
-  v.literal("ai_insight"),
-  v.literal("conversation"),
-  v.literal("idea"),
-  v.literal("url"),
-  v.literal("date"),
-  v.literal("brainstorm"),
-  v.literal("click")
+  v.literal("idea_bank"),
+  v.literal("content_script"),
+  v.literal("collaboration_note"),
+  v.literal("analytics_insight"),
+  v.literal("reflection_journal"),
+  v.literal("task_checklist")
 );
 
 const referenceType = v.union(
-  v.literal("ai_insight"),
-  v.literal("conversation"),
-  v.literal("idea"),
-  v.literal("url"),
-  v.literal("date"),
-  v.literal("brainstorm"),
-  v.literal("click")
+  v.literal("idea_bank"),
+  v.literal("content_script"),
+  v.literal("collaboration_note"),
+  v.literal("analytics_insight"),
+  v.literal("reflection_journal"),
+  v.literal("task_checklist")
 );
 
 // CREATE NOTE MUTATION
@@ -47,7 +45,7 @@ export const createNote = mutation({
       title: typeof args.title === "string" ? args.title : "",
       content: args.content ?? "",
       platform: args.platform ?? "",
-      type: args.type ?? "idea",
+      type: args.type ?? "idea_bank",
       important: args.important ?? false,
       tags: Array.isArray(args.tags) ? args.tags : [],
       createdAt: now,
@@ -228,42 +226,84 @@ export const getAnalysisforNote = query({
 });
 
 // Type-specific queries
-export const getIdeas = query({
+export const getIdeaBank = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("notes")
       .filter((q) =>
         q.eq(q.field("userId"), args.userId) &&
-        q.eq(q.field("type"), "idea")
+        q.eq(q.field("type"), "idea_bank")
       )
       .order("desc")
       .collect();
   },
 });
 
-export const getAIInsights = query({
+export const getContentScripts = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("notes")
       .filter((q) =>
         q.eq(q.field("userId"), args.userId) &&
-        q.eq(q.field("type"), "ai_insight")
+        q.eq(q.field("type"), "content_script")
       )
       .order("desc")
       .collect();
   },
 });
 
-export const getConversations = query({
+export const getCollaborationNotes = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("notes")
       .filter((q) =>
         q.eq(q.field("userId"), args.userId) &&
-        q.eq(q.field("type"), "conversation")
+        q.eq(q.field("type"), "collaboration_note")
+      )
+      .order("desc")
+      .collect();
+  },
+});
+
+export const getAnalyticsInsights = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("notes")
+      .filter((q) =>
+        q.eq(q.field("userId"), args.userId) &&
+        q.eq(q.field("type"), "analytics_insight")
+      )
+      .order("desc")
+      .collect();
+  },
+});
+
+export const getReflectionJournal = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("notes")
+      .filter((q) =>
+        q.eq(q.field("userId"), args.userId) &&
+        q.eq(q.field("type"), "reflection_journal")
+      )
+      .order("desc")
+      .collect();
+  },
+});
+
+export const getTaskChecklists = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("notes")
+      .filter((q) =>
+        q.eq(q.field("userId"), args.userId) &&
+        q.eq(q.field("type"), "task_checklist")
       )
       .order("desc")
       .collect();

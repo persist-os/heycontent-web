@@ -137,13 +137,12 @@ export default defineSchema({
     platform: v.optional(v.string()),
     references: v.optional(v.array(v.string())),
     type: v.optional(v.union(
-      v.literal("ai_insight"),
-      v.literal("conversation"),
-      v.literal("idea"),
-      v.literal("url"),
-      v.literal("date"),
-      v.literal("brainstorm"),
-      v.literal("click")
+      v.literal("idea_bank"),
+      v.literal("content_script"),
+      v.literal("collaboration_note"),
+      v.literal("analytics_insight"),
+      v.literal("reflection_journal"),
+      v.literal("task_checklist")
     )),
     tags: v.array(v.string()),
     analysis: v.optional(v.string()),
@@ -433,8 +432,6 @@ export default defineSchema({
         })),
       }))),
     })),
-    analytics: v.optional(v.any()),
-    public_stats: v.optional(v.any()),
     createdAt: v.optional(v.float64()),
     updatedAt: v.optional(v.float64()),
   })

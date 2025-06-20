@@ -31,6 +31,7 @@ import type * as personaQueries from "../personaQueries.js";
 import type * as personas from "../personas.js";
 import type * as priceConfig from "../priceConfig.js";
 import type * as rateLimiting from "../rateLimiting.js";
+import type * as smartNotesMutation from "../smartNotesMutation.js";
 import type * as subscriptionActions from "../subscriptionActions.js";
 import type * as subscriptionQueries from "../subscriptionQueries.js";
 import type * as usageEvents from "../usageEvents.js";
@@ -68,6 +69,7 @@ declare const fullApi: ApiFromModules<{
   personas: typeof personas;
   priceConfig: typeof priceConfig;
   rateLimiting: typeof rateLimiting;
+  smartNotesMutation: typeof smartNotesMutation;
   subscriptionActions: typeof subscriptionActions;
   subscriptionQueries: typeof subscriptionQueries;
   usageEvents: typeof usageEvents;
