@@ -52,6 +52,7 @@ export function ContentHubScreen() {
   )
   const [selectedContent, setSelectedContent] = useState<AnyContentItem | null>(null)
   const [currentQuote, setCurrentQuote] = useState<string>('')
+  const [expandedInsight, setExpandedInsight] = useState<string | null>(null);
   
   const { firebaseUser, authLoading } = useAuth()
   const userId = firebaseUser?.uid
@@ -274,12 +275,17 @@ export function ContentHubScreen() {
     if (allInsights.length > 0) {
       return (
         <div className="grid gap-6">
-          {allInsights.map((insight, idx) => (
-            <InsightCard
-              key={`${insight.platform}-${idx}`}
-              {...insight}
-            />
-          ))}
+          {allInsights.map((insight, idx) => {
+            const insightId = `${insight.platform}-${idx}`;
+            return (
+              <InsightCard
+                key={insightId}
+                {...insight}
+                expanded={expandedInsight === insightId}
+                onExpand={() => setExpandedInsight(expandedInsight === insightId ? null : insightId)}
+              />
+            );
+          })}
         </div>
       )
     }
