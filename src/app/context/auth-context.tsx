@@ -9,6 +9,8 @@ declare global {
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { getFirebaseAuth } from '@/app/lib/firebase';
+import { TokenRefreshService } from '@/app/lib/token-refresh-service';
+import { getValidToken, removeFirebaseToken } from '@/app/lib/firebase-token-manager';
 
 interface AuthContextType {
   firebaseUser: User | null;
@@ -82,14 +84,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.location.href = path;
   };
 
-  // getToken returns the Firebase ID token for the current user
-  const getToken = async () => {
+  // Enhanced getToken that ensures we always get a valid token
+  const getToken = async (): Promise<string> => {
     if (!firebaseUser) throw new Error('User not authenticated');
-    return await firebaseUser.getIdToken();
+    
+    try {
+      // Use the enhanced token manager to get a valid token
+      return await getValidToken(firebaseUser);
+    } catch (error) {
+      console.error('Failed to get valid token:', error);
+      // If token refresh fails, clear stored tokens and throw error
+      removeFirebaseToken();
+      throw new Error('Failed to refresh authentication token. Please sign in again.');
+    }
+  };
+
+  // Handle token refresh events
+  const handleTokenRefreshError = (error: Error) => {
+    console.error('Background token refresh failed:', error);
+    setError('Authentication session expired. Please sign in again.');
+    // Optionally redirect to login or show a notification
   };
 
   return (
     <AuthContext.Provider value={{ firebaseUser, authLoading, error, getToken }}>
+      {/* Include the token refresh service */}
+      <TokenRefreshService 
+        user={firebaseUser} 
+        onTokenRefreshError={handleTokenRefreshError}
+      />
       {children}
     </AuthContext.Provider>
   );

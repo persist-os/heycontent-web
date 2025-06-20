@@ -1,6 +1,7 @@
 'use client';
 
 import { getFirebaseAuth } from '@/app/lib/firebase';
+import { getValidToken, isTokenExpired } from '@/app/lib/firebase-token-manager';
 import Cookies from 'js-cookie';
 
 /**
@@ -50,8 +51,8 @@ export async function getApiKey(): Promise<string | null> {
     if (needsRefresh && auth && auth.currentUser) {
       const userId = auth.currentUser.uid;
       try {
-        // Get a fresh Firebase ID token
-        const idToken = await auth.currentUser.getIdToken(true);
+        // Get a fresh Firebase ID token using the enhanced token manager
+        const idToken = await getValidToken(auth.currentUser);
         // Request an API key via our API proxy to avoid CSP issues
         const response = await fetch('/api/auth/key', {
           method: 'POST',
@@ -126,6 +127,7 @@ export function getCurrentUserId(): string | null {
 /**
  * Helper function to make authenticated API requests
  * Automatically adds the Firebase ID token to the request headers
+ * Now includes automatic token refresh and expiration checking
  */
 export async function fetchWithAuth(url: string, options: RequestInit = {}) {
   try {
@@ -135,7 +137,7 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
       user = getFirebaseAuth().currentUser;
     } catch (e) {
       console.warn('getFirebaseAuth() failed:', e);
-      return;
+      throw new Error('Firebase Auth not available');
     }
 
     if (!user) {
@@ -143,12 +145,8 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
       throw new Error('User not authenticated');
     }
 
-    // Get the ID token with force refresh to ensure it's up to date
-    const token = await user.getIdToken(true);
-
-    // Also set the token in a cookie for server-side access
-    // Use a more permissive SameSite policy to ensure the cookie is sent with cross-site requests
-    document.cookie = `firebase-auth-token=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax; secure=${process.env.NODE_ENV === 'production'}`;
+    // Get a valid token (this will automatically refresh if needed)
+    const token = await getValidToken(user);
 
     // Create headers with Authorization
     const headers = {
@@ -164,6 +162,35 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
       // Add credentials: 'include' to ensure cookies are sent with the request
       credentials: 'include'
     });
+
+    // Check if the response indicates an authentication error
+    if (response.status === 401 || response.status === 403) {
+      console.warn('Authentication error in API response, attempting token refresh...');
+      
+      try {
+        // Force refresh the token
+        const refreshedToken = await getValidToken(user);
+        
+        // Retry the request with the refreshed token
+        const retryHeaders = {
+          ...options.headers,
+          'Authorization': `Bearer ${refreshedToken}`,
+          'Content-Type': 'application/json',
+        };
+        
+        const retryResponse = await fetch(url, {
+          ...options,
+          headers: retryHeaders,
+          credentials: 'include'
+        });
+        
+        console.log('Request retried with refreshed token');
+        return retryResponse;
+      } catch (refreshError) {
+        console.error('Token refresh failed during API retry:', refreshError);
+        throw new Error('Authentication failed. Please sign in again.');
+      }
+    }
 
     return response;
   } catch (error) {
