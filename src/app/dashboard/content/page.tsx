@@ -1,5 +1,5 @@
-import { ContentAnalyticsScreen } from '../content-analytics/components/ContentAnalyticsScreen'
+import { redirect } from 'next/navigation'
 
 export default function ContentPage() {
-  return <ContentAnalyticsScreen />
+  redirect('/dashboard/content-hub')
 } 

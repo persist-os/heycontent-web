@@ -30,18 +30,11 @@ const navItems = [
     color: 'text-black'
   },
   {
-    id: 'content',
-    label: 'Content Analytics',
+    id: 'content-hub',
+    label: 'Content Hub',
     icon: BarChart3,
-    href: '/dashboard/content',
+    href: '/dashboard/content-hub',
     color: 'text-blue-500'
-  },
-  {
-    id: 'ai-insights',
-    label: 'AI Insights',
-    icon: Brain,
-    href: '/dashboard/ai-insights',
-    color: 'text-purple-500'
   },
   // {
   //   id: 'audience',
@@ -176,7 +169,8 @@ export function DashboardNav() {
                           href={item.href}
                           onClick={() => setIsExpanded(false)}
                           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
-                              pathname === item.href
+                              pathname === item.href || 
+                              (item.id === 'content-hub' && (pathname.startsWith('/dashboard/content') || pathname.startsWith('/dashboard/ai-insights')))
                                   ? 'bg-gray-100 font-medium ' + item.color
                                   : 'text-gray-600 hover:bg-gray-50'
                           }`}
