@@ -53,11 +53,16 @@ export async function POST(req: Request) {
         await fetchMutation(api.gmailMutations.disconnectGmail, {
           userId
         });
-        break;
-      // Add other platforms as needed
-      default:
-        return NextResponse.json({ error: 'Unsupported platform' }, { status: 400 });
-    }
+       break;
+     case 'instagram':
+       await fetchMutation(api.instagramMutations.disconnectInstagram, {
+         userId
+       });
+       break;
+     // Add other platforms as needed
+     default:
+       return NextResponse.json({ error: 'Unsupported platform' }, { status: 400 });
+   }
 
     return NextResponse.json({ success: true });
   } catch (error) {

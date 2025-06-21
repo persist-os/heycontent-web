@@ -38,6 +38,32 @@ export const getGmailAccountByEmail = query({
   },
 });
 
+// Get Gmail account by email (for collision detection - checks across all users)
+export const getGmailAccountByEmailGlobal = query({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    try {
+      console.log('Checking collision for Gmail email:', args.email);
+      
+      const gmailAccount = await ctx.db
+        .query("gmailAccounts")
+        .withIndex("by_email", (q) => q.eq("email", args.email))
+        .first();
+        
+      console.log('Collision check result:', gmailAccount ? {
+        userId: gmailAccount.userId,
+        email: gmailAccount.email
+      } : 'No collision found');
+      
+      return gmailAccount;
+    } catch (error) {
+      console.error('Error checking Gmail account collision:', error);
+      // Return null to allow connection in case of error
+      return null;
+    }
+  },
+});
+
 // Get Gmail token for a user
 export const getGmailToken = query({
   args: { userId: v.string() },
