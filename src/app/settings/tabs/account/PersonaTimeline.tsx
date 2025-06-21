@@ -34,11 +34,11 @@ export const PersonaTimeline: React.FC<PersonaTimelineProps> = ({ history, onRes
     <div className="p-4">
       <div className="flex flex-col md:flex-row md:items-start md:space-x-8">
         {history.map((persona, index) => (
-          <div key={persona._id} className="group relative flex pb-8 last:pb-0 md:flex-col md:flex-1 md:pb-0">
+          <div key={persona._id} className="group relative flex pb-8 last:pb-0 md:flex-col md:flex-1 md:pb-0 md:items-center">
             {/* Connectors: Vertical for mobile, horizontal for web */}
             <div className="absolute top-3 left-3 -ml-px h-full w-px bg-gray-200 group-last:hidden md:hidden" />
             {index < history.length - 1 && (
-              <div className="hidden md:block absolute top-3 left-1/2 w-full h-px bg-gray-200" />
+              <div className="hidden md:block absolute top-3 left-1/2 w-full h-px bg-gray-200 -translate-x-1/2" />
             )}
             
             {/* Dot */}
