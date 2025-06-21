@@ -260,13 +260,16 @@ export function ChatInput({
         )}
 
         <div className="flex gap-2 items-end w-full relative">
-          <div className="flex-1 relative">
+          <div className={`
+            flex-1 relative rounded-xl border-2 transition-all duration-200
+            ${isAtLimit ? 'border-destructive' : ''}
+            ${isNearLimit && !isAtLimit ? 'border-warning' : ''}
+            ${!isAtLimit && !isNearLimit ? 'border-transparent hover:border-purple-600 dark:hover:border-accent' : ''}
+            ${accentFocusBorder}
+            focus-within:bg-background
+          `}>
             {/* Top section - Text input area */}
-            <div className={`flex items-center rounded-t-xl transition-all duration-200 bg-muted/50 border-2 border-b-0
-              ${isAtLimit ? 'border-destructive' : ''}
-              ${isNearLimit && !isAtLimit ? 'border-warning' : ''}
-              ${!isAtLimit && !isNearLimit ? 'border-transparent hover:border-border' : ''}
-              ${accentFocusBorder} focus-within:bg-background
+            <div className={`flex items-center rounded-t-xl bg-muted/50
               pl-3 py-2 pr-3
             `}>
               <textarea
@@ -293,11 +296,7 @@ export function ChatInput({
             </div>
 
             {/* Bottom section - Buttons area */}
-            <div className={`flex items-center justify-between rounded-b-xl transition-all duration-200 bg-muted/50 border-2 border-t-0
-              ${isAtLimit ? 'border-destructive' : ''}
-              ${isNearLimit && !isAtLimit ? 'border-warning' : ''}
-              ${!isAtLimit && !isNearLimit ? 'border-transparent hover:border-border' : ''}
-              focus-within:border-primary dark:focus-within:border-accent focus-within:bg-background
+            <div className={`flex items-center justify-between rounded-b-xl
               px-3 py-2 h-10
             `}>
               {/* Left side - Smart Search */}

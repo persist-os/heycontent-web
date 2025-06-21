@@ -235,8 +235,8 @@ export function MessageBubble({
             ${isUser ? 'max-w-[80%]' : 'max-w-[90%]'}
             rounded-2xl
             ${isUser ? 'px-3 sm:px-4 py-2 sm:py-3' : 'px-4 sm:px-6 py-3 sm:py-4'}
-            ${isUser ? (isDark ? 'bg-accent' : 'bg-purple-600') : 'bg-card border'}
-            ${isUser ? 'text-black [&_*]:!text-black [&_*]:!text-inherit' : ''}
+            ${isUser ? 'bg-accent' : 'bg-card border'}
+            ${isUser ? 'text-black [&_*]:!text-black' : ''}
             relative
             group
           `}
@@ -259,7 +259,7 @@ export function MessageBubble({
 
           {/* Message Content - Full Width */}
           <div className="w-full">
-            <div className={`break-words chat-font ${isUser ? 'text-black' : ''}`}>
+            <div className={`break-words chat-font`}>
               {message.status === 'typing' ? (
                 <div className="space-y-2">
                   <ThinkingIndicator />
