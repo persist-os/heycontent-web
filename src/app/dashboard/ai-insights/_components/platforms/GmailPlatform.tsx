@@ -7,6 +7,7 @@ import { useGmailInsights } from '../hooks/useGmailInsights'
 import { RefreshState } from '@/components/ui/refresh-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AnalysisDepthPicker } from '../AnalysisDepthPicker'
+import { PlatformConnectionPrompt } from '../../../_components/content-hub/PlatformConnectionPrompt'
 
 interface GmailPlatformProps {
   userId?: string
@@ -37,22 +38,17 @@ export function GmailPlatform({ userId, currentQuote, loading }: GmailPlatformPr
   // Handle Gmail not connected state
   if (!isConnected) {
     return (
-      <div className="text-center py-12 px-4">
-        <Mail className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-          Gmail Not Connected
-        </h3>
-        <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-4">
-          Connect your Gmail account to get strategic insights about brand partnerships, media opportunities, and business inquiries in your inbox.
-        </p>
-        <button 
-          onClick={() => window.location.href = '/settings?tab=integrations'}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black rounded-lg font-medium transition-colors"
-        >
-          <Mail className="w-4 h-4" />
-          Connect Gmail
-        </button>
-      </div>
+      <PlatformConnectionPrompt
+        platformName="Gmail"
+        platformIcon={
+          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-red-500 flex items-center justify-center">
+            <Mail className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+          </div>
+        }
+        description="Connect your Gmail account to view detailed analytics, track content performance, and get insights on your content strategy."
+        buttonColor="bg-red-500"
+        buttonHoverColor="hover:bg-red-600"
+      />
     )
   }
 

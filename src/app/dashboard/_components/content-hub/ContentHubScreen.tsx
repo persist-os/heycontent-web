@@ -2,11 +2,12 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Instagram, Mail, BarChart3, Brain } from 'lucide-react'
+import { Instagram, Mail, BarChart3, Brain, Settings } from 'lucide-react'
 import { useAuth } from '@/app/context/auth-context'
 import { RefreshState } from '@/components/ui/refresh-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { YouTubeBrandIcon } from '@/lib/YoutubeBrandIcon'
 
 // Analytics components and hooks
@@ -189,7 +190,45 @@ export function ContentHubScreen() {
     }
   }
 
+  // Check if any platforms are connected for "all platforms" view
+  const hasAnyPlatformConnected = youtubeAnalytics.isConnected || instagramAnalytics.isConnected || gmailAnalytics.isConnected;
+
   const renderAllPlatformsAnalytics = () => {
+    // If no platforms are connected, show connection prompt
+    if (!hasAnyPlatformConnected) {
+      return (
+        <div className="flex items-center justify-center min-h-[400px] px-4">
+          <Card className="p-6 sm:p-8 max-w-md w-full bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl text-center">
+            <div className="flex justify-center mb-4 sm:mb-6">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+              </div>
+            </div>
+            
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
+              Connect Your Platforms
+            </h3>
+            
+            <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
+              Connect your YouTube, Instagram, and Gmail accounts to view detailed analytics, track content performance, and get insights on your content strategy.
+            </p>
+            
+            <Button 
+              onClick={() => router.push('/settings?tab=integrations')}
+              className="w-full py-3 px-4 sm:px-6 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
+            >
+              <Settings className="w-4 h-4" />
+              Go to Integrations
+            </Button>
+            
+            <div className="mt-3 sm:mt-4 text-xs text-gray-500">
+              You can connect platforms in Settings → Integrations
+            </div>
+          </Card>
+        </div>
+      )
+    }
+
     if (isAnalyticsLoading && allDisplayItems.length === 0) {
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
@@ -233,30 +272,61 @@ export function ContentHubScreen() {
 
     return (
       <div className="flex items-center justify-center min-h-[400px] px-4">
-        <Card className="p-6 sm:p-8 max-w-md w-full bg-card shadow-lg rounded-2xl text-center">
+        <Card className="p-6 sm:p-8 max-w-md w-full bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl text-center">
           <div className="flex justify-center mb-4 sm:mb-6">
             <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
               <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
             </div>
           </div>
           
-          <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-2 sm:mb-3">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
             No Content Found
           </h3>
           
-          <p className="text-muted-foreground mb-4 sm:mb-6 text-sm leading-relaxed">
-            Connect your social accounts and email to start seeing content analytics here.
+          <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
+            We couldn't find any content in your connected platforms. Create new content to see your analytics here.
           </p>
-          
-          <div className="mt-3 sm:mt-4 text-xs text-muted-foreground">
-            Connect YouTube, Instagram, and Gmail in Settings
-          </div>
         </Card>
       </div>
     )
   }
 
   const renderAllPlatformsInsights = () => {
+    // If no platforms are connected, show connection prompt
+    if (!hasAnyPlatformConnected) {
+      return (
+        <div className="flex items-center justify-center min-h-[400px] px-4">
+          <Card className="p-6 sm:p-8 max-w-md w-full bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl text-center">
+            <div className="flex justify-center mb-4 sm:mb-6">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 flex items-center justify-center">
+                <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+              </div>
+            </div>
+            
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
+              Connect Your Platforms
+            </h3>
+            
+            <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
+              Connect your YouTube, Instagram, and Gmail accounts to receive AI-powered insights, strategic recommendations, and content performance analysis.
+            </p>
+            
+            <Button 
+              onClick={() => router.push('/settings?tab=integrations')}
+              className="w-full py-3 px-4 sm:px-6 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
+            >
+              <Settings className="w-4 h-4" />
+              Go to Integrations
+            </Button>
+            
+            <div className="mt-3 sm:mt-4 text-xs text-gray-500">
+              You can connect platforms in Settings → Integrations
+            </div>
+          </Card>
+        </div>
+      )
+    }
+
     if (isInsightsLoading && allInsights.length === 0) {
       return (
         <div className="grid gap-6">
@@ -293,24 +363,20 @@ export function ContentHubScreen() {
 
     return (
       <div className="flex items-center justify-center min-h-[400px] px-4">
-        <Card className="p-6 sm:p-8 max-w-md w-full bg-card shadow-lg rounded-2xl text-center">
+        <Card className="p-6 sm:p-8 max-w-md w-full bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl text-center">
           <div className="flex justify-center mb-4 sm:mb-6">
             <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 flex items-center justify-center">
               <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
             </div>
           </div>
           
-          <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-2 sm:mb-3">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
             No Insights Available
           </h3>
           
-          <p className="text-muted-foreground mb-4 sm:mb-6 text-sm leading-relaxed">
-            Connect your accounts and create content to start receiving AI-powered insights and recommendations.
+          <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
+            We couldn't find any insights from your connected platforms. Create new content to receive AI-powered insights and recommendations.
           </p>
-          
-          <div className="mt-3 sm:mt-4 text-xs text-muted-foreground">
-            AI insights are generated from your connected platforms
-          </div>
         </Card>
       </div>
     )
