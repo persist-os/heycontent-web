@@ -322,8 +322,8 @@ export function ContentHubScreen() {
       <div className="shrink-0 px-6 py-4 bg-white dark:bg-gray-900">
         <div className="flex justify-between items-center">
           <div className="w-[100px] sm:w-[24px]"></div>
-          <div className="flex-1 flex justify-center sm:justify-start">
-            <div className="text-center sm:text-left">
+          <div className="flex-1 flex justify-center">
+            <div className="text-center">
               <h1 className="text-base font-medium text-black dark:text-white">Content Hub</h1>
               <p className="text-text-gray dark:text-gray-400">
                 <span className="hidden sm:inline">Your unified content analytics and AI insights dashboard</span>

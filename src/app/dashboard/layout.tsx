@@ -66,6 +66,7 @@ export default function DashboardLayout({
         <DashboardNav />
       </div>
       <main className={`flex-1 transition-[margin] duration-300 ${isExpanded ? 'md:ml-64' : 'ml-0'}`}>
+        <div className="h-16 md:hidden" />
         {children}
       </main>
     </div>

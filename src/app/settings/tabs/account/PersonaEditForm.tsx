@@ -1,325 +1,172 @@
-import React, { useCallback, useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PersonaData } from '../../../dashboard/chat/types';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 interface PersonaEditFormProps {
   persona: PersonaData;
   onUpdate: (field: keyof PersonaData, value: string | string[]) => void;
 }
 
-const PersonaSection = React.memo(({ title, description, children }: { 
-  title: string; 
-  description?: string;
-  children: React.ReactNode 
-}) => (
-  <div className="space-y-4">
-    <div className="space-y-1">
-      <h3 className="font-bold text-[#4715C8] dark:text-[#4715C8] border-b border-[#BAA9FC]/30 pb-2 text-lg">
-        {title}
-      </h3>
-      {description && (
-        <p className="text-gray-500 dark:text-gray-400 text-sm">
-          {description}
-        </p>
+const Section: React.FC<{ title: string; description: string; children: React.ReactNode }> = ({ title, description, children }) => (
+    <div className="py-6 border-b border-gray-200 last:border-b-0">
+        <div className="mb-4">
+            <h3 className="text-base font-semibold text-gray-900">{title}</h3>
+            <p className="text-sm text-gray-500">{description}</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+            {children}
+        </div>
+    </div>
+);
+
+const EditableField: React.FC<{
+  label: string;
+  value: string | string[];
+  field: keyof PersonaData;
+  onUpdate: (field: keyof PersonaData, value: string) => void;
+  isArray?: boolean;
+}> = ({ label, value, field, onUpdate, isArray = false }) => {
+  const [inputValue, setInputValue] = useState(Array.isArray(value) ? value.join(', ') : value || '');
+
+  useEffect(() => {
+    setInputValue(Array.isArray(value) ? value.join(', ') : value || '');
+  }, [value]);
+
+  const handleBlur = () => {
+    onUpdate(field, inputValue);
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={String(field)} className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+        {label}
+      </Label>
+      <Input
+        id={String(field)}
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+        onBlur={handleBlur}
+        placeholder={isArray ? 'Separate with commas' : `Enter ${label.toLowerCase()}`}
+      />
+      {isArray && Array.isArray(value) && value.length > 0 && (
+        <div className="flex flex-wrap gap-2 pt-2">
+          {value.map((item, index) => (
+            <Badge key={index} variant="outline" className="font-normal">
+              {item}
+            </Badge>
+          ))}
+        </div>
       )}
     </div>
-    <div className="space-y-3">
-      {children}
-    </div>
-  </div>
-));
+  );
+};
 
-PersonaSection.displayName = 'PersonaSection';
+const EditableTextarea: React.FC<{
+  label: string;
+  value: string;
+  field: keyof PersonaData;
+  onUpdate: (field: keyof PersonaData, value: string) => void;
+}> = ({ label, value, field, onUpdate }) => {
+    const [textValue, setTextValue] = useState(value || '');
 
-const EditableField = React.memo(({ label, value, onChange, isArray = false }: { 
-  label: string; 
-  value: string | string[]; 
-  onChange: (value: string) => void;
-  isArray?: boolean;
-}) => {
-  const displayValue = isArray && Array.isArray(value) ? value.join(', ') : String(value || '');
-  
-  // Add local state for array inputs to prevent cursor jumping
-  const [localValue, setLocalValue] = useState(displayValue);
-  
-  // Use ref to track if user is actively typing
-  const isUserTypingRef = useRef(false);
-  
-  // Update local value when external value changes (but not during user typing)
-  useEffect(() => {
-    // Only update if user is not actively typing
-    if (!isUserTypingRef.current) {
-      const newDisplayValue = isArray && Array.isArray(value) ? value.join(', ') : String(value || '');
-      setLocalValue(newDisplayValue);
-    }
-  }, [value, isArray]);
+    useEffect(() => {
+        setTextValue(value || '');
+    }, [value]);
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value;
-    
-    // Mark that user is actively typing
-    isUserTypingRef.current = true;
-    
-    // Update local state immediately for responsive typing
-    setLocalValue(inputValue);
-    
-    // Debounce the actual state update to prevent excessive re-renders
-    onChange(inputValue);
-    
-    // Reset typing flag after a short delay
-    setTimeout(() => {
-      isUserTypingRef.current = false;
-    }, 100);
-  }, [onChange]);
+    const handleBlur = () => {
+        onUpdate(field, textValue);
+    };
 
-  return (
-    <div className="space-y-2">
-      <label className="block font-medium text-[#4715C8] uppercase tracking-wide leading-tight text-sm" htmlFor={label}>
-        {label}
-      </label>
-      <div className="text-gray-700 dark:text-gray-300">
-        {isArray ? (
-          <div className="space-y-2">
-            <input
-              id={label}
-              type="text"
-              value={localValue} // Use local value instead of computed displayValue
-              onChange={handleChange}
-              className="w-full px-4 py-3 text-base bg-white border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4715C8] focus:border-[#4715C8] transition-colors"
-              placeholder="Separate items with commas"
-              autoComplete="off"
-              spellCheck={false}
+    return (
+        <div className="space-y-2">
+            <Label htmlFor={String(field)} className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                {label}
+            </Label>
+            <Textarea
+                id={String(field)}
+                value={textValue}
+                onChange={(e) => setTextValue(e.target.value)}
+                onBlur={handleBlur}
+                placeholder={`Describe ${label.toLowerCase()}`}
+                rows={4}
             />
-            {value && Array.isArray(value) && value.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {value.map((item, index) => (
-                  <Badge 
-                    key={index} 
-                    variant="outline" 
-                    className="bg-[#4715C8]/10 text-[#4715C8] border-[#4715C8]/30 hover:bg-[#4715C8]/20 rounded-full transition-colors px-3 py-1 text-sm"
-                  >
-                    {item}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-          <input
-            id={label}
-            type="text"
-            value={displayValue}
-            onChange={handleChange}
-            className="w-full px-4 py-3 text-base leading-relaxed text-gray-800 dark:text-gray-200 bg-white border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4715C8] focus:border-[#4715C8] transition-colors"
-            aria-label={label}
-            autoComplete="off"
-            spellCheck={false}
-          />
-        )}
-      </div>
-    </div>
-  );
-});
+        </div>
+    );
+};
 
-EditableField.displayName = 'EditableField';
+export const PersonaEditForm: React.FC<PersonaEditFormProps> = ({ persona, onUpdate }) => {
+  const handleUpdate = (field: keyof PersonaData, value: string | string[]) => {
+    onUpdate(field, value);
+  };
 
-const EditableTextArea = React.memo(({ label, value, onChange }: { 
-  label: string; 
-  value: string; 
-  onChange: (value: string) => void;
-}) => {
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onChange(e.target.value);
-  }, [onChange]);
-
-  return (
-    <div className="space-y-2">
-      <label className="block font-medium text-[#4715C8] uppercase tracking-wide leading-tight text-sm" htmlFor={label}>
-        {label}
-      </label>
-      <textarea
-        id={label}
-        value={value || ''}
-        onChange={handleChange}
-        rows={4}
-        className="w-full px-4 py-3 text-base leading-relaxed text-gray-800 dark:text-gray-200 bg-white border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4715C8] focus:border-[#4715C8] transition-colors resize-y"
-        aria-label={label}
-        autoComplete="off"
-        spellCheck={false}
-      />
-    </div>
-  );
-});
-
-EditableTextArea.displayName = 'EditableTextArea';
-
-export const PersonaEditForm: React.FC<PersonaEditFormProps> = React.memo(({ persona, onUpdate }) => {
-  const handleArrayUpdate = useCallback((field: keyof PersonaData, value: string) => {
+  const handleArrayUpdate = (field: keyof PersonaData, value: string) => {
     const items = value.split(',').map(item => item.trim()).filter(Boolean);
     onUpdate(field, items);
-  }, [onUpdate]);
-
+  };
+  
   return (
-    <div className="w-full space-y-8">
-      {/* Header Section - Editable */}
-      <div className="text-center space-y-4 p-8 bg-gradient-to-br from-[#4715C8]/5 via-[#BAA9FC]/8 to-[#4715C8]/5 rounded-2xl border border-[#BAA9FC]/20 shadow-sm">
-        <div className="space-y-3">
-          <div>
-            <input
-              type="text"
-              value={persona.current_name}
-              onChange={(e) => onUpdate('current_name', e.target.value)}
-              className="text-4xl font-black text-[#4715C8] dark:text-[#4715C8] tracking-tight leading-tight bg-transparent text-center border-none outline-none focus:ring-2 focus:ring-[#4715C8]/50 rounded px-3 py-2 w-full"
-              placeholder="Persona Name"
-              autoFocus
-              spellCheck={false}
-              autoComplete="off"
+    <div className="bg-white rounded-lg">
+      <div className="p-6">
+        <div className="space-y-2 mb-6">
+            <Label htmlFor="current_name" className="text-xs font-medium text-gray-500 uppercase tracking-wider">Persona Name</Label>
+            <Input
+                id="current_name"
+                value={persona.current_name}
+                onChange={(e) => handleUpdate('current_name', e.target.value)}
+                className="text-2xl font-bold h-auto p-0 border-none focus-visible:ring-0"
+                placeholder="Persona Name"
             />
-          </div>
-          <div>
-            <textarea
-              value={persona.current_description}
-              onChange={(e) => onUpdate('current_description', e.target.value)}
-              rows={3}
-              className="text-lg text-gray-600 dark:text-gray-400 leading-relaxed max-w-3xl mx-auto bg-transparent text-center border-none outline-none focus:ring-2 focus:ring-[#4715C8]/50 rounded px-4 py-3 w-full resize-y"
-              placeholder="Describe your persona..."
-              spellCheck={false}
-              autoComplete="off"
+        </div>
+        <div className="space-y-2">
+            <Label htmlFor="current_description" className="text-xs font-medium text-gray-500 uppercase tracking-wider">Description</Label>
+            <Textarea
+                id="current_description"
+                value={persona.current_description}
+                onChange={(e) => handleUpdate('current_description', e.target.value)}
+                placeholder="Describe your persona..."
+                className="text-base border-none p-0 focus-visible:ring-0"
             />
-          </div>
         </div>
       </div>
 
-      {/* Persona Details Grid */}
-      <div className="grid gap-8 grid-cols-1 lg:grid-cols-2">
-        {/* Identity & Audience */}
-        <PersonaSection 
-          title="Creator Identity" 
-          description="Current style and audience focus"
-        >
-          <EditableField 
-            label="Experience Level" 
-            value={persona.experience_level} 
-            onChange={(value) => onUpdate('experience_level', value)}
-          />
-          <EditableField 
-            label="Content Formats" 
-            value={persona.content_formats} 
-            onChange={(value) => handleArrayUpdate('content_formats', value)}
-            isArray
-          />
-          <EditableField 
-            label="Tone" 
-            value={persona.content_tone} 
-            onChange={(value) => onUpdate('content_tone', value)}
-          />
-          <EditableField 
-            label="Voice" 
-            value={persona.content_voice} 
-            onChange={(value) => onUpdate('content_voice', value)}
-          />
-          <EditableTextArea 
-            label="Unique Value" 
-            value={persona.unique_value} 
-            onChange={(value) => onUpdate('unique_value', value)}
-          />
-          <EditableField 
-            label="Audience Type" 
-            value={persona.audience_type} 
-            onChange={(value) => onUpdate('audience_type', value)}
-          />
-        </PersonaSection>
+      <div className="px-6">
+        <Section title="Creator Identity" description="Current style and audience focus">
+          <EditableField label="Experience Level" value={persona.experience_level} field="experience_level" onUpdate={handleUpdate} />
+          <EditableField label="Content Formats" value={persona.content_formats} field="content_formats" onUpdate={handleArrayUpdate} isArray />
+          <EditableField label="Tone" value={persona.content_tone} field="content_tone" onUpdate={handleUpdate} />
+          <EditableField label="Voice" value={persona.content_voice} field="content_voice" onUpdate={handleUpdate} />
+          <div className="md:col-span-2">
+            <EditableTextarea label="Unique Value" value={persona.unique_value} field="unique_value" onUpdate={handleUpdate} />
+          </div>
+          <EditableField label="Audience Type" value={persona.audience_type} field="audience_type" onUpdate={handleUpdate} />
+        </Section>
 
-        {/* Content Pillars */}
-        <PersonaSection 
-          title="Content Pillars" 
-          description="Core themes and recurring topics"
-        >
-          <EditableField 
-            label="Pillars" 
-            value={persona.content_pillars} 
-            onChange={(value) => handleArrayUpdate('content_pillars', value)}
-            isArray
-          />
-        </PersonaSection>
+        <Section title="Future Vision" description="Where your content journey is heading">
+          <EditableField label="Future Persona" value={persona.future_name} field="future_name" onUpdate={handleUpdate} />
+          <div className="md:col-span-2">
+            <EditableTextarea label="Vision Description" value={persona.future_description} field="future_description" onUpdate={handleUpdate} />
+          </div>
+          <div className="md:col-span-2">
+            <EditableTextarea label="Desired Impact" value={persona.desired_impact} field="desired_impact" onUpdate={handleUpdate} />
+          </div>
+          <EditableField label="Goals" value={persona.goals} field="goals" onUpdate={handleArrayUpdate} isArray />
+        </Section>
 
-        {/* Future Vision */}
-        <PersonaSection 
-          title="Future Vision" 
-          description="Where your content journey is heading"
-        >
-          <EditableField 
-            label="Future Persona" 
-            value={persona.future_name} 
-            onChange={(value) => onUpdate('future_name', value)}
-          />
-          <EditableTextArea 
-            label="Vision Description" 
-            value={persona.future_description} 
-            onChange={(value) => onUpdate('future_description', value)}
-          />
-          <EditableTextArea 
-            label="Desired Impact" 
-            value={persona.desired_impact} 
-            onChange={(value) => onUpdate('desired_impact', value)}
-          />
-          <EditableField 
-            label="Goals" 
-            value={persona.goals} 
-            onChange={(value) => handleArrayUpdate('goals', value)}
-            isArray
-          />
-        </PersonaSection>
+        <Section title="Content Strategy" description="Topic approach and audience engagement">
+          <EditableField label="Primary Topics" value={persona.primary_topics} field="primary_topics" onUpdate={handleArrayUpdate} isArray />
+          <EditableField label="Secondary Topics" value={persona.secondary_topics} field="secondary_topics" onUpdate={handleArrayUpdate} isArray />
+          <EditableField label="Engagement Style" value={persona.engagement_style} field="engagement_style" onUpdate={handleUpdate} />
+          <EditableField label="Content Pillars" value={persona.content_pillars} field="content_pillars" onUpdate={handleArrayUpdate} isArray />
+        </Section>
 
-        {/* Content Strategy */}
-        <PersonaSection 
-          title="Content Strategy" 
-          description="Topic approach and audience engagement"
-        >
-          <EditableField 
-            label="Primary Topics" 
-            value={persona.primary_topics} 
-            onChange={(value) => handleArrayUpdate('primary_topics', value)}
-            isArray
-          />
-          <EditableField 
-            label="Secondary Topics" 
-            value={persona.secondary_topics} 
-            onChange={(value) => handleArrayUpdate('secondary_topics', value)}
-            isArray
-          />
-          <EditableField 
-            label="Engagement Style" 
-            value={persona.engagement_style} 
-            onChange={(value) => onUpdate('engagement_style', value)}
-          />
-        </PersonaSection>
-
-        {/* Style & Voice - Full Width */}
-        <div className="lg:col-span-2">
-          <PersonaSection 
-            title="Creative Signature" 
-            description="The unique fingerprint of your content"
-          >
-            <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
-              <EditableField 
-                label="Tone Descriptors" 
-                value={persona.tone_descriptors} 
-                onChange={(value) => handleArrayUpdate('tone_descriptors', value)}
-                isArray
-              />
-              <EditableField 
-                label="Style Descriptors" 
-                value={persona.style_descriptors} 
-                onChange={(value) => handleArrayUpdate('style_descriptors', value)}
-                isArray
-              />
-            </div>
-          </PersonaSection>
-        </div>
+        <Section title="Creative Signature" description="The unique fingerprint of your content">
+          <EditableField label="Tone Descriptors" value={persona.tone_descriptors} field="tone_descriptors" onUpdate={handleArrayUpdate} isArray />
+          <EditableField label="Style Descriptors" value={persona.style_descriptors} field="style_descriptors" onUpdate={handleArrayUpdate} isArray />
+        </Section>
       </div>
     </div>
   );
-});
-
-PersonaEditForm.displayName = 'PersonaEditForm'; 
+}; 
