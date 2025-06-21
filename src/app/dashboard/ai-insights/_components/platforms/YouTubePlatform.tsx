@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { AnalysisDepthPicker } from '../AnalysisDepthPicker'
 import { YouTubeBrandIcon } from '../../../../../lib/YoutubeBrandIcon'
 import { Button } from '@/components/ui/button'
+import { PlatformConnectionPrompt } from '../../../_components/content-hub/PlatformConnectionPrompt'
 
 interface YouTubePlatformProps {
   userId?: string
@@ -47,23 +48,17 @@ export function YouTubePlatform({ userId, currentQuote, loading }: YouTubePlatfo
   // Handle YouTube not connected state
   if (!isConnected) {
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <Skeleton className="h-10 w-32" />
-          <Skeleton className="h-10 w-32" />
-        </div>
-        <div className="grid gap-6">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 flex flex-col space-y-4">
-              <Skeleton className="h-5 w-3/4" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <PlatformConnectionPrompt
+        platformName="YouTube"
+        platformIcon={
+          <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center">
+            <YouTubeBrandIcon href="https://youtube.com/" className="w-full h-full" />
+          </div>
+        }
+        description="Connect your YouTube account to view detailed analytics, track video performance, and get insights on your content strategy."
+        buttonColor="bg-red-600"
+        buttonHoverColor="hover:bg-red-700"
+      />
     )
   }
 
@@ -98,7 +93,7 @@ export function YouTubePlatform({ userId, currentQuote, loading }: YouTubePlatfo
             onClick={() => window.location.href = '/settings?tab=integrations'}
             className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
           >
-            <YouTubeBrandIcon href={null} className="w-4 h-4" />
+            <YouTubeBrandIcon href="https://youtube.com/" className="w-4 h-4" />
             Connect YouTube
           </Button>
         </div>

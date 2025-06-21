@@ -16,7 +16,7 @@ interface ContentHubInsightsProps {
 }
 
 export function ContentHubInsights({ userId }: ContentHubInsightsProps) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(true)
   const router = useRouter()
   const {
     latestInsight,
@@ -24,8 +24,11 @@ export function ContentHubInsights({ userId }: ContentHubInsightsProps) {
     generateNewInsights,
     hasMinimumPlatforms,
     connectedPlatforms,
-    error
+    error,
+    dataBundle
   } = useContentHubInsights(userId)
+
+  const isLoading = dataBundle === undefined
 
   const handleGenerateInsights = async () => {
     await generateNewInsights()
@@ -49,7 +52,7 @@ export function ContentHubInsights({ userId }: ContentHubInsightsProps) {
   }
 
   // Show skeleton while data is loading
-  if (latestInsight === undefined || hasMinimumPlatforms === undefined) {
+  if (isLoading) {
     return (
       <div className="mb-6">
         <Card className="p-6 border-2 border-transparent shadow-sm">
@@ -89,7 +92,7 @@ export function ContentHubInsights({ userId }: ContentHubInsightsProps) {
             </p>
             <div className="flex justify-center gap-4 text-xs text-gray-500">
               <div className={`flex items-center gap-1 ${connectedPlatforms.includes('youtube') ? 'text-gray-900 dark:text-gray-100' : ''}`}>
-                <YouTubeBrandIcon href="#" className="w-4 h-4" />
+                <YouTubeBrandIcon href="https://youtube.com/" className="w-4 h-4" />
                 YouTube {connectedPlatforms.includes('youtube') ? '✓' : ''}
               </div>
               <div className={`flex items-center gap-1 ${connectedPlatforms.includes('instagram') ? 'text-gray-900 dark:text-gray-100' : ''}`}>
@@ -280,7 +283,7 @@ export function ContentHubInsights({ userId }: ContentHubInsightsProps) {
               {/* YouTube Section */}
               <PlatformInsightCard
                 platform="YouTube"
-                icon={<YouTubeBrandIcon href="#" className="w-4 h-4" />}
+                icon={<YouTubeBrandIcon href="https://youtube.com/" className="w-4 h-4" />}
                 hook={insight.youtube_hook}
                 format={insight.youtube_format}
                 cta={insight.youtube_cta}

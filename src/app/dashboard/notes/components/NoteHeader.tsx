@@ -50,49 +50,71 @@ export function NoteHeader({ note, onUpdate, onSave, onRequestAIInsights, onBack
   };
 
   return (
-    <div className="border-b border-gray-100 px-6 py-4 flex justify-between items-center">
-      <div className="flex items-center gap-4 flex-1">
-        {isMobile && (
+    <div className="border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-10">
+      <div className="px-4 py-3 flex items-center">
+        {/* Left spacer for centering */}
+        <div className="flex-1"></div>
+        
+        {/* Centered title */}
+        <div className="text-center">
+          <h1 className="text-base font-medium text-purple-600 dark:text-accent">Smart Notes</h1>
+        </div>
+        
+        {/* Right side with back button and action buttons */}
+        <div className="flex-1 flex justify-end">
+          <div className="flex gap-2">
+            {isMobile && (
+              <button
+                onClick={onBack}
+                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"
+                title="Back to notes"
+              >
+                <ArrowLeft className="w-5 h-5 text-muted-foreground hover:text-foreground" />
+              </button>
+            )}
           <button
-            onClick={onBack}
-            className="p-2 -ml-2 rounded-full hover:bg-gray-100"
-            title="Back to notes"
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+              note.type === 'idea_bank' 
+                ? 'bg-primary/10 text-primary' 
+                : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+            }`}
+            onClick={() => onUpdate(note._id, { type: note.type === 'idea_bank' ? 'content_script' : 'idea_bank' as NoteType })}
+            title={note.type === 'idea_bank' ? 'Switch to content script' : 'Mark as idea bank'}
           >
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
+            <Lightbulb size={16} />
           </button>
-        )}
-        <div className="text-gray-500 font-medium">Smart Notes</div>
-      </div>
-      <div className="flex gap-2">
-        <button
-          className={`w-8 h-8 rounded-full flex items-center justify-center ${note.type === 'idea' ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-          onClick={() => onUpdate(note._id, { type: note.type === 'idea' ? undefined : 'idea' as NoteType })}
-          title={note.type === 'idea' ? 'Remove idea status' : 'Mark as idea'}
-        >
-          <Lightbulb size={16} />
-        </button>
-        <button
-          className={`w-8 h-8 rounded-full flex items-center justify-center ${note.important ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-          onClick={() => onUpdate(note._id, { important: !note.important })}
-          title={note.important ? 'Remove importance' : 'Mark as important'}
-        >
-          <Star size={16} />
-        </button>
-        <button
-          className={`w-8 h-8 rounded-full flex items-center justify-center ${isAnalyzing ? 'bg-purple-50' : 'bg-purple-100'} text-purple-600 hover:bg-purple-200`}
-          onClick={handleRequestInsights}
-          disabled={isAnalyzing}
-          title={isAnalyzing ? 'Analyzing note...' : 'Get AI insights'}
-        >
-          {isAnalyzing ? <Loader2 size={16} className="animate-spin" /> : <Brain size={16} />}
-        </button>
-        <button
-          className="w-8 h-8 rounded-full flex items-center justify-center bg-purple-600 text-white hover:bg-purple-700"
-          onClick={handleSave}
-          title="Save note"
-        >
-          <Save size={16} />
-        </button>
+          <button
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+              note.important 
+                ? 'bg-primary/10 text-primary' 
+                : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+            }`}
+            onClick={() => onUpdate(note._id, { important: !note.important })}
+            title={note.important ? 'Remove importance' : 'Mark as important'}
+          >
+            <Star size={16} fill={note.important ? "currentColor" : "none"} />
+          </button>
+          <button
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+              isAnalyzing 
+                ? 'bg-accent/50 text-accent-foreground' 
+                : 'bg-accent text-accent-foreground hover:bg-accent/80'
+            }`}
+            onClick={handleRequestInsights}
+            disabled={isAnalyzing}
+            title={isAnalyzing ? 'Analyzing note...' : 'Get AI insights'}
+          >
+            {isAnalyzing ? <Loader2 size={16} className="animate-spin" /> : <Brain size={16} />}
+          </button>
+            <button
+              className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              onClick={handleSave}
+              title="Save note"
+            >
+              <Save size={16} />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

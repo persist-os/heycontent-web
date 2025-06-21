@@ -2,11 +2,12 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Instagram, Mail, BarChart3, Brain } from 'lucide-react'
+import { Instagram, Mail, BarChart3, Brain, Settings, Sparkles } from 'lucide-react'
 import { useAuth } from '@/app/context/auth-context'
 import { RefreshState } from '@/components/ui/refresh-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { YouTubeBrandIcon } from '@/lib/YoutubeBrandIcon'
 
 // Analytics components and hooks
@@ -33,24 +34,27 @@ import { useYouTubeInsights } from '../../ai-insights/_components/hooks/useYouTu
 import { useInstagramInsights } from '../../ai-insights/_components/hooks/useInstagramInsights'
 import { useGmailInsights } from '../../ai-insights/_components/hooks/useGmailInsights'
 import { InsightCard } from '../../ai-insights/_components/InsightCard'
+import { ContentCardSkeleton } from './ContentCardSkeleton'
+import { InsightCardSkeleton } from '../../ai-insights/_components/InsightCardSkeleton'
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ContentHubInsights } from './ContentHubInsights'
 
 type PlatformType = 'all' | 'youtube' | 'instagram' | 'gmail'
-type DataType = 'posts' | 'insights'
+type ViewType = 'hub-insights' | 'all' | 'youtube' | 'instagram' | 'gmail'
+type DataType = 'posts' | 'ai-insights'
 
 export function ContentHubScreen() {
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab')
   
-  const [selectedPlatform, setSelectedPlatform] = useState<PlatformType>('all')
-  const [selectedDataType, setSelectedDataType] = useState<DataType>(
-    tabParam === 'insights' ? 'insights' : 
-    tabParam === 'posts' ? 'posts' : 
-    tabParam === 'analytics' ? 'posts' : // Legacy support
-    'posts'
+  const [selectedView, setSelectedView] = useState<ViewType>(
+    tabParam === 'posts' ? 'all' : 
+    tabParam === 'analytics' ? 'all' : // Legacy support
+    tabParam === 'ai-insights' ? 'all' :
+    'hub-insights' // Default to Content Hub Insights as home
   )
+  const [selectedDataType, setSelectedDataType] = useState<DataType>('posts')
   const [selectedContent, setSelectedContent] = useState<AnyContentItem | null>(null)
   const [currentQuote, setCurrentQuote] = useState<string>('')
   const [expandedInsight, setExpandedInsight] = useState<string | null>(null);
@@ -189,18 +193,50 @@ export function ContentHubScreen() {
     }
   }
 
+  // Check if any platforms are connected for "all platforms" view
+  const hasAnyPlatformConnected = youtubeAnalytics.isConnected || instagramAnalytics.isConnected || gmailAnalytics.isConnected;
+
   const renderAllPlatformsAnalytics = () => {
+    // If no platforms are connected, show connection prompt
+    if (!hasAnyPlatformConnected) {
+      return (
+        <div className="flex items-center justify-center min-h-[400px] px-4">
+          <Card className="p-6 sm:p-8 max-w-md w-full bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl text-center">
+            <div className="flex justify-center mb-4 sm:mb-6">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+              </div>
+            </div>
+            
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
+              Connect Your Platforms
+            </h3>
+            
+            <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
+              Connect your YouTube, Instagram, and Gmail accounts to view detailed analytics, track content performance, and get insights on your content strategy.
+            </p>
+            
+            <Button 
+              onClick={() => router.push('/settings?tab=integrations')}
+              className="w-full py-3 px-4 sm:px-6 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
+            >
+              <Settings className="w-4 h-4" />
+              Go to Integrations
+            </Button>
+            
+            <div className="mt-3 sm:mt-4 text-xs text-gray-500">
+              You can connect platforms in Settings → Integrations
+            </div>
+          </Card>
+        </div>
+      )
+    }
+
     if (isAnalyticsLoading && allDisplayItems.length === 0) {
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
           {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 flex flex-col space-y-4">
-              <Skeleton className="h-40 w-full rounded-lg" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-4/5" />
-                <Skeleton className="h-4 w-3/5" />
-              </div>
-            </div>
+            <ContentCardSkeleton key={index} />
           ))}
         </div>
       )
@@ -233,41 +269,66 @@ export function ContentHubScreen() {
 
     return (
       <div className="flex items-center justify-center min-h-[400px] px-4">
-        <Card className="p-6 sm:p-8 max-w-md w-full bg-card shadow-lg rounded-2xl text-center">
+        <Card className="p-6 sm:p-8 max-w-md w-full bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl text-center">
           <div className="flex justify-center mb-4 sm:mb-6">
             <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
               <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
             </div>
           </div>
           
-          <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-2 sm:mb-3">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
             No Content Found
           </h3>
           
-          <p className="text-muted-foreground mb-4 sm:mb-6 text-sm leading-relaxed">
-            Connect your social accounts and email to start seeing content analytics here.
+          <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
+            We couldn't find any content in your connected platforms. Create new content to see your analytics here.
           </p>
-          
-          <div className="mt-3 sm:mt-4 text-xs text-muted-foreground">
-            Connect YouTube, Instagram, and Gmail in Settings
-          </div>
         </Card>
       </div>
     )
   }
 
   const renderAllPlatformsInsights = () => {
+    // If no platforms are connected, show connection prompt
+    if (!hasAnyPlatformConnected) {
+      return (
+        <div className="flex items-center justify-center min-h-[400px] px-4">
+          <Card className="p-6 sm:p-8 max-w-md w-full bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl text-center">
+            <div className="flex justify-center mb-4 sm:mb-6">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 flex items-center justify-center">
+                <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+              </div>
+            </div>
+            
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
+              Connect Your Platforms
+            </h3>
+            
+            <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
+              Connect your YouTube, Instagram, and Gmail accounts to receive AI-powered insights, strategic recommendations, and content performance analysis.
+            </p>
+            
+            <Button 
+              onClick={() => router.push('/settings?tab=integrations')}
+              className="w-full py-3 px-4 sm:px-6 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
+            >
+              <Settings className="w-4 h-4" />
+              Go to Integrations
+            </Button>
+            
+            <div className="mt-3 sm:mt-4 text-xs text-gray-500">
+              You can connect platforms in Settings → Integrations
+            </div>
+          </Card>
+        </div>
+      )
+    }
+
     if (isInsightsLoading && allInsights.length === 0) {
       return (
         <div className="grid gap-6">
           {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 flex flex-col space-y-4">
-              <Skeleton className="h-5 w-3/4" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6" />
-              </div>
-            </div>
+            <InsightCardSkeleton key={index} />
           ))}
         </div>
       )
@@ -293,24 +354,20 @@ export function ContentHubScreen() {
 
     return (
       <div className="flex items-center justify-center min-h-[400px] px-4">
-        <Card className="p-6 sm:p-8 max-w-md w-full bg-card shadow-lg rounded-2xl text-center">
+        <Card className="p-6 sm:p-8 max-w-md w-full bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl text-center">
           <div className="flex justify-center mb-4 sm:mb-6">
             <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 flex items-center justify-center">
               <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
             </div>
           </div>
           
-          <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-2 sm:mb-3">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
             No Insights Available
           </h3>
           
-          <p className="text-muted-foreground mb-4 sm:mb-6 text-sm leading-relaxed">
-            Connect your accounts and create content to start receiving AI-powered insights and recommendations.
+          <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
+            We couldn't find any insights from your connected platforms. Create new content to receive AI-powered insights and recommendations.
           </p>
-          
-          <div className="mt-3 sm:mt-4 text-xs text-muted-foreground">
-            AI insights are generated from your connected platforms
-          </div>
         </Card>
       </div>
     )
@@ -338,17 +395,19 @@ export function ContentHubScreen() {
       <div className="flex-1 overflow-y-auto">
         <div className="p-6">
           <div className="max-w-7xl mx-auto space-y-6">
-            {/* Content Hub Insights Section */}
-            <ContentHubInsights userId={userId} />
             
-            {/* Platform Tabs */}
-            <Tabs value={selectedPlatform} onValueChange={(value) => setSelectedPlatform(value as PlatformType)} className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-4">
+            {/* Main Navigation - Content Hub Insights + Platform Selection */}
+            <Tabs value={selectedView} onValueChange={(value) => setSelectedView(value as ViewType)} className="w-full">
+              <TabsList className="grid w-full grid-cols-5 mb-0">
+                <TabsTrigger value="hub-insights" className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  Content Hub Insights
+                </TabsTrigger>
                 <TabsTrigger value="all" className="flex items-center gap-2">
                   All Platforms
                 </TabsTrigger>
                 <TabsTrigger value="youtube" className="flex items-center gap-2">
-                  <YouTubeBrandIcon href="#" className="w-4 h-4" />
+                  <YouTubeBrandIcon href="https://youtube.com/" className="w-4 h-4" />
                   YouTube
                 </TabsTrigger>
                 <TabsTrigger value="instagram" className="flex items-center gap-2">
@@ -361,90 +420,100 @@ export function ContentHubScreen() {
                 </TabsTrigger>
               </TabsList>
 
-              {/* Data Type Tabs */}
-              <Tabs value={selectedDataType} onValueChange={(value) => setSelectedDataType(value as DataType)} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="posts" className="flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4" />
-                    Posts ({
-                      selectedPlatform === 'all' ? allDisplayItems.length :
-                      selectedPlatform === 'youtube' ? youtubeAnalytics.items.length :
-                      selectedPlatform === 'instagram' ? instagramAnalytics.items.length :
-                      gmailAnalytics.items.length
-                    })
-                  </TabsTrigger>
-                  <TabsTrigger value="insights" className="flex items-center gap-2">
-                    <Brain className="w-4 h-4" />
-                    Insights ({
-                      selectedPlatform === 'all' ? allInsights.length :
-                      selectedPlatform === 'youtube' ? youtubeInsights.insights.length :
-                      selectedPlatform === 'instagram' ? instagramInsights.insights.length :
-                      gmailInsights.insights.length
-                    })
-                  </TabsTrigger>
-                </TabsList>
+              {/* Content Hub Insights - Home Screen */}
+              <TabsContent value="hub-insights" className="space-y-6">
+                <ContentHubInsights userId={userId} />
+              </TabsContent>
 
-                {/* Content Area */}
-                <TabsContent value="posts" className="space-y-6">
-                  {selectedPlatform === 'all' && renderAllPlatformsAnalytics()}
-                  
-                  {selectedPlatform === 'youtube' && (
-                    <YouTubeAnalyticsPlatform 
-                      userId={userId} 
-                      {...youtubeAnalytics} 
-                    />
-                  )}
-                  
-                  {selectedPlatform === 'instagram' && (
-                    <InstagramAnalyticsPlatform 
-                      userId={userId} 
-                      {...instagramAnalytics}
-                    />
-                  )}
-                  
-                  {selectedPlatform === 'gmail' && (
-                    <GmailAnalyticsPlatform 
-                      userId={userId}
-                      {...gmailAnalytics}
-                    />
-                  )}
-                </TabsContent>
+              {/* Platform-based content - Posts and AI Insights */}
+              {(selectedView === 'all' || selectedView === 'youtube' || selectedView === 'instagram' || selectedView === 'gmail') && (
+                <div className="space-y-0">
+                  <Tabs value={selectedDataType} onValueChange={(value) => setSelectedDataType(value as DataType)} className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 mb-6">
+                      <TabsTrigger value="posts" className="flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4" />
+                        Posts ({
+                          selectedView === 'all' ? allDisplayItems.length :
+                          selectedView === 'youtube' ? youtubeAnalytics.items.length :
+                          selectedView === 'instagram' ? instagramAnalytics.items.length :
+                          gmailAnalytics.items.length
+                        })
+                      </TabsTrigger>
+                      <TabsTrigger value="ai-insights" className="flex items-center gap-2">
+                        <Brain className="w-4 h-4" />
+                        AI Insights ({
+                          selectedView === 'all' ? allInsights.length :
+                          selectedView === 'youtube' ? youtubeInsights.insights.length :
+                          selectedView === 'instagram' ? instagramInsights.insights.length :
+                          gmailInsights.insights.length
+                        })
+                      </TabsTrigger>
+                    </TabsList>
 
-                <TabsContent value="insights" className="space-y-6">
-                  {selectedPlatform === 'all' && renderAllPlatformsInsights()}
-                  
-                  {selectedPlatform === 'youtube' && (
-                    <YouTubeInsightsPlatform 
-                      userId={userId} 
-                      currentQuote={currentQuote} 
-                      loading={youtubeInsights.loading} 
-                    />
-                  )}
-                  
-                  {selectedPlatform === 'instagram' && (
-                    <InstagramInsightsPlatform 
-                      userId={userId} 
-                      currentQuote={currentQuote} 
-                      loading={instagramInsights.loading} 
-                    />
-                  )}
-                  
-                  {selectedPlatform === 'gmail' && (
-                    <GmailInsightsPlatform 
-                      userId={userId} 
-                      currentQuote={currentQuote} 
-                      loading={gmailInsights.loading} 
-                    />
-                  )}
-                </TabsContent>
-              </Tabs>
+                    {/* Posts Screen */}
+                    <TabsContent value="posts" className="space-y-6">
+                      {selectedView === 'all' && renderAllPlatformsAnalytics()}
+                      
+                      {selectedView === 'youtube' && (
+                        <YouTubeAnalyticsPlatform 
+                          userId={userId} 
+                          {...youtubeAnalytics} 
+                        />
+                      )}
+                      
+                      {selectedView === 'instagram' && (
+                        <InstagramAnalyticsPlatform 
+                          userId={userId} 
+                          {...instagramAnalytics}
+                        />
+                      )}
+                      
+                      {selectedView === 'gmail' && (
+                        <GmailAnalyticsPlatform 
+                          userId={userId}
+                          {...gmailAnalytics}
+                        />
+                      )}
+                    </TabsContent>
+
+                    {/* AI Insights Screen */}
+                    <TabsContent value="ai-insights" className="space-y-6">
+                      {selectedView === 'all' && renderAllPlatformsInsights()}
+                      
+                      {selectedView === 'youtube' && (
+                        <YouTubeInsightsPlatform 
+                          userId={userId} 
+                          currentQuote={currentQuote} 
+                          loading={youtubeInsights.loading} 
+                        />
+                      )}
+                      
+                      {selectedView === 'instagram' && (
+                        <InstagramInsightsPlatform 
+                          userId={userId} 
+                          currentQuote={currentQuote} 
+                          loading={instagramInsights.loading} 
+                        />
+                      )}
+                      
+                      {selectedView === 'gmail' && (
+                        <GmailInsightsPlatform 
+                          userId={userId} 
+                          currentQuote={currentQuote} 
+                          loading={gmailInsights.loading} 
+                        />
+                      )}
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              )}
             </Tabs>
           </div>
         </div>
       </div>
 
       {/* Modals for "all" tab posts */}
-      {selectedContent && selectedPlatform === 'all' && selectedDataType === 'posts' && (
+      {selectedContent && selectedView === 'all' && selectedDataType === 'posts' && (
         <>
           {selectedContent.platform === 'gmail' && (
             <GmailModal

@@ -22,6 +22,7 @@ export interface Note {
   titleGenerated?: boolean;
   typeGenerated?: boolean;
   isLocal?: boolean;
+  isTemporary?: boolean; // Flag for optimistic updates during note creation
 }
 
 export interface NoteUpdate {

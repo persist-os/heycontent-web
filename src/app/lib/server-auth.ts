@@ -1,22 +1,9 @@
 'use server';
 
-import { cookies } from 'next/headers';
-import { headers } from 'next/headers';
-import { jwtDecode } from 'jwt-decode';
+import { cookies, headers } from 'next/headers';
 import { adminAuth } from './firebase-admin';
-
-interface FirebaseToken {
-  uid?: string;
-  user_id?: string;
-  sub?: string;
-  email?: string;
-  name?: string;
-  picture?: string;
-  exp: number;
-  iat: number;
-  aud: string;
-  iss: string;
-}
+import { validateApiKey } from './validateApiKey';
+import { DecodedIdToken } from 'firebase-admin/auth';
 
 /**
  * Get Firebase token from cookies or Authorization header
@@ -27,20 +14,17 @@ export const getFirebaseToken = async () => {
     const resolvedHeaders = await headers();
     const authHeader = resolvedHeaders.get('Authorization');
     if (authHeader && authHeader.startsWith('Bearer ')) {
-      console.log('Found token in Authorization header');
       const token = authHeader.substring(7);
       // Validate that it's a Firebase token (should be a JWT)
       try {
         // Basic validation - check if it's a JWT format
         const parts = token.split('.');
         if (parts.length !== 3) {
-          console.log('Authorization header token is not a valid JWT format');
           // Not a valid JWT, try cookie instead
         } else {
           return token;
         }
       } catch (tokenError) {
-        console.log('Error parsing Authorization header token:', tokenError);
         // Continue to try cookie
       }
     }
@@ -49,18 +33,13 @@ export const getFirebaseToken = async () => {
     const resolvedCookies = await cookies();
     const cookieToken = resolvedCookies.get('firebase-auth-token')?.value;
     if (cookieToken) {
-      console.log('Found token in cookie');
       return cookieToken;
     }
 
     // Log all cookies for debugging
     const allCookies = await resolvedCookies.getAll();
-    console.log('All cookies:', allCookies.map((c: { name: string }) => c.name));
-
-    console.log('No token found in Authorization header or cookie');
     return null;
   } catch (error) {
-    console.error('Error getting Firebase token:', error);
     return null;
   }
 };
@@ -69,98 +48,69 @@ export const getFirebaseToken = async () => {
  * Get user session from Firebase token
  */
 export const getServerSession = async () => {
-  console.log('getServerSession called');
   const tokenValue = await getFirebaseToken();
   if (!tokenValue) {
-    console.log('No Firebase token found');
     return null;
   }
 
   try {
-    console.log('Verifying token with Firebase Admin');
-
-    // Verify the token with Firebase Admin SDK
-    let decodedToken;
-    try {
-      // Ensure tokenValue is a string
-      if (typeof tokenValue !== 'string') {
-        console.error('Token is not a string:', typeof tokenValue);
-        return null;
+    // New logic to handle both JWTs and custom API keys
+    if (tokenValue.startsWith('hc-')) {
+      const apiKeyDetails = await validateApiKey(tokenValue);
+      if (!apiKeyDetails.isValid) {
+        return {
+          isAuthenticated: false,
+          error: 'Invalid API key',
+        };
       }
+      return {
+        isAuthenticated: true,
+        userId: apiKeyDetails.userId,
+        apiKey: tokenValue,
+      };
+    }
 
-      // Log token format for debugging (first few chars only)
-      const tokenPreview = tokenValue.substring(0, 20) + '...';
-      console.log('Token format (preview):', tokenPreview);
-
-      decodedToken = await adminAuth.verifyIdToken(tokenValue);
+    // Default to Firebase JWT validation for backward compatibility
+    try {
+      const decodedToken = await adminAuth.verifyIdToken(tokenValue);
+      return {
+        isAuthenticated: true,
+        userId: decodedToken.uid,
+        token: tokenValue,
+        decodedToken,
+      };
     } catch (error) {
-      console.error('Firebase Admin token verification failed:', error);
-
-      // Try to decode the token manually to see if it's a valid JWT
-      try {
-        if (typeof tokenValue === 'string') {
-          const manualDecoded = jwtDecode<FirebaseToken>(tokenValue);
-          console.log('Manual token decode succeeded:', {
-            uid: manualDecoded.uid || manualDecoded.user_id || manualDecoded.sub,
-            email: manualDecoded.email
-          });
-
-          // If we can decode it but Firebase can't verify it, it might be expired
-          // We could implement a fallback here if needed
-        } else {
-          console.error('Cannot manually decode token: not a string');
-        }
-      } catch (decodeError) {
-        console.error('Manual token decode also failed:', decodeError);
-      }
-
-      return null;
+      return {
+        isAuthenticated: false,
+        error: 'Token verification failed',
+      };
     }
-
-    if (!decodedToken) {
-      console.error('Token verification failed');
-      return null;
-    }
-
-    // Log the verified token information
-    console.log('Token verified successfully:', {
-      uid: decodedToken.uid,
-      email: decodedToken.email,
-      name: decodedToken.name,
-      picture: decodedToken.picture
-    });
-
-    // Create a session object with the user information from the verified token
-    const session = {
-      user: {
-        id: decodedToken.uid,
-        email: decodedToken.email || null,
-        name: decodedToken.name || null,
-        image: decodedToken.picture || null
-      }
-    };
-
-    // Ensure the token is set in cookies for future requests
-    // This is done in API routes, but we'll ensure it's set here as well
-    try {
-      const cookieStore = await cookies();
-      const existingCookie = cookieStore.get('firebase-auth-token');
-
-      // If the cookie doesn't exist or has a different value, update it
-      if (!existingCookie || existingCookie.value !== tokenValue) {
-        console.log('Updating firebase-auth-token cookie');
-        // Note: This won't work in getServerSession due to cookies() being read-only in this context
-        // But it's good to have the logic here for documentation purposes
-      }
-    } catch (cookieError) {
-      // This will likely fail in getServerSession context, which is expected
-      console.log('Note: Cannot modify cookies in this context, which is expected');
-    }
-
-    console.log('Session created successfully:', session);
-    return session;
   } catch (error) {
-    console.error('Error decoding Firebase token:', error);
-    return null;
+    return {
+      isAuthenticated: false,
+      error: 'An unexpected error occurred during authentication',
+    };
   }
 };
+
+/**
+ * Validates a Firebase ID token and returns the decoded token.
+ * This function encapsulates the logic for verifying a token against Firebase Admin.
+ *
+ * @param token The Firebase ID token to validate.
+ * @returns A promise that resolves with the decoded token if valid, or null otherwise.
+ */
+export async function validateFirebaseToken(
+  token: string
+): Promise<DecodedIdToken | null> {
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const decodedToken = await adminAuth.verifyIdToken(token);
+    return decodedToken;
+  } catch (error) {
+    return null;
+  }
+}
