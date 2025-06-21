@@ -82,10 +82,6 @@ async function callSubscriptionAPI(endpoint: string, method: string, apiKey: str
   const url = `${BACKEND_URL}${API_PREFIX}${endpoint}`;
   const requestId = Math.random().toString(36).substring(7);
   
-  console.log(`[${requestId}] Calling subscription API: ${method} ${endpoint}`, {
-    timestamp: new Date().toISOString(),
-  });
-  
   try {
     const response = await fetch(url, {
       method,
