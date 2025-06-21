@@ -152,7 +152,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                                lastMessage.metadata?.persona_created === true);
 
     if (isPersonaCompleted) {
-      console.log('🎭 Persona completion detected in chat flow!');
       setUpdatePersonaRequested(false);
   
     }
@@ -210,7 +209,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   // Modified handleSendMessage to detect persona update request
   const handleSendMessageWithUpdateCheck = (message: string) => {
     if (message.toLowerCase().trim() === 'hey content update persona') {
-      console.log('Persona update requested by user.');
       setUpdatePersonaRequested(true);
     }
     handleSendMessage(message);
@@ -226,8 +224,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       handleClearReference();
     }
     setUpdatePersonaRequested(false);
+    
     // CRITICAL: Reset state for a new chat session
-    console.log('Initializing new chat session...');
     
     // Important: Force sessionId to null
     window.localStorage.removeItem('chatSessionId'); // Also clear from storage if present
@@ -251,13 +249,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     // Clear input value
     setInputValue('');
     
-    console.log('Started new chat with fresh state:', {
-      sessionId: null,
-      isFirstMessage: true,
-      messagesCount: 0,
-      contentContext: null
-    });
-
   };
 
   // Handle removing context
@@ -278,8 +269,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         !welcome &&
         messages.length === 0 &&
         user) {
-      
-      console.log('Processing askQuery:', askQuery, 'with context:', currentContext);
       
       // Mark this askQuery as processed immediately to prevent duplicate processing
       askQueryProcessedRef.current = askQuery;
@@ -322,7 +311,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           const token = await getToken();
           setApiKey(token);
         } catch (error) {
-          console.error('Failed to get API key token:', error);
           setApiKey(null);
         }
       } else {
@@ -336,12 +324,10 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   useEffect(() => {
     if (user && !authLoading) {
       if (chatId && loadedConversationRef.current !== chatId) {
-        console.log('Attempting to load conversation:', chatId);
         loadedConversationRef.current = chatId; // Mark this conversation as being loaded
         handleLoadConversation(chatId);
       } else if (!chatId && loadedConversationRef.current !== null) {
         // User navigated to new chat - reset state
-        console.log('Switching to new chat - resetting conversation state');
         setMessages([]);
         chatState.setSessionId(null);
         chatState.setIsFirstMessage(true);

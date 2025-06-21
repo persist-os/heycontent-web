@@ -42,7 +42,6 @@ export async function generateEmbeddingsForPlatform(
   userId: string, 
   platform: 'instagram' | 'youtube' | 'gmail' | 'conversations' | 'notes'
 ): Promise<any> {
-  console.log(`🚀 [PLATFORM EMBEDDING] Starting embedding generation for ${platform} only`);
   
   const results: Record<string, any> = {
     [platform]: { processed: 0, succeeded: 0, failed: 0, skipped: 0 },
@@ -54,7 +53,6 @@ export async function generateEmbeddingsForPlatform(
       case 'instagram':
         // Get Instagram posts only
         const instagramPosts = await convex.query(api.instagramQueries.getAllInstagramPosts, { userId });
-        console.log('🚀 [PLATFORM EMBEDDING] Found', instagramPosts.length, 'Instagram posts');
         
         for (const post of instagramPosts) {
           results.instagram.processed++;
@@ -108,7 +106,6 @@ export async function generateEmbeddingsForPlatform(
             });
             
             results.instagram.succeeded++;
-            console.log(`✅ [PLATFORM EMBEDDING] Instagram post "${title}" embedded successfully`);
             
           } catch (error: any) {
             results.instagram.failed++;
@@ -123,7 +120,6 @@ export async function generateEmbeddingsForPlatform(
       case 'youtube':
         // Get YouTube videos only
         const youtubeVideos = await convex.query(api.youtubeQueries.getYouTubeVideos, { userId });
-        console.log('🚀 [PLATFORM EMBEDDING] Found', youtubeVideos.length, 'YouTube videos');
         
         for (const video of youtubeVideos) {
           results.youtube.processed++;
@@ -163,7 +159,6 @@ export async function generateEmbeddingsForPlatform(
             });
             
             results.youtube.succeeded++;
-            console.log(`✅ [PLATFORM EMBEDDING] YouTube video "${title}" embedded successfully`);
             
           } catch (error: any) {
             results.youtube.failed++;
@@ -178,7 +173,6 @@ export async function generateEmbeddingsForPlatform(
       case 'gmail':
         // Get Gmail threads only
         const gmailThreads = await convex.query(api.gmailQueries.getRecentGmailThreads, { userId, limit: 100 });
-        console.log('🚀 [PLATFORM EMBEDDING] Found', gmailThreads.length, 'Gmail threads');
         
         for (const thread of gmailThreads) {
           results.gmail.processed++;
@@ -226,7 +220,6 @@ export async function generateEmbeddingsForPlatform(
             });
             
             results.gmail.succeeded++;
-            console.log(`✅ [PLATFORM EMBEDDING] Gmail thread "${title}" embedded successfully`);
             
           } catch (error: any) {
             results.gmail.failed++;
@@ -241,7 +234,6 @@ export async function generateEmbeddingsForPlatform(
       case 'conversations':
         // Get conversations only
         const conversations = await convex.query(api.chatQueries.getHistory, { userId, limit: 100 });
-        console.log('🚀 [PLATFORM EMBEDDING] Found', conversations.length, 'conversations');
         
         for (const conv of conversations) {
           results.conversations.processed++;
@@ -287,7 +279,6 @@ export async function generateEmbeddingsForPlatform(
             });
             
             results.conversations.succeeded++;
-            console.log(`✅ [PLATFORM EMBEDDING] Conversation "${conv.title}" embedded successfully`);
             
           } catch (error: any) {
             results.conversations.failed++;
@@ -302,7 +293,6 @@ export async function generateEmbeddingsForPlatform(
       case 'notes':
         // Get notes only
         const notes = await convex.query(api.notes.getNotesByUser, { userId });
-        console.log('🚀 [PLATFORM EMBEDDING] Found', notes.length, 'notes');
         
         for (const note of notes) {
           results.notes.processed++;
@@ -331,7 +321,6 @@ export async function generateEmbeddingsForPlatform(
             });
             
             results.notes.succeeded++;
-            console.log(`✅ [PLATFORM EMBEDDING] Note "${note.title}" embedded successfully`);
             
           } catch (error: any) {
             results.notes.failed++;
@@ -347,7 +336,6 @@ export async function generateEmbeddingsForPlatform(
         throw new Error(`Unsupported platform: ${platform}`);
     }
 
-    console.log(`🎉 [PLATFORM EMBEDDING] ${platform} embedding generation complete!`, results);
     return results;
     
   } catch (error: any) {
@@ -361,7 +349,6 @@ export async function generateEmbeddingsForPlatform(
  * Generate embeddings for all existing user content (one-time setup)
  */
 export async function generateEmbeddingsForUser(userId: string): Promise<any> {
-  console.log('🚀 [EMBEDDING SETUP] Starting embedding generation for user:', userId);
   
   const results = {
     conversations: { processed: 0, succeeded: 0, failed: 0, skipped: 0 },
@@ -375,12 +362,10 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
   try {
     // Get all conversations
     const conversations = await convex.query(api.chatQueries.getHistory, { userId, limit: 100 });
-    console.log('🚀 [EMBEDDING SETUP] Found', conversations.length, 'conversations');
     
     for (const conv of conversations) {
       results.conversations.processed++;
       
-      // Validate conversation data
       if (!conv || !conv._id || !conv.title || !conv.messages || !Array.isArray(conv.messages)) {
         console.warn(`⚠️ [EMBEDDING SETUP] Skipping invalid conversation:`, {
           hasConv: !!conv,
@@ -393,7 +378,6 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
         continue;
       }
 
-      // Skip conversations with no messages or very short content
       if (conv.messages.length === 0) {
         console.warn(`⚠️ [EMBEDDING SETUP] Skipping conversation "${conv.title}" - no messages`);
         results.conversations.skipped++;
@@ -401,7 +385,6 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
       }
 
       try {
-        // Create searchable content with validation
         const messageContent = conv.messages
           .filter((m: any) => m && typeof m.content === 'string' && m.content.trim().length > 0)
           .map((m: any) => `${m.role || 'unknown'}: ${m.content}`)
@@ -415,15 +398,12 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
 
         const searchableContent = `${conv.title}\n\n${messageContent}`;
         
-        // Skip if content is too short to be meaningful
         if (searchableContent.trim().length < 10) {
           console.warn(`⚠️ [EMBEDDING SETUP] Skipping conversation "${conv.title}" - content too short`);
           results.conversations.skipped++;
           continue;
         }
 
-        console.log(`🚀 [EMBEDDING SETUP] Processing conversation: "${conv.title}" (${searchableContent.length} chars)`);
-        
         await convex.action(api.vectorSearch.createEmbedding, {
           userId,
           contentId: conv._id,
@@ -433,7 +413,6 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
         });
         
         results.conversations.succeeded++;
-        console.log(`✅ [EMBEDDING SETUP] Conversation "${conv.title}" embedded successfully`);
         
       } catch (error: any) {
         results.conversations.failed++;
@@ -441,19 +420,16 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
         console.error('❌ [EMBEDDING SETUP]', errorMsg);
         results.errors.push(errorMsg);
         
-        // Continue processing other conversations even if one fails
         continue;
       }
     }
 
     // Get all notes
     const notes = await convex.query(api.notes.getNotesByUser, { userId });
-    console.log('🚀 [EMBEDDING SETUP] Found', notes.length, 'notes');
     
     for (const note of notes) {
       results.notes.processed++;
       
-      // Validate note data
       if (!note || !note._id || !note.title) {
         console.warn(`⚠️ [EMBEDDING SETUP] Skipping invalid note:`, {
           hasNote: !!note,
@@ -467,14 +443,11 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
       try {
         const searchableContent = `${note.title}\n\n${note.content || ''}`;
         
-        // Skip if content is too short to be meaningful
         if (searchableContent.trim().length < 5) {
           console.warn(`⚠️ [EMBEDDING SETUP] Skipping note "${note.title}" - content too short`);
           results.notes.skipped++;
           continue;
         }
-        
-        console.log(`🚀 [EMBEDDING SETUP] Processing note: "${note.title}" (${searchableContent.length} chars)`);
         
         await convex.action(api.vectorSearch.createEmbedding, {
           userId,
@@ -485,7 +458,6 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
         });
         
         results.notes.succeeded++;
-        console.log(`✅ [EMBEDDING SETUP] Note "${note.title}" embedded successfully`);
         
       } catch (error: any) {
         results.notes.failed++;
@@ -493,21 +465,17 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
         console.error('❌ [EMBEDDING SETUP]', errorMsg);
         results.errors.push(errorMsg);
         
-        // Continue processing other notes even if one fails
         continue;
       }
     }
 
     // Get all Instagram posts
-    console.log('🚀 [EMBEDDING SETUP] Processing Instagram posts...');
     try {
       const instagramPosts = await convex.query(api.instagramQueries.getAllInstagramPosts, { userId });
-      console.log('🚀 [EMBEDDING SETUP] Found', instagramPosts.length, 'Instagram posts');
       
       for (const post of instagramPosts) {
         results.instagramPosts.processed++;
         
-        // Validate Instagram post data
         if (!post || !post._id || !post.data || !post.data.id) {
           console.warn(`⚠️ [EMBEDDING SETUP] Skipping invalid Instagram post:`, {
             hasPost: !!post,
@@ -520,7 +488,6 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
         }
 
         try {
-          // Create searchable content from Instagram post
           const caption = post.data.caption || '';
           const username = post.data.username || 'Unknown User';
           const mediaType = post.data.media_type || 'Unknown';
@@ -528,21 +495,16 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
           const commentsCount = post.data.comments_count || 0;
           const timestamp = post.data.timestamp ? new Date(post.data.timestamp).toLocaleDateString() : 'Unknown date';
           
-          // Extract hashtags from caption
           const hashtags = caption.match(/#[a-zA-Z0-9_]+/g) || [];
           const hashtagText = hashtags.length > 0 ? `\n\nHashtags: ${hashtags.join(' ')}` : '';
           
-          // Extract mentions from caption
           const mentions = caption.match(/@[a-zA-Z0-9_.]+/g) || [];
           const mentionText = mentions.length > 0 ? `\n\nMentions: ${mentions.join(' ')}` : '';
           
-          // Create engagement context
           const engagementText = `\n\nEngagement: ${likeCount} likes, ${commentsCount} comments`;
           
-          // Create a more descriptive title
           const title = `${username} - ${mediaType} Post (${timestamp})`;
           
-          // Build rich searchable content
           const searchableContent = [
             `Instagram Post by ${username}`,
             `Posted: ${timestamp}`,
@@ -554,14 +516,11 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
             `\n\nContext: This is an Instagram ${mediaType.toLowerCase()} post by ${username} with ${likeCount} likes and ${commentsCount} comments.`
           ].filter(Boolean).join('\n');
           
-          // Skip if content is too short to be meaningful
           if (searchableContent.trim().length < 20) {
             console.warn(`⚠️ [EMBEDDING SETUP] Skipping Instagram post "${post.data.id}" - content too short`);
             results.instagramPosts.skipped++;
             continue;
           }
-          
-          console.log(`🚀 [EMBEDDING SETUP] Processing Instagram post: "${title}" (${searchableContent.length} chars)`);
           
           await convex.action(api.vectorSearch.createEmbedding, {
             userId,
@@ -572,7 +531,6 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
           });
           
           results.instagramPosts.succeeded++;
-          console.log(`✅ [EMBEDDING SETUP] Instagram post "${title}" embedded successfully`);
           
         } catch (error: any) {
           results.instagramPosts.failed++;
@@ -580,7 +538,6 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
           console.error('❌ [EMBEDDING SETUP]', errorMsg);
           results.errors.push(errorMsg);
           
-          // Continue processing other posts even if one fails
           continue;
         }
       }
@@ -590,15 +547,12 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
     }
 
     // Get all YouTube videos
-    console.log('🚀 [EMBEDDING SETUP] Processing YouTube videos...');
     try {
       const youtubeVideos = await convex.query(api.youtubeQueries.getYouTubeVideos, { userId });
-      console.log('🚀 [EMBEDDING SETUP] Found', youtubeVideos.length, 'YouTube videos');
       
       for (const video of youtubeVideos) {
         results.youtubeVideos.processed++;
         
-        // Validate YouTube video data
         if (!video || !video._id || !video.videoId) {
           console.warn(`⚠️ [EMBEDDING SETUP] Skipping invalid YouTube video:`, {
             hasVideo: !!video,
@@ -610,13 +564,11 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
         }
 
         try {
-          // Create searchable content from YouTube video
           const title = video.snippet?.title || `YouTube Video ${video.videoId}`;
           const description = video.snippet?.description || '';
           const channelTitle = video.snippet?.channel?.title || 'Unknown Channel';
           const publishedAt = video.snippet?.published_at || '';
           
-          // Include analysis if available
           let analysisText = '';
           if (video.analysisMarkdown) {
             analysisText = `\n\nAnalysis: ${video.analysisMarkdown}`;
@@ -626,14 +578,11 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
           
           const searchableContent = `YouTube Video: ${title}\n\nChannel: ${channelTitle}\n\nDescription: ${description}${analysisText}`;
           
-          // Skip if content is too short to be meaningful
           if (searchableContent.trim().length < 10) {
             console.warn(`⚠️ [EMBEDDING SETUP] Skipping YouTube video "${title}" - content too short`);
             results.youtubeVideos.skipped++;
             continue;
           }
-          
-          console.log(`🚀 [EMBEDDING SETUP] Processing YouTube video: "${title}" (${searchableContent.length} chars)`);
           
           await convex.action(api.vectorSearch.createEmbedding, {
             userId,
@@ -644,7 +593,6 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
           });
           
           results.youtubeVideos.succeeded++;
-          console.log(`✅ [EMBEDDING SETUP] YouTube video "${title}" embedded successfully`);
           
         } catch (error: any) {
           results.youtubeVideos.failed++;
@@ -652,7 +600,6 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
           console.error('❌ [EMBEDDING SETUP]', errorMsg);
           results.errors.push(errorMsg);
           
-          // Continue processing other videos even if one fails
           continue;
         }
       }
@@ -662,15 +609,12 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
     }
 
     // Get all Gmail threads
-    console.log('🚀 [EMBEDDING SETUP] Processing Gmail threads...');
     try {
       const gmailThreads = await convex.query(api.gmailQueries.getRecentGmailThreads, { userId, limit: 100 });
-      console.log('🚀 [EMBEDDING SETUP] Found', gmailThreads.length, 'Gmail threads');
       
       for (const thread of gmailThreads) {
         results.gmailThreads.processed++;
         
-        // Validate Gmail thread data
         if (!thread || !thread._id || !thread.threadId) {
           console.warn(`⚠️ [EMBEDDING SETUP] Skipping invalid Gmail thread:`, {
             hasThread: !!thread,
@@ -682,22 +626,19 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
         }
 
         try {
-          // Create searchable content from Gmail thread
           const subject = thread.subject || thread.data?.subject || 'No Subject';
           const from = thread.from || thread.data?.from || 'Unknown Sender';
           const snippet = thread.snippet || thread.data?.snippet || '';
           const messageCount = thread.message_count || thread.data?.messageCount || 1;
           
-          // Include message details if available
           let messageDetails = '';
           if (thread.messages && Array.isArray(thread.messages) && thread.messages.length > 0) {
             messageDetails = '\n\nMessages:\n' + thread.messages
-              .slice(0, 3) // Limit to first 3 messages to avoid too much content
+              .slice(0, 3)
               .map((msg, index) => `${index + 1}. From: ${msg.from || 'Unknown'}\n   Subject: ${msg.subject || subject}\n   Content: ${(msg.snippet || '').substring(0, 200)}`)
               .join('\n');
           }
           
-          // Include analysis if available
           let analysisText = '';
           if (thread.analysis && typeof thread.analysis === 'object') {
             analysisText = `\n\nAnalysis: ${JSON.stringify(thread.analysis)}`;
@@ -706,14 +647,11 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
           const title = `Email Thread: ${subject}`;
           const searchableContent = `Gmail Thread: ${subject}\n\nFrom: ${from}\n\nSnippet: ${snippet}\n\nMessage Count: ${messageCount}${messageDetails}${analysisText}`;
           
-          // Skip if content is too short to be meaningful
           if (searchableContent.trim().length < 20) {
             console.warn(`⚠️ [EMBEDDING SETUP] Skipping Gmail thread "${subject}" - content too short`);
             results.gmailThreads.skipped++;
             continue;
           }
-          
-          console.log(`🚀 [EMBEDDING SETUP] Processing Gmail thread: "${title}" (${searchableContent.length} chars)`);
           
           await convex.action(api.vectorSearch.createEmbedding, {
             userId,
@@ -724,7 +662,6 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
           });
           
           results.gmailThreads.succeeded++;
-          console.log(`✅ [EMBEDDING SETUP] Gmail thread "${title}" embedded successfully`);
           
         } catch (error: any) {
           results.gmailThreads.failed++;
@@ -732,7 +669,6 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
           console.error('❌ [EMBEDDING SETUP]', errorMsg);
           results.errors.push(errorMsg);
           
-          // Continue processing other threads even if one fails
           continue;
         }
       }
@@ -741,7 +677,6 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
       results.errors.push(`Failed to fetch Gmail threads: ${error.message}`);
     }
 
-    console.log('🎉 [EMBEDDING SETUP] Generation complete!', results);
     return results;
     
   } catch (error: any) {
@@ -775,10 +710,6 @@ async function searchRelevantContent(
   onStatusUpdate?: (status: string) => void,
   searchLimit: number = 5
 ): Promise<VectorSearchResponse | null> {
-  console.log('🚨 [FRONTEND DEBUG] searchRelevantContent called - TRYING VECTOR EMBEDDINGS FIRST!');
-  console.log('🚨 [FRONTEND DEBUG] Query:', query);
-  console.log('🚨 [FRONTEND DEBUG] User ID:', userId);
-  
   try {
     onStatusUpdate?.('🔍 Searching for relevant content...');
     
@@ -823,32 +754,18 @@ async function searchRelevantContent(
         onStatusUpdate?.(`Found ${vectorResults.length} relevant items using smart search`);
         return result;
       } else {
-        console.log('[FRONTEND DEBUG] Hybrid search returned no results');
+        console.warn('[FRONTEND DEBUG] Hybrid search returned no results');
       }
     } catch (vectorError) {
       console.error('[FRONTEND DEBUG] Hybrid search failed, falling back to text search:', vectorError);
     }
 
-    
-    
     const result = await convex.action(api.chatMutations.chatWithContext, {
       userId,
       query
     });
 
-    console.log('🚨 [FRONTEND DEBUG] Text search call successful!', result);
-
     if (result && result.relevantContent?.length > 0) {
-      console.log('📊 Text Search Results:', {
-        query,
-        foundItems: result.relevantContent.length,
-        relevantContent: result.relevantContent.map((item: any) => ({
-          title: item.title,
-          type: item.contentType,
-          score: item.score
-        }))
-      });
-      
       onStatusUpdate?.(`Found ${result.relevantContent.length} relevant items using text search`);
       
       return {
@@ -859,7 +776,7 @@ async function searchRelevantContent(
       };
     }
 
-    console.log('No relevant content found for query:', query);
+    console.warn('No relevant content found for query:', query);
     return null;
   } catch (error) {
     console.error('🚨 [FRONTEND DEBUG] All search methods failed:', error);
@@ -1123,11 +1040,9 @@ export async function checkUserEmbeddings(userId: string): Promise<{ hasEmbeddin
  * Delete all embeddings for user
  */
 export async function deleteAllUserEmbeddings(userId: string): Promise<{ success: boolean; deletedCount: number; message: string }> {
-  console.log('🗑️ [EMBEDDING DELETE] Starting deletion for user:', userId);
   
   try {
     const result = await convex.mutation(api.vectorSearch.deleteAllUserEmbeddings, { userId });
-    console.log('✅ [EMBEDDING DELETE] Deletion completed:', result);
     return result;
   } catch (error: any) {
     console.error('❌ [EMBEDDING DELETE] Deletion failed:', error);
