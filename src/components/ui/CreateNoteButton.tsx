@@ -59,6 +59,7 @@ export const CreateNoteButton = React.forwardRef<HTMLButtonElement, CreateNoteBu
           })
         ]);
 
+        // Use AI-generated title if available, otherwise let the backend handle it
         const suggestedTitle = titleResult.title && titleResult.wasGenerated 
           ? titleResult.title 
           : content.length > 50 
@@ -78,7 +79,7 @@ export const CreateNoteButton = React.forwardRef<HTMLButtonElement, CreateNoteBu
         setShowPreview(true);
       } catch (error) {
         console.error('Failed to generate preview:', error);
-        // Fall back to direct creation
+        // Fall back to direct creation without pre-generated title
         await handleCreateNote();
       } finally {
         setIsGeneratingPreview(false);
@@ -91,11 +92,12 @@ export const CreateNoteButton = React.forwardRef<HTMLButtonElement, CreateNoteBu
       }
       
       if (content.trim()) {
-        // Create note with custom title if provided
+        // Create note with custom title only if it's not the placeholder
         const noteContent = content.trim();
+        const finalTitle = customData?.title === "AI will generate title" ? undefined : customData?.title;
         
-        // We'll modify createNote to accept custom title
-        await createNote(noteContent, onNoteCreate, customData?.title);
+        // Let the backend handle AI generation if no custom title provided
+        await createNote(noteContent, onNoteCreate, finalTitle);
         setShowPreview(false);
         setNotePreview(null);
       }

@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { Send, Loader2, MessageSquare, Search, FileText, Brain } from 'lucide-react'
 import { Message } from '@/app/types'
+import { useTheme } from 'next-themes'
 
 interface ChatInputProps {
   onSend: (message: string) => void
@@ -64,7 +64,6 @@ export function ChatInput({
   onClearQuoted,
   disabled = false
 }: ChatInputProps) {
-  const router = useRouter()
   const [input, setInput] = useState('')
   const [placeholder, setPlaceholder] = useState(placeholders[0])
   const [showFullReply, setShowFullReply] = useState(false)
@@ -72,6 +71,16 @@ export function ChatInput({
   const [showSmartSearchText, setShowSmartSearchText] = useState(true)
   const internalInputRef = useRef<HTMLTextAreaElement>(null)
   const textareaRef = inputRef || internalInputRef
+  const { theme } = useTheme()
+  
+  // Theme-aware accent colors
+  const isDark = theme === 'dark'
+  const accentColor = isDark ? 'text-accent' : 'text-purple-600'
+  const accentBg = isDark ? 'bg-accent' : 'bg-purple-600'
+  const accentBgHover = isDark ? 'hover:bg-accent/90' : 'hover:bg-purple-700'
+  const accentBgLight = isDark ? 'bg-accent/10' : 'bg-purple-600/10'
+  const accentBorder = isDark ? 'border-accent' : 'border-purple-600'
+  const accentFocusBorder = isDark ? 'focus-within:border-accent' : 'focus-within:border-purple-600'
 
   // Use external input value if provided, otherwise use internal state
   const currentInput = inputValue !== undefined ? inputValue : input
@@ -180,8 +189,8 @@ export function ChatInput({
           <div className="w-full mb-2">
             <div className={`flex items-center gap-2 text-xs p-2 rounded-lg border ${
               hasAnalysis 
-                ? 'text-primary dark:text-accent bg-primary/10 dark:bg-accent/10 border-primary/20 dark:border-accent/20'
-                : 'text-primary dark:text-accent bg-primary/10 dark:bg-accent/10 border-primary/20 dark:border-accent/20'
+                ? `${accentColor} ${accentBgLight} border-${accentBorder.split('-')[1]}/20`
+                : `${accentColor} ${accentBgLight} border-${accentBorder.split('-')[1]}/20`
             }`}>
               <Search className="w-4 h-4 flex-shrink-0" />
               <span className="break-words">
@@ -251,13 +260,16 @@ export function ChatInput({
         )}
 
         <div className="flex gap-2 items-end w-full relative">
-          <div className="flex-1 relative">
+          <div className={`
+            flex-1 relative rounded-xl border-2 transition-all duration-200
+            ${isAtLimit ? 'border-destructive' : ''}
+            ${isNearLimit && !isAtLimit ? 'border-warning' : ''}
+            ${!isAtLimit && !isNearLimit ? 'border-transparent hover:border-purple-600 dark:hover:border-accent' : ''}
+            ${accentFocusBorder}
+            focus-within:bg-background
+          `}>
             {/* Top section - Text input area */}
-            <div className={`flex items-center rounded-t-xl transition-all duration-200 bg-muted/50 border-2 border-b-0
-              ${isAtLimit ? 'border-destructive' : ''}
-              ${isNearLimit && !isAtLimit ? 'border-warning' : ''}
-              ${!isAtLimit && !isNearLimit ? 'border-transparent hover:border-border' : ''}
-              focus-within:border-primary dark:focus-within:border-accent focus-within:bg-background
+            <div className={`flex items-center rounded-t-xl bg-muted/50
               pl-3 py-2 pr-3
             `}>
               <textarea
@@ -284,69 +296,46 @@ export function ChatInput({
             </div>
 
             {/* Bottom section - Buttons area */}
-            <div className={`flex items-center justify-between rounded-b-xl transition-all duration-200 bg-muted/50 border-2 border-t-0
-              ${isAtLimit ? 'border-destructive' : ''}
-              ${isNearLimit && !isAtLimit ? 'border-warning' : ''}
-              ${!isAtLimit && !isNearLimit ? 'border-transparent hover:border-border' : ''}
-              focus-within:border-primary dark:focus-within:border-accent focus-within:bg-background
+            <div className={`flex items-center justify-between rounded-b-xl
               px-3 py-2 h-10
             `}>
               {/* Left side - Smart Search */}
               <div className="flex items-center">
-                <div className="relative flex items-center"
-                  onMouseEnter={() => setSmartSearchHovered(true)}
-                  onMouseLeave={() => setSmartSearchHovered(false)}
-                >
-                  {/* Smart Search Toggle Button */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (embeddingInfo?.hasEmbeddings) {
-                        onToggleContextSearch?.(!useContextSearch)
-                      } else {
-                        // Navigate to settings integrations tab to create search index
-                        router.push('/settings?tab=integrations')
-                      }
-                    }}
-                    className={`relative flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 transform hover:scale-105 ${
-                      embeddingInfo?.hasEmbeddings && useContextSearch 
-                        ? 'bg-purple-100 text-purple-600 shadow-sm' 
-                        : embeddingInfo?.hasEmbeddings
-                        ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                        : 'bg-orange-100 text-orange-600 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:hover:bg-orange-900/50'
-                    }`}
-                    aria-label={
-                      embeddingInfo?.hasEmbeddings 
-                        ? (useContextSearch ? 'Smart Search: ON' : 'Smart Search: OFF')
-                        : 'Create search index'
-                    }
-                    title={
-                      embeddingInfo?.hasEmbeddings 
-                        ? (useContextSearch ? 'Smart Search: ON' : 'Smart Search: OFF')
-                        : 'Click to create your search index'
-                    }
+                {embeddingInfo?.hasEmbeddings && (
+                  <div className="relative flex items-center"
+                    onMouseEnter={() => setSmartSearchHovered(true)}
+                    onMouseLeave={() => setSmartSearchHovered(false)}
                   >
-                    <Brain className="w-4 h-4" />
-                  </button>
+                    {/* Smart Search Toggle Button */}
+                    <button
+                      type="button"
+                      onClick={() => onToggleContextSearch?.(!useContextSearch)}
+                      className={`relative flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 transform hover:scale-105 ${
+                        useContextSearch 
+                          ? `${accentBgLight} ${accentColor} shadow-sm` 
+                          : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                      }`}
+                      aria-label="Toggle Smart Search"
+                      title={useContextSearch ? 'Smart Search: ON' : 'Smart Search: OFF'}
+                    >
+                      <Brain className="w-4 h-4" />
+                    </button>
 
-                  {/* Smart Search Text Label - always visible */}
-                  <div className="ml-3">
-                    <span className={`text-xs font-medium transition-colors duration-300 ${
-                      embeddingInfo?.hasEmbeddings
-                        ? (useContextSearch 
-                            ? 'text-gray-700 dark:text-gray-200' 
-                            : 'text-gray-500 dark:text-gray-400')
-                        : 'text-orange-600 dark:text-orange-400'
-                    }`}>
-                      {embeddingInfo?.hasEmbeddings 
-                        ? (useContextSearch 
-                            ? `Smart search activated - ${embeddingInfo.count} items included` 
-                            : `Activate smart search to include ${embeddingInfo.count} items as context`)
-                        : 'Click here to create your searchable content'
-                      }
-                    </span>
+                    {/* Smart Search Text Label - always visible */}
+                    <div className="ml-3">
+                      <span className={`text-xs font-medium transition-colors duration-300 ${
+                        useContextSearch 
+                          ? 'text-foreground' 
+                          : 'text-muted-foreground'
+                      }`}>
+                        {useContextSearch 
+                          ? `Smart search activated - ${embeddingInfo.count} items included` 
+                          : `Activate smart search to include ${embeddingInfo.count} items as context`
+                        }
+                      </span>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Right side - Character count, Notes, Send */}
@@ -383,7 +372,7 @@ export function ChatInput({
                   className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200
                     ${isLoading || !currentInput.trim() || isAtLimit || disabled 
                       ? 'bg-muted text-muted-foreground cursor-not-allowed' 
-                      : 'bg-primary text-primary-foreground hover:bg-primary/90 dark:bg-accent dark:text-accent-foreground dark:hover:bg-accent/90 shadow-sm hover:shadow-md hover:scale-105 active:scale-95'
+                      : `${accentBg} text-white ${accentBgHover} shadow-sm hover:shadow-md hover:scale-105 active:scale-95`
                     }`}
                 >
                   {isLoading ? (
