@@ -2,6 +2,8 @@ import React from 'react';
 import { ReadOnlyField, ReadOnlyTextArea } from './ReadOnlyField';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 const MAX_PERSONA_LENGTH = 500;
 const MAX_VISION_LENGTH = 500;
@@ -49,14 +51,12 @@ export const ProfileFields = ({ formData, setFormData, isEditMode }: ProfileFiel
     {isEditMode ? (
       <div>
         <label htmlFor="name" className="text-sm font-medium">Name</label>
-        <input
-          id="name"
-          name="name"
+        <Input
           type="text"
-          className="w-full mt-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-          placeholder="Your name"
           value={formData.name}
-          onChange={(e) => setFormData((prev: any) => ({ ...prev, name: e.target.value }))}
+          onChange={e => setFormData({...formData, name: e.target.value})}
+          disabled={!isEditMode}
+          className="w-full mt-1 p-3 border border-border rounded-lg text-base bg-card focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
         />
       </div>
     ) : (
@@ -68,14 +68,12 @@ export const ProfileFields = ({ formData, setFormData, isEditMode }: ProfileFiel
     {isEditMode ? (
       <div>
         <label htmlFor="username" className="text-sm font-medium">Username</label>
-        <input
-          id="username"
-          name="username"
+        <Input
           type="text"
-          className="w-full mt-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-          placeholder="Your username"
           value={formData.username}
-          onChange={(e) => setFormData((prev: any) => ({ ...prev, username: e.target.value }))}
+          onChange={e => setFormData({...formData, username: e.target.value})}
+          disabled={!isEditMode}
+          className="w-full mt-1 p-3 border border-border rounded-lg text-base bg-card focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
         />
       </div>
     ) : (
@@ -105,10 +103,10 @@ export const ReferralFields = ({ formData, referrerName = '', referrerLoading = 
 // Persona fields section
 export const PersonaFields = ({ formData, setFormData, isEditMode, showPersonaFields, setShowPersonaFields }: PersonaFieldsProps) => (
   <div className="mt-6 space-y-4">
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-muted/50 rounded-lg">
       <div>
-        <h3 className="text-sm font-medium">AI Persona Understanding</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400">Help Content understand your journey and goals</p>
+        <h3 className="font-medium">Persona Information</h3>
+        <p className="text-sm text-muted-foreground">Help Content understand your journey and goals</p>
       </div>
       <Button
         type="button"
@@ -129,12 +127,13 @@ export const PersonaFields = ({ formData, setFormData, isEditMode, showPersonaFi
         {isEditMode ? (
           <div>
             <label className="text-sm font-medium">Current Persona</label>
-            <textarea
-              className="w-full mt-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg resize-y min-h-[100px] text-base bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              placeholder="Describe who you are today..."
+            <Textarea
+              placeholder="Describe your current persona..."
               value={formData.currentPersona}
-              onChange={(e) => setFormData((prev: any) => ({ ...prev, currentPersona: e.target.value }))}
-              maxLength={MAX_PERSONA_LENGTH}
+              onChange={e => setFormData({...formData, currentPersona: e.target.value})}
+              disabled={!isEditMode}
+              rows={4}
+              className="w-full mt-1 p-3 border border-border rounded-lg resize-y min-h-[100px] text-base bg-card focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
             />
           </div>
         ) : (
@@ -148,12 +147,13 @@ export const PersonaFields = ({ formData, setFormData, isEditMode, showPersonaFi
         {isEditMode ? (
           <div>
             <label className="text-sm font-medium">Future Vision</label>
-            <textarea
-              className="w-full mt-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg resize-y min-h-[100px] text-base bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              placeholder="Describe your goals and aspirations..."
+            <Textarea
+              placeholder="Describe your future vision..."
               value={formData.futureVision}
-              onChange={(e) => setFormData((prev: any) => ({ ...prev, futureVision: e.target.value }))}
-              maxLength={MAX_VISION_LENGTH}
+              onChange={e => setFormData({...formData, futureVision: e.target.value})}
+              disabled={!isEditMode}
+              rows={4}
+              className="w-full mt-1 p-3 border border-border rounded-lg resize-y min-h-[100px] text-base bg-card focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
             />
           </div>
         ) : (

@@ -6,6 +6,7 @@ This document defines the required engineering standards for the HeyContent fron
 
 - Framework: Next.js (App Router)
 - Styling: TailwindCSS (utility-first)
+- Theming: next-themes with CSS variables
 - Hosting: Vercel
 - API Integration: `api/` folder and `/lib/api-utils.ts`
 - Design: Minimalist, typography-first, mobile-optimized
@@ -22,7 +23,7 @@ No file may exceed 400 lines. If it does, split it:
 ### 2. Never Guess
 
 Always ask for clarification if:
-- You’re unsure about intent, architecture, or design
+- You're unsure about intent, architecture, or design
 - A feature is poorly documented
 - A spec is ambiguous
 
@@ -61,6 +62,26 @@ UI components must be:
 
 State and logic should live in hooks.
 
+## Theming and Colors
+
+### 7. Theme Compliance
+
+**STRICT THEME REQUIREMENTS:**
+- **Dark mode background**: MUST be `#202020` (never navy blue or gray-900)
+- **Light mode background**: MUST be white (`#FFFFFF`)
+- **Primary accent color**: `heycontent-yellow` (`#FFDF39`)
+- **NO hardcoded colors**: Use CSS variables and semantic color classes only
+
+**Required approach:**
+- Use `bg-background`, `text-foreground`, `border-border`, etc.
+- Use `bg-primary`, `bg-accent` for heycontent-yellow elements
+- Use `bg-muted`, `bg-secondary` for subtle backgrounds
+- NEVER use `dark:bg-gray-800`, `dark:bg-gray-900`, or similar hardcoded values
+
+**Theme toggle requirements:**
+- Must support Light, Dark, and System modes
+- Must use proper accessibility labels
+- Must handle hydration properly with loading states
 
 ### 8. API Communication
 
@@ -115,6 +136,7 @@ Follow the shared PR template.
 - Keep components pure and modular
 - Pages handle layout, not logic
 - API access goes through `api-utils`
+- **STRICT theme compliance**: #202020 for dark mode, semantic colors only, heycontent-yellow as primary accent
 - PRs must be clear, linked, and reviewed
 
-Stick to the rules. Keep it clean.
+Stick to the rules. Keep it clean. Make it accessible.

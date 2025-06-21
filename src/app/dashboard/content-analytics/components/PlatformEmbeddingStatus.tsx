@@ -57,7 +57,7 @@ export function PlatformEmbeddingStatus({ platform, contentCount, userId }: Plat
         setEmbeddingInfo(info);
         
         if (info.hasEmbeddings) {
-          setEmbeddingStatus(`✅ ~${info.count} ${config.name} items indexed`);
+          setEmbeddingStatus(`~${info.count} ${config.name} items indexed`);
         }
       }
     };
@@ -69,12 +69,12 @@ export function PlatformEmbeddingStatus({ platform, contentCount, userId }: Plat
   const handleUpdatePlatformEmbeddings = async () => {
     const currentUserId = getCurrentUserId();
     if (!currentUserId) {
-      setEmbeddingStatus('❌ No user ID found');
+      setEmbeddingStatus('No user ID found');
       return;
     }
 
     setIsUpdatingEmbeddings(true);
-    setEmbeddingStatus(`🚀 Updating ${config.name} embeddings...`);
+          setEmbeddingStatus(`Updating ${config.name} embeddings...`);
     
     try {
       const results = await generateEmbeddingsForPlatform(currentUserId, platform);
@@ -82,7 +82,7 @@ export function PlatformEmbeddingStatus({ platform, contentCount, userId }: Plat
       // Get platform-specific results from the results object
       const platformResults = results[platform];
       
-      setEmbeddingStatus(`✅ Updated! ${platformResults.succeeded}/${platformResults.processed} ${config.name} items processed (${platformResults.skipped} skipped)`);
+              setEmbeddingStatus(`Updated! ${platformResults.succeeded}/${platformResults.processed} ${config.name} items processed (${platformResults.skipped} skipped)`);
       
       // Refresh embedding info
       const info = await checkPlatformEmbeddings(currentUserId, platform);
@@ -93,7 +93,7 @@ export function PlatformEmbeddingStatus({ platform, contentCount, userId }: Plat
         setEmbeddingStatus(prev => prev + ` (${results.errors.length} errors)`);
       }
     } catch (error: any) {
-      setEmbeddingStatus(`❌ Failed: ${error.message}`);
+              setEmbeddingStatus(`Failed: ${error.message}`);
       console.error('Platform embedding update failed:', error);
     } finally {
       setIsUpdatingEmbeddings(false);

@@ -128,18 +128,27 @@ export function NoteArea({
           onValueChange={setActiveTab}
           className="flex flex-col flex-1 overflow-hidden"
         >
-          <TabsList className="bg-white border-b border-gray-200 px-2 mb-0 w-full justify-between">
+          <TabsList className="bg-background/95 backdrop-blur-sm border-b border-border px-2 mb-0 w-full justify-between">
             <div className="flex items-center">
-              <TabsTrigger value="editor" className="flex items-center gap-1 data-[state=active]:text-purple-700">
-                <Edit size={16} />
+              <TabsTrigger 
+                value="editor" 
+                className="flex items-center gap-1.5 data-[state=active]:text-primary data-[state=active]:shadow-[0_-2px_0_0_hsl(var(--primary))_inset]"
+              >
+                <Edit size={16} className="h-4 w-4" />
                 <span>Editor</span>
               </TabsTrigger>
-              <TabsTrigger value="analysis" className="flex items-center gap-1 data-[state=active]:text-purple-700">
-                <Brain size={16} />
+              <TabsTrigger 
+                value="analysis" 
+                className="flex items-center gap-1.5 data-[state=active]:text-primary data-[state=active]:shadow-[0_-2px_0_0_hsl(var(--primary))_inset]"
+              >
+                <Brain size={16} className="h-4 w-4" />
                 <span>Analysis</span>
               </TabsTrigger>
-              <TabsTrigger value="ideas" className="flex items-center gap-1 data-[state=active]:text-purple-700">
-                <Lightbulb size={16} />
+              <TabsTrigger 
+                value="ideas" 
+                className="flex items-center gap-1.5 data-[state=active]:text-primary data-[state=active]:shadow-[0_-2px_0_0_hsl(var(--primary))_inset]"
+              >
+                <Lightbulb size={16} className="h-4 w-4" />
                 <span>Ideas</span>
               </TabsTrigger>
             </div>
@@ -156,7 +165,9 @@ export function NoteArea({
           
           <div className="flex flex-1 overflow-hidden">
             {/* Editor Tab - Always visible regardless of active tab */}
-            <div className={`flex-1 overflow-hidden relative transition-all ${activeTab !== "editor" ? "lg:flex-[0.6] border-r border-gray-200" : ""}`}>
+            <div className={`flex-1 overflow-hidden relative transition-all ${
+              activeTab !== "editor" ? "lg:flex-[0.6] border-r border-border/50" : ""
+            }`}>
               <NoteEditor
                 ref={textAreaRef}
                 content={content}
@@ -189,7 +200,7 @@ export function NoteArea({
                 </TabsContent>
                 
                 <TabsContent value="ideas" className="h-full overflow-auto m-0 p-0 data-[state=active]:flex-1">
-                  <div className="h-full overflow-auto p-4">
+                  <div className="h-full overflow-auto p-4 bg-background/50">
                     <IdeasPanel 
                       noteId={String(note._id)}
                       userId={String(note.userId)}

@@ -10,17 +10,17 @@ export const ReadOnlyField: React.FC<{
   helperText?: string;
 }> = ({ label, value, showCopy = false, copyText, helperText }) => (
   <div className="space-y-1">
-    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
+    <label className="text-sm font-medium text-foreground">{label}</label>
     <div className="relative">
-      <div className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-base border-0 min-h-[42px] flex items-center text-gray-900 dark:text-gray-100">
-        {value || <span className="text-gray-400">Loading...</span>}
+      <div className="w-full p-3 bg-muted rounded-lg text-base border-0 min-h-[42px] flex items-center text-foreground">
+        {value || <span className="text-muted-foreground">Loading...</span>}
       </div>
       {showCopy && value && (
         <Button 
           type="button" 
           variant="ghost" 
           size="sm"
-          className="absolute right-1 top-1 h-8 w-8 p-0 hover:bg-gray-200 dark:hover:bg-gray-700"
+          className="absolute right-1 top-1 h-8 w-8 p-0 hover:bg-muted-foreground/20"
           onClick={() => {
             navigator.clipboard.writeText(copyText || value);
             // You could add a toast notification here
@@ -31,7 +31,7 @@ export const ReadOnlyField: React.FC<{
       )}
     </div>
     {helperText && (
-      <p className="text-xs text-gray-500 dark:text-gray-400">{helperText}</p>
+      <p className="text-xs text-muted-foreground">{helperText}</p>
     )}
   </div>
 );
@@ -43,13 +43,13 @@ export const ReadOnlyTextArea: React.FC<{
 }> = ({ label, value, characterCount }) => (
   <div className="space-y-1">
     <div className="flex justify-between items-center">
-      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
+      <label className="text-sm font-medium text-foreground">{label}</label>
       {characterCount && (
-        <span className="text-sm text-gray-500">{characterCount}</span>
+        <span className="text-sm text-muted-foreground">{characterCount}</span>
       )}
     </div>
-    <div className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-base border-0 min-h-[100px] text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
-      {value || <span className="text-gray-400">Loading...</span>}
+    <div className="w-full p-3 bg-muted rounded-lg text-base border-0 min-h-[100px] text-foreground whitespace-pre-wrap">
+      {value || <span className="text-muted-foreground">Loading...</span>}
     </div>
   </div>
 ); 

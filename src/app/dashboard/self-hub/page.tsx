@@ -32,10 +32,10 @@ export default function SelfHubPage() {
         <div className="flex-1 px-4 py-4 md:p-6 space-y-6 md:space-y-8">
           {/* Header */}
           <div className="mb-4 md:mb-6 text-center">
-            <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
+            <h1 className="text-base font-medium text-purple-600 dark:text-accent">
               Self
             </h1>
-            <p className="text-sm md:text-base text-gray-600 mt-1 leading-relaxed">
+            <p className="text-muted-foreground">
               Manage your persona and activity.
             </p>
           </div>

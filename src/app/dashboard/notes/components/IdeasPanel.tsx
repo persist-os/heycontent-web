@@ -87,22 +87,22 @@ const IdeasPanel: React.FC<IdeasPanelProps> = ({ noteId, userId, platform: initi
   }, [applying, onApplyIdea, isEmbedded]);
 
   return (
-    <div className={`bg-white ${!isEmbedded ? 'border border-purple-100 rounded-lg' : ''} overflow-hidden transition-all duration-300 ease-in-out`}>
+    <div className={`bg-card ${!isEmbedded ? 'border border-border/50 rounded-lg' : ''} overflow-hidden transition-all duration-300 ease-in-out`}>
       {!isEmbedded && (
-        <div className="flex justify-between items-center p-3 bg-gradient-to-r from-purple-50 to-white border-b border-purple-100">
+        <div className="flex justify-between items-center p-3 bg-card border-b border-border/50">
           <div className="flex items-center gap-2">
-            <Lightbulb size={18} className="text-purple-500" />
-            <span className="font-semibold text-purple-700 text-base">Smart Note Ideas</span>
+            <Lightbulb size={18} className="text-primary" />
+            <span className="font-semibold text-foreground text-base">Smart Note Ideas</span>
           </div>
           <button
-            className="text-xs text-purple-600 hover:text-purple-800 px-2 py-1 rounded focus:outline-none"
+            className="text-sm text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted transition-colors"
             onClick={() => setIsPanelCollapsed(v => !v)}
             aria-label={isPanelCollapsed ? 'Expand ideas panel' : 'Collapse ideas panel'}
           >
             {isPanelCollapsed ? (
-              <ChevronDown size={16} className="text-purple-600" />
+              <ChevronDown size={18} className="text-muted-foreground" />
             ) : (
-              <ChevronUp size={16} className="text-purple-600" />
+              <ChevronUp size={18} className="text-muted-foreground" />
             )}
             <span className="sr-only">{isPanelCollapsed ? 'Show' : 'Hide'}</span>
           </button>
@@ -112,15 +112,19 @@ const IdeasPanel: React.FC<IdeasPanelProps> = ({ noteId, userId, platform: initi
         <div className="p-4">
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <label htmlFor="platform-select" className="text-sm text-purple-700 font-medium">Platform:</label>
+              <label htmlFor="platform-select" className="text-sm text-muted-foreground font-medium">
+                Platform:
+              </label>
               <select
                 id="platform-select"
                 value={platform}
                 onChange={e => setPlatform(e.target.value)}
-                className="border border-purple-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+                className="bg-background border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
               >
                 {platformOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
                 ))}
               </select>
             </div>
@@ -129,11 +133,11 @@ const IdeasPanel: React.FC<IdeasPanelProps> = ({ noteId, userId, platform: initi
             {ideas.length > 0 && (
               <button
                 onClick={handleRefreshIdeas}
-                className="text-purple-600 hover:text-purple-800 p-1 rounded-full hover:bg-purple-50 transition-colors"
+                className="text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-muted transition-colors"
                 title="Get new ideas"
                 disabled={loading}
               >
-                <RefreshCw size={16} className={`${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
                 <span className="sr-only">Refresh ideas</span>
               </button>
             )}
@@ -152,7 +156,9 @@ const IdeasPanel: React.FC<IdeasPanelProps> = ({ noteId, userId, platform: initi
             <div className="text-red-600 text-sm text-center my-4">{error}</div>
           )}
           {hasRequested && !loading && ideas.length === 0 && !error && (
-            <div className="text-center text-gray-400 py-4">No ideas found. Try regenerating.</div>
+            <div className="text-center text-muted-foreground/70 py-6">
+              No ideas found. Try regenerating.
+            </div>
           )}
           {hasRequested && ideas.length > 0 && !loading && (
             <div className="space-y-4">

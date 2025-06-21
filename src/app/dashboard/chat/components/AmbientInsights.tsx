@@ -163,18 +163,18 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
         <div
           key={insight.id}
           onClick={() => onInsightClick?.(insight.action, insight)}
-          className="bg-white border border-gray-200 shadow-sm p-3 sm:p-4 rounded-xl cursor-pointer \
-            hover:shadow-md transition-all duration-200 hover:scale-[1.02]"
+          className="bg-card border border-border shadow-sm p-3 sm:p-4 rounded-xl cursor-pointer \
+            hover:shadow-md transition-all duration-200 hover:scale-[1.02] hover:border-primary/20"
           tabIndex={0}
           role="button"
           aria-label={`${insight.title}: ${insight.description}`}
         >
           <div className="flex items-start gap-2 sm:gap-3">
             <div className="flex-1 min-w-0">
-              <h3 className="font-medium text-sm text-gray-900 mb-1">{insight.title}</h3>
-              <p className="text-sm text-gray-600">{insight.description}</p>
+              <h3 className="font-medium text-sm text-card-foreground mb-1">{insight.title}</h3>
+              <p className="text-sm text-muted-foreground">{insight.description}</p>
               {insight.action && (
-                <p className="mt-2 text-sm text-blue-600 font-medium">
+                <p className="mt-2 text-sm text-blue-600 dark:text-blue-400 font-medium">
                   {insight.action}
                 </p>
               )}

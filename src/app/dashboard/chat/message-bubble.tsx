@@ -190,7 +190,7 @@ export function MessageBubble({
       {highlightRects.map((rect, index) => (
         <div
           key={index}
-          className="fixed pointer-events-none z-30 bg-blue-200/40 dark:bg-blue-400/30"
+          className="fixed pointer-events-none z-30 bg-primary/20"
           style={{
             left: rect.left,
             top: rect.top,
@@ -211,7 +211,7 @@ export function MessageBubble({
         >
           <button
             onClick={handleQuoteText}
-            className="pointer-events-auto bg-gray-900 text-white p-2 rounded-lg shadow-lg hover:bg-gray-800 transition-all duration-200 transform hover:scale-105"
+            className="pointer-events-auto bg-foreground text-background p-2 rounded-lg shadow-lg hover:bg-opacity-80 transition-all duration-200 transform hover:scale-105"
             title={`Quote "${selectedText.length > 20 ? selectedText.substring(0, 20) + '...' : selectedText}"`}
           >
             <Quote className="w-4 h-4" />
@@ -227,7 +227,8 @@ export function MessageBubble({
             ${isUser ? 'max-w-[80%]' : 'max-w-[90%]'}
             rounded-2xl
             ${isUser ? 'px-3 sm:px-4 py-2 sm:py-3' : 'px-4 sm:px-6 py-3 sm:py-4'}
-            ${isUser ? 'bg-heycontent-yellow text-black' : 'bg-white border'}
+            ${isUser ? 'bg-primary' : 'bg-card border'}
+            ${isUser ? 'text-black [&_*]:!text-black [&_*]:!text-inherit' : ''}
             relative
             group
           `}
@@ -236,7 +237,7 @@ export function MessageBubble({
           {message.referencedMessage && (
             <button 
               onClick={() => onScrollToMessage?.(message.referencedMessage!.id)}
-              className="text-[10px] sm:text-xs text-gray-500 bg-black/5 hover:bg-black/10 p-1.5 rounded mb-2 break-words text-left transition-colors w-full cursor-pointer"
+              className="text-[10px] sm:text-xs text-muted-foreground bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 p-1.5 rounded mb-2 break-words text-left transition-colors w-full cursor-pointer"
             >
               <div className="font-medium mb-0.5">Replying to:</div>
               <div className="line-clamp-2">{message.referencedMessage.content}</div>
@@ -250,12 +251,12 @@ export function MessageBubble({
 
           {/* Message Content - Full Width */}
           <div className="w-full">
-            <div className="break-words chat-font">
+            <div className={`break-words chat-font ${isUser ? 'text-black' : ''}`}>
               {message.status === 'typing' ? (
                 <div className="space-y-2">
                   <ThinkingIndicator />
                   {message.searchStatus && (
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center">
+                    <div className="text-xs text-muted-foreground mt-1 flex items-center">
                       <Search className="w-3 h-3 mr-1.5 flex-shrink-0" />
                       <span>{message.searchStatus}</span>
                     </div>

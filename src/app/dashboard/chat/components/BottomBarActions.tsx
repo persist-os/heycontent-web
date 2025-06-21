@@ -26,7 +26,7 @@ export const BottomBarActions: React.FC<BottomBarActionsProps> = ({ onActionClic
         `
       }} />
       
-      <div className="bg-white border-t border-gray-100">
+      <div className="bg-background border-t border-border">
         <div className="max-w-3xl sm:max-w-4xl mx-auto px-3 sm:px-4 py-2">
           {/* Horizontal scrollable container */}
           <div className="overflow-x-auto overflow-y-hidden hide-scrollbar">
@@ -35,8 +35,8 @@ export const BottomBarActions: React.FC<BottomBarActionsProps> = ({ onActionClic
                 <button
                   key={action.id}
                   onClick={() => handleActionClick(action.action)}
-                  className="flex-shrink-0 px-3 py-1.5 text-sm font-medium text-black 
-                    bg-heycontent-yellow hover:bg-heycontent-yellow/90 
+                  className="flex-shrink-0 px-3 py-1.5 text-sm font-medium text-primary-foreground 
+                    bg-primary hover:bg-primary/90 dark:bg-accent dark:hover:bg-accent/90
                     rounded-full transition-all duration-200 hover:shadow-sm
                     whitespace-nowrap select-none chat-font"
                 >

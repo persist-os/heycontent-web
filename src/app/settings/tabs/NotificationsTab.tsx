@@ -20,11 +20,11 @@ const NotificationsTab = () => {
         {notificationOptions.map((item, i) => (
           <div
             key={i}
-            className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-gray-50 rounded-lg gap-3"
+            className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-muted/50 rounded-lg gap-3"
           >
             <div>
               <h3 className="font-medium">{item.title}</h3>
-              <p className="text-sm text-gray-600">{item.desc}</p>
+              <p className="text-sm text-muted-foreground">{item.desc}</p>
             </div>
             <Switch />
           </div>

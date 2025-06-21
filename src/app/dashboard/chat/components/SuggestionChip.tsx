@@ -30,13 +30,14 @@ export const SuggestionChip = ({ suggestion, onClick, onInputPopulate }: Suggest
     <div className="group relative">
       <button
         onClick={onClick}
-        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-black 
-          bg-heycontent-yellow hover:bg-heycontent-yellow/90 
+        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium  
+          bg-heycontent-yellow text-black dark:bg-heycontent-yellow/20 dark:text-heycontent-yellow
+          hover:bg-heycontent-yellow/90 dark:hover:bg-heycontent-yellow/30
           rounded-lg transition-all duration-200 hover:shadow-sm hover:-translate-y-0.5 
           active:translate-y-0 active:shadow-none select-none max-w-full chat-font"
       >
         {!isStringType && (
-          <span className="text-black/70 group-hover:text-black transition-colors duration-200">
+          <span className="text-black/70 dark:text-heycontent-yellow/80 group-hover:text-black dark:group-hover:text-heycontent-yellow transition-colors duration-200">
             {(suggestion as SuggestedAction).type === 'explore' && <Brain className="w-3.5 h-3.5 flex-shrink-0" />}
             {(suggestion as SuggestedAction).type === 'clarify' && <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />}
             {(suggestion as SuggestedAction).type === 'action' && <Zap className="w-3.5 h-3.5 flex-shrink-0" />}
