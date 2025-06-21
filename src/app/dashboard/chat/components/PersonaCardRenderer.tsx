@@ -28,9 +28,9 @@ export const PersonaCardRenderer: React.FC<PersonaCardRendererProps> = ({ messag
 
   // FALLBACK: Check message content for persona indicators since metadata is unreliable
   const hasPersonaContentPattern = message.content && (
-    message.content.includes('🎭 *Your Content Persona*') ||
+    message.content.includes('*Your Content Persona*') ||
     message.content.includes('Content Persona') ||
-    (message.content.includes('🎭') && message.content.includes('Content Style')) ||
+    (message.content.includes('Content Style')) ||
     (message.content.includes('Content Focus') && message.content.includes('Future Goals'))
   );
 
@@ -139,7 +139,7 @@ export const PersonaCardRenderer: React.FC<PersonaCardRendererProps> = ({ messag
     return (
       <div className="mt-4 p-4 bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-xl">
         <div className="mb-3 text-center">
-          <h3 className="text-lg font-bold text-purple-800 mb-1">🎭 Your Content Persona</h3>
+          <h3 className="text-lg font-bold text-purple-800 mb-1">Your Content Persona</h3>
           <p className="text-sm text-purple-600">Your personalized content identity has been created!</p>
         </div>
         <PersonaCard persona={persona} userId={userId} variant="compact" />

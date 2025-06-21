@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { query, is_first_message, session_id, content_context } = body;
+    const { query, is_first_message, session_id, content_context, vector_search_metadata } = body;
 
     if (!query) {
       console.warn(`[${requestId}] Invalid request: Missing query`);
@@ -54,7 +54,8 @@ export async function POST(request: Request) {
       has_api_key: !!apiKey,
       user_id: user_id,
       has_content_context: !!content_context,
-      content_context_platform: content_context?.platform
+      content_context_platform: content_context?.platform,
+      has_vector_search: !!vector_search_metadata
     });
 
     // Prepare the request body for the backend
@@ -68,6 +69,11 @@ export async function POST(request: Request) {
     // Include content context if provided
     if (content_context) {
       backendRequestBody.content_context = content_context;
+    }
+
+    // Include vector search metadata if provided
+    if (vector_search_metadata) {
+        backendRequestBody.vector_search_metadata = vector_search_metadata;
     }
 
     // Log the full request body
