@@ -100,7 +100,7 @@ export function NoteArea({
   };
 
   return (
-    <div className="flex flex-col h-full w-full">
+    <div className="flex flex-col h-full w-full bg-background">
       {/* Header */}
       <NoteHeader 
         note={note}
@@ -128,25 +128,25 @@ export function NoteArea({
           onValueChange={setActiveTab}
           className="flex flex-col flex-1 overflow-hidden"
         >
-          <TabsList className="bg-background/95 backdrop-blur-sm border-b border-border px-2 mb-0 w-full justify-between">
+          <TabsList className="bg-background/95 backdrop-blur-sm border-b border-border px-2 mb-0 w-full justify-between shadow-sm">
             <div className="flex items-center">
               <TabsTrigger 
                 value="editor" 
-                className="flex items-center gap-1.5 data-[state=active]:text-primary data-[state=active]:shadow-[0_-2px_0_0_hsl(var(--primary))_inset]"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-all duration-200 data-[state=active]:text-primary data-[state=active]:bg-primary/10 data-[state=active]:border-primary/20 rounded-lg border border-transparent hover:bg-muted/40"
               >
                 <Edit size={16} className="h-4 w-4" />
                 <span>Editor</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="analysis" 
-                className="flex items-center gap-1.5 data-[state=active]:text-primary data-[state=active]:shadow-[0_-2px_0_0_hsl(var(--primary))_inset]"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-all duration-200 data-[state=active]:text-primary data-[state=active]:bg-primary/10 data-[state=active]:border-primary/20 rounded-lg border border-transparent hover:bg-muted/40"
               >
                 <Brain size={16} className="h-4 w-4" />
                 <span>Analysis</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="ideas" 
-                className="flex items-center gap-1.5 data-[state=active]:text-primary data-[state=active]:shadow-[0_-2px_0_0_hsl(var(--primary))_inset]"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-all duration-200 data-[state=active]:text-primary data-[state=active]:bg-primary/10 data-[state=active]:border-primary/20 rounded-lg border border-transparent hover:bg-muted/40"
               >
                 <Lightbulb size={16} className="h-4 w-4" />
                 <span>Ideas</span>
@@ -156,6 +156,8 @@ export function NoteArea({
             {/* Type Selector aligned with tabs */}
             <div className="flex items-center mr-4">
               <TypeSelector
+                noteId={note._id}
+                userId={note.userId}
                 currentType={note.type || 'idea_bank'}
                 typeGenerated={note.typeGenerated}
                 onTypeChange={handleTypeChange}
@@ -165,8 +167,8 @@ export function NoteArea({
           
           <div className="flex flex-1 overflow-hidden">
             {/* Editor Tab - Always visible regardless of active tab */}
-            <div className={`flex-1 overflow-hidden relative transition-all ${
-              activeTab !== "editor" ? "lg:flex-[0.6] border-r border-border/50" : ""
+            <div className={`flex-1 overflow-hidden relative transition-all duration-300 ${
+              activeTab !== "editor" ? "lg:flex-[0.6] border-r border-border/40" : ""
             }`}>
               <NoteEditor
                 ref={textAreaRef}
@@ -192,7 +194,7 @@ export function NoteArea({
             
             {/* Right panel for Analysis or Ideas based on active tab */}
             {activeTab !== "editor" && (
-              <div className="flex-1 overflow-hidden lg:flex-[0.4] transition-all">
+              <div className="flex-1 overflow-hidden lg:flex-[0.4] transition-all duration-300 bg-muted/20 border-l border-border/30">
                 <TabsContent value="analysis" className="h-full overflow-auto m-0 p-0 data-[state=active]:flex-1">
                   <div className="h-full overflow-auto">
                     <AnalysisSection noteId={note._id as Id<"notes">} userId={note.userId} />
