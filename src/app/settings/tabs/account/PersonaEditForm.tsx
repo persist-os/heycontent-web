@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PersonaData } from '../../../dashboard/chat/types';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
