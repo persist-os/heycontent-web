@@ -13,7 +13,7 @@ export async function GET(req: Request) {
 
     if (!code || !state) {
       console.error('[Gmail OAuth] Missing code or state in query params.', { code, state });
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=missing_params`);
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=missing_params&tab=integrations`);
     }
 
     // Decode state parameter to log userId for debugging
@@ -32,6 +32,6 @@ export async function GET(req: Request) {
     return NextResponse.redirect(backendUrl);
   } catch (err) {
     console.error('[Gmail OAuth] Error handling callback.', { error: err });
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=oauth_callback_failed`);
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=oauth_callback_failed&tab=integrations`);
   }
 }
