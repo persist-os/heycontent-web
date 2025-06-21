@@ -1,0 +1,110 @@
+import React from 'react';
+import { BaseCard } from './BaseCard';
+import { Note } from '../../types';
+import { Lightbulb, CheckCircle } from 'lucide-react';
+
+interface TipsCardProps {
+  note: Note;
+  onEdit?: (note: Note) => void;
+  onDelete?: (noteId: string) => void;
+  onToggleImportant?: (noteId: string) => void;
+}
+
+export function TipsCard({ 
+  note, 
+  onEdit, 
+  onDelete, 
+  onToggleImportant 
+}: TipsCardProps) {
+  // Parse tips from note content
+  const parseTips = (content: string): string[] => {
+    const lines = content.split('\n');
+    const tips: string[] = [];
+    
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      // Look for bullet points, numbered lists, or tip markers
+      if (trimmed.match(/^[-*•]\s/) || trimmed.match(/^\d+\.\s/) || trimmed.match(/^tip[:\s]/i)) {
+        const tipText = trimmed
+          .replace(/^[-*•]\s/, '')
+          .replace(/^\d+\.\s/, '')
+          .replace(/^tip[:\s]/i, '');
+        
+        if (tipText.length > 0) {
+          tips.push(tipText);
+        }
+      } else if (trimmed && !trimmed.startsWith('#') && tips.length === 0) {
+        // If no bullet points found, treat each line as a tip
+        tips.push(trimmed);
+      }
+    });
+    
+    return tips.slice(0, 4); // Show max 4 tips
+  };
+
+  const tips = parseTips(note.content || '');
+
+  // Determine if this is a HeyContent tip or general tip
+  const isHeyContentTip = note.title?.toLowerCase().includes('heycontent') || 
+                          note.content?.toLowerCase().includes('heycontent');
+
+  return (
+    <BaseCard
+      note={note}
+      className="bg-yellow-50 border-yellow-200 hover:border-yellow-300"
+      onEdit={onEdit}
+      onDelete={onDelete}
+      onToggleImportant={onToggleImportant}
+    >
+      <div className="p-4">
+        {/* Header with HeyContent icon */}
+        <div className="flex items-center gap-2 mb-3">
+          {isHeyContentTip ? (
+            <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center">
+              <span className="text-xs font-bold text-yellow-900">HC</span>
+            </div>
+          ) : (
+            <Lightbulb className="w-4 h-4 text-yellow-600" />
+          )}
+          <h3 className="font-semibold text-gray-900 flex-1 pr-8 line-clamp-1">
+            {note.title || 'Tips & Advice'}
+          </h3>
+        </div>
+
+        {/* Tips list */}
+        <div className="space-y-2">
+          {tips.map((tip, index) => (
+            <div key={index} className="flex items-start gap-2">
+              <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full mt-2 flex-shrink-0" />
+              <span className="text-sm text-gray-700 line-clamp-2">
+                {tip}
+              </span>
+            </div>
+          ))}
+          
+          {tips.length === 0 && (
+            <div className="text-sm text-gray-500 italic">
+              No tips yet
+            </div>
+          )}
+          
+          {note.content && note.content.split('\n').length > tips.length && (
+            <div className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+              <span>+{note.content.split('\n').length - tips.length} more tips</span>
+            </div>
+          )}
+        </div>
+
+        {/* Footer with category or source */}
+        {isHeyContentTip && (
+          <div className="mt-3 pt-2 border-t border-yellow-200">
+            <div className="flex items-center gap-1">
+              <CheckCircle className="w-3 h-3 text-green-500" />
+              <span className="text-xs text-gray-600">HeyContent Tips</span>
+            </div>
+          </div>
+        )}
+      </div>
+    </BaseCard>
+  );
+} 
