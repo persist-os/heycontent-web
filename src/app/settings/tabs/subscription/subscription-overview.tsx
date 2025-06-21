@@ -20,6 +20,8 @@ import { getApiKey } from '@/app/lib/api-helpers';
 // Convex imports
 import { useQuery } from 'convex/react';
 import { api } from '@/../convex/_generated/api';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 // Utils
 import { DeleteAccountButton } from '../../utils/DeleteAccountButton';
@@ -273,7 +275,58 @@ export default function SubscriptionOverview() {
     setTimeout(() => setSaving(false), 1000);
   };
 
-  if (loading) return <div className="p-8 text-center">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-7 w-1/2" />
+                <Skeleton className="h-4 w-1/3" />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between">
+                  <Skeleton className="h-5 w-1/4" />
+                  <Skeleton className="h-5 w-1/4" />
+                </div>
+                <Skeleton className="h-10 w-full" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-7 w-1/2" />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-5 w-4/5" />
+                <Skeleton className="h-5 w-full" />
+              </CardContent>
+            </Card>
+          </div>
+          <div className="lg:col-span-1 space-y-6">
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-7 w-3/4" />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex items-center space-x-4">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (error) return <div className="p-8 text-center text-red-600">{error}</div>;
 
   // If user doesn't have an active subscription, show the checkout form

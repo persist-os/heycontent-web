@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 import { useAuth } from '@/app/context/auth-context'
 import { ReadOnlyField, ReadOnlyTextArea } from './account/ReadOnlyField'
 import { ProfileFields, ReferralFields, PersonaFields } from './account/FormSections'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const MAX_PERSONA_LENGTH = 500
 const MAX_VISION_LENGTH = 500
@@ -162,7 +163,7 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
 
   // Show loading if userId is not yet loaded
   if (!userId) {
-    return <div className="flex justify-center items-center min-h-[200px]">Loading user info...</div>;
+    return <FormSkeleton />;
   }
 
   return (
@@ -243,6 +244,32 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
                 <ReferralFields formData={formData} referrerName={referrerName} referrerLoading={referrerLoading} />
               </div>
             </form>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function FormSkeleton() {
+  return (
+    <div className="grid gap-6">
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-7 w-48" />
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-10 w-full" />
           </div>
         </CardContent>
       </Card>
