@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getApiKey } from '@/app/lib/api-helpers';
-import { PersonaCard } from './PersonaCard';
+import { NewPersonaCard } from '@/app/settings/tabs/account/NewPersonaCard';
 import { usePersonaData } from '../hooks/usePersonaData';
 import { Message } from '@/app/types/chat';
 import { useRouter } from 'next/navigation';
@@ -137,20 +137,20 @@ export const PersonaCardRenderer: React.FC<PersonaCardRendererProps> = ({ messag
   // Render PersonaCard if conditions are met
   if (shouldFetchPersona && shouldShow && hasPersona && persona) {
     return (
-      <div className="mt-4 p-4 bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-xl">
-        <div className="mb-3 text-center">
-          <h3 className="text-lg font-bold text-purple-800 mb-1">Your Content Persona</h3>
-          <p className="text-sm text-purple-600">Your personalized content identity has been created!</p>
+      <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-xl">
+        <div className="mb-4 text-center">
+          <h3 className="text-lg font-semibold text-gray-900">Your Content Persona</h3>
+          <p className="text-sm text-gray-500">Your personalized content identity has been created.</p>
         </div>
-        <PersonaCard persona={persona} userId={userId} variant="compact" />
+        <NewPersonaCard persona={persona} />
         {showSettingsButton && (
           <div className="flex justify-center mt-6">
             <button
-              className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-lg shadow hover:from-purple-600 hover:to-pink-600 transition-colors"
+              className="px-4 py-2 bg-gray-900 text-white font-semibold rounded-lg shadow-sm hover:bg-gray-800 transition-colors"
               onClick={() => router.push('/settings')}
               type="button"
             >
-              Go see my persona in settings
+              View Persona in Settings
             </button>
           </div>
         )}
