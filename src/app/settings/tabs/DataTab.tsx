@@ -147,9 +147,9 @@ const DataTab = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Change Password Section */}
-          <form onSubmit={handleChangePassword} className="flex flex-col p-4 bg-gray-50 rounded-lg gap-4">
+          <form onSubmit={handleChangePassword} className="flex flex-col p-4 bg-muted/50 rounded-lg gap-4">
             <div className="flex items-center gap-2">
-              <Lock className="w-4 h-4 text-gray-500" />
+              <Lock className="w-4 h-4 text-muted-foreground" />
               <h3 className="font-medium">Change Password</h3>
             </div>
             <div className="space-y-3">
@@ -166,7 +166,7 @@ const DataTab = () => {
                 <button
                   type="button"
                   onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   {showCurrentPassword ? (
                     <EyeOff className="w-4 h-4" />
@@ -188,7 +188,7 @@ const DataTab = () => {
                 <button
                   type="button"
                   onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   {showNewPassword ? (
                     <EyeOff className="w-4 h-4" />
@@ -210,7 +210,7 @@ const DataTab = () => {
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   {showConfirmPassword ? (
                     <EyeOff className="w-4 h-4" />
@@ -231,20 +231,20 @@ const DataTab = () => {
             </div>
           </form>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 rounded-lg gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-muted/50 rounded-lg gap-3">
             <div>
               <h3 className="font-medium">Data Collection</h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 By using HeyContent, you consent to us saving, using, and analyzing your data from your integrations. We use this to improve your experience and our services.
               </p>
             </div>
             <Button variant="outline" disabled={isDeleting}>Configure</Button>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 rounded-lg gap-3 border border-red-100">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-muted/50 rounded-lg gap-3 border border-red-100">
             <div>
               <h3 className="font-medium text-red-600">Delete Account</h3>
-              <p className="text-sm text-gray-600">Permanently delete your account and all associated data. This action cannot be undone.</p>
+              <p className="text-sm text-muted-foreground">Permanently delete your account and all associated data. This action cannot be undone.</p>
             </div>
             <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
               <AlertDialogTrigger asChild>
@@ -272,7 +272,7 @@ const DataTab = () => {
                       <button
                         type="button"
                         onClick={() => setShowDeletePassword(!showDeletePassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                         tabIndex={-1}
                       >
                         {showDeletePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

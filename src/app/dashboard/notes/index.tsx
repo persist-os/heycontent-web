@@ -195,7 +195,7 @@ export default function SmartNotes() {
 
 
   return (
-    <div className="flex h-screen bg-white/70 backdrop-blur-sm rounded-3xl overflow-hidden">
+    <div className="flex h-screen bg-background backdrop-blur-sm rounded-3xl overflow-hidden">
       {showSidebar && (
         <Sidebar
           notes={notes}

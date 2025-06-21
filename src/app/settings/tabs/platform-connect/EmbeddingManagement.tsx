@@ -25,7 +25,7 @@ export function EmbeddingManagement({ userId }: EmbeddingManagementProps) {
         const info = await checkUserEmbeddings(currentUserId);
         setEmbeddingInfo(info);
         if (info.hasEmbeddings) {
-          setEmbeddingStatus(`✅ Found ${info.count} existing embeddings`);
+          setEmbeddingStatus(`Found ${info.count} existing embeddings`);
         }
       }
     };
@@ -37,12 +37,12 @@ export function EmbeddingManagement({ userId }: EmbeddingManagementProps) {
   const handleGenerateEmbeddings = async () => {
     const currentUserId = getCurrentUserId();
     if (!currentUserId) {
-      setEmbeddingStatus('❌ No user ID found');
+      setEmbeddingStatus('No user ID found');
       return;
     }
 
     setIsGeneratingEmbeddings(true);
-    setEmbeddingStatus('🚀 Starting embedding generation...');
+    setEmbeddingStatus('Starting embedding generation...');
     
     try {
       const results = await generateEmbeddingsForUser(currentUserId);
@@ -53,7 +53,7 @@ export function EmbeddingManagement({ userId }: EmbeddingManagementProps) {
       const youtubeStats = `YouTube: ${results.youtubeVideos.succeeded}/${results.youtubeVideos.processed} (${results.youtubeVideos.skipped} skipped)`;
       const gmailStats = `Gmail: ${results.gmailThreads.succeeded}/${results.gmailThreads.processed} (${results.gmailThreads.skipped} skipped)`;
       
-      setEmbeddingStatus(`✅ Complete! ${convStats}, ${noteStats}, ${instagramStats}, ${youtubeStats}, ${gmailStats}`);
+      setEmbeddingStatus(`Complete! ${convStats}, ${noteStats}, ${instagramStats}, ${youtubeStats}, ${gmailStats}`);
       
       // Refresh embedding info
       const info = await checkUserEmbeddings(currentUserId);
@@ -64,8 +64,7 @@ export function EmbeddingManagement({ userId }: EmbeddingManagementProps) {
         setEmbeddingStatus(prev => prev + ` (${results.errors.length} errors - check console)`);
       }
     } catch (error: any) {
-      setEmbeddingStatus(`❌ Failed: ${error.message}`);
-      console.error('Embedding generation failed:', error);
+      setEmbeddingStatus('Failed to check embeddings');
     } finally {
       setIsGeneratingEmbeddings(false);
     }
@@ -75,7 +74,7 @@ export function EmbeddingManagement({ userId }: EmbeddingManagementProps) {
   const handleDeleteEmbeddings = async () => {
     const currentUserId = getCurrentUserId();
     if (!currentUserId) {
-      setEmbeddingStatus('❌ No user ID found');
+      setEmbeddingStatus('No user ID found');
       return;
     }
 
@@ -84,22 +83,22 @@ export function EmbeddingManagement({ userId }: EmbeddingManagementProps) {
     }
 
     setIsDeletingEmbeddings(true);
-    setEmbeddingStatus('🗑️ Deleting embeddings...');
+    setEmbeddingStatus('Deleting embeddings...');
     
     try {
       const result = await deleteAllUserEmbeddings(currentUserId);
       
       if (result.success) {
-        setEmbeddingStatus(`✅ Deleted ${result.deletedCount} embeddings`);
+        setEmbeddingStatus(`Deleted ${result.deletedCount} embeddings`);
         
         // Refresh embedding info
         const info = await checkUserEmbeddings(currentUserId);
         setEmbeddingInfo(info);
       } else {
-        setEmbeddingStatus(`❌ ${result.message}`);
+        setEmbeddingStatus(`Failed: ${result.message}`);
       }
     } catch (error: any) {
-      setEmbeddingStatus(`❌ Failed: ${error.message}`);
+      setEmbeddingStatus(`Failed: ${error.message}`);
       console.error('Embedding deletion failed:', error);
     } finally {
       setIsDeletingEmbeddings(false);
@@ -107,25 +106,25 @@ export function EmbeddingManagement({ userId }: EmbeddingManagementProps) {
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
+    <div className="bg-card border border-border rounded-lg p-6 space-y-4">
       <div className="flex items-center gap-3">
-        <div className="bg-purple-100 p-2 rounded-lg">
-          <Brain className="w-5 h-5 text-purple-600" />
+        <div className="bg-accent/20 p-2 rounded-lg">
+          <Brain className="w-5 h-5 text-accent-foreground" />
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">AI Search Intelligence</h3>
-          <p className="text-sm text-gray-600">
+          <h3 className="text-lg font-semibold text-foreground">AI Search Intelligence</h3>
+          <p className="text-sm text-muted-foreground">
             Enable smart content discovery across all your platforms
           </p>
         </div>
       </div>
 
-      <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+      <div className="bg-muted/50 rounded-lg p-4 space-y-3">
         <div className="flex items-start gap-3">
-          <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-          <div className="text-sm text-gray-700">
+          <Info className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
+          <div className="text-sm text-foreground">
             <p className="font-medium mb-1">How it works:</p>
-            <ul className="space-y-1 text-gray-600">
+            <ul className="space-y-1 text-muted-foreground">
               <li>• Analyzes your content from Instagram, YouTube, Gmail, conversations, and notes</li>
               <li>• Creates AI-powered search indexes for intelligent content discovery</li>
               <li>• Enables semantic search - find content by meaning, not just keywords</li>
@@ -135,19 +134,19 @@ export function EmbeddingManagement({ userId }: EmbeddingManagementProps) {
         </div>
       </div>
 
-      <div className="flex items-center justify-between bg-blue-50 rounded-lg p-4">
+      <div className="flex items-center justify-between bg-accent/10 rounded-lg p-4">
         <div className="flex items-center gap-3">
-          <div className="bg-blue-100 p-2 rounded-full">
-            <Database className="w-4 h-4 text-blue-600" />
+          <div className="bg-accent/20 p-2 rounded-full">
+            <Database className="w-4 h-4 text-accent-foreground" />
           </div>
           <div>
-            <p className="text-sm font-medium text-blue-900">
+            <p className="text-sm font-medium text-foreground">
               {embeddingInfo.hasEmbeddings 
                 ? `${embeddingInfo.count} content items indexed`
                 : 'No content indexed yet'
               }
             </p>
-            <p className="text-xs text-blue-700">
+            <p className="text-xs text-muted-foreground">
               {embeddingInfo.hasEmbeddings 
                 ? 'Your content is ready for AI-powered search'
                 : 'Index your content to enable smart search'
@@ -221,8 +220,8 @@ export function EmbeddingManagement({ userId }: EmbeddingManagementProps) {
       </div>
 
       {embeddingStatus && (
-        <div className="bg-gray-100 rounded-lg p-3">
-          <p className="text-xs text-gray-700 font-mono">
+        <div className="bg-muted/50 rounded-lg p-3">
+          <p className="text-xs text-muted-foreground font-mono">
             {embeddingStatus}
           </p>
         </div>

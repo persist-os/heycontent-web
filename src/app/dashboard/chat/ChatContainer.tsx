@@ -438,7 +438,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     <>
       <div 
         data-chat-container
-        className="flex flex-col h-screen bg-white overflow-hidden"
+        className="flex flex-col h-screen bg-background overflow-hidden"
         style={getMainContentStyle()}
       >
         {/* Header - Always render this static element */}
@@ -454,9 +454,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             // Static placeholder for unauthenticated state
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center p-4">
-                <div className="h-12 w-12 rounded-full bg-gray-100 mx-auto mb-4"></div>
-                <div className="h-4 w-48 bg-gray-100 rounded mx-auto mb-2"></div>
-                <div className="h-3 w-32 bg-gray-100 rounded mx-auto"></div>
+                <div className="h-12 w-12 rounded-full bg-secondary mx-auto mb-4"></div>
+                <div className="h-4 w-48 bg-secondary rounded mx-auto mb-2"></div>
+                <div className="h-3 w-32 bg-secondary rounded mx-auto"></div>
               </div>
             </div>
           ) : hasMessagesOrContext ? (
@@ -512,11 +512,11 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                   )}
 
                   {error && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-4">
-                      <p className="text-red-600 text-sm">{error}</p>
+                    <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 mt-4">
+                      <p className="text-destructive text-sm">{error}</p>
                       <button
                         onClick={() => chatState.setError(null)}
-                        className="text-xs text-red-500 hover:text-red-700 mt-1"
+                        className="text-xs text-destructive hover:text-destructive/80 mt-1"
                       >
                         Dismiss
                       </button>
@@ -548,7 +548,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         )}
 
         {/* Input Bar - Always render the container, but conditionally enable functionality */}
-        <div className="flex-shrink-0 border-t border-gray-100">
+        <div className="flex-shrink-0 border-t border-border">
           <ChatInputArea
             showAmbient={false}
             currentContext={currentContext}

@@ -16,32 +16,60 @@ export function AnalysisSection({ noteId, userId }: AnalysisSectionProps) {
 
   if (analysis === undefined) {
     return (
-      <div className="w-full bg-white border-t border-gray-200 p-6 mt-2">
-        <p className="text-gray-400 italic">Loading analysis...</p>
+      <div className="w-full bg-background/50 border-t border-border p-6">
+        <p className="text-muted-foreground/70 italic">Loading analysis...</p>
       </div>
     );
   }
 
   return (
-    <div className="w-full bg-white h-full overflow-auto p-6">
-      <div className="markdown-content">
+    <div className="w-full h-full overflow-auto p-6">
+      <div className="markdown-content text-foreground">
         {analysis && analysis.trim() ? (
           analysis.split('\n').map((line: string, i: number) => {
             if (line.startsWith('```')) {
-              return <pre key={i} className="bg-gray-100 text-sm p-2 rounded my-2 overflow-x-auto">{line.replace(/```[a-z]*|```/g, '')}</pre>;
+              return (
+                <pre 
+                  key={i} 
+                  className="bg-muted/50 text-sm p-4 rounded-md my-3 overflow-x-auto border border-border"
+                >
+                  <code>{line.replace(/```[a-z]*|```/g, '')}</code>
+                </pre>
+              );
             }
             if (line.startsWith('## ')) {
-              return <h2 key={i} className="text-xl font-bold mt-4 mb-2 text-purple-800">{line.substring(3)}</h2>;
+              return (
+                <h2 key={i} className="text-xl font-bold mt-6 mb-3 text-foreground">
+                  {line.substring(3)}
+                </h2>
+              );
             } else if (line.startsWith('### ')) {
-              return <h3 key={i} className="text-lg font-semibold mt-3 mb-2 text-purple-700">{line.substring(4)}</h3>;
+              return (
+                <h3 key={i} className="text-lg font-semibold mt-4 mb-2 text-foreground/90">
+                  {line.substring(4)}
+                </h3>
+              );
             } else if (line.trim().startsWith('- ')) {
-              return <div key={i} className="flex items-start my-1"><span className="mr-2 mt-1 text-purple-500">•</span><span>{line.trim().substring(2)}</span></div>;
+              return (
+                <div key={i} className="flex items-start my-1.5">
+                  <span className="mr-2 mt-1.5 text-primary">•</span>
+                  <span className="text-foreground/90">{line.trim().substring(2)}</span>
+                </div>
+              );
+            } else if (line.trim() === '') {
+              return <br key={i} />;
             } else {
-              return <p key={i} className="my-1">{line}</p>;
+              return (
+                <p key={i} className="my-2 text-foreground/90 leading-relaxed">
+                  {line}
+                </p>
+              );
             }
           })
         ) : (
-          <p className="text-gray-500">No analysis available. Trigger AI analysis to see results here.</p>
+          <p className="text-muted-foreground/80 italic">
+            No analysis available. Trigger AI analysis to see results here.
+          </p>
         )}
       </div>
     </div>

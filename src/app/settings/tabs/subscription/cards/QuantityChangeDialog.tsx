@@ -34,7 +34,7 @@ export const QuantityChangeDialog: React.FC<QuantityChangeDialogProps> = ({
           <div className="text-2xl font-bold w-12 text-center">{pendingQuantity}</div>
           <Button variant="outline" size="lg" onClick={onIncrease}>+</Button>
         </div>
-        <div className="mt-4 text-sm text-gray-500 text-center">
+        <div className="mt-4 text-sm text-muted-foreground text-center">
           Total: ${planPrice * pendingQuantity}/month
         </div>
       </div>

@@ -68,7 +68,7 @@ function formatOverviewSection(
   const { includeEmoji, bulletPoint } = options;
   const parts: string[] = [];
 
-  parts.push(includeEmoji ? '📋 OVERVIEW' : 'OVERVIEW');
+  parts.push(includeEmoji ? 'OVERVIEW' : 'OVERVIEW');
   parts.push(`Summary: ${overview.summary}`);
 
   if (overview.keyPoints.length) {
@@ -92,7 +92,7 @@ function formatAnalysisSection(
   const { includeEmoji, bulletPoint = '•' } = options;
   const parts: string[] = [];
 
-  parts.push(includeEmoji ? '🔍 ANALYSIS' : 'ANALYSIS');
+      parts.push(includeEmoji ? 'ANALYSIS' : 'ANALYSIS');
 
   // Format business context
   if (analysis.businessContext) {
@@ -298,7 +298,7 @@ function formatRecommendationsSection(
   const { includeEmoji, bulletPoint } = options;
   const parts: string[] = [];
 
-  parts.push(includeEmoji ? '🎯 RECOMMENDATIONS' : 'RECOMMENDATIONS');
+      parts.push(includeEmoji ? 'RECOMMENDATIONS' : 'RECOMMENDATIONS');
 
   if (recommendations.immediate.length) {
     parts.push('\nImmediate Actions:');

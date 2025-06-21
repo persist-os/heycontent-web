@@ -14,7 +14,7 @@ export const RecentUsageEventsCard: React.FC<RecentUsageEventsCardProps> = ({ us
       <div className="overflow-x-auto">
         <table className="min-w-full text-xs">
           <thead>
-            <tr className="text-left text-gray-500">
+            <tr className="text-left text-muted-foreground">
               <th className="py-2 px-2">UTC Time</th>
               <th className="py-2 px-2">Type</th>
               <th className="py-2 px-2">Status</th>
@@ -23,7 +23,7 @@ export const RecentUsageEventsCard: React.FC<RecentUsageEventsCardProps> = ({ us
           </thead>
           <tbody>
             {usageEvents.length === 0 && (
-              <tr><td colSpan={4} className="text-center text-gray-400 py-4">No usage events</td></tr>
+              <tr><td colSpan={4} className="text-center text-muted-foreground py-4">No usage events</td></tr>
             )}
             {usageEvents.map((event: any) => (
               <tr key={event._id} className="border-b last:border-0">

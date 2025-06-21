@@ -26,27 +26,37 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
         components={{
           // Paragraph styling with better spacing and proper word wrapping
           p: ({ children }) => (
-            <p className="mb-3 last:mb-0 text-base leading-relaxed text-gray-800 dark:text-gray-200 w-full break-words hyphens-auto">{children}</p>
+            <p className="mb-3 last:mb-0 text-base leading-relaxed w-full break-words hyphens-auto">
+              {children}
+            </p>
           ),
           
-          // Bold text with better contrast
+          // Bold text
           strong: ({ children }) => (
-            <strong className="font-semibold text-gray-900 dark:text-gray-100 break-words">{children}</strong>
+            <strong className="font-semibold break-words">
+              {children}
+            </strong>
           ),
           
           // Italic text
           em: ({ children }) => (
-            <em className="italic break-words">{children}</em>
+            <em className="italic break-words">
+              {children}
+            </em>
           ),
           
           // Unordered lists with better spacing and proper wrapping
           ul: ({ children }) => (
-            <ul className="list-disc ml-5 mb-4 space-y-1 text-base w-full">{children}</ul>
+            <ul className="list-disc ml-5 mb-4 space-y-1 w-full">
+              {children}
+            </ul>
           ),
           
           // Ordered lists with better spacing and proper wrapping
           ol: ({ children }) => (
-            <ol className="list-decimal ml-5 mb-4 space-y-1 text-base w-full">{children}</ol>
+            <ol className="list-decimal ml-5 mb-4 space-y-1 w-full">
+              {children}
+            </ol>
           ),
           
           // List items with proper sizing and word wrapping

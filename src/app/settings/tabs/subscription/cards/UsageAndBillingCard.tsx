@@ -37,19 +37,19 @@ export const UsageAndBillingCard: React.FC<UsageAndBillingCardProps> = ({ usage 
           </div>
           
           <div className={cn(
-            "relative h-2 w-full overflow-hidden rounded-full bg-gray-100",
-            isOverLimit ? "bg-red-100" : isCloseToLimit ? "bg-yellow-100" : "bg-gray-100"
+            "relative h-2 w-full overflow-hidden rounded-full bg-muted",
+            isOverLimit ? "bg-red-100" : isCloseToLimit ? "bg-yellow-100" : "bg-muted"
           )}>
             <div 
               className={cn(
                 "h-full transition-all duration-300",
-                isOverLimit ? "bg-red-500" : isCloseToLimit ? "bg-yellow-500" : "bg-blue-500"
+                isOverLimit ? "bg-red-500" : isCloseToLimit ? "bg-yellow-500" : "bg-accent"
               )}
               style={{ width: `${usagePercentage}%` }}
             />
           </div>
           
-          <div className="flex justify-between text-xs text-gray-500">
+          <div className="flex justify-between text-xs text-muted-foreground">
             <span>
               {isOverLimit ? (
                 <span className="text-red-600 font-medium">

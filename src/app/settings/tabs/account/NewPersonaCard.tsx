@@ -7,10 +7,10 @@ interface NewPersonaCardProps {
 }
 
 const Section: React.FC<{ title: string; description: string; children: React.ReactNode }> = ({ title, description, children }) => (
-  <div className="py-6 border-b border-gray-200">
+  <div className="py-6 border-b border-border">
     <div className="mb-4">
-      <h3 className="text-base font-semibold text-gray-900">{title}</h3>
-      <p className="text-sm text-gray-500">{description}</p>
+      <h3 className="text-base font-semibold text-foreground">{title}</h3>
+      <p className="text-sm text-muted-foreground">{description}</p>
     </div>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
       {children}
@@ -23,21 +23,21 @@ const InfoItem: React.FC<{ label: string; value: string | string[] | undefined }
 
   return (
     <div>
-      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider group-hover:text-heycontent-purple transition-colors duration-300">{label}</p>
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider dark:group-hover:text-accent group-hover:text-purple-500 transition-colors duration-300">{label}</p>
       {Array.isArray(value) ? (
         <div className="flex flex-wrap gap-2 mt-2">
           {value.map((item, index) => (
             <Badge 
               key={index} 
               variant="outline" 
-              className="font-normal border-gray-300 group-hover:text-heycontent-purple group-hover:border-heycontent-purple/50 transition-colors"
+              className="font-normal border-border group-hover:text-purple-500 group-hover:border-purple-500/50 dark:group-hover:text-accent dark:group-hover:border-accent/50 transition-colors"
             >
               {item}
             </Badge>
           ))}
         </div>
       ) : (
-        <p className="text-sm text-gray-800 mt-1">{value}</p>
+        <p className="text-sm text-foreground/90 mt-1">{value}</p>
       )}
     </div>
   );
@@ -48,10 +48,11 @@ export const NewPersonaCard: React.FC<NewPersonaCardProps> = ({ persona }) => {
   if (!persona) return null;
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200/80 group transition-all hover:shadow-lg hover:border-heycontent-purple/60">
+    <div className="bg-card rounded-lg group transition-all duration-300 
+      hover:ring-2 hover:ring-purple-500 dark:hover:ring-accent hover:ring-offset-2 hover:ring-offset-background">
       <div className="p-6">
-        <h2 className="text-2xl font-bold text-gray-900 group-hover:text-heycontent-purple transition-colors">{persona.current_name}</h2>
-        <p className="mt-2 text-base text-gray-600 leading-relaxed">{persona.current_description}</p>
+        <h2 className="text-2xl font-bold text-foreground group-hover:text-purple-500 dark:group-hover:text-accent transition-colors">{persona.current_name}</h2>
+        <p className="mt-2 text-base text-muted-foreground leading-relaxed">{persona.current_description}</p>
       </div>
 
       <div className="px-6">

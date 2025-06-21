@@ -13,6 +13,8 @@ import {
   Calendar,
   TrendingUp,
   LayoutDashboard,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { 
   Command, 
@@ -194,17 +196,7 @@ const mockConversationHistory: ConversationHistory[] = [
 
 // Navigation Commands
 const navigationCommands: NavigationCommand[] = [
-  {
-    id: 'nav-dashboard',
-    type: 'navigation',
-    category: 'navigation',
-    label: 'Go to Dashboard',
-    description: 'Navigate to the main dashboard',
-    icon: LayoutDashboard,
-    href: '/dashboard',
-    shortcut: ['g', 'd'],
-    tags: ['dashboard', 'home', 'main'],
-  },
+
   {
     id: 'nav-chat',
     type: 'navigation',
@@ -212,54 +204,24 @@ const navigationCommands: NavigationCommand[] = [
     label: 'Chat With Content',
     description: 'Open AI chat interface',
     icon: MessageSquare,
-    href: '/chat',
+    href: '/dashboard/chat',
     shortcut: ['g', 'c'],
     tags: ['chat', 'ai', 'conversation'],
   },
+
+
   {
-    id: 'nav-analytics',
+    id: 'nav-content-hub',
     type: 'navigation',
     category: 'navigation',
-    label: 'Content Analytics',
-    description: 'View content performance metrics',
-    icon: BarChart3,
-    href: '/content',
-    shortcut: ['g', 'a'],
-    tags: ['analytics', 'metrics', 'performance'],
-  },
-  {
-    id: 'nav-ai-insights',
-    type: 'navigation',
-    category: 'navigation',
-    label: 'AI Insights',
-    description: 'View AI-generated content insights',
-    icon: Brain,
-    href: '/ai-insights',
-    shortcut: ['g', 'i'],
-    tags: ['ai', 'insights', 'analysis'],
-  },
-  {
-    id: 'nav-audience',
-    type: 'navigation',
-    category: 'navigation',
-    label: 'Audience DNA',
-    description: 'Analyze your audience demographics',
+    label: 'Content Hub',
+    description: 'Access content creation tools',
     icon: Users,
-    href: '/audience',
-    shortcut: ['g', 'd'],
-    tags: ['audience', 'demographics', 'analytics'],
+    href: '/dashboard/content-hub',
+    shortcut: ['g', 'h'],
+    tags: ['content', 'hub', 'creation'],
   },
-  {
-    id: 'nav-partnerships',
-    type: 'navigation',
-    category: 'navigation',
-    label: 'Partnerships',
-    description: 'Manage brand partnerships',
-    icon: Briefcase,
-    href: '/partnerships',
-    shortcut: ['g', 'p'],
-    tags: ['partnerships', 'brands', 'collaboration'],
-  },
+
   {
     id: 'nav-notes',
     type: 'navigation',
@@ -267,9 +229,42 @@ const navigationCommands: NavigationCommand[] = [
     label: 'Smart Notes',
     description: 'Access your content notes',
     icon: FileText,
-    href: '/notes',
+    href: '/dashboard/notes',
     shortcut: ['g', 'n'],
     tags: ['notes', 'documents', 'content'],
+  },
+  {
+    id: 'nav-self-hub',
+    type: 'navigation',
+    category: 'navigation',
+    label: 'Self Hub',
+    description: 'Personal content hub',
+    icon: Users,
+    href: '/dashboard/self-hub',
+    shortcut: ['g', 's'],
+    tags: ['self', 'personal', 'hub'],
+  },
+  {
+    id: 'nav-history',
+    type: 'navigation',
+    category: 'navigation',
+    label: 'History',
+    description: 'View conversation history',
+    icon: Calendar,
+    href: '/dashboard/history',
+    shortcut: ['g', 'y'],
+    tags: ['history', 'conversations'],
+  },
+  {
+    id: 'nav-settings',
+    type: 'navigation',
+    category: 'navigation',
+    label: 'Settings',
+    description: 'Configure app settings',
+    icon: Settings,
+    href: '/settings',
+    shortcut: ['g', 'set'],
+    tags: ['settings', 'configuration', 'preferences'],
   },
 ];
 
@@ -285,8 +280,7 @@ const actionCommands: ActionCommand[] = [
     shortcut: ['n'],
     tags: ['new', 'create', 'note'],
     action: () => {
-      // Implementation will be added when we integrate with the notes system
-      console.log('Create new note');
+      window.location.href = '/dashboard/notes?new=true';
     },
   },
   {
@@ -299,46 +293,54 @@ const actionCommands: ActionCommand[] = [
     shortcut: ['c'],
     tags: ['new', 'chat', 'ai'],
     action: () => {
-      // Implementation will be added when we integrate with the chat system
-      console.log('Start new chat');
+      window.location.href = '/dashboard/chat';
     },
   },
 ];
 
-// AI Commands
-const aiCommands: AICommand[] = [
+// Theme Commands
+const themeCommands: ActionCommand[] = [
   {
-    id: 'ai-analyze',
-    type: 'ai',
-    category: 'ai',
-    label: 'Analyze Content',
-    description: 'Get AI analysis of your content',
-    icon: Brain,
-    tags: ['analyze', 'ai', 'content'],
-    action: (input?: string) => {
-      // Implementation will be added when we integrate with the AI system
-      console.log('Analyze content:', input);
-    },
-    generateSuggestions: async (input: string) => {
-      // Mock implementation - will be replaced with actual AI integration
-      return ['Analyze engagement trends', 'Check content sentiment', 'Review posting schedule'];
-    },
-  },
-];
-
-// Search Commands
-const searchCommandsList: SearchCommand[] = [
-  {
-    id: 'search-content',
-    type: 'search',
-    category: 'content',
-    label: 'Search Content',
-    description: 'Search through your content',
-    icon: Search,
-    tags: ['search', 'find', 'content'],
-    onSearch: (query: string) => {
-      // Implementation will be added when we integrate with the search system
-      console.log('Search content:', query);
+    id: 'action-toggle-theme',
+    type: 'action',
+    category: 'system',
+    label: 'Toggle Theme',
+    description: 'Switch between light and dark mode',
+    icon: Moon,
+    shortcut: ['t'],
+    tags: ['theme', 'dark', 'light', 'appearance'],
+    action: () => {
+      if (typeof window !== 'undefined') {
+        // Get current theme from localStorage or system preference
+        const currentTheme = localStorage.getItem('theme') || 
+          (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        
+        // Update localStorage
+        localStorage.setItem('theme', newTheme);
+        
+        // Update DOM directly
+        if (newTheme === 'dark') {
+          document.documentElement.classList.add('dark');
+          document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+        
+        // Dispatch custom event for next-themes compatibility
+        window.dispatchEvent(new CustomEvent('theme-change', {
+          detail: { theme: newTheme }
+        }));
+        
+        // Also dispatch storage event for other components
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'theme',
+          newValue: newTheme,
+          oldValue: currentTheme,
+        }));
+      }
     },
   },
 ];
@@ -359,8 +361,7 @@ export const createQuickAskCommand = (question: string): QuickAskCommand => ({
 export const staticCommands: Command[] = [
   ...navigationCommands,
   ...actionCommands,
-  ...aiCommands,
-  ...searchCommandsList,
+  ...themeCommands,
 ];
 
 // Group commands by category
@@ -371,19 +372,9 @@ export const commandGroups: CommandGroup[] = [
     commands: navigationCommands,
   },
   {
-    category: 'ai',
-    title: 'AI & Insights',
-    commands: [...aiCommands, ...searchCommandsList.filter(cmd => cmd.category === 'ai')],
-  },
-  {
-    category: 'content',
-    title: 'Content',
-    commands: searchCommandsList.filter(cmd => cmd.category === 'content'),
-  },
-  {
-    category: 'notes',
-    title: 'Notes',
-    commands: actionCommands.filter(cmd => cmd.category === 'notes'),
+    category: 'system',
+    title: 'Actions',
+    commands: actionCommands.concat(themeCommands),
   },
 ];
 
@@ -443,16 +434,49 @@ export function parseSearchQuery(input: string): SearchQuery {
 }
 
 // Update the existing searchCommands function
-export function searchCommands(input: string): (Command | SearchResult)[] {
+export async function searchCommands(input: string): Promise<(Command | SearchResult)[]> {
   const { text, filters } = parseSearchQuery(input);
   
-  // Search through commands
+  // Search through commands (synchronous)
   const commandResults = matchSorter(staticCommands, text, {
     keys: ['label', 'description'],
     threshold: matchSorter.rankings.CONTAINS,
   });
 
-  // Search through content and conversation history
+  // If there's no text to search or it's too short, just return commands and mock data
+  if (!text || text.length < 2) {
+    const mockResults = matchSorter([...mockSearchResults, ...mockConversationHistory], text, {
+      keys: ['title', 'preview', 'summary', 'lastMessage'],
+      threshold: matchSorter.rankings.CONTAINS,
+    });
+    return [...commandResults, ...mockResults];
+  }
+
+  try {
+    // Try vector search first for real content
+    const vectorResults = await vectorSearchContent(text, 5);
+    
+    if (vectorResults.length > 0) {
+      
+      // Apply filters to vector results
+      const filteredVectorResults = vectorResults.filter(result => {
+        if (filters.type && result.type !== filters.type) return false;
+        if (filters.tags && result.type === 'note' && 'tags' in result && !filters.tags.every(tag => result.tags.includes(tag))) return false;
+        if (filters.status && result.type === 'partnership' && 'status' in result && result.status !== filters.status) return false;
+        if (filters.dateRange) {
+          const resultDate = new Date(result.type === 'conversation_history' && 'timestamp' in result ? result.timestamp : result.updatedAt);
+          if (resultDate < filters.dateRange.start || resultDate > filters.dateRange.end) return false;
+        }
+        return true;
+      });
+      
+      return [...commandResults, ...filteredVectorResults];
+    }
+  } catch (error) {
+    // Vector search failed, fall back to mock data
+  }
+
+  // Fallback to mock data search
   const contentResults = matchSorter([...mockSearchResults, ...mockConversationHistory], text, {
     keys: ['title', 'preview', 'summary', 'lastMessage'],
     threshold: matchSorter.rankings.CONTAINS,
@@ -470,6 +494,9 @@ export function searchCommands(input: string): (Command | SearchResult)[] {
 
   return [...commandResults, ...contentResults];
 }
+
+// Export vector search function for external use
+export { vectorSearchContent };
 
 // Get command by ID
 export const getCommandById = (id: string): Command | undefined => {
@@ -489,4 +516,128 @@ export const parseCommandString = (input: string): { command: Command | null; ar
     command: command || null,
     args: args.join(' '),
   };
-}; 
+};
+
+// Import vector search function
+async function getConvexClient() {
+  const { ConvexHttpClient } = await import('convex/browser');
+  const { api } = await import('../../../convex/_generated/api');
+  const client = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+  return { convex: client, api };
+}
+
+async function getCurrentUserId(): Promise<string | null> {
+  try {
+    const { getCurrentUserId } = await import('@/app/lib/api-helpers');
+    return await getCurrentUserId();
+  } catch (error) {
+    return null;
+  }
+}
+
+// Vector search function for command palette
+async function vectorSearchContent(query: string, limit: number = 5): Promise<SearchResult[]> {
+  if (!query.trim()) return [];
+  
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return [];
+    }
+
+    const { convex, api } = await getConvexClient();
+    
+    const vectorResults = await convex.action(api.vectorSearch.searchRelevantContent, {
+      userId,
+      query,
+      limit,
+      contentTypes: ["conversation", "note", "instagram_post", "youtube_video", "gmail_thread"],
+      minSimilarity: 0.3 // Lower threshold for command palette search
+    });
+
+    // Convert vector results to SearchResult format
+    return vectorResults.map((result: any): SearchResult => {
+      const baseResult = {
+        id: result.contentId || result._id,
+        title: result.title,
+        icon: getIconForContentType(result.contentType),
+        color: getColorForContentType(result.contentType),
+        updatedAt: new Date().toISOString().split('T')[0], // Default to today
+        path: getPathForContentType(result.contentType, result.contentId || result._id),
+      };
+
+      // Type-specific fields
+      switch (result.contentType) {
+        case 'conversation':
+          return {
+            ...baseResult,
+            type: 'conversation',
+            lastMessage: result.content.substring(0, 100) + '...',
+            participants: ['AI Assistant'],
+          } as ConversationResult;
+        
+        case 'note':
+          return {
+            ...baseResult,
+            type: 'note',
+            preview: result.content.substring(0, 100) + '...',
+            tags: [], // Could extract tags from content if needed
+          } as NoteResult;
+        
+        case 'instagram_post':
+        case 'youtube_video':
+        case 'gmail_thread':
+          return {
+            ...baseResult,
+            type: 'insight',
+            category: result.contentType,
+            summary: result.content.substring(0, 100) + '...',
+          } as InsightResult;
+        
+        default:
+          return {
+            ...baseResult,
+            type: 'insight',
+            category: 'Content',
+            summary: result.content.substring(0, 100) + '...',
+          } as InsightResult;
+      }
+    });
+  } catch (error) {
+    console.error('Vector search failed:', error);
+    return [];
+  }
+}
+
+function getIconForContentType(contentType: string) {
+  switch (contentType) {
+    case 'conversation': return MessageSquare;
+    case 'note': return FileText;
+    case 'instagram_post': return Users;
+    case 'youtube_video': return TrendingUp;
+    case 'gmail_thread': return MessageSquare;
+    default: return Brain;
+  }
+}
+
+function getColorForContentType(contentType: string) {
+  switch (contentType) {
+    case 'conversation': return 'text-blue-500';
+    case 'note': return 'text-purple-500';
+    case 'instagram_post': return 'text-pink-500';
+    case 'youtube_video': return 'text-red-500';
+    case 'gmail_thread': return 'text-green-500';
+    default: return 'text-gray-500';
+  }
+}
+
+function getPathForContentType(contentType: string, contentId: string) {
+  switch (contentType) {
+    case 'conversation': return `/dashboard/chat/${contentId}`;
+    case 'note': return `/dashboard/notes/${contentId}`;
+    case 'instagram_post': return `/dashboard/content-analytics?highlight=${contentId}`;
+    case 'youtube_video': return `/dashboard/content-analytics?highlight=${contentId}`;
+    case 'gmail_thread': return `/dashboard/content-analytics?highlight=${contentId}`;
+    default: return '/dashboard';
+  }
+} 
