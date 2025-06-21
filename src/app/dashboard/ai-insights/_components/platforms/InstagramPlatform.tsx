@@ -7,6 +7,7 @@ import { useInstagramInsights } from '../hooks/useInstagramInsights'
 import { RefreshState } from '@/components/ui/refresh-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AnalysisDepthPicker } from '../AnalysisDepthPicker'
+import { PlatformConnectionPrompt } from '../../../_components/content-hub/PlatformConnectionPrompt'
 
 interface InstagramPlatformProps {
   userId?: string
@@ -36,23 +37,17 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
   // Handle Instagram not connected state
   if (!isConnected) {
     return (
-      <div className="text-center py-12 px-4">
-        <Instagram className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-          Instagram Not Connected
-        </h3>
-        <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-4">
-          Connect your Instagram account to get strategic insights about post performance, 
-          audience engagement, and growth opportunities.
-        </p>
-        <button 
-          onClick={() => window.location.href = '/settings?tab=integrations'}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg font-medium transition-colors"
-        >
-          <Instagram className="w-4 h-4" />
-          Connect Instagram
-        </button>
-      </div>
+      <PlatformConnectionPrompt
+        platformName="Instagram"
+        platformIcon={
+          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
+            <Instagram className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+          </div>
+        }
+        description="Connect your Instagram account to view detailed analytics, track content performance, and get insights on your content strategy."
+        buttonColor="bg-gradient-to-r from-purple-500 to-pink-500"
+        buttonHoverColor="hover:from-purple-600 hover:to-pink-600"
+      />
     )
   }
 
