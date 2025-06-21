@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Instagram, Mail, BarChart3, Brain, Settings } from 'lucide-react'
+import { Instagram, Mail, BarChart3, Brain, Settings, Sparkles } from 'lucide-react'
 import { useAuth } from '@/app/context/auth-context'
 import { RefreshState } from '@/components/ui/refresh-state'
 import { Skeleton } from '@/components/ui/skeleton'
