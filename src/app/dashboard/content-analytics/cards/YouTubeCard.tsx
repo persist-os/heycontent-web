@@ -72,7 +72,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
   };
 
   return (
-    <Card key={item.id} className="overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-red-500/25 border-2 border-transparent hover:border-red-500/30 bg-white dark:bg-gray-800">
+    <Card key={item.id} className="overflow-hidden transition-all duration-200 group border bg-card text-card-foreground shadow-sm hover:shadow-md hover:-translate-y-px hover:border-gray-300 dark:hover:border-gray-700">
       {/* Thumbnail */}
       <div className="relative aspect-video bg-gray-100 dark:bg-gray-800 overflow-hidden">
         {thumbnailUrl ? (
@@ -80,7 +80,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
             <img
               src={thumbnailUrl}
               alt={content?.title || 'YouTube Video'}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               loading="eager"
               onError={(e) => {
                 console.error('Error loading YouTube thumbnail:', thumbnailUrl);
@@ -104,7 +104,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
               }}
             />
             {/* Overlay play button to make it look more like a video */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
+            <div className="absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               <div className="bg-black bg-opacity-50 rounded-full p-2">
                 <PlayCircle className="w-10 h-10 text-white" />
               </div>

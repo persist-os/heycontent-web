@@ -31,19 +31,19 @@ export default function SelfHubPage() {
       <div className="h-full flex flex-col">
         <div className="flex-1 px-4 py-4 md:p-6 space-y-6 md:space-y-8">
           {/* Header */}
-          <div className="mb-4 md:mb-6">
+          <div className="mb-4 md:mb-6 text-center">
             <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
-              Self Hub
+              Self
             </h1>
             <p className="text-sm md:text-base text-gray-600 mt-1 leading-relaxed">
-              Manage your personal content profile, preferences, and usage.
+              Manage your persona and activity.
             </p>
           </div>
           
-          <Tabs defaultValue="usage" className="space-y-4">
+          <Tabs defaultValue="persona" className="space-y-4">
             <TabsList>
               <TabsTrigger value="persona">Persona</TabsTrigger>
-              <TabsTrigger value="usage">Usage Activity</TabsTrigger>
+              <TabsTrigger value="usage">Activity</TabsTrigger>
              
             </TabsList>
             <TabsContent value="usage" className="space-y-4">
@@ -51,7 +51,7 @@ export default function SelfHubPage() {
                 <UsageHeatmap userId={userId} />
               ) : (
                 <div className="flex justify-center items-center min-h-[200px] px-4 rounded-lg border border-dashed">
-                  <p className="text-gray-600 text-sm">Please sign in to view your usage activity.</p>
+                  <p className="text-gray-600 text-sm">Please sign in to view your activity.</p>
                 </div>
               )}
             </TabsContent>

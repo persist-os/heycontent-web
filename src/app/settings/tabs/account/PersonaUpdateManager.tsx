@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { PersonaCard } from '../../../dashboard/chat/components/PersonaCard';
 import { usePersonaManager } from '../../../dashboard/chat/hooks/usePersonaData';
 import { PersonaData } from '../../../dashboard/chat/types';
 import { Edit2, Plus } from 'lucide-react';
 import { Id } from '@/convex/_generated/dataModel';
 import { PersonaEditForm } from './PersonaEditForm';
-import { PersonaHistoryItem } from './PersonaHistoryItem';
+import { PersonaTimeline } from './PersonaTimeline';
+import { NewPersonaCard } from './NewPersonaCard';
 
 interface PersonaUpdateManagerProps {
   userId: string;
@@ -123,7 +123,11 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
               variant={isEditMode ? 'default' : 'outline'}
               size="sm"
               onClick={isEditMode ? handleSave : handleEdit}
-              className="min-h-[44px] w-full sm:w-auto"
+              className={`min-h-[44px] w-full sm:w-auto transition-colors ${
+                isEditMode 
+                  ? 'bg-heycontent-purple text-white hover:bg-heycontent-purple' 
+                  : 'text-heycontent-purple border-heycontent-purple hover:bg-heycontent-purple/10'
+              }`}
             >
               <Edit2 className="w-4 h-4 mr-2" />
               {isEditMode ? 'Save' : 'Edit'}
@@ -154,7 +158,7 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
         {isEditMode ? (
           <PersonaEditForm persona={editedPersona!} onUpdate={updateField} />
         ) : (
-          <PersonaCard persona={currentPersona} userId={userId} />
+          <NewPersonaCard persona={currentPersona!} />
         )}
       </div>
 
@@ -162,23 +166,16 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
       {hasHistory && (
         <div>
           <div className="mb-6">
-            <h3 className="font-medium text-gray-900 text-lg">Previous Versions</h3>
+            <h3 className="font-medium text-gray-900 text-lg">Persona History</h3>
             <p className="text-sm text-gray-500 mt-1">
-              {personaHistory.length} previous {personaHistory.length === 1 ? 'version' : 'versions'}
+              Review and manage previous versions of your persona.
             </p>
           </div>
-
-          <div className="space-y-4">
-            {personaHistory.map((persona, index) => (
-              <PersonaHistoryItem
-                key={persona._id}
-                persona={persona}
-                version={personaHistory.length - index}
-                onRestore={handleRestore}
-                onDelete={handleDelete}
-              />
-            ))}
-          </div>
+          <PersonaTimeline
+            history={personaHistory}
+            onRestore={handleRestore}
+            onDelete={handleDelete}
+          />
         </div>
       )}
     </div>

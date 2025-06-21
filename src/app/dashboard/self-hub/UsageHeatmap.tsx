@@ -50,7 +50,7 @@ const getEndpointDisplayName = (path: string): string => {
 
 export const UsageHeatmap: React.FC<UsageHeatmapProps> = ({ userId }) => {
   const [timeRange, setTimeRange] = useState<'30d' | '90d' | '365d'>('30d');
-  const [showEndpoints, setShowEndpoints] = useState(false);
+  const [showEndpoints, setShowEndpoints] = useState(true);
   
   // Calculate date range
   const { startDate, endDate } = useMemo(() => {
@@ -212,8 +212,7 @@ export const UsageHeatmap: React.FC<UsageHeatmapProps> = ({ userId }) => {
         <CardHeader>
           <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
             <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="w-5 h-5" />
-              Usage Activity
+              <BarChart3 className="w-5 h-5" />Activity
             </CardTitle>
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4" />

@@ -59,7 +59,7 @@ const navItems = [
   },
   {
     id: 'self-hub',
-    label: 'Self Hub',
+    label: 'Self',
     icon: Users,
     href: '/dashboard/self-hub',
     color: 'text-purple-500'
