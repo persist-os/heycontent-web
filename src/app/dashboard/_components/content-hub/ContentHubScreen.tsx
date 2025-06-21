@@ -35,6 +35,7 @@ import { useGmailInsights } from '../../ai-insights/_components/hooks/useGmailIn
 import { InsightCard } from '../../ai-insights/_components/InsightCard'
 
 import { useRouter, useSearchParams } from 'next/navigation'
+import { ContentHubInsights } from './ContentHubInsights'
 
 type PlatformType = 'all' | 'youtube' | 'instagram' | 'gmail'
 type DataType = 'posts' | 'insights'
@@ -337,6 +338,9 @@ export function ContentHubScreen() {
       <div className="flex-1 overflow-y-auto dark:bg-gray-900">
         <div className="p-6">
           <div className="max-w-7xl mx-auto space-y-6">
+            {/* Content Hub Insights Section */}
+            <ContentHubInsights userId={userId} />
+            
             {/* Platform Tabs */}
             <Tabs value={selectedPlatform} onValueChange={(value) => setSelectedPlatform(value as PlatformType)} className="w-full">
               <TabsList className="grid w-full grid-cols-4 mb-4">

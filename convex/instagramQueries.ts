@@ -580,3 +580,65 @@ export const getInstagramBatchAnalysis = query({
     }
   },
 });
+
+// Get Instagram account by Instagram account ID (for collision detection)
+export const getInstagramAccountById = query({
+  args: { instagramAccountId: v.string() },
+  handler: async (ctx, args) => {
+    try {
+      console.log('Checking collision for Instagram account ID:', args.instagramAccountId);
+      
+      const account = await ctx.db
+        .query("instagramAccounts")
+        .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", args.instagramAccountId))
+        .first();
+      
+      console.log('Collision check result:', account ? {
+        userId: account.userId,
+        username: account.username,
+        instagramAccountId: account.instagramAccountId
+      } : 'No collision found');
+      
+      return account;
+    } catch (error) {
+      console.error('Error checking Instagram account collision:', error);
+      // Return null to allow connection in case of error
+      return null;
+    }
+  },
+});
+
+// Get 3 most recent Instagram posts with analysis for content hub
+export const getRecentPostsWithAnalysis = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    try {
+      // Get 3 most recent posts
+      const posts = await ctx.db
+        .query("instagramPosts")
+        .withIndex("by_userId", q => q.eq("userId", args.userId))
+        .order("desc")
+        .take(3);
+
+      // Return posts with their analysis data
+      const postsWithAnalysis = posts.map(post => ({
+        id: post.postId,
+        caption: post.data?.caption || '',
+        mediaType: post.data?.media_type || 'UNKNOWN',
+        mediaUrl: post.data?.media_url || '',
+        permalink: post.data?.permalink || '',
+        timestamp: post.data?.timestamp || post.createdAt,
+        likeCount: post.data?.like_count || 0,
+        commentsCount: post.data?.comments_count || 0,
+        analysis: post.analysis || null,
+        analysisMarkdown: post.analysisMarkdown || null
+      }));
+
+      console.log(`[getRecentPostsWithAnalysis] Found ${posts.length} posts for user ${args.userId}`);
+      return postsWithAnalysis;
+    } catch (error) {
+      console.error('Error getting recent posts with analysis:', error);
+      return [];
+    }
+  },
+});

@@ -52,7 +52,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
       // Get ID token
       let idToken: string;
       try {
-        idToken = await user.getIdToken(true);
+        // Use the enhanced token manager to get and store the token properly
+        const { setFirebaseToken, updateTokenForUser } = await import('@/app/lib/firebase-token-manager');
+        idToken = await updateTokenForUser(user, true);
       } catch (err: any) {
         setError('Failed to get Firebase ID token: ' + (err.message || err.code));
         setIsLoading(false);

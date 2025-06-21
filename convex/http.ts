@@ -1727,6 +1727,85 @@ app.get("/api/users/:id/ambient-data-bundle", async (c) => {
   }
 });
 
+// Get content hub data bundle (Instagram, YouTube, Gmail data)
+app.get("/api/users/:id/content-hub-data-bundle", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  try {
+    const bundle = await ctx.runQuery(api.contentHub.getContentHubDataBundle, { userId });
+    return c.json({ success: true, data: bundle });
+  } catch (error) {
+    console.error("Failed to get content hub data bundle:", error);
+    return c.json({ success: false, error: "Failed to get content hub data bundle" }, 500);
+  }
+});
+
+// Save content hub insight for a user
+app.post("/api/users/:id/save_content_hub_insight", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  
+  console.log(`HTTP_TS_DEBUG: Save content hub insight route HIT for userId: ${userId}`);
+  console.log(`HTTP_TS_DEBUG: Request method: ${c.req.method}, URL: ${c.req.url}`);
+  
+  let insight;
+  try {
+    const requestBody = await c.req.json();
+    console.log(`HTTP_TS_DEBUG: Request body received:`, requestBody);
+    insight = requestBody.insight;
+  } catch (jsonError) {
+    console.error(`HTTP_TS_DEBUG: Failed to parse JSON body:`, jsonError);
+    return c.json({ success: false, error: "Invalid JSON in request body" }, 400);
+  }
+  
+  if (!insight) {
+    console.error(`HTTP_TS_DEBUG: Missing insight data for userId: ${userId}`);
+    return c.json({ success: false, error: "Missing insight data" }, 400);
+  }
+  
+  console.log(`HTTP_TS_DEBUG: About to call createContentHubInsight mutation for userId: ${userId}`);
+  console.log(`HTTP_TS_DEBUG: Insight keys:`, Object.keys(insight));
+  
+  try {
+    const result = await ctx.runMutation(api.contentHub.createContentHubInsight, {
+      userId,
+      insight,
+    });
+    console.log(`HTTP_TS_DEBUG: Mutation result:`, result);
+    console.log(`HTTP_TS_DEBUG: Successfully saved content hub insight for userId: ${userId} with ID: ${result}`);
+    return c.json({ success: true, insightId: result });
+  } catch (error) {
+    console.error(`HTTP_TS_DEBUG: Failed to save content hub insight for userId: ${userId}:`, error);
+    return c.json({ success: false, error: "Failed to save content hub insight" }, 500);
+  }
+});
+
+// Get content hub insights for a user
+app.get("/api/users/:id/content-hub-insights", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  try {
+    const insights = await ctx.runQuery(api.contentHub.getByUserId, { userId });
+    return c.json({ success: true, data: insights });
+  } catch (error) {
+    console.error("Failed to get content hub insights:", error);
+    return c.json({ success: false, error: "Failed to get content hub insights" }, 500);
+  }
+});
+
+// Get most recent content hub insight for a user
+app.get("/api/users/:id/content-hub-insights/latest", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  try {
+    const insight = await ctx.runQuery(api.contentHub.getMostRecentByUserId, { userId });
+    return c.json({ success: true, data: insight });
+  } catch (error) {
+    console.error("Failed to get latest content hub insight:", error);
+    return c.json({ success: false, error: "Failed to get latest content hub insight" }, 500);
+  }
+});
+
 // Instagram Analysis Endpoints
 
 // Store Instagram tracker analysis
@@ -1875,6 +1954,119 @@ app.get("/api/gmail/batch_analysis", async (c) => {
   } catch (error) {
     console.error("Failed to fetch Gmail batch analysis:", error);
     return c.json({ success: false, error: "Failed to fetch Gmail batch analysis" }, 500);
+  }
+});
+
+// === COLLISION DETECTION ENDPOINTS ===
+
+// Check Instagram account collision
+app.get("/api/collision/instagram", async (c) => {
+  const { instagramAccountId } = c.req.query();
+  
+  if (!instagramAccountId) {
+    return c.json({ error: "instagramAccountId is required" }, 400);
+  }
+  
+  try {
+    const existingAccount = await c.env.runQuery(api.instagramQueries.getInstagramAccountById, {
+      instagramAccountId: instagramAccountId as string
+    });
+    
+    if (existingAccount) {
+      return c.json({
+        hasCollision: true,
+        platform: "instagram",
+        identifier: instagramAccountId,
+        existingAccount: {
+          userId: existingAccount.userId,
+          username: existingAccount.username,
+          connectedAt: existingAccount.createdAt
+        }
+      });
+    }
+    
+    return c.json({
+      hasCollision: false,
+      platform: "instagram", 
+      identifier: instagramAccountId
+    });
+  } catch (error) {
+    console.error("Error checking Instagram collision:", error);
+    return c.json({ error: "Failed to check collision" }, 500);
+  }
+});
+
+// Check YouTube channel collision
+app.get("/api/collision/youtube", async (c) => {
+  const { channelId } = c.req.query();
+  
+  if (!channelId) {
+    return c.json({ error: "channelId is required" }, 400);
+  }
+  
+  try {
+    const existingChannel = await c.env.runQuery(api.youtubeQueries.getYouTubeChannelById, {
+      channelId: channelId as string
+    });
+    
+    if (existingChannel) {
+      return c.json({
+        hasCollision: true,
+        platform: "youtube",
+        identifier: channelId,
+        existingAccount: {
+          userId: existingChannel.userId,
+          channelTitle: existingChannel.snippet?.title || "Unknown Channel",
+          connectedAt: existingChannel.createdAt
+        }
+      });
+    }
+    
+    return c.json({
+      hasCollision: false,
+      platform: "youtube",
+      identifier: channelId
+    });
+  } catch (error) {
+    console.error("Error checking YouTube collision:", error);
+    return c.json({ error: "Failed to check collision" }, 500);
+  }
+});
+
+// Check Gmail account collision
+app.get("/api/collision/gmail", async (c) => {
+  const { email } = c.req.query();
+  
+  if (!email) {
+    return c.json({ error: "email is required" }, 400);
+  }
+  
+  try {
+    const existingAccount = await c.env.runQuery(api.gmailQueries.getGmailAccountByEmailGlobal, {
+      email: email as string
+    });
+    
+    if (existingAccount) {
+      return c.json({
+        hasCollision: true,
+        platform: "gmail",
+        identifier: email,
+        existingAccount: {
+          userId: existingAccount.userId,
+          email: existingAccount.email,
+          connectedAt: existingAccount.createdAt
+        }
+      });
+    }
+    
+    return c.json({
+      hasCollision: false,
+      platform: "gmail",
+      identifier: email
+    });
+  } catch (error) {
+    console.error("Error checking Gmail collision:", error);
+    return c.json({ error: "Failed to check collision" }, 500);
   }
 });
 

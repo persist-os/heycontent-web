@@ -84,6 +84,28 @@ export default defineSchema({
   })
   .index("by_userId", ["userId"]),
 
+  // Content Hub Insights
+  contentHubInsights: defineTable({
+    userId: v.string(),
+    insight: v.object({
+      remix_insight: v.string(),
+      youtube_hook: v.string(),
+      youtube_format: v.string(),
+      youtube_cta: v.string(),
+      instagram_hook: v.string(),
+      instagram_format: v.string(),
+      instagram_cta: v.string(),
+      gmail_hook: v.string(),
+      gmail_format: v.string(),
+      gmail_cta: v.string(),
+      smartnote_summary: v.string(),
+      conversation_starter: v.string(),
+    }),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_userId", ["userId"]),
+
   // Personas
   personas: defineTable({
     current_name: v.string(),
@@ -472,7 +494,8 @@ export default defineSchema({
     updatedAt: v.number(),
   })
   .index("by_userId", ["userId"])
-  .index("by_username", ["username"]),
+  .index("by_username", ["username"])
+  .index("by_instagramAccountId", ["instagramAccountId"]),
 
   // Instagram Posts
   instagramPosts: defineTable({

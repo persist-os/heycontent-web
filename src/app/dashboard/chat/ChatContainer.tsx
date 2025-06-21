@@ -48,6 +48,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   const [user, setUser] = useState<any>(null)
   const [userId, setUserId] = useState<string | undefined>()
   const [userEmail, setUserEmail] = useState<string | undefined>()
+  const [updatePersonaRequested, setUpdatePersonaRequested] = useState(false);
   const { isExpanded, setIsExpanded } = useSidebar()
   
   // Track which conversation has been loaded to prevent infinite loops
@@ -142,6 +143,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
     if (isPersonaCompleted) {
       console.log('🎭 Persona completion detected in chat flow!');
+      setUpdatePersonaRequested(false);
   
     }
   }, [messages, userId]);
@@ -194,6 +196,16 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   const handleActionClick = (action: string) => {
     handleSendMessage(action);
   };
+  
+  // Modified handleSendMessage to detect persona update request
+  const handleSendMessageWithUpdateCheck = (message: string) => {
+    if (message.toLowerCase().trim() === 'hey content update persona') {
+      console.log('Persona update requested by user.');
+      setUpdatePersonaRequested(true);
+    }
+    handleSendMessage(message);
+  }
+
   // Handle new chat: this is the ONLY way to start a truly fresh conversation.
   // Clears all chat state and ensures the next message will start a new backend session/conversation.
   const handleNewChat = () => {
@@ -203,6 +215,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     if (handleClearReference) {
       handleClearReference();
     }
+    setUpdatePersonaRequested(false);
     // CRITICAL: Reset state for a new chat session
     console.log('Initializing new chat session...');
     
@@ -263,15 +276,15 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       
       // Send the message with a small delay to ensure context is properly set
       setTimeout(() => {
-        handleSendMessage(askQuery);
+        handleSendMessageWithUpdateCheck(askQuery);
       }, 100);
     }
   }, [askQuery, isLoading, welcome, handleSendMessage, messages.length, user, currentContext]);
   
   // Handle insight clicks by sending the action as a message
   const handleInsightClick = useCallback((action: string, insight: any) => {
-    handleSendMessage(action);
-  }, [handleSendMessage]);
+    handleSendMessageWithUpdateCheck(action);
+  }, [handleSendMessageWithUpdateCheck]);
 
   // Authentication effect
   const { firebaseUser, getToken } = useAuth();
@@ -459,7 +472,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                         onRemove={handleRemoveContext}
                         includeAnalysisInQuery={includeAnalysisInQuery}
                         onToggleAnalysis={setIncludeAnalysisInQuery}
-                        onSendMessage={handleSendMessage}
+                        onSendMessage={handleSendMessageWithUpdateCheck}
                         onInputPopulate={handleInputAppend}
                       />
                     ) : (
@@ -469,7 +482,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                         onRemove={handleRemoveContext}
                         includeAnalysisInQuery={includeAnalysisInQuery}
                         onToggleAnalysis={setIncludeAnalysisInQuery}
-                        onSendMessage={handleSendMessage}
+                        onSendMessage={handleSendMessageWithUpdateCheck}
                         onInputPopulate={handleInputAppend}
                       />
                     )
@@ -484,17 +497,17 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                     handleFollowUpClick={handleFollowUpPopulate}
                     userId={userId}
                     handleSuggestionClick={handleSuggestionClick}
-                    handleSendMessage={handleSendMessage}
+                    handleSendMessage={handleSendMessageWithUpdateCheck}
                     onInputPopulate={handleInputAppend}
                     notepadOpen={notepadOpen}
                     onQuoteToNotepad={handleQuoteToNotepad}
                   />
 
-                  {/* Show persona tip in onboarding flow when ready and at least 4 messages exist */}
-                  {onboardingState.shouldShowPersonaTip && messages.length >= 4 && !onboardingState.hasCompletedPersona && (
+                  {/* Show persona tip in onboarding flow when ready and at least 4 messages exist OR when update is requested */}
+                  {(updatePersonaRequested || (onboardingState.shouldShowPersonaTip && messages.length >= 4)) && !onboardingState.hasCompletedPersona && (
                     <PersonaTip
                       userId={userId}
-                      onTipClick={handleSendMessage}
+                      onTipClick={handleSendMessageWithUpdateCheck}
                     />
                   )}
 
@@ -521,7 +534,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                   handleNewChat();
                   setTimeout(() => {
                     if (context) setContentContext(context);
-                    handleSendMessage(msg);
+                    handleSendMessageWithUpdateCheck(msg);
                   }, 0);
                 }}
               />
@@ -540,7 +553,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             showAmbient={false}
             currentContext={currentContext}
             handleActionClick={handleActionClick}
-            handleSendMessage={handleSendMessage}
+            handleSendMessage={handleSendMessageWithUpdateCheck}
             inputRef={inputRef}
             isLoading={isLoading}
             referencedMessage={referencedMessage}

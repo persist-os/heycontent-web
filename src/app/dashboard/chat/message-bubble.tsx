@@ -157,7 +157,7 @@ export function MessageBubble({
      message.metadata?.persona_created === true ||
      // Fallback: check if message content suggests persona creation completed
      (message.content && (
-       message.content.includes('🎭 *Your Content Persona*') ||
+       message.content.includes('*Your Content Persona*') ||
        message.content.includes('Content Persona') ||
        (message.content.includes('persona') && message.content.includes('guide your content creation'))
      )));

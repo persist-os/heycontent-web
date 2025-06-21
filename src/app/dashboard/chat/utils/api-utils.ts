@@ -898,13 +898,12 @@ export async function sendChatMessage(
 
   // Get user ID directly from Firebase/cookies (much simpler!)
   const { getCurrentUserId } = await import('@/app/lib/api-helpers');
-  const userId = getCurrentUserId();
+  const userId = await getCurrentUserId();
   
   console.log('🐛 [DEBUG] Got user ID directly:', userId);
 
   // Perform vector search if we have a user ID
   let vectorSearchResults: VectorSearchResponse | null = null;
-  let enhancedQuery = content;
   
   console.log('🐛 [DEBUG] Vector search conditions check:', {
     hasUserId: !!userId,
@@ -929,18 +928,6 @@ export async function sendChatMessage(
       hasContext: !!(vectorSearchResults && vectorSearchResults.context),
       itemCount: vectorSearchResults?.relevantContent?.length || 0
     });
-    
-    if (vectorSearchResults && vectorSearchResults.context) {
-      // Inject the vector search context into the query
-      enhancedQuery = `Based on the user's previous content and context:\n\n${vectorSearchResults.context}\n\n---\n\nUser query: ${content}\n\nPlease provide a helpful response that takes into account the user's existing content and context. If the retrieved content is relevant, reference it naturally in your response.`;
-      
-      console.log('Enhanced Query with Vector Context:', {
-        originalQuery: content,
-        contextLength: vectorSearchResults.context.length,
-        relevantItems: vectorSearchResults.relevantContent.length,
-        enhancedQueryPreview: enhancedQuery.substring(0, 200) + '...'
-      });
-    }
   } else {
     console.log('🐛 [DEBUG] SKIPPING VECTOR SEARCH - conditions not met:', {
       reason: !userId ? 'No user ID' : !useContextSearch ? 'Context search disabled' : 'Unknown'
@@ -952,22 +939,24 @@ export async function sendChatMessage(
   const isFirstMessageBool = isFirstMessage;
   
   const requestBody: any = {
-    query: enhancedQuery, // Use enhanced query with vector context
-    is_first_message: isFirstMessageBool
+    query: content, // Use the original, clean query
+    is_first_message: isFirstMessageBool,
+    use_vector_search: useContextSearch // Explicitly pass the flag
   };
 
   // Add context injection flag to help backend understand the message type
-  if (hasContextInjection || vectorSearchResults) {
+  if (hasContextInjection || (vectorSearchResults && vectorSearchResults.context)) {
     requestBody.has_context_injection = true;
     requestBody.context_enhanced = true;
   }
 
   // Add vector search metadata if available
-  if (vectorSearchResults) {
+  if (vectorSearchResults && vectorSearchResults.context) {
     requestBody.vector_search_metadata = {
       foundRelevantContent: true,
       relevantItemsCount: vectorSearchResults.relevantContent.length,
-      searchQuery: content // Store original query
+      searchQuery: content, // Store original query
+      context: vectorSearchResults.context // Pass the context separately
     };
   }
 
