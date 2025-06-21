@@ -224,7 +224,7 @@ export const getRecentGmailThreads = query({
 export const getUnreviewedGmailThreads = query({
   args: { userId: v.string(), limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    let q = ctx.db
+    const q = ctx.db
       .query("gmailThreads")
       .withIndex("by_userId", q => q.eq("userId", args.userId))
       .filter(q => q.eq(q.field("spamStatus"), "unreviewed"))
@@ -573,6 +573,39 @@ export const debugGmailData = query({
         threads: 0,
         messages: 0
       };
+    }
+  },
+});
+
+// Get 3 most recent Gmail threads for content hub
+export const getRecentThreadsForContentHub = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    try {
+      // Get 3 most recent threads
+      const threads = await ctx.db
+        .query("gmailThreads")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .order("desc")
+        .take(3);
+
+      // Return threads with essential data for content analysis
+      const threadsForAnalysis = threads.map(thread => ({
+        id: thread.threadId,
+        subject: thread.data?.subject || thread.subject || 'No Subject',
+        snippet: thread.data?.snippet || thread.snippet || '',
+        from: thread.data?.from || thread.from || 'Unknown Sender',
+        to: thread.data?.to || '',
+        messageCount: thread.message_count || 1,
+        timestamp: thread.createdAt || Date.now(),
+        email: thread.email
+      }));
+
+      console.log(`[getRecentThreadsForContentHub] Found ${threads.length} threads for user ${args.userId}`);
+      return threadsForAnalysis;
+    } catch (error) {
+      console.error('Error getting recent threads for content hub:', error);
+      return [];
     }
   },
 });
