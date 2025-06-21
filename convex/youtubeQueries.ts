@@ -399,3 +399,36 @@ export const getYouTubeChannelById = query({
     }
   },
 });
+
+// Get 3 most recent YouTube videos with analysis for content hub
+export const getRecentVideosWithAnalysis = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    try {
+      // Get 3 most recent videos
+      const videos = await ctx.db
+        .query("youtubeVideos")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .order("desc")
+        .take(3);
+
+      // Return videos with their analysis data
+      const videosWithAnalysis = videos.map(video => ({
+        id: video.videoId,
+        title: video.snippet?.title || 'Untitled Video',
+        description: video.snippet?.description || '',
+        publishedAt: video.snippet?.published_at || video.createdAt,
+        thumbnail: video.snippet?.thumbnails?.high || video.snippet?.thumbnails?.medium || '',
+        statistics: video.statistics || {},
+        analysis: video.analysis || null,
+        analysisMarkdown: video.analysisMarkdown || null
+      }));
+
+      console.log(`[getRecentVideosWithAnalysis] Found ${videos.length} videos for user ${args.userId}`);
+      return videosWithAnalysis;
+    } catch (error) {
+      console.error('Error getting recent videos with analysis:', error);
+      return [];
+    }
+  },
+});

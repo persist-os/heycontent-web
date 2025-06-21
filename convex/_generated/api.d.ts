@@ -20,6 +20,7 @@ import type * as apiKeysQueries from "../apiKeysQueries.js";
 import type * as backfillInstagramTokenUsernames from "../backfillInstagramTokenUsernames.js";
 import type * as chatMutations from "../chatMutations.js";
 import type * as chatQueries from "../chatQueries.js";
+import type * as contentHub from "../contentHub.js";
 import type * as gmailMutations from "../gmailMutations.js";
 import type * as gmailQueries from "../gmailQueries.js";
 import type * as http from "../http.js";
@@ -58,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   backfillInstagramTokenUsernames: typeof backfillInstagramTokenUsernames;
   chatMutations: typeof chatMutations;
   chatQueries: typeof chatQueries;
+  contentHub: typeof contentHub;
   gmailMutations: typeof gmailMutations;
   gmailQueries: typeof gmailQueries;
   http: typeof http;

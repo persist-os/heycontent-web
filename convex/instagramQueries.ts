@@ -607,3 +607,38 @@ export const getInstagramAccountById = query({
     }
   },
 });
+
+// Get 3 most recent Instagram posts with analysis for content hub
+export const getRecentPostsWithAnalysis = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    try {
+      // Get 3 most recent posts
+      const posts = await ctx.db
+        .query("instagramPosts")
+        .withIndex("by_userId", q => q.eq("userId", args.userId))
+        .order("desc")
+        .take(3);
+
+      // Return posts with their analysis data
+      const postsWithAnalysis = posts.map(post => ({
+        id: post.postId,
+        caption: post.data?.caption || '',
+        mediaType: post.data?.media_type || 'UNKNOWN',
+        mediaUrl: post.data?.media_url || '',
+        permalink: post.data?.permalink || '',
+        timestamp: post.data?.timestamp || post.createdAt,
+        likeCount: post.data?.like_count || 0,
+        commentsCount: post.data?.comments_count || 0,
+        analysis: post.analysis || null,
+        analysisMarkdown: post.analysisMarkdown || null
+      }));
+
+      console.log(`[getRecentPostsWithAnalysis] Found ${posts.length} posts for user ${args.userId}`);
+      return postsWithAnalysis;
+    } catch (error) {
+      console.error('Error getting recent posts with analysis:', error);
+      return [];
+    }
+  },
+});
