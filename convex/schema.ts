@@ -168,6 +168,16 @@ export default defineSchema({
     )),
     tags: v.array(v.string()),
     analysis: v.optional(v.string()),
+    images: v.optional(v.array(v.object({
+      url: v.string(),
+      filename: v.string(),
+      originalFilename: v.optional(v.string()),
+      uploadedAt: v.number(),
+      size: v.optional(v.number()),
+      mimeType: v.optional(v.string()),
+      width: v.optional(v.number()),
+      height: v.optional(v.number())
+    }))),
     createdAt: v.number(),
     updatedAt: v.number(),
     titleGenerated: v.optional(v.boolean()),
