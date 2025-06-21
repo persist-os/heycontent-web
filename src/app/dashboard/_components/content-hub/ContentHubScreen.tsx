@@ -414,7 +414,7 @@ export function ContentHubScreen() {
                   All Platforms
                 </TabsTrigger>
                 <TabsTrigger value="youtube" className="flex items-center gap-2">
-                  <YouTubeBrandIcon href="#" className="w-4 h-4" />
+                  <YouTubeBrandIcon href="https://youtube.com/" className="w-4 h-4" />
                   YouTube
                 </TabsTrigger>
                 <TabsTrigger value="instagram" className="flex items-center gap-2">

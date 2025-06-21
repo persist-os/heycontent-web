@@ -93,7 +93,7 @@ export function YouTubePlatform({ userId, currentQuote, loading }: YouTubePlatfo
             onClick={() => window.location.href = '/settings?tab=integrations'}
             className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
           >
-            <YouTubeBrandIcon href={null} className="w-4 h-4" />
+            <YouTubeBrandIcon href="https://youtube.com/" className="w-4 h-4" />
             Connect YouTube
           </Button>
         </div>
