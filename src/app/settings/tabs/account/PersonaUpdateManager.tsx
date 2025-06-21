@@ -87,18 +87,20 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
 
   if (!hasPersona) {
     return (
-      <div className="text-center py-12 space-y-4">
+      <div className="text-center py-12 px-4 space-y-6">
         <div className="w-12 h-12 bg-gray-100 rounded-lg mx-auto flex items-center justify-center">
           <Plus className="w-6 h-6 text-gray-400" />
         </div>
-        <div>
-          <p className="font-medium text-gray-900">No persona yet</p>
-          <p className="text-sm text-gray-500 mt-1 mb-3">
-            Create your first persona in chat to get started
-          </p>
+        <div className="space-y-4">
+          <div>
+            <p className="font-medium text-gray-900 text-lg">No persona yet</p>
+            <p className="text-sm text-gray-500 mt-2 leading-relaxed max-w-sm mx-auto">
+              Create your first persona in chat to get started
+            </p>
+          </div>
           <Button 
             onClick={() => window.location.href = '/dashboard/chat?ask=hey%20content%20persona'}
-            className="mt-2"
+            className="w-full sm:w-auto min-h-[48px] px-6"
           >
             Create Persona in Chat
           </Button>
@@ -111,28 +113,38 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
     <div className="space-y-6">
       {/* Current Persona */}
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <div>
+        <div className="flex flex-col space-y-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0 mb-6">
+          <div className="space-y-1">
             <h2 className="text-lg font-semibold text-gray-900">Your Persona</h2>
             <p className="text-sm text-gray-500">Current active version</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-2">
             <Button
               variant={isEditMode ? 'default' : 'outline'}
               size="sm"
               onClick={isEditMode ? handleSave : handleEdit}
+              className="min-h-[44px] w-full sm:w-auto"
             >
-              <Edit2 className="w-4 h-4 mr-1" />
+              <Edit2 className="w-4 h-4 mr-2" />
               {isEditMode ? 'Save' : 'Edit'}
             </Button>
             {isEditMode && (
-              <Button variant="ghost" size="sm" onClick={handleCancel}>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleCancel}
+                className="min-h-[44px] w-full sm:w-auto"
+              >
                 Cancel
               </Button>
             )}
-            {/* New Persona Button beside Edit, only if not editing and prop provided */}
             {!isEditMode && renderNewPersonaButton && (
-              <Button onClick={renderNewPersonaButton} variant="outline" className="text-heycontent-purple border-heycontent-purple hover:bg-heycontent-purple/10" size="sm">
+              <Button 
+                onClick={renderNewPersonaButton} 
+                variant="outline" 
+                className="text-heycontent-purple border-heycontent-purple hover:bg-heycontent-purple/10 min-h-[44px] w-full sm:w-auto" 
+                size="sm"
+              >
                 New Persona
               </Button>
             )}
@@ -149,14 +161,14 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
       {/* History */}
       {hasHistory && (
         <div>
-          <div className="mb-4">
-            <h3 className="font-medium text-gray-900">Previous Versions</h3>
-            <p className="text-sm text-gray-500">
+          <div className="mb-6">
+            <h3 className="font-medium text-gray-900 text-lg">Previous Versions</h3>
+            <p className="text-sm text-gray-500 mt-1">
               {personaHistory.length} previous {personaHistory.length === 1 ? 'version' : 'versions'}
             </p>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             {personaHistory.map((persona, index) => (
               <PersonaHistoryItem
                 key={persona._id}

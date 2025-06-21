@@ -56,6 +56,13 @@ const navItems = [
     icon: FileText,
     href: '/dashboard/notes',
     color: 'text-red-500'
+  },
+  {
+    id: 'self-hub',
+    label: 'Self Hub',
+    icon: Users,
+    href: '/dashboard/self-hub',
+    color: 'text-purple-500'
   }
 ]
 
@@ -170,7 +177,8 @@ export function DashboardNav() {
                           onClick={() => setIsExpanded(false)}
                           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
                               pathname === item.href || 
-                              (item.id === 'content-hub' && (pathname.startsWith('/dashboard/content') || pathname.startsWith('/dashboard/ai-insights')))
+                              (item.id === 'content-hub' && (pathname.startsWith('/dashboard/content') || pathname.startsWith('/dashboard/ai-insights'))) ||
+                              (item.id === 'self-hub' && pathname.startsWith('/dashboard/self-hub'))
                                   ? 'bg-gray-100 font-medium ' + item.color
                                   : 'text-gray-600 hover:bg-gray-50'
                           }`}

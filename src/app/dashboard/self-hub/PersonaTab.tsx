@@ -1,13 +1,14 @@
 'use client'
 
 import React, { useEffect, useState } from 'react';
-import { PersonaUpdateManager } from './account/PersonaUpdateManager';
+import { PersonaUpdateManager } from '@/app/settings/tabs/account/PersonaUpdateManager';
 import { getFirebaseAuth } from '@/app/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 
-const PersonaTab = () => {
+export const PersonaTab = () => {
   const [userId, setUserId] = useState<string | undefined>();
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -16,38 +17,50 @@ const PersonaTab = () => {
       auth = getFirebaseAuth();
     } catch (e) {
       auth = null;
+      setIsLoading(false);
     }
     if (!auth) return;
     
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUserId(firebaseUser?.uid);
+      setIsLoading(false);
     });
     
     return () => unsubscribe();
   }, []);
 
   const handleNewPersona = () => {
-    // Navigate to chat with ask param to autosend the persona update message
     router.push('/dashboard/chat?ask=' + encodeURIComponent('hey content update persona'));
   };
 
-  // Show loading if userId is not yet loaded
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[200px] px-4">
+        <div className="animate-pulse space-y-4 text-center max-w-sm w-full">
+          <div className="w-8 h-8 bg-purple-200 rounded-full mx-auto animate-spin"></div>
+          <p className="text-gray-600 text-sm leading-relaxed">Loading your persona data...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!userId) {
     return (
-      <div className="flex justify-center items-center min-h-[200px]">
-        <div className="animate-pulse space-y-4 text-center">
-          <div className="w-8 h-8 bg-purple-200 rounded-full mx-auto animate-spin"></div>
-          <p className="text-gray-600">Loading your persona data...</p>
+      <div className="flex justify-center items-center min-h-[200px] px-4">
+        <div className="text-center space-y-4 max-w-sm">
+          <p className="text-gray-600 text-sm leading-relaxed">
+            Please sign in to view your persona settings
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-none">
+    <div className="w-full">
       <PersonaUpdateManager userId={userId} renderNewPersonaButton={handleNewPersona} />
     </div>
   );
 };
 
-export default PersonaTab; 
+ 
