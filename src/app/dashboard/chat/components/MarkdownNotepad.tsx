@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, Send, Copy } from 'lucide-react'
+import { X, Send, Copy, Sparkles } from 'lucide-react'
 import { CreateNoteButton } from '@/components/ui/CreateNoteButton'
 
 interface MarkdownNotepadProps {
@@ -113,6 +113,9 @@ export function MarkdownNotepad({ isOpen, onClose, onSendToChat, quotedContent, 
     }
   }
 
+  // Check if content is substantial enough for smart features
+  const hasSmartContent = content.trim().length >= 10;
+
   if (!isOpen) return null
 
   return (
@@ -134,8 +137,14 @@ export function MarkdownNotepad({ isOpen, onClose, onSendToChat, quotedContent, 
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Notes
+            Smart Notes
           </h3>
+          {hasSmartContent && (
+            <div className="flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400">
+              <Sparkles className="w-3 h-3" />
+              <span>AI Ready</span>
+            </div>
+          )}
         </div>
         
         <div className="flex items-center gap-1">
@@ -143,9 +152,17 @@ export function MarkdownNotepad({ isOpen, onClose, onSendToChat, quotedContent, 
           <CreateNoteButton
             content={content}
             onNoteCreate={onClose}
-            title="Create a new smart note"
+            title={hasSmartContent ? "Create smart note with AI-generated title" : "Create a new note"}
+            className={hasSmartContent ? "bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200" : ""}
           >
-            Create Note
+            {hasSmartContent ? (
+              <>
+                <Sparkles className="w-4 h-4 mr-1" />
+                Smart Note
+              </>
+            ) : (
+              "Create Note"
+            )}
           </CreateNoteButton>
 
           {/* Copy Button */}
@@ -193,6 +210,16 @@ export function MarkdownNotepad({ isOpen, onClose, onSendToChat, quotedContent, 
         </div>
       </div>
 
+      {/* Smart Features Hint */}
+      {hasSmartContent && (
+        <div className="px-4 py-2 bg-purple-50 dark:bg-purple-900/20 border-b border-purple-100 dark:border-purple-800 text-xs">
+          <div className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
+            <Sparkles className="w-3 h-3" />
+            <span>AI will generate a smart title and classify your note type</span>
+          </div>
+        </div>
+      )}
+
       {/* Editor */}
       <div className="flex-1">
         <textarea
@@ -211,7 +238,7 @@ Referenced messages appear here when notepad is open."
 
       {/* Footer info */}
       <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-400 dark:text-gray-500 shrink-0">
-        Temporary • Markdown supported
+        {hasSmartContent ? "Smart features enabled • Markdown supported" : "Temporary • Markdown supported"}
       </div>
     </div>
   )

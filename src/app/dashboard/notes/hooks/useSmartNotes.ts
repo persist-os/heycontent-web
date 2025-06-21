@@ -87,25 +87,32 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
       type?: NoteType;
       references?: string[];
       platform?: string;
+      skipAIGeneration?: boolean;
     } = {}
   ): Promise<{ success: boolean; noteId?: Id<"notes">; error?: string }> => {
     if (!userId) {
       return { success: false, error: "User not authenticated" };
     }
 
-    const { title = "Untitled Note", type = "idea_bank", platform = "general" } = options;
+    const { 
+      title = "Untitled Note", 
+      type = "idea_bank", 
+      platform = "general",
+      skipAIGeneration = false 
+    } = options;
 
     console.log("🚀 [saveNote] Starting note creation:", {
       contentLength: content?.length || 0,
       title,
       initialType: type,
       platform,
+      skipAIGeneration,
       userId
     });
 
     try {
       setIsSaving(true);
-      console.log("Creating new note:", { title, contentLength: content?.length || 0 });
+      console.log("Creating new note:", { title, type, contentLength: content?.length || 0 });
 
       // 1. Create the note first
       const noteId = await createNoteConvex({
@@ -124,8 +131,15 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
           title,
           type,
           platform,
+          skipAIGeneration,
           contentPreview: content?.substring(0, 100) + "..."
         });
+        
+        // Skip AI generation if already done (e.g., from chat context)
+        if (skipAIGeneration) {
+          console.log("⏭️ [saveNote] Skipping AI generation - already processed");
+          return { success: true, noteId };
+        }
         
         // 2. Auto-generate title if content is substantial and title is generic
         const shouldGenerateTitle = (
