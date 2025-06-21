@@ -11,6 +11,7 @@ import { GmailPlatformCard } from './GmailPlatformCard';
 import { InstagramPlatformCard } from './InstagramPlatformCard';
 import { EmbeddingManagement } from './EmbeddingManagement';
 import { isError, getAccountDetails, ConnectedAccount } from './platform-utils';
+import { AlertCircle } from 'lucide-react';
 
 export function PlatformConnect() {
   const { firebaseUser } = useAuth();
@@ -158,10 +159,36 @@ export function PlatformConnect() {
   //   return <div className="flex items-center justify-center h-40">Loading platform data...</div>;
   // }
   if (isError(youtubeData)) {
-    return <div className="text-red-500 p-4">Failed to load YouTube data: {youtubeData.error}</div>;
+    return (
+      <div className="space-y-6">
+        <div className="space-y-3">
+          <h2 className="text-2xl font-semibold tracking-tight">Platform Integrations</h2>
+          <p className="text-muted-foreground">We're having trouble loading your YouTube data.</p>
+        </div>
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+          <div className="flex items-center gap-2 text-destructive">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>Failed to load YouTube data: {youtubeData.error}</span>
+          </div>
+        </div>
+      </div>
+    );
   }
   if (isError(instagramData)) {
-    return <div className="text-red-500 p-4">Failed to load Instagram data: {instagramData.error}</div>;
+    return (
+      <div className="space-y-6">
+        <div className="space-y-3">
+          <h2 className="text-2xl font-semibold tracking-tight">Platform Integrations</h2>
+          <p className="text-muted-foreground">We're having trouble loading your Instagram data.</p>
+        </div>
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+          <div className="flex items-center gap-2 text-destructive">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>Failed to load Instagram data: {instagramData.error}</span>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Handle disconnecting a platform
@@ -204,9 +231,14 @@ export function PlatformConnect() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="space-y-2">
-          <h2 className="text-xl font-semibold">Platform Integrations</h2>
-          <p className="text-muted-foreground">Loading connected platforms...</p>
+        <div className="space-y-3">
+          <h2 className="text-2xl font-semibold tracking-tight">Platform Integrations</h2>
+          <p className="text-muted-foreground">Connecting you to your favorite platforms...</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-48 bg-muted/50 rounded-lg border border-border/30 animate-pulse" />
+          ))}
         </div>
       </div>
     );
@@ -214,19 +246,36 @@ export function PlatformConnect() {
 
   return (
     <div key={refetchKey} className="space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-xl font-semibold">Platform Integrations</h2>
-        <p className="text-muted-foreground">
+      <div className="space-y-3">
+        <h2 className="text-2xl font-semibold tracking-tight">Platform Integrations</h2>
+        <p className="text-muted-foreground max-w-3xl">
           Connect your social media accounts to unlock powerful analytics and insights.
           Content will help you track engagement, monitor growth, and identify opportunities across all your platforms.
         </p>
       </div>
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>{connectedAccounts.length} of {PLATFORMS.length} platforms connected</span>
+      
+      {/* Connection Status */}
+      <div className="bg-muted/50 p-4 rounded-lg border">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="space-y-1">
+            <h3 className="font-medium">Connection Status</h3>
+            <p className="text-sm text-muted-foreground">
+              {connectedAccounts.length} of {PLATFORMS.length} platforms connected
+            </p>
+          </div>
+          <div className="w-full sm:w-48 h-2 bg-background rounded-full overflow-hidden">
+            <div 
+              className="h-full transition-all duration-700 ease-out"
+              style={{ 
+                width: `${(connectedAccounts.length / PLATFORMS.length) * 100}%`,
+                background: 'linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(var(--primary)/0.8) 100%)',
+                borderRadius: '9999px'
+              }}
+            />
+          </div>
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {PLATFORMS.map(platform => {
           const account = getAccountDetails(connectedAccounts, platform.id);
           const isConnecting = connecting === platform.id;

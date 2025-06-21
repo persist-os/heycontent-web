@@ -47,7 +47,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ planId, onSuccess, o
   }, []);
 
   return (
-    <div className="w-full bg-white dark:bg-gray-900 rounded-lg shadow-lg p-2 sm:p-4">
+    <div className="w-full bg-card rounded-lg shadow-lg p-2 sm:p-4">
       
       {error && (
         <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-md">

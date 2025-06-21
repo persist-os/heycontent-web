@@ -20,6 +20,8 @@ HeyContent is a web application designed to assist creators and content managers
 - **Framework**: Next.js 15 with App Router
 - **UI Components**: React 18 with TypeScript
 - **Styling**: Tailwind CSS with shadcn/ui components
+- **Theming**: next-themes with CSS variables for light/dark mode support
+- **Design System**: Semantic color tokens with HeyContent Yellow (#FFDF39) as primary accent
 - **Authentication**: Firebase Authentication
 
 ### Backend
@@ -126,3 +128,27 @@ The application interacts with:
 - `npm run build` - Build for production
 - `npm run start` - Start production server
 - `node .next/standalone/server.js` - Start standalone server
+
+## Design System & Theming
+
+HeyContent follows a strict theming approach using semantic CSS variables:
+
+### Color Scheme
+- **Light Mode**: Clean white background (#FFFFFF)
+- **Dark Mode**: Deep charcoal background (#202020) - never navy blue
+- **Primary Accent**: HeyContent Yellow (#FFDF39)
+- **Secondary Colors**: Purple (#9046FF), Green (#45E290)
+
+### Theme Implementation
+- Uses `next-themes` for seamless light/dark/system mode switching
+- All colors defined as CSS variables in `globals.css`
+- Components use semantic tokens (`bg-background`, `text-foreground`, etc.)
+- No hardcoded color values in component code
+- Proper accessibility support with ARIA labels and focus states
+
+### Theme Toggle
+Located in navigation areas, supports:
+- Light mode (sun icon)
+- Dark mode (moon icon)  
+- System preference (monitor icon)
+- Automatic hydration handling to prevent flash

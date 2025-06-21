@@ -74,7 +74,10 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
         value={content}
         onChange={handleChange}
         onKeyDown={onKeyDown}
-        className="w-full h-full min-h-[300px] resize-none p-4 text-base leading-relaxed border-0 focus:outline-none focus:ring-0 bg-white"
+        className="w-full h-full min-h-[300px] resize-none p-4 text-base leading-relaxed 
+          bg-background text-foreground placeholder:text-muted-foreground/50
+          border-0 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2
+          transition-colors duration-200 rounded-md"
         placeholder={placeholder}
         disabled={disabled}
         spellCheck={true}

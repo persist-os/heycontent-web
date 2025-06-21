@@ -136,7 +136,7 @@ export const CreateNoteButton = React.forwardRef<HTMLButtonElement, CreateNoteBu
           onClick={generatePreview}
           disabled={!content.trim() || isCreating || isGeneratingPreview || props.disabled}
           variant="ghost"
-          className={cn("text-xs bg-gray-100 dark:bg-gray-800", className)}
+          className={cn("text-xs bg-secondary", className)}
           {...props}
         >
           {isGeneratingPreview ? (
@@ -160,13 +160,14 @@ export const CreateNoteButton = React.forwardRef<HTMLButtonElement, CreateNoteBu
         {/* Preview Dialog */}
         {showPreview && notePreview && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
+            <div className="bg-background border border-border rounded-lg p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold">Preview Note</h3>
-                <button
-                  onClick={() => setShowPreview(false)}
-                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                >
+                                  <button
+                    title="Close"
+                    onClick={() => setShowPreview(false)}
+                    className="p-1 hover:bg-muted rounded"
+                  >
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -174,12 +175,12 @@ export const CreateNoteButton = React.forwardRef<HTMLButtonElement, CreateNoteBu
               {/* Title Section */}
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label className="text-sm font-medium text-foreground">
                     Title
                   </label>
                   <button
                     onClick={() => setEditingTitle(!editingTitle)}
-                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                    className="p-1 hover:bg-muted rounded"
                     title={editingTitle ? "Save title" : "Edit title"}
                   >
                     {editingTitle ? <Check className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
@@ -190,11 +191,11 @@ export const CreateNoteButton = React.forwardRef<HTMLButtonElement, CreateNoteBu
                     type="text"
                     value={customTitle}
                     onChange={(e) => setCustomTitle(e.target.value)}
-                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm"
+                    className="w-full p-2 border border-border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring"
                     placeholder="Enter custom title..."
                   />
                 ) : (
-                  <div className="p-2 bg-gray-50 dark:bg-gray-700 rounded-md text-sm">
+                  <div className="p-2 bg-muted rounded-md text-sm">
                     {customTitle}
                   </div>
                 )}
@@ -202,7 +203,7 @@ export const CreateNoteButton = React.forwardRef<HTMLButtonElement, CreateNoteBu
 
               {/* Type Section */}
               <div className="mb-4">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
+                <label className="text-sm font-medium text-foreground block mb-2">
                   Type
                 </label>
                 <span className={cn(
@@ -215,10 +216,10 @@ export const CreateNoteButton = React.forwardRef<HTMLButtonElement, CreateNoteBu
 
               {/* Content Preview */}
               <div className="mb-6">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
+                <label className="text-sm font-medium text-foreground block mb-2">
                   Content Preview
                 </label>
-                <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-md text-sm max-h-32 overflow-y-auto">
+                <div className="p-3 bg-muted rounded-md text-sm max-h-32 overflow-y-auto">
                   {notePreview.content.length > 200 
                     ? notePreview.content.substring(0, 200) + "..."
                     : notePreview.content

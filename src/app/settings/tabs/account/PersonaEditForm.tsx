@@ -11,10 +11,10 @@ interface PersonaEditFormProps {
 }
 
 const Section: React.FC<{ title: string; description: string; children: React.ReactNode }> = ({ title, description, children }) => (
-    <div className="py-6 border-b border-gray-200 last:border-b-0">
+    <div className="py-6 border-b border-border last:border-b-0">
         <div className="mb-4">
-            <h3 className="text-base font-semibold text-gray-900">{title}</h3>
-            <p className="text-sm text-gray-500">{description}</p>
+            <h3 className="text-base font-semibold text-foreground">{title}</h3>
+            <p className="text-sm text-muted-foreground">{description}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
             {children}
@@ -41,7 +41,7 @@ const EditableField: React.FC<{
 
   return (
     <div className="space-y-2">
-      <Label htmlFor={String(field)} className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+      <Label htmlFor={String(field)} className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
         {label}
       </Label>
       <Input
@@ -82,7 +82,7 @@ const EditableTextarea: React.FC<{
 
     return (
         <div className="space-y-2">
-            <Label htmlFor={String(field)} className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <Label htmlFor={String(field)} className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 {label}
             </Label>
             <Textarea
@@ -108,10 +108,10 @@ export const PersonaEditForm: React.FC<PersonaEditFormProps> = ({ persona, onUpd
   };
   
   return (
-    <div className="bg-white rounded-lg">
+    <div className="bg-card rounded-lg">
       <div className="p-6">
         <div className="space-y-2 mb-6">
-            <Label htmlFor="current_name" className="text-xs font-medium text-gray-500 uppercase tracking-wider">Persona Name</Label>
+            <Label htmlFor="current_name" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Persona Name</Label>
             <Input
                 id="current_name"
                 value={persona.current_name}
@@ -121,7 +121,7 @@ export const PersonaEditForm: React.FC<PersonaEditFormProps> = ({ persona, onUpd
             />
         </div>
         <div className="space-y-2">
-            <Label htmlFor="current_description" className="text-xs font-medium text-gray-500 uppercase tracking-wider">Description</Label>
+            <Label htmlFor="current_description" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Description</Label>
             <Textarea
                 id="current_description"
                 value={persona.current_description}

@@ -15,7 +15,7 @@ export default function ChatHeader({
   isAuthenticated = true
 }: ChatHeaderProps) {
   return (
-    <div className="flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-800">
+    <div className="flex items-center justify-between px-4 py-2 bg-background border-b border-border">
       {/* Left side - placeholder for future content */}
       <div className="flex-1">
         {rightContent}
@@ -23,7 +23,7 @@ export default function ChatHeader({
       
       {/* Center - Title */}
       <div className="flex-1 flex justify-center">
-        <h1 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+        <h1 className="text-lg font-semibold text-foreground">
           Chat With Content
         </h1>
       </div>
@@ -34,9 +34,9 @@ export default function ChatHeader({
           onClick={onNewChat}
           disabled={isRefreshing || !isAuthenticated}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200
-            text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100
-            hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600
-            hover:border-gray-300 dark:hover:border-gray-500 text-sm font-medium
+            text-muted-foreground hover:text-foreground
+            hover:bg-secondary border border-border
+            hover:border-primary/20 text-sm font-medium
             ${(isRefreshing || !isAuthenticated) ? 'opacity-50 cursor-not-allowed' : ''}`}
           aria-label="New conversation"
           title="Start new conversation"

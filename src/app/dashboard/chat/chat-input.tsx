@@ -173,15 +173,15 @@ export function ChatInput({
   }
 
   return (
-    <div className="shrink-0 bg-white dark:bg-gray-800">
+    <div className="shrink-0 bg-background">
       <form onSubmit={handleSubmit} className="p-2 sm:p-3">
         {/* Context indicator */}
         {hasContext && (
           <div className="w-full mb-2">
             <div className={`flex items-center gap-2 text-xs p-2 rounded-lg border ${
               hasAnalysis 
-                ? 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-700'
-                : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700'
+                ? 'text-primary dark:text-accent bg-primary/10 dark:bg-accent/10 border-primary/20 dark:border-accent/20'
+                : 'text-primary dark:text-accent bg-primary/10 dark:bg-accent/10 border-primary/20 dark:border-accent/20'
             }`}>
               <Search className="w-4 h-4 flex-shrink-0" />
               <span className="break-words">
@@ -197,11 +197,11 @@ export function ChatInput({
         {/* Reference preview */}
         {referencedMessage && !notepadOpen && (
           <div className="w-full mb-2">
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400 bg-gray-50/80 dark:bg-gray-800/40 p-2 rounded-lg border border-gray-200/50 dark:border-gray-700/50">
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground bg-muted/80 p-2 rounded-lg border border-border/50">
               <MessageSquare className="w-4 h-4 flex-shrink-0" />
               <button 
                 onClick={() => setShowFullReply(!showFullReply)}
-                className="flex-1 text-left hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                className="flex-1 text-left hover:text-foreground transition-colors"
               >
                 <span className={showFullReply ? "break-words whitespace-pre-wrap" : "truncate block"}>
                   Replying to: {showFullReply 
@@ -216,7 +216,7 @@ export function ChatInput({
                   setShowFullReply(false)
                   onClearReference?.()
                 }}
-                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1.5 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700/50 flex-shrink-0 transition-colors"
+                className="text-muted-foreground hover:text-foreground p-1.5 rounded-full hover:bg-muted flex-shrink-0 transition-colors"
                 aria-label="Clear reply"
               >
                 <span className="text-base font-medium">×</span>
@@ -228,11 +228,11 @@ export function ChatInput({
         {/* Reference notification when notepad is open */}
         {referencedMessage && notepadOpen && (
           <div className="w-full mb-2">
-            <div className="flex items-center gap-3 text-xs text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-200/50 dark:border-gray-700/50">
-              <FileText className="w-4 h-4 flex-shrink-0 text-gray-500 dark:text-gray-400" />
+            <div className="flex items-center gap-3 text-xs text-foreground bg-muted/50 p-3 rounded-lg border border-border/50">
+              <FileText className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
               <button 
                 onClick={handleReferenceClick}
-                className="flex-1 text-left hover:text-gray-900 dark:hover:text-gray-100 transition-colors font-medium"
+                className="flex-1 text-left hover:text-foreground transition-colors font-medium"
               >
                 Add quote to notepad
               </button>
@@ -241,7 +241,7 @@ export function ChatInput({
                   setShowFullReply(false)
                   onClearReference?.()
                 }}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded transition-colors"
+                className="text-muted-foreground hover:text-foreground p-1 rounded transition-colors"
                 aria-label="Clear reply"
               >
                 <span className="text-sm">×</span>
@@ -253,11 +253,11 @@ export function ChatInput({
         <div className="flex gap-2 items-end w-full relative">
           <div className="flex-1 relative">
             {/* Top section - Text input area */}
-            <div className={`flex items-center rounded-t-xl transition-all duration-200 bg-gray-50 dark:bg-gray-800 border-2 border-b-0
-              ${isAtLimit ? 'border-red-400 dark:border-red-500' : ''}
-              ${isNearLimit && !isAtLimit ? 'border-amber-400 dark:border-amber-500' : ''}
-              ${!isAtLimit && !isNearLimit ? 'border-transparent hover:border-gray-200 dark:hover:border-gray-600' : ''}
-              focus-within:border-heycontent-yellow focus-within:bg-white dark:focus-within:bg-gray-700
+            <div className={`flex items-center rounded-t-xl transition-all duration-200 bg-muted/50 border-2 border-b-0
+              ${isAtLimit ? 'border-destructive' : ''}
+              ${isNearLimit && !isAtLimit ? 'border-warning' : ''}
+              ${!isAtLimit && !isNearLimit ? 'border-transparent hover:border-border' : ''}
+              focus-within:border-primary dark:focus-within:border-accent focus-within:bg-background
               pl-3 py-2 pr-3
             `}>
               <textarea
@@ -265,21 +265,18 @@ export function ChatInput({
                 value={currentInput}
                 onChange={(e) => setCurrentInput(e.target.value)}
                 placeholder={contextPlaceholder}
-                className="text-base leading-relaxed flex-1 bg-transparent border-0 outline-0 resize-none placeholder:text-gray-500 dark:placeholder:text-gray-400 chat-font 
+                className="text-base leading-relaxed flex-1 bg-transparent border-0 outline-0 resize-none placeholder:text-muted-foreground chat-font 
                 [&::-webkit-scrollbar]:w-2 
                 [&::-webkit-scrollbar]:h-2
                 [&::-webkit-scrollbar-track]:bg-transparent
-                [&::-webkit-scrollbar-thumb]:bg-gray-300 
+                [&::-webkit-scrollbar-thumb]:bg-border 
                 [&::-webkit-scrollbar-thumb]:rounded-full 
                 [&::-webkit-scrollbar-thumb]:border-transparent
                 [&::-webkit-scrollbar-thumb]:bg-clip-padding
-                hover:[&::-webkit-scrollbar-thumb]:bg-gray-400
-                dark:[&::-webkit-scrollbar-thumb]:bg-gray-600
-                dark:hover:[&::-webkit-scrollbar-thumb]:bg-gray-500
+                hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/50
                 [&::-webkit-scrollbar-corner]:bg-transparent
                 [scrollbar-width:thin]
-                [scrollbar-color:rgb(209_213_219)_transparent]
-                dark:[scrollbar-color:rgb(75_85_99)_transparent]"
+                [scrollbar-color:hsl(var(--border))_transparent]"
                 disabled={isLoading || disabled}
                 onKeyDown={handleKeyDown}
                 maxLength={maxLength}
@@ -287,11 +284,11 @@ export function ChatInput({
             </div>
 
             {/* Bottom section - Buttons area */}
-            <div className={`flex items-center justify-between rounded-b-xl transition-all duration-200 bg-gray-50 dark:bg-gray-800 border-2 border-t-0
-              ${isAtLimit ? 'border-red-400 dark:border-red-500' : ''}
-              ${isNearLimit && !isAtLimit ? 'border-amber-400 dark:border-amber-500' : ''}
-              ${!isAtLimit && !isNearLimit ? 'border-transparent hover:border-gray-200 dark:hover:border-gray-600' : ''}
-              focus-within:border-heycontent-yellow focus-within:bg-white dark:focus-within:bg-gray-700
+            <div className={`flex items-center justify-between rounded-b-xl transition-all duration-200 bg-muted/50 border-2 border-t-0
+              ${isAtLimit ? 'border-destructive' : ''}
+              ${isNearLimit && !isAtLimit ? 'border-warning' : ''}
+              ${!isAtLimit && !isNearLimit ? 'border-transparent hover:border-border' : ''}
+              focus-within:border-primary dark:focus-within:border-accent focus-within:bg-background
               px-3 py-2 h-10
             `}>
               {/* Left side - Smart Search */}
@@ -357,8 +354,8 @@ export function ChatInput({
                 {/* Character count */}
                 {!isLoading && (
                   <div className={`text-xs
-                    ${isAtLimit ? 'text-red-500 font-medium' : ''}
-                    ${isNearLimit && !isAtLimit ? 'text-amber-500 font-medium' : 'text-gray-400 dark:text-gray-500'}
+                    ${isAtLimit ? 'text-destructive font-medium' : ''}
+                    ${isNearLimit && !isAtLimit ? 'text-warning font-medium' : 'text-muted-foreground'}
                     transition-colors duration-200
                   `}>
                     {characterCount.toLocaleString()}/{maxLength.toLocaleString()}
@@ -372,7 +369,7 @@ export function ChatInput({
                     onClick={openNotepad}
                     aria-label="Open markdown notepad"
                     title="Open markdown notepad"
-                    className="w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200 text-muted-foreground hover:text-foreground hover:bg-muted"
                   >
                     <FileText className="w-3.5 h-3.5" />
                   </button>
@@ -385,8 +382,8 @@ export function ChatInput({
                   disabled={isLoading || !currentInput.trim() || isAtLimit || disabled}
                   className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200
                     ${isLoading || !currentInput.trim() || isAtLimit || disabled 
-                      ? 'bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-500 cursor-not-allowed' 
-                      : 'bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black shadow-sm hover:shadow-md hover:scale-105 active:scale-95'
+                      ? 'bg-muted text-muted-foreground cursor-not-allowed' 
+                      : 'bg-primary text-primary-foreground hover:bg-primary/90 dark:bg-accent dark:text-accent-foreground dark:hover:bg-accent/90 shadow-sm hover:shadow-md hover:scale-105 active:scale-95'
                     }`}
                 >
                   {isLoading ? (
@@ -399,7 +396,7 @@ export function ChatInput({
             </div>
           </div>
         </div>
-        <div className="mt-1.5 text-xs text-gray-500 text-center">
+        <div className="mt-1.5 text-xs text-muted-foreground text-center">
           Press Enter to send, Shift+Enter for new line
         </div>
       </form>

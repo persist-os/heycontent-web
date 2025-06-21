@@ -52,7 +52,7 @@ export const OverageControlsCard: React.FC<OverageControlsCardProps> = ({
           {saving ? "Saving..." : "Save"}
         </Button>
       </div>
-      <div className="text-xs text-gray-500 mt-1">
+      <div className="text-xs text-muted-foreground mt-1">
         You will never be charged more than this for extra requests in a month. Base plan cost is separate.
       </div>
     </CardContent>

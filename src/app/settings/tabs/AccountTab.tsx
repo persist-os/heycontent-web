@@ -171,15 +171,15 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
       <Card className={cn(
         "transition-all duration-300 ease-in-out",
         isEditMode 
-          ? "bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800" 
-          : "bg-white dark:bg-gray-900"
+          ? "bg-accent/10 border-accent/50" 
+          : "bg-card"
       )}>
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
             <div className="flex items-center gap-3">
               <CardTitle className="text-lg sm:text-xl">Profile Information</CardTitle>
               {isEditMode && (
-                <Badge variant="default" className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                <Badge variant="default" className="bg-accent/20 text-accent-foreground">
                   <Edit2 className="w-3 h-3 mr-1" />
                   Editing
                 </Badge>

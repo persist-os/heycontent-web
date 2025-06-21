@@ -234,22 +234,22 @@ export function ContentHubScreen() {
 
     return (
       <div className="flex items-center justify-center min-h-[400px] px-4">
-        <Card className="p-6 sm:p-8 max-w-md w-full bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl text-center">
+        <Card className="p-6 sm:p-8 max-w-md w-full bg-card shadow-lg rounded-2xl text-center">
           <div className="flex justify-center mb-4 sm:mb-6">
             <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
               <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
             </div>
           </div>
           
-          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
+          <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-2 sm:mb-3">
             No Content Found
           </h3>
           
-          <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
+          <p className="text-muted-foreground mb-4 sm:mb-6 text-sm leading-relaxed">
             Connect your social accounts and email to start seeing content analytics here.
           </p>
           
-          <div className="mt-3 sm:mt-4 text-xs text-gray-500">
+          <div className="mt-3 sm:mt-4 text-xs text-muted-foreground">
             Connect YouTube, Instagram, and Gmail in Settings
           </div>
         </Card>
@@ -294,22 +294,22 @@ export function ContentHubScreen() {
 
     return (
       <div className="flex items-center justify-center min-h-[400px] px-4">
-        <Card className="p-6 sm:p-8 max-w-md w-full bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl text-center">
+        <Card className="p-6 sm:p-8 max-w-md w-full bg-card shadow-lg rounded-2xl text-center">
           <div className="flex justify-center mb-4 sm:mb-6">
             <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 flex items-center justify-center">
               <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
             </div>
           </div>
           
-          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
+          <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-2 sm:mb-3">
             No Insights Available
           </h3>
           
-          <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
+          <p className="text-muted-foreground mb-4 sm:mb-6 text-sm leading-relaxed">
             Connect your accounts and create content to start receiving AI-powered insights and recommendations.
           </p>
           
-          <div className="mt-3 sm:mt-4 text-xs text-gray-500">
+          <div className="mt-3 sm:mt-4 text-xs text-muted-foreground">
             AI insights are generated from your connected platforms
           </div>
         </Card>
@@ -318,15 +318,15 @@ export function ContentHubScreen() {
   }
 
   return (
-    <div className="relative">
+    <div className="relative bg-background">
       {/* Fixed Header */}
-      <div className="shrink-0 px-6 py-4 bg-white dark:bg-gray-900">
+      <div className="shrink-0 px-6 py-4 bg-background border-b border-border">
         <div className="flex justify-between items-center">
           <div className="w-[100px] sm:w-[24px]"></div>
           <div className="flex-1 flex justify-center">
             <div className="text-center">
-              <h1 className="text-base font-medium text-black dark:text-white">Content Hub</h1>
-              <p className="text-text-gray dark:text-gray-400">
+              <h1 className="text-base font-medium text-purple-600 dark:text-accent">Content Hub</h1>
+              <p className="text-muted-foreground">
                 <span className="hidden sm:inline">Your unified content analytics and AI insights dashboard</span>
               </p>
             </div>
@@ -336,7 +336,7 @@ export function ContentHubScreen() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto dark:bg-gray-900">
+      <div className="flex-1 overflow-y-auto">
         <div className="p-6">
           <div className="max-w-7xl mx-auto space-y-6">
             

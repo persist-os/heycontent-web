@@ -120,27 +120,27 @@ export function MarkdownNotepad({ isOpen, onClose, onSendToChat, quotedContent, 
 
   return (
     <div 
-      className="fixed top-0 right-0 h-full bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 z-30 flex flex-col"
+      className="fixed top-0 right-0 h-full bg-background border-l border-border z-30 flex flex-col shadow-lg"
       style={{ ...style, width: `${width}px` }}
     >
       {/* Resize Handle */}
       <div
-        className="absolute left-0 top-0 w-1 h-full cursor-col-resize hover:bg-heycontent-yellow/50 transition-colors group"
+        className="absolute left-0 top-0 w-1 h-full cursor-col-resize hover:bg-primary/20 transition-colors group"
         onMouseDown={(e) => {
           e.preventDefault()
           setIsResizing(true)
         }}
       >
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-12 bg-gray-300 dark:bg-gray-600 group-hover:bg-heycontent-yellow transition-colors rounded-r-sm" />
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-12 bg-border group-hover:bg-primary transition-colors rounded-r-sm" />
       </div>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
+      <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <h3 className="text-sm font-medium text-foreground">
             Smart Notes
           </h3>
           {hasSmartContent && (
-            <div className="flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400">
+            <div className="flex items-center gap-1 text-xs text-primary">
               <Sparkles className="w-3 h-3" />
               <span>AI Ready</span>
             </div>
@@ -153,7 +153,7 @@ export function MarkdownNotepad({ isOpen, onClose, onSendToChat, quotedContent, 
             content={content}
             onNoteCreate={onClose}
             title={hasSmartContent ? "Create smart note with AI-generated title" : "Create a new note"}
-            className={hasSmartContent ? "bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200" : ""}
+            className={hasSmartContent ? "bg-primary/10 text-primary" : ""}
           >
             {hasSmartContent ? (
               <>
@@ -169,7 +169,7 @@ export function MarkdownNotepad({ isOpen, onClose, onSendToChat, quotedContent, 
           <button
             onClick={handleCopy}
             disabled={!content.trim()}
-            className="p-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-1.5 text-muted-foreground hover:text-foreground rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted"
             aria-label="Copy content"
             title="Copy content"
           >
@@ -179,7 +179,7 @@ export function MarkdownNotepad({ isOpen, onClose, onSendToChat, quotedContent, 
           {/* Clear Button */}
           <button
             onClick={handleClear}
-            className="px-2 py-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 rounded transition-colors"
+            className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground rounded-md transition-colors hover:bg-muted"
             title="Clear content"
           >
             Clear
@@ -190,7 +190,7 @@ export function MarkdownNotepad({ isOpen, onClose, onSendToChat, quotedContent, 
             <button
               onClick={handleSendToChat}
               disabled={!content.trim()}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1 px-3 py-1.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               title="Send to chat"
             >
               <Send className="w-3 h-3" />
@@ -212,8 +212,8 @@ export function MarkdownNotepad({ isOpen, onClose, onSendToChat, quotedContent, 
 
       {/* Smart Features Hint */}
       {hasSmartContent && (
-        <div className="px-4 py-2 bg-purple-50 dark:bg-purple-900/20 border-b border-purple-100 dark:border-purple-800 text-xs">
-          <div className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
+        <div className="px-4 py-2 bg-primary/5 border-b border-border text-xs">
+          <div className="flex items-center gap-2 text-primary">
             <Sparkles className="w-3 h-3" />
             <span>AI will generate a smart title and classify your note type</span>
           </div>
@@ -232,12 +232,12 @@ export function MarkdownNotepad({ isOpen, onClose, onSendToChat, quotedContent, 
 > quotes and lists supported
 
 Referenced messages appear here when notepad is open."
-          className="w-full h-full resize-none p-4 text-base leading-relaxed border-0 focus:outline-none focus:ring-0 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
+          className="w-full h-full resize-none p-4 text-base leading-relaxed border-0 focus:outline-none focus:ring-0 bg-background text-foreground placeholder:text-muted-foreground/60"
         />
       </div>
 
       {/* Footer info */}
-      <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-400 dark:text-gray-500 shrink-0">
+      <div className="px-4 py-2 border-t border-border text-xs text-muted-foreground/80 shrink-0">
         {hasSmartContent ? "Smart features enabled • Markdown supported" : "Temporary • Markdown supported"}
       </div>
     </div>

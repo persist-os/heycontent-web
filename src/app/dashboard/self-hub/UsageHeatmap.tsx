@@ -5,9 +5,11 @@ import { useQuery } from 'convex/react';
 import { api } from '@/../convex/_generated/api';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import ActivityCalendar from 'react-activity-calendar';
 import { Calendar, BarChart3, ChevronDown, ChevronUp, Route } from 'lucide-react';
+import { useTheme } from 'next-themes';
 
 interface UsageHeatmapProps {
   userId: string;
@@ -181,7 +183,7 @@ export const UsageHeatmap: React.FC<UsageHeatmapProps> = ({ userId }) => {
 
   // Calculate streak and activity summary like GitHub
   const activitySummary = useMemo(() => {
-    if (!calendarData.length) return { streak: 0, totalDays: 0, mostActiveDay: 0 };
+    if (!calendarData.length) return { streak: 0, totalDays: 0, mostActiveDay: 0, maxStreak: 0 };
     
     let currentStreak = 0;
     let maxStreak = 0;
@@ -220,6 +222,9 @@ export const UsageHeatmap: React.FC<UsageHeatmapProps> = ({ userId }) => {
     };
   }, [calendarData]);
 
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+
   // Show loading state
   if (usageEvents === undefined || usageSummary === undefined) {
     return (
@@ -231,15 +236,12 @@ export const UsageHeatmap: React.FC<UsageHeatmapProps> = ({ userId }) => {
               Activity
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="animate-pulse space-y-6">
-              <div className="h-48 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl"></div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="h-20 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl"></div>
-                <div className="h-20 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl"></div>
-                <div className="h-20 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl"></div>
-                <div className="h-20 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl"></div>
-              </div>
+          <CardContent className="space-y-6">
+            <Skeleton className="h-32 w-full" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
             </div>
           </CardContent>
         </Card>
@@ -250,20 +252,20 @@ export const UsageHeatmap: React.FC<UsageHeatmapProps> = ({ userId }) => {
   return (
     <div className="space-y-6">
       {/* Main Heatmap Card - Much Larger and Modern */}
-      <Card className="border-0 shadow-lg bg-gradient-to-br from-white via-gray-50/30 to-white">
+      <Card className="border-0 shadow-lg bg-gradient-to-br from-background via-muted/30 to-background">
         <CardHeader className="pb-6">
           <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
             <div className="space-y-1">
               <CardTitle className="flex items-center gap-3 text-xl">
-                <BarChart3 className="w-6 h-6 text-[#5b36ff]" />
+                <BarChart3 className={cn("w-6 h-6", isDark ? "text-yellow-400" : "text-purple-600")} />
                 Activity
               </CardTitle>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 {stats.totalRequests.toLocaleString()} requests in {timeRange === '365d' ? 'the last year' : `the last ${timeRange.replace('d', ' days')}`}
               </p>
             </div>
-            <div className="flex items-center gap-3 bg-white/80 rounded-lg px-4 py-2 border border-gray-200/60">
-              <Calendar className="w-4 h-4 text-gray-500" />
+            <div className="flex items-center gap-3 bg-background/80 rounded-lg px-4 py-2 border">
+              <Calendar className="w-4 h-4 text-muted-foreground" />
               <select
                 value={timeRange}
                 onChange={(e) => setTimeRange(e.target.value as '30d' | '90d' | '365d')}
@@ -277,58 +279,48 @@ export const UsageHeatmap: React.FC<UsageHeatmapProps> = ({ userId }) => {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-8">
-          {/* Large Heatmap with GitHub-style layout */}
-          <div className="w-full">
-            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-              <div className="min-w-fit p-6 bg-white/60 rounded-2xl border border-gray-200/40">
-                <ActivityCalendar
-                  data={calendarData}
-                  theme={{
-                    light: [
-                      '#f8fafc', // Very light gray (level 0)
-                      '#e2e8f0', // Light gray (level 1) 
-                      '#a855f7', // Medium purple (level 2)
-                      '#7c3aed', // Darker purple (level 3)
-                      '#5b21b6'  // Darkest purple (level 4)
-                    ],
-                    dark: [
-                      '#1e293b',
-                      '#334155', 
-                      '#a855f7',
-                      '#7c3aed',
-                      '#5b21b6'
-                    ]
-                  }}
-                  colorScheme="light"
-                  labels={{
-                    totalCount: `{{count}} requests in ${timeRange === '365d' ? 'the last year' : `the last ${timeRange.replace('d', ' days')}`}`,
-                  }}
-                  showWeekdayLabels={true}
-                  fontSize={calendarSettings.fontSize}
-                  blockSize={calendarSettings.blockSize}
-                  blockMargin={calendarSettings.blockMargin}
-                  blockRadius={calendarSettings.blockRadius}
-                  style={{ 
-                    fontSize: `${calendarSettings.fontSize}px`,
-                    color: '#374151'
-                  }}
-                />
+        <CardContent className="space-y-6">
+          {/* Heatmap */}
+          <div className="w-full overflow-hidden">
+            <div className="overflow-x-auto py-4">
+              <div className="min-w-fit flex justify-center">
+                <div className="max-w-full">
+                  <ActivityCalendar
+                    data={calendarData}
+                    theme={{
+                      light: ['hsl(var(--muted))', 'hsl(262.1 83.3% 57.8%)'], // Purple for light mode
+                      dark: ['hsl(var(--muted))', 'hsl(47.9 95.8% 67.1%)'] // Yellow for dark mode
+                    }}
+                    colorScheme={isDark ? 'dark' : 'light'}
+                    labels={{
+                      totalCount: `{{count}} requests in ${timeRange === '365d' ? 'the last year' : `the last ${timeRange.replace('d', ' days')}`}`,
+                    }}
+                    showWeekdayLabels
+                    fontSize={calendarSettings.fontSize}
+                    blockSize={calendarSettings.blockSize}
+                    blockMargin={calendarSettings.blockMargin}
+                    blockRadius={calendarSettings.blockRadius}
+                    style={{ 
+                      fontSize: `${calendarSettings.fontSize}px`,
+                      maxWidth: '100%'
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
 
           {/* GitHub-style activity summary */}
-          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 bg-gray-50/50 rounded-xl p-4">
+          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground bg-muted/50 rounded-xl p-4">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-gray-200 rounded-sm"></div>
+              <div className="w-3 h-3 bg-muted rounded-sm"></div>
               <span>Less</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-[#e2e8f0] rounded-sm"></div>
-              <div className="w-3 h-3 bg-[#a855f7] rounded-sm"></div>
-              <div className="w-3 h-3 bg-[#7c3aed] rounded-sm"></div>
-              <div className="w-3 h-3 bg-[#5b21b6] rounded-sm"></div>
+              <div className={cn("w-3 h-3 rounded-sm", isDark ? "bg-muted" : "bg-slate-200")}></div>
+              <div className={cn("w-3 h-3 rounded-sm", isDark ? "bg-yellow-400/60" : "bg-purple-400")}></div>
+              <div className={cn("w-3 h-3 rounded-sm", isDark ? "bg-yellow-400/80" : "bg-purple-500")}></div>
+              <div className={cn("w-3 h-3 rounded-sm", isDark ? "bg-yellow-400" : "bg-purple-600")}></div>
             </div>
             <div className="flex items-center gap-2">
               <span>More</span>
@@ -340,37 +332,52 @@ export const UsageHeatmap: React.FC<UsageHeatmapProps> = ({ userId }) => {
             </div>
           </div>
 
-          {/* Enhanced Usage Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="text-center p-6 bg-gradient-to-br from-gray-50 to-white rounded-2xl border border-gray-200/40 shadow-sm">
-              <div className="text-2xl lg:text-3xl font-bold text-gray-900 mb-1">{stats.totalRequests.toLocaleString()}</div>
-              <div className="text-sm text-gray-600">Period Total</div>
+          {/* Usage Stats */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="text-center p-4 bg-muted/30 rounded-lg min-h-[80px] flex flex-col justify-center border">
+              <div className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">{stats.totalRequests.toLocaleString()}</div>
+              <div className="text-xs sm:text-sm text-muted-foreground mt-1">Period Total</div>
             </div>
-            <div className="text-center p-6 bg-gradient-to-br from-purple-50 to-white rounded-2xl border border-purple-200/40 shadow-sm">
-              <div className="text-2xl lg:text-3xl font-bold text-purple-900 mb-1">{(usageSummary?.total || 0).toLocaleString()}</div>
-              <div className="text-sm text-purple-600">Billing Period</div>
+            <div className={cn(
+              "text-center p-4 rounded-lg min-h-[80px] flex flex-col justify-center border",
+              isDark 
+                ? "bg-yellow-500/5 border-yellow-500/10"
+                : "bg-purple-500/5 border-purple-500/10"
+            )}>
+              <div className={cn(
+                "text-lg sm:text-xl lg:text-2xl font-bold",
+                isDark ? "text-yellow-400" : "text-purple-600"
+              )}>
+                {(usageSummary?.total || 0).toLocaleString()}
+              </div>
+              <div className={cn(
+                "text-xs sm:text-sm mt-1",
+                isDark ? "text-yellow-400/80" : "text-purple-600/80"
+              )}>
+                Billing Period
+              </div>
             </div>
-            <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-white rounded-2xl border border-blue-200/40 shadow-sm">
-              <div className="text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{stats.avgDaily}</div>
-              <div className="text-sm text-blue-600">Avg Daily</div>
+            <div className="text-center p-4 bg-muted/30 rounded-lg min-h-[80px] flex flex-col justify-center border">
+              <div className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">{stats.avgDaily}</div>
+              <div className="text-xs sm:text-sm text-muted-foreground mt-1">Avg Daily</div>
             </div>
-            <div className="text-center p-6 bg-gradient-to-br from-green-50 to-white rounded-2xl border border-green-200/40 shadow-sm">
-              <div className="text-2xl lg:text-3xl font-bold text-green-900 mb-1">{stats.activeDays}</div>
-              <div className="text-sm text-green-600">Active Days</div>
+            <div className="text-center p-4 bg-muted/30 rounded-lg min-h-[80px] flex flex-col justify-center border">
+              <div className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">{stats.activeDays}</div>
+              <div className="text-xs sm:text-sm text-muted-foreground mt-1">Active Days</div>
             </div>
           </div>
 
           {/* Top Features Section - Integrated into main card */}
           {topPaths.length > 0 && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between border-t border-gray-200/60 pt-8">
+              <div className="flex items-center justify-between border-t border-border pt-8">
                 <div className="flex items-center gap-3">
-                  <Route className="w-5 h-5 text-[#5b36ff]" />
-                  <h3 className="text-lg font-semibold text-gray-900">Top Features ({topPaths.length})</h3>
+                  <Route className={cn("w-5 h-5", isDark ? "text-yellow-400" : "text-purple-600")} />
+                  <h3 className="text-lg font-semibold text-foreground">Top Features ({topPaths.length})</h3>
                 </div>
                 <button
                   onClick={() => setShowEndpoints(!showEndpoints)}
-                  className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-all duration-200 min-h-[44px] px-4 py-2 rounded-lg hover:bg-gray-50 border border-gray-200/60"
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-all duration-200 min-h-[44px] px-4 py-2 rounded-lg hover:bg-muted border"
                 >
                   {showEndpoints ? (
                     <>
@@ -392,44 +399,35 @@ export const UsageHeatmap: React.FC<UsageHeatmapProps> = ({ userId }) => {
                       : 0;
                     
                     return (
-                      <div key={pathData.path} className="space-y-3 p-4 bg-gray-50/50 rounded-xl">
+                      <div key={pathData.path} className="space-y-3 p-4 bg-muted/50 rounded-xl">
                         <div className="flex flex-col space-y-2 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
                           <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <span className="text-xs bg-[#5b36ff] text-white px-3 py-1 rounded-full font-mono font-medium shrink-0">
+                            <span className={cn(
+                              "text-xs px-3 py-1 rounded-full font-mono font-medium shrink-0",
+                              isDark ? "bg-yellow-400 text-black" : "bg-purple-600 text-white"
+                            )}>
                               #{index + 1}
                             </span>
-                            <span className="text-sm font-medium text-gray-900 truncate min-w-0">
+                            <span className="text-sm font-medium text-foreground truncate min-w-0">
                               {getEndpointDisplayName(pathData.path)}
                             </span>
                           </div>
-                          <span className="text-sm font-semibold text-gray-700 shrink-0">
+                          <span className="text-sm font-semibold text-foreground shrink-0">
                             {pathData.totalUsage.toLocaleString()} ({percentage.toFixed(1)}%)
                           </span>
                         </div>
                         <Progress 
                           value={percentage} 
-                          className="h-3 bg-gray-200 [&>div]:bg-gradient-to-r [&>div]:from-[#5b36ff] [&>div]:to-[#7c3aed] [&>div]:rounded-full"
+                          className={cn(
+                            "h-3",
+                            isDark 
+                              ? "[&>div]:bg-gradient-to-r [&>div]:from-yellow-400 [&>div]:to-yellow-500" 
+                              : "[&>div]:bg-gradient-to-r [&>div]:from-purple-500 [&>div]:to-purple-600"
+                          )}
                         />
                       </div>
                     );
                   })}
-                  
-                  {/* Enhanced summary stats */}
-                  <div className="mt-6 pt-4 border-t border-gray-200/40">
-                    <div className="text-sm text-gray-600 leading-relaxed bg-gradient-to-r from-gray-50 to-transparent p-4 rounded-xl">
-                      <span className="font-semibold text-gray-900">Top 5 features</span> account for{' '}
-                      <span className="font-bold text-[#5b36ff]">
-                        {topPaths.reduce((sum, p) => sum + p.totalUsage, 0).toLocaleString()}
-                      </span>{' '}
-                      requests (
-                      <span className="font-bold text-[#5b36ff]">
-                        {stats.totalRequests > 0 
-                          ? ((topPaths.reduce((sum, p) => sum + p.totalUsage, 0) / stats.totalRequests) * 100).toFixed(1)
-                          : 0}%
-                      </span>
-                      ) of total usage in this period.
-                    </div>
-                  </div>
                 </div>
               )}
             </div>

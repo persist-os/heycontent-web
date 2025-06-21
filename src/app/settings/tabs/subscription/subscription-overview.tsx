@@ -281,7 +281,7 @@ export default function SubscriptionOverview() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[300px] py-12 px-4 w-full">
         <div className="w-full max-w-4xl mx-auto">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6">
+          <div className="bg-card rounded-lg shadow-lg p-6">
             <h1 className="text-2xl font-bold mb-6">Subscribe to HeyContent</h1>
             <p className="mb-6">You need an active subscription to access HeyContent. Please choose a plan to continue.</p>
             
@@ -312,16 +312,16 @@ export default function SubscriptionOverview() {
               </div>
             )}
             
-            <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800">
+            <div className="mt-8 pt-6 border-t border-border">
               <h3 className="text-lg font-medium mb-4">Account Management</h3>
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  <p className="text-sm text-muted-foreground mb-4">
                     If you no longer wish to use HeyContent, you can delete your account and all associated data.
                   </p>
                   <DeleteAccountButton />
                 </div>
-                <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
+                <div className="pt-4 border-t border-border">
                   <Button
                     onClick={onSignOut}
                     variant="outline"

@@ -20,9 +20,31 @@ export function useCommandPaletteState() {
   const [recentCommands, setRecentCommands] = useState<Command[]>([]);
   const [shortcutBuffer, setShortcutBuffer] = useState<string[]>([]);
   const [shortcutTimeout, setShortcutTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
-  // Search results based on input
-  const searchResults = searchCommands(input);
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const results = await searchCommands(input);
+        setSearchResults(results);
+      } catch (error) {
+        console.error('Search failed:', error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [input]);
+
+  // Reset active index when search results change
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [searchResults]);
   
   // Parse command if input starts with /
   const parsedCommand = parseCommandString(input);
@@ -42,31 +64,38 @@ export function useCommandPaletteState() {
       return newHistory;
     });
 
-    // Update recent commands based on frequency
-    setRecentCommands(prev => {
+    // Update recent commands based on frequency - using async search
+    const updateRecentCommands = async () => {
       const commandCount = new Map<string, number>();
       [...history, { command }].forEach(item => {
         const count = commandCount.get(item.command.id) || 0;
         commandCount.set(item.command.id, count + 1);
       });
 
-      // Filter to ensure we only get Command types
-      return Array.from(commandCount.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .map(([id]) => {
-          const result = searchCommands('').find(cmd => cmd.id === id);
-          // Only include if it's a Command type and result exists
-          return result && 'type' in result && (
-            result.type === 'navigation' ||
-            result.type === 'action' ||
-            result.type === 'ai' ||
-            result.type === 'search' ||
-            result.type === 'quick_ask'
-          ) ? result : null;
-        })
-        .filter((cmd): cmd is Command => cmd !== null);
-    });
+      try {
+        const allCommands = await searchCommands('');
+        const recentCommandList = Array.from(commandCount.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map(([id]) => {
+            const result = allCommands.find(cmd => cmd.id === id);
+            return result && 'type' in result && (
+              result.type === 'navigation' ||
+              result.type === 'action' ||
+              result.type === 'ai' ||
+              result.type === 'search' ||
+              result.type === 'quick_ask'
+            ) ? result : null;
+          })
+          .filter((cmd): cmd is Command => cmd !== null);
+        
+        setRecentCommands(recentCommandList);
+      } catch (error) {
+        console.error('Failed to update recent commands:', error);
+      }
+    };
+
+    updateRecentCommands();
   }, [history]);
 
   // Execute a command
@@ -192,6 +221,7 @@ export function useCommandPaletteState() {
     activeIndex,
     setActiveIndex,
     searchResults,
+    isSearching,
     recentCommands,
     history,
     executeCommand,

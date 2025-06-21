@@ -1,6 +1,7 @@
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import React from 'react';
+import { User } from 'lucide-react';
 
 /**
  * Type definition for the user object
@@ -79,14 +80,21 @@ export const AccountSubscriptionCard: React.FC<AccountSubscriptionCardProps> = (
   const isOnHighestPlan = plan?.name === 'Pro';
 
   return (
-    <Card className="w-full p-4 sm:p-6 rounded-xl shadow-md bg-white dark:bg-gray-900">
+    <Card className="w-full p-4 sm:p-6 rounded-xl shadow-md bg-card">
       <CardHeader className="pb-2">
         <CardTitle className="text-lg sm:text-xl font-bold">Account & Subscription</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
         {/* User Information Section */}
-        <div className="font-medium text-base sm:text-lg">{user?.displayName || 'No name provided'}</div>
-        <div className="text-sm text-gray-500 break-all">{user?.email || 'No email provided'}</div>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center space-x-3">
+            <User className="w-5 h-5 text-primary" />
+            <div>
+              <h3 className="font-semibold text-foreground">{user?.displayName || 'User'}</h3>
+              <div className="text-sm text-muted-foreground break-all">{user?.email || 'No email provided'}</div>
+            </div>
+          </div>
+        </div>
         {/* Subscription Plan Information */}
         <div className="mt-2 text-base">
           <span className="font-semibold">Plan:</span>{' '}
@@ -94,7 +102,7 @@ export const AccountSubscriptionCard: React.FC<AccountSubscriptionCardProps> = (
             <>
               {plan.name}
               {plan.price !== undefined && (
-                <span className="ml-2 text-gray-500">
+                <span className="ml-2 text-muted-foreground">
                   {typeof plan.price === 'number'
                     ? `$${plan.price.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
                     : plan.price}

@@ -66,7 +66,7 @@ export function AmbientInsightsContainer({ handleSendMessage }: { handleSendMess
               variant="ghost" 
               size="sm" 
               disabled={loading}
-              className="gap-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50/50 transition-colors px-3 py-1.5 h-auto"
+              className="gap-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors px-3 py-1.5 h-auto"
               onClick={handleRefresh}
             >
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />

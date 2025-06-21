@@ -52,7 +52,7 @@ export function ContentHubInsights({ userId }: ContentHubInsightsProps) {
   if (latestInsight === undefined || hasMinimumPlatforms === undefined) {
     return (
       <div className="mb-6">
-        <Card className="p-6 border-2 border-transparent bg-white shadow-sm">
+        <Card className="p-6 border-2 border-transparent shadow-sm">
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
               <Skeleton className="h-6 w-48 mb-2" />
@@ -74,29 +74,29 @@ export function ContentHubInsights({ userId }: ContentHubInsightsProps) {
   if (!hasMinimumPlatforms) {
     return (
       <div className="mb-6">
-        <Card className="p-6 border-2 border-transparent bg-white shadow-sm">
+        <Card className="p-6 border-2 border-transparent shadow-sm">
           <div className="text-center">
             <div className="flex justify-center mb-4">
-              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                <Plus className="w-6 h-6 text-gray-600" />
+              <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                <Plus className="w-6 h-6 text-gray-600 dark:text-gray-400" />
               </div>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
               Connect Your Platforms
             </h3>
-            <p className="text-gray-600 text-sm mb-4 max-w-md mx-auto">
+            <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 max-w-md mx-auto">
               Connect at least 2 platforms to unlock cross-platform content insights and remix opportunities.
             </p>
             <div className="flex justify-center gap-4 text-xs text-gray-500">
-              <div className={`flex items-center gap-1 ${connectedPlatforms.includes('youtube') ? 'text-gray-900' : ''}`}>
+              <div className={`flex items-center gap-1 ${connectedPlatforms.includes('youtube') ? 'text-gray-900 dark:text-gray-100' : ''}`}>
                 <YouTubeBrandIcon href="#" className="w-4 h-4" />
                 YouTube {connectedPlatforms.includes('youtube') ? '✓' : ''}
               </div>
-              <div className={`flex items-center gap-1 ${connectedPlatforms.includes('instagram') ? 'text-gray-900' : ''}`}>
+              <div className={`flex items-center gap-1 ${connectedPlatforms.includes('instagram') ? 'text-gray-900 dark:text-gray-100' : ''}`}>
                 <Instagram className="w-4 h-4" />
                 Instagram {connectedPlatforms.includes('instagram') ? '✓' : ''}
               </div>
-              <div className={`flex items-center gap-1 ${connectedPlatforms.includes('gmail') ? 'text-gray-900' : ''}`}>
+              <div className={`flex items-center gap-1 ${connectedPlatforms.includes('gmail') ? 'text-gray-900 dark:text-gray-100' : ''}`}>
                 <Mail className="w-4 h-4" />
                 Gmail {connectedPlatforms.includes('gmail') ? '✓' : ''}
               </div>
@@ -111,14 +111,14 @@ export function ContentHubInsights({ userId }: ContentHubInsightsProps) {
   if (!latestInsight) {
     return (
       <div className="mb-6">
-        <Card className="p-6 border-2 border-transparent bg-white shadow-sm hover:shadow-lg hover:shadow-gray-500/10 transition-all duration-300">
+        <Card className="p-6 border-2 border-transparent shadow-sm hover:shadow-lg hover:shadow-gray-500/10 transition-all duration-300">
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
-              <h3 className="text-lg font-medium text-gray-900 mb-2 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-gray-600" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                 Content Hub Insights
               </h3>
-              <p className="text-gray-600 text-sm">
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
                 Generate cross-platform remix opportunities from your content
               </p>
             </div>
@@ -126,7 +126,7 @@ export function ContentHubInsights({ userId }: ContentHubInsightsProps) {
               onClick={handleGenerateInsights}
               disabled={refreshing}
               size="sm"
-              className="bg-gray-900 hover:bg-gray-800 text-white"
+              className="bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-100 dark:hover:bg-gray-200 dark:text-black"
             >
               {refreshing ? (
                 <RefreshCw className="w-4 h-4 animate-spin" />
@@ -153,16 +153,16 @@ export function ContentHubInsights({ userId }: ContentHubInsightsProps) {
 
   return (
     <div className="mb-6">
-      <Card className="border-2 border-transparent bg-white shadow-sm hover:shadow-lg hover:shadow-gray-500/10 transition-all duration-300 overflow-hidden">
+      <Card className="border-2 border-transparent shadow-sm hover:shadow-lg hover:shadow-gray-500/10 transition-all duration-300 overflow-hidden">
         {/* Header */}
         <div className="p-6 pb-4">
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
-              <h3 className="text-lg font-medium text-gray-900 mb-2 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-gray-600" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                 Content Hub Insights
               </h3>
-              <p className="text-gray-600 text-sm">
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
                 Cross-platform remix opportunities from your recent activity
               </p>
             </div>
@@ -171,7 +171,7 @@ export function ContentHubInsights({ userId }: ContentHubInsightsProps) {
               disabled={refreshing}
               size="sm"
               variant="ghost"
-              className="text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+              className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
               {refreshing ? (
                 <RefreshCw className="w-4 h-4 animate-spin" />
@@ -185,8 +185,8 @@ export function ContentHubInsights({ userId }: ContentHubInsightsProps) {
           {/* Main Remix Insight */}
           <div className="space-y-4">
             <div className="border-2 border-transparent rounded-lg p-4 hover:shadow-xl hover:shadow-purple-500/25 hover:border-purple-500/30 transition-all duration-300">
-              <h4 className="font-medium text-gray-900 mb-2">Remix Opportunity</h4>
-              <p className="text-gray-700 text-sm leading-relaxed">{insight.remix_insight}</p>
+              <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Remix Opportunity</h4>
+              <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">{insight.remix_insight}</p>
               <div className="flex gap-2 mt-3">
                 <CreateNoteButton
                   content={insight.remix_insight}
@@ -209,8 +209,8 @@ export function ContentHubInsights({ userId }: ContentHubInsightsProps) {
             {/* Smart Note Summary */}
             {insight.smartnote_summary && (
               <div className="border-2 border-transparent rounded-lg p-4 hover:shadow-xl hover:shadow-blue-500/25 hover:border-blue-500/30 transition-all duration-300">
-                <h4 className="font-medium text-gray-900 mb-2">Smart Note Summary</h4>
-                <p className="text-gray-700 text-sm leading-relaxed">{insight.smartnote_summary}</p>
+                <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Smart Note Summary</h4>
+                <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">{insight.smartnote_summary}</p>
                 <div className="flex gap-2 mt-3">
                   <CreateNoteButton
                     content={insight.smartnote_summary}
@@ -234,11 +234,11 @@ export function ContentHubInsights({ userId }: ContentHubInsightsProps) {
             {/* Conversation Starter */}
             {insight.conversation_starter && (
               <div className="border-2 border-transparent rounded-lg p-4 hover:shadow-xl hover:shadow-green-500/25 hover:border-green-500/30 transition-all duration-300">
-                <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-gray-600" />
+                <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                   Conversation Starter
                 </h4>
-                <p className="text-gray-700 text-sm leading-relaxed mb-3">{insight.conversation_starter}</p>
+                <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed mb-3">{insight.conversation_starter}</p>
                 <div className="flex gap-2">
                   <CreateNoteButton
                     content={insight.conversation_starter}
@@ -262,16 +262,16 @@ export function ContentHubInsights({ userId }: ContentHubInsightsProps) {
         </div>
 
         {/* Platform-Specific Sections - Collapsible */}
-        <div className="border-t border-gray-100">
+        <div className="border-t border-border">
           <button
             onClick={() => setExpanded(!expanded)}
-            className="w-full px-6 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+            className="w-full px-6 py-3 flex items-center justify-between text-left hover:bg-secondary transition-colors"
           >
-            <span className="text-sm font-medium text-gray-700">Platform-Specific Hooks & Formats</span>
+            <span className="text-sm font-medium text-foreground">Platform-Specific Hooks & Formats</span>
             {expanded ? (
-              <ChevronUp className="w-4 h-4 text-gray-400" />
+              <ChevronUp className="w-4 h-4 text-muted-foreground" />
             ) : (
-              <ChevronDown className="w-4 h-4 text-gray-400" />
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
             )}
           </button>
 
@@ -330,7 +330,7 @@ interface PlatformInsightCardProps {
 function PlatformInsightCard({ platform, icon, hook, format, cta, onDiscuss, glowColor }: PlatformInsightCardProps) {
   return (
     <div className={`border-2 border-transparent rounded-lg p-4 space-y-3 hover:shadow-xl ${glowColor} transition-all duration-300`}>
-      <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+      <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
         {icon}
         {platform}
       </h4>
@@ -338,27 +338,27 @@ function PlatformInsightCard({ platform, icon, hook, format, cta, onDiscuss, glo
       <div className="space-y-3">
         {hook && (
           <div>
-            <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Hook</span>
-            <p className="text-gray-700 text-sm mt-1">{hook}</p>
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Hook</span>
+            <p className="text-gray-700 dark:text-gray-300 text-sm mt-1">{hook}</p>
           </div>
         )}
         
         {format && (
           <div>
-            <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Format</span>
-            <p className="text-gray-700 text-sm mt-1">{format}</p>
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Format</span>
+            <p className="text-gray-700 dark:text-gray-300 text-sm mt-1">{format}</p>
           </div>
         )}
         
         {cta && (
           <div>
-            <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Call to Action</span>
-            <p className="text-gray-700 text-sm mt-1">{cta}</p>
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Call to Action</span>
+            <p className="text-gray-700 dark:text-gray-300 text-sm mt-1">{cta}</p>
           </div>
         )}
       </div>
 
-      <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
+      <div className="flex gap-2 mt-3 pt-3 border-t border-border">
         <CreateNoteButton
           content={`${platform} Content:\n\nHook: ${hook}\n\nFormat: ${format}\n\nCTA: ${cta}`}
           className="text-xs"

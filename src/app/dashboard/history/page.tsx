@@ -85,18 +85,18 @@ export default function HistoryPage() {
   )
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-4 sm:p-6">
       {/* Search */}
-      <div className="mt-16 mb-6">
-        <p className="text-gray-600 mb-2 font-medium text-lg">Your chat history</p>
+      <div className="mt-4 sm:mt-8 mb-6">
+        <h1 className="text-foreground text-xl font-semibold mb-3">Your chat history</h1>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <input
             type="text"
             placeholder="Search conversations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border rounded-xl bg-white/50 backdrop-blur-sm"
+            className="w-full pl-10 pr-4 py-2.5 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
           />
         </div>
       </div>
@@ -105,14 +105,14 @@ export default function HistoryPage() {
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="group bg-white border rounded-xl p-4">
+            <div key={index} className="group bg-card border border-border/50 rounded-lg p-4">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
-                    <Skeleton className="w-5 h-5 rounded" />
-                    <div className="w-full">
-                      <Skeleton className="h-4 w-1/2 mb-2" />
-                      <Skeleton className="h-3 w-full" />
+                    <Skeleton className="w-5 h-5 rounded bg-muted/50" />
+                    <div className="w-full space-y-2">
+                      <Skeleton className="h-4 w-1/2 bg-muted/50" />
+                      <Skeleton className="h-3 w-full bg-muted/50" />
                     </div>
                   </div>
                 </div>
@@ -122,14 +122,14 @@ export default function HistoryPage() {
         </div>
       ) : filteredChats.length === 0 ? (
         <div className="text-center py-12">
-          <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-500 mb-2">No conversations found</h3>
-          <p className="text-gray-400 mb-4">
+          <MessageSquare className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-foreground/80 mb-2">No conversations found</h3>
+          <p className="text-muted-foreground/70 mb-6">
             {searchQuery ? 'No conversations match your search.' : 'Start a conversation to see your chat history here.'}
           </p>
           <button
             onClick={() => router.push('/dashboard/chat')}
-            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+            className="bg-primary text-primary-foreground px-5 py-2.5 rounded-lg hover:bg-primary/90 transition-colors font-medium"
           >
             Start New Chat
           </button>
@@ -139,32 +139,39 @@ export default function HistoryPage() {
           {filteredChats.map((chat) => (
             <div
               key={chat.id}
-              className="group bg-white border rounded-xl p-4 hover:shadow-md transition-all"
+              className="group bg-card border border-border/50 rounded-lg p-4 hover:shadow-sm transition-all hover:border-border/70"
             >
               <div className="flex items-start justify-between">
                 <div
                   className="flex-1 cursor-pointer"
                   onClick={() => router.push(`/dashboard/chat?id=${chat.id}`)}
                 >
-                  <div className="flex items-center gap-3">
-                    <MessageSquare className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <h3 className="font-medium">{chat.topic}</h3>
-                      <p className="text-sm text-gray-500 mt-1">{chat.preview}</p>
+                  <div className="flex items-start gap-3">
+                    <MessageSquare className="w-5 h-5 text-muted-foreground/70 shrink-0 mt-0.5" />
+                    <div className="overflow-hidden">
+                      <h3 className="font-medium text-foreground/90 truncate">{chat.topic}</h3>
+                      {chat.preview && (
+                        <p className="text-sm text-muted-foreground/80 mt-1 line-clamp-1">
+                          {chat.preview}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 pl-2">
                   {chat.starred && (
-                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 shrink-0" />
                   )}
                   <button
-                    onClick={() => handleDeleteChat(chat.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 rounded transition-all"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteChat(chat.id);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-destructive/10 rounded-md transition-all text-destructive/80 hover:text-destructive"
                     title="Delete chat"
                     aria-label="Delete chat"
                   >
-                    <Trash2 className="w-4 h-4 text-red-500" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>

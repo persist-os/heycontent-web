@@ -53,11 +53,11 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   const showAmbientContent = showAmbient && !currentContext;
   
   return (
-    <div className={`bg-white ${showAmbientContent ? 'h-full flex flex-col' : ''}`}>
+    <div className={`bg-background ${showAmbientContent ? 'h-full flex flex-col' : ''}`}>
       <div className="max-w-3xl sm:max-w-4xl mx-auto w-full h-full flex flex-col">
         {/* Show ambient content when there are no messages */}
         {showAmbientContent && (
-          <div className="w-full bg-white flex-1 flex flex-col">
+          <div className="w-full bg-background flex-1 flex flex-col">
             <div className="px-3 sm:px-4 pt-6 pb-2 flex-shrink-0">
               {/* Empty header for consistent spacing */}
             </div>
@@ -70,7 +70,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
             </div>
 
             {/* Bottom bar actions */}
-            <div className="border-t border-gray-100 flex-shrink-0">
+            <div className="border-t border-border flex-shrink-0">
               <div className="px-3 sm:px-4 py-3">
                 <BottomBarActions onActionClick={handleActionClick} onInputPopulate={onInputPopulate} />
               </div>
