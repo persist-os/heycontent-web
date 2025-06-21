@@ -1,77 +1,20 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useEffect } from 'react';
-import { Sidebar } from './Sidebar';
+import { useState } from 'react';
+import { NotesGrid } from './components/NotesGrid';
 import { NoteArea } from './NoteArea';
-import { useSmartNotes } from './hooks/useSmartNotes';
 import { useAIInsights } from './hooks/useAIInsights';
-import { FileText, Plus, Lightbulb, ArrowLeft } from 'lucide-react';
-import { useSidebar } from '@/app/context/sidebar-context';
 import { useAuth } from '@/app/context/auth-context';
-import { useRouter } from 'next/navigation';
-import type { Id } from '@/convex/_generated/dataModel'; // Import Id type from Convex generated data model
+import type { Id } from '@/convex/_generated/dataModel';
 import { useNotes } from '@/app/context/notes-context';
-
-function EmptyState({ onCreateNote }: { onCreateNote: () => void }) {
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center text-gray-500 p-8">
-      <div className="bg-purple-50 rounded-full p-4 mb-4">
-        <FileText className="w-12 h-12 text-purple-500" />
-      </div>
-      <h3 className="text-xl font-semibold mb-2">No Notes Yet</h3>
-      <p className="text-gray-600 text-center mb-6 max-w-md">
-        Start organizing your thoughts, ideas, and insights. Create your first note to get started.
-      </p>
-      <div className="flex flex-col items-center gap-4">
-        <button
-          onClick={onCreateNote}
-          className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create Your First Note</span>
-        </button>
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <Lightbulb className="w-4 h-4" />
-          <span>Tip: Use keyboard shortcuts for faster note-taking</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SelectNotePrompt({ onCreateNote }: { onCreateNote: () => void }) {
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center text-gray-500 p-8 relative">
-      <div className="bg-purple-50 rounded-full p-4 mb-4">
-        <FileText className="w-12 h-12 text-purple-500" />
-      </div>
-      <h3 className="text-xl font-semibold mb-2">Select a Note</h3>
-      <p className="text-gray-600 text-center mb-6 max-w-md">
-        Choose a note from the sidebar or create a new one to start writing.
-      </p>
-      <div className="flex flex-col items-center gap-4">
-        <button
-          onClick={onCreateNote}
-          className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create New Note</span>
-        </button>
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <Lightbulb className="w-4 h-4" />
-          <span>Tip: Use keyboard shortcuts for faster note-taking</span>
-        </div>
-      </div>
-    </div>
-  );
-}
+import { Note, NoteType } from './types';
 
 export default function SmartNotes() {
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid;
-  const [showShortcuts, setShowShortcuts] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(true); // Make sidebar visible by default
+  const [activeNote, setActiveNote] = useState<Note | null>(null);
+  const [isCreatingNote, setIsCreatingNote] = useState(false);
   
   // Get notes and mutations from useNotes context
   const { 
@@ -82,181 +25,214 @@ export default function SmartNotes() {
     deleteNote, 
     saveNoteContent, 
     setNotes,
-    activeNoteId,
-    setActiveNoteId,
   } = useNotes();
   
-  const { requestAIInsights } = useAIInsights(updateNote); // updateNote from useSmartNotes is passed here
-  const { setIsViewingNote } = useSidebar();
-  const router = useRouter();
+  const { requestAIInsights } = useAIInsights(updateNote);
 
-  // Local note creation: This creates a temporary local note.
-  // The actual saving to Convex will happen via saveNote from useSmartNotes when the user explicitly saves.
-  const createNote = React.useCallback(async (options: any = {}) => {
-    // For creating a new note, we'll call the saveNote mutation immediately with minimal content.
-    // The user can then edit it. This avoids managing purely local state that needs complex syncing.
-    // Alternatively, could create a truly local object and then call saveNote on first explicit save action.
-    // For simplicity with Convex, let's try to save immediately.
-    const placeholderContent = options.type === 'brainstorm' ? 'New Brainstorm' : 'New Note';
-    const result = await saveNote(options.content || '', {
-      metadata: {
-        type: options.type || 'idea',
-        title: options.title || placeholderContent,
-      }
-    });
-
-    if (result.success && result.noteId) {
-      setActiveNoteId(result.noteId.toString()); // Convex IDs are objects, convert to string for activeNoteId state
-      setShowSidebar(false);
-    } 
-  }, [saveNote, setActiveNoteId]);
-
-
-  // Update isViewingNote when showSidebar changes
-  useEffect(() => {
-    setIsViewingNote(!showSidebar);
-  }, [showSidebar, setIsViewingNote]);
-
-  const handleDeleteNote = async (noteId: string | Id<"notes">) => {
+  // Create a new note with optimistic updates for instant UI feedback
+  const createNote = React.useCallback(async () => {
+    if (isCreatingNote) return; // Prevent double-clicks
+    
+    setIsCreatingNote(true);
+    
+    // Generate a temporary ID for optimistic update
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const defaultContent = '';
+    
+    // Create temporary note object for immediate UI feedback
+    const tempNote: Note = {
+      _id: tempId as any,
+      _creationTime: Date.now(),
+      userId: userId || '',
+      title: 'New Note',
+      content: defaultContent,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      important: false,
+      type: 'idea_bank',
+      tags: [],
+      typeGenerated: false,
+      titleGenerated: false,
+      isTemporary: true, // Flag to indicate this is a temporary note
+    };
+    
+    // Immediately show the editor with the temporary note for instant feedback
+    setActiveNote(tempNote);
+    
     try {
-      // deleteNote from useSmartNotes handles both local string IDs (like 'local_...') and Convex Id<"notes">
-      // It will only call Convex deletion for actual Convex IDs.
-      const result = await deleteNote(noteId);
-      if (result) {
-        // If the active note was deleted, clear activeNoteId
-        // activeNoteId is string | null. noteId is string | Id<"notes">.
-        // Use String() for a safe string conversion for comparison.
-        if (activeNoteId === String(noteId)) {
-          setActiveNoteId(null);
-        }
+      // Create the actual note in the background
+      const result = await saveNote(defaultContent, {
+        title: 'New Note',
+        type: 'idea_bank' as NoteType,
+      });
+
+      if (result.success && result.noteId) {
+        // Update the temporary note with the real ID
+        const realNote: Note = {
+          ...tempNote,
+          _id: result.noteId,
+          isTemporary: false,
+        };
+        
+        setActiveNote(realNote);
+        
+        // Wait for the note to be added to the notes array for consistency
+        setTimeout(() => {
+          const newNote = notes.find(note => String(note._id) === String(result.noteId));
+          if (newNote) {
+            setActiveNote(newNote);
+          }
+        }, 100); // Reduced timeout for faster sync
       } else {
-        console.error('Failed to delete note');
+        // If creation failed, go back to grid
+        setActiveNote(null);
+        console.error("Failed to create note - no ID returned");
+      }
+    } catch (error) {
+      console.error("Error creating note:", error);
+      // If creation failed, go back to grid
+      setActiveNote(null);
+    } finally {
+      setIsCreatingNote(false);
+    }
+  }, [saveNote, notes, userId, isCreatingNote]);
+
+  // Handle note editing
+  const handleEditNote = (note: Note) => {
+    setActiveNote(note);
+  };
+
+  // Handle note deletion
+  const handleDeleteNote = async (noteId: string) => {
+    try {
+      const result = await deleteNote(noteId as Id<"notes">);
+      if (result) {
+        // If the active note was deleted, clear it
+        if (activeNote && String(activeNote._id) === noteId) {
+          setActiveNote(null);
+        }
       }
     } catch (error) {
       console.error('Failed to delete note:', error);
     }
   };
 
-
-
-  // activeNote is derived from the `notes` array (from useSmartNotes)
-  const activeNote = notes?.find(note => note._id.toString() === activeNoteId);
-
-  console.log('[SmartNotes] activeNote:', activeNote);
-  console.log('[SmartNotes] activeNoteId:', activeNoteId);
-  console.log('[SmartNotes] notes:', notes);
-
-  // This function is called by NoteArea's onSave button
-  // It ensures all content is properly saved to the database using the simpler saveNoteContent function
-  const handleSave = async (latestContent: string, latestTitle?: string) => {
-    if (!activeNote || !activeNoteId) return;
-    
-    // If the note is local, we need to save it for the first time
-    if (activeNote.isLocal) {
-      // remove the local note from state
-      setNotes(notes => notes.filter(n => n._id !== activeNoteId));
-      const result = await saveNote(latestContent, { title: latestTitle });
-      if (result.success && result.noteId) {
-        setActiveNoteId(result.noteId.toString());
-      }
-      return;
-    }
-
-    // Log the active note for debugging
-    console.log('Saving note content:', { 
-      id: activeNote._id, 
-      title: activeNote.title,
-      contentLength: activeNote.content?.length || 0
-    });
-    
-    try {
-      // Use the simpler saveNoteContent function that only updates content and title
-      // This avoids schema validation issues with references and other complex fields
-      const result = await saveNoteContent(
-        activeNote._id,
-        latestContent,
-        latestTitle ?? activeNote.title ?? ''
-      );
-      
-      if (result) {
-        console.log('Note content saved successfully:', { 
-          id: result._id,
-          contentSaved: result.content?.substring(0, 30) + '...',
-          updatedAt: new Date(result.updatedAt).toLocaleTimeString()
-        });
-      } else {
-        console.warn('Note content save returned null result');
-      }
-    } catch (error) {
-      console.error('Failed to save note content:', error);
+  // Handle importance toggle
+  const handleToggleImportant = async (noteId: string) => {
+    const note = notes.find(n => String(n._id) === noteId);
+    if (note) {
+      await updateNote(noteId, { important: !note.important });
     }
   };
 
+  // Handle note updates
+  const handleUpdateNote = async (noteId: string, updates: any) => {
+    await updateNote(noteId, updates);
+  };
 
+  // Handle note saving from editor
+  const handleSave = async (latestContent: string, latestTitle?: string) => {
+    if (!activeNote) return;
+    
+    try {
+      // If this is a temporary note, we need to create it first
+      if (activeNote.isTemporary) {
+        const result = await saveNote(latestContent, {
+          title: latestTitle || 'New Note',
+          type: activeNote.type,
+        });
+        
+        if (result.success && result.noteId) {
+          const realNote: Note = {
+            ...activeNote,
+            _id: result.noteId,
+            title: latestTitle || 'New Note',
+            content: latestContent,
+            isTemporary: false,
+          };
+          setActiveNote(realNote);
+        }
+      } else {
+        // Normal save for existing notes
+        const result = await saveNoteContent(
+          activeNote._id,
+          latestContent,
+          latestTitle ?? activeNote.title ?? ''
+        );
+        
+        if (result) {
+          // Update the active note with the latest data
+          setActiveNote(result);
+          console.log('Note saved successfully');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to save note:', error);
+    }
+  };
 
-  return (
-    <div className="flex h-screen bg-background backdrop-blur-sm rounded-3xl overflow-hidden">
-      {showSidebar && (
-        <Sidebar
-          notes={notes}
-          activeNoteId={activeNoteId}
-          onNoteSelect={setActiveNoteId}
-          onCreateNote={createNote}
-          onDeleteNote={handleDeleteNote}
-          onHideSidebar={() => setShowSidebar(false)}
+  // Handle going back to grid view
+  const handleBackToGrid = () => {
+    setActiveNote(null);
+  };
+
+  // If viewing a specific note, show the editor with smooth transition
+  if (activeNote) {
+    return (
+      <div className="h-full w-full bg-background animate-in slide-in-from-right-4 duration-200">
+        <NoteArea
+          key={String(activeNote._id)}
+          note={activeNote}
+          onUpdate={async (noteId, updates) => {
+            // For temporary notes, update local state only
+            if (activeNote.isTemporary) {
+              const updatedNote = { ...activeNote, ...updates };
+              setActiveNote(updatedNote);
+              return updatedNote;
+            }
+            
+            // Optimistically update the note in local state
+            setNotes(currentNotes =>
+              currentNotes.map(note =>
+                String(note._id) === String(noteId)
+                  ? { ...note, ...updates }
+                  : note
+              )
+            );
+            // Then call the backend update
+            return await updateNote(String(noteId), updates);
+          }}
+          onSave={handleSave}
+          onToggleShortcuts={() => {}} // Not used in grid view
+          onRequestAIInsights={requestAIInsights}
+          onBack={handleBackToGrid}
+          isMobile={true} // Always show back button in this context
         />
-      )}
-      {/* Main content area */}
-      <div className="flex-1 relative">
-        {activeNote ? (
-          <NoteArea
-            key={activeNoteId}
-            note={activeNote}
-            onUpdate={async (noteId, updates) => {
-              // Optimistically update the note in local state
-              setNotes(currentNotes =>
-                currentNotes.map(note =>
-                  note._id.toString() === noteId.toString()
-                    ? { ...note, ...updates }
-                    : note
-                )
-              );
-              // Then call the backend update
-              return await updateNote(noteId, updates);
-            }}
-            onSave={handleSave}
-            onToggleShortcuts={() => setShowShortcuts(!showShortcuts)}
-            onRequestAIInsights={requestAIInsights}
-            onBack={() => {
-              setShowSidebar(true);
-              setActiveNoteId(null);
-            }}
-            isMobile={!showSidebar}
-          />
-        ) : notes.length === 0 ? (
-          <EmptyState onCreateNote={() => createNote({})} />
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-gray-500 p-8 relative">
-            {!showSidebar && (
-              <button
-                onClick={() => setShowSidebar(true)}
-                className="absolute top-4 left-4 p-2 rounded-full hover:bg-gray-100"
-                title="Back to notes"
-              >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
-              </button>
-            )}
-            {isLoading && <p>Loading notes...</p> } {/* Show loading indicator */}
-            {!isLoading && notes && notes.length > 0 && !activeNote && (
-                <SelectNotePrompt onCreateNote={() => createNote({})} />
-            )}
-            {!isLoading && (!notes || notes.length === 0) && (
-                 <EmptyState onCreateNote={() => createNote({})} />
-            )}
-          </div>
-        )}
-
       </div>
+    );
+  }
+
+  // Show the grid view with loading state for note creation
+  return (
+    <div className="h-full w-full bg-background p-3 sm:p-4 md:p-6">
+      {isCreatingNote && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-background rounded-lg p-6 shadow-lg border border-border flex items-center gap-3">
+            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-sm font-medium">Creating your note...</span>
+          </div>
+        </div>
+      )}
+      <NotesGrid
+        notes={notes}
+        onCreateNote={createNote}
+        onEditNote={handleEditNote}
+        onDeleteNote={handleDeleteNote}
+        onToggleImportant={handleToggleImportant}
+        onUpdateNote={handleUpdateNote}
+        isLoading={isLoading}
+        isCreatingNote={isCreatingNote}
+      />
     </div>
   );
 }

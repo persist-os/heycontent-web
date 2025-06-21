@@ -1,7 +1,7 @@
 // File: components/settings/tabs/DataTab.tsx
 import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Lock, Eye, EyeOff } from 'lucide-react'
+import { Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
@@ -226,7 +226,14 @@ const DataTab = () => {
                 disabled={isChangingPassword || isDeleting}
                 className="w-full sm:w-auto"
               >
-                {isChangingPassword ? 'Updating...' : 'Update Password'}
+                {isChangingPassword ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Password'
+                )}
               </Button>
             </div>
           </form>

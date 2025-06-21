@@ -68,7 +68,7 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
   //};
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full animate-in fade-in-0 duration-150">
       <textarea
         ref={textAreaRef}
         value={content}
@@ -77,10 +77,12 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
         className="w-full h-full min-h-[300px] resize-none p-4 text-base leading-relaxed 
           bg-background text-foreground placeholder:text-muted-foreground/50
           border-0 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2
-          transition-colors duration-200 rounded-md"
+          transition-all duration-200 rounded-md
+          transform-gpu will-change-contents"
         placeholder={placeholder}
         disabled={disabled}
         spellCheck={true}
+        autoFocus={!disabled}
       />
     </div>
   );

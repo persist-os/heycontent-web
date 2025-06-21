@@ -34,6 +34,8 @@ import { useYouTubeInsights } from '../../ai-insights/_components/hooks/useYouTu
 import { useInstagramInsights } from '../../ai-insights/_components/hooks/useInstagramInsights'
 import { useGmailInsights } from '../../ai-insights/_components/hooks/useGmailInsights'
 import { InsightCard } from '../../ai-insights/_components/InsightCard'
+import { ContentCardSkeleton } from './ContentCardSkeleton'
+import { InsightCardSkeleton } from '../../ai-insights/_components/InsightCardSkeleton'
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ContentHubInsights } from './ContentHubInsights'
@@ -234,13 +236,7 @@ export function ContentHubScreen() {
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
           {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 flex flex-col space-y-4">
-              <Skeleton className="h-40 w-full rounded-lg" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-4/5" />
-                <Skeleton className="h-4 w-3/5" />
-              </div>
-            </div>
+            <ContentCardSkeleton key={index} />
           ))}
         </div>
       )
@@ -332,13 +328,7 @@ export function ContentHubScreen() {
       return (
         <div className="grid gap-6">
           {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 flex flex-col space-y-4">
-              <Skeleton className="h-5 w-3/4" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6" />
-              </div>
-            </div>
+            <InsightCardSkeleton key={index} />
           ))}
         </div>
       )

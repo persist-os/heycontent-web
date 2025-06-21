@@ -24,8 +24,11 @@ export function ContentHubInsights({ userId }: ContentHubInsightsProps) {
     generateNewInsights,
     hasMinimumPlatforms,
     connectedPlatforms,
-    error
+    error,
+    dataBundle
   } = useContentHubInsights(userId)
+
+  const isLoading = dataBundle === undefined
 
   const handleGenerateInsights = async () => {
     await generateNewInsights()
@@ -49,7 +52,7 @@ export function ContentHubInsights({ userId }: ContentHubInsightsProps) {
   }
 
   // Show skeleton while data is loading
-  if (latestInsight === undefined || hasMinimumPlatforms === undefined) {
+  if (isLoading) {
     return (
       <div className="mb-6">
         <Card className="p-6 border-2 border-transparent shadow-sm">
