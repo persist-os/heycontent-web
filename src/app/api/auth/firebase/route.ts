@@ -73,13 +73,26 @@ export async function POST(request: Request) {
         apiKey,
         apiKeyData
       });
+      
+      // Set cookie with proper expiry tracking
+      const tokenExpiry = Date.now() + (60 * 60 * 1000); // 1 hour from now
       response.cookies.set('firebase-auth-token', idToken, {
         httpOnly: false,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
-        maxAge: 60 * 60 * 24 * 7 // 1 week
+        maxAge: 60 * 60 // 1 hour in seconds
       });
+      
+      // Also set the expiry timestamp cookie
+      response.cookies.set('firebase-token-expiry', tokenExpiry.toString(), {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 // 1 hour in seconds
+      });
+      
       return response;
     
   } catch (err: any) {
