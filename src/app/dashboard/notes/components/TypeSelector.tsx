@@ -23,6 +23,7 @@ export function TypeSelector({ currentType, typeGenerated, onTypeChange }: TypeS
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleTypeSelect = (newType: NoteType) => {
     console.log('[TypeSelector] Type selected:', newType);
@@ -50,9 +51,17 @@ export function TypeSelector({ currentType, typeGenerated, onTypeChange }: TypeS
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+      const target = event.target as Node;
+      
+      // Don't close if clicking on the button or inside the dropdown
+      if (
+        (buttonRef.current && buttonRef.current.contains(target)) ||
+        (dropdownRef.current && dropdownRef.current.contains(target))
+      ) {
+        return;
       }
+      
+      setIsOpen(false);
     };
 
     if (isOpen) {
@@ -65,6 +74,7 @@ export function TypeSelector({ currentType, typeGenerated, onTypeChange }: TypeS
 
   const dropdownContent = isOpen && (
     <div 
+      ref={dropdownRef}
       className="fixed w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-[9999]"
       style={{
         top: `${dropdownPosition.top}px`,
