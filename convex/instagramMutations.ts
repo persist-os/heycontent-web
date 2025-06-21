@@ -160,123 +160,23 @@ export const disconnectInstagram = mutation({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
     const { userId } = args;
-    
+
     try {
-      const results = {
-        postsDeleted: 0,
-        postInsightsDeleted: 0,
-        postCommentsDeleted: 0,
-        profileInsightsDeleted: 0,
-        storiesDeleted: 0,
-        trackerDeleted: 0,
-        trackerAnalysisDeleted: 0,
-        batchAnalysisDeleted: 0,
-        tokensDeleted: 0,
-        accountsDeleted: 0
-      };
+      // Delete data from all Instagram-related tables for the given userId
+      await Promise.all([
+        ctx.db.query(api.instagramTokens).withIndex("by_userId", (q) => q.eq("userId", userId)).collect().then(tokens => tokens.forEach(token => ctx.db.delete(token._id))),
+        ctx.db.query(api.instagramAccounts).withIndex("by_userId", (q) => q.eq("userId", userId)).collect().then(accounts => accounts.forEach(account => ctx.db.delete(account._id))),
+        ctx.db.query(api.instagramPosts).withIndex("by_userId", (q) => q.eq("userId", userId)).collect().then(posts => posts.forEach(post => ctx.db.delete(post._id))),
+        ctx.db.query(api.instagramProfileInsights).withIndex("by_userId", (q) => q.eq("userId", userId)).collect().then(insights => insights.forEach(insight => ctx.db.delete(insight._id))),
+        ctx.db.query(api.instagramStories).withIndex("by_userId", (q) => q.eq("userId", userId)).collect().then(stories => stories.forEach(story => ctx.db.delete(story._id))),
+        ctx.db.query(api.instagramPostInsights).withIndex("by_userId", (q) => q.eq("userId", userId)).collect().then(postInsights => postInsights.forEach(postInsight => ctx.db.delete(postInsight._id))),
+        ctx.db.query(api.instagramPostComments).withIndex("by_userId", (q) => q.eq("userId", userId)).collect().then(postComments => postComments.forEach(postComment => ctx.db.delete(postComment._id))),
+        ctx.db.query(api.instagramTracker).withIndex("by_userId", (q) => q.eq("userId", userId)).collect().then(trackers => trackers.forEach(tracker => ctx.db.delete(tracker._id))),
+        ctx.db.query(api.instagramTrackerAnalysis).withIndex("by_userId", (q) => q.eq("userId", userId)).collect().then(trackerAnalyses => trackerAnalyses.forEach(trackerAnalysis => ctx.db.delete(trackerAnalysis._id))),
+        ctx.db.query(api.instagramBatchAnalysis).withIndex("by_userId", (q) => q.eq("userId", userId)).collect().then(batchAnalyses => batchAnalyses.forEach(batchAnalysis => ctx.db.delete(batchAnalysis._id)))
+      ]);
 
-      const BATCH_SIZE = 50;
-
-      // Helper function for batch deletion
-      async function batchDelete(table: string, getQuery: () => Promise<any[]>) {
-        let deleted = 0;
-        let hasMore = true;
-        while (hasMore) {
-          const items = await getQuery();
-          if (!items || items.length === 0) break;
-          for (const item of items) {
-            try {
-              await ctx.db.delete(item._id);
-              deleted++;
-            } catch (err) {
-              console.error(`Error deleting ${table} item ${item._id}:`, err);
-            }
-          }
-          hasMore = items.length === BATCH_SIZE;
-        }
-        return deleted;
-      }
-
-      // Delete Instagram posts
-      results.postsDeleted = await batchDelete("instagramPosts", () =>
-        ctx.db.query("instagramPosts").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-      );
-      console.log(`Deleted ${results.postsDeleted} Instagram posts for user ${userId}`);
-
-      // Delete Instagram post insights
-      results.postInsightsDeleted = await batchDelete("instagramPostInsights", () =>
-        ctx.db.query("instagramPostInsights").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-      );
-      console.log(`Deleted ${results.postInsightsDeleted} Instagram post insights for user ${userId}`);
-
-      // Delete Instagram post comments
-      results.postCommentsDeleted = await batchDelete("instagramPostComments", () =>
-        ctx.db.query("instagramPostComments").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-      );
-      console.log(`Deleted ${results.postCommentsDeleted} Instagram post comments for user ${userId}`);
-
-      // Delete Instagram profile insights
-      results.profileInsightsDeleted = await batchDelete("instagramProfileInsights", () =>
-        ctx.db.query("instagramProfileInsights").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-      );
-      console.log(`Deleted ${results.profileInsightsDeleted} Instagram profile insights for user ${userId}`);
-
-      // Delete Instagram stories
-      results.storiesDeleted = await batchDelete("instagramStories", () =>
-        ctx.db.query("instagramStories").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-      );
-      console.log(`Deleted ${results.storiesDeleted} Instagram stories for user ${userId}`);
-
-      // Delete Instagram tracker data
-      results.trackerDeleted = await batchDelete("instagramTracker", () =>
-        ctx.db.query("instagramTracker").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-      );
-      console.log(`Deleted ${results.trackerDeleted} Instagram tracker records for user ${userId}`);
-
-      // Delete Instagram tracker analysis
-      results.trackerAnalysisDeleted = await batchDelete("instagramTrackerAnalysis", () =>
-        ctx.db.query("instagramTrackerAnalysis").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-      );
-      console.log(`Deleted ${results.trackerAnalysisDeleted} Instagram tracker analysis records for user ${userId}`);
-
-      // Delete Instagram batch analysis
-      results.batchAnalysisDeleted = await batchDelete("instagramBatchAnalysis", () =>
-        ctx.db.query("instagramBatchAnalysis").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-      );
-      console.log(`Deleted ${results.batchAnalysisDeleted} Instagram batch analysis records for user ${userId}`);
-     
-      // Delete tokens using the by_userId index
-      const tokens = await ctx.db
-        .query("instagramTokens")
-        .withIndex("by_userId", (q) => q.eq("userId", userId))
-        .collect();
-
-      console.log(`Found ${tokens.length} Instagram tokens to delete for user ${userId}`);
-      
-      for (const token of tokens) {
-        await ctx.db.delete(token._id);
-        results.tokensDeleted++;
-      }
-
-      // Delete Instagram accounts
-      const accounts = await ctx.db
-        .query("instagramAccounts")
-        .withIndex("by_userId", (q) => q.eq("userId", userId))
-        .collect();
-
-      console.log(`Found ${accounts.length} Instagram accounts to delete for user ${userId}`);
-      
-      for (const account of accounts) {
-        await ctx.db.delete(account._id);
-        results.accountsDeleted++;
-      }
-
-      console.log(`Successfully disconnected Instagram for user ${userId}. Deleted:`, results);
-      
-      return { 
-        success: true,
-        results
-      };
+      return { success: true };
     } catch (error) {
       console.error('Error disconnecting Instagram:', error);
       throw new Error(`Failed to disconnect Instagram: ${error instanceof Error ? error.message : 'Unknown error'}`);
