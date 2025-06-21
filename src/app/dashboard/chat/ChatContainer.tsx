@@ -6,6 +6,7 @@ import { MessageBubble } from './message-bubble'
 import { ChatInput } from './chat-input'
 import { RefreshCw, Brain, CheckCircle, FileText } from 'lucide-react'
 import { useSidebar } from '@/app/context/sidebar-context'
+import { useTheme } from 'next-themes'
 
 // Import types
 import { ChatScreenProps } from './types'
@@ -50,6 +51,15 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   const [userEmail, setUserEmail] = useState<string | undefined>()
   const [updatePersonaRequested, setUpdatePersonaRequested] = useState(false);
   const { isExpanded, setIsExpanded } = useSidebar()
+  const { theme } = useTheme()
+  
+  // Theme-aware accent colors
+  const isDark = theme === 'dark'
+  const accentColor = isDark ? 'text-primary' : 'text-purple-600'
+  const accentBg = isDark ? 'bg-primary' : 'bg-purple-600'
+  const accentBgHover = isDark ? 'hover:bg-primary/90' : 'hover:bg-purple-700'
+  const accentBgLight = isDark ? 'bg-primary/10' : 'bg-purple-600/10'
+  const accentBorder = isDark ? 'border-primary' : 'border-purple-600'
   
   // Track which conversation has been loaded to prevent infinite loops
   const loadedConversationRef = useRef<string | null>(null)
@@ -454,9 +464,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             // Static placeholder for unauthenticated state
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center p-4">
-                <div className="h-12 w-12 rounded-full bg-secondary mx-auto mb-4"></div>
-                <div className="h-4 w-48 bg-secondary rounded mx-auto mb-2"></div>
-                <div className="h-3 w-32 bg-secondary rounded mx-auto"></div>
+                <div className={`h-12 w-12 rounded-full ${accentBgLight} mx-auto mb-4`}></div>
+                <div className={`h-4 w-48 ${accentBgLight} rounded mx-auto mb-2`}></div>
+                <div className={`h-3 w-32 ${accentBgLight} rounded mx-auto`}></div>
               </div>
             </div>
           ) : hasMessagesOrContext ? (
@@ -512,11 +522,11 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                   )}
 
                   {error && (
-                    <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 mt-4">
-                      <p className="text-destructive text-sm">{error}</p>
+                    <div className={`${accentBgLight} border ${accentBorder}/20 rounded-lg p-3 mt-4`}>
+                      <p className={`${accentColor} text-sm`}>{error}</p>
                       <button
                         onClick={() => chatState.setError(null)}
-                        className="text-xs text-destructive hover:text-destructive/80 mt-1"
+                        className={`text-xs ${accentColor} hover:opacity-80 mt-1`}
                       >
                         Dismiss
                       </button>
