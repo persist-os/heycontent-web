@@ -3,6 +3,7 @@
 import type { Message } from '@/app/types/chat'
 import type { InteractiveOption } from './interactive-response'
 import { MessageSquare, Quote, Search, CheckCircle, Database } from 'lucide-react'
+import { useTheme } from 'next-themes'
 import { ExpandableInsights } from './expandable-insights'
 import { MarkdownRenderer } from './markdown-renderer'
 import { PersonaCardRenderer } from './components/PersonaCardRenderer'
@@ -56,6 +57,13 @@ export function MessageBubble({
     viewportLeft: number;
   } | null>(null)
   const [highlightRects, setHighlightRects] = useState<DOMRect[]>([])
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+  const accentColor = isDark ? 'accent' : 'purple-600'
+  const accentBg = isDark ? 'bg-accent' : 'bg-purple-600'
+  const accentBgHover = isDark ? 'hover:bg-accent/90' : 'hover:bg-purple-700'
+  const accentBgLight = isDark ? 'bg-accent/10' : 'bg-purple-600/10'
+  const accentBorder = isDark ? 'border-accent' : 'border-purple-600'
 
   // Simple selection handler
   useEffect(() => {
@@ -190,7 +198,7 @@ export function MessageBubble({
       {highlightRects.map((rect, index) => (
         <div
           key={index}
-          className="fixed pointer-events-none z-30 bg-primary/20"
+          className={`fixed pointer-events-none z-30 ${isDark ? 'bg-accent/20' : 'bg-purple-600/20'}`}
           style={{
             left: rect.left,
             top: rect.top,
@@ -211,7 +219,7 @@ export function MessageBubble({
         >
           <button
             onClick={handleQuoteText}
-            className="pointer-events-auto bg-foreground text-background p-2 rounded-lg shadow-lg hover:bg-opacity-80 transition-all duration-200 transform hover:scale-105"
+            className={`pointer-events-auto ${isDark ? 'bg-accent text-accent-foreground' : 'bg-purple-600 text-white'} p-2 rounded-lg shadow-lg hover:opacity-90 transition-all duration-200 transform hover:scale-105`}
             title={`Quote "${selectedText.length > 20 ? selectedText.substring(0, 20) + '...' : selectedText}"`}
           >
             <Quote className="w-4 h-4" />
@@ -227,7 +235,7 @@ export function MessageBubble({
             ${isUser ? 'max-w-[80%]' : 'max-w-[90%]'}
             rounded-2xl
             ${isUser ? 'px-3 sm:px-4 py-2 sm:py-3' : 'px-4 sm:px-6 py-3 sm:py-4'}
-            ${isUser ? 'bg-primary' : 'bg-card border'}
+            ${isUser ? (isDark ? 'bg-accent' : 'bg-purple-600') : 'bg-card border'}
             ${isUser ? 'text-black [&_*]:!text-black [&_*]:!text-inherit' : ''}
             relative
             group
@@ -281,7 +289,7 @@ export function MessageBubble({
             {message.status === 'failed' && onRetry && (
               <button
                 onClick={onRetry}
-                className="text-xs text-red-500 hover:text-red-700 mt-1"
+                className={`text-xs ${isDark ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-800'} mt-1`}
               >
                 Retry
               </button>
@@ -311,7 +319,7 @@ export function MessageBubble({
             {/* Copy Button */}
             <CopyButton
               text={getTextToCopy()}
-              className="opacity-60 hover:opacity-100 transition-opacity duration-200"
+              className={`opacity-60 hover:opacity-100 transition-opacity duration-200 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
               size="sm"
               variant="ghost"
               tooltipText={`Copy ${isUser ? 'your message' : 'AI response'}`}
@@ -322,10 +330,10 @@ export function MessageBubble({
               <button
                 onClick={handleQuoteText}
                 aria-label="Quote selected text"
-                className="opacity-60 hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                className={`opacity-60 hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-full ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
                 title={`Quote "${selectedText.length > 20 ? selectedText.substring(0, 20) + '...' : selectedText}"`}
               >
-                <Quote className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                <Quote className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
               </button>
             )}
             
@@ -334,9 +342,9 @@ export function MessageBubble({
               <button
                 onClick={() => onReference(message)}
                 aria-label="Reference message"
-                className="opacity-60 hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                className={`opacity-60 hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-full ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
               >
-                <MessageSquare className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                <MessageSquare className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
               </button>
             )}
           </div>

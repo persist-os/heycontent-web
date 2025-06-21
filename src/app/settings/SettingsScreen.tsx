@@ -11,7 +11,6 @@ import { PlatformConnect } from './tabs/platform-connect/platform-connect'
 import AccountTab from './tabs/AccountTab'
 
 import NotificationsTab from './tabs/NotificationsTab'
-import AIPreferencesTab from './tabs/AIPreferencesTab'
 import DataTab from './tabs/DataTab'
 import { handleSignOut } from './utils'
 import SubscriptionOverview from './tabs/subscription/subscription-overview'
@@ -141,7 +140,6 @@ const SettingsScreen = () => {
             <TabsTrigger value="subscription" className="flex-1 sm:flex-none"><CreditCard className="w-4 h-4 mr-2" /><span className="hidden sm:inline">Subscription</span></TabsTrigger>
             <TabsTrigger value="notifications" className="flex-1 sm:flex-none"><Bell className="w-4 h-4 mr-2" /><span className="hidden sm:inline">Notifications</span></TabsTrigger>
             <TabsTrigger value="integrations" className="flex-1 sm:flex-none"><Globe className="w-4 h-4 mr-2" /><span className="hidden sm:inline">Integrations</span></TabsTrigger>
-            <TabsTrigger value="ai-preferences" className="flex-1 sm:flex-none"><Sliders className="w-4 h-4 mr-2" /><span className="hidden sm:inline">AI Preferences</span></TabsTrigger>
             <TabsTrigger value="data" className="flex-1 sm:flex-none"><Database className="w-4 h-4 mr-2" /><span className="hidden sm:inline">Data</span></TabsTrigger>
           </TabsList>
 
@@ -170,10 +168,6 @@ const SettingsScreen = () => {
 
           <TabsContent value="integrations">
             <PlatformConnect />
-          </TabsContent>
-
-          <TabsContent value="ai-preferences">
-            <AIPreferencesTab />
           </TabsContent>
 
           <TabsContent value="data">

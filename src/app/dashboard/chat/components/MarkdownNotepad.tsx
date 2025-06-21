@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { X, Send, Copy, Sparkles } from 'lucide-react'
 import { CreateNoteButton } from '@/components/ui/CreateNoteButton'
+import { useTheme } from 'next-themes'
 
 interface MarkdownNotepadProps {
   isOpen: boolean
@@ -19,6 +20,11 @@ export function MarkdownNotepad({ isOpen, onClose, onSendToChat, quotedContent, 
   const [content, setContent] = useState('')
   const [isResizing, setIsResizing] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+  const accentColor = isDark ? 'text-primary' : 'text-purple-600'
+  const accentBg = isDark ? 'bg-primary' : 'bg-purple-600'
+  const accentBgHover = isDark ? 'hover:bg-primary/90' : 'hover:bg-purple-700'
 
   // Auto-focus when opened
   useEffect(() => {
@@ -125,13 +131,13 @@ export function MarkdownNotepad({ isOpen, onClose, onSendToChat, quotedContent, 
     >
       {/* Resize Handle */}
       <div
-        className="absolute left-0 top-0 w-1 h-full cursor-col-resize hover:bg-primary/20 transition-colors group"
+        className={`absolute left-0 top-0 w-1 h-full cursor-col-resize ${isDark ? 'hover:bg-primary/20' : 'hover:bg-purple-600/20'} transition-colors group`}
         onMouseDown={(e) => {
           e.preventDefault()
           setIsResizing(true)
         }}
       >
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-12 bg-border group-hover:bg-primary transition-colors rounded-r-sm" />
+        <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-12 bg-border ${isDark ? 'group-hover:bg-primary' : 'group-hover:bg-purple-600'} transition-colors rounded-r-sm`} />
       </div>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
@@ -140,7 +146,7 @@ export function MarkdownNotepad({ isOpen, onClose, onSendToChat, quotedContent, 
             Smart Notes
           </h3>
           {hasSmartContent && (
-            <div className="flex items-center gap-1 text-xs text-primary">
+            <div className={`flex items-center gap-1 text-xs ${accentColor}`}>
               <Sparkles className="w-3 h-3" />
               <span>AI Ready</span>
             </div>
@@ -153,7 +159,7 @@ export function MarkdownNotepad({ isOpen, onClose, onSendToChat, quotedContent, 
             content={content}
             onNoteCreate={onClose}
             title={hasSmartContent ? "Create smart note with AI-generated title" : "Create a new note"}
-            className={hasSmartContent ? "bg-primary/10 text-primary" : ""}
+            className={hasSmartContent ? `${isDark ? 'bg-primary/10 text-primary' : 'bg-purple-600/10 text-purple-600'}` : ""}
           >
             {hasSmartContent ? (
               <>
@@ -190,7 +196,7 @@ export function MarkdownNotepad({ isOpen, onClose, onSendToChat, quotedContent, 
             <button
               onClick={handleSendToChat}
               disabled={!content.trim()}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className={`flex items-center gap-1 px-3 py-1.5 text-xs ${accentBg} ${accentBgHover} text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium`}
               title="Send to chat"
             >
               <Send className="w-3 h-3" />
@@ -212,8 +218,8 @@ export function MarkdownNotepad({ isOpen, onClose, onSendToChat, quotedContent, 
 
       {/* Smart Features Hint */}
       {hasSmartContent && (
-        <div className="px-4 py-2 bg-primary/5 border-b border-border text-xs">
-          <div className="flex items-center gap-2 text-primary">
+        <div className={`px-4 py-2 ${isDark ? 'bg-primary/5' : 'bg-purple-600/5'} border-b border-border text-xs`}>
+          <div className={`flex items-center gap-2 ${accentColor}`}>
             <Sparkles className="w-3 h-3" />
             <span>AI will generate a smart title and classify your note type</span>
           </div>

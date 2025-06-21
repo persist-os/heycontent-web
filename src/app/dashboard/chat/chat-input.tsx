@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, Loader2, MessageSquare, Search, FileText, Brain } from 'lucide-react'
 import { Message } from '@/app/types'
+import { useTheme } from 'next-themes'
 
 interface ChatInputProps {
   onSend: (message: string) => void
@@ -70,6 +71,16 @@ export function ChatInput({
   const [showSmartSearchText, setShowSmartSearchText] = useState(true)
   const internalInputRef = useRef<HTMLTextAreaElement>(null)
   const textareaRef = inputRef || internalInputRef
+  const { theme } = useTheme()
+  
+  // Theme-aware accent colors
+  const isDark = theme === 'dark'
+  const accentColor = isDark ? 'text-accent' : 'text-purple-600'
+  const accentBg = isDark ? 'bg-accent' : 'bg-purple-600'
+  const accentBgHover = isDark ? 'hover:bg-accent/90' : 'hover:bg-purple-700'
+  const accentBgLight = isDark ? 'bg-accent/10' : 'bg-purple-600/10'
+  const accentBorder = isDark ? 'border-accent' : 'border-purple-600'
+  const accentFocusBorder = isDark ? 'focus-within:border-accent' : 'focus-within:border-purple-600'
 
   // Use external input value if provided, otherwise use internal state
   const currentInput = inputValue !== undefined ? inputValue : input
@@ -178,8 +189,8 @@ export function ChatInput({
           <div className="w-full mb-2">
             <div className={`flex items-center gap-2 text-xs p-2 rounded-lg border ${
               hasAnalysis 
-                ? 'text-primary dark:text-accent bg-primary/10 dark:bg-accent/10 border-primary/20 dark:border-accent/20'
-                : 'text-primary dark:text-accent bg-primary/10 dark:bg-accent/10 border-primary/20 dark:border-accent/20'
+                ? `${accentColor} ${accentBgLight} border-${accentBorder.split('-')[1]}/20`
+                : `${accentColor} ${accentBgLight} border-${accentBorder.split('-')[1]}/20`
             }`}>
               <Search className="w-4 h-4 flex-shrink-0" />
               <span className="break-words">
@@ -255,7 +266,7 @@ export function ChatInput({
               ${isAtLimit ? 'border-destructive' : ''}
               ${isNearLimit && !isAtLimit ? 'border-warning' : ''}
               ${!isAtLimit && !isNearLimit ? 'border-transparent hover:border-border' : ''}
-              focus-within:border-primary dark:focus-within:border-accent focus-within:bg-background
+              ${accentFocusBorder} focus-within:bg-background
               pl-3 py-2 pr-3
             `}>
               <textarea
@@ -302,7 +313,7 @@ export function ChatInput({
                       onClick={() => onToggleContextSearch?.(!useContextSearch)}
                       className={`relative flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 transform hover:scale-105 ${
                         useContextSearch 
-                          ? 'bg-primary/10 text-primary dark:bg-accent/10 dark:text-accent shadow-sm' 
+                          ? `${accentBgLight} ${accentColor} shadow-sm` 
                           : 'bg-muted text-muted-foreground hover:bg-muted/80'
                       }`}
                       aria-label="Toggle Smart Search"
@@ -362,7 +373,7 @@ export function ChatInput({
                   className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200
                     ${isLoading || !currentInput.trim() || isAtLimit || disabled 
                       ? 'bg-muted text-muted-foreground cursor-not-allowed' 
-                      : 'bg-primary text-primary-foreground hover:bg-primary/90 dark:bg-accent dark:text-accent-foreground dark:hover:bg-accent/90 shadow-sm hover:shadow-md hover:scale-105 active:scale-95'
+                      : `${accentBg} text-white ${accentBgHover} shadow-sm hover:shadow-md hover:scale-105 active:scale-95`
                     }`}
                 >
                   {isLoading ? (
