@@ -39,19 +39,20 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { ContentHubInsights } from './ContentHubInsights'
 
 type PlatformType = 'all' | 'youtube' | 'instagram' | 'gmail'
-type DataType = 'posts' | 'insights'
+type ViewType = 'hub-insights' | 'all' | 'youtube' | 'instagram' | 'gmail'
+type DataType = 'posts' | 'ai-insights'
 
 export function ContentHubScreen() {
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab')
   
-  const [selectedPlatform, setSelectedPlatform] = useState<PlatformType>('all')
-  const [selectedDataType, setSelectedDataType] = useState<DataType>(
-    tabParam === 'insights' ? 'insights' : 
-    tabParam === 'posts' ? 'posts' : 
-    tabParam === 'analytics' ? 'posts' : // Legacy support
-    'posts'
+  const [selectedView, setSelectedView] = useState<ViewType>(
+    tabParam === 'posts' ? 'all' : 
+    tabParam === 'analytics' ? 'all' : // Legacy support
+    tabParam === 'ai-insights' ? 'all' :
+    'hub-insights' // Default to Content Hub Insights as home
   )
+  const [selectedDataType, setSelectedDataType] = useState<DataType>('posts')
   const [selectedContent, setSelectedContent] = useState<AnyContentItem | null>(null)
   const [currentQuote, setCurrentQuote] = useState<string>('')
   const [expandedInsight, setExpandedInsight] = useState<string | null>(null);
@@ -404,12 +405,14 @@ export function ContentHubScreen() {
       <div className="flex-1 overflow-y-auto">
         <div className="p-6">
           <div className="max-w-7xl mx-auto space-y-6">
-            {/* Content Hub Insights Section */}
-            <ContentHubInsights userId={userId} />
             
-            {/* Platform Tabs */}
-            <Tabs value={selectedPlatform} onValueChange={(value) => setSelectedPlatform(value as PlatformType)} className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-4">
+            {/* Main Navigation - Content Hub Insights + Platform Selection */}
+            <Tabs value={selectedView} onValueChange={(value) => setSelectedView(value as ViewType)} className="w-full">
+              <TabsList className="grid w-full grid-cols-5 mb-0">
+                <TabsTrigger value="hub-insights" className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  Content Hub Insights
+                </TabsTrigger>
                 <TabsTrigger value="all" className="flex items-center gap-2">
                   All Platforms
                 </TabsTrigger>
@@ -427,90 +430,100 @@ export function ContentHubScreen() {
                 </TabsTrigger>
               </TabsList>
 
-              {/* Data Type Tabs */}
-              <Tabs value={selectedDataType} onValueChange={(value) => setSelectedDataType(value as DataType)} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="posts" className="flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4" />
-                    Posts ({
-                      selectedPlatform === 'all' ? allDisplayItems.length :
-                      selectedPlatform === 'youtube' ? youtubeAnalytics.items.length :
-                      selectedPlatform === 'instagram' ? instagramAnalytics.items.length :
-                      gmailAnalytics.items.length
-                    })
-                  </TabsTrigger>
-                  <TabsTrigger value="insights" className="flex items-center gap-2">
-                    <Brain className="w-4 h-4" />
-                    Insights ({
-                      selectedPlatform === 'all' ? allInsights.length :
-                      selectedPlatform === 'youtube' ? youtubeInsights.insights.length :
-                      selectedPlatform === 'instagram' ? instagramInsights.insights.length :
-                      gmailInsights.insights.length
-                    })
-                  </TabsTrigger>
-                </TabsList>
+              {/* Content Hub Insights - Home Screen */}
+              <TabsContent value="hub-insights" className="space-y-6">
+                <ContentHubInsights userId={userId} />
+              </TabsContent>
 
-                {/* Content Area */}
-                <TabsContent value="posts" className="space-y-6">
-                  {selectedPlatform === 'all' && renderAllPlatformsAnalytics()}
-                  
-                  {selectedPlatform === 'youtube' && (
-                    <YouTubeAnalyticsPlatform 
-                      userId={userId} 
-                      {...youtubeAnalytics} 
-                    />
-                  )}
-                  
-                  {selectedPlatform === 'instagram' && (
-                    <InstagramAnalyticsPlatform 
-                      userId={userId} 
-                      {...instagramAnalytics}
-                    />
-                  )}
-                  
-                  {selectedPlatform === 'gmail' && (
-                    <GmailAnalyticsPlatform 
-                      userId={userId}
-                      {...gmailAnalytics}
-                    />
-                  )}
-                </TabsContent>
+              {/* Platform-based content - Posts and AI Insights */}
+              {(selectedView === 'all' || selectedView === 'youtube' || selectedView === 'instagram' || selectedView === 'gmail') && (
+                <div className="space-y-0">
+                  <Tabs value={selectedDataType} onValueChange={(value) => setSelectedDataType(value as DataType)} className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 mb-6">
+                      <TabsTrigger value="posts" className="flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4" />
+                        Posts ({
+                          selectedView === 'all' ? allDisplayItems.length :
+                          selectedView === 'youtube' ? youtubeAnalytics.items.length :
+                          selectedView === 'instagram' ? instagramAnalytics.items.length :
+                          gmailAnalytics.items.length
+                        })
+                      </TabsTrigger>
+                      <TabsTrigger value="ai-insights" className="flex items-center gap-2">
+                        <Brain className="w-4 h-4" />
+                        AI Insights ({
+                          selectedView === 'all' ? allInsights.length :
+                          selectedView === 'youtube' ? youtubeInsights.insights.length :
+                          selectedView === 'instagram' ? instagramInsights.insights.length :
+                          gmailInsights.insights.length
+                        })
+                      </TabsTrigger>
+                    </TabsList>
 
-                <TabsContent value="insights" className="space-y-6">
-                  {selectedPlatform === 'all' && renderAllPlatformsInsights()}
-                  
-                  {selectedPlatform === 'youtube' && (
-                    <YouTubeInsightsPlatform 
-                      userId={userId} 
-                      currentQuote={currentQuote} 
-                      loading={youtubeInsights.loading} 
-                    />
-                  )}
-                  
-                  {selectedPlatform === 'instagram' && (
-                    <InstagramInsightsPlatform 
-                      userId={userId} 
-                      currentQuote={currentQuote} 
-                      loading={instagramInsights.loading} 
-                    />
-                  )}
-                  
-                  {selectedPlatform === 'gmail' && (
-                    <GmailInsightsPlatform 
-                      userId={userId} 
-                      currentQuote={currentQuote} 
-                      loading={gmailInsights.loading} 
-                    />
-                  )}
-                </TabsContent>
-              </Tabs>
+                    {/* Posts Screen */}
+                    <TabsContent value="posts" className="space-y-6">
+                      {selectedView === 'all' && renderAllPlatformsAnalytics()}
+                      
+                      {selectedView === 'youtube' && (
+                        <YouTubeAnalyticsPlatform 
+                          userId={userId} 
+                          {...youtubeAnalytics} 
+                        />
+                      )}
+                      
+                      {selectedView === 'instagram' && (
+                        <InstagramAnalyticsPlatform 
+                          userId={userId} 
+                          {...instagramAnalytics}
+                        />
+                      )}
+                      
+                      {selectedView === 'gmail' && (
+                        <GmailAnalyticsPlatform 
+                          userId={userId}
+                          {...gmailAnalytics}
+                        />
+                      )}
+                    </TabsContent>
+
+                    {/* AI Insights Screen */}
+                    <TabsContent value="ai-insights" className="space-y-6">
+                      {selectedView === 'all' && renderAllPlatformsInsights()}
+                      
+                      {selectedView === 'youtube' && (
+                        <YouTubeInsightsPlatform 
+                          userId={userId} 
+                          currentQuote={currentQuote} 
+                          loading={youtubeInsights.loading} 
+                        />
+                      )}
+                      
+                      {selectedView === 'instagram' && (
+                        <InstagramInsightsPlatform 
+                          userId={userId} 
+                          currentQuote={currentQuote} 
+                          loading={instagramInsights.loading} 
+                        />
+                      )}
+                      
+                      {selectedView === 'gmail' && (
+                        <GmailInsightsPlatform 
+                          userId={userId} 
+                          currentQuote={currentQuote} 
+                          loading={gmailInsights.loading} 
+                        />
+                      )}
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              )}
             </Tabs>
           </div>
         </div>
       </div>
 
       {/* Modals for "all" tab posts */}
-      {selectedContent && selectedPlatform === 'all' && selectedDataType === 'posts' && (
+      {selectedContent && selectedView === 'all' && selectedDataType === 'posts' && (
         <>
           {selectedContent.platform === 'gmail' && (
             <GmailModal
