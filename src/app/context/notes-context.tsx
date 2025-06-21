@@ -74,20 +74,20 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       originalContentLength: content?.length || 0,
       cleanedContentLength: cleanedContent?.length || 0,
       hasCustomTitle: !!title,
+      customTitle: title,
       contentPreview: cleanedContent?.substring(0, 100) + "..."
     });
 
-    let finalTitle = title || 'New Note from Chat';
+    let finalTitle = title;
     let finalType = 'idea_bank';
 
-    // Generate smart title if content is substantial and no custom title provided
+    // Always try to generate smart title for chat content if it's substantial
     const shouldGenerateTitle = (
-      !title && 
       cleanedContent && 
       cleanedContent.trim().length >= 10
     );
 
-    // Generate smart type classification if content is substantial
+    // Always try to classify type for chat content if it's substantial
     const shouldClassifyType = (
       cleanedContent && 
       cleanedContent.trim().length >= 10
@@ -127,15 +127,20 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       const [titleResult, typeResult] = await Promise.all(promises);
 
-      // Process title result
+      // Process title result - prefer AI-generated title over custom title for chat
       if (titleResult?.title && titleResult.wasGenerated) {
         finalTitle = titleResult.title;
         console.log("✅ [createLocalNote] Smart title generated:", finalTitle);
       } else if (!title) {
+        // Only use fallback if no custom title was provided
         console.log("⚠️ [createLocalNote] Title generation failed, using fallback");
         finalTitle = cleanedContent.length > 50 
           ? cleanedContent.substring(0, 50).trim() + "..."
           : cleanedContent.trim() || 'New Note from Chat';
+      } else {
+        // Keep the custom title if provided and AI generation failed
+        console.log("ℹ️ [createLocalNote] Using provided custom title:", title);
+        finalTitle = title;
       }
 
       // Process type result
@@ -151,6 +156,8 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         finalTitle = cleanedContent.length > 50 
           ? cleanedContent.substring(0, 50).trim() + "..."
           : cleanedContent.trim() || 'New Note from Chat';
+      } else {
+        finalTitle = title;
       }
     }
 
