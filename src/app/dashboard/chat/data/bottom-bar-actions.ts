@@ -17,27 +17,27 @@ export const bottomBarActions: BottomBarAction[] = [
   },
   {
     id: 'audience-growth',
-    text: 'hey content grow audience',
+    text: 'Grow audience',
     action: 'How can I grow my audience faster?'
   },
   {
     id: 'content-ideas',
-    text: 'hey content content ideas',
+    text: 'Content ideas',
     action: 'What content should I create next?'
   },
   {
     id: 'engagement',
-    text: 'hey content engagement',
+    text: 'Engagement',
     action: 'How do I improve my engagement rates?'
   },
   {
     id: 'strategy',
-    text: 'hey content content strategy',
+    text: 'Content strategy',
     action: 'Help me with my content strategy'
   },
   {
     id: 'roast',
-    text: 'hey content roast me',
+    text: 'Roast me',
     action: 'Roast me!'
   }
 ];

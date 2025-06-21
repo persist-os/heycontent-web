@@ -16,7 +16,7 @@ interface ContentHubInsightsProps {
 }
 
 export function ContentHubInsights({ userId }: ContentHubInsightsProps) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(true)
   const router = useRouter()
   const {
     latestInsight,
