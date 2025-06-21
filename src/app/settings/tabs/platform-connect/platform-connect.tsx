@@ -123,7 +123,29 @@ export function PlatformConnect() {
     // Check for error in URL
     const urlParams = new URLSearchParams(window.location.search);
     const error = urlParams.get('error');
-    if (error === 'no_pages_found') {
+    const platform = urlParams.get('platform');
+    const message = urlParams.get('message');
+    
+    if (error === 'account_already_connected' && platform && message) {
+      const platformNames = {
+        instagram: 'Instagram',
+        youtube: 'YouTube', 
+        gmail: 'Gmail'
+      };
+      
+      toast.error(
+        `${platformNames[platform]} Connection Failed: ${decodeURIComponent(message)}`,
+        { 
+          duration: 8000,
+          style: {
+            maxWidth: '500px'
+          }
+        }
+      );
+      
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (error === 'no_pages_found') {
       toast.error(
         'Facebook Page required. Please create a Facebook Page and connect it to your Instagram Professional account first.',
         { duration: 6000 }

@@ -1878,5 +1878,118 @@ app.get("/api/gmail/batch_analysis", async (c) => {
   }
 });
 
+// === COLLISION DETECTION ENDPOINTS ===
+
+// Check Instagram account collision
+app.get("/api/collision/instagram", async (c) => {
+  const { instagramAccountId } = c.req.query();
+  
+  if (!instagramAccountId) {
+    return c.json({ error: "instagramAccountId is required" }, 400);
+  }
+  
+  try {
+    const existingAccount = await c.env.runQuery(api.instagramQueries.getInstagramAccountById, {
+      instagramAccountId: instagramAccountId as string
+    });
+    
+    if (existingAccount) {
+      return c.json({
+        hasCollision: true,
+        platform: "instagram",
+        identifier: instagramAccountId,
+        existingAccount: {
+          userId: existingAccount.userId,
+          username: existingAccount.username,
+          connectedAt: existingAccount.createdAt
+        }
+      });
+    }
+    
+    return c.json({
+      hasCollision: false,
+      platform: "instagram", 
+      identifier: instagramAccountId
+    });
+  } catch (error) {
+    console.error("Error checking Instagram collision:", error);
+    return c.json({ error: "Failed to check collision" }, 500);
+  }
+});
+
+// Check YouTube channel collision
+app.get("/api/collision/youtube", async (c) => {
+  const { channelId } = c.req.query();
+  
+  if (!channelId) {
+    return c.json({ error: "channelId is required" }, 400);
+  }
+  
+  try {
+    const existingChannel = await c.env.runQuery(api.youtubeQueries.getYouTubeChannelById, {
+      channelId: channelId as string
+    });
+    
+    if (existingChannel) {
+      return c.json({
+        hasCollision: true,
+        platform: "youtube",
+        identifier: channelId,
+        existingAccount: {
+          userId: existingChannel.userId,
+          channelTitle: existingChannel.snippet?.title || "Unknown Channel",
+          connectedAt: existingChannel.createdAt
+        }
+      });
+    }
+    
+    return c.json({
+      hasCollision: false,
+      platform: "youtube",
+      identifier: channelId
+    });
+  } catch (error) {
+    console.error("Error checking YouTube collision:", error);
+    return c.json({ error: "Failed to check collision" }, 500);
+  }
+});
+
+// Check Gmail account collision
+app.get("/api/collision/gmail", async (c) => {
+  const { email } = c.req.query();
+  
+  if (!email) {
+    return c.json({ error: "email is required" }, 400);
+  }
+  
+  try {
+    const existingAccount = await c.env.runQuery(api.gmailQueries.getGmailAccountByEmailGlobal, {
+      email: email as string
+    });
+    
+    if (existingAccount) {
+      return c.json({
+        hasCollision: true,
+        platform: "gmail",
+        identifier: email,
+        existingAccount: {
+          userId: existingAccount.userId,
+          email: existingAccount.email,
+          connectedAt: existingAccount.createdAt
+        }
+      });
+    }
+    
+    return c.json({
+      hasCollision: false,
+      platform: "gmail",
+      identifier: email
+    });
+  } catch (error) {
+    console.error("Error checking Gmail collision:", error);
+    return c.json({ error: "Failed to check collision" }, 500);
+  }
+});
+
 const router = new HttpRouterWithHono(app);
 export default router;

@@ -372,3 +372,30 @@ export const getFullVideoDetails = query({
     }
   },
 });
+
+// Get YouTube channel by channel ID (for collision detection)
+export const getYouTubeChannelById = query({
+  args: { channelId: v.string() },
+  handler: async (ctx, args) => {
+    try {
+      console.log('Checking collision for YouTube channel ID:', args.channelId);
+      
+      const channel = await ctx.db
+        .query("youtubeChannels")
+        .withIndex("by_channelId", q => q.eq("id", args.channelId))
+        .first();
+      
+      console.log('Collision check result:', channel ? {
+        userId: channel.userId,
+        channelTitle: channel.snippet?.title,
+        channelId: channel.id
+      } : 'No collision found');
+      
+      return channel;
+    } catch (error) {
+      console.error('Error checking YouTube channel collision:', error);
+      // Return null to allow connection in case of error
+      return null;
+    }
+  },
+});

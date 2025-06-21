@@ -580,3 +580,30 @@ export const getInstagramBatchAnalysis = query({
     }
   },
 });
+
+// Get Instagram account by Instagram account ID (for collision detection)
+export const getInstagramAccountById = query({
+  args: { instagramAccountId: v.string() },
+  handler: async (ctx, args) => {
+    try {
+      console.log('Checking collision for Instagram account ID:', args.instagramAccountId);
+      
+      const account = await ctx.db
+        .query("instagramAccounts")
+        .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", args.instagramAccountId))
+        .first();
+      
+      console.log('Collision check result:', account ? {
+        userId: account.userId,
+        username: account.username,
+        instagramAccountId: account.instagramAccountId
+      } : 'No collision found');
+      
+      return account;
+    } catch (error) {
+      console.error('Error checking Instagram account collision:', error);
+      // Return null to allow connection in case of error
+      return null;
+    }
+  },
+});

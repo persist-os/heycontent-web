@@ -472,7 +472,8 @@ export default defineSchema({
     updatedAt: v.number(),
   })
   .index("by_userId", ["userId"])
-  .index("by_username", ["username"]),
+  .index("by_username", ["username"])
+  .index("by_instagramAccountId", ["instagramAccountId"]),
 
   // Instagram Posts
   instagramPosts: defineTable({
