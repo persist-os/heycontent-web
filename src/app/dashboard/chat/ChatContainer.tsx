@@ -535,7 +535,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         )}
 
         {/* Input Bar - Always render the container, but conditionally enable functionality */}
-        <div className="flex-shrink-0 border-t border-gray-100">
+        <div className={`flex-shrink-0 ${user && messages.length === 0 ? '' : 'border-t border-gray-100'}`}>
           <ChatInputArea
             showAmbient={false}
             currentContext={currentContext}

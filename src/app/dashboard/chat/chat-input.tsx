@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Send, Loader2, MessageSquare, Search, FileText, Brain } from 'lucide-react'
 import { Message } from '@/app/types'
 
@@ -63,6 +64,7 @@ export function ChatInput({
   onClearQuoted,
   disabled = false
 }: ChatInputProps) {
+  const router = useRouter()
   const [input, setInput] = useState('')
   const [placeholder, setPlaceholder] = useState(placeholders[0])
   const [showFullReply, setShowFullReply] = useState(false)
@@ -294,41 +296,60 @@ export function ChatInput({
             `}>
               {/* Left side - Smart Search */}
               <div className="flex items-center">
-                {embeddingInfo?.hasEmbeddings && (
-                  <div className="relative flex items-center"
-                    onMouseEnter={() => setSmartSearchHovered(true)}
-                    onMouseLeave={() => setSmartSearchHovered(false)}
+                <div className="relative flex items-center"
+                  onMouseEnter={() => setSmartSearchHovered(true)}
+                  onMouseLeave={() => setSmartSearchHovered(false)}
+                >
+                  {/* Smart Search Toggle Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (embeddingInfo?.hasEmbeddings) {
+                        onToggleContextSearch?.(!useContextSearch)
+                      } else {
+                        // Navigate to settings integrations tab to create search index
+                        router.push('/settings?tab=integrations')
+                      }
+                    }}
+                    className={`relative flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 transform hover:scale-105 ${
+                      embeddingInfo?.hasEmbeddings && useContextSearch 
+                        ? 'bg-purple-100 text-purple-600 shadow-sm' 
+                        : embeddingInfo?.hasEmbeddings
+                        ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        : 'bg-orange-100 text-orange-600 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:hover:bg-orange-900/50'
+                    }`}
+                    aria-label={
+                      embeddingInfo?.hasEmbeddings 
+                        ? (useContextSearch ? 'Smart Search: ON' : 'Smart Search: OFF')
+                        : 'Create search index'
+                    }
+                    title={
+                      embeddingInfo?.hasEmbeddings 
+                        ? (useContextSearch ? 'Smart Search: ON' : 'Smart Search: OFF')
+                        : 'Click to create your search index'
+                    }
                   >
-                    {/* Smart Search Toggle Button */}
-                    <button
-                      type="button"
-                      onClick={() => onToggleContextSearch?.(!useContextSearch)}
-                      className={`relative flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 transform hover:scale-105 ${
-                        useContextSearch 
-                          ? 'bg-purple-100 text-purple-600 shadow-sm' 
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                      aria-label="Toggle Smart Search"
-                      title={useContextSearch ? 'Smart Search: ON' : 'Smart Search: OFF'}
-                    >
-                      <Brain className="w-4 h-4" />
-                    </button>
+                    <Brain className="w-4 h-4" />
+                  </button>
 
-                    {/* Smart Search Text Label - always visible */}
-                    <div className="ml-3">
-                      <span className={`text-xs font-medium transition-colors duration-300 ${
-                        useContextSearch 
-                          ? 'text-gray-700 dark:text-gray-200' 
-                          : 'text-gray-500 dark:text-gray-400'
-                      }`}>
-                        {useContextSearch 
-                          ? `Smart search activated - ${embeddingInfo.count} items included` 
-                          : `Activate smart search to include ${embeddingInfo.count} items as context`
-                        }
-                      </span>
-                    </div>
+                  {/* Smart Search Text Label - always visible */}
+                  <div className="ml-3">
+                    <span className={`text-xs font-medium transition-colors duration-300 ${
+                      embeddingInfo?.hasEmbeddings
+                        ? (useContextSearch 
+                            ? 'text-gray-700 dark:text-gray-200' 
+                            : 'text-gray-500 dark:text-gray-400')
+                        : 'text-orange-600 dark:text-orange-400'
+                    }`}>
+                      {embeddingInfo?.hasEmbeddings 
+                        ? (useContextSearch 
+                            ? `Smart search activated - ${embeddingInfo.count} items included` 
+                            : `Activate smart search to include ${embeddingInfo.count} items as context`)
+                        : 'Click here to create your searchable content'
+                      }
+                    </span>
                   </div>
-                )}
+                </div>
               </div>
 
               {/* Right side - Character count, Notes, Send */}
