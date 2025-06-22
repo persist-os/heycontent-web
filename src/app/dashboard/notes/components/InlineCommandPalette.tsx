@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Bot, Brain, Lightbulb, Loader2, X } from 'lucide-react';
+import { Bot, Brain, Lightbulb, Loader2, X, Sparkles, ArrowRight } from 'lucide-react';
 
 interface InlineCommandPaletteProps {
   isOpen: boolean;
@@ -16,19 +16,20 @@ interface InlineCommandPaletteProps {
 interface CommandOption {
   id: string;
   label: string;
-  description: string;
+  description?: string;
   icon: React.ReactNode;
   action: () => void;
   requiresInput?: boolean;
+  category?: string;
 }
 
 const NOTE_TYPES = [
-  { value: 'idea_bank', label: 'Idea Bank' },
-  { value: 'content_script', label: 'Content Script' },
-  { value: 'analytics_insight', label: 'Analytics Insight' },
-  { value: 'collaboration_note', label: 'Collaboration Note' },
-  { value: 'reflection_journal', label: 'Reflection Journal' },
-  { value: 'task_checklist', label: 'Task Checklist' },
+  { value: 'idea_bank', label: 'Idea Bank', description: 'Generate creative concepts and brainstorm new content ideas' },
+  { value: 'content_script', label: 'Content Script', description: 'Structure your content with professional scripting techniques' },
+  { value: 'analytics_insight', label: 'Analytics Insight', description: 'Deep dive into performance metrics and data analysis' },
+  { value: 'collaboration_note', label: 'Collaboration Note', description: 'Organize team discussions and collaborative workflows' },
+  { value: 'reflection_journal', label: 'Reflection Journal', description: 'Document insights and learning experiences' },
+  { value: 'task_checklist', label: 'Task Checklist', description: 'Create actionable task lists and project management tools' },
 ];
 
 export function InlineCommandPalette({
@@ -45,7 +46,7 @@ export function InlineCommandPalette({
   const [showAIPrompt, setShowAIPrompt] = useState(false);
   const [showAnalysisTypes, setShowAnalysisTypes] = useState(false);
   const [aiPrompt, setAIPrompt] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const handleAskAI = async () => {
@@ -99,36 +100,56 @@ export function InlineCommandPalette({
 
   const mainCommands: CommandOption[] = [
     {
-      id: 'ask-ai',
-      label: 'Ask AI Anything',
-      description: 'Continue writing or get help',
-      icon: <Bot className="w-4 h-4" />,
-      action: handleAskAI,
-      requiresInput: true
+      id: 'ideas',
+      label: 'Generate ideas',
+      icon: <Lightbulb className="w-4 h-4" />,
+      action: handleRequestIdeas,
+      category: 'Write'
     },
     {
       id: 'analysis',
-      label: 'Request Analysis',
-      description: 'Analyze with specialized agent',
+      label: 'Request analysis',
       icon: <Brain className="w-4 h-4" />,
-      action: handleRequestAnalysis
-    },
-    {
-      id: 'ideas',
-      label: 'Request Ideas',
-      description: 'Get content suggestions',
-      icon: <Lightbulb className="w-4 h-4" />,
-      action: handleRequestIdeas
+      action: handleRequestAnalysis,
+      category: 'Write'
     }
   ];
 
-  const currentOptions = showAnalysisTypes ? NOTE_TYPES.map(type => ({
+  const analysisCommands: CommandOption[] = NOTE_TYPES.map(type => ({
     id: type.value,
     label: type.label,
-    description: `Analyze as ${type.label}`,
     icon: <Brain className="w-4 h-4" />,
-    action: () => handleAnalysisTypeSelect(type.value)
-  })) : mainCommands;
+    action: () => handleAnalysisTypeSelect(type.value),
+    category: 'Analysis'
+  }));
+
+  const currentOptions = showAnalysisTypes ? analysisCommands : mainCommands;
+
+  // Calculate position to prevent cutoff
+  const calculatePosition = () => {
+    const menuWidth = 600;
+    const menuHeight = 400;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    let finalLeft = position.left;
+    let finalTop = position.top;
+    
+    // Prevent horizontal cutoff
+    if (finalLeft + menuWidth > viewportWidth - 20) {
+      finalLeft = viewportWidth - menuWidth - 20;
+    }
+    if (finalLeft < 20) {
+      finalLeft = 20;
+    }
+    
+    // Prevent vertical cutoff
+    if (finalTop + menuHeight > viewportHeight - 20) {
+      finalTop = Math.max(20, viewportHeight - menuHeight - 20);
+    }
+    
+    return { left: finalLeft, top: finalTop };
+  };
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -138,21 +159,21 @@ export function InlineCommandPalette({
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
-          e.stopPropagation(); // Prevent global handlers
+          e.stopPropagation();
           setSelectedIndex(prev => 
             showAIPrompt ? prev : (prev + 1) % currentOptions.length
           );
           break;
         case 'ArrowUp':
           e.preventDefault();
-          e.stopPropagation(); // Prevent global handlers
+          e.stopPropagation();
           setSelectedIndex(prev => 
             showAIPrompt ? prev : (prev - 1 + currentOptions.length) % currentOptions.length
           );
           break;
         case 'Enter':
           e.preventDefault();
-          e.stopPropagation(); // Prevent global handlers
+          e.stopPropagation();
           if (showAIPrompt) {
             handleSubmitAIPrompt();
           } else {
@@ -161,7 +182,7 @@ export function InlineCommandPalette({
           break;
         case 'Escape':
           e.preventDefault();
-          e.stopPropagation(); // Prevent global handlers
+          e.stopPropagation();
           if (showAIPrompt || showAnalysisTypes) {
             setShowAIPrompt(false);
             setShowAnalysisTypes(false);
@@ -171,12 +192,10 @@ export function InlineCommandPalette({
             onClose();
           }
           break;
-        // Specifically handle Cmd/Ctrl + K to prevent global command palette
         case 'k':
           if (e.metaKey || e.ctrlKey) {
             e.preventDefault();
             e.stopPropagation();
-            // Do nothing - we're already open, just prevent global palette
           }
           break;
       }
@@ -214,102 +233,131 @@ export function InlineCommandPalette({
 
   if (!isOpen) return null;
 
+  const finalPosition = calculatePosition();
+
+  // Group commands by category
+  const groupedCommands = currentOptions.reduce((acc, command) => {
+    const category = command.category || 'Other';
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(command);
+    return acc;
+  }, {} as Record<string, CommandOption[]>);
+
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 bg-background border border-border rounded-lg shadow-lg overflow-hidden"
+      className="fixed z-50 bg-background border border-border rounded-lg shadow-2xl overflow-hidden backdrop-blur-sm"
       style={{
-        top: position.top + 'px',
-        left: position.left + 'px',
-        minWidth: '320px',
-        maxWidth: '400px'
+        top: finalPosition.top + 'px',
+        left: finalPosition.left + 'px',
+        width: '600px',
+        maxHeight: '400px'
       }}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-border bg-muted/10">
+      {/* Search Input */}
+      <div className="p-3 border-b border-border">
         <div className="flex items-center gap-2">
-          <Bot className="w-4 h-4 text-primary" />
-          <span className="text-sm font-medium">
-            {showAIPrompt ? 'Ask AI' : showAnalysisTypes ? 'Select Analysis Type' : 'AI Assistant'}
-          </span>
+          <Sparkles className="w-4 h-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Ask Content anything..."
+            className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
+            value={showAIPrompt ? aiPrompt : ''}
+            onChange={(e) => setAIPrompt(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && showAIPrompt && aiPrompt.trim()) {
+                handleSubmitAIPrompt();
+              }
+            }}
+            onFocus={() => {
+              if (!showAIPrompt) {
+                setShowAIPrompt(true);
+              }
+            }}
+          />
         </div>
-        <button
-          onClick={onClose}
-          className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted/50"
-          title="Close AI Assistant"
-        >
-          <X className="w-4 h-4" />
-        </button>
       </div>
 
       {/* Content */}
-      <div className="py-2">
-        {showAIPrompt ? (
+      <div className="max-h-80 overflow-y-auto">
+        {showAIPrompt && aiPrompt.trim() ? (
           <div className="p-3">
-            <input
-              ref={inputRef}
-              type="text"
-              value={aiPrompt}
-              onChange={(e) => setAIPrompt(e.target.value)}
-              placeholder="What would you like me to help you with?"
-              className="w-full p-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+            <button
+              onClick={handleSubmitAIPrompt}
               disabled={loadingCommand === 'ask-ai'}
-            />
-            <div className="flex justify-end gap-2 mt-3">
-              <button
-                onClick={() => {
-                  setShowAIPrompt(false);
-                  setAIPrompt('');
-                }}
-                className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground"
-                disabled={loadingCommand === 'ask-ai'}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmitAIPrompt}
-                disabled={!aiPrompt.trim() || loadingCommand === 'ask-ai'}
-                className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {loadingCommand === 'ask-ai' && <Loader2 className="w-3 h-3 animate-spin" />}
-                Ask AI
-              </button>
-            </div>
+              className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-muted/50 rounded-md transition-colors"
+            >
+              <Bot className="w-4 h-4 text-purple-500 dark:text-yellow-500" />
+              <span className="text-sm">Ask: "{aiPrompt}"</span>
+              {loadingCommand === 'ask-ai' && <Loader2 className="w-4 h-4 animate-spin ml-auto" />}
+            </button>
           </div>
         ) : (
-          <div className="max-h-64 overflow-y-auto">
-            {currentOptions.map((option, index) => {
-              const isOptionLoading = loadingCommand === option.id;
-              return (
-                <button
-                  key={option.id}
-                  onClick={option.action}
-                  disabled={isOptionLoading}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-accent/10 transition-colors ${
-                    selectedIndex === index ? 'bg-accent/10 text-accent-foreground' : 'text-foreground'
-                  } ${isOptionLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  <div className="flex-shrink-0 text-muted-foreground">
-                    {isOptionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : option.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium">{option.label}</div>
-                    <div className="text-xs text-muted-foreground">{option.description}</div>
-                  </div>
-                </button>
-              );
-            })}
+          <div className="py-2">
+            {Object.entries(groupedCommands).map(([category, commands]) => (
+              <div key={category} className="mb-3 last:mb-0">
+                <div className="px-3 py-1">
+                  <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    {category}
+                  </h3>
+                </div>
+                <div className="space-y-0.5">
+                  {commands.map((option, index) => {
+                    const globalIndex = currentOptions.indexOf(option);
+                    const isOptionLoading = loadingCommand === option.id;
+                    const isSelected = selectedIndex === globalIndex;
+                    
+                    return (
+                      <button
+                        key={option.id}
+                        onClick={option.action}
+                        disabled={isOptionLoading}
+                        className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
+                          isSelected 
+                            ? 'bg-purple-500/10 dark:bg-yellow-500/10 text-purple-600 dark:text-yellow-400' 
+                            : 'hover:bg-muted/50 text-foreground'
+                        } ${isOptionLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                      >
+                        <div className="flex-shrink-0">
+                          {isOptionLoading ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <div className={isSelected ? 'text-purple-600 dark:text-yellow-400' : 'text-muted-foreground'}>
+                              {option.icon}
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-sm font-medium">{option.label}</span>
+                                                  {isSelected && (
+                            <ArrowRight className="w-3 h-3 ml-auto text-purple-600 dark:text-yellow-400" />
+                          )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
 
       {/* Footer */}
-      <div className="px-3 py-2 border-t border-border bg-muted/5 text-xs text-muted-foreground">
-        <div className="flex items-center justify-between">
-          <span>
-            {showAIPrompt ? 'Enter to submit' : '↑↓ to navigate • Enter to select'}
+      <div className="px-3 py-2 border-t border-border bg-muted/5">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1">
+              <kbd className="px-1 py-0.5 bg-muted rounded text-xs">↑↓</kbd>
+              to navigate
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="px-1 py-0.5 bg-muted rounded text-xs">↵</kbd>
+              to select
+            </span>
+          </div>
+          <span className="flex items-center gap-1">
+            <kbd className="px-1 py-0.5 bg-muted rounded text-xs">esc</kbd>
+            to close
           </span>
-          <span>ESC to close</span>
         </div>
       </div>
     </div>
