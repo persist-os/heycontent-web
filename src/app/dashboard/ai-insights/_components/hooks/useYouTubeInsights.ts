@@ -1,10 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { getApiKey } from '@/app/lib/api-helpers';
 
 export function useYouTubeInsights(userId?: string) {
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [postLimit, setPostLimit] = useState<number | 'all'>(10);
   const [customPostLimit, setCustomPostLimit] = useState('');
@@ -28,13 +27,28 @@ export function useYouTubeInsights(userId?: string) {
   // Platform-specific insights
   const insightsList = youtubeInsights?.insights?.insights || [];
 
+  // Determine if batch analysis is currently running based on database status
+  const isRunning = youtubeInsights?.status?.status === 'processing' || 
+                   youtubeInsights?.status?.status === 'enqueued' ||
+                   youtubeInsights?.status?.status === 'running';
+
+  // Check if there's an error in the batch analysis
+  const batchError = youtubeInsights?.status?.error;
+
+  // Update local error state when batch analysis has an error
+  useEffect(() => {
+    if (batchError && !error) {
+      setError(batchError);
+    }
+  }, [batchError, error]);
+
   const refresh = useCallback(async () => {
     if (!userId || !youtubeChannel?.id) {
       setError('YouTube channel not connected');
       return;
     }
 
-    setRefreshing(true);
+    // Clear any existing errors
     setError(null);
     
     try {
@@ -67,7 +81,12 @@ export function useYouTubeInsights(userId?: string) {
         throw new Error(data.error || `HTTP error! status: ${response.status}`);
       }
       
-      if (data.status === 'success') {
+      if (data.status === 'enqueued') {
+        // YouTube analysis is now async - the status is tracked in the database
+        // The results will be automatically available in the query once completed
+        console.log(`YouTube analysis enqueued with task ID: ${data.task_id}`);
+      } else if (data.status === 'success') {
+        // Handle legacy synchronous response (if any)
         await storeYoutubeBatchAnalysis({
           userId,
           insights: data.data
@@ -78,8 +97,6 @@ export function useYouTubeInsights(userId?: string) {
     } catch (error: any) {
       console.error('Error refreshing YouTube insights:', error);
       setError(error.message || 'Failed to refresh YouTube insights');
-    } finally {
-      setRefreshing(false);
     }
   }, [userId, youtubeChannel?.id, storeYoutubeBatchAnalysis, postLimit]);
 
@@ -94,7 +111,7 @@ export function useYouTubeInsights(userId?: string) {
   return {
     insights: insightsList,
     loading: youtubeInsights === undefined,
-    refreshing,
+    refreshing: isRunning, // Use database status instead of local state
     error,
     isConnected: !!youtubeChannel?.id,
     refresh,
