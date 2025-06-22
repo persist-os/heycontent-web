@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { Note, NoteUpdate, NoteType } from './types';
 import { NoteHeader } from './components/NoteHeader';
 import { NoteEditor } from './components/NoteEditor';
@@ -10,62 +12,43 @@ import type { Id } from "@/convex/_generated/dataModel";
 
 interface NoteAreaProps {
   note: Note;
-  onUpdate: (noteId: string | Id<"notes">, updates: NoteUpdate) => Promise<Note>;
+  onUpdate: (noteId: string | Id<"notes">, updates: NoteUpdate) => Promise<Note | null>;
   onSave: (content: string, title?: string) => void;
   onToggleShortcuts: () => void;
-  onRequestAIInsights: (noteId: string, note: Note) => Promise<void>;
   onBack: () => void;
   isMobile: boolean;
 }
 
 export function NoteArea({
-  note,
+  note: initialNote,
   onUpdate,
   onSave,
   onToggleShortcuts,
-  onRequestAIInsights,
   onBack,
   isMobile
 }: NoteAreaProps) {
+  const liveNoteData = useQuery(api.notes.getNote, { 
+    noteId: initialNote._id as Id<"notes">, 
+    userId: String(initialNote.userId) 
+  });
+
+  const note = liveNoteData || initialNote;
+  
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [content, setContent] = useState(note.content || '');
 
   // Keep content in sync with note prop
   React.useEffect(() => {
-    setContent(note.content || '');
+    if (note.content !== content) {
+      setContent(note.content || '');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note._id, note.content]);
 
   // Handle content changes with debounced save
-  const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
-
   const handleContentChange = (newContent: string) => {
     setContent(newContent);
-    
-    // Clear existing timeout
-    if (saveTimeout) {
-      clearTimeout(saveTimeout);
-    }
-    
-    // Set new timeout for auto-save
-    const timeout = setTimeout(async () => {
-      try {
-        await onUpdate(note._id, { content: newContent });
-      } catch (error) {
-        console.error('Auto-save failed:', error);
-      }
-    }, 1000); // Auto-save after 1 second of inactivity
-    
-    setSaveTimeout(timeout);
   };
-
-  // Clean up timeout on unmount
-  React.useEffect(() => {
-    return () => {
-      if (saveTimeout) {
-        clearTimeout(saveTimeout);
-      }
-    };
-  }, [saveTimeout]);
 
   const handleTypeChange = async (newType: NoteType) => {
     await onUpdate(note._id, { type: newType, typeGenerated: false });
@@ -82,7 +65,6 @@ export function NoteArea({
         note={note}
         onUpdate={onUpdate}
         onSave={handleSave}
-        onRequestAIInsights={onRequestAIInsights}
         onBack={onBack} 
         isMobile={isMobile}
         currentContent={content}

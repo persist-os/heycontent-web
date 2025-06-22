@@ -57,14 +57,15 @@ export function TodoCard({
       }
     });
     
-    return todos.slice(0, 4); // Show max 4 items
+    return todos;
   };
 
-  const todos = parseTodos(note.content || '');
+  const allTodos = parseTodos(note.content || '');
+  const todos = allTodos.slice(0, 4); // Show max 4 items
 
   const handleToggleTodo = async (todoId: string) => {
     // Toggle the todo and update the note
-    const updatedTodos = todos.map(todo => 
+    const updatedTodos = allTodos.map(todo => 
       todo.id === todoId ? { ...todo, completed: !todo.completed } : todo
     );
     

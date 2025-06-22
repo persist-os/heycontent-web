@@ -4,7 +4,6 @@ import * as React from 'react';
 import { useState } from 'react';
 import { NotesGrid } from './components/NotesGrid';
 import { NoteArea } from './NoteArea';
-import { useAIInsights } from './hooks/useAIInsights';
 import { useAuth } from '@/app/context/auth-context';
 import type { Id } from '@/convex/_generated/dataModel';
 import { useNotes } from '@/app/context/notes-context';
@@ -27,8 +26,6 @@ export default function SmartNotes() {
     setNotes,
   } = useNotes();
   
-  const { requestAIInsights } = useAIInsights(updateNote);
-
   // Create a new note with optimistic updates for instant UI feedback
   const createNote = React.useCallback(async () => {
     if (isCreatingNote) return; // Prevent double-clicks
@@ -44,7 +41,7 @@ export default function SmartNotes() {
       _id: tempId as any,
       _creationTime: Date.now(),
       userId: userId || '',
-      title: 'New Note',
+      title: '',
       content: defaultContent,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -62,7 +59,7 @@ export default function SmartNotes() {
     try {
       // Create the actual note in the background
       const result = await saveNote(defaultContent, {
-        title: 'New Note',
+        title: '',
         type: 'idea_bank' as NoteType,
       });
 
@@ -138,7 +135,7 @@ export default function SmartNotes() {
       // If this is a temporary note, we need to create it first
       if (activeNote.isTemporary) {
         const result = await saveNote(latestContent, {
-          title: latestTitle || 'New Note',
+          title: latestTitle || '',
           type: activeNote.type,
         });
         
@@ -146,7 +143,7 @@ export default function SmartNotes() {
           const realNote: Note = {
             ...activeNote,
             _id: result.noteId,
-            title: latestTitle || 'New Note',
+            title: latestTitle || '',
             content: latestContent,
             isTemporary: false,
           };
@@ -204,7 +201,6 @@ export default function SmartNotes() {
           }}
           onSave={handleSave}
           onToggleShortcuts={() => {}} // Not used in grid view
-          onRequestAIInsights={requestAIInsights}
           onBack={handleBackToGrid}
           isMobile={true} // Always show back button in this context
         />

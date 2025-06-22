@@ -70,6 +70,19 @@ export function BaseCard({
       {/* Card content */}
       {children}
 
+      {/* Tags */}
+      {note.tags && note.tags.length > 0 && (
+        <div className="px-4 pt-2 pb-1">
+          <div className="flex flex-wrap gap-1.5">
+            {note.tags.map((tag, index) => (
+              <span key={index} className="px-2 py-0.5 text-xs bg-muted text-muted-foreground rounded-full">
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Date footer */}
       <div className="px-3 pb-2 text-xs text-muted-foreground">
         {new Date(note.updatedAt).toLocaleDateString('en-US', {

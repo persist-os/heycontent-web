@@ -93,25 +93,6 @@ export function AnalyticsCard({
         <div className="text-sm text-muted-foreground line-clamp-3">
           {note.content || 'No content yet...'}
         </div>
-
-        {/* Analytics category badges */}
-        <div className="mt-3 flex flex-wrap gap-1">
-          {note.content?.toLowerCase().includes('growth') && (
-            <span className="text-xs px-2 py-1 bg-pink-500/10 text-pink-600 rounded-full font-medium">
-              Growth
-            </span>
-          )}
-          {note.content?.toLowerCase().includes('engagement') && (
-            <span className="text-xs px-2 py-1 bg-pink-500/10 text-pink-600 rounded-full font-medium">
-              Engagement
-            </span>
-          )}
-          {note.content?.toLowerCase().includes('retention') && (
-            <span className="text-xs px-2 py-1 bg-pink-500/10 text-pink-600 rounded-full font-medium">
-              Retention
-            </span>
-          )}
-        </div>
       </div>
     </BaseCard>
   );

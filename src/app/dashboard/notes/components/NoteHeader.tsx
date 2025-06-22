@@ -7,43 +7,24 @@ interface NoteHeaderProps {
   note: Note;
   onUpdate: (noteId: string, updates: Partial<Note>) => void;
   onSave: () => void;
-  onRequestAIInsights: (noteId: string, note: Note) => Promise<void>;
   onBack: () => void;
   isMobile: boolean;
   currentContent?: string; // Add current content prop
 }
 
-export function NoteHeader({ note, onUpdate, onSave, onRequestAIInsights, onBack, isMobile, currentContent }: NoteHeaderProps) {
+export function NoteHeader({ note, onUpdate, onSave, onBack, isMobile, currentContent }: NoteHeaderProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-
-  const handleRequestInsights = async () => {
-    if (isAnalyzing) return;
-    try {
-      setIsAnalyzing(true);
-      // Ensure we're using the latest note data with current content
-      if (note && note._id) {
-        // Create a new note object with the current content if available
-        const noteWithCurrentContent = currentContent !== undefined
-          ? { ...note, content: currentContent }
-          : note;
-        
-        await onRequestAIInsights(note._id, noteWithCurrentContent);
-      } else {
-        console.error('Cannot request AI insights: Invalid note or note ID');
-      }
-    } catch (error) {
-      console.error('Failed to request AI insights:', error);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
 
   // Handler for Save button that shows a toast
   const handleSave = async () => {
     console.log('[NoteHeader] Save button clicked, calling onSave');
     try {
       await onSave();
-      toast.success('Note saved!', { duration: 1800, position: 'top-right' });
+      toast.success('Note saved', { 
+        duration: 1800, 
+        position: 'top-center',
+        icon: null 
+      });
     } catch (err) {
       toast.error('Failed to save note');
     }
@@ -93,18 +74,6 @@ export function NoteHeader({ note, onUpdate, onSave, onRequestAIInsights, onBack
             title={note.important ? 'Remove importance' : 'Mark as important'}
           >
             <Star size={16} fill={note.important ? "currentColor" : "none"} />
-          </button>
-          <button
-            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
-              isAnalyzing 
-                ? 'bg-primary/30 text-primary border border-primary/40' 
-                : 'bg-primary/15 text-primary hover:bg-primary/25 border border-primary/30'
-            }`}
-            onClick={handleRequestInsights}
-            disabled={isAnalyzing}
-            title={isAnalyzing ? 'Analyzing note...' : 'Get AI insights'}
-          >
-            {isAnalyzing ? <Loader2 size={16} className="animate-spin" /> : <Brain size={16} />}
           </button>
             <button
               className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 shadow-sm"

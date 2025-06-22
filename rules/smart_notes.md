@@ -93,11 +93,22 @@ This non-obvious color switch is a deliberate design choice that must be maintai
 
 ---
 
-## 4. API Integration (`/api/smart_note_inline/*`)
+## 4. API Integration
+
+### Inline AI Commands (`/api/v1/smart-notes-inline/*`)
 
 - **Proxy Pattern**: The frontend does not directly call the backend AI services. Instead, it calls Next.js API routes located in `src/app/api/smart_note_inline/`.
 - **Responsibilities**: These routes are responsible for:
   1.  Authenticating the request by checking for a `Bearer` token in the `Authorization` header.
   2.  Constructing a payload with the note content and other metadata.
   3.  Forwarding the request to the central backend AI service defined by `NEXT_PUBLIC_BACKEND_URL`.
-- **Benefits**: This pattern keeps the frontend clean, secures the backend endpoint, and centralizes the logic for communicating with the AI service. 
+- **Benefits**: This pattern keeps the frontend clean, secures the backend endpoint, and centralizes the logic for communicating with the AI service.
+
+### Automatic Metadata Generation (`/api/v1/smart-notes/generate-metadata`)
+
+- **Endpoint**: `POST /api/v1/smart-notes/generate-metadata`
+- **Purpose**: This endpoint provides a "fire-and-forget" mechanism for enriching notes automatically. It is separate from the inline command system.
+- **Frontend Workflow**:
+  - This route should be called by the frontend shortly after a new note is created or when an existing note's content has been significantly modified and saved.
+  - The frontend should send the full `noteId` and `note_content` in the request body.
+  - The backend will then asynchronously generate a title, tags, and type for the note and update it directly in Convex. The frontend can listen for data changes via its Convex subscription to update the UI once the new metadata is available. 

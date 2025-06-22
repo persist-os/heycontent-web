@@ -85,20 +85,6 @@ export function ContentCard({
           </h3>
         </div>
 
-        {/* Hashtags */}
-        {hashtags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-3">
-            {hashtags.map((hashtag, index) => (
-              <span 
-                key={index}
-                className="text-xs px-2 py-1 bg-muted/60 rounded-full text-muted-foreground font-medium"
-              >
-                {hashtag}
-              </span>
-            ))}
-          </div>
-        )}
-
         {/* Content preview */}
         <div className="text-sm text-muted-foreground line-clamp-4">
           {contentPreview}

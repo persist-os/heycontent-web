@@ -2,11 +2,11 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useSmartNotes } from '@/app/dashboard/notes/hooks/useSmartNotes';
-import { useTitleGeneration } from '@/app/dashboard/notes/hooks/useTitleGeneration';
-import { useTypeClassification } from '@/app/dashboard/notes/hooks/useTypeClassification';
 import { Note, NoteUpdate } from '@/app/dashboard/notes/types';
 import type { Id } from '@/convex/_generated/dataModel';
 import { useAuth } from './auth-context';
+import { useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 
 interface NotesContextType {
   notes: Note[];
@@ -15,7 +15,6 @@ interface NotesContextType {
   isSaving: boolean;
   activeNoteId: string | null;
   setActiveNoteId: (id: string | null) => void;
-  createLocalNote: (content: string, title?: string) => Promise<string>;
   deleteNote: (noteId: Id<"notes"> | string) => Promise<boolean>;
   updateNote: (noteId: string | Id<"notes">, updateFields: NoteUpdate, force?: boolean) => Promise<Note | null>;
   saveNoteContent: (noteId: string | Id<"notes">, content: string, title: string) => Promise<Note | null>;
@@ -32,81 +31,47 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setNotes: setFetchedNotes,
     isLoading, 
     isSaving,
-    saveNote: backendSaveNote,
+    createNote,
     updateNote, 
-    deleteNote, 
-    saveNoteContent 
   } = useSmartNotes(userId);
-
-  // Add title generation and type classification hooks
-  const { generateTitle } = useTitleGeneration();
-  const { classifyType } = useTypeClassification();
+  
+  const convexDeleteNote = useMutation(api.notes.deleteNote);
 
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
 
-  // Clean content for note saving - remove markdown quote formatting
-  const cleanContentForNotes = useCallback((content: string): string => {
-    return content
-      .split('\n')
-      .map(line => {
-        // Remove quote markers (> ) from the beginning of lines
-        let cleanedLine = line.replace(/^>\s?/, '');
-        
-        // Remove leading and trailing quotation marks from the line
-        cleanedLine = cleanedLine.replace(/^["'"'""]/, '').replace(/["'"'""]$/, '');
-        
-        return cleanedLine;
-      })
-      .join('\n')
-      .trim();
-  }, []);
-
-  const createLocalNote = useCallback(async (content: string, title?: string): Promise<string> => {
+  const deleteNote = useCallback(async (noteId: Id<"notes"> | string): Promise<boolean> => {
     if (!userId) {
-      console.warn('Cannot create note: user not authenticated');
-      return '';
+      console.warn('Cannot delete note: user not authenticated');
+      return false;
     }
-
-    const cleanedContent = cleanContentForNotes(content);
-    console.log("📝 [createLocalNote] Creating note from chat content:", {
-      originalLength: content.length,
-      cleanedLength: cleanedContent.length,
-      hasTitle: !!title,
-      title: title,
-      userId
-    });
-
-    // Use the save-with-title API that handles AI generation automatically
-    console.log("🎯 [createLocalNote] Using save-with-title API for chat content");
-
     try {
-      const result = await backendSaveNote(cleanedContent, {
-        title: title || undefined, // Let the API generate if no title provided
-        type: 'idea_bank', // Start with default, let API classify
-        platform: 'chat',
-        skipAIGeneration: false // Let the API handle AI generation
-      });
-
-      if (result.success && result.noteId) {
-        console.log("✅ [createLocalNote] Note saved successfully:", {
-          noteId: result.noteId,
-          platform: 'chat'
-        });
-        return result.noteId.toString();
-      } else {
-        console.error("❌ [createLocalNote] Failed to save note:", result.error);
-        return '';
-      }
+      await convexDeleteNote({ noteId: noteId as Id<"notes">, userId });
+      setFetchedNotes(prev => prev.filter(note => note._id !== noteId));
+      return true;
     } catch (error) {
-      console.error("💥 [createLocalNote] Error saving note:", error);
-      return '';
+      console.error("Error deleting note:", error);
+      return false;
     }
-  }, [userId, backendSaveNote, cleanContentForNotes]);
+  }, [userId, convexDeleteNote, setFetchedNotes]);
 
-  // Wrapper for saveNote to maintain compatibility
+  const saveNoteContent = useCallback(async (noteId: string | Id<"notes">, content: string, title: string): Promise<Note | null> => {
+    return await updateNote(noteId, { content, title });
+  }, [updateNote]);
+
+
   const saveNote = useCallback(async (content: string, options: any = {}) => {
-    return await backendSaveNote(content, options);
-  }, [backendSaveNote]);
+    const noteData = { content, ...options };
+    try {
+      const newNote = await createNote(noteData);
+      if (newNote) {
+        return { success: true, noteId: newNote._id as Id<"notes"> };
+      }
+      return { success: false, error: 'Failed to create note.' };
+    } catch(e) {
+      const error = e as Error;
+      return { success: false, error: error.message };
+    }
+  }, [createNote]);
 
   const value = {
     notes: fetchedNotes,
@@ -115,17 +80,20 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     isSaving,
     activeNoteId,
     setActiveNoteId,
-    createLocalNote,
     deleteNote,
     updateNote,
     saveNoteContent,
     saveNote,
   };
 
-  return <NotesContext.Provider value={value}>{children}</NotesContext.Provider>;
+  return (
+    <NotesContext.Provider value={value}>
+      {children}
+    </NotesContext.Provider>
+  );
 };
 
-export const useNotes = (): NotesContextType => {
+export const useNotes = () => {
   const context = useContext(NotesContext);
   if (context === undefined) {
     throw new Error('useNotes must be used within a NotesProvider');

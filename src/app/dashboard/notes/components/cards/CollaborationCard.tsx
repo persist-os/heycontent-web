@@ -17,14 +17,6 @@ export function CollaborationCard({
   onDelete, 
   onToggleImportant 
 }: CollaborationCardProps) {
-  // Extract mentions from content
-  const extractMentions = (content: string) => {
-    const mentionMatches = content.match(/@[\w]+/g) || [];
-    return mentionMatches.slice(0, 3);
-  };
-
-  const mentions = extractMentions(note.content || '');
-  
   // Determine collaboration type based on content
   const getCollaborationType = () => {
     const content = note.content?.toLowerCase() || '';
@@ -86,20 +78,6 @@ export function CollaborationCard({
             {note.title || getTypeLabel()}
           </h3>
         </div>
-
-        {/* Mentions */}
-        {mentions.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-3">
-            {mentions.map((mention, index) => (
-              <span 
-                key={index}
-                className="text-xs px-2 py-1 bg-green-500/10 text-green-600 rounded-full font-medium"
-              >
-                {mention}
-              </span>
-            ))}
-          </div>
-        )}
 
         {/* Content preview */}
         <div className="text-sm text-muted-foreground line-clamp-4">
