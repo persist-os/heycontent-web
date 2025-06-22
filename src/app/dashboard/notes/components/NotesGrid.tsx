@@ -142,10 +142,10 @@ export function NotesGrid({
           </button>
         </div>
       ) : (
-        <div className="flex-1 overflow-auto">
-          <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 gap-4 space-y-4 pb-6">
+        <div className="flex-1 overflow-auto px-4">
+          <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 gap-4 pb-6">
             {sortedNotes.map((note) => (
-              <div key={String(note._id)} className="break-inside-avoid mb-4 inline-block w-full">
+              <div key={String(note._id)} className="break-inside-avoid mb-4 w-full">
                 <NoteCard
                   note={note}
                   onEdit={onEditNote}
