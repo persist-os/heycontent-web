@@ -28,8 +28,8 @@ export function useInstagramInsights(userId?: string) {
   // Store Instagram batch analysis mutation
   const storeInstagramAnalysis = useMutation(api.instagramMutations.storeInstagramBatchAnalysis);
 
-  // Platform-specific insights
-  const insightsList = instagramInsights?.insights?.insights || [];
+  // Platform-specific insights - backend now returns direct array format
+  const insightsList = instagramInsights?.insights || [];
 
   // Only show as running if we're actively refreshing AND status is processing/enqueued
   // Don't auto-show loading for old stuck statuses

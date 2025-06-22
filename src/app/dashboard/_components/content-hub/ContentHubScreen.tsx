@@ -117,10 +117,15 @@ export function ContentHubScreen() {
 
   // Combined insights for "all" tab
   const allInsights = useMemo(() => {
+    // Hooks now return direct arrays (standardized format)
+    const youtubeInsightsArray = youtubeInsights.insights || [];
+    const instagramInsightsArray = instagramInsights.insights || [];
+    const gmailInsightsArray = gmailInsights.insights || [];
+    
     return [
-      ...youtubeInsights.insights,
-      ...instagramInsights.insights,
-      ...gmailInsights.insights,
+      ...youtubeInsightsArray,
+      ...instagramInsightsArray,
+      ...gmailInsightsArray,
     ]
   }, [youtubeInsights.insights, instagramInsights.insights, gmailInsights.insights])
 
@@ -443,9 +448,9 @@ export function ContentHubScreen() {
                         <Brain className="w-4 h-4" />
                         AI Insights ({
                           selectedView === 'all' ? allInsights.length :
-                          selectedView === 'youtube' ? youtubeInsights.insights.length :
-                          selectedView === 'instagram' ? instagramInsights.insights.length :
-                          gmailInsights.insights.length
+                          selectedView === 'youtube' ? (youtubeInsights.insights?.insights || []).length :
+                          selectedView === 'instagram' ? (instagramInsights.insights?.insights || []).length :
+                          (gmailInsights.insights?.insights || []).length
                         })
                       </TabsTrigger>
                     </TabsList>

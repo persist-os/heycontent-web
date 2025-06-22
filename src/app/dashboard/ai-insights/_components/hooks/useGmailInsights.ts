@@ -28,8 +28,8 @@ export function useGmailInsights(userId?: string) {
   // Store Gmail batch analysis mutation
   const storeGmailBatchAnalysis = useMutation(api.gmailMutations.storeGmailBatchAnalysis);
 
-  // Platform-specific insights
-  const insightsList = gmailInsights?.insights?.insights || [];
+  // Platform-specific insights - backend now returns direct array format
+  const insightsList = gmailInsights?.insights || [];
 
   // Only show as running if we're actively refreshing AND status is processing/enqueued
   // Don't auto-show loading for old stuck statuses
