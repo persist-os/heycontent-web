@@ -45,9 +45,9 @@ export function ContentAnalyticsScreen() {
   const allContentItems = useMemo(() => {
     if (!userId) return [];
     return [
-      ...youtubeData.items,
-      ...gmailData.items,
-      ...instagramData.items,
+      ...(youtubeData.items || []),
+      ...(gmailData.items || []),
+      ...(instagramData.items || []),
     ];
   }, [userId, youtubeData.items, gmailData.items, instagramData.items]);
 

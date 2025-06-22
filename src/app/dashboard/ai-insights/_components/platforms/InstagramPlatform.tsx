@@ -87,10 +87,10 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
         />
       ) : (
         <div className="grid gap-6">
-          {insights.length === 0 && !error && (
+          {(insights || []).length === 0 && !error && (
             <div className="text-center text-gray-400">No Instagram insights available.</div>
           )}
-          {insights.map((insight, idx) => (
+          {(insights || []).map((insight, idx) => (
             <InsightCard
               key={idx}
               {...insight}
