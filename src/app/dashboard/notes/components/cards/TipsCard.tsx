@@ -51,7 +51,7 @@ export function TipsCard({
   return (
     <BaseCard
       note={note}
-      className="bg-yellow-50 border-yellow-200 hover:border-yellow-300"
+      className="bg-yellow-500/10 border-yellow-500/30 hover:border-yellow-500/50"
       onEdit={onEdit}
       onDelete={onDelete}
       onToggleImportant={onToggleImportant}
@@ -60,13 +60,13 @@ export function TipsCard({
         {/* Header with HeyContent icon */}
         <div className="flex items-center gap-2 mb-3">
           {isHeyContentTip ? (
-            <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center">
-              <span className="text-xs font-bold text-yellow-900">HC</span>
+            <div className="w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center">
+              <span className="text-xs font-bold text-white">HC</span>
             </div>
           ) : (
             <Lightbulb className="w-4 h-4 text-yellow-600" />
           )}
-          <h3 className="font-semibold text-gray-900 flex-1 pr-8 line-clamp-1">
+          <h3 className="font-semibold text-foreground flex-1 pr-8 line-clamp-1">
             {note.title || 'Tips & Advice'}
           </h3>
         </div>
@@ -76,20 +76,20 @@ export function TipsCard({
           {tips.map((tip, index) => (
             <div key={index} className="flex items-start gap-2">
               <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full mt-2 flex-shrink-0" />
-              <span className="text-sm text-gray-700 line-clamp-2">
+              <span className="text-sm text-foreground line-clamp-2">
                 {tip}
               </span>
             </div>
           ))}
           
           {tips.length === 0 && (
-            <div className="text-sm text-gray-500 italic">
+            <div className="text-sm text-muted-foreground italic">
               No tips yet
             </div>
           )}
           
           {note.content && note.content.split('\n').length > tips.length && (
-            <div className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+            <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
               <span>+{note.content.split('\n').length - tips.length} more tips</span>
             </div>
           )}
@@ -97,10 +97,10 @@ export function TipsCard({
 
         {/* Footer with category or source */}
         {isHeyContentTip && (
-          <div className="mt-3 pt-2 border-t border-yellow-200">
+          <div className="mt-3 pt-2 border-t border-border">
             <div className="flex items-center gap-1">
-              <CheckCircle className="w-3 h-3 text-green-500" />
-              <span className="text-xs text-gray-600">HeyContent Tips</span>
+              <CheckCircle className="w-3 h-3 text-yellow-600" />
+              <span className="text-xs text-muted-foreground">HeyContent Tips</span>
             </div>
           </div>
         )}

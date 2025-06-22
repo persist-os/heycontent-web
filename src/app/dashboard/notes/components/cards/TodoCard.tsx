@@ -81,14 +81,14 @@ export function TodoCard({
   return (
     <BaseCard
       note={note}
-      className="bg-yellow-50 border-yellow-200 hover:border-yellow-300"
+      className="bg-yellow-500/10 border-yellow-500/30 hover:border-yellow-500/50"
       onEdit={onEdit}
       onDelete={onDelete}
       onToggleImportant={onToggleImportant}
     >
       <div className="p-4">
         {/* Title */}
-        <h3 className="font-semibold text-gray-900 mb-3 pr-8 line-clamp-2">
+        <h3 className="font-semibold text-foreground mb-3 pr-8 line-clamp-2">
           {note.title || 'TO-DO List'}
         </h3>
         
@@ -107,8 +107,8 @@ export function TodoCard({
                 className={cn(
                   "w-4 h-4 rounded border-2 flex items-center justify-center cursor-pointer transition-colors",
                   todo.completed 
-                    ? "bg-green-500 border-green-500" 
-                    : "border-gray-300 hover:border-gray-400"
+                    ? "bg-yellow-500 border-yellow-500" 
+                    : "border-border hover:border-yellow-500/50"
                 )}
               >
                 {todo.completed && (
@@ -119,8 +119,8 @@ export function TodoCard({
                 className={cn(
                   "text-sm flex-1 cursor-pointer",
                   todo.completed 
-                    ? "line-through text-gray-500" 
-                    : "text-gray-700"
+                    ? "line-through text-muted-foreground" 
+                    : "text-foreground"
                 )}
               >
                 {todo.text}
@@ -129,13 +129,13 @@ export function TodoCard({
           ))}
           
           {todos.length === 0 && (
-            <div className="text-sm text-gray-500 italic">
+            <div className="text-sm text-muted-foreground italic">
               No tasks yet
             </div>
           )}
           
           {note.content && note.content.split('\n').length > 4 && (
-            <div className="text-xs text-gray-500 mt-2">
+            <div className="text-xs text-muted-foreground mt-2">
               +{note.content.split('\n').length - 4} more tasks
             </div>
           )}

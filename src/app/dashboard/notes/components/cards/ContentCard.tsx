@@ -1,7 +1,7 @@
 import React from 'react';
 import { BaseCard } from './BaseCard';
 import { Note } from '../../types';
-import { Image, Video, Mic } from 'lucide-react';
+import { Image, Video } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ContentCardProps {
@@ -26,15 +26,29 @@ export function ContentCard({
   // Get card color based on note type or content
   const getCardColor = () => {
     if (note.type === 'content_script') {
-      return 'bg-purple-50 border-purple-200 hover:border-purple-300';
+      return 'bg-purple-500/10 border-purple-500/30 hover:border-purple-500/50';
+    }
+    if (note.type === 'idea_bank') {
+      return 'bg-red-500/10 border-red-500/30 hover:border-red-500/50';
     }
     if (note.title?.toLowerCase().includes('vlog')) {
-      return 'bg-red-50 border-red-200 hover:border-red-300';
+      return 'bg-red-500/10 border-red-500/30 hover:border-red-500/50';
     }
     if (note.title?.toLowerCase().includes('inspiration') || note.title?.toLowerCase().includes('ootd')) {
-      return 'bg-orange-50 border-orange-200 hover:border-orange-300';
+      return 'bg-red-500/10 border-red-500/30 hover:border-red-500/50';
     }
-    return 'bg-blue-50 border-blue-200 hover:border-blue-300';
+    return 'bg-purple-500/10 border-purple-500/30 hover:border-purple-500/50';
+  };
+
+  // Get icon color based on type
+  const getIconColor = () => {
+    if (note.type === 'content_script') {
+      return 'text-purple-600';
+    }
+    if (note.type === 'idea_bank') {
+      return 'text-red-600';
+    }
+    return 'text-purple-600';
   };
 
   // Determine if this is a media-heavy content
@@ -60,13 +74,13 @@ export function ContentCard({
           {hasMediaContent && (
             <div className="mt-1">
               {note.title?.toLowerCase().includes('vlog') ? (
-                <Video className="w-4 h-4 text-red-500" />
+                <Video className={cn("w-4 h-4", getIconColor())} />
               ) : (
-                <Image className="w-4 h-4 text-blue-500" />
+                <Image className={cn("w-4 h-4", getIconColor())} />
               )}
             </div>
           )}
-          <h3 className="font-semibold text-gray-900 flex-1 pr-8 line-clamp-2">
+          <h3 className="font-semibold text-foreground flex-1 pr-8 line-clamp-2">
             {note.title || 'Content Idea'}
           </h3>
         </div>
@@ -77,7 +91,7 @@ export function ContentCard({
             {hashtags.map((hashtag, index) => (
               <span 
                 key={index}
-                className="text-xs px-2 py-1 bg-background/60 rounded-full text-gray-600 font-medium"
+                className="text-xs px-2 py-1 bg-muted/60 rounded-full text-muted-foreground font-medium"
               >
                 {hashtag}
               </span>
@@ -86,34 +100,14 @@ export function ContentCard({
         )}
 
         {/* Content preview */}
-        <div className="text-sm text-gray-700 line-clamp-4">
+        <div className="text-sm text-muted-foreground line-clamp-4">
           {contentPreview}
         </div>
 
         {/* Media placeholder for certain content types */}
         {note.title?.toLowerCase().includes('ootd') && (
-          <div className="mt-3 h-24 bg-gradient-to-r from-orange-100 to-pink-100 rounded border border-orange-200 flex items-center justify-center">
-            <Image className="w-6 h-6 text-orange-400" />
-          </div>
-        )}
-
-        {/* Audio waveform for script content */}
-        {note.type === 'content_script' && (
-          <div className="mt-3 flex items-center gap-1 h-8">
-            <Mic className="w-4 h-4 text-purple-500" />
-            <div className="flex items-end gap-0.5 flex-1">
-              {Array.from({ length: 40 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="bg-purple-300 rounded-full"
-                  style={{
-                    width: '2px',
-                    height: `${Math.random() * 20 + 4}px`
-                  }}
-                />
-              ))}
-            </div>
-            <span className="text-xs text-gray-500">0:35</span>
+          <div className="mt-3 h-24 bg-gradient-to-r from-red-500/20 to-purple-500/20 rounded border border-red-500/30 flex items-center justify-center">
+            <Image className="w-6 h-6 text-red-600" />
           </div>
         )}
       </div>
