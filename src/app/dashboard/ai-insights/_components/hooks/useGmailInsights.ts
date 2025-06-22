@@ -2,8 +2,9 @@ import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { getApiKey } from '@/app/lib/api-helpers';
+import { BatchAnalysisHookReturn, InsightCard } from '@/types/batch-analysis';
 
-export function useGmailInsights(userId?: string) {
+export function useGmailInsights(userId?: string): BatchAnalysisHookReturn {
   const [error, setError] = useState<string | null>(null);
   const [threadLimit, setThreadLimit] = useState<number | 'all'>(50);
   const [customGmailLimit, setCustomGmailLimit] = useState<string>('');
@@ -28,16 +29,18 @@ export function useGmailInsights(userId?: string) {
   // Store Gmail batch analysis mutation
   const storeGmailBatchAnalysis = useMutation(api.gmailMutations.storeGmailBatchAnalysis);
 
-  // Platform-specific insights - backend now returns direct array format
-  const insightsList = gmailInsights?.insights || [];
+  // Extract data - handle both old and new formats during transition
+  const insightsList: InsightCard[] = gmailInsights?.insights || [];
+  const metadata = (gmailInsights as any)?.metadata || null;
+  const status = gmailInsights?.status || null;
 
   // Only show as running if we're actively refreshing AND status is processing/enqueued
   // Don't auto-show loading for old stuck statuses
-  const databaseStatus = gmailInsights?.status?.status;
-  const isActuallyRunning = isRefreshing && (databaseStatus === 'processing' || databaseStatus === 'enqueued' || databaseStatus === 'running');
+  const databaseStatus = status?.status;
+  const isActuallyRunning = isRefreshing && (databaseStatus === 'processing' || databaseStatus === 'enqueued');
 
   // Check if there's an error in the batch analysis
-  const batchError = gmailInsights?.status?.error;
+  const batchError = status?.error;
 
   // Update local error state when batch analysis has an error
   useEffect(() => {
@@ -48,7 +51,7 @@ export function useGmailInsights(userId?: string) {
 
   // Reset refreshing state when task completes
   useEffect(() => {
-    if (isRefreshing && databaseStatus && databaseStatus !== 'processing' && databaseStatus !== 'enqueued' && databaseStatus !== 'running') {
+    if (isRefreshing && databaseStatus && databaseStatus !== 'processing' && databaseStatus !== 'enqueued') {
       setIsRefreshing(false);
     }
   }, [isRefreshing, databaseStatus]);
@@ -127,18 +130,20 @@ export function useGmailInsights(userId?: string) {
 
   return {
     insights: insightsList,
+    metadata,
+    status,
     loading: gmailInsights === undefined,
     refreshing: isActuallyRunning, // Use combined local + database state
     error,
     isConnected: !!(gmailAccount && gmailAccount.length > 0),
     refresh,
     account: gmailAccount,
-    threadLimit,
-    setThreadLimit,
-    customGmailLimit,
-    setCustomGmailLimit,
-    showGmailCustomInput,
-    setShowGmailCustomInput,
+    postLimit: threadLimit,
+    setPostLimit: setThreadLimit,
+    customPostLimit: customGmailLimit,
+    setCustomPostLimit: setCustomGmailLimit,
+    showCustomInput: showGmailCustomInput,
+    setShowCustomInput: setShowGmailCustomInput,
     handleCustomSubmit,
   };
 } 

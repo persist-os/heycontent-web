@@ -2,8 +2,9 @@ import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { getApiKey } from '@/app/lib/api-helpers';
+import { BatchAnalysisHookReturn, BatchAnalysisData, InsightCard } from '@/types/batch-analysis';
 
-export function useYouTubeInsights(userId?: string) {
+export function useYouTubeInsights(userId?: string): BatchAnalysisHookReturn {
   const [error, setError] = useState<string | null>(null);
   const [postLimit, setPostLimit] = useState<number | 'all'>(10);
   const [customPostLimit, setCustomPostLimit] = useState('');
@@ -16,7 +17,7 @@ export function useYouTubeInsights(userId?: string) {
     userId ? { userId } : "skip"
   );
 
-  // Fetch YouTube batch analysis insights
+  // Fetch YouTube batch analysis insights (will be migrated to universal format)
   const youtubeInsights = useQuery(
     api.youtubeQueries.getYoutubeBatchAnalysis,
     userId && youtubeChannel?.id ? { 
@@ -28,16 +29,18 @@ export function useYouTubeInsights(userId?: string) {
   // Store YouTube batch analysis mutation
   const storeYoutubeBatchAnalysis = useMutation(api.youtubeMutations.storeYoutubeBatchAnalysis);
 
-  // Platform-specific insights - backend now returns direct array format
-  const insightsList = youtubeInsights?.insights || [];
+  // Extract data - handle both old and new formats during transition
+  const insightsList: InsightCard[] = youtubeInsights?.insights || [];
+  const metadata = (youtubeInsights as any)?.metadata || null;
+  const status = youtubeInsights?.status || null;
 
   // Only show as running if we're actively refreshing AND status is processing/enqueued
   // Don't auto-show loading for old stuck statuses
-  const databaseStatus = youtubeInsights?.status?.status;
-  const isActuallyRunning = isRefreshing && (databaseStatus === 'processing' || databaseStatus === 'enqueued' || databaseStatus === 'running');
+  const databaseStatus = status?.status;
+  const isActuallyRunning = isRefreshing && (databaseStatus === 'processing' || databaseStatus === 'enqueued');
 
   // Check if there's an error in the batch analysis
-  const batchError = youtubeInsights?.status?.error;
+  const batchError = status?.error;
 
   // Update local error state when batch analysis has an error
   useEffect(() => {
@@ -126,6 +129,8 @@ export function useYouTubeInsights(userId?: string) {
 
   return {
     insights: insightsList,
+    metadata,
+    status,
     loading: youtubeInsights === undefined,
     refreshing: isActuallyRunning, // Use combined local + database state
     error,

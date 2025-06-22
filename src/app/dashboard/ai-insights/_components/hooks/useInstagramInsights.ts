@@ -2,8 +2,9 @@ import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { getApiKey } from '@/app/lib/api-helpers';
+import { BatchAnalysisHookReturn, InsightCard } from '@/types/batch-analysis';
 
-export function useInstagramInsights(userId?: string) {
+export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
   const [error, setError] = useState<string | null>(null);
   const [postLimit, setPostLimit] = useState<number | 'all'>(50);
   const [customPostLimit, setCustomPostLimit] = useState<string>('');
@@ -28,16 +29,18 @@ export function useInstagramInsights(userId?: string) {
   // Store Instagram batch analysis mutation
   const storeInstagramAnalysis = useMutation(api.instagramMutations.storeInstagramBatchAnalysis);
 
-  // Platform-specific insights - backend now returns direct array format
-  const insightsList = instagramInsights?.insights || [];
+  // Extract data - handle both old and new formats during transition
+  const insightsList: InsightCard[] = instagramInsights?.insights || [];
+  const metadata = (instagramInsights as any)?.metadata || null;
+  const status = instagramInsights?.status || null;
 
   // Only show as running if we're actively refreshing AND status is processing/enqueued
   // Don't auto-show loading for old stuck statuses
-  const databaseStatus = instagramInsights?.status?.status;
-  const isActuallyRunning = isRefreshing && (databaseStatus === 'processing' || databaseStatus === 'enqueued' || databaseStatus === 'running');
+  const databaseStatus = status?.status;
+  const isActuallyRunning = isRefreshing && (databaseStatus === 'processing' || databaseStatus === 'enqueued');
 
   // Check if there's an error in the batch analysis
-  const batchError = instagramInsights?.status?.error;
+  const batchError = status?.error;
 
   // Update local error state when batch analysis has an error
   useEffect(() => {
@@ -48,7 +51,7 @@ export function useInstagramInsights(userId?: string) {
 
   // Reset refreshing state when task completes
   useEffect(() => {
-    if (isRefreshing && databaseStatus && databaseStatus !== 'processing' && databaseStatus !== 'enqueued' && databaseStatus !== 'running') {
+    if (isRefreshing && databaseStatus && databaseStatus !== 'processing' && databaseStatus !== 'enqueued') {
       setIsRefreshing(false);
     }
   }, [isRefreshing, databaseStatus]);
@@ -149,6 +152,8 @@ export function useInstagramInsights(userId?: string) {
 
   return {
     insights: insightsList,
+    metadata,
+    status,
     loading: instagramInsights === undefined,
     refreshing: isActuallyRunning, // Use combined local + database state
     error,
