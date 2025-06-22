@@ -104,9 +104,9 @@ export function ContentHubScreen() {
   const allContentItems = useMemo(() => {
     if (!userId) return []
     return [
-      ...youtubeAnalytics.items,
-      ...gmailAnalytics.items,
-      ...instagramAnalytics.items,
+      ...(youtubeAnalytics.items || []),
+      ...(gmailAnalytics.items || []),
+      ...(instagramAnalytics.items || []),
     ]
   }, [userId, youtubeAnalytics.items, gmailAnalytics.items, instagramAnalytics.items])
 
@@ -117,7 +117,7 @@ export function ContentHubScreen() {
 
   // Combined insights for "all" tab
   const allInsights = useMemo(() => {
-    // Hooks now return direct arrays (standardized format)
+    // Hooks return insights as direct arrays
     const youtubeInsightsArray = youtubeInsights.insights || [];
     const instagramInsightsArray = instagramInsights.insights || [];
     const gmailInsightsArray = gmailInsights.insights || [];
@@ -448,9 +448,9 @@ export function ContentHubScreen() {
                         <Brain className="w-4 h-4" />
                         AI Insights ({
                           selectedView === 'all' ? allInsights.length :
-                          selectedView === 'youtube' ? (youtubeInsights.insights?.insights || []).length :
-                          selectedView === 'instagram' ? (instagramInsights.insights?.insights || []).length :
-                          (gmailInsights.insights?.insights || []).length
+                          selectedView === 'youtube' ? (youtubeInsights.insights || []).length :
+                          selectedView === 'instagram' ? (instagramInsights.insights || []).length :
+                          (gmailInsights.insights || []).length
                         })
                       </TabsTrigger>
                     </TabsList>
