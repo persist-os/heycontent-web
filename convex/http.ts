@@ -312,6 +312,43 @@ app.delete("/api/api-keys/delete", async (c) => {
 
 // NOTES ROUTES
 
+app.post("/api/notes/create", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    const noteData = await c.req.json();
+
+    // Validate required fields
+    if (!noteData.userId) {
+      return c.json({ success: false, error: "Missing required field: userId" }, 400);
+    }
+    if (!noteData.content) {
+      return c.json({ success: false, error: "Missing required field: content" }, 400);
+    }
+
+    // Create the note using the notes mutation
+    const noteId = await ctx.runMutation(api.notes.createNote, noteData);
+    
+    if (noteId) {
+      // Fetch the created note to return it
+      const createdNote = await ctx.runQuery(api.notes.getNote, { 
+        noteId: noteId as string, 
+        userId: noteData.userId 
+      });
+      return c.json({ success: true, note: createdNote, noteId: noteId });
+    } else {
+      return c.json({ success: false, error: "Failed to create note" }, 500);
+    }
+
+  } catch (error: any) {
+    console.error("Failed to create note:", error);
+    if (error.data) {
+        return c.json({ success: false, error: "Failed to create note", details: error.data }, 500);
+    }
+    return c.json({ success: false, error: "Failed to create note", message: error.message || "Internal Server Error" }, 500);
+  }
+});
+
 app.get("/api/notes/:noteId", async (c) => {
   const ctx = c.env;
   const noteId = c.req.param("noteId");
