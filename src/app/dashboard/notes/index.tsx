@@ -8,7 +8,6 @@ import { useAuth } from '@/app/context/auth-context';
 import type { Id } from '@/convex/_generated/dataModel';
 import { useNotes } from '@/app/context/notes-context';
 import { Note, NoteType } from './types';
-import { useCreateNote } from './hooks/useCreateNote';
 
 export default function SmartNotes() {
   const { firebaseUser } = useAuth();
@@ -26,8 +25,6 @@ export default function SmartNotes() {
     setActiveNoteId,
   } = useNotes();
   
-  const { createNote: createNewNote, isCreating: isCreatingNote } = useCreateNote();
-
   useEffect(() => {
     if (activeNoteId) {
       const note = notes.find(n => n._id === activeNoteId);
@@ -39,11 +36,6 @@ export default function SmartNotes() {
     }
   }, [activeNoteId, notes]);
   
-  const createNote = React.useCallback(async () => {
-    if (isCreatingNote) return;
-    await createNewNote('');
-  }, [createNewNote, isCreatingNote]);
-
   // Handle note editing
   const handleEditNote = (note: Note) => {
     setActiveNoteId(note._id);
@@ -141,23 +133,13 @@ export default function SmartNotes() {
   // Show the grid view with loading state for note creation
   return (
     <div className="h-full w-full bg-background p-3 sm:p-4 md:p-6">
-      {isCreatingNote && (
-        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-background rounded-lg p-6 shadow-lg border border-border flex items-center gap-3">
-            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-            <span className="text-sm font-medium">Creating your note...</span>
-          </div>
-        </div>
-      )}
       <NotesGrid
         notes={notes}
-        onCreateNote={createNote}
         onEditNote={handleEditNote}
         onDeleteNote={handleDeleteNote}
         onToggleImportant={handleToggleImportant}
         onUpdateNote={handleUpdateNote}
         isLoading={isLoading}
-        isCreatingNote={isCreatingNote}
       />
     </div>
   );

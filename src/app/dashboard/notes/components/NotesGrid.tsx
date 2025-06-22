@@ -1,32 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Note, NoteType } from '../types';
 import { NoteCard } from './cards/NoteCard';
 import { Plus, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCreateNote } from '../hooks/useCreateNote';
+import { useNotes } from '@/app/context/notes-context';
 
 interface NotesGridProps {
   notes: Note[];
-  onCreateNote: () => void;
   onEditNote: (note: Note) => void;
   onDeleteNote: (noteId: string) => void;
   onToggleImportant: (noteId: string) => void;
   onUpdateNote: (noteId: string, updates: any) => void;
   isLoading?: boolean;
-  isCreatingNote?: boolean;
 }
 
 export function NotesGrid({
   notes,
-  onCreateNote,
   onEditNote,
   onDeleteNote,
   onToggleImportant,
   onUpdateNote,
   isLoading,
-  isCreatingNote
 }: NotesGridProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<'all' | NoteType>('all');
+  const { createNote, isCreating: isCreatingNote } = useCreateNote();
+  const { setActiveNoteId } = useNotes();
+
+  const handleCreateNote = async () => {
+    const newNoteId = await createNote('');
+    if (newNoteId) {
+      setActiveNoteId(newNoteId);
+    }
+  };
 
   // Note type configurations with colors - matching exact schema types
   const noteTypes = [
@@ -119,12 +126,12 @@ export function NotesGrid({
           </h3>
           <p className="text-muted-foreground mb-6 max-w-md">
             {searchTerm || selectedTypeFilter !== 'all' 
-              ? 'Try adjusting your search or filters to find what you\'re looking for.'
+              ? "Try adjusting your search or filters to find what you're looking for."
               : 'Start organizing your thoughts, ideas, and insights. Create your first note to get started.'
             }
           </p>
           <button
-            onClick={onCreateNote}
+            onClick={handleCreateNote}
             disabled={isCreatingNote}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -161,7 +168,7 @@ export function NotesGrid({
 
       {/* Floating Create Note Button */}
       <button
-        onClick={onCreateNote}
+        onClick={handleCreateNote}
         disabled={isCreatingNote}
         className="fixed bottom-6 right-6 w-14 h-14 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors flex items-center justify-center shadow-lg hover:shadow-xl z-50 disabled:opacity-50 disabled:cursor-not-allowed"
         title={isCreatingNote ? "Creating note..." : "Create new note"}

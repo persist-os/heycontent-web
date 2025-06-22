@@ -1,6 +1,5 @@
 import React from 'react';
-import { ContextBox } from './ContextBox';
-import { Brain } from 'lucide-react';
+import { ContextBox } from '../main_chat/ContextBox';
 
 interface ChatContextBoxProps {
   currentContext: any;
