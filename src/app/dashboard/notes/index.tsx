@@ -1,102 +1,52 @@
 'use client';
 
 import * as React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NotesGrid } from './components/NotesGrid';
 import { NoteArea } from './NoteArea';
 import { useAuth } from '@/app/context/auth-context';
 import type { Id } from '@/convex/_generated/dataModel';
 import { useNotes } from '@/app/context/notes-context';
 import { Note, NoteType } from './types';
+import { useCreateNote } from './hooks/useCreateNote';
 
 export default function SmartNotes() {
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid;
   const [activeNote, setActiveNote] = useState<Note | null>(null);
-  const [isCreatingNote, setIsCreatingNote] = useState(false);
   
-  // Get notes and mutations from useNotes context
   const { 
     notes, 
     isLoading, 
-    saveNote, 
     updateNote, 
     deleteNote, 
     saveNoteContent, 
     setNotes,
+    activeNoteId,
+    setActiveNoteId,
   } = useNotes();
   
-  // Create a new note with optimistic updates for instant UI feedback
-  const createNote = React.useCallback(async () => {
-    if (isCreatingNote) return; // Prevent double-clicks
-    
-    setIsCreatingNote(true);
-    
-    // Generate a temporary ID for optimistic update
-    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const defaultContent = '';
-    
-    // Create temporary note object for immediate UI feedback
-    const tempNote: Note = {
-      _id: tempId as any,
-      _creationTime: Date.now(),
-      userId: userId || '',
-      title: '',
-      content: defaultContent,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      important: false,
-      type: 'idea_bank',
-      tags: [],
-      typeGenerated: false,
-      titleGenerated: false,
-      isTemporary: true, // Flag to indicate this is a temporary note
-    };
-    
-    // Immediately show the editor with the temporary note for instant feedback
-    setActiveNote(tempNote);
-    
-    try {
-      // Create the actual note in the background
-      const result = await saveNote(defaultContent, {
-        title: '',
-        type: 'idea_bank' as NoteType,
-      });
+  const { createNote: createNewNote, isCreating: isCreatingNote } = useCreateNote();
 
-      if (result.success && result.noteId) {
-        // Update the temporary note with the real ID
-        const realNote: Note = {
-          ...tempNote,
-          _id: result.noteId,
-          isTemporary: false,
-        };
-        
-        setActiveNote(realNote);
-        
-        // Wait for the note to be added to the notes array for consistency
-        setTimeout(() => {
-          const newNote = notes.find(note => String(note._id) === String(result.noteId));
-          if (newNote) {
-            setActiveNote(newNote);
-          }
-        }, 100); // Reduced timeout for faster sync
-      } else {
-        // If creation failed, go back to grid
-        setActiveNote(null);
-        console.error("Failed to create note - no ID returned");
+  useEffect(() => {
+    if (activeNoteId) {
+      const note = notes.find(n => n._id === activeNoteId);
+      if (note) {
+        setActiveNote(note);
       }
-    } catch (error) {
-      console.error("Error creating note:", error);
-      // If creation failed, go back to grid
+    } else {
       setActiveNote(null);
-    } finally {
-      setIsCreatingNote(false);
     }
-  }, [saveNote, notes, userId, isCreatingNote]);
+  }, [activeNoteId, notes]);
+  
+  const createNote = React.useCallback(async () => {
+    if (isCreatingNote) return;
+    await createNewNote('');
+  }, [createNewNote, isCreatingNote]);
 
   // Handle note editing
   const handleEditNote = (note: Note) => {
-    setActiveNote(note);
+    setActiveNoteId(note._id);
   };
 
   // Handle note deletion
@@ -132,36 +82,16 @@ export default function SmartNotes() {
     if (!activeNote) return;
     
     try {
-      // If this is a temporary note, we need to create it first
-      if (activeNote.isTemporary) {
-        const result = await saveNote(latestContent, {
-          title: latestTitle || '',
-          type: activeNote.type,
-        });
-        
-        if (result.success && result.noteId) {
-          const realNote: Note = {
-            ...activeNote,
-            _id: result.noteId,
-            title: latestTitle || '',
-            content: latestContent,
-            isTemporary: false,
-          };
-          setActiveNote(realNote);
-        }
-      } else {
-        // Normal save for existing notes
-        const result = await saveNoteContent(
-          activeNote._id,
-          latestContent,
-          latestTitle ?? activeNote.title ?? ''
-        );
-        
-        if (result) {
-          // Update the active note with the latest data
-          setActiveNote(result);
-          console.log('Note saved successfully');
-        }
+      const result = await saveNoteContent(
+        activeNote._id,
+        latestContent,
+        latestTitle ?? activeNote.title ?? ''
+      );
+      
+      if (result) {
+        // Update the active note with the latest data
+        setActiveNote(result);
+        console.log('Note saved successfully');
       }
     } catch (error) {
       console.error('Failed to save note:', error);
@@ -170,7 +100,7 @@ export default function SmartNotes() {
 
   // Handle going back to grid view
   const handleBackToGrid = () => {
-    setActiveNote(null);
+    setActiveNoteId(null);
   };
 
   // If viewing a specific note, show the editor with smooth transition
