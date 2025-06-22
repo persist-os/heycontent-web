@@ -42,7 +42,7 @@ export function BaseCard({
     <div
       className={cn(
         "group relative bg-background border border-border rounded-lg shadow-sm transition-all duration-200",
-        "hover:shadow-md hover:border-border/80 cursor-pointer",
+        "hover:shadow-md hover:border-border/60 cursor-pointer",
         className
       )}
       onClick={handleEdit}

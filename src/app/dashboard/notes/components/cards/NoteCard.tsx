@@ -5,6 +5,7 @@ import { ContentCard } from './ContentCard';
 import { AnalyticsCard } from './AnalyticsCard';
 import { ReflectionCard } from './ReflectionCard';
 import { TipsCard } from './TipsCard';
+import { CollaborationCard } from './CollaborationCard';
 import { BaseCard } from './BaseCard';
 
 interface NoteCardProps {
@@ -24,7 +25,7 @@ export function NoteCard({
 }: NoteCardProps) {
   // Determine card type based on note properties and content
   // Priority: Convex note type first, then content-based detection
-  const getCardType = (): 'todo' | 'content' | 'analytics' | 'reflection' | 'tips' | 'default' => {
+  const getCardType = (): 'todo' | 'content' | 'analytics' | 'reflection' | 'tips' | 'collaboration' | 'default' => {
     const title = note.title?.toLowerCase() || '';
     const content = note.content?.toLowerCase() || '';
     const type = note.type;
@@ -51,7 +52,7 @@ export function NoteCard({
     }
     
     if (type === 'collaboration_note') {
-      return 'default'; // Could be any type, use default
+      return 'collaboration';
     }
 
     // Priority 2: Content-based detection for notes without specific types
@@ -78,6 +79,18 @@ export function NoteCard({
         content.includes('data') ||
         content.includes('performance')) {
       return 'analytics';
+    }
+
+    // Check for collaboration patterns
+    if (title.includes('meeting') || 
+        title.includes('project') ||
+        title.includes('team') ||
+        title.includes('collaboration') ||
+        content.includes('@') ||
+        content.includes('meeting') ||
+        content.includes('feedback') ||
+        content.includes('review')) {
+      return 'collaboration';
     }
 
     // Check for tips content patterns
@@ -156,6 +169,16 @@ export function NoteCard({
         />
       );
 
+    case 'collaboration':
+      return (
+        <CollaborationCard
+          note={note}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onToggleImportant={onToggleImportant}
+        />
+      );
+
     case 'reflection':
       return (
         <ReflectionCard
@@ -185,10 +208,10 @@ export function NoteCard({
           onToggleImportant={onToggleImportant}
         >
           <div className="p-4">
-            <h3 className="font-semibold text-gray-900 mb-2 pr-8 line-clamp-2">
+            <h3 className="font-semibold text-foreground mb-2 pr-8 line-clamp-2">
               {note.title || 'Untitled Note'}
             </h3>
-            <div className="text-sm text-gray-700 line-clamp-4">
+            <div className="text-sm text-muted-foreground line-clamp-4">
               {note.content || 'No content yet...'}
             </div>
           </div>

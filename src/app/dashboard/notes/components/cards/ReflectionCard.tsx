@@ -1,7 +1,7 @@
 import React from 'react';
 import { BaseCard } from './BaseCard';
 import { Note } from '../../types';
-import { Heart, Smile, User } from 'lucide-react';
+import { Heart, Smile, Brain, Lightbulb, Target, TrendingUp } from 'lucide-react';
 
 interface ReflectionCardProps {
   note: Note;
@@ -17,117 +17,168 @@ export function ReflectionCard({
   onToggleImportant 
 }: ReflectionCardProps) {
   // Extract mood or sentiment from content
-  const extractMood = (content: string): 'positive' | 'neutral' | 'thoughtful' => {
+  const extractMood = (content: string): 'positive' | 'reflective' | 'growth' | 'neutral' => {
     const lowerContent = content.toLowerCase();
-    if (lowerContent.includes('grateful') || lowerContent.includes('happy') || lowerContent.includes('excited')) {
+    
+    // Positive emotions
+    if (lowerContent.includes('grateful') || lowerContent.includes('happy') || 
+        lowerContent.includes('excited') || lowerContent.includes('proud') ||
+        lowerContent.includes('accomplished') || lowerContent.includes('joy')) {
       return 'positive';
     }
-    if (lowerContent.includes('think') || lowerContent.includes('reflect') || lowerContent.includes('consider')) {
-      return 'thoughtful';
+    
+    // Growth-oriented
+    if (lowerContent.includes('learn') || lowerContent.includes('grow') || 
+        lowerContent.includes('improve') || lowerContent.includes('progress') ||
+        lowerContent.includes('goal') || lowerContent.includes('achievement')) {
+      return 'growth';
     }
+    
+    // Reflective/thoughtful
+    if (lowerContent.includes('think') || lowerContent.includes('reflect') || 
+        lowerContent.includes('consider') || lowerContent.includes('realize') ||
+        lowerContent.includes('understand') || lowerContent.includes('insight')) {
+      return 'reflective';
+    }
+    
     return 'neutral';
   };
 
   const mood = extractMood(note.content || '');
-  
-  // Get card styling based on mood
-  const getCardStyle = () => {
-    switch (mood) {
-      case 'positive':
-        return 'bg-green-50 border-green-200 hover:border-green-300';
-      case 'thoughtful':
-        return 'bg-blue-50 border-blue-200 hover:border-blue-300';
-      default:
-        return 'bg-gray-50 border-gray-200 hover:border-gray-300';
-    }
-  };
 
   const getMoodIcon = () => {
     switch (mood) {
       case 'positive':
-        return <Smile className="w-4 h-4 text-green-500" />;
-      case 'thoughtful':
-        return <User className="w-4 h-4 text-blue-500" />;
+        return <Smile className="w-4 h-4 text-blue-600" />;
+      case 'growth':
+        return <TrendingUp className="w-4 h-4 text-blue-600" />;
+      case 'reflective':
+        return <Brain className="w-4 h-4 text-blue-600" />;
       default:
-        return <Heart className="w-4 h-4 text-gray-500" />;
+        return <Heart className="w-4 h-4 text-blue-600" />;
     }
   };
 
-  // Extract key phrases or quotes
-  const extractHighlight = (content: string): string => {
-    // Look for quoted text or sentences with emotional words
+  const getMoodLabel = () => {
+    switch (mood) {
+      case 'positive':
+        return 'Positive Reflection';
+      case 'growth':
+        return 'Growth & Goals';
+      case 'reflective':
+        return 'Deep Thinking';
+      default:
+        return 'Personal Journal';
+    }
+  };
+
+  // Extract key insight or quote
+  const extractKeyInsight = (content: string): string | null => {
+    // Look for quoted text first
     const quotedMatch = content.match(/"([^"]+)"/);
-    if (quotedMatch) return quotedMatch[1];
+    if (quotedMatch && quotedMatch[1].length > 10) return quotedMatch[1];
     
-    // Look for sentences with reflection keywords
-    const sentences = content.split('.').filter(s => s.trim());
-    const reflectionSentence = sentences.find(s => 
-      s.toLowerCase().includes('feel') || 
-      s.toLowerCase().includes('think') || 
-      s.toLowerCase().includes('realize')
-    );
+    // Look for sentences with key reflection words
+    const sentences = content.split(/[.!?]/).filter(s => s.trim().length > 15);
+    const insightSentence = sentences.find(s => {
+      const lower = s.toLowerCase();
+      return lower.includes('realize') || lower.includes('learned') || 
+             lower.includes('understand') || lower.includes('insight') ||
+             lower.includes('grateful') || lower.includes('feel');
+    });
     
-    if (reflectionSentence) {
-      return reflectionSentence.trim().substring(0, 100);
+    if (insightSentence) {
+      return insightSentence.trim().substring(0, 120);
     }
     
-    return content.substring(0, 100);
+    return null;
   };
 
-  const highlight = extractHighlight(note.content || '');
+  // Extract reflection themes
+  const extractThemes = (content: string): string[] => {
+    const themes: string[] = [];
+    const lowerContent = content.toLowerCase();
+    
+    if (lowerContent.includes('grateful') || lowerContent.includes('gratitude')) {
+      themes.push('Gratitude');
+    }
+    if (lowerContent.includes('goal') || lowerContent.includes('objective')) {
+      themes.push('Goals');
+    }
+    if (lowerContent.includes('growth') || lowerContent.includes('develop')) {
+      themes.push('Growth');
+    }
+    if (lowerContent.includes('challenge') || lowerContent.includes('difficult')) {
+      themes.push('Challenges');
+    }
+    if (lowerContent.includes('relationship') || lowerContent.includes('people')) {
+      themes.push('Relationships');
+    }
+    if (lowerContent.includes('work') || lowerContent.includes('career')) {
+      themes.push('Career');
+    }
+    
+    return themes.slice(0, 3);
+  };
+
+  const keyInsight = extractKeyInsight(note.content || '');
+  const themes = extractThemes(note.content || '');
 
   return (
     <BaseCard
       note={note}
-      className={getCardStyle()}
+      className="bg-blue-500/10 border-blue-500/30 hover:border-blue-500/50"
       onEdit={onEdit}
       onDelete={onDelete}
       onToggleImportant={onToggleImportant}
     >
       <div className="p-4">
-        {/* Header with mood icon */}
+        {/* Header with mood icon and type */}
         <div className="flex items-center gap-2 mb-3">
           {getMoodIcon()}
-          <h3 className="font-semibold text-gray-900 flex-1 pr-8 line-clamp-1">
-            {note.title || 'Self Check-in'}
-          </h3>
+          <div className="flex-1 pr-8">
+            <h3 className="font-semibold text-foreground line-clamp-1">
+              {note.title || getMoodLabel()}
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              {getMoodLabel()}
+            </p>
+          </div>
         </div>
 
-        {/* Highlighted quote or key phrase */}
-        {highlight && (
-          <div className="mb-3 p-3 bg-background/60 rounded-lg border-l-4 border-primary/30">
-            <div className="text-sm text-gray-700 italic line-clamp-3">
-              "{highlight}"
+        {/* Key insight highlight */}
+        {keyInsight && (
+          <div className="mb-3 p-3 bg-muted/30 rounded-lg border-l-4 border-blue-500/50">
+            <div className="flex items-start gap-2">
+              <Lightbulb className="w-3 h-3 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-foreground italic line-clamp-3">
+                "{keyInsight}"
+              </div>
             </div>
           </div>
         )}
 
         {/* Content preview */}
-        <div className="text-sm text-gray-600 line-clamp-4">
-          {note.content && note.content.length > highlight.length 
-            ? note.content.replace(highlight, '').substring(0, 150)
-            : note.content?.substring(0, 150)
+        <div className="text-sm text-muted-foreground line-clamp-4 mb-3">
+          {note.content && keyInsight 
+            ? note.content.replace(keyInsight, '').trim().substring(0, 150) + '...'
+            : note.content?.substring(0, 150) + '...' || 'Start your reflection...'
           }
         </div>
 
-        {/* Reflection tags/categories */}
-        <div className="mt-3 flex flex-wrap gap-1">
-          {mood === 'positive' && (
-            <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
-              Positive
-            </span>
-          )}
-          {note.content?.toLowerCase().includes('growth') && (
-            <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
-              Growth
-            </span>
-          )}
-          {note.content?.toLowerCase().includes('goal') && (
-            <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full">
-              Goals
-            </span>
-          )}
-        </div>
+        {/* Reflection themes */}
+        {themes.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {themes.map((theme, index) => (
+              <span 
+                key={index}
+                className="text-xs px-2 py-1 bg-blue-500/10 text-blue-600 rounded-full font-medium"
+              >
+                {theme}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </BaseCard>
   );
