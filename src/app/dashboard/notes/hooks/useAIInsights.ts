@@ -59,19 +59,27 @@ export function useAIInsights(updateNote: (noteId: string | Id<"notes">, updates
     }
 
     try {
-      // Call the smart note analysis API
-      const response = await fetch('/api/smart-note/analyze', {
+      // Use typed analysis for all notes
+      const requestBody = {
+        noteId: noteId,
+        content: noteContent,
+        title: note.title || 'Untitled Note',
+        type: note.type || 'idea_bank', // Default to idea_bank if no type
+        platform: note?.platform || 'web',
+        tags: note.tags || [],
+        important: note.important || false,
+        references: [] // Can add references later if needed
+      };
+
+      console.log(`[useAIInsights] Using typed analysis for type: ${requestBody.type}`);
+
+      const response = await fetch('/api/smart-note-typed/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
         },
-        // Send both noteId and content so backend can always analyze
-        body: JSON.stringify({
-          noteId: noteId,
-          content: noteContent, // always send content
-          platform: note?.platform || 'web',
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -84,28 +92,18 @@ export function useAIInsights(updateNote: (noteId: string | Id<"notes">, updates
         throw new Error(data.message || 'Analysis failed');
       }
 
-      // Handle the new markdown response format
+      // Handle typed analysis response format
       let formattedContent = '';
       
-      // Check if we have markdown_content in the response
-      if (data.data?.markdown_content && typeof data.data.markdown_content === 'string') {
-        formattedContent = data.data.markdown_content;
-        console.log('Using markdown_content from response');
-      } 
-      // Fall back to the original note content if no markdown content is found
-      else if (data.data?.original_note) {
-        console.warn('No markdown content found, using original note');
-        formattedContent = '### Analysis Failed\n\nThe AI was unable to analyze your note. Please try again later.';
+      // Typed analysis returns markdown directly in the analysis field
+      if (data.data?.analysis && typeof data.data.analysis === 'string') {
+        formattedContent = data.data.analysis;
+        console.log('Using typed analysis response format');
       }
-      // Legacy format support
-      else if (data.data?.analysis) {
-        console.log('Using legacy analysis format');
-        formattedContent = formatAnalysisToMarkdown(data.data.analysis);
-      }
-      // Complete fallback
+      // Fallback for any unexpected response structure
       else {
         console.warn('Response data structure is unexpected:', data);
-        formattedContent = '### Analysis Result\n\n' + JSON.stringify(data.data, null, 2);
+        formattedContent = '### Analysis Failed\n\nThe AI was unable to analyze your note. Please try again later.';
       }
 
       // Write the entire backend response to Convex analysis field

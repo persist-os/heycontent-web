@@ -1,20 +1,12 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Note, NoteUpdate, NoteType } from './types';
-import { CommandMenu } from './CommandMenu';
 import { NoteHeader } from './components/NoteHeader';
 import { NoteEditor } from './components/NoteEditor';
 import { NoteMeta } from './components/NoteMeta';
 import { TypeSelector } from './components/TypeSelector';
-import { useSmartNoteEditor } from './hooks/useSmartNoteEditor';
-import { FullAnalysisModal } from './components/FullAnalysisModal';
-import IdeasPanel from "./components/IdeasPanel";
-import { AnalysisSection } from "./AnalysisSection";
 import type { Id } from "@/convex/_generated/dataModel";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Brain, Lightbulb, Edit } from 'lucide-react';
-
 
 interface NoteAreaProps {
   note: Note;
@@ -35,72 +27,56 @@ export function NoteArea({
   onBack,
   isMobile
 }: NoteAreaProps) {
-  // Local UI state
-  const [activeTab, setActiveTab] = useState<string>("editor");
-  const editorRef = useRef<HTMLTextAreaElement>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  
-  // Add event listener to switch to editor tab when an idea is applied
+  const [content, setContent] = useState(note.content || '');
+
+  // Keep content in sync with note prop
   React.useEffect(() => {
-    const handleSwitchToEditor = () => {
-      setActiveTab("editor");
-    };
+    setContent(note.content || '');
+  }, [note._id, note.content]);
+
+  // Handle content changes with debounced save
+  const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  const handleContentChange = (newContent: string) => {
+    setContent(newContent);
     
-    window.addEventListener('switchToEditorTab', handleSwitchToEditor);
+    // Clear existing timeout
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+    }
     
-    return () => {
-      window.removeEventListener('switchToEditorTab', handleSwitchToEditor);
-    };
-  }, []);
-  
-  // Use the hook for all editor functionality
-  const {
-    content,
-    showFullAnalysis,
-    setShowFullAnalysis,
-    selectedInsight,
-    cursorPosition,
-    setCursorPosition,
-    showCommands,
-    setShowCommands,
-    menuPosition,
-    searchTerm,
-    insertText,
-    handleContentChange,
-    handleCommand,
-    handleKeyDown,
-    textAreaRef,
-    handleSave,
-  } = useSmartNoteEditor({
-    note,
-    onUpdate,
-    onSave,
-    onToggleShortcuts,
-    onRequestAIInsights,
-    isEditingTitle
-  });
-
-  // Track the latest title from NoteMeta
-  const [latestTitle, setLatestTitle] = useState(note.title || "Untitled Note");
-
-  // Keep local latestTitle in sync with note prop
-  React.useEffect(() => {
-    setLatestTitle(note.title || "Untitled Note");
-  }, [note._id, note.title]);
-
-  // Callback to receive title changes from NoteMeta
-  const handleMetaTitleChange = (title: string) => {
-    setLatestTitle(title);
-    console.log('[NoteArea] handleMetaTitleChange: received new title', title);
+    // Set new timeout for auto-save
+    const timeout = setTimeout(async () => {
+      try {
+        await onUpdate(note._id, { content: newContent });
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+      }
+    }, 1000); // Auto-save after 1 second of inactivity
+    
+    setSaveTimeout(timeout);
   };
 
+  // Clean up timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+      }
+    };
+  }, [saveTimeout]);
+
   const handleTypeChange = async (newType: NoteType) => {
-    console.log('[NoteArea] handleTypeChange: updating type', { noteId: note._id, newType });
     await onUpdate(note._id, { type: newType, typeGenerated: false });
   };
 
+  const handleSave = () => {
+    onSave(content, note.title);
+  };
+
   return (
-    <div className="flex flex-col h-full w-full">
+    <div className="flex flex-col h-full w-full bg-background">
       {/* Header */}
       <NoteHeader 
         note={note}
@@ -112,118 +88,39 @@ export function NoteArea({
         currentContent={content}
       />
       
-      {/* Note metadata */}
-      <NoteMeta
-        note={note}
-        onUpdate={onUpdate}
-        onTitleChange={handleMetaTitleChange}
-        onEditingTitleChange={setIsEditingTitle}
-      />
-      
-      {/* Main content area with tabs */}
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <Tabs 
-          defaultValue="editor" 
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="flex flex-col flex-1 overflow-hidden"
-        >
-          <TabsList className="bg-background/95 backdrop-blur-sm border-b border-border px-2 mb-0 w-full justify-between">
-            <div className="flex items-center">
-              <TabsTrigger 
-                value="editor" 
-                className="flex items-center gap-1.5 data-[state=active]:text-primary data-[state=active]:shadow-[0_-2px_0_0_hsl(var(--primary))_inset]"
-              >
-                <Edit size={16} className="h-4 w-4" />
-                <span>Editor</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="analysis" 
-                className="flex items-center gap-1.5 data-[state=active]:text-primary data-[state=active]:shadow-[0_-2px_0_0_hsl(var(--primary))_inset]"
-              >
-                <Brain size={16} className="h-4 w-4" />
-                <span>Analysis</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="ideas" 
-                className="flex items-center gap-1.5 data-[state=active]:text-primary data-[state=active]:shadow-[0_-2px_0_0_hsl(var(--primary))_inset]"
-              >
-                <Lightbulb size={16} className="h-4 w-4" />
-                <span>Ideas</span>
-              </TabsTrigger>
-            </div>
-            
-            {/* Type Selector aligned with tabs */}
-            <div className="flex items-center mr-4">
-              <TypeSelector
-                currentType={note.type || 'idea_bank'}
-                typeGenerated={note.typeGenerated}
-                onTypeChange={handleTypeChange}
-              />
-            </div>
-          </TabsList>
-          
-          <div className="flex flex-1 overflow-hidden">
-            {/* Editor Tab - Always visible regardless of active tab */}
-            <div className={`flex-1 overflow-hidden relative transition-all ${
-              activeTab !== "editor" ? "lg:flex-[0.6] border-r border-border/50" : ""
-            }`}>
-              <NoteEditor
-                ref={textAreaRef}
-                content={content}
-                onContentChange={handleContentChange}
-                onKeyDown={handleKeyDown}
-                cursorPosition={cursorPosition}
-                setCursorPosition={setCursorPosition}
-              />
-              
-              {/* Command menu */}
-              {showCommands && (
-                <CommandMenu
-                  onSelect={(cmd) => handleCommand(cmd as any)}
-                  onClose={() => setShowCommands(false)}
-                  searchTerm={searchTerm}
-                  position={menuPosition}
-                  userId={String(note.userId)}
-                  noteId={String(note._id)}
-                />
-              )}
-            </div>
-            
-            {/* Right panel for Analysis or Ideas based on active tab */}
-            {activeTab !== "editor" && (
-              <div className="flex-1 overflow-hidden lg:flex-[0.4] transition-all">
-                <TabsContent value="analysis" className="h-full overflow-auto m-0 p-0 data-[state=active]:flex-1">
-                  <div className="h-full overflow-auto">
-                    <AnalysisSection noteId={note._id as Id<"notes">} userId={note.userId} />
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="ideas" className="h-full overflow-auto m-0 p-0 data-[state=active]:flex-1">
-                  <div className="h-full overflow-auto p-4 bg-background/50">
-                    <IdeasPanel 
-                      noteId={String(note._id)}
-                      userId={String(note.userId)}
-                      platform={note.platform}
-                      mode="note"
-                      limit={5}
-                      onApplyIdea={(idea) => insertText(idea)}
-                      isEmbedded={true}
-                    />
-                  </div>
-                </TabsContent>
-              </div>
-            )}
-          </div>
-        </Tabs>
+      {/* Note metadata and type selector */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/95">
+        <NoteMeta
+          note={note}
+          onUpdate={onUpdate}
+          onTitleChange={() => {}} // Title changes are handled by NoteMeta internally
+          onEditingTitleChange={setIsEditingTitle}
+        />
+        
+        <TypeSelector
+          noteId={note._id}
+          userId={note.userId}
+          currentType={note.type || 'idea_bank'}
+          typeGenerated={note.typeGenerated}
+          onTypeChange={handleTypeChange}
+        />
       </div>
       
-      {/* Full Analysis Modal */}
-      <FullAnalysisModal
-        showFullAnalysis={showFullAnalysis}
-        setShowFullAnalysis={setShowFullAnalysis}
-        selectedInsight={selectedInsight}
-      />
+      {/* Main editor area */}
+      <div className="flex-1 overflow-hidden">
+        <NoteEditor
+          content={content}
+          onContentChange={handleContentChange}
+          placeholder="Start writing your note..."
+          disabled={false}
+          noteId={String(note._id)}
+          noteTitle={note.title}
+          platform={note.platform}
+          tags={note.tags}
+          userId={String(note.userId)}
+          noteType={note.type}
+        />
+      </div>
     </div>
   );
 }

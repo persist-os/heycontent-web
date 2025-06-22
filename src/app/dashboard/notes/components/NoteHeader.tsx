@@ -57,7 +57,7 @@ export function NoteHeader({ note, onUpdate, onSave, onRequestAIInsights, onBack
         
         {/* Centered title */}
         <div className="text-center">
-          <h1 className="text-base font-medium text-purple-600 dark:text-accent">Smart Notes</h1>
+          <h1 className="text-base font-medium text-primary">Smart Notes</h1>
         </div>
         
         {/* Right side with back button and action buttons */}
@@ -66,17 +66,17 @@ export function NoteHeader({ note, onUpdate, onSave, onRequestAIInsights, onBack
             {isMobile && (
               <button
                 onClick={onBack}
-                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"
+                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted/60 transition-all duration-200 group"
                 title="Back to notes"
               >
-                <ArrowLeft className="w-5 h-5 text-muted-foreground hover:text-foreground" />
+                <ArrowLeft className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors duration-200" />
               </button>
             )}
           <button
-            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
               note.type === 'idea_bank' 
-                ? 'bg-primary/10 text-primary' 
-                : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+                ? 'bg-primary/15 text-primary border border-primary/30' 
+                : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent'
             }`}
             onClick={() => onUpdate(note._id, { type: note.type === 'idea_bank' ? 'content_script' : 'idea_bank' as NoteType })}
             title={note.type === 'idea_bank' ? 'Switch to content script' : 'Mark as idea bank'}
@@ -84,10 +84,10 @@ export function NoteHeader({ note, onUpdate, onSave, onRequestAIInsights, onBack
             <Lightbulb size={16} />
           </button>
           <button
-            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
               note.important 
-                ? 'bg-primary/10 text-primary' 
-                : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+                ? 'bg-primary/15 text-primary border border-primary/30' 
+                : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent'
             }`}
             onClick={() => onUpdate(note._id, { important: !note.important })}
             title={note.important ? 'Remove importance' : 'Mark as important'}
@@ -95,10 +95,10 @@ export function NoteHeader({ note, onUpdate, onSave, onRequestAIInsights, onBack
             <Star size={16} fill={note.important ? "currentColor" : "none"} />
           </button>
           <button
-            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
               isAnalyzing 
-                ? 'bg-accent/50 text-accent-foreground' 
-                : 'bg-accent text-accent-foreground hover:bg-accent/80'
+                ? 'bg-primary/30 text-primary border border-primary/40' 
+                : 'bg-primary/15 text-primary hover:bg-primary/25 border border-primary/30'
             }`}
             onClick={handleRequestInsights}
             disabled={isAnalyzing}
@@ -107,7 +107,7 @@ export function NoteHeader({ note, onUpdate, onSave, onRequestAIInsights, onBack
             {isAnalyzing ? <Loader2 size={16} className="animate-spin" /> : <Brain size={16} />}
           </button>
             <button
-              className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 shadow-sm"
               onClick={handleSave}
               title="Save note"
             >

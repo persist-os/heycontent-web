@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { Note } from '../types';
+import { MinimalTypeDisplay } from './TypeSelector';
 
 interface NoteMetaProps {
   note: Note;
@@ -52,7 +53,7 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onEditingTitleChange }
   };
 
   return (
-    <div className="pb-3 px-6">
+    <div className="pb-4 px-6 border-b border-border/30">
       {isEditing ? (
         <input
           title="Note Title"
@@ -62,19 +63,19 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onEditingTitleChange }
           onFocus={handleTitleFocus}
           onBlur={handleTitleBlur}
           onKeyDown={handleTitleKeyDown}
-          className="w-full text-xl font-semibold px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-300"
+          className="w-full text-xl font-semibold px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary bg-background text-foreground transition-all duration-200"
           autoFocus
         />
       ) : (
         <h1 
-          className="text-xl font-semibold px-2 py-1 hover:bg-gray-50 rounded-md cursor-pointer"
+          className="text-xl font-semibold px-3 py-2 hover:bg-muted/40 rounded-lg cursor-pointer transition-all duration-200 text-foreground group"
           onClick={() => { setIsEditing(true); if (onEditingTitleChange) onEditingTitleChange(true); }}
         >
           {title || "Untitled Note"}
         </h1>
       )}
-      <div className="flex flex-wrap items-center mt-1 px-2 text-xs text-gray-500">
-        <span>
+      <div className="flex flex-wrap items-center mt-2 px-3 text-xs text-muted-foreground">
+        <span className="font-medium">
           {note.updatedAt
             ? new Date(note.updatedAt).toLocaleDateString('en-US', {
                 month: 'short',
@@ -85,12 +86,14 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onEditingTitleChange }
             : 'Just now'
           }
         </span>
+        <span className="mx-2 text-muted-foreground/60">•</span>
+        <MinimalTypeDisplay currentType={note.type || 'idea_bank'} />
         {note.tags && note.tags.length > 0 && (
-          <div className="flex flex-wrap items-center ml-2">
-            <span className="mr-1">•</span>
-            <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap items-center ml-3">
+            <span className="mr-2 text-muted-foreground/60">•</span>
+            <div className="flex flex-wrap gap-1.5">
               {note.tags.map((tag, idx) => (
-                <span key={idx} className="bg-gray-100 px-1.5 py-0.5 rounded-full text-gray-600">
+                <span key={idx} className="bg-muted/60 px-2 py-1 rounded-full text-muted-foreground text-xs font-medium border border-border/40 hover:border-border transition-colors duration-200">
                   #{tag}
                 </span>
               ))}
