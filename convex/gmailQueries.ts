@@ -460,6 +460,7 @@ export const getGmailBatchAnalysis = query({
         userId: analysis.userId,
         gmailAccountId: analysis.gmailAccountId,
         insights: analysis.insights,
+        status: analysis.status,
         updatedAt: analysis.updatedAt || analysis._creationTime
       };
     } catch (error) {

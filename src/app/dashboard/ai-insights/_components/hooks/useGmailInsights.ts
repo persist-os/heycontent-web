@@ -1,10 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { getApiKey } from '@/app/lib/api-helpers';
 
 export function useGmailInsights(userId?: string) {
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [threadLimit, setThreadLimit] = useState<number | 'all'>(50);
   const [customGmailLimit, setCustomGmailLimit] = useState<string>('');
@@ -31,13 +30,28 @@ export function useGmailInsights(userId?: string) {
   // Platform-specific insights
   const insightsList = gmailBatchInsights?.insights?.insights || [];
 
+  // Determine if batch analysis is currently running based on database status
+  const isRunning = gmailBatchInsights?.status?.status === 'processing' || 
+                   gmailBatchInsights?.status?.status === 'enqueued' ||
+                   gmailBatchInsights?.status?.status === 'running';
+
+  // Check if there's an error in the batch analysis
+  const batchError = gmailBatchInsights?.status?.error;
+
+  // Update local error state when batch analysis has an error
+  useEffect(() => {
+    if (batchError && !error) {
+      setError(batchError);
+    }
+  }, [batchError, error]);
+
   const refresh = useCallback(async () => {
     if (!userId || !gmailAccount || gmailAccount.length === 0) {
       setError('Gmail account not connected');
       return;
     }
 
-    setRefreshing(true);
+    // Clear any existing errors
     setError(null);
     
     try {
@@ -72,7 +86,7 @@ export function useGmailInsights(userId?: string) {
       }
       
       if (data.status === 'enqueued') {
-        // Gmail analysis is now async like YouTube and Instagram
+        // Gmail analysis is now async - the status is tracked in the database
         // The results will be automatically available in the query once completed
         console.log(`Gmail analysis enqueued with task ID: ${data.task_id}`);
       } else if (data.status === 'success') {
@@ -88,8 +102,6 @@ export function useGmailInsights(userId?: string) {
     } catch (error: any) {
       console.error('Error refreshing Gmail insights:', error);
       setError(error.message || 'Failed to refresh Gmail insights');
-    } finally {
-      setRefreshing(false);
     }
   }, [userId, gmailAccount, threadLimit, storeGmailBatchAnalysis]);
 
@@ -105,7 +117,7 @@ export function useGmailInsights(userId?: string) {
   return {
     insights: insightsList,
     loading: gmailBatchInsights === undefined,
-    refreshing,
+    refreshing: isRunning, // Use database status instead of local state
     error,
     isConnected: !!(gmailAccount && gmailAccount.length > 0),
     refresh,
