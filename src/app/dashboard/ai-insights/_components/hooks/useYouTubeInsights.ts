@@ -28,8 +28,8 @@ export function useYouTubeInsights(userId?: string) {
   // Store YouTube batch analysis mutation
   const storeYoutubeBatchAnalysis = useMutation(api.youtubeMutations.storeYoutubeBatchAnalysis);
 
-  // Platform-specific insights
-  const insightsList = youtubeInsights?.insights?.insights || [];
+  // Platform-specific insights - backend now returns direct array format
+  const insightsList = youtubeInsights?.insights || [];
 
   // Only show as running if we're actively refreshing AND status is processing/enqueued
   // Don't auto-show loading for old stuck statuses
