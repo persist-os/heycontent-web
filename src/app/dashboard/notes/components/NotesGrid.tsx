@@ -67,49 +67,45 @@ export function NotesGrid({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header with search and filters */}
-      <div className="flex flex-col gap-4 mb-4 sm:mb-6">
-        <div className="flex flex-col gap-3">
-          <div className="text-center">
-            <h1 className="text-base font-medium text-purple-600 dark:text-accent">Smart Notes</h1>
-            <p className="text-muted-foreground text-sm">
-              Your intelligent note-taking workspace
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* Search bar */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search notes..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2.5 w-full border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
-            />
-          </div>
+      {/* Header */}
+      <div className="text-center mb-6">
+        <h1 className="text-base font-medium text-purple-600 dark:text-accent">Smart Notes</h1>
+        <p className="text-muted-foreground text-sm">
+          Your intelligent note-taking workspace
+        </p>
+      </div>
 
-          {/* Type filter buttons */}
-          <div className="flex flex-wrap gap-2 w-full justify-center">
-            {noteTypes.map((type) => (
-              <button
-                key={type.key}
-                onClick={() => setSelectedTypeFilter(type.key as any)}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-full transition-colors",
-                  selectedTypeFilter === type.key
-                    ? "bg-background text-foreground shadow-sm border-2 border-primary"
-                    : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
-                )}
-              >
-                <div className={cn("w-2 h-2 rounded-full", type.color)}></div>
-                {type.label}
-              </button>
-            ))}
-          </div>
+      {/* Prominent Search Bar */}
+      <div className="mb-6 px-4">
+        <div className="relative max-w-2xl mx-auto">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <input
+            type="text"
+            placeholder="Search your notes..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 text-base bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-full text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition-colors"
+          />
         </div>
+      </div>
+
+      {/* Type filter buttons */}
+      <div className="flex flex-wrap gap-2 justify-center mb-6">
+        {noteTypes.map((type) => (
+          <button
+            key={type.key}
+            onClick={() => setSelectedTypeFilter(type.key as any)}
+            className={cn(
+              "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-full transition-colors",
+              selectedTypeFilter === type.key
+                ? "bg-background text-foreground shadow-sm border-2 border-primary"
+                : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
+            )}
+          >
+            <div className={cn("w-2 h-2 rounded-full", type.color)}></div>
+            {type.label}
+          </button>
+        ))}
       </div>
 
       {/* Notes grid */}
