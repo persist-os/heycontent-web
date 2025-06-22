@@ -66,7 +66,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   const askQueryProcessedRef = useRef<string | null>(null)
 
   // Notes context for creating local notes
-  const { createLocalNote, setActiveNoteId } = useNotes();
+  const { setActiveNoteId } = useNotes();
 
   // Initialize shared state
   const chatState = useChatState()

@@ -52,7 +52,8 @@ export const useCreateNote = () => {
   }, []);
 
   const createNote = async (content: string, callback?: () => void, customTitle?: string) => {
-    if (!content.trim()) return;
+    // Allow empty content for new notes - users can fill them in later
+    // if (!content.trim()) return;
     
     setIsCreating(true);
     
@@ -64,8 +65,10 @@ export const useCreateNote = () => {
       if (success && noteId) {
         console.log("✅ [useCreateNote] Note created successfully:", noteId);
         
-        // Trigger metadata generation
-        await generateMetadata(noteId.toString(), content);
+        // Only trigger metadata generation if content is substantial
+        if (content.trim().length >= 10) {
+          await generateMetadata(noteId.toString(), content);
+        }
 
         setActiveNoteId(noteId.toString());
         router.push('/dashboard/notes');
