@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Note, NoteUpdate, Command } from '../types';
 import { ShortcutManager } from '../keyboard-shortcuts';
 import { saveToLocal, getCursorCoordinates } from '../utils/note-utils';
-import { useTitleGeneration } from './useTitleGeneration';
+import { useTitleTypeAnalysis } from './useTitleTypeAnalysis';
 
 interface UseSmartNoteEditorProps {
   note: Note;
@@ -44,8 +44,8 @@ export function useSmartNoteEditor({
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastGenerationAttemptRef = useRef<string | null>(null);
   
-  // Title generation hook
-  const { generateTitle, loading: titleLoading, clearAttempted } = useTitleGeneration();
+  // Title and type analysis hook
+  const { analyzeTitleAndType, loading: titleLoading, clearAttempted } = useTitleTypeAnalysis();
 
   // Sync state with note prop changes
   useEffect(() => {
@@ -321,7 +321,7 @@ export function useSmartNoteEditor({
 
     // Only generate title if it's the first save and title is missing
     if (!note.title || note.title === 'Untitled Note') {
-      const result = await generateTitle({
+      const result = await analyzeTitleAndType({
         content,
         platform: note.platform || 'general',
         noteId: String(note._id),
@@ -363,7 +363,7 @@ export function useSmartNoteEditor({
     }
     // Now proceed with the normal save
     await onSave(content, note.title);
-  }, [note.title, note._id, note.platform, content, generateTitle, onUpdate, onSave]);
+  }, [note.title, note._id, note.platform, content, analyzeTitleAndType, onUpdate, onSave]);
 
   return {
     content,

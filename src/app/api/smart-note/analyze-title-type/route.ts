@@ -16,8 +16,8 @@ export async function POST(request: Request) {
 
     const body = await request.json();
 
-    // Proxy to backend smart-note-ideas endpoint
-    const response = await fetch(`${BACKEND_URL}/api/v1/smart-note/ideas/generate-title`, {
+    // Proxy to backend unified analyze-title-type endpoint
+    const response = await fetch(`${BACKEND_URL}/api/v1/smart-note/analyze-title-type`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -34,11 +34,11 @@ export async function POST(request: Request) {
     return NextResponse.json(data);
 
   } catch (error) {
-    console.error('Title generation proxy error:', error);
+    console.error('Title and type analysis proxy error:', error);
     return NextResponse.json({
       success: false,
-      error: 'Title generation failed',
+      error: 'Title and type analysis failed',
       message: error instanceof Error ? error.message : 'Unknown error',
     }, { status: 500 });
   }
-}
+} 

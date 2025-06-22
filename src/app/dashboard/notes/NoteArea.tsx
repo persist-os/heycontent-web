@@ -1,21 +1,13 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Note, NoteUpdate, NoteType } from './types';
-import { CommandMenu } from './CommandMenu';
 import { NoteHeader } from './components/NoteHeader';
 import { NoteEditor } from './components/NoteEditor';
 import { ImageUpload } from './components/ImageUpload';
 import { NoteMeta } from './components/NoteMeta';
 import { TypeSelector } from './components/TypeSelector';
-import { useSmartNoteEditor } from './hooks/useSmartNoteEditor';
-import { FullAnalysisModal } from './components/FullAnalysisModal';
-import IdeasPanel from "./components/IdeasPanel";
-import { AnalysisSection } from "./AnalysisSection";
 import type { Id } from "@/convex/_generated/dataModel";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Brain, Lightbulb, Edit } from 'lucide-react';
-
 
 interface NoteAreaProps {
   note: Note;
@@ -36,67 +28,47 @@ export function NoteArea({
   onBack,
   isMobile
 }: NoteAreaProps) {
-  // Local UI state
-  const [activeTab, setActiveTab] = useState<string>("editor");
-  const editorRef = useRef<HTMLTextAreaElement>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  
-  // Add event listener to switch to editor tab when an idea is applied
+  const [content, setContent] = useState(note.content || '');
+
+  // Keep content in sync with note prop
   React.useEffect(() => {
-    const handleSwitchToEditor = () => {
-      setActiveTab("editor");
-    };
+    setContent(note.content || '');
+  }, [note._id, note.content]);
+
+  // Handle content changes with debounced save
+  const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  const handleContentChange = (newContent: string) => {
+    setContent(newContent);
     
-    window.addEventListener('switchToEditorTab', handleSwitchToEditor);
+    // Clear existing timeout
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+    }
     
-    return () => {
-      window.removeEventListener('switchToEditorTab', handleSwitchToEditor);
-    };
-  }, []);
-  
-  // Use the hook for all editor functionality
-  const {
-    content,
-    showFullAnalysis,
-    setShowFullAnalysis,
-    selectedInsight,
-    cursorPosition,
-    setCursorPosition,
-    showCommands,
-    setShowCommands,
-    menuPosition,
-    searchTerm,
-    insertText,
-    handleContentChange,
-    handleCommand,
-    handleKeyDown,
-    textAreaRef,
-    handleSave,
-  } = useSmartNoteEditor({
-    note,
-    onUpdate,
-    onSave,
-    onToggleShortcuts,
-    onRequestAIInsights,
-    isEditingTitle
-  });
-
-  // Track the latest title from NoteMeta
-  const [latestTitle, setLatestTitle] = useState(note.title || "Untitled Note");
-
-  // Keep local latestTitle in sync with note prop
-  React.useEffect(() => {
-    setLatestTitle(note.title || "Untitled Note");
-  }, [note._id, note.title]);
-
-  // Callback to receive title changes from NoteMeta
-  const handleMetaTitleChange = (title: string) => {
-    setLatestTitle(title);
-    console.log('[NoteArea] handleMetaTitleChange: received new title', title);
+    // Set new timeout for auto-save
+    const timeout = setTimeout(async () => {
+      try {
+        await onUpdate(note._id, { content: newContent });
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+      }
+    }, 1000); // Auto-save after 1 second of inactivity
+    
+    setSaveTimeout(timeout);
   };
 
+  // Clean up timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+      }
+    };
+  }, [saveTimeout]);
+
   const handleTypeChange = async (newType: NoteType) => {
-    console.log('[NoteArea] handleTypeChange: updating type', { noteId: note._id, newType });
     await onUpdate(note._id, { type: newType, typeGenerated: false });
   };
 
@@ -155,7 +127,7 @@ export function NoteArea({
   };
 
   return (
-    <div className="flex flex-col h-full w-full">
+    <div className="flex flex-col h-full w-full bg-background">
       {/* Header */}
       <NoteHeader 
         note={note}

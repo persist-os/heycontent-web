@@ -572,6 +572,7 @@ export const getInstagramBatchAnalysis = query({
         userId: analysis.userId,
         instagramAccountId: analysis.instagramAccountId,
         insights: analysis.insights,
+        status: analysis.status,
         updatedAt: analysis.updatedAt || analysis._creationTime
       };
     } catch (error) {

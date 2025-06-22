@@ -1,10 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { getApiKey } from '@/app/lib/api-helpers';
 
 export function useInstagramInsights(userId?: string) {
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [postLimit, setPostLimit] = useState<number | 'all'>(50);
   const [customPostLimit, setCustomPostLimit] = useState<string>('');
@@ -31,13 +30,28 @@ export function useInstagramInsights(userId?: string) {
   // Platform-specific insights
   const insightsList = instagramInsights?.insights?.insights || [];
 
+  // Determine if batch analysis is currently running based on database status
+  const isRunning = instagramInsights?.status?.status === 'processing' || 
+                   instagramInsights?.status?.status === 'enqueued' ||
+                   instagramInsights?.status?.status === 'running';
+
+  // Check if there's an error in the batch analysis
+  const batchError = instagramInsights?.status?.error;
+
+  // Update local error state when batch analysis has an error
+  useEffect(() => {
+    if (batchError && !error) {
+      setError(batchError);
+    }
+  }, [batchError, error]);
+
   const refresh = useCallback(async () => {
     if (!userId || !instagramAccount?.instagramAccountId) {
       setError('Instagram account not connected');
       return;
     }
 
-    setRefreshing(true);
+    // Clear any existing errors
     setError(null);
     
     try {
@@ -77,7 +91,11 @@ export function useInstagramInsights(userId?: string) {
         throw new Error(data.error || `HTTP error! status: ${response.status}`);
       }
       
-      if (data.status === 'success') {
+      if (data.status === 'enqueued') {
+        // Instagram analysis is now async - the status is tracked in the database
+        // The results will be automatically available in the query once completed
+        console.log(`Instagram analysis enqueued with task ID: ${data.task_id}`);
+      } else if (data.status === 'success') {
         // Log optimization information
         if (data.analysis_summary) {
           const summary = data.analysis_summary;
@@ -113,8 +131,6 @@ export function useInstagramInsights(userId?: string) {
     } catch (error: any) {
       console.error('❌ Error refreshing Instagram insights:', error);
       setError(error.message || 'Failed to refresh Instagram insights');
-    } finally {
-      setRefreshing(false);
     }
   }, [userId, instagramAccount?.instagramAccountId, postLimit, storeInstagramAnalysis]);
 
@@ -130,7 +146,7 @@ export function useInstagramInsights(userId?: string) {
   return {
     insights: insightsList,
     loading: instagramInsights === undefined,
-    refreshing,
+    refreshing: isRunning, // Use database status instead of local state
     error,
     isConnected: !!instagramAccount?.instagramAccountId,
     refresh,

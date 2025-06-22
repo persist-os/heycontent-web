@@ -5,6 +5,7 @@ import { api } from '@/convex/_generated/api';
 import { getApiKey } from '@/app/lib/api-helpers';
 import { Id } from '@/convex/_generated/dataModel';
 import { RefreshState } from '@/components/ui/refresh-state';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Type for the Convex response
 type ConvexInsight = {
@@ -25,6 +26,20 @@ interface AmbientInsightsProps {
   error?: string | null;
   onInsightClick?: (action: string, insight: InsightWithOptionalIcon) => void;
 }
+
+// Skeleton component for loading state
+const InsightSkeleton = () => (
+  <div className="bg-card border border-border shadow-sm p-3 sm:p-4 rounded-xl">
+    <div className="flex items-start gap-2 sm:gap-3">
+      <div className="flex-1 min-w-0 space-y-2">
+        <Skeleton className="h-4 w-3/4" />
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-2/3" />
+        <Skeleton className="h-3 w-1/2 mt-2" />
+      </div>
+    </div>
+  </div>
+);
 
 export const AmbientInsights: React.FC<AmbientInsightsProps> = ({ 
   loading = false,
@@ -156,6 +171,45 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
     
     requestNewInsights();
   }, [userId, convexInsights, isRequestingInsights]);
+
+  // Determine if we should show loading state
+  const isLoading = loading || 
+    !userId || 
+    convexInsights === undefined || 
+    isRequestingInsights;
+
+  // Show skeleton loading state
+  if (isLoading && !error) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-4xl sm:max-w-5xl lg:max-w-7xl mx-auto pb-32 px-4 sm:px-0">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <InsightSkeleton key={index} />
+        ))}
+      </div>
+    );
+  }
+
+  // Show error state if there's an error
+  if (error) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-4xl sm:max-w-5xl lg:max-w-7xl mx-auto pb-32 px-4 sm:px-0">
+        <div className="col-span-full text-center text-muted-foreground">
+          <p>Failed to load insights: {error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state if no insights
+  if (insights.length === 0) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-4xl sm:max-w-5xl lg:max-w-7xl mx-auto pb-32 px-4 sm:px-0">
+        <div className="col-span-full text-center text-muted-foreground">
+          <p>No insights available yet. Check back soon!</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-4xl sm:max-w-5xl lg:max-w-7xl mx-auto pb-32 px-4 sm:px-0">
