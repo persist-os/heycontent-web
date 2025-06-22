@@ -127,15 +127,29 @@ export function ContentHubScreen() {
   // Combined insights for "all" tab
   const allInsights = useMemo(() => {
     // Hooks return insights as direct arrays
-    const youtubeInsightsArray = youtubeInsights.insights || [];
-    const instagramInsightsArray = instagramInsights.insights || [];
-    const gmailInsightsArray = gmailInsights.insights || [];
+    console.log('[ContentHubScreen] Raw hook data:');
+    console.log('  - youtubeInsights:', youtubeInsights);
+    console.log('  - youtubeInsights.insights:', youtubeInsights.insights);
+    console.log('  - instagramInsights.insights:', instagramInsights.insights);
+    console.log('  - gmailInsights.insights:', gmailInsights.insights);
     
-    return [
+    const youtubeInsightsArray = Array.isArray(youtubeInsights.insights) ? youtubeInsights.insights : [];
+    const instagramInsightsArray = Array.isArray(instagramInsights.insights) ? instagramInsights.insights : [];
+    const gmailInsightsArray = Array.isArray(gmailInsights.insights) ? gmailInsights.insights : [];
+    
+    console.log('[ContentHubScreen] Extracted arrays:');
+    console.log('  - youtubeInsightsArray:', youtubeInsightsArray);
+    console.log('  - instagramInsightsArray:', instagramInsightsArray);
+    console.log('  - gmailInsightsArray:', gmailInsightsArray);
+    
+    const combined = [
       ...youtubeInsightsArray,
       ...instagramInsightsArray,
       ...gmailInsightsArray,
-    ]
+    ];
+    
+    console.log('[ContentHubScreen] Combined insights:', combined);
+    return combined;
   }, [youtubeInsights.insights, instagramInsights.insights, gmailInsights.insights])
 
   const isAnalyticsLoading = youtubeAnalytics.loading || instagramAnalytics.loading || gmailAnalytics.loading
