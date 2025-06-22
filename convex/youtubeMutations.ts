@@ -384,4 +384,110 @@ export const disconnectYouTube = mutation({
       throw new Error(`Failed to disconnect YouTube: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
+});
+
+// Store YouTube batch analysis insights
+export const storeYoutubeBatchAnalysis = mutation({
+  args: {
+    userId: v.string(),
+    insights: v.any(),
+  },
+  handler: async (ctx, args) => {
+    const { userId, insights } = args;
+    const now = Date.now();
+
+    try {
+      // Check if batch analysis already exists
+      const existingAnalysis = await ctx.db
+        .query("youtubeBatchAnalysis")
+        .withIndex("by_userId", q => q.eq("userId", userId))
+        .first();
+
+      if (existingAnalysis) {
+        // Update existing batch analysis
+        await ctx.db.patch(existingAnalysis._id, {
+          insights,
+          updatedAt: now,
+        });
+        return { status: "updated", analysisId: existingAnalysis._id };
+      } else {
+        // Insert new batch analysis
+        const id = await ctx.db.insert("youtubeBatchAnalysis", {
+          userId,
+          insights,
+          analysisType: "batch",
+          createdAt: now,
+          updatedAt: now,
+        });
+        return { status: "created", analysisId: id };
+      }
+    } catch (error) {
+      console.error(`Error storing YouTube batch analysis for user ${userId}:`, error);
+      throw new Error(`Failed to store YouTube batch analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Update YouTube batch analysis status for the async task system
+export const updateYoutubeBatchAnalysisStatus = mutation({
+  args: {
+    userId: v.string(),
+    statusUpdate: v.object({
+      status: v.string(),
+      task_id: v.string(),
+      started_at: v.optional(v.string()),
+      completed_at: v.optional(v.string()),
+      progress: v.optional(v.number()),
+      error: v.optional(v.string()),
+    }),
+    insights: v.optional(v.any()),
+  },
+  handler: async (ctx, args) => {
+    const { userId, statusUpdate, insights } = args;
+    const now = Date.now();
+
+    try {
+      // Check if batch analysis already exists
+      const existingAnalysis = await ctx.db
+        .query("youtubeBatchAnalysis")
+        .withIndex("by_userId", q => q.eq("userId", userId))
+        .first();
+
+      if (existingAnalysis) {
+        // Update existing batch analysis with status and insights
+        const updateData: any = {
+          status: statusUpdate,
+          updatedAt: now,
+        };
+        
+        // Add insights if provided
+        if (insights !== null && insights !== undefined) {
+          updateData.insights = insights;
+        }
+        
+        await ctx.db.patch(existingAnalysis._id, updateData);
+        return { status: "updated", analysisId: existingAnalysis._id };
+      } else {
+        // Insert new batch analysis with status
+        const insertData: any = {
+          userId,
+          status: statusUpdate,
+          analysisType: "batch",
+          createdAt: now,
+          updatedAt: now,
+        };
+        
+        // Add insights if provided
+        if (insights !== null && insights !== undefined) {
+          insertData.insights = insights;
+        }
+        
+        const id = await ctx.db.insert("youtubeBatchAnalysis", insertData);
+        return { status: "created", analysisId: id };
+      }
+    } catch (error) {
+      console.error(`Error updating YouTube batch analysis status for user ${userId}:`, error);
+      throw new Error(`Failed to update YouTube batch analysis status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
 }); 
