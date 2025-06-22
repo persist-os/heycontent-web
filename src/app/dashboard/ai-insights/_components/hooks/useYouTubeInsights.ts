@@ -8,6 +8,7 @@ export function useYouTubeInsights(userId?: string) {
   const [postLimit, setPostLimit] = useState<number | 'all'>(10);
   const [customPostLimit, setCustomPostLimit] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Fetch YouTube channel data
   const youtubeChannel = useQuery(
@@ -18,7 +19,10 @@ export function useYouTubeInsights(userId?: string) {
   // Fetch YouTube batch analysis insights
   const youtubeInsights = useQuery(
     api.youtubeQueries.getYoutubeBatchAnalysis,
-    userId ? { userId } : "skip"
+    userId && youtubeChannel?.id ? { 
+      userId, 
+      channelId: youtubeChannel.id 
+    } : "skip"
   );
 
   // Store YouTube batch analysis mutation
@@ -27,10 +31,10 @@ export function useYouTubeInsights(userId?: string) {
   // Platform-specific insights
   const insightsList = youtubeInsights?.insights?.insights || [];
 
-  // Determine if batch analysis is currently running based on database status
-  const isRunning = youtubeInsights?.status?.status === 'processing' || 
-                   youtubeInsights?.status?.status === 'enqueued' ||
-                   youtubeInsights?.status?.status === 'running';
+  // Only show as running if we're actively refreshing AND status is processing/enqueued
+  // Don't auto-show loading for old stuck statuses
+  const databaseStatus = youtubeInsights?.status?.status;
+  const isActuallyRunning = isRefreshing && (databaseStatus === 'processing' || databaseStatus === 'enqueued' || databaseStatus === 'running');
 
   // Check if there's an error in the batch analysis
   const batchError = youtubeInsights?.status?.error;
@@ -42,13 +46,21 @@ export function useYouTubeInsights(userId?: string) {
     }
   }, [batchError, error]);
 
+  // Reset refreshing state when task completes
+  useEffect(() => {
+    if (isRefreshing && databaseStatus && databaseStatus !== 'processing' && databaseStatus !== 'enqueued' && databaseStatus !== 'running') {
+      setIsRefreshing(false);
+    }
+  }, [isRefreshing, databaseStatus]);
+
   const refresh = useCallback(async () => {
     if (!userId || !youtubeChannel?.id) {
       setError('YouTube channel not connected');
       return;
     }
 
-    // Clear any existing errors
+    // Set local refreshing state
+    setIsRefreshing(true);
     setError(null);
     
     try {
@@ -85,18 +97,22 @@ export function useYouTubeInsights(userId?: string) {
         // YouTube analysis is now async - the status is tracked in the database
         // The results will be automatically available in the query once completed
         console.log(`YouTube analysis enqueued with task ID: ${data.task_id}`);
+        // Keep refreshing state until task completes
       } else if (data.status === 'success') {
         // Handle legacy synchronous response (if any)
         await storeYoutubeBatchAnalysis({
           userId,
+          channelId: youtubeChannel.id,
           insights: data.data
         });
+        setIsRefreshing(false);
       } else {
         throw new Error(data.error || 'Failed to refresh YouTube insights');
       }
     } catch (error: any) {
       console.error('Error refreshing YouTube insights:', error);
       setError(error.message || 'Failed to refresh YouTube insights');
+      setIsRefreshing(false);
     }
   }, [userId, youtubeChannel?.id, storeYoutubeBatchAnalysis, postLimit]);
 
@@ -111,7 +127,7 @@ export function useYouTubeInsights(userId?: string) {
   return {
     insights: insightsList,
     loading: youtubeInsights === undefined,
-    refreshing: isRunning, // Use database status instead of local state
+    refreshing: isActuallyRunning, // Use combined local + database state
     error,
     isConnected: !!youtubeChannel?.id,
     refresh,

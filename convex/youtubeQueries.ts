@@ -437,6 +437,7 @@ export const getRecentVideosWithAnalysis = query({
 export const getYoutubeBatchAnalysis = query({
   args: {
     userId: v.string(),
+    channelId: v.string(),
   },
   handler: async (ctx, args) => {
     try {
@@ -446,17 +447,27 @@ export const getYoutubeBatchAnalysis = query({
         return null;
       }
 
+      if (!args.channelId || typeof args.channelId !== 'string' || args.channelId.trim() === '') {
+        console.log('[getYoutubeBatchAnalysis] Invalid channelId provided:', args.channelId);
+        return null;
+      }
+
       console.log('[getYoutubeBatchAnalysis] Querying with:', { 
-        userId: args.userId
+        userId: args.userId,
+        channelId: args.channelId
       });
       
       const analysis = await ctx.db
         .query("youtubeBatchAnalysis")
-        .withIndex("by_userId", q => q.eq("userId", args.userId))
+        .withIndex("by_user_channel", q => 
+          q.eq("userId", args.userId)
+           .eq("channelId", args.channelId)
+        )
         .first();
 
       console.log('[getYoutubeBatchAnalysis] Found analysis:', analysis ? {
         userId: analysis.userId,
+        channelId: analysis.channelId,
         hasInsights: !!analysis.insights,
         insightsKeys: analysis.insights ? Object.keys(analysis.insights) : null,
         createdAt: analysis.createdAt,
@@ -470,6 +481,7 @@ export const getYoutubeBatchAnalysis = query({
       return {
         _id: analysis._id,
         userId: analysis.userId,
+        channelId: analysis.channelId,
         insights: analysis.insights,
         status: analysis.status,
         updatedAt: analysis.updatedAt || analysis._creationTime

@@ -8,6 +8,7 @@ export function useInstagramInsights(userId?: string) {
   const [postLimit, setPostLimit] = useState<number | 'all'>(50);
   const [customPostLimit, setCustomPostLimit] = useState<string>('');
   const [showCustomInput, setShowCustomInput] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Add Instagram-specific queries
   const instagramAccount = useQuery(
@@ -15,25 +16,25 @@ export function useInstagramInsights(userId?: string) {
     userId ? { userId } : "skip"
   );
 
-  // Fetch Instagram insights
+  // Fetch Instagram batch analysis insights
   const instagramInsights = useQuery(
     api.instagramQueries.getInstagramBatchAnalysis,
-    instagramAccount && userId ? { 
+    userId && instagramAccount?.instagramAccountId ? { 
       userId, 
       instagramAccountId: instagramAccount.instagramAccountId 
     } : "skip"
   );
 
-  // Store Instagram analysis mutation
+  // Store Instagram batch analysis mutation
   const storeInstagramAnalysis = useMutation(api.instagramMutations.storeInstagramBatchAnalysis);
 
   // Platform-specific insights
   const insightsList = instagramInsights?.insights?.insights || [];
 
-  // Determine if batch analysis is currently running based on database status
-  const isRunning = instagramInsights?.status?.status === 'processing' || 
-                   instagramInsights?.status?.status === 'enqueued' ||
-                   instagramInsights?.status?.status === 'running';
+  // Only show as running if we're actively refreshing AND status is processing/enqueued
+  // Don't auto-show loading for old stuck statuses
+  const databaseStatus = instagramInsights?.status?.status;
+  const isActuallyRunning = isRefreshing && (databaseStatus === 'processing' || databaseStatus === 'enqueued' || databaseStatus === 'running');
 
   // Check if there's an error in the batch analysis
   const batchError = instagramInsights?.status?.error;
@@ -45,13 +46,21 @@ export function useInstagramInsights(userId?: string) {
     }
   }, [batchError, error]);
 
+  // Reset refreshing state when task completes
+  useEffect(() => {
+    if (isRefreshing && databaseStatus && databaseStatus !== 'processing' && databaseStatus !== 'enqueued' && databaseStatus !== 'running') {
+      setIsRefreshing(false);
+    }
+  }, [isRefreshing, databaseStatus]);
+
   const refresh = useCallback(async () => {
     if (!userId || !instagramAccount?.instagramAccountId) {
       setError('Instagram account not connected');
       return;
     }
 
-    // Clear any existing errors
+    // Set local refreshing state
+    setIsRefreshing(true);
     setError(null);
     
     try {
@@ -61,8 +70,6 @@ export function useInstagramInsights(userId?: string) {
       }
 
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
-      
-      console.log(`🔄 Refreshing Instagram insights (requested: ${postLimit === 'all' ? 'all' : postLimit} posts)`);
       
       const response = await fetch(`${backendUrl}/api/v1/instagram/account-insights`, {
         method: 'POST',
@@ -76,18 +83,13 @@ export function useInstagramInsights(userId?: string) {
           max_posts: postLimit === 'all' ? 1000 : postLimit,
           include_stories: true,
           include_comments: true,
-          force_refresh: true
+          force_refresh: false // Don't force refresh to avoid unnecessary API calls
         }),
       });
 
       const data = await response.json();
       
       if (!response.ok) {
-        // Handle rate limiting specifically
-        if (response.status === 429 && data.error_type === 'rate_limit') {
-          const retryMsg = data.retry_after ? ` Try again in ${data.retry_after} seconds.` : '';
-          throw new Error(`Instagram API rate limit exceeded.${retryMsg}`);
-        }
         throw new Error(data.error || `HTTP error! status: ${response.status}`);
       }
       
@@ -95,6 +97,7 @@ export function useInstagramInsights(userId?: string) {
         // Instagram analysis is now async - the status is tracked in the database
         // The results will be automatically available in the query once completed
         console.log(`Instagram analysis enqueued with task ID: ${data.task_id}`);
+        // Keep refreshing state until task completes
       } else if (data.status === 'success') {
         // Log optimization information
         if (data.analysis_summary) {
@@ -125,39 +128,39 @@ export function useInstagramInsights(userId?: string) {
           instagramAccountId: instagramAccount.instagramAccountId,
           insights: data.data
         });
+        setIsRefreshing(false);
       } else {
         throw new Error(data.error || 'Failed to refresh Instagram insights');
       }
     } catch (error: any) {
       console.error('❌ Error refreshing Instagram insights:', error);
       setError(error.message || 'Failed to refresh Instagram insights');
+      setIsRefreshing(false);
     }
-  }, [userId, instagramAccount?.instagramAccountId, postLimit, storeInstagramAnalysis]);
+  }, [userId, instagramAccount?.instagramAccountId, storeInstagramAnalysis, postLimit]);
 
   const handleCustomSubmit = useCallback(() => {
-    const customValue = parseInt(customPostLimit);
-    if (customValue && customValue > 0 && customValue <= 1000) {
-      setPostLimit(customValue);
+    const limit = parseInt(customPostLimit, 10);
+    if (!isNaN(limit) && limit > 0) {
+      setPostLimit(limit);
       setShowCustomInput(false);
-      setCustomPostLimit('');
     }
   }, [customPostLimit]);
 
   return {
     insights: insightsList,
     loading: instagramInsights === undefined,
-    refreshing: isRunning, // Use database status instead of local state
+    refreshing: isActuallyRunning, // Use combined local + database state
     error,
     isConnected: !!instagramAccount?.instagramAccountId,
     refresh,
     account: instagramAccount,
-    // Post limit controls
     postLimit,
     setPostLimit,
     customPostLimit,
     setCustomPostLimit,
     showCustomInput,
     setShowCustomInput,
-    handleCustomSubmit
+    handleCustomSubmit,
   };
 } 

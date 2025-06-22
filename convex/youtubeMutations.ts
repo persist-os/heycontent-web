@@ -390,17 +390,21 @@ export const disconnectYouTube = mutation({
 export const storeYoutubeBatchAnalysis = mutation({
   args: {
     userId: v.string(),
+    channelId: v.string(),
     insights: v.any(),
   },
   handler: async (ctx, args) => {
-    const { userId, insights } = args;
+    const { userId, channelId, insights } = args;
     const now = Date.now();
 
     try {
       // Check if batch analysis already exists
       const existingAnalysis = await ctx.db
         .query("youtubeBatchAnalysis")
-        .withIndex("by_userId", q => q.eq("userId", userId))
+        .withIndex("by_user_channel", q => 
+          q.eq("userId", userId)
+           .eq("channelId", channelId)
+        )
         .first();
 
       if (existingAnalysis) {
@@ -414,6 +418,7 @@ export const storeYoutubeBatchAnalysis = mutation({
         // Insert new batch analysis
         const id = await ctx.db.insert("youtubeBatchAnalysis", {
           userId,
+          channelId,
           insights,
           analysisType: "batch",
           createdAt: now,
@@ -432,6 +437,7 @@ export const storeYoutubeBatchAnalysis = mutation({
 export const updateYoutubeBatchAnalysisStatus = mutation({
   args: {
     userId: v.string(),
+    channelId: v.string(),
     statusUpdate: v.object({
       status: v.string(),
       task_id: v.string(),
@@ -443,14 +449,17 @@ export const updateYoutubeBatchAnalysisStatus = mutation({
     insights: v.optional(v.any()),
   },
   handler: async (ctx, args) => {
-    const { userId, statusUpdate, insights } = args;
+    const { userId, channelId, statusUpdate, insights } = args;
     const now = Date.now();
 
     try {
       // Check if batch analysis already exists
       const existingAnalysis = await ctx.db
         .query("youtubeBatchAnalysis")
-        .withIndex("by_userId", q => q.eq("userId", userId))
+        .withIndex("by_user_channel", q => 
+          q.eq("userId", userId)
+           .eq("channelId", channelId)
+        )
         .first();
 
       if (existingAnalysis) {
@@ -471,6 +480,7 @@ export const updateYoutubeBatchAnalysisStatus = mutation({
         // Insert new batch analysis with status
         const insertData: any = {
           userId,
+          channelId,
           status: statusUpdate,
           analysisType: "batch",
           createdAt: now,

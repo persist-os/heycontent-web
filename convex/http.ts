@@ -2008,15 +2008,16 @@ app.post("/api/gmail/batch_analysis_status", async (c) => {
 // Store YouTube batch analysis
 app.post("/api/youtube/batch_analysis", async (c) => {
   const ctx = c.env;
-  const { userId, insights } = await c.req.json();
+  const { userId, channelId, insights } = await c.req.json();
 
-  if (!userId || !insights) {
+  if (!userId || !channelId || !insights) {
     return c.json({ success: false, error: "Missing required fields" }, 400);
   }
 
   try {
     const result = await ctx.runMutation(api.youtubeMutations.storeYoutubeBatchAnalysis, {
       userId,
+      channelId,
       insights,
     });
     return c.json({ success: true, data: result });
@@ -2030,14 +2031,16 @@ app.post("/api/youtube/batch_analysis", async (c) => {
 app.get("/api/youtube/batch_analysis", async (c) => {
   const ctx = c.env;
   const userId = c.req.query("userId");
+  const channelId = c.req.query("channelId");
 
-  if (!userId) {
+  if (!userId || !channelId) {
     return c.json({ success: false, error: "Missing required query parameters" }, 400);
   }
 
   try {
     const result = await ctx.runQuery(api.youtubeQueries.getYoutubeBatchAnalysis, {
       userId,
+      channelId,
     });
     return c.json({ success: true, data: result });
   } catch (error) {
@@ -2049,15 +2052,16 @@ app.get("/api/youtube/batch_analysis", async (c) => {
 // Update YouTube batch analysis status
 app.post("/api/youtube/batch_analysis_status", async (c) => {
   const ctx = c.env;
-  const { userId, statusUpdate, insights } = await c.req.json();
+  const { userId, channelId, statusUpdate, insights } = await c.req.json();
 
-  if (!userId || !statusUpdate) {
+  if (!userId || !channelId || !statusUpdate) {
     return c.json({ success: false, error: "Missing required fields" }, 400);
   }
 
   try {
     const result = await ctx.runMutation(api.youtubeMutations.updateYoutubeBatchAnalysisStatus, {
       userId,
+      channelId,
       statusUpdate,
       insights: insights || null,
     });
