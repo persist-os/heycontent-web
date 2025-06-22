@@ -432,3 +432,52 @@ export const getRecentVideosWithAnalysis = query({
     }
   },
 });
+
+// Get YouTube batch analysis insights
+export const getYoutubeBatchAnalysis = query({
+  args: {
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      // Validate inputs
+      if (!args.userId || typeof args.userId !== 'string' || args.userId.trim() === '') {
+        console.log('[getYoutubeBatchAnalysis] Invalid userId provided:', args.userId);
+        return null;
+      }
+
+      console.log('[getYoutubeBatchAnalysis] Querying with:', { 
+        userId: args.userId
+      });
+      
+      const analysis = await ctx.db
+        .query("youtubeBatchAnalysis")
+        .withIndex("by_userId", q => q.eq("userId", args.userId))
+        .first();
+
+      console.log('[getYoutubeBatchAnalysis] Found analysis:', analysis ? {
+        userId: analysis.userId,
+        hasInsights: !!analysis.insights,
+        insightsKeys: analysis.insights ? Object.keys(analysis.insights) : null,
+        createdAt: analysis.createdAt,
+        updatedAt: analysis.updatedAt
+      } : 'No analysis found');
+
+      if (!analysis) {
+        return null;
+      }
+
+      return {
+        _id: analysis._id,
+        userId: analysis.userId,
+        insights: analysis.insights,
+        status: analysis.status,
+        updatedAt: analysis.updatedAt || analysis._creationTime
+      };
+    } catch (error) {
+      console.error("Error fetching YouTube batch analysis:", error);
+      // Return null instead of throwing to prevent frontend crashes
+      return null;
+    }
+  },
+});
