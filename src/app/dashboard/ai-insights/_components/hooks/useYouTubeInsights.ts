@@ -16,17 +16,17 @@ export function useYouTubeInsights(userId?: string) {
     userId ? { userId } : "skip"
   );
 
-  // Fetch YouTube insights
+  // Fetch YouTube batch analysis insights
   const youtubeInsights = useQuery(
-    api.youtubeQueries.getChannelAnalysis,
-    youtubeChannel?.id ? { userId, channelId: youtubeChannel.id } : "skip"
+    api.youtubeQueries.getYoutubeBatchAnalysis,
+    userId ? { userId } : "skip"
   );
 
-  // Store channel analysis mutation
-  const storeChannelAnalysis = useMutation(api.youtubeMutations.storeChannelAnalysis);
+  // Store YouTube batch analysis mutation
+  const storeYoutubeBatchAnalysis = useMutation(api.youtubeMutations.storeYoutubeBatchAnalysis);
 
   // Platform-specific insights
-  const insightsList = youtubeInsights?.analysis?.insights || [];
+  const insightsList = youtubeInsights?.insights?.insights || [];
 
   const refresh = useCallback(async () => {
     if (!userId || !youtubeChannel?.id) {
@@ -68,10 +68,9 @@ export function useYouTubeInsights(userId?: string) {
       }
       
       if (data.status === 'success') {
-        await storeChannelAnalysis({
+        await storeYoutubeBatchAnalysis({
           userId,
-          channelId: youtubeChannel.id,
-          analysisData: data.data
+          insights: data.data
         });
       } else {
         throw new Error(data.error || 'Failed to refresh YouTube insights');
@@ -82,7 +81,7 @@ export function useYouTubeInsights(userId?: string) {
     } finally {
       setRefreshing(false);
     }
-  }, [userId, youtubeChannel?.id, storeChannelAnalysis, postLimit]);
+  }, [userId, youtubeChannel?.id, storeYoutubeBatchAnalysis, postLimit]);
 
   const handleCustomSubmit = useCallback(() => {
     const limit = parseInt(customPostLimit, 10);
