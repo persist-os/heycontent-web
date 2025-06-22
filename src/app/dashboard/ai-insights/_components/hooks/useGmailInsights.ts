@@ -71,7 +71,12 @@ export function useGmailInsights(userId?: string) {
         throw new Error(data.error || `HTTP error! status: ${response.status}`);
       }
       
-      if (data.status === 'success') {
+      if (data.status === 'enqueued') {
+        // Gmail analysis is now async like YouTube and Instagram
+        // The results will be automatically available in the query once completed
+        console.log(`Gmail analysis enqueued with task ID: ${data.task_id}`);
+      } else if (data.status === 'success') {
+        // Handle legacy synchronous response (if any)
         await storeGmailBatchAnalysis({
           userId,
           gmailAccountId: gmailAccount[0].email,
