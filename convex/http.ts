@@ -1911,6 +1911,29 @@ app.get("/api/instagram/batch_analysis", async (c) => {
   }
 });
 
+// Update Instagram batch analysis status
+app.post("/api/instagram/batch_analysis_status", async (c) => {
+  const ctx = c.env;
+  const { userId, instagramAccountId, statusUpdate, insights } = await c.req.json();
+
+  if (!userId || !instagramAccountId || !statusUpdate) {
+    return c.json({ success: false, error: "Missing required fields" }, 400);
+  }
+
+  try {
+    const result = await ctx.runMutation(api.instagramMutations.updateInstagramBatchAnalysisStatus, {
+      userId,
+      instagramAccountId,
+      statusUpdate,
+      insights: insights || null,
+    });
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error("Failed to update Instagram batch analysis status:", error);
+    return c.json({ success: false, error: "Failed to update Instagram batch analysis status" }, 500);
+  }
+});
+
 // Gmail Analysis Endpoints
 
 // Store Gmail batch analysis
@@ -1954,6 +1977,29 @@ app.get("/api/gmail/batch_analysis", async (c) => {
   } catch (error) {
     console.error("Failed to fetch Gmail batch analysis:", error);
     return c.json({ success: false, error: "Failed to fetch Gmail batch analysis" }, 500);
+  }
+});
+
+// Update Gmail batch analysis status
+app.post("/api/gmail/batch_analysis_status", async (c) => {
+  const ctx = c.env;
+  const { userId, gmailAccountId, statusUpdate, insights } = await c.req.json();
+
+  if (!userId || !gmailAccountId || !statusUpdate) {
+    return c.json({ success: false, error: "Missing required fields" }, 400);
+  }
+
+  try {
+    const result = await ctx.runMutation(api.gmailMutations.updateGmailBatchAnalysisStatus, {
+      userId,
+      gmailAccountId,
+      statusUpdate,
+      insights: insights || null,
+    });
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error("Failed to update Gmail batch analysis status:", error);
+    return c.json({ success: false, error: "Failed to update Gmail batch analysis status" }, 500);
   }
 });
 

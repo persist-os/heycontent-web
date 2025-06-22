@@ -696,7 +696,8 @@ export default defineSchema({
   .index("by_email", ["email"]),
 
   instagramBatchAnalysis: defineTable({
-    insights: v.any(),
+    insights: v.optional(v.any()),
+    status: v.optional(v.any()),
     createdAt: v.float64(),
     instagramAccountId: v.string(),
     updatedAt: v.float64(),
