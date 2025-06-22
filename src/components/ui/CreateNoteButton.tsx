@@ -6,8 +6,7 @@ import { Button } from './button';
 import React from 'react';
 import { FilePlus, Loader2, Eye, Edit3, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useTitleGeneration } from '@/app/dashboard/notes/hooks/useTitleGeneration';
-import { useTypeClassification } from '@/app/dashboard/notes/hooks/useTypeClassification';
+import { useTitleTypeAnalysis } from '@/app/dashboard/notes/hooks/useTitleTypeAnalysis';
 
 interface CreateNoteButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   content: string;
@@ -24,8 +23,7 @@ interface NotePreview {
 export const CreateNoteButton = React.forwardRef<HTMLButtonElement, CreateNoteButtonProps>(
   ({ content, children, onClick, onNoteCreate, className, ...props }, ref) => {
     const { createNote, isCreating } = useCreateNote();
-    const { generateTitle } = useTitleGeneration();
-    const { classifyType } = useTypeClassification();
+    const { analyzeTitleAndType } = useTitleTypeAnalysis();
     
     const [showPreview, setShowPreview] = useState(false);
     const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
@@ -45,29 +43,22 @@ export const CreateNoteButton = React.forwardRef<HTMLButtonElement, CreateNoteBu
       try {
         const tempNoteId = `temp_${Date.now()}`;
         
-        // Generate title and type in parallel
-        const [titleResult, typeResult] = await Promise.all([
-          generateTitle({
+        // Use unified analysis hook
+        const analysisResult = await analyzeTitleAndType({
             content: content.trim(),
             platform: 'chat',
-            noteId: tempNoteId,
-          }),
-          classifyType({
-            content: content.trim(),
-            platform: 'chat',
-            noteId: tempNoteId,
-          })
-        ]);
+          // Don't pass noteId for preview - we don't want to save yet
+        });
 
         // Use AI-generated title if available, otherwise let the backend handle it
-        const suggestedTitle = titleResult.title && titleResult.wasGenerated 
-          ? titleResult.title 
+        const suggestedTitle = analysisResult.title && analysisResult.titleGenerated 
+          ? analysisResult.title 
           : content.length > 50 
             ? content.substring(0, 50).trim() + "..."
             : content.trim();
 
-        const suggestedType = typeResult.typeGenerated && typeResult.type !== 'idea_bank'
-          ? typeResult.type
+        const suggestedType = analysisResult.typeGenerated && analysisResult.type !== 'idea_bank'
+          ? analysisResult.type
           : 'idea_bank';
 
         setNotePreview({

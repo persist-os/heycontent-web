@@ -25,6 +25,7 @@ export default function SmartNotes() {
     deleteNote, 
     saveNoteContent, 
     setNotes,
+    generateTitleAndType,
   } = useNotes();
   
   const { requestAIInsights } = useAIInsights(updateNote);
@@ -191,35 +192,22 @@ export default function SmartNotes() {
               return updatedNote;
             }
             
-            // Optimistically update the note in local state
-            setNotes(currentNotes =>
-              currentNotes.map(note =>
-                String(note._id) === String(noteId)
-                  ? { ...note, ...updates }
-                  : note
-              )
-            );
-            
-            // Also update the active note if it's the one being updated
-            if (String(activeNote._id) === String(noteId)) {
-              setActiveNote(currentNote => ({ ...currentNote, ...updates }));
-            }
-            
-            // Then call the backend update
+            // Call the backend update first
             const result = await updateNote(String(noteId), updates);
             
-            // Update activeNote with the final result from the backend
+            // Only update activeNote if the backend call was successful and it's the current note
             if (result && String(activeNote._id) === String(noteId)) {
               setActiveNote(result);
             }
             
-            return result;
+            return result || activeNote;
           }}
           onSave={handleSave}
           onToggleShortcuts={() => {}} // Not used in grid view
           onRequestAIInsights={requestAIInsights}
           onBack={handleBackToGrid}
           isMobile={true} // Always show back button in this context
+          generateTitleAndType={generateTitleAndType}
         />
       </div>
     );

@@ -33,7 +33,8 @@ export function useTitleTypeAnalysis() {
       contentLength: content?.length || 0,
       contentPreview: content?.substring(0, 100) + "...",
       platform,
-      noteId
+      noteId,
+      willSaveToConvex: !!noteId ? 'Backend will save' : 'No saving'
     });
     
     // SAFEGUARD 1: Prevent multiple attempts for same note if noteId provided

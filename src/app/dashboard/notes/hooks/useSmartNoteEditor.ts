@@ -71,18 +71,6 @@ export function useSmartNoteEditor({
     );
   }, [isEditingTitle, titleGenerated, isGeneratingTitle, titleLoading, note.title, content]);
   
-  // Debounced content update - separate from title generation
-  const debouncedContentUpdate = useCallback((newContent: string) => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-    
-    debounceTimerRef.current = setTimeout(() => {
-      // Only update content, never title here
-      onUpdate(String(note._id), { content: newContent });
-    }, 2000);
-  }, [note._id, onUpdate]);
-  
   // Extract tags from content
   useEffect(() => {
     if (!content) return;
@@ -98,7 +86,7 @@ export function useSmartNoteEditor({
     if (JSON.stringify(tags) !== JSON.stringify(note.tags)) {
       onUpdate(String(note._id), { tags: [...new Set(tags)] });
     }
-  }, [content, note._id, note.tags, onUpdate]);
+  }, [content, note._id, note.tags]);
 
   // Load from local storage
   useEffect(() => {
@@ -192,9 +180,7 @@ export function useSmartNoteEditor({
     
     setContent(newContent);
     setCursorPosition(newCursorPosition);
-    // Use debounced update instead of direct update
-    debouncedContentUpdate(newContent);
-  }, [content, note._id, debouncedContentUpdate]);
+  }, [content, note._id]);
 
   // Insert text at cursor (no more command menu logic here)
   const insertText = useCallback((text: string) => {
@@ -205,8 +191,7 @@ export function useSmartNoteEditor({
     const newContent = content.substring(0, start) + text + content.substring(end);
     setContent(newContent);
     setCursorPosition(newCursorPosition);
-    debouncedContentUpdate(newContent);
-  }, [content, debouncedContentUpdate]);
+  }, [content, note._id]);
 
   // Handle indentation
   const handleIndent = useCallback((indent: boolean = true) => {
@@ -222,11 +207,9 @@ export function useSmartNoteEditor({
       if (lineContent.startsWith('  ')) {
         const newContent = content.substring(0, lineStart) + content.substring(lineStart + 2);
         setContent(newContent);
-        // Use debounced update instead of direct update
-        debouncedContentUpdate(newContent);
       }
     }
-  }, [content, insertText, debouncedContentUpdate]);
+  }, [content, insertText]);
 
   // Handle content changes from typing
   const handleContentChange = useCallback((newContent: string) => {
@@ -252,8 +235,7 @@ export function useSmartNoteEditor({
         setShowCommands(false);
       }
     }
-    debouncedContentUpdate(newContent);
-  }, [debouncedContentUpdate, showCommands, updateMenuPosition]);
+  }, [showCommands, updateMenuPosition]);
 
   // Handle command selection
   const handleCommand = useCallback((command: Command) => {
@@ -267,7 +249,6 @@ export function useSmartNoteEditor({
         const newContent = content.substring(0, start - 1) + template + content.substring(end);
         setContent(newContent);
         setCursorPosition(start - 1 + template.length);
-        debouncedContentUpdate(newContent);
       } else {
         insertText(template);
       }
@@ -275,7 +256,7 @@ export function useSmartNoteEditor({
       onUpdate(String(note._id), { [command.metadata.type || '']: command.metadata.value });
     }
     setShowCommands(false);
-  }, [content, debouncedContentUpdate, handleFormat, insertText, note._id, onUpdate]);
+  }, [content, handleFormat, insertText, note._id]);
 
   // Set up shortcut manager
   const shortcutManager = useRef(
@@ -324,9 +305,9 @@ export function useSmartNoteEditor({
       const result = await analyzeTitleAndType({
         content,
         platform: note.platform || 'general',
-        noteId: String(note._id),
+        noteId: String(note._id),  // Backend will save to Convex
       });
-      console.log("[handleSave] AI title generation result:", result);
+      console.log("[handleSave] AI title generation result (saved by backend):", result);
 
       const BAD_TITLES = [
         "Untitled Note",
@@ -339,31 +320,24 @@ export function useSmartNoteEditor({
         result.title.trim().length >= 5 &&
         !BAD_TITLES.includes(result.title.trim())
       ) {
-        console.log("[handleSave] About to update note with:", {
-          noteId: String(note._id),
-          updates: {
-            title: result.title,
-            titleGenerated: true,
-          }
-        });
-        const updatedNote = await onUpdate(String(note._id), {
+        console.log("[handleSave] Backend saved title and type successfully:", {
           title: result.title,
-          titleGenerated: true,
+          type: result.type,
+          titleGenerated: result.titleGenerated,
+          typeGenerated: result.typeGenerated
         });
-        console.log("Mutation response (updated note):", updatedNote);
+        // No need to update Convex from frontend - backend already did it
         await onSave(content, result.title);
         return;
       } else {
         console.warn("[handleSave] Skipping update: invalid or generic title from AI:", result.title);
-        // Optionally, show an error or fallback
-        // toast.error("Failed to generate a valid title");
         await onSave(content, note.title);
         return;
       }
     }
     // Now proceed with the normal save
     await onSave(content, note.title);
-  }, [note.title, note._id, note.platform, content, analyzeTitleAndType, onUpdate, onSave]);
+  }, [note.title, note._id, note.platform, content, analyzeTitleAndType, onSave]);
 
   return {
     content,

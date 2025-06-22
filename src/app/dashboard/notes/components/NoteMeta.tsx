@@ -16,13 +16,24 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onEditingTitleChange }
   
   // Update local title state when note prop changes
   useEffect(() => {
+    console.log('[NoteMeta] useEffect triggered - note title changed:', {
+      noteId: note._id,
+      newTitle: note.title,
+      currentLocalTitle: title,
+      isEditing
+    });
+    
     if (!isEditing) {
-      setTitle(note.title || "Untitled Note");
+      const newTitle = note.title || "Untitled Note";
+      if (newTitle !== title) {
+        console.log('[NoteMeta] Updating local title state from:', title, 'to:', newTitle);
+        setTitle(newTitle);
+      }
       if (onTitleChange) {
-        onTitleChange(note.title || "Untitled Note");
+        onTitleChange(newTitle);
       }
     }
-  }, [note._id, note.title, onTitleChange, isEditing]);
+  }, [note._id, note.title, isEditing, note.titleGenerated]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(e.target.value);

@@ -2,8 +2,6 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useSmartNotes } from '@/app/dashboard/notes/hooks/useSmartNotes';
-import { useTitleGeneration } from '@/app/dashboard/notes/hooks/useTitleGeneration';
-import { useTypeClassification } from '@/app/dashboard/notes/hooks/useTypeClassification';
 import { Note, NoteUpdate } from '@/app/dashboard/notes/types';
 import type { Id } from '@/convex/_generated/dataModel';
 import { useAuth } from './auth-context';
@@ -20,6 +18,7 @@ interface NotesContextType {
   updateNote: (noteId: string | Id<"notes">, updateFields: NoteUpdate, force?: boolean) => Promise<Note | null>;
   saveNoteContent: (noteId: string | Id<"notes">, content: string, title: string) => Promise<Note | null>;
   saveNote: (content: string, options?: any) => Promise<{ success: boolean; noteId?: Id<"notes">; error?: string }>;
+  generateTitleAndType: (noteId: string | Id<"notes">, content: string) => Promise<void>;
 }
 
 const NotesContext = createContext<NotesContextType | undefined>(undefined);
@@ -35,12 +34,9 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     saveNote: backendSaveNote,
     updateNote, 
     deleteNote, 
-    saveNoteContent 
+    saveNoteContent,
+    generateTitleAndType
   } = useSmartNotes(userId);
-
-  // Add title generation and type classification hooks
-  const { generateTitle } = useTitleGeneration();
-  const { classifyType } = useTypeClassification();
 
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
 
@@ -120,6 +116,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     updateNote,
     saveNoteContent,
     saveNote,
+    generateTitleAndType,
   };
 
   return <NotesContext.Provider value={value}>{children}</NotesContext.Provider>;
