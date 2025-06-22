@@ -23,6 +23,16 @@ export interface Note {
   typeGenerated?: boolean;
   isLocal?: boolean;
   isTemporary?: boolean; // Flag for optimistic updates during note creation
+  images?: Array<{
+    url: string;
+    filename: string;
+    originalFilename?: string;
+    uploadedAt: number;
+    size?: number;
+    mimeType?: string;
+    width?: number;
+    height?: number;
+  }>;
 }
 
 export interface NoteUpdate {
@@ -31,16 +41,23 @@ export interface NoteUpdate {
   important?: boolean;
   type?: NoteType;
   tags?: string[];
-
-
   platform?: string;
   postType?: string;
   goal?: string;
   fields?: any;
-
   analysis?: any;
   titleGenerated?: boolean;
   typeGenerated?: boolean;
+  images?: Array<{
+    url: string;
+    filename: string;
+    originalFilename?: string;
+    uploadedAt: number;
+    size?: number;
+    mimeType?: string;
+    width?: number;
+    height?: number;
+  }>;
 }
 
 export interface Command {

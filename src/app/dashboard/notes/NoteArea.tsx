@@ -5,6 +5,7 @@ import { Note, NoteUpdate, NoteType } from './types';
 import { CommandMenu } from './CommandMenu';
 import { NoteHeader } from './components/NoteHeader';
 import { NoteEditor } from './components/NoteEditor';
+import { ImageUpload } from './components/ImageUpload';
 import { NoteMeta } from './components/NoteMeta';
 import { TypeSelector } from './components/TypeSelector';
 import { useSmartNoteEditor } from './hooks/useSmartNoteEditor';
@@ -99,6 +100,60 @@ export function NoteArea({
     await onUpdate(note._id, { type: newType, typeGenerated: false });
   };
 
+  // Handle image uploads
+  const handleImagesUploaded = async (images: Array<{
+    url: string;
+    filename: string;
+    originalFilename?: string;
+    uploadedAt: number;
+    size?: number;
+    mimeType?: string;
+    width?: number;
+    height?: number;
+  }>) => {
+    console.log('[NoteArea] handleImagesUploaded: updating note with images', { 
+      noteId: note._id, 
+      imageCount: images.length,
+      images: images.map(img => ({
+        url: img.url,
+        filename: img.filename,
+        size: img.size,
+        mimeType: img.mimeType,
+        hasWidth: img.width !== undefined,
+        hasHeight: img.height !== undefined
+      }))
+    });
+    
+    try {
+      // Clean up the images data to ensure no undefined values
+      const cleanImages = images.map(img => {
+        const cleanImg: any = {
+          url: img.url,
+          filename: img.filename,
+          uploadedAt: img.uploadedAt
+        };
+        
+        // Only add optional fields if they have actual values
+        if (img.originalFilename) cleanImg.originalFilename = img.originalFilename;
+        if (img.size) cleanImg.size = img.size;
+        if (img.mimeType) cleanImg.mimeType = img.mimeType;
+        if (img.width) cleanImg.width = img.width;
+        if (img.height) cleanImg.height = img.height;
+        
+        return cleanImg;
+      });
+      
+      console.log('[NoteArea] handleImagesUploaded: cleaned images data', cleanImages);
+      
+      await onUpdate(note._id, { images: cleanImages });
+      console.log('[NoteArea] handleImagesUploaded: successfully updated note with images');
+    } catch (error) {
+      console.error('[NoteArea] handleImagesUploaded: failed to update note with images', error);
+      // Don't throw the error, just log it so the user can still see their uploaded images
+      // The images are already uploaded to GCS, they just aren't linked to the note yet
+    }
+  };
+
   return (
     <div className="flex flex-col h-full w-full">
       {/* Header */}
@@ -168,14 +223,27 @@ export function NoteArea({
             <div className={`flex-1 overflow-hidden relative transition-all ${
               activeTab !== "editor" ? "lg:flex-[0.6] border-r border-border/50" : ""
             }`}>
-              <NoteEditor
-                ref={textAreaRef}
-                content={content}
-                onContentChange={handleContentChange}
-                onKeyDown={handleKeyDown}
-                cursorPosition={cursorPosition}
-                setCursorPosition={setCursorPosition}
-              />
+              <div className="h-full flex flex-col">
+                <div className="flex-1 overflow-hidden">
+                  <NoteEditor
+                    ref={textAreaRef}
+                    content={content}
+                    onContentChange={handleContentChange}
+                    onKeyDown={handleKeyDown}
+                    cursorPosition={cursorPosition}
+                    setCursorPosition={setCursorPosition}
+                  />
+                </div>
+                
+                {/* Image Upload Section */}
+                <div className="border-t border-border p-4 bg-background/50">
+                  <ImageUpload
+                    onImagesUploaded={handleImagesUploaded}
+                    existingImages={note.images || []}
+                    maxImages={5}
+                  />
+                </div>
+              </div>
               
               {/* Command menu */}
               {showCommands && (

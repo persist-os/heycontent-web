@@ -34,7 +34,16 @@ export const createNote = mutation({
     title: v.optional(v.string()),
     important: v.optional(v.boolean()),
     tags: v.optional(v.array(v.string())),
-
+    images: v.optional(v.array(v.object({
+      url: v.string(),
+      filename: v.string(),
+      originalFilename: v.optional(v.string()),
+      uploadedAt: v.number(),
+      size: v.optional(v.number()),
+      mimeType: v.optional(v.string()),
+      width: v.optional(v.number()),
+      height: v.optional(v.number())
+    }))),
   },
   handler: async (ctx, args) => {
     console.log('🏗️ [Convex createNote] Starting note creation with args:', {
@@ -45,7 +54,8 @@ export const createNote = mutation({
       contentLength: args.content?.length || 0,
       contentPreview: args.content?.substring(0, 50) + "...",
       tags: args.tags,
-      important: args.important
+      important: args.important,
+      imagesCount: args.images?.length || 0
     });
     
     const now = Date.now();
@@ -62,6 +72,11 @@ export const createNote = mutation({
       updatedAt: now,
     };
 
+    // Add images if provided
+    if (args.images && args.images.length > 0) {
+      noteData.images = args.images;
+    }
+
     console.log('💾 [Convex createNote] Final note data being saved:', {
       userId: noteData.userId,
       title: noteData.title,
@@ -70,6 +85,7 @@ export const createNote = mutation({
       contentLength: noteData.content?.length || 0,
       tags: noteData.tags,
       important: noteData.important,
+      imagesCount: noteData.images?.length || 0,
       createdAt: new Date(noteData.createdAt).toISOString(),
       updatedAt: new Date(noteData.updatedAt).toISOString()
     });
@@ -158,6 +174,16 @@ export const updateNote = mutation({
       fields: v.optional(v.any()),
       titleGenerated: v.optional(v.boolean()),
       typeGenerated: v.optional(v.boolean()),
+      images: v.optional(v.array(v.object({
+        url: v.string(),
+        filename: v.string(),
+        originalFilename: v.optional(v.string()),
+        uploadedAt: v.number(),
+        size: v.optional(v.number()),
+        mimeType: v.optional(v.string()),
+        width: v.optional(v.number()),
+        height: v.optional(v.number())
+      }))),
     })
   },
   handler: async (ctx, args) => {

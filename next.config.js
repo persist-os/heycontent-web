@@ -20,7 +20,7 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com https://www.googletagmanager.com;",
       "style-src 'self' 'unsafe-inline';",
       "img-src * blob: data:;",
-      "connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://js.stripe.com https://api.stripe.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://va.vercel-scripts.com https://backend.incontent.co http://127.0.0.1:8000 http://localhost:8000;",
+      "connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://js.stripe.com https://api.stripe.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://va.vercel-scripts.com https://backend.incontent.co http://127.0.0.1:8000 http://localhost:8000 https://us-central1-content-454219.cloudfunctions.net;",
       "font-src 'self' data:;",
       "frame-src https://js.stripe.com;",
     ].join(' ')
@@ -40,6 +40,7 @@ const nextConfig = {
       'heycontent-web-216038426364.us-central1.run.app',
       'i.ytimg.com',
       'img.youtube.com',
+      'storage.googleapis.com',
     ],
     remotePatterns: [
       {
@@ -77,6 +78,10 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'img.youtube.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'storage.googleapis.com',
       },
     ],
   },

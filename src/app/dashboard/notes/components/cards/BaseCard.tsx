@@ -20,6 +20,9 @@ export function BaseCard({
   onDelete,
   onToggleImportant
 }: BaseCardProps) {
+  // Debug logging for images
+  console.log('[BaseCard] Note images:', note.images);
+
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
     onEdit?.(note);
@@ -69,6 +72,28 @@ export function BaseCard({
 
       {/* Card content */}
       {children}
+
+      {/* Images section */}
+      {note.images && note.images.length > 0 && (
+        <div className="px-3 pb-2">
+          <div className="grid grid-cols-3 gap-1">
+            {note.images.slice(0, 3).map((image, index) => (
+              <div key={index} className="aspect-square rounded overflow-hidden">
+                <img
+                  src={image.url}
+                  alt={image.originalFilename || image.filename}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ))}
+          </div>
+          {note.images.length > 3 && (
+            <div className="text-xs text-muted-foreground mt-1">
+              +{note.images.length - 3} more images
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Date footer */}
       <div className="px-3 pb-2 text-xs text-muted-foreground">

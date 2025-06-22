@@ -199,8 +199,21 @@ export default function SmartNotes() {
                   : note
               )
             );
+            
+            // Also update the active note if it's the one being updated
+            if (String(activeNote._id) === String(noteId)) {
+              setActiveNote(currentNote => ({ ...currentNote, ...updates }));
+            }
+            
             // Then call the backend update
-            return await updateNote(String(noteId), updates);
+            const result = await updateNote(String(noteId), updates);
+            
+            // Update activeNote with the final result from the backend
+            if (result && String(activeNote._id) === String(noteId)) {
+              setActiveNote(result);
+            }
+            
+            return result;
           }}
           onSave={handleSave}
           onToggleShortcuts={() => {}} // Not used in grid view
