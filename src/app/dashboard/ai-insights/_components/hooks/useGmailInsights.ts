@@ -8,6 +8,7 @@ export function useGmailInsights(userId?: string) {
   const [threadLimit, setThreadLimit] = useState<number | 'all'>(50);
   const [customGmailLimit, setCustomGmailLimit] = useState<string>('');
   const [showGmailCustomInput, setShowGmailCustomInput] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Add Gmail-specific queries
   const gmailAccount = useQuery(
@@ -15,28 +16,28 @@ export function useGmailInsights(userId?: string) {
     userId ? { userId } : "skip"
   );
 
-  // Fetch Gmail insights
-  const gmailBatchInsights = useQuery(
+  // Fetch Gmail batch analysis insights
+  const gmailInsights = useQuery(
     api.gmailQueries.getGmailBatchAnalysis,
-    gmailAccount && gmailAccount.length > 0 && userId ? { 
+    userId && gmailAccount && gmailAccount.length > 0 ? { 
       userId, 
       gmailAccountId: gmailAccount[0].email 
     } : "skip"
   );
 
-  // Store Gmail analysis mutation
+  // Store Gmail batch analysis mutation
   const storeGmailBatchAnalysis = useMutation(api.gmailMutations.storeGmailBatchAnalysis);
 
   // Platform-specific insights
-  const insightsList = gmailBatchInsights?.insights?.insights || [];
+  const insightsList = gmailInsights?.insights?.insights || [];
 
-  // Determine if batch analysis is currently running based on database status
-  const isRunning = gmailBatchInsights?.status?.status === 'processing' || 
-                   gmailBatchInsights?.status?.status === 'enqueued' ||
-                   gmailBatchInsights?.status?.status === 'running';
+  // Only show as running if we're actively refreshing AND status is processing/enqueued
+  // Don't auto-show loading for old stuck statuses
+  const databaseStatus = gmailInsights?.status?.status;
+  const isActuallyRunning = isRefreshing && (databaseStatus === 'processing' || databaseStatus === 'enqueued' || databaseStatus === 'running');
 
   // Check if there's an error in the batch analysis
-  const batchError = gmailBatchInsights?.status?.error;
+  const batchError = gmailInsights?.status?.error;
 
   // Update local error state when batch analysis has an error
   useEffect(() => {
@@ -45,13 +46,21 @@ export function useGmailInsights(userId?: string) {
     }
   }, [batchError, error]);
 
+  // Reset refreshing state when task completes
+  useEffect(() => {
+    if (isRefreshing && databaseStatus && databaseStatus !== 'processing' && databaseStatus !== 'enqueued' && databaseStatus !== 'running') {
+      setIsRefreshing(false);
+    }
+  }, [isRefreshing, databaseStatus]);
+
   const refresh = useCallback(async () => {
     if (!userId || !gmailAccount || gmailAccount.length === 0) {
       setError('Gmail account not connected');
       return;
     }
 
-    // Clear any existing errors
+    // Set local refreshing state
+    setIsRefreshing(true);
     setError(null);
     
     try {
@@ -74,7 +83,7 @@ export function useGmailInsights(userId?: string) {
           max_threads: threadLimit === 'all' ? 1000 : threadLimit,
           max_messages: 100,
           include_spam_analysis: true,
-          force_refresh: true,
+          force_refresh: false, // Don't force refresh to avoid unnecessary API calls
           analysis_mode: "individual"
         }),
       });
@@ -89,6 +98,7 @@ export function useGmailInsights(userId?: string) {
         // Gmail analysis is now async - the status is tracked in the database
         // The results will be automatically available in the query once completed
         console.log(`Gmail analysis enqueued with task ID: ${data.task_id}`);
+        // Keep refreshing state until task completes
       } else if (data.status === 'success') {
         // Handle legacy synchronous response (if any)
         await storeGmailBatchAnalysis({
@@ -96,39 +106,39 @@ export function useGmailInsights(userId?: string) {
           gmailAccountId: gmailAccount[0].email,
           insights: data.data
         });
+        setIsRefreshing(false);
       } else {
         throw new Error(data.error || 'Failed to refresh Gmail insights');
       }
     } catch (error: any) {
       console.error('Error refreshing Gmail insights:', error);
       setError(error.message || 'Failed to refresh Gmail insights');
+      setIsRefreshing(false);
     }
   }, [userId, gmailAccount, threadLimit, storeGmailBatchAnalysis]);
 
   const handleCustomSubmit = useCallback(() => {
-    const customValue = parseInt(customGmailLimit);
-    if (customValue && customValue > 0 && customValue <= 1000) {
-      setThreadLimit(customValue);
+    const limit = parseInt(customGmailLimit, 10);
+    if (!isNaN(limit) && limit > 0) {
+      setThreadLimit(limit);
       setShowGmailCustomInput(false);
-      setCustomGmailLimit('');
     }
   }, [customGmailLimit]);
 
   return {
     insights: insightsList,
-    loading: gmailBatchInsights === undefined,
-    refreshing: isRunning, // Use database status instead of local state
+    loading: gmailInsights === undefined,
+    refreshing: isActuallyRunning, // Use combined local + database state
     error,
     isConnected: !!(gmailAccount && gmailAccount.length > 0),
     refresh,
     account: gmailAccount,
-    // Thread limit controls
     threadLimit,
     setThreadLimit,
     customGmailLimit,
     setCustomGmailLimit,
     showGmailCustomInput,
     setShowGmailCustomInput,
-    handleCustomSubmit
+    handleCustomSubmit,
   };
 } 

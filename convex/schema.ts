@@ -739,9 +739,11 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
     userId: v.string(),
+    channelId: v.string(),
     analysisType: v.literal("batch"),
   })
-    .index("by_userId", ["userId"]),
+    .index("by_userId", ["userId"])
+    .index("by_user_channel", ["userId", "channelId"]),
 
   // Vector embeddings for search
   contentEmbeddings: defineTable({

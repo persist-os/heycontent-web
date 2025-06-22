@@ -38,6 +38,16 @@ interface IdeasResponse {
 
 const API_BASE = "/api/smart_note_inline";
 
+const getContentForAPI = (content: string, title?: string): string => {
+  if (content.trim() !== '') {
+    return content;
+  }
+  if (title && title.trim() !== '') {
+    return `This note is currently empty. The title is "${title}". Please provide a response based on the title.`;
+  }
+  return "This note is currently empty. Please provide general suggestions or analysis.";
+};
+
 export function useInlineAI({
   noteId,
   noteContent,
@@ -59,12 +69,14 @@ export function useInlineAI({
         throw new Error('You are not authenticated. Please log in again.');
       }
 
+      const contentForAPI = getContentForAPI(noteContent, noteTitle);
+
       console.log('🤖 [useInlineAI] Calling askAI with:', {
         noteId,
         noteTitle,
         platform,
         userPrompt: userPrompt.substring(0, 50) + '...',
-        contentLength: noteContent.length
+        contentLength: contentForAPI.length
       });
 
       const response = await fetch(`${API_BASE}/generic-writing`, {
@@ -75,7 +87,7 @@ export function useInlineAI({
         },
         body: JSON.stringify({
           noteId,
-          noteContent,
+          noteContent: contentForAPI,
           userPrompt,
           title: noteTitle,
           platform,
@@ -121,12 +133,14 @@ export function useInlineAI({
         throw new Error('You are not authenticated. Please log in again.');
       }
 
+      const contentForAPI = getContentForAPI(noteContent, noteTitle);
+
       console.log('🧠 [useInlineAI] Calling requestAnalysis with:', {
         noteId,
         noteTitle,
         platform,
         noteType,
-        contentLength: noteContent.length
+        contentLength: contentForAPI.length
       });
 
       const response = await fetch(`${API_BASE}/smart-note-analysis`, {
@@ -137,7 +151,7 @@ export function useInlineAI({
         },
         body: JSON.stringify({
           noteId,
-          noteContent,
+          noteContent: contentForAPI,
           noteType,
           title: noteTitle,
           platform,
@@ -184,11 +198,13 @@ export function useInlineAI({
         throw new Error('You are not authenticated. Please log in again.');
       }
 
+      const contentForAPI = getContentForAPI(noteContent, noteTitle);
+
       console.log('💡 [useInlineAI] Calling requestIdeas with:', {
         noteId,
         noteTitle,
         platform,
-        contentLength: noteContent.length
+        contentLength: contentForAPI.length
       });
 
       const response = await fetch(`${API_BASE}/note-idea-suggestions`, {
@@ -199,7 +215,7 @@ export function useInlineAI({
         },
         body: JSON.stringify({
           noteId,
-          noteContent,
+          noteContent: contentForAPI,
           platform,
           limit: 5,
         }),
