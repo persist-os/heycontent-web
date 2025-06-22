@@ -85,21 +85,21 @@ export function AIInsightsScreen() {
                   value="youtube" 
                   className="flex items-center gap-2"
                 >
-                  YouTube ({youtubeHook.insights.length})
+                  YouTube ({(youtubeHook.insights || []).length})
                 </TabsTrigger>
                 <TabsTrigger 
                   value="instagram" 
                   className="flex items-center gap-2"
                 >
                   <Instagram className="w-4 h-4" />
-                  Instagram ({instagramHook.insights.length})
+                  Instagram ({(instagramHook.insights || []).length})
                 </TabsTrigger>
                 <TabsTrigger 
                   value="gmail" 
                   className="flex items-center gap-2"
                 >
                   <Mail className="w-4 h-4" />
-                  Gmail ({gmailHook.insights.length})
+                  Gmail ({(gmailHook.insights || []).length})
                 </TabsTrigger>
               </TabsList>
 
