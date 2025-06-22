@@ -72,7 +72,7 @@ export default function DashboardLayout({
       >
         <Menu className="w-6 h-6" />
       </button>
-      <main className={`flex-1 transition-all duration-300 ${isExpanded ? 'ml-64' : 'ml-0 md:ml-20'}`}>
+      <main className={`flex-1 transition-all duration-300 md:ml-20 ${isExpanded ? 'ml-64 md:ml-64' : 'ml-0'}`}>
         {children}
       </main>
     </div>
