@@ -995,7 +995,7 @@ try {
         id: string;
         username: string;
         account_type: any;
-        profile_picture_url: any;
+        profile_picture_url?: any;
         followers_count: any;
         follows_count: any;
         media_count: any;

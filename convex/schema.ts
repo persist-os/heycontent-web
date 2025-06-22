@@ -495,7 +495,7 @@ export default defineSchema({
       id: v.string(),
       username: v.string(),
       account_type: v.any(),
-      profile_picture_url: v.any(),
+      profile_picture_url: v.optional(v.any()),
       followers_count: v.any(),
       follows_count: v.any(),
       media_count: v.any(),
