@@ -5,44 +5,34 @@ import { MinimalTypeDisplay } from './TypeSelector';
 
 interface NoteMetaProps {
   note: Note;
-  onUpdate: (noteId: string, updates: { title: string }) => Promise<Note>;
+  onUpdate: (noteId: string, updates: { title: string }) => Promise<any>;
   onTitleChange?: (title: string) => void;
   onEditingTitleChange?: (isEditing: boolean) => void;
 }
 
 export function NoteMeta({ note, onUpdate, onTitleChange, onEditingTitleChange }: NoteMetaProps) {
-  const [title, setTitle] = useState(note.title || "Untitled Note");
-  const [isEditing, setIsEditing] = useState(false);
-  
-  // Update local title state when note prop changes
-  useEffect(() => {
-    if (!isEditing) {
-      setTitle(note.title || "Untitled Note");
-      if (onTitleChange) {
-        onTitleChange(note.title || "Untitled Note");
-      }
-    }
-  }, [note._id, note.title, onTitleChange, isEditing]);
+  const [editedTitle, setEditedTitle] = useState<string | null>(null);
+  const isEditing = editedTitle !== null;
 
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTitle(e.target.value);
-    if (onTitleChange) {
-      onTitleChange(e.target.value);
-      console.log('[NoteMeta] handleTitleChange: called onTitleChange with', e.target.value);
-    }
-  };
+  const displayTitle = isEditing ? editedTitle : (note.title || "Untitled Note");
 
-  const handleTitleFocus = () => {
-    setIsEditing(true);
+  const handleStartEditing = () => {
+    setEditedTitle(note.title || "");
     if (onEditingTitleChange) onEditingTitleChange(true);
   };
 
-  const handleTitleBlur = async () => {
-    if (title !== note.title) {
-      console.log('[NoteMeta] handleTitleBlur: updating title', { noteId: note._id, newTitle: title });
-      await onUpdate(String(note._id), { title });
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEditedTitle(e.target.value);
+    if (onTitleChange) {
+      onTitleChange(e.target.value);
     }
-    setIsEditing(false);
+  };
+
+  const handleTitleBlur = async () => {
+    if (editedTitle !== null && editedTitle !== note.title) {
+      await onUpdate(String(note._id), { title: editedTitle });
+    }
+    setEditedTitle(null);
     if (onEditingTitleChange) onEditingTitleChange(false);
   };
 
@@ -50,31 +40,35 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onEditingTitleChange }
     if (e.key === 'Enter') {
       e.currentTarget.blur();
     }
+    if (e.key === 'Escape') {
+      setEditedTitle(null);
+      if (onEditingTitleChange) onEditingTitleChange(false);
+    }
   };
-
+  
   return (
-    <div className="pb-4 px-6 border-b border-border/30">
+    <div className="flex-1 min-w-0">
       {isEditing ? (
         <input
           title="Note Title"
           type="text"
-          value={title}
+          value={editedTitle || ''}
           onChange={handleTitleChange}
-          onFocus={handleTitleFocus}
           onBlur={handleTitleBlur}
           onKeyDown={handleTitleKeyDown}
-          className="w-full text-xl font-semibold px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary bg-background text-foreground transition-all duration-200"
+          className="w-full text-xl font-semibold px-1 -ml-1 border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary bg-background text-foreground transition-all duration-200"
           autoFocus
         />
       ) : (
         <h1 
-          className="text-xl font-semibold px-3 py-2 hover:bg-muted/40 rounded-lg cursor-pointer transition-all duration-200 text-foreground group"
-          onClick={() => { setIsEditing(true); if (onEditingTitleChange) onEditingTitleChange(true); }}
+          className="text-xl font-semibold px-1 -ml-1 hover:bg-muted/40 rounded-lg cursor-pointer transition-all duration-200 text-foreground truncate"
+          onClick={handleStartEditing}
+          title={displayTitle}
         >
-          {title || "Untitled Note"}
+          {displayTitle}
         </h1>
       )}
-      <div className="flex flex-wrap items-center mt-2 px-3 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center mt-2 text-xs text-muted-foreground">
         <span className="font-medium">
           {note.updatedAt
             ? new Date(note.updatedAt).toLocaleDateString('en-US', {

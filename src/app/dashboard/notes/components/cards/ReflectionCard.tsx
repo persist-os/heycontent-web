@@ -166,19 +166,6 @@ export function ReflectionCard({
           }
         </div>
 
-        {/* Reflection themes */}
-        {themes.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {themes.map((theme, index) => (
-              <span 
-                key={index}
-                className="text-xs px-2 py-1 bg-blue-500/10 text-blue-600 rounded-full font-medium"
-              >
-                {theme}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
     </BaseCard>
   );
