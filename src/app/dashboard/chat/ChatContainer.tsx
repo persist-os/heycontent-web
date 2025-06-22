@@ -13,15 +13,15 @@ import { ChatScreenProps } from './types'
 import { Message } from '@/app/types/chat'
 
 // Import components 
-import { BottomBarActions } from './components/BottomBarActions';
-import { useAmbientInsightsActions } from './components/AmbientInsightsActions';
+import { BottomBarActions } from './components/main_chat/BottomBarActions';
+import { useAmbientInsightsActions } from './components/ambient_insights/AmbientInsightsActions';
 import { PersonaTip } from './components/PersonaTip'
-import ChatHeader from './components/ChatHeader'
-import ChatContextBox from './components/ChatContextBox'
-import AIInsightsContextBox from './components/AIInsightsContextBox'
-import ChatMessagesList from './components/ChatMessagesList'
-import ChatInputArea from './components/ChatInputArea'
-import { AmbientInsightsContainer } from './components/AmbientInsightsContainer'
+import ChatHeader from './components/main_chat/ChatHeader'
+import ChatContextBox from './components/main_chat/ChatContextBox'
+import AIInsightsContextBox from './components/ambient_insights/AIInsightsContextBox'
+import ChatMessagesList from './components/main_chat/ChatMessagesList'
+import ChatInputArea from './components/main_chat/ChatInputArea'
+import { AmbientInsightsContainer } from './components/ambient_insights/AmbientInsightsContainer'
 
 // Import custom hooks
 import { useChatState } from './hooks/useChatState'
@@ -36,9 +36,9 @@ import { checkUserEmbeddings } from './utils/api-utils';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { useMarkdownNotepad } from './hooks/useMarkdownNotepad'
 import { useChatHandlers } from './hooks/useChatHandlers'
-import { MarkdownNotepad } from './components/MarkdownNotepad'
+import { MarkdownNotepad } from './components/notepad/MarkdownNotepad'
 import { useNotepadUI } from './hooks/useNotepadUI'
-import { NotepadToggle } from './components/NotepadToggle'
+import { NotepadToggle } from './components/notepad/NotepadToggle'
 import { useNotes } from '@/app/context/notes-context'
 
 
@@ -64,9 +64,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   // Track which conversation has been loaded to prevent infinite loops
   const loadedConversationRef = useRef<string | null>(null)
   const askQueryProcessedRef = useRef<string | null>(null)
-
-  // Notes context for creating local notes
-  const { createLocalNote, setActiveNoteId } = useNotes();
 
   // Initialize shared state
   const chatState = useChatState()
