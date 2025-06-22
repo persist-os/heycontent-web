@@ -63,126 +63,34 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const createLocalNote = useCallback(async (content: string, title?: string): Promise<string> => {
     if (!userId) {
-      console.error("Cannot create local note without a user.");
+      console.warn('Cannot create note: user not authenticated');
       return '';
     }
 
-    // Clean the content for note saving (remove quote markers)
     const cleanedContent = cleanContentForNotes(content);
-
-    console.log("🚀 [createLocalNote] Starting smart note creation from chat:", {
-      originalContentLength: content?.length || 0,
-      cleanedContentLength: cleanedContent?.length || 0,
-      hasCustomTitle: !!title,
-      customTitle: title,
-      contentPreview: cleanedContent?.substring(0, 100) + "..."
+    console.log("📝 [createLocalNote] Creating note from chat content:", {
+      originalLength: content.length,
+      cleanedLength: cleanedContent.length,
+      hasTitle: !!title,
+      title: title,
+      userId
     });
 
-    let finalTitle = title;
-    let finalType = 'idea_bank';
-
-    // Always try to generate smart title for chat content if it's substantial
-    const shouldGenerateTitle = (
-      cleanedContent && 
-      cleanedContent.trim().length >= 10
-    );
-
-    // Always try to classify type for chat content if it's substantial
-    const shouldClassifyType = (
-      cleanedContent && 
-      cleanedContent.trim().length >= 10
-    );
-
-    // Run title generation and type classification in parallel
-    try {
-      const promises = [];
-      
-      if (shouldGenerateTitle) {
-        console.log("🎯 [createLocalNote] Generating smart title for chat content");
-        const tempNoteId = `temp_${Date.now()}`;
-        promises.push(
-          generateTitle({
-            content: cleanedContent.trim(),
-            platform: 'chat',
-            noteId: tempNoteId,
-          })
-        );
-      } else {
-        promises.push(Promise.resolve(null));
-      }
-
-      if (shouldClassifyType) {
-        console.log("🎯 [createLocalNote] Classifying note type for chat content");
-        const tempNoteId = `temp_${Date.now()}`;
-        promises.push(
-          classifyType({
-            content: cleanedContent.trim(),
-            platform: 'chat',
-            noteId: tempNoteId,
-          })
-        );
-      } else {
-        promises.push(Promise.resolve(null));
-      }
-
-      const [titleResult, typeResult] = await Promise.all(promises);
-
-      // Process title result - prefer AI-generated title over custom title for chat
-      if (titleResult?.title && titleResult.wasGenerated) {
-        finalTitle = titleResult.title;
-        console.log("✅ [createLocalNote] Smart title generated:", finalTitle);
-      } else if (!title) {
-        // Only use fallback if no custom title was provided
-        console.log("⚠️ [createLocalNote] Title generation failed, using fallback");
-        finalTitle = cleanedContent.length > 50 
-          ? cleanedContent.substring(0, 50).trim() + "..."
-          : cleanedContent.trim() || 'New Note from Chat';
-      } else {
-        // Keep the custom title if provided and AI generation failed
-        console.log("ℹ️ [createLocalNote] Using provided custom title:", title);
-        finalTitle = title;
-      }
-
-      // Process type result
-      if (typeResult?.typeGenerated && typeResult.type !== 'idea_bank') {
-        finalType = typeResult.type;
-        console.log("✅ [createLocalNote] Smart type classified:", finalType);
-      }
-
-    } catch (error) {
-      console.warn("⚠️ [createLocalNote] AI generation error:", error);
-      // Use fallbacks
-      if (!title) {
-        finalTitle = cleanedContent.length > 50 
-          ? cleanedContent.substring(0, 50).trim() + "..."
-          : cleanedContent.trim() || 'New Note from Chat';
-      } else {
-        finalTitle = title;
-      }
-    }
-
-    // Save directly to backend with AI-generated title and type using cleaned content
-    console.log("💾 [createLocalNote] Saving note to backend with AI data:", {
-      title: finalTitle,
-      type: finalType,
-      platform: 'chat',
-      cleanedContent: true
-    });
+    // Use the save-with-title API that handles AI generation automatically
+    console.log("🎯 [createLocalNote] Using save-with-title API for chat content");
 
     try {
       const result = await backendSaveNote(cleanedContent, {
-        title: finalTitle,
-        type: finalType,
+        title: title || undefined, // Let the API generate if no title provided
+        type: 'idea_bank', // Start with default, let API classify
         platform: 'chat',
-        // Prevent the backend from running AI generation again since we already did it
-        skipAIGeneration: true
+        skipAIGeneration: false // Let the API handle AI generation
       });
 
       if (result.success && result.noteId) {
-        console.log("✅ [createLocalNote] Note saved successfully with AI features:", {
+        console.log("✅ [createLocalNote] Note saved successfully:", {
           noteId: result.noteId,
-          title: finalTitle,
-          type: finalType
+          platform: 'chat'
         });
         return result.noteId.toString();
       } else {
@@ -193,7 +101,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.error("💥 [createLocalNote] Error saving note:", error);
       return '';
     }
-  }, [userId, generateTitle, classifyType, backendSaveNote, cleanContentForNotes]);
+  }, [userId, backendSaveNote, cleanContentForNotes]);
 
   // Wrapper for saveNote to maintain compatibility
   const saveNote = useCallback(async (content: string, options: any = {}) => {

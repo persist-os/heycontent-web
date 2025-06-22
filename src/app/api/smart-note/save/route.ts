@@ -36,17 +36,19 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     console.info(`[${requestId}] Incoming request body`, body);
-    const { content, platform, type, templateInput, analysisId } = body;
+    const { content, platform, type, titleGenerated } = body;
 
-    // Prepare payload for backend (do NOT send userId)
-    const payload: Record<string, any> = { content, platform };
-    if (type !== undefined) payload.type = type;
-    if (templateInput !== undefined) payload.templateInput = templateInput;
-    if (analysisId !== undefined) payload.analysisId = analysisId;
+    // Prepare payload for backend using the new save-with-title endpoint
+    const payload: Record<string, any> = { 
+      content, 
+      platform: platform || "general",
+      type: type || "idea_bank",
+      titleGenerated: titleGenerated || false
+    };
 
     // Log the backend request
     console.info(`[${requestId}] Proxying to backend API`, {
-      url: `${BACKEND_URL}/api/v1/smart-note/save`,
+      url: `${BACKEND_URL}/api/v1/smart-note/ideas/save-with-title`,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': apiKey ? `${apiKey.slice(0, 8)}...[REDACTED]` : undefined,
@@ -54,8 +56,8 @@ export async function POST(request: Request) {
       payload: payload
     });
 
-    // Proxy to backend
-    const backendUrl = `${BACKEND_URL}/api/v1/smart-note/save`;
+    // Proxy to backend using the new save-with-title endpoint
+    const backendUrl = `${BACKEND_URL}/api/v1/smart-note/ideas/save-with-title`;
     const backendResponse = await fetch(backendUrl, {
       method: 'POST',
       headers: {
@@ -87,6 +89,10 @@ export async function POST(request: Request) {
       duration_ms: totalDuration,
       save_success: data.success || false,
       note_id: data.noteId || null,
+      title_generated: data.titleGenerated || false,
+      type_generated: data.typeGenerated || false,
+      final_title: data.title || null,
+      final_type: data.type || null,
       response_size: JSON.stringify(data).length
     });
 

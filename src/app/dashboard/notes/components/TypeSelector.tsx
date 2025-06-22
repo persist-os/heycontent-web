@@ -217,4 +217,35 @@ export function TypeSelector({ noteId, userId, currentType, typeGenerated, onTyp
       {typeof window !== 'undefined' && dropdownContent && createPortal(dropdownContent, document.body)}
     </>
   );
+}
+
+// Create a minimal type display component for showing beside the date
+export function MinimalTypeDisplay({ currentType }: { currentType: NoteType }) {
+  const TYPE_COLORS: Record<NoteType, string> = {
+    idea_bank: 'bg-red-500',
+    content_script: 'bg-purple-500',
+    collaboration_note: 'bg-green-500',
+    analytics_insight: 'bg-pink-500',
+    reflection_journal: 'bg-blue-500',
+    task_checklist: 'bg-yellow-500'
+  };
+
+  const TYPE_LABELS: Record<NoteType, string> = {
+    idea_bank: 'Idea Bank',
+    content_script: 'Content Script',
+    collaboration_note: 'Collaboration',
+    analytics_insight: 'Analytics',
+    reflection_journal: 'Reflection',
+    task_checklist: 'Task Checklist'
+  };
+
+  const colorClass = TYPE_COLORS[currentType] || 'bg-gray-500';
+  const label = TYPE_LABELS[currentType] || 'Unknown';
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className={`w-2 h-2 rounded-full ${colorClass}`}></div>
+      <span className="text-xs text-muted-foreground font-medium">{label}</span>
+    </div>
+  );
 } 

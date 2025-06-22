@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { Note } from '../types';
+import { MinimalTypeDisplay } from './TypeSelector';
 
 interface NoteMetaProps {
   note: Note;
@@ -85,6 +86,8 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onEditingTitleChange }
             : 'Just now'
           }
         </span>
+        <span className="mx-2 text-muted-foreground/60">•</span>
+        <MinimalTypeDisplay currentType={note.type || 'idea_bank'} />
         {note.tags && note.tags.length > 0 && (
           <div className="flex flex-wrap items-center ml-3">
             <span className="mr-2 text-muted-foreground/60">•</span>
