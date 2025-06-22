@@ -6,22 +6,23 @@ import { useNotes } from '@/app/context/notes-context';
 
 export const useCreateNote = () => {
   const router = useRouter();
-  const { createLocalNote, setActiveNoteId } = useNotes();
+  const { saveNote, setActiveNoteId } = useNotes();
   const [isCreating, setIsCreating] = useState(false);
 
   const createNote = async (content: string, callback?: () => void, customTitle?: string) => {
-    if (!content.trim()) return;
+    // Allow empty content for new notes - users can fill them in later
+    // if (!content.trim()) return;
     
     setIsCreating(true);
     
     try {
       console.log("🚀 [useCreateNote] Starting note creation process");
       
-      const newNoteId = await createLocalNote(content, customTitle);
+      const { success, noteId } = await saveNote(content, { title: customTitle });
       
-      if (newNoteId) {
-        console.log("✅ [useCreateNote] Note created successfully:", newNoteId);
-        setActiveNoteId(newNoteId);
+      if (success && noteId) {
+        console.log("✅ [useCreateNote] Note created successfully:", noteId);
+        setActiveNoteId(noteId.toString());
         router.push('/dashboard/notes');
         if (callback) {
           callback();
