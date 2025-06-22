@@ -228,128 +228,67 @@ export function MessageBubble({
       )}
 
       {/* Chat Bubble Container */}
-      <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-1`}>
+      <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-1`}>
         <div
-          id={`message-${message.id}`}
-          className={`
-            ${isUser ? 'max-w-[80%]' : 'max-w-[90%]'}
-            rounded-2xl
-            ${isUser ? 'px-3 sm:px-4 py-2 sm:py-3' : 'px-4 sm:px-6 py-3 sm:py-4'}
-            ${isUser ? 'bg-accent' : 'bg-card border'}
-            ${isUser ? 'text-black [&_*]:!text-black' : ''}
-            relative
-            group
-          `}
+          className={`flex-shrink max-w-full sm:max-w-[80%] ${isUser ? '' : 'sm:max-w-[90%]'}`}
         >
-          {/* Referenced message preview */}
-          {message.referencedMessage && (
-            <button 
-              onClick={() => onScrollToMessage?.(message.referencedMessage!.id)}
-              className="text-[10px] sm:text-xs text-muted-foreground bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 p-1.5 rounded mb-2 break-words text-left transition-colors w-full cursor-pointer"
-            >
-              <div className="font-medium mb-0.5">Replying to:</div>
-              <div className="line-clamp-2">{message.referencedMessage.content}</div>
-            </button>
-          )}
-          
-          {/* Vector Search Context */}
-          {message.role === 'assistant' && message.vectorSearchMetadata && (
-            <VectorSearchContext vectorSearchMetadata={message.vectorSearchMetadata} />
-          )}
+          <div
+            id={`message-${message.id}`}
+            className={`
+              rounded-2xl
+              px-3 sm:px-4 py-2 sm:py-3
+              ${isUser ? 'bg-accent' : 'bg-card border'}
+              ${isUser ? 'text-black [&_*]:!text-black' : ''}
+              relative
+              group
+              w-full
+            `}
+          >
+            {/* Referenced message preview */}
+            {message.referencedMessage && (
+              <button 
+                onClick={() => onScrollToMessage?.(message.referencedMessage!.id)}
+                className="text-[10px] sm:text-xs text-muted-foreground bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 p-1.5 rounded mb-2 break-words text-left transition-colors w-full cursor-pointer"
+              >
+                <div className="font-medium mb-0.5">Replying to:</div>
+                <div className="truncate opacity-80">{message.referencedMessage.content}</div>
+              </button>
+            )}
 
-          {/* Message Content - Full Width */}
-          <div className="w-full">
-            <div className={`break-words chat-font`}>
+            {/* Main message content */}
+            <div className="prose prose-sm dark:prose-invert prose-p:my-2 prose-headings:my-3 max-w-none break-words">
               {message.status === 'typing' ? (
-                <div className="space-y-2">
-                  <ThinkingIndicator />
-                  {message.searchStatus && (
-                    <div className="text-xs text-muted-foreground mt-1 flex items-center">
-                      <Search className="w-3 h-3 mr-1.5 flex-shrink-0" />
-                      <span>{message.searchStatus}</span>
-                    </div>
-                  )}
-                </div>
-              ) : mightHavePersona ? (
-                <>
-                  <MarkdownRenderer 
-                    content={message.chat_response || message.content} 
-                    className=""
-                  />
-                  <PersonaCardRenderer message={message} userId={userId} />
-                </>
+                <ThinkingIndicator />
+              ) : mightHavePersona && userId ? (
+                <PersonaCardRenderer message={message} userId={userId} />
               ) : (
-                <MarkdownRenderer 
-                  content={message.chat_response || message.content} 
-                  className=""
-                />
+                <MarkdownRenderer content={message.chat_response || message.content} />
               )}
             </div>
-
-            {message.status === 'failed' && onRetry && (
-              <button
-                onClick={onRetry}
-                className={`text-xs ${isDark ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-800'} mt-1`}
-              >
-                Retry
-              </button>
-            )}
-          </div>
-          
-          {/* Expandable Insights for assistant messages with suggestions - inside bubble */}
-          {!isUser && message.metadata?.suggestions && message.metadata.suggestions.length > 0 && (
-            <div className="mt-3">
-              <ExpandableInsights
-                message={{
-                  ...message,
-                  suggestions: message.metadata.suggestions,
-                }}
-                onSuggestionPress={onFollowUpClick}
-                onInputPopulate={onInputPopulate}
+            
+            {/* Vector Search Context Display */}
+            {!isUser && message.metadata?.vector_search_context && (
+              <VectorSearchContext
+                vectorSearchMetadata={message.metadata.vector_search_context}
               />
+            )}
+
+            {/* Message Actions */}
+            <div className="absolute -bottom-2.5 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              {onReference && showReferenceButton && (
+                <button
+                  onClick={() => onReference(message)}
+                  className="p-1 rounded-full bg-background/70 backdrop-blur-sm border text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all"
+                  title="Reply"
+                >
+                  <MessageSquare className="w-3 h-3" />
+                </button>
+              )}
+              <CopyButton text={getTextToCopy()} />
             </div>
-          )}
+          </div>
         </div>
       </div>
-
-      {/* Action Buttons - Outside and Below Bubble */}
-      {message.status !== 'typing' && (
-        <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-3`}>
-          <div className={`flex items-center gap-2 ${isUser ? 'mr-4' : 'ml-4'}`}>
-            {/* Copy Button */}
-            <CopyButton
-              text={getTextToCopy()}
-              className={`opacity-60 hover:opacity-100 transition-opacity duration-200 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-              size="sm"
-              variant="ghost"
-              tooltipText={`Copy ${isUser ? 'your message' : 'AI response'}`}
-            />
-            
-            {/* Quote Button - appears when text is selected */}
-            {showQuoteButton && onInputPopulate && (
-              <button
-                onClick={handleQuoteText}
-                aria-label="Quote selected text"
-                className={`opacity-60 hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-full ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-                title={`Quote "${selectedText.length > 20 ? selectedText.substring(0, 20) + '...' : selectedText}"`}
-              >
-                <Quote className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
-              </button>
-            )}
-            
-            {/* Reference/Reply Button */}
-            {showReferenceButton && onReference && (
-              <button
-                onClick={() => onReference(message)}
-                aria-label="Reference message"
-                className={`opacity-60 hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-full ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-              >
-                <MessageSquare className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
-              </button>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

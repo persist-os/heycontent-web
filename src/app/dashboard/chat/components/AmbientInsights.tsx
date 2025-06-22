@@ -181,7 +181,7 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
   // Show skeleton loading state
   if (isLoading && !error) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-4xl sm:max-w-5xl lg:max-w-7xl mx-auto pb-32 px-4 sm:px-0">
+      <div className="space-y-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
         {Array.from({ length: 6 }).map((_, index) => (
           <InsightSkeleton key={index} />
         ))}
@@ -192,7 +192,7 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
   // Show error state if there's an error
   if (error) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-4xl sm:max-w-5xl lg:max-w-7xl mx-auto pb-32 px-4 sm:px-0">
+      <div className="space-y-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
         <div className="col-span-full text-center text-muted-foreground">
           <p>Failed to load insights: {error}</p>
         </div>
@@ -203,7 +203,7 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
   // Show empty state if no insights
   if (insights.length === 0) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-4xl sm:max-w-5xl lg:max-w-7xl mx-auto pb-32 px-4 sm:px-0">
+      <div className="space-y-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
         <div className="col-span-full text-center text-muted-foreground">
           <p>No insights available yet. Check back soon!</p>
         </div>
@@ -212,7 +212,7 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-4xl sm:max-w-5xl lg:max-w-7xl mx-auto pb-32 px-4 sm:px-0">
+    <div className="space-y-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
       {insights.map((insight) => (
         <div
           key={insight.id}

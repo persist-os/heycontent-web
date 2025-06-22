@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useCreateNote } from '@/app/hooks/useCreateNote';
+import { useCreateNote } from '@/app/dashboard/notes/hooks/useCreateNote';
 import { Button } from './button';
 import React from 'react';
 import { FilePlus, Loader2 } from 'lucide-react';
@@ -10,10 +10,11 @@ interface CreateNoteButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEle
   content: string;
   onNoteCreate?: () => void;
   children?: React.ReactNode;
+  title?: string;
 }
 
 export const CreateNoteButton = React.forwardRef<HTMLButtonElement, CreateNoteButtonProps>(
-  ({ content, children, onClick, onNoteCreate, className, ...props }, ref) => {
+  ({ content, children, onClick, onNoteCreate, className, title, ...props }, ref) => {
     const { createNote, isCreating } = useCreateNote();
 
     const handleCreateNote = async () => {
@@ -22,7 +23,7 @@ export const CreateNoteButton = React.forwardRef<HTMLButtonElement, CreateNoteBu
       }
       
       if (content.trim()) {
-        await createNote(content.trim(), onNoteCreate);
+        await createNote(content.trim(), onNoteCreate, title);
       }
     };
 
@@ -35,11 +36,18 @@ export const CreateNoteButton = React.forwardRef<HTMLButtonElement, CreateNoteBu
         {...props}
       >
         {isCreating ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Saving...
+          </>
         ) : (
-          children || <FilePlus className="mr-2 h-4 w-4" />
+          children || (
+            <>
+              <FilePlus className="mr-2 h-4 w-4" />
+              Save as Note
+            </>
+          )
         )}
-        {isCreating ? 'Saving...' : 'Save as Note'}
       </Button>
     );
   }

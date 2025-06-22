@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Instagram, Mail, BarChart3, Brain, Settings, Sparkles } from 'lucide-react'
 import { useAuth } from '@/app/context/auth-context'
 import { RefreshState } from '@/components/ui/refresh-state'
@@ -43,6 +44,14 @@ import { ContentHubInsights } from './ContentHubInsights'
 type PlatformType = 'all' | 'youtube' | 'instagram' | 'gmail'
 type ViewType = 'hub-insights' | 'all' | 'youtube' | 'instagram' | 'gmail'
 type DataType = 'posts' | 'ai-insights'
+
+const platformOptions = [
+  { value: 'hub-insights', label: 'Content Hub Insights', icon: <Sparkles className="w-4 h-4" /> },
+  { value: 'all', label: 'All Platforms', icon: <BarChart3 className="w-4 h-4" /> },
+  { value: 'youtube', label: 'YouTube', icon: <YouTubeBrandIcon href="https://youtube.com/" className="w-4 h-4" /> },
+  { value: 'instagram', label: 'Instagram', icon: <Instagram className="w-4 h-4" /> },
+  { value: 'gmail', label: 'Gmail', icon: <Mail className="w-4 h-4" /> },
+];
 
 export function ContentHubScreen() {
   const searchParams = useSearchParams()
@@ -403,26 +412,38 @@ export function ContentHubScreen() {
             
             {/* Main Navigation - Content Hub Insights + Platform Selection */}
             <Tabs value={selectedView} onValueChange={(value) => setSelectedView(value as ViewType)} className="w-full">
-              <TabsList className="grid w-full grid-cols-5 mb-0">
-                <TabsTrigger value="hub-insights" className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4" />
-                  Content Hub Insights
-                </TabsTrigger>
-                <TabsTrigger value="all" className="flex items-center gap-2">
-                  All Platforms
-                </TabsTrigger>
-                <TabsTrigger value="youtube" className="flex items-center gap-2">
-                  <YouTubeBrandIcon href="https://youtube.com/" className="w-4 h-4" />
-                  YouTube
-                </TabsTrigger>
-                <TabsTrigger value="instagram" className="flex items-center gap-2">
-                  <Instagram className="w-4 h-4" />
-                  Instagram
-                </TabsTrigger>
-                <TabsTrigger value="gmail" className="flex items-center gap-2">
-                  <Mail className="w-4 h-4" />
-                  Gmail
-                </TabsTrigger>
+              {/* Mobile Select */}
+              <div className="sm:hidden px-1 mb-4">
+                <Select value={selectedView} onValueChange={(value) => setSelectedView(value as ViewType)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue>
+                      <div className="flex items-center gap-2">
+                        {platformOptions.find(p => p.value === selectedView)?.icon}
+                        <span>{platformOptions.find(p => p.value === selectedView)?.label}</span>
+                      </div>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {platformOptions.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        <div className="flex items-center gap-2">
+                          {option.icon}
+                          <span>{option.label}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Desktop Tabs */}
+              <TabsList className="hidden sm:grid w-full grid-cols-5 mb-0">
+                {platformOptions.map(option => (
+                  <TabsTrigger key={option.value} value={option.value} className="flex items-center gap-2">
+                    {option.icon}
+                    {option.label}
+                  </TabsTrigger>
+                ))}
               </TabsList>
 
               {/* Content Hub Insights - Home Screen */}
@@ -434,8 +455,8 @@ export function ContentHubScreen() {
               {(selectedView === 'all' || selectedView === 'youtube' || selectedView === 'instagram' || selectedView === 'gmail') && (
                 <div className="space-y-0">
                   <Tabs value={selectedDataType} onValueChange={(value) => setSelectedDataType(value as DataType)} className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 mb-6">
-                      <TabsTrigger value="posts" className="flex items-center gap-2">
+                    <TabsList className="mb-6 flex w-full flex-row sm:grid sm:grid-cols-2">
+                      <TabsTrigger value="posts" className="flex flex-1 items-center justify-center gap-2 sm:flex-initial">
                         <BarChart3 className="w-4 h-4" />
                         Posts ({
                           selectedView === 'all' ? allDisplayItems.length :
@@ -444,7 +465,7 @@ export function ContentHubScreen() {
                           gmailAnalytics.items.length
                         })
                       </TabsTrigger>
-                      <TabsTrigger value="ai-insights" className="flex items-center gap-2">
+                      <TabsTrigger value="ai-insights" className="flex flex-1 items-center justify-center gap-2 sm:flex-initial">
                         <Brain className="w-4 h-4" />
                         AI Insights ({
                           selectedView === 'all' ? allInsights.length :

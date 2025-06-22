@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useSidebar } from '@/app/context/sidebar-context';
 import { useSubscriptionCheck } from '@/app/hooks/useSubscriptionCheck';
 import { RefreshState } from '@/components/ui/refresh-state';
+import { Menu } from 'lucide-react';
 
 // Pages that don't require a subscription
 const PUBLIC_PATHS = [
@@ -28,7 +29,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const { firebaseUser, authLoading } = useAuth();
-  const { isExpanded } = useSidebar();
+  const { isExpanded, setIsExpanded } = useSidebar();
   
   // Check if current path is public or doesn't require a subscription
   const isPublicPath = useMemo(() => {
@@ -62,11 +63,16 @@ export default function DashboardLayout({
 
   return (
     <div className="relative flex min-h-screen">
-      <div className="fixed inset-y-0 left-0 z-40">
-        <DashboardNav />
-      </div>
-      <main className={`flex-1 transition-[margin] duration-300 ${isExpanded ? 'md:ml-64' : 'ml-0'}`}>
-        <div className="h-16 md:hidden" />
+      <DashboardNav />
+      {/* Mobile-only menu button */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className={`fixed top-4 left-4 z-50 p-2 rounded-md bg-background/50 text-foreground transition-transform duration-300 md:hidden ${isExpanded ? 'translate-x-64' : 'translate-x-0'}`}
+        aria-label="Toggle menu"
+      >
+        <Menu className="w-6 h-6" />
+      </button>
+      <main className={`flex-1 transition-all duration-300 md:ml-20 ${isExpanded ? 'ml-64 md:ml-64' : 'ml-0'}`}>
         {children}
       </main>
     </div>
