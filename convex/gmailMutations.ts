@@ -1006,3 +1006,72 @@ export const createDebugGmailAccount = mutation({
     }
   },
 });
+
+// Update Gmail batch analysis status for the async task system
+export const updateGmailBatchAnalysisStatus = mutation({
+  args: {
+    userId: v.string(),
+    gmailAccountId: v.string(),
+    statusUpdate: v.object({
+      status: v.string(),
+      task_id: v.string(),
+      started_at: v.optional(v.string()),
+      completed_at: v.optional(v.string()),
+      progress: v.optional(v.number()),
+      error: v.optional(v.string()),
+    }),
+    insights: v.optional(v.any()),
+  },
+  handler: async (ctx, args) => {
+    const { userId, gmailAccountId, statusUpdate, insights } = args;
+    const now = Date.now();
+
+    try {
+      // Check if batch analysis already exists
+      const existingAnalysis = await ctx.db
+        .query("gmailBatchAnalysis")
+        .withIndex("by_user_account", q => 
+          q.eq("userId", userId)
+           .eq("gmailAccountId", gmailAccountId)
+        )
+        .first();
+
+      if (existingAnalysis) {
+        // Update existing batch analysis with status and insights
+        const updateData: any = {
+          status: statusUpdate,
+          updatedAt: now,
+        };
+        
+        // Add insights if provided
+        if (insights !== null && insights !== undefined) {
+          updateData.insights = insights;
+        }
+        
+        await ctx.db.patch(existingAnalysis._id, updateData);
+        return { status: "updated", analysisId: existingAnalysis._id };
+      } else {
+        // Insert new batch analysis with status
+        const insertData: any = {
+          userId,
+          gmailAccountId,
+          status: statusUpdate,
+          analysisType: "batch",
+          createdAt: now,
+          updatedAt: now,
+        };
+        
+        // Add insights if provided
+        if (insights !== null && insights !== undefined) {
+          insertData.insights = insights;
+        }
+        
+        const id = await ctx.db.insert("gmailBatchAnalysis", insertData);
+        return { status: "created", analysisId: id };
+      }
+    } catch (error) {
+      console.error(`Error updating Gmail batch analysis status for user ${userId}:`, error);
+      throw new Error(`Failed to update Gmail batch analysis status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});

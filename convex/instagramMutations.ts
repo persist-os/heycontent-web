@@ -506,7 +506,7 @@ export const storePostComments = mutation({
         ...comment,
         username: comment.username || 'anonymous', // Provide default username if missing
         replies: comment.replies ? {
-          data: Array.isArray(comment.replies) ? comment.replies.map(reply => ({
+          data: Array.isArray(comment.replies.data) ? comment.replies.data.map(reply => ({
             ...reply,
             username: reply.username || 'anonymous' // Provide default username for replies if missing
           })) : [],
@@ -733,5 +733,72 @@ export const storePostAnalysis = mutation({
     await ctx.db.patch(post._id, updateData);
 
     return { success: true, status: "updated", postId: post._id };
+  },
+});
+
+// Update Instagram batch analysis status for async tasks
+export const updateInstagramBatchAnalysisStatus = mutation({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+    statusUpdate: v.object({
+      status: v.string(),
+      task_id: v.string(),
+      started_at: v.optional(v.string()),
+      completed_at: v.optional(v.string()),
+      progress: v.optional(v.number()),
+      error: v.optional(v.string()),
+    }),
+    insights: v.optional(v.any()),
+  },
+  handler: async (ctx, args) => {
+    const { userId, instagramAccountId, statusUpdate, insights } = args;
+    const now = Date.now();
+
+    try {
+      // Check if batch analysis already exists
+      const existingAnalysis = await ctx.db
+        .query("instagramBatchAnalysis")
+        .withIndex("by_userId", q => q.eq("userId", userId))
+        .filter(q => q.eq(q.field("instagramAccountId"), instagramAccountId))
+        .first();
+
+      if (existingAnalysis) {
+        // Update existing batch analysis with status and insights
+        const updateData: any = {
+          status: statusUpdate,
+          updatedAt: now,
+        };
+        
+        // Add insights if provided
+        if (insights !== null && insights !== undefined) {
+          updateData.insights = insights;
+        }
+        
+        await ctx.db.patch(existingAnalysis._id, updateData);
+        return { status: "updated", analysisId: existingAnalysis._id };
+      } else {
+        // Insert new batch analysis with status
+        const insertData: any = {
+          userId,
+          instagramAccountId,
+          status: statusUpdate,
+          analysisType: "batch" as const,
+          createdAt: now,
+          updatedAt: now,
+        };
+        
+        // Add insights if provided
+        if (insights !== null && insights !== undefined) {
+          insertData.insights = insights;
+        }
+        
+        const id = await ctx.db.insert("instagramBatchAnalysis", insertData);
+        return { status: "created", analysisId: id };
+      }
+    } catch (error) {
+      console.error(`Error updating Instagram batch analysis status for user ${userId}:`, error);
+      throw new Error(`Failed to update Instagram batch analysis status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   },
 });
