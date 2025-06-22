@@ -27,10 +27,13 @@ export function NoteArea({
   onBack,
   isMobile
 }: NoteAreaProps) {
-  const liveNoteData = useQuery(api.notes.getNote, { 
-    noteId: initialNote._id as Id<"notes">, 
-    userId: String(initialNote.userId) 
-  });
+  // Only use the live query if the note is not temporary
+  const liveNoteData = initialNote.isTemporary 
+    ? null 
+    : useQuery(api.notes.getNote, {
+        noteId: initialNote._id as Id<"notes">, 
+        userId: String(initialNote.userId) 
+      });
 
   const note = liveNoteData || initialNote;
   
