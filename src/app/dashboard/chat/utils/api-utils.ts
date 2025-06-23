@@ -845,6 +845,15 @@ export async function sendChatMessage(
       hasContext: !!(vectorSearchResults && vectorSearchResults.context),
       itemCount: vectorSearchResults?.relevantContent?.length || 0
     });
+
+    // Immediately notify with vector search results if found
+    if (vectorSearchResults?.relevantContent?.length > 0) {
+      onStatusUpdate?.(`VECTOR_SEARCH_RESULTS:${JSON.stringify({
+        foundRelevantContent: true,
+        relevantItemsCount: vectorSearchResults.relevantContent.length,
+        relevantContent: vectorSearchResults.relevantContent
+      })}`);
+    }
   } else {
     console.log('🐛 [DEBUG] SKIPPING VECTOR SEARCH - conditions not met:', {
       reason: !userId ? 'No user ID' : !useContextSearch ? 'Context search disabled' : 'Unknown'

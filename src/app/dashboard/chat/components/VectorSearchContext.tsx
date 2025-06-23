@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { FileText, Youtube, Mail, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react';
-import { Message } from '@/types/chat';
+import { Message } from '@/app/types/chat';
 
 interface VectorSearchContextProps {
-  vectorSearchMetadata: Message['vector_search_metadata'];
+  vectorSearchMetadata: Message['vectorSearchMetadata'];
 }
 
 const ContentTypeIcon = ({ contentType }: { contentType: string }) => {
@@ -58,22 +58,11 @@ const VectorSearchContext: React.FC<VectorSearchContextProps> = ({ vectorSearchM
                     <ContentTypeIcon contentType={item.contentType} />
                     <div className="flex-1 min-w-0">
                       <p className="font-medium" title={item.title}>{item.title}</p>
-                      {item.summary && (
-                        <p className={`mt-1 text-gray-600 ${!isItemExpanded ? 'line-clamp-2' : ''}`}>
-                          {item.summary}
-                        </p>
-                      )}
+                      <p className="mt-1 text-gray-600 text-[11px]">
+                        Score: {(item.score * 100).toFixed(1)}% match
+                      </p>
                     </div>
                   </div>
-                  {item.summary && item.summary.length > 100 && (
-                    <button
-                      onClick={() => toggleItem(index)}
-                      className="mt-1.5 w-full text-left text-blue-600 hover:text-blue-800 font-medium text-[11px] flex items-center"
-                    >
-                      {isItemExpanded ? 'Show less' : 'Show more'}
-                      {isItemExpanded ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />}
-                    </button>
-                  )}
                 </li>
               );
             })}
