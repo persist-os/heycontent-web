@@ -39,9 +39,9 @@ export default function SmartNotes() {
     }
   }, [activeNoteId, notes]);
   
-  const createNote = React.useCallback(async () => {
+  const createNote = React.useCallback(async (noteType?: NoteType) => {
     if (isCreatingNote) return;
-    await createNewNote('');
+    await createNewNote('', undefined, undefined, noteType);
   }, [createNewNote, isCreatingNote]);
 
   // Handle note editing

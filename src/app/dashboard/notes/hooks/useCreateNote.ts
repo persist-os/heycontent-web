@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useNotes } from '@/app/context/notes-context';
 import { getApiKey } from '@/app/lib/api-helpers';
+import { NoteType } from '../types';
 
 export const useCreateNote = () => {
   const router = useRouter();
@@ -51,7 +52,7 @@ export const useCreateNote = () => {
     }
   }, []);
 
-  const createNote = async (content: string, callback?: () => void, customTitle?: string) => {
+  const createNote = async (content: string, callback?: () => void, customTitle?: string, noteType?: NoteType) => {
     // Allow empty content for new notes - users can fill them in later
     // if (!content.trim()) return;
     
@@ -60,7 +61,7 @@ export const useCreateNote = () => {
     try {
       console.log("🚀 [useCreateNote] Starting note creation process");
       
-      const { success, noteId } = await saveNote(content, { title: customTitle });
+      const { success, noteId } = await saveNote(content, { title: customTitle, type: noteType });
       
       if (success && noteId) {
         console.log("✅ [useCreateNote] Note created successfully:", noteId);

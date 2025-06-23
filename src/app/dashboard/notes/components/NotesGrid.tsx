@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 interface NotesGridProps {
   notes: Note[];
-  onCreateNote: () => void;
+  onCreateNote: (noteType?: NoteType) => void;
   onEditNote: (note: Note) => void;
   onDeleteNote: (noteId: string) => void;
   onToggleImportant: (noteId: string) => void;
@@ -124,7 +124,7 @@ export function NotesGrid({
             }
           </p>
           <button
-            onClick={onCreateNote}
+            onClick={() => onCreateNote(selectedTypeFilter !== 'all' ? selectedTypeFilter : undefined)}
             disabled={isCreatingNote}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -161,7 +161,7 @@ export function NotesGrid({
 
       {/* Floating Create Note Button */}
       <button
-        onClick={onCreateNote}
+        onClick={() => onCreateNote(selectedTypeFilter !== 'all' ? selectedTypeFilter : undefined)}
         disabled={isCreatingNote}
         className="fixed bottom-6 right-6 w-14 h-14 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors flex items-center justify-center shadow-lg hover:shadow-xl z-50 disabled:opacity-50 disabled:cursor-not-allowed"
         title={isCreatingNote ? "Creating note..." : "Create new note"}
