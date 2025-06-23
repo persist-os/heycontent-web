@@ -5,7 +5,7 @@ import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Note, NoteUpdate, NoteType } from './types';
 import { NoteHeader } from './components/NoteHeader';
-import { NoteEditor } from './components/NoteEditor';
+import { TiptapNoteEditor } from './components/TiptapNoteEditor';
 import { NoteMeta } from './components/NoteMeta';
 import { TypeSelector } from './components/TypeSelector';
 import type { Id } from "@/convex/_generated/dataModel";
@@ -19,6 +19,10 @@ interface NoteAreaProps {
   isMobile: boolean;
   availableNotes?: Array<{ _id: string; title: string; type: string }>;
   onLinkNote?: (noteId: string) => void;
+  // Navigation stack props
+  canGoBack?: boolean;
+  onNavigateBack?: () => void;
+  navigationStack?: string[];
 }
 
 export function NoteArea({
@@ -29,7 +33,11 @@ export function NoteArea({
   onBack,
   isMobile,
   availableNotes = [],
-  onLinkNote
+  onLinkNote,
+  // Navigation stack props
+  canGoBack,
+  onNavigateBack,
+  navigationStack
 }: NoteAreaProps) {
   // Only use the live query if the note is not temporary
   const liveNoteData = initialNote.isTemporary 
@@ -82,6 +90,9 @@ export function NoteArea({
         onBack={onBack} 
         isMobile={isMobile}
         currentContent={content}
+        canGoBack={canGoBack}
+        onNavigateBack={onNavigateBack}
+        navigationStack={navigationStack}
       />
       
       {/* Note metadata and type selector */}
@@ -104,7 +115,7 @@ export function NoteArea({
       
       {/* Main editor area */}
       <div className="flex-1 overflow-hidden">
-        <NoteEditor
+        <TiptapNoteEditor
           content={content}
           onContentChange={handleContentChange}
           placeholder="Start writing your note..."

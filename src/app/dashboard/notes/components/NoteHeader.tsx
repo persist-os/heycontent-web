@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lightbulb, Star, Brain, Save, Loader2, ArrowLeft } from 'lucide-react';
+import { Lightbulb, Star, Brain, Save, Loader2, ArrowLeft, ChevronLeft } from 'lucide-react';
 import type { Note, NoteType } from '../types/index';
 import toast from 'react-hot-toast';
 
@@ -10,9 +10,13 @@ interface NoteHeaderProps {
   onBack: () => void;
   isMobile: boolean;
   currentContent?: string; // Add current content prop
+  // Navigation stack props
+  canGoBack?: boolean;
+  onNavigateBack?: () => void;
+  navigationStack?: string[];
 }
 
-export function NoteHeader({ note, onUpdate, onSave, onBack, isMobile, currentContent }: NoteHeaderProps) {
+export function NoteHeader({ note, onUpdate, onSave, onBack, isMobile, currentContent, canGoBack, onNavigateBack, navigationStack }: NoteHeaderProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // Handler for Save button that shows a toast
@@ -44,11 +48,22 @@ export function NoteHeader({ note, onUpdate, onSave, onBack, isMobile, currentCo
         {/* Right side with back button and action buttons */}
         <div className="flex-1 flex justify-end">
           <div className="flex gap-2">
+            {/* Navigation back button (for note links) */}
+            {canGoBack && onNavigateBack && (
+              <button
+                onClick={onNavigateBack}
+                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted/60 transition-all duration-200 group"
+                title={`Back to previous note (${navigationStack?.length || 0} in history)`}
+              >
+                <ChevronLeft className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors duration-200" />
+              </button>
+            )}
+            {/* Main back button (to grid) */}
             {isMobile && (
               <button
                 onClick={onBack}
                 className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted/60 transition-all duration-200 group"
-                title="Back to notes"
+                title="Back to notes grid"
               >
                 <ArrowLeft className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors duration-200" />
               </button>

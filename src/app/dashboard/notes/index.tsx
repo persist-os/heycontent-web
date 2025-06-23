@@ -24,6 +24,11 @@ export default function SmartNotes() {
     setNotes,
     activeNoteId,
     setActiveNoteId,
+    navigationStack,
+    canGoBack,
+    navigateToNote,
+    navigateBack,
+    clearNavigationStack,
   } = useNotes();
   
   const { createNote: createNewNote, isCreating: isCreatingNote } = useCreateNote();
@@ -46,7 +51,7 @@ export default function SmartNotes() {
 
   // Handle note editing
   const handleEditNote = (note: Note) => {
-    setActiveNoteId(note._id);
+    navigateToNote(note._id, false); // Not from a link, so don't add to stack
   };
 
   // Handle note deletion
@@ -100,18 +105,19 @@ export default function SmartNotes() {
 
   // Handle going back to grid view
   const handleBackToGrid = () => {
-    setActiveNoteId(null);
+    clearNavigationStack();
   };
 
-  // Handle note linking
+  // Handle note linking with navigation stack
   const handleLinkNote = (noteId: string) => {
     console.log('handleLinkNote called:', {
       noteId,
       currentActiveNoteId: activeNoteId,
       notesCount: notes.length,
-      targetNote: notes.find(n => String(n._id) === noteId)
+      targetNote: notes.find(n => String(n._id) === noteId),
+      currentStack: navigationStack
     });
-    setActiveNoteId(noteId);
+    navigateToNote(noteId, true); // From a link, so add to navigation stack
   };
 
   // Prepare available notes for linking (exclude current note)
@@ -162,6 +168,9 @@ export default function SmartNotes() {
           isMobile={true} // Always show back button in this context
           availableNotes={availableNotes}
           onLinkNote={handleLinkNote}
+          canGoBack={canGoBack}
+          onNavigateBack={navigateBack}
+          navigationStack={navigationStack}
         />
       </div>
     );

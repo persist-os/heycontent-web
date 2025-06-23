@@ -272,7 +272,7 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
 
   return (
     <div className="relative w-full h-full">
-      {/* Hidden textarea for text input */}
+      {/* Textarea for text input with visible cursor and selection, but invisible text */}
       <textarea
         ref={textAreaRef}
         value={content}
@@ -281,12 +281,15 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
         onFocus={handleFocus}
         onBlur={handleBlur}
         onScroll={handleScroll}
-        className="absolute inset-0 w-full h-full min-h-[300px] resize-none p-4 text-base leading-relaxed bg-transparent text-transparent caret-foreground border-0 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 transition-all duration-200 rounded-md z-0"
+        className="absolute inset-0 w-full h-full min-h-[300px] resize-none p-4 text-base leading-relaxed bg-transparent caret-foreground border-0 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 transition-all duration-200 rounded-md z-0 selection:bg-primary/20"
         placeholder=""
         disabled={disabled}
         spellCheck={true}
         autoFocus={!disabled}
-        style={{ caretColor: 'currentColor' }}
+        style={{ 
+          color: 'transparent',
+          caretColor: 'var(--foreground)'
+        }}
       />
       
       {/* Visual overlay with rendered content and clickable links */}
