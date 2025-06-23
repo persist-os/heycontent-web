@@ -146,10 +146,15 @@ export const TiptapNoteEditor = forwardRef<HTMLDivElement, TiptapNoteEditorProps
       console.log('Processing link:', { noteId, linkedNote });
       
       if (linkedNote) {
-        // Create a proper HTML structure that Tiptap can parse
+        // Create a proper HTML structure that Tiptap can parse for existing notes
         const linkHtml = `<span data-type="noteLink" data-note-id="${linkedNote._id}" data-title="${linkedNote.title}"></span>`;
         parsedContent = parsedContent.replace(fullMatch, linkHtml);
         console.log('Replaced with HTML:', linkHtml);
+      } else {
+        // Create a note link node for missing notes too (with empty title to trigger missing state)
+        const linkHtml = `<span data-type="noteLink" data-note-id="${noteId}" data-title=""></span>`;
+        parsedContent = parsedContent.replace(fullMatch, linkHtml);
+        console.log('Replaced missing note with HTML:', linkHtml);
       }
     }
     
