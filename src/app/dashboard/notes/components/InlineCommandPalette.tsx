@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Bot, Brain, Lightbulb, Loader2, X, Sparkles, ArrowRight } from 'lucide-react';
+import { Bot, Brain, Lightbulb, Loader2, X, Sparkles, ArrowRight, Link, FileText, Users, BarChart3, BookOpen, CheckSquare } from 'lucide-react';
 
 interface InlineCommandPaletteProps {
   isOpen: boolean;
@@ -10,7 +10,11 @@ interface InlineCommandPaletteProps {
   onAskAI: (prompt: string) => Promise<void>;
   onRequestAnalysis: (noteType: string) => Promise<void>;
   onRequestIdeas: () => Promise<void>;
+  onLinkNote?: (noteId: string) => void;
   noteType?: string;
+  availableNotes?: Array<{ _id: string; title: string; type: string }>;
+  currentNoteId?: string;
+  showNoteLinks?: boolean;
 }
 
 interface CommandOption {
@@ -23,6 +27,23 @@ interface CommandOption {
   category?: string;
 }
 
+interface NoteOption {
+  id: string;
+  title: string;
+  type: string;
+  icon: React.ReactNode;
+  action: () => void;
+}
+
+// Unified interface for display
+interface DisplayOption {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  action: () => void;
+  category?: string;
+}
+
 const NOTE_TYPES = [
   { value: 'idea_bank', label: 'Idea Bank', description: 'Generate creative concepts and brainstorm new content ideas' },
   { value: 'content_script', label: 'Content Script', description: 'Structure your content with professional scripting techniques' },
@@ -32,6 +53,16 @@ const NOTE_TYPES = [
   { value: 'task_checklist', label: 'Task Checklist', description: 'Create actionable task lists and project management tools' },
 ];
 
+// Note type icons mapping
+const NOTE_TYPE_ICONS: Record<string, React.ReactNode> = {
+  idea_bank: <Lightbulb className="w-4 h-4" />,
+  content_script: <FileText className="w-4 h-4" />,
+  analytics_insight: <BarChart3 className="w-4 h-4" />,
+  collaboration_note: <Users className="w-4 h-4" />,
+  reflection_journal: <BookOpen className="w-4 h-4" />,
+  task_checklist: <CheckSquare className="w-4 h-4" />,
+};
+
 export function InlineCommandPalette({
   isOpen,
   onClose,
@@ -39,15 +70,28 @@ export function InlineCommandPalette({
   onAskAI,
   onRequestAnalysis,
   onRequestIdeas,
-  noteType = 'idea_bank'
+  onLinkNote,
+  noteType = 'idea_bank',
+  availableNotes = [],
+  currentNoteId,
+  showNoteLinks = false
 }: InlineCommandPaletteProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [loadingCommand, setLoadingCommand] = useState<string | null>(null);
   const [showAIPrompt, setShowAIPrompt] = useState(false);
   const [showAnalysisTypes, setShowAnalysisTypes] = useState(false);
   const [aiPrompt, setAIPrompt] = useState('');
+  const [noteSearchTerm, setNoteSearchTerm] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Debug logging
+  console.log('InlineCommandPalette props:', {
+    isOpen,
+    showNoteLinks,
+    availableNotesCount: availableNotes.length,
+    currentNoteId
+  });
 
   const handleAskAI = async () => {
     setShowAIPrompt(true);
@@ -98,6 +142,13 @@ export function InlineCommandPalette({
     }
   };
 
+  const handleNoteLinkSelect = (noteId: string) => {
+    if (onLinkNote) {
+      onLinkNote(noteId);
+      onClose();
+    }
+  };
+
   const mainCommands: CommandOption[] = [
     {
       id: 'ideas',
@@ -123,7 +174,46 @@ export function InlineCommandPalette({
     category: 'Analysis'
   }));
 
-  const currentOptions = showAnalysisTypes ? analysisCommands : mainCommands;
+  // Filter notes based on search term and exclude current note
+  const filteredNotes = availableNotes
+    .filter(note => 
+      String(note._id) !== currentNoteId && 
+      note.title.toLowerCase().includes(noteSearchTerm.toLowerCase())
+    )
+    .map(note => ({
+      id: String(note._id),
+      title: note.title,
+      type: note.type,
+      icon: NOTE_TYPE_ICONS[note.type] || <Link className="w-4 h-4" />,
+      action: () => handleNoteLinkSelect(String(note._id))
+    }));
+
+  const noteCommands: NoteOption[] = filteredNotes;
+
+  const currentOptions = showAnalysisTypes ? analysisCommands : showNoteLinks ? noteCommands : mainCommands;
+
+  // Convert to display options for rendering
+  const displayOptions: DisplayOption[] = currentOptions.map(option => {
+    if ('label' in option) {
+      // CommandOption
+      return {
+        id: option.id,
+        label: option.label,
+        icon: option.icon,
+        action: option.action,
+        category: option.category
+      };
+    } else {
+      // NoteOption
+      return {
+        id: option.id,
+        label: option.title,
+        icon: option.icon,
+        action: option.action,
+        category: 'Notes'
+      };
+    }
+  });
 
   // Calculate position to prevent cutoff
   const calculatePosition = () => {
@@ -161,14 +251,14 @@ export function InlineCommandPalette({
           e.preventDefault();
           e.stopPropagation();
           setSelectedIndex(prev => 
-            showAIPrompt ? prev : (prev + 1) % currentOptions.length
+            showAIPrompt ? prev : (prev + 1) % displayOptions.length
           );
           break;
         case 'ArrowUp':
           e.preventDefault();
           e.stopPropagation();
           setSelectedIndex(prev => 
-            showAIPrompt ? prev : (prev - 1 + currentOptions.length) % currentOptions.length
+            showAIPrompt ? prev : (prev - 1 + displayOptions.length) % displayOptions.length
           );
           break;
         case 'Enter':
@@ -177,16 +267,17 @@ export function InlineCommandPalette({
           if (showAIPrompt) {
             handleSubmitAIPrompt();
           } else {
-            currentOptions[selectedIndex]?.action();
+            displayOptions[selectedIndex]?.action();
           }
           break;
         case 'Escape':
           e.preventDefault();
           e.stopPropagation();
-          if (showAIPrompt || showAnalysisTypes) {
+          if (showAIPrompt || showAnalysisTypes || showNoteLinks) {
             setShowAIPrompt(false);
             setShowAnalysisTypes(false);
             setAIPrompt('');
+            setNoteSearchTerm('');
             setSelectedIndex(0);
           } else {
             onClose();
@@ -203,7 +294,7 @@ export function InlineCommandPalette({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, selectedIndex, showAIPrompt, showAnalysisTypes, aiPrompt, currentOptions]);
+  }, [isOpen, selectedIndex, showAIPrompt, showAnalysisTypes, showNoteLinks, aiPrompt, displayOptions]);
 
   // Handle click outside
   useEffect(() => {
@@ -227,6 +318,7 @@ export function InlineCommandPalette({
       setShowAIPrompt(false);
       setShowAnalysisTypes(false);
       setAIPrompt('');
+      setNoteSearchTerm('');
       setLoadingCommand(null);
     }
   }, [isOpen]);
@@ -236,12 +328,12 @@ export function InlineCommandPalette({
   const finalPosition = calculatePosition();
 
   // Group commands by category
-  const groupedCommands = currentOptions.reduce((acc, command) => {
+  const groupedCommands = displayOptions.reduce((acc, command) => {
     const category = command.category || 'Other';
     if (!acc[category]) acc[category] = [];
     acc[category].push(command);
     return acc;
-  }, {} as Record<string, CommandOption[]>);
+  }, {} as Record<string, DisplayOption[]>);
 
   return (
     <div
@@ -260,17 +352,23 @@ export function InlineCommandPalette({
           <Sparkles className="w-4 h-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Ask Content anything..."
+            placeholder={showNoteLinks ? "Search notes to link..." : "Ask Content anything..."}
             className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
-            value={showAIPrompt ? aiPrompt : ''}
-            onChange={(e) => setAIPrompt(e.target.value)}
+            value={showAIPrompt ? aiPrompt : showNoteLinks ? noteSearchTerm : ''}
+            onChange={(e) => {
+              if (showAIPrompt) {
+                setAIPrompt(e.target.value);
+              } else if (showNoteLinks) {
+                setNoteSearchTerm(e.target.value);
+              }
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && showAIPrompt && aiPrompt.trim()) {
                 handleSubmitAIPrompt();
               }
             }}
             onFocus={() => {
-              if (!showAIPrompt) {
+              if (!showAIPrompt && !showNoteLinks) {
                 setShowAIPrompt(true);
               }
             }}
@@ -303,7 +401,7 @@ export function InlineCommandPalette({
                 </div>
                 <div className="space-y-0.5">
                   {commands.map((option, index) => {
-                    const globalIndex = currentOptions.indexOf(option);
+                    const globalIndex = displayOptions.indexOf(option);
                     const isOptionLoading = loadingCommand === option.id;
                     const isSelected = selectedIndex === globalIndex;
                     
@@ -328,9 +426,9 @@ export function InlineCommandPalette({
                           )}
                         </div>
                         <span className="text-sm font-medium">{option.label}</span>
-                                                  {isSelected && (
-                            <ArrowRight className="w-3 h-3 ml-auto text-purple-600 dark:text-yellow-400" />
-                          )}
+                        {isSelected && (
+                          <ArrowRight className="w-3 h-3 ml-auto text-purple-600 dark:text-yellow-400" />
+                        )}
                       </button>
                     );
                   })}
@@ -362,4 +460,9 @@ export function InlineCommandPalette({
       </div>
     </div>
   );
-} 
+}
+
+// Export a function to show note links
+export const showNoteLinks = (setShowNoteLinks: (show: boolean) => void) => {
+  setShowNoteLinks(true);
+}; 

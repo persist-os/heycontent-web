@@ -17,6 +17,8 @@ interface NoteAreaProps {
   onToggleShortcuts: () => void;
   onBack: () => void;
   isMobile: boolean;
+  availableNotes?: Array<{ _id: string; title: string; type: string }>;
+  onLinkNote?: (noteId: string) => void;
 }
 
 export function NoteArea({
@@ -25,7 +27,9 @@ export function NoteArea({
   onSave,
   onToggleShortcuts,
   onBack,
-  isMobile
+  isMobile,
+  availableNotes = [],
+  onLinkNote
 }: NoteAreaProps) {
   // Only use the live query if the note is not temporary
   const liveNoteData = initialNote.isTemporary 
@@ -59,6 +63,13 @@ export function NoteArea({
 
   const handleSave = () => {
     onSave(content, note.title);
+  };
+
+  // Handle note linking
+  const handleLinkNote = (noteId: string) => {
+    if (onLinkNote) {
+      onLinkNote(noteId);
+    }
   };
 
   return (
@@ -104,6 +115,8 @@ export function NoteArea({
           tags={note.tags}
           userId={String(note.userId)}
           noteType={note.type}
+          availableNotes={availableNotes}
+          onLinkNote={handleLinkNote}
         />
       </div>
     </div>
