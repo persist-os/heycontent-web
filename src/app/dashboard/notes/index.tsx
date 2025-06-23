@@ -91,7 +91,16 @@ export default function SmartNotes() {
   };
 
   // Handle going back to grid view
-  const handleBackToGrid = () => {
+  const handleBackToGrid = async (currentContent?: string) => {
+    if (activeNote && currentContent !== undefined) {
+      // Save the note content without triggering metadata generation
+      try {
+        await updateNote(activeNote._id, { content: currentContent }, true); // force=true to skip metadata
+        console.log('Note saved before returning to grid');
+      } catch (error) {
+        console.error('Failed to save note before returning to grid:', error);
+      }
+    }
     setActiveNoteId(null);
   };
 

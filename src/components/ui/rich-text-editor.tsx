@@ -263,6 +263,40 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
     insertAtCursor(`\n\n${embedMarkdown}\n\n`)
   }, [insertAtCursor])
 
+  // Table insertion handler
+  const handleInsertTable = useCallback((rows: number = 3, cols: number = 3) => {
+    const headers = Array(cols).fill('Header').map((h, i) => `${h} ${i + 1}`).join(' | ')
+    const separator = Array(cols).fill('---').join(' | ')
+    const tableRows = Array(rows - 1).fill(null).map((_, rowIndex) => 
+      Array(cols).fill('Cell').map((c, colIndex) => `${c} ${rowIndex + 1}-${colIndex + 1}`).join(' | ')
+    )
+    
+    const tableMarkdown = [
+      `| ${headers} |`,
+      `| ${separator} |`,
+      ...tableRows.map(row => `| ${row} |`)
+    ].join('\n')
+    
+    insertAtCursor(`\n\n${tableMarkdown}\n\n`)
+  }, [insertAtCursor])
+
+  // AI table generation handler
+  const handleGenerateTableFromContent = useCallback(async () => {
+    const tablePrompt = `Based on the following content, create a relevant and useful markdown table that organizes or summarizes key information. The table should have appropriate headers and meaningful data extracted from the content. If the content doesn't contain tabular data, create a summary table or analysis table that would be helpful for understanding the content.
+
+Content:
+${content}
+
+Please respond with only the markdown table, no additional text.`
+
+    if (onAskAI) {
+      const response = await onAskAI(tablePrompt)
+      insertAtCursor(`\n\n${response}`)
+    } else {
+      insertAtCursor(`\n\n| Column 1 | Column 2 | Column 3 |\n|----------|----------|----------|\n| Data 1   | Data 2   | Data 3   |\n| Data 4   | Data 5   | Data 6   |`)
+    }
+  }, [content, onAskAI, insertAtCursor])
+
   // Handle keyboard shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Cmd/Ctrl + K to open inline command palette
@@ -411,6 +445,8 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
         onInsertHeading={handleInsertHeading}
         onInsertLink={handleInsertLink}
         onInsertLinkEmbed={handleInsertLinkEmbed}
+        onInsertTable={handleInsertTable}
+        onGenerateTableFromContent={handleGenerateTableFromContent}
         noteType={noteType}
       />
     </div>

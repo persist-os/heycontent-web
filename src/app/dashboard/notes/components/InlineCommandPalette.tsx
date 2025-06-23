@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Bot, Brain, Lightbulb, Loader2, X, Sparkles, ArrowRight, List, Heading1, Heading2, Heading3, Link, ExternalLink } from 'lucide-react';
+import { Bot, Brain, Lightbulb, Loader2, X, Sparkles, ArrowRight, List, Heading1, Heading2, Heading3, Link, ExternalLink, Table } from 'lucide-react';
 
 interface InlineCommandPaletteProps {
   isOpen: boolean;
@@ -15,6 +15,8 @@ interface InlineCommandPaletteProps {
   onInsertHeading: (level: number) => void;
   onInsertLink?: (url: string, text: string) => void;
   onInsertLinkEmbed?: (url: string) => void;
+  onInsertTable?: (rows: number, cols: number) => void;
+  onGenerateTableFromContent?: () => Promise<void>;
   noteType?: string;
 }
 
@@ -49,6 +51,8 @@ export function InlineCommandPalette({
   onInsertHeading,
   onInsertLink,
   onInsertLinkEmbed,
+  onInsertTable,
+  onGenerateTableFromContent,
   noteType = 'idea_bank'
 }: InlineCommandPaletteProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -57,9 +61,12 @@ export function InlineCommandPalette({
   const [showAnalysisTypes, setShowAnalysisTypes] = useState(false);
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [showLinkEmbedInput, setShowLinkEmbedInput] = useState(false);
+  const [showTableInput, setShowTableInput] = useState(false);
   const [aiPrompt, setAIPrompt] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [linkText, setLinkText] = useState('');
+  const [tableRows, setTableRows] = useState(3);
+  const [tableCols, setTableCols] = useState(3);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -142,6 +149,32 @@ export function InlineCommandPalette({
     onClose();
   };
 
+  const handleInsertTable = () => {
+    setShowTableInput(true);
+    setSelectedIndex(0);
+  };
+
+  const handleSubmitTable = () => {
+    if (onInsertTable) {
+      onInsertTable(tableRows, tableCols);
+    }
+    onClose();
+  };
+
+  const handleGenerateTableFromContent = async () => {
+    setLoadingCommand('generate-table');
+    try {
+      if (onGenerateTableFromContent) {
+        await onGenerateTableFromContent();
+      }
+      onClose();
+    } catch (error) {
+      console.error('Failed to generate table from content:', error);
+    } finally {
+      setLoadingCommand(null);
+    }
+  };
+
   const mainCommands: CommandOption[] = [
     {
       id: 'ideas',
@@ -155,6 +188,14 @@ export function InlineCommandPalette({
       label: 'Request analysis',
       icon: <Brain className="w-4 h-4" />,
       action: handleRequestAnalysis,
+      category: 'Write'
+    },
+    {
+      id: 'generate-table',
+      label: 'Generate table',
+      description: 'AI creates table from content',
+      icon: <Table className="w-4 h-4" />,
+      action: handleGenerateTableFromContent,
       category: 'Write'
     },
     {
@@ -211,6 +252,14 @@ export function InlineCommandPalette({
       description: 'Insert rich link preview',
       icon: <ExternalLink className="w-4 h-4" />,
       action: handleInsertLinkEmbed,
+      category: 'Format'
+    },
+    {
+      id: 'table',
+      label: 'Insert table',
+      description: 'Create a data table',
+      icon: <Table className="w-4 h-4" />,
+      action: handleInsertTable,
       category: 'Format'
     }
   ];
@@ -280,6 +329,8 @@ export function InlineCommandPalette({
             handleSubmitLink();
           } else if (showLinkEmbedInput) {
             handleSubmitLinkEmbed();
+          } else if (showTableInput) {
+            handleSubmitTable();
           } else {
             currentOptions[selectedIndex]?.action();
           }
@@ -287,14 +338,17 @@ export function InlineCommandPalette({
         case 'Escape':
           e.preventDefault();
           e.stopPropagation();
-          if (showAIPrompt || showAnalysisTypes || showLinkInput || showLinkEmbedInput) {
+          if (showAIPrompt || showAnalysisTypes || showLinkInput || showLinkEmbedInput || showTableInput) {
             setShowAIPrompt(false);
             setShowAnalysisTypes(false);
             setShowLinkInput(false);
             setShowLinkEmbedInput(false);
+            setShowTableInput(false);
             setAIPrompt('');
             setLinkUrl('');
             setLinkText('');
+            setTableRows(3);
+            setTableCols(3);
             setSelectedIndex(0);
           } else {
             onClose();
@@ -311,7 +365,7 @@ export function InlineCommandPalette({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-        }, [isOpen, selectedIndex, showAIPrompt, showAnalysisTypes, showLinkInput, showLinkEmbedInput, aiPrompt, linkUrl, currentOptions]);
+        }, [isOpen, selectedIndex, showAIPrompt, showAnalysisTypes, showLinkInput, showLinkEmbedInput, showTableInput, aiPrompt, linkUrl, tableRows, tableCols, currentOptions]);
 
   // Handle click outside
   useEffect(() => {
@@ -336,9 +390,12 @@ export function InlineCommandPalette({
       setShowAnalysisTypes(false);
       setShowLinkInput(false);
       setShowLinkEmbedInput(false);
+      setShowTableInput(false);
       setAIPrompt('');
       setLinkUrl('');
       setLinkText('');
+      setTableRows(3);
+      setTableCols(3);
       setLoadingCommand(null);
     }
   }, [isOpen]);
@@ -436,6 +493,51 @@ export function InlineCommandPalette({
               autoFocus
             />
           </div>
+        ) : showTableInput ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Table className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Table size:</span>
+            </div>
+                         <div className="flex items-center gap-4 pl-6">
+               <div className="flex items-center gap-2">
+                 <label htmlFor="table-rows-input" className="text-xs text-muted-foreground">Rows:</label>
+                 <input
+                   id="table-rows-input"
+                   type="number"
+                   min="2"
+                   max="10"
+                   value={tableRows}
+                   onChange={(e) => setTableRows(Math.max(2, Math.min(10, parseInt(e.target.value) || 2)))}
+                   className="w-16 bg-transparent text-sm text-center border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                   autoFocus
+                 />
+               </div>
+               <div className="flex items-center gap-2">
+                 <label htmlFor="table-cols-input" className="text-xs text-muted-foreground">Cols:</label>
+                 <input
+                   id="table-cols-input"
+                   type="number"
+                   min="2"
+                   max="8"
+                   value={tableCols}
+                   onChange={(e) => setTableCols(Math.max(2, Math.min(8, parseInt(e.target.value) || 2)))}
+                   className="w-16 bg-transparent text-sm text-center border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                   onKeyDown={(e) => {
+                     if (e.key === 'Enter') {
+                       handleSubmitTable();
+                     }
+                   }}
+                 />
+               </div>
+             </div>
+            <div className="flex items-center gap-2 px-2 py-1 bg-muted/30 rounded text-xs text-muted-foreground">
+              <span className="font-mono">Preview:</span>
+              <span className="font-mono text-blue-600 dark:text-blue-400">
+                {tableRows}×{tableCols} table with headers
+              </span>
+            </div>
+          </div>
         ) : (
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-muted-foreground" />
@@ -487,6 +589,21 @@ export function InlineCommandPalette({
               <div className="flex-1 text-left">
                 <div className="text-sm font-medium">Embed link</div>
                 <div className="text-xs text-muted-foreground truncate">{linkUrl}</div>
+              </div>
+            </button>
+          </div>
+        ) : showTableInput ? (
+          <div className="p-3">
+            <button
+              onClick={handleSubmitTable}
+              className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-muted/50 rounded-md transition-colors"
+            >
+              <Table className="w-4 h-4 text-green-600 dark:text-green-400" />
+              <div className="flex-1 text-left">
+                <div className="text-sm font-medium">Create table</div>
+                <div className="text-xs text-muted-foreground">
+                  {tableRows} rows × {tableCols} columns with headers
+                </div>
               </div>
             </button>
           </div>
@@ -564,6 +681,16 @@ export function InlineCommandPalette({
                 <span className="flex items-center gap-1">
                   <kbd className="px-1 py-0.5 bg-muted rounded text-xs">↵</kbd>
                   to insert
+                </span>
+              </>
+            ) : showTableInput ? (
+              <>
+                <span className="flex items-center gap-1">
+                  <kbd className="px-1 py-0.5 bg-muted rounded text-xs">↵</kbd>
+                  to create table
+                </span>
+                <span className="flex items-center gap-1">
+                  Min 2×2, Max 10×8
                 </span>
               </>
             ) : (

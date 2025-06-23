@@ -15,7 +15,7 @@ interface NoteAreaProps {
   onUpdate: (noteId: string | Id<"notes">, updates: NoteUpdate) => Promise<Note | null>;
   onSave: (content: string, title?: string) => void;
   onToggleShortcuts: () => void;
-  onBack: () => void;
+  onBack: (currentContent?: string) => void;
   isMobile: boolean;
 }
 
@@ -61,6 +61,10 @@ export function NoteArea({
     onSave(content, note.title);
   };
 
+  const handleBack = () => {
+    onBack(content);
+  };
+
   return (
     <div className="flex flex-col h-full w-full bg-background">
       {/* Header */}
@@ -68,7 +72,7 @@ export function NoteArea({
         note={note}
         onUpdate={onUpdate}
         onSave={handleSave}
-        onBack={onBack} 
+        onBack={handleBack} 
         isMobile={isMobile}
         currentContent={content}
       />
