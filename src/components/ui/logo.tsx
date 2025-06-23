@@ -15,7 +15,7 @@ export function Logo({ className = '', size = 'medium', disableLink = false }: L
   }
 
   const logoImage = (
-    <div className="rounded-2xl bg-white p-1 shadow-sm">
+    <div className="rounded-lg bg-white p-1 shadow-sm">
       <Image
         src={logoMap[size]}
         alt="HeyContent Logo"

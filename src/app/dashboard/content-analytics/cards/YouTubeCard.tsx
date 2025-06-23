@@ -72,7 +72,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
   };
 
   return (
-    <Card key={item.id} className="overflow-hidden transition-all duration-200 group border bg-card text-card-foreground shadow-sm hover:shadow-md hover:-translate-y-px hover:border-gray-300 dark:hover:border-gray-700">
+    <Card key={item.id} className="overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-red-500/25 border-2 border-transparent hover:border-red-500/30 bg-white dark:bg-gray-800">
       {/* Thumbnail */}
       <div className="relative aspect-video bg-gray-100 dark:bg-gray-800 overflow-hidden">
         {thumbnailUrl ? (
