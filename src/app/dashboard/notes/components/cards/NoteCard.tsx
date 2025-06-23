@@ -120,7 +120,7 @@ export function NoteCard({
       return 'reflection';
     }
 
-    // Check for content creation patterns
+    // Enhanced content creation patterns - be more inclusive for content notes
     if (title.includes('content') || 
         title.includes('script') || 
         title.includes('vlog') || 
@@ -128,13 +128,27 @@ export function NoteCard({
         title.includes('inspiration') ||
         title.includes('post') ||
         title.includes('video') ||
+        title.includes('caption') ||
+        title.includes('idea') ||
+        title.includes('tiktok') ||
+        title.includes('instagram') ||
+        title.includes('youtube') ||
+        title.includes('reel') ||
+        title.includes('story') ||
         content.includes('#') ||
         content.includes('caption') ||
-        content.includes('hashtag')) {
+        content.includes('hashtag') ||
+        content.includes('hook') ||
+        content.includes('cta') ||
+        content.includes('call to action') ||
+        content.includes('platform') ||
+        (note.platform && note.platform.length > 0)) {
       return 'content';
     }
 
-    return 'default';
+    // If no specific pattern matches, default to content for better user experience
+    // since content creation is the primary use case
+    return 'content';
   };
 
   const cardType = getCardType();
@@ -206,22 +220,15 @@ export function NoteCard({
       );
 
     default:
+      // This should never be reached since we default to 'content' type
       return (
-        <BaseCard
+        <ContentCard
           note={note}
+          availableNotes={availableNotes}
           onEdit={onEdit}
           onDelete={onDelete}
           onToggleImportant={onToggleImportant}
-        >
-          <div className="p-4">
-            <h3 className="font-semibold text-foreground mb-2 pr-8 line-clamp-2">
-              {note.title || 'Untitled Note'}
-            </h3>
-            <div className="text-sm text-muted-foreground line-clamp-4">
-              {note.content || 'No content yet...'}
-            </div>
-          </div>
-        </BaseCard>
+        />
       );
   }
 }

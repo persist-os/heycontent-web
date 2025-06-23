@@ -141,7 +141,7 @@ export function ReflectionCard({
           {getMoodIcon()}
           <div className="flex-1 pr-8">
             <h3 className="font-semibold text-foreground line-clamp-1">
-              {note.title || getMoodLabel()}
+              {(note.title && note.title.trim()) || getMoodLabel()}
             </h3>
             <p className="text-xs text-muted-foreground">
               {getMoodLabel()}

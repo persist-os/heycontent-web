@@ -40,18 +40,22 @@ export function NoteArea({
   onNavigateBack,
   navigationStack
 }: NoteAreaProps) {
-  // Only use the live query if the note is not temporary
-  const liveNoteData = initialNote.isTemporary 
-    ? null 
-    : useQuery(api.notes.getNote, {
-        noteId: initialNote._id as Id<"notes">, 
-        userId: String(initialNote.userId) 
-      });
+  // Use the live query conditionally with "skip" parameter to avoid conditional hook call
+  const liveNoteData = useQuery(
+    api.notes.getNote, 
+    initialNote.isTemporary 
+      ? "skip" 
+      : {
+          noteId: initialNote._id as Id<"notes">, 
+          userId: String(initialNote.userId) 
+        }
+  );
 
   const note = liveNoteData || initialNote;
   
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [content, setContent] = useState(note.content || '');
+  const [lastSavedContent, setLastSavedContent] = useState(note.content || '');
 
   // Initialize the inline AI hook
   const { askAI, requestAnalysis, requestIdeas } = useInlineAI({
@@ -67,9 +71,106 @@ export function NoteArea({
   React.useEffect(() => {
     if (note.content !== content) {
       setContent(note.content || '');
+      setLastSavedContent(note.content || '');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note._id, note.content]);
+
+  // Autosave function that uses existing updateNote logic
+  const autosave = React.useCallback(async () => {
+    // Only autosave if content has changed and note is not temporary
+    const isTemporary = 'isTemporary' in note ? note.isTemporary : false;
+    if (content !== lastSavedContent && !isTemporary && content.length > 0) {
+      console.log('🔄 [NoteArea] Autosaving note:', {
+        noteId: note._id,
+        contentChanged: content !== lastSavedContent,
+        contentLength: content.length
+      });
+      
+      try {
+        // Use onUpdate which already includes metadata generation logic
+        await onUpdate(note._id, { 
+          content, 
+          title: note.title || '' 
+        });
+        
+        setLastSavedContent(content);
+        console.log('✅ [NoteArea] Autosave successful');
+      } catch (error) {
+        console.error('❌ [NoteArea] Autosave failed:', error);
+      }
+    }
+  }, [content, lastSavedContent, note._id, note.title, note, onUpdate]);
+
+  // Debounced autosave that waits for a pause in typing
+  React.useEffect(() => {
+    const isTemporary = 'isTemporary' in note ? note.isTemporary : false;
+    
+    // Only set up debounced autosave if content has changed and note is not temporary
+    if (content !== lastSavedContent && !isTemporary && content.length > 0) {
+      console.log('⌨️ [NoteArea] Content changed, setting up debounced autosave');
+      
+      // Wait 3 seconds after last keystroke before autosaving
+      const debounceTimer = setTimeout(() => {
+        console.log('🔄 [NoteArea] Debounced autosave triggered');
+        autosave();
+      }, 3000);
+
+      return () => {
+        clearTimeout(debounceTimer);
+      };
+    }
+  }, [content, lastSavedContent, note, autosave]);
+
+  // Handle page visibility change (when switching tabs or minimizing)
+  React.useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        console.log('🔍 [NoteArea] Page hidden, triggering autosave');
+        autosave();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [autosave]);
+
+  // Handle beforeunload (when closing tab or navigating away)
+  React.useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      const isTemporary = 'isTemporary' in note ? note.isTemporary : false;
+      
+      // Only show warning and autosave if there are unsaved changes
+      if (content !== lastSavedContent && !isTemporary && content.length > 0) {
+        console.log('⚠️ [NoteArea] Before unload, triggering autosave');
+        
+        // Try to save synchronously (limited time)
+        autosave();
+        
+        // Show warning to user
+        event.preventDefault();
+        event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return 'You have unsaved changes. Are you sure you want to leave?';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [content, lastSavedContent, note, autosave]);
+
+  // Periodic autosave (every 2 minutes as a safety net, but debounced autosave should handle most cases)
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      const isTemporary = 'isTemporary' in note ? note.isTemporary : false;
+      
+      if (content !== lastSavedContent && !isTemporary && content.length > 0) {
+        console.log('⏰ [NoteArea] Periodic safety autosave triggered');
+        autosave();
+      }
+    }, 120000); // 2 minutes
+
+    return () => clearInterval(interval);
+  }, [content, lastSavedContent, note, autosave]);
 
   // Handle content changes with debounced save
   const handleContentChange = (newContent: string) => {

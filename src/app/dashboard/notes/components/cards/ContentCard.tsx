@@ -85,7 +85,7 @@ export function ContentCard({
             </div>
           )}
           <h3 className="font-semibold text-foreground flex-1 pr-8 line-clamp-2">
-            {note.title || 'Content Idea'}
+            {(note.title && note.title.trim()) || 'Content Idea'}
           </h3>
         </div>
 

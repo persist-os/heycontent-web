@@ -57,15 +57,19 @@ export const useCreateNote = () => {
       redirect?: boolean;
       callback?: () => void;
       customTitle?: string;
+      customType?: string;
     } = {}
   ): Promise<string | null> => {
-    const { redirect = false, callback, customTitle } = options;
+    const { redirect = false, callback, customTitle, customType } = options;
     setIsCreating(true);
 
     try {
-      console.log("🚀 [useCreateNote] Starting note creation process", { redirect });
+      console.log("🚀 [useCreateNote] Starting note creation process", { redirect, customType });
       
-      const { success, noteId } = await saveNote(content, { title: customTitle });
+      const { success, noteId } = await saveNote(content, { 
+        title: customTitle,
+        type: customType
+      });
       
       if (success && noteId) {
         console.log("✅ [useCreateNote] Note created successfully:", noteId);
