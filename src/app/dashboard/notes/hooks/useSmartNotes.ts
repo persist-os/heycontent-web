@@ -171,6 +171,7 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
         });
 
         const shouldGenerateMetadata =
+          !force && // Skip metadata generation if force is true
           updateFields.content &&
           updateFields.content.trim().length >= 10 &&
           (!updatedNote.titleGenerated || !updatedNote.typeGenerated);
@@ -191,6 +192,10 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
               metadataError
             );
           }
+        } else if (force) {
+          console.log(
+            "⏭️ [updateNote] Skipping metadata generation due to force=true"
+          );
         }
         
         return updatedNote;

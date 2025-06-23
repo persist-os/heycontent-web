@@ -1,8 +1,7 @@
 "use client";
-import React, { useRef, useEffect, forwardRef, useState, useCallback } from 'react';
-import { InlineCommandPalette } from './InlineCommandPalette';
+import React, { forwardRef, useCallback, useRef, useState, useEffect } from 'react';
+import { RichTextEditor } from '@/components/ui/rich-text-editor/rich-text-editor';
 import { useInlineAI } from '../hooks/useInlineAI';
-import { NoteContentRenderer } from './NoteContentRenderer';
 
 interface NoteEditorProps {
   content: string;
@@ -205,30 +204,32 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
   const handleAskAI = useCallback(async (prompt: string) => {
     try {
       const response = await askAI(prompt);
-      insertAtCursor(`\n\n${response}`);
+      // The RichTextEditor will handle inserting the response
+      return response;
     } catch (error) {
       console.error('Failed to get AI response:', error);
     }
-  }, [askAI, insertAtCursor]);
+  }, [askAI]);
 
   const handleRequestAnalysis = useCallback(async (noteType: string) => {
     try {
       const analysis = await requestAnalysis(noteType);
-      insertAtCursor(`\n\n## Analysis\n\n${analysis}`);
+      // The RichTextEditor will handle inserting the analysis
+      return analysis;
     } catch (error) {
       console.error('Failed to get analysis:', error);
     }
-  }, [requestAnalysis, insertAtCursor]);
+  }, [requestAnalysis]);
 
   const handleRequestIdeas = useCallback(async () => {
     try {
       const ideas = await requestIdeas();
-      const ideasText = ideas.map((idea, index) => `${index + 1}. ${idea}`).join('\n');
-      insertAtCursor(`\n\n## Ideas\n\n${ideasText}`);
+      // The RichTextEditor will handle formatting and inserting the ideas
+      return ideas;
     } catch (error) {
       console.error('Failed to get ideas:', error);
     }
-  }, [requestIdeas, insertAtCursor]);
+  }, [requestIdeas]);
 
   // Handle note linking - fixed to not replace the user's @ but just add title and closing @
   const handleLinkNote = useCallback((noteId: string) => {
@@ -271,62 +272,22 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
   }, []);
 
   return (
-    <div className="relative w-full h-full">
-      {/* Textarea for text input with visible cursor and selection, but invisible text */}
-      <textarea
-        ref={textAreaRef}
-        value={content}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        onScroll={handleScroll}
-        className="absolute inset-0 w-full h-full min-h-[300px] resize-none p-4 text-base leading-relaxed bg-transparent caret-foreground border-0 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 transition-all duration-200 rounded-md z-0 selection:bg-primary/20"
-        placeholder=""
-        disabled={disabled}
-        spellCheck={true}
-        autoFocus={!disabled}
-        style={{ 
-          color: 'transparent',
-          caretColor: 'var(--foreground)'
-        }}
-      />
-      
-      {/* Visual overlay with rendered content and clickable links */}
-      <div 
-        ref={overlayRef}
-        className="absolute inset-0 p-4 text-base leading-relaxed whitespace-pre-wrap overflow-hidden bg-background text-foreground rounded-md pointer-events-none z-10"
-        onClick={() => textAreaRef.current?.focus()}
-      >
-        <NoteContentRenderer
-          content={content}
-          availableNotes={availableNotes}
-          onLinkNote={onLinkNote}
-        />
-        
-        {/* Placeholder text when empty */}
-        {!content && !isFocused && (
-          <div className="text-muted-foreground/50 pointer-events-none">
-            {placeholder}
-            {'\n\n⌘K or / to open inline AI assistant • @ to link notes • ⌘K outside editor for global search'}
-          </div>
-        )}
-      </div>
-      
-      <InlineCommandPalette
-        isOpen={showCommandPalette}
-        onClose={() => setShowCommandPalette(false)}
-        position={palettePosition}
-        onAskAI={handleAskAI}
-        onRequestAnalysis={handleRequestAnalysis}
-        onRequestIdeas={handleRequestIdeas}
-        onLinkNote={handleLinkNote}
-        noteType={noteType}
-        availableNotes={availableNotes}
-        currentNoteId={noteId}
-        showNoteLinks={paletteMode === 'notes'}
-      />
-    </div>
+    <RichTextEditor
+      ref={ref}
+      content={content}
+      onContentChange={onContentChange}
+      placeholder={placeholder}
+      disabled={disabled}
+      onAskAI={handleAskAI}
+      onRequestAnalysis={handleRequestAnalysis}
+      onRequestIdeas={handleRequestIdeas}
+      noteId={noteId}
+      noteTitle={noteTitle}
+      platform={platform}
+      tags={tags}
+      userId={userId}
+      noteType={noteType}
+    />
   );
 });
 

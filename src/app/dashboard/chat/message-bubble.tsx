@@ -65,10 +65,45 @@ export function MessageBubble({
   const accentBgLight = isDark ? 'bg-accent/10' : 'bg-purple-600/10'
   const accentBorder = isDark ? 'border-accent' : 'border-purple-600'
 
-  // Simple selection handler
+  // Stable selection handler with scroll support
   useEffect(() => {
     const messageElement = document.getElementById(`message-${message.id}`)
     if (!messageElement) return
+
+    let persistentRange: Range | null = null
+
+    const updateHighlightPositions = () => {
+      if (!persistentRange) return
+
+      try {
+        const rects = Array.from(persistentRange.getClientRects())
+        const mainRect = rects.length > 0 ? rects[0] : persistentRange.getBoundingClientRect()
+        
+        if (mainRect.width <= 0 || mainRect.height <= 0) return
+
+        setSelectionRect({
+          top: mainRect.top,
+          left: mainRect.left,
+          width: mainRect.width,
+          height: mainRect.height,
+          viewportTop: mainRect.top,
+          viewportLeft: mainRect.left
+        })
+        setHighlightRects(rects)
+      } catch (error) {
+        // Range might be invalid, clear selection
+        console.log('Range invalid, clearing selection')
+        clearSelection()
+      }
+    }
+
+    const clearSelection = () => {
+      setShowQuoteButton(false)
+      setHighlightRects([])
+      setSelectedText('')
+      setSelectionRect(null)
+      persistentRange = null
+    }
 
     const handleMouseUp = () => {
       setTimeout(() => {
@@ -76,8 +111,6 @@ export function MessageBubble({
         const text = selection?.toString().trim()
         
         if (!text || text.length === 0) {
-          setShowQuoteButton(false)
-          setHighlightRects([])
           return
         }
 
@@ -91,56 +124,60 @@ export function MessageBubble({
         
         if (!isInMessage) return
 
-        // Get all client rects for multi-line selections
-        const rects = Array.from(range.getClientRects())
-        const mainRect = rects.length > 0 ? rects[0] : range.getBoundingClientRect()
-        
-        // Simple validation
-        if (mainRect.width <= 0 || mainRect.height <= 0) return
+        // Clear any existing selection first to prevent overlaps
+        clearSelection()
 
+        // Clone the range to persist it
+        persistentRange = range.cloneRange()
+        
         console.log('✅ Selection captured:', text)
 
         setSelectedText(text)
-        setSelectionRect({
-          top: mainRect.top,
-          left: mainRect.left,
-          width: mainRect.width,
-          height: mainRect.height,
-          viewportTop: mainRect.top,
-          viewportLeft: mainRect.left
-        })
-        setHighlightRects(rects)
+        updateHighlightPositions()
         setShowQuoteButton(true)
 
         // Don't clear the browser selection immediately - let user see it briefly
         setTimeout(() => {
           window.getSelection()?.removeAllRanges()
         }, 100)
-
-        // Auto-hide after 10 seconds
-        setTimeout(() => {
-          setShowQuoteButton(false)
-          setHighlightRects([])
-        }, 10000)
       }, 100)
     }
 
-    // Clear selection on click elsewhere
+    // Handle scroll to update positions
+    const handleScroll = () => {
+      if (persistentRange && showQuoteButton) {
+        updateHighlightPositions()
+      }
+    }
+
+    // Clear selection on click outside this message
     const handleClickOutside = (event: MouseEvent) => {
-      if (!messageElement.contains(event.target as Node)) {
-        setShowQuoteButton(false)
-        setHighlightRects([])
+      if (!messageElement.contains(event.target as Node) && showQuoteButton) {
+        clearSelection()
+      }
+    }
+
+    // Clear selection only on explicit dismiss (clicking quote button or ESC key)
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && showQuoteButton) {
+        clearSelection()
       }
     }
 
     messageElement.addEventListener('mouseup', handleMouseUp)
-    document.addEventListener('click', handleClickOutside)
+    window.addEventListener('scroll', handleScroll, true) // Use capture to catch all scroll events
+    window.addEventListener('resize', handleScroll) // Also update on resize
+    document.addEventListener('click', handleClickOutside, true)
+    document.addEventListener('keydown', handleKeyDown)
     
     return () => {
       messageElement.removeEventListener('mouseup', handleMouseUp)
-      document.removeEventListener('click', handleClickOutside)
+      window.removeEventListener('scroll', handleScroll, true)
+      window.removeEventListener('resize', handleScroll)
+      document.removeEventListener('click', handleClickOutside, true)
+      document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [message.id])
+  }, [message.id, showQuoteButton])
 
   // Handle quote button click
   const handleQuoteText = () => {
@@ -150,6 +187,7 @@ export function MessageBubble({
       } else if (onInputPopulate) {
         onInputPopulate(`"${selectedText}"`)
       }
+      // Clear the selection after using it
       setSelectedText('')
       setSelectionRect(null)
       setHighlightRects([])
@@ -194,11 +232,11 @@ export function MessageBubble({
 
   return (
     <div className={`w-full ${className}`}>
-      {/* Persistent Highlight Overlays - like ChatGPT */}
-      {highlightRects.map((rect, index) => (
+      {/* Persistent Highlight Overlays - only show if this message has active selection */}
+      {showQuoteButton && highlightRects.map((rect, index) => (
         <div
-          key={index}
-          className={`fixed pointer-events-none z-30 ${isDark ? 'bg-accent/20' : 'bg-purple-600/20'}`}
+          key={`${message.id}-highlight-${index}`}
+          className={`fixed pointer-events-none z-30 ${isDark ? 'bg-accent/20' : 'bg-purple-600/20'} transition-opacity duration-200`}
           style={{
             left: rect.left,
             top: rect.top,

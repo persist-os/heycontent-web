@@ -424,6 +424,15 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     });
   }, []);
 
+  const { notes } = useNotes();
+
+  // Prepare availableNotes for MarkdownNotepad (all notes for now)
+  const availableNotes = notes.map(note => ({
+    _id: String(note._id),
+    title: note.title,
+    type: note.type || 'idea_bank',
+  }));
+
   // Always render the static UI shell, even when authentication is in progress
   // User-dependent content will be conditionally rendered
 
@@ -577,6 +586,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         width={notepadWidth}
         onWidthChange={updateWidth}
         style={getNotepadStyle()}
+        availableNotes={availableNotes}
       />
     </>
   );

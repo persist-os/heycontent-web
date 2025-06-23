@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { useInlineAI } from './hooks/useInlineAI';
 import { Note, NoteUpdate, NoteType } from './types';
 import { NoteHeader } from './components/NoteHeader';
-import { TiptapNoteEditor } from './components/TiptapNoteEditor';
+import { RichTextEditor } from '@/components/ui/rich-text-editor/rich-text-editor';
 import { NoteMeta } from './components/NoteMeta';
 import { TypeSelector } from './components/TypeSelector';
 import type { Id } from "@/convex/_generated/dataModel";
@@ -15,7 +16,7 @@ interface NoteAreaProps {
   onUpdate: (noteId: string | Id<"notes">, updates: NoteUpdate) => Promise<Note | null>;
   onSave: (content: string, title?: string) => void;
   onToggleShortcuts: () => void;
-  onBack: () => void;
+  onBack: (currentContent?: string) => void;
   isMobile: boolean;
   availableNotes?: Array<{ _id: string; title: string; type: string }>;
   onLinkNote?: (noteId: string) => void;
@@ -52,6 +53,16 @@ export function NoteArea({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [content, setContent] = useState(note.content || '');
 
+  // Initialize the inline AI hook
+  const { askAI, requestAnalysis, requestIdeas } = useInlineAI({
+    noteId: String(note._id),
+    noteContent: content,
+    noteTitle: note.title,
+    platform: note.platform,
+    tags: note.tags,
+    userId: String(note.userId),
+  });
+
   // Keep content in sync with note prop
   React.useEffect(() => {
     if (note.content !== content) {
@@ -73,11 +84,46 @@ export function NoteArea({
     onSave(content, note.title);
   };
 
+  // AI handlers that return values for RichTextEditor
+  const handleAskAI = useCallback(async (prompt: string) => {
+    try {
+      const response = await askAI(prompt);
+      return response;
+    } catch (error) {
+      console.error('Failed to get AI response:', error);
+      throw error;
+    }
+  }, [askAI]);
+
+  const handleRequestAnalysis = useCallback(async (noteType: string) => {
+    try {
+      const analysis = await requestAnalysis(noteType);
+      return analysis;
+    } catch (error) {
+      console.error('Failed to get analysis:', error);
+      throw error;
+    }
+  }, [requestAnalysis]);
+
+  const handleRequestIdeas = useCallback(async () => {
+    try {
+      const ideas = await requestIdeas();
+      return ideas;
+    } catch (error) {
+      console.error('Failed to get ideas:', error);
+      throw error;
+    }
+  }, [requestIdeas]);
+
   // Handle note linking
   const handleLinkNote = (noteId: string) => {
     if (onLinkNote) {
       onLinkNote(noteId);
     }
+  };
+
+  const handleBack = () => {
+    onBack(content);
   };
 
   return (
@@ -87,7 +133,7 @@ export function NoteArea({
         note={note}
         onUpdate={onUpdate}
         onSave={handleSave}
-        onBack={onBack} 
+        onBack={handleBack} 
         isMobile={isMobile}
         currentContent={content}
         canGoBack={canGoBack}
@@ -115,11 +161,14 @@ export function NoteArea({
       
       {/* Main editor area */}
       <div className="flex-1 overflow-hidden">
-        <TiptapNoteEditor
+        <RichTextEditor
           content={content}
           onContentChange={handleContentChange}
           placeholder="Start writing your note..."
           disabled={false}
+          onAskAI={handleAskAI}
+          onRequestAnalysis={handleRequestAnalysis}
+          onRequestIdeas={handleRequestIdeas}
           noteId={String(note._id)}
           noteTitle={note.title}
           platform={note.platform}
@@ -128,6 +177,7 @@ export function NoteArea({
           noteType={note.type}
           availableNotes={availableNotes}
           onLinkNote={handleLinkNote}
+          className="h-full border-0"
         />
       </div>
     </div>

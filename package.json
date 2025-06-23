@@ -80,6 +80,7 @@
     "react-parallax-tilt": "^1.7.295",
     "react-resizable-panels": "^3.0.2",
     "recharts": "^2.15.3",
+    "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
     "resend": "^4.0.1",
     "shadcn-ui": "^0.9.4",

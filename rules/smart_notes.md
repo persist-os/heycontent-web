@@ -111,4 +111,152 @@ This non-obvious color switch is a deliberate design choice that must be maintai
 - **Frontend Workflow**:
   - This route should be called by the frontend shortly after a new note is created or when an existing note's content has been significantly modified and saved.
   - The frontend should send the full `noteId` and `note_content` in the request body.
-  - The backend will then asynchronously generate a title, tags, and type for the note and update it directly in Convex. The frontend can listen for data changes via its Convex subscription to update the UI once the new metadata is available. 
+  - The backend will then asynchronously generate a title, tags, and type for the note and update it directly in Convex. The frontend can listen for data changes via its Convex subscription to update the UI once the new metadata is available.
+
+---
+
+## 5. Rich Text Editor & Enhanced Formatting
+
+### `RichTextEditor.tsx`: Enhanced Markdown Editor
+
+The `RichTextEditor` component (`src/components/ui/rich-text-editor.tsx`) provides a comprehensive writing experience with markdown support, live preview, and advanced formatting capabilities.
+
+#### Core Features
+
+- **Dual Mode Interface**: Seamless switching between edit mode (textarea) and preview mode (rendered markdown)
+- **Live Preview**: Real-time markdown rendering with custom components for enhanced content display
+- **Keyboard Shortcuts**: Comprehensive set of formatting shortcuts for efficient writing
+- **Command Palette Integration**: Direct access to AI tools and formatting commands via `Cmd/Ctrl + K` or `/`
+
+#### Formatting Support
+
+**Text Formatting:**
+- **Bold**: `Cmd/Ctrl + B` → `**text**`
+- **Italic**: `Cmd/Ctrl + I` → `*text*`
+- **Underline**: `Cmd/Ctrl + U` → `<u>text</u>`
+
+**Structural Elements:**
+- **Headings**: Via command palette (H1, H2, H3) → `# Heading`
+- **Bullet Lists**: Via command palette → `- Item`
+- **Numbered Lists**: Via command palette → `1. Item`
+
+**Links & Embeds:**
+- **Regular Links**: Via command palette → `[text](url)`
+- **Rich Link Embeds**: Via command palette → `[embed](url)`
+
+### Link Embedding System
+
+The Smart Notes system includes a sophisticated link embedding feature that transforms simple URL references into rich, interactive content previews.
+
+#### Link Types & Rendering
+
+**1. Regular Links (`[text](url)`)**
+- Rendered as clickable links with visual indicators
+- Icons added based on content type:
+  - `Play` icon for YouTube videos
+  - `Image` icon for image URLs
+  - `ExternalLink` icon for generic URLs
+
+**2. Rich Link Embeds (`[embed](url)`)**
+- **YouTube Videos**: Full iframe embed with responsive aspect ratio
+- **Images**: Responsive image display with error handling
+- **Generic URLs**: Rich preview cards with metadata and direct access links
+
+#### Implementation Details
+
+**YouTube Embed Detection:**
+```regex
+/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/
+```
+
+**Image Detection:**
+```regex
+/\.(jpg|jpeg|png|gif|webp|svg)$/i
+```
+
+**Example Usage:**
+```markdown
+Regular link: [Visit YouTube](https://youtube.com/watch?v=abc123)
+Rich embed: [embed](https://youtube.com/watch?v=abc123)
+Image embed: [embed](https://example.com/image.jpg)
+```
+
+### Command Palette Enhancements
+
+The `InlineCommandPalette.tsx` has been enhanced with formatting and link insertion capabilities:
+
+#### New Commands
+
+| Command | Category | Description | Keyboard Shortcut |
+|---------|----------|-------------|-------------------|
+| Insert link | Format | Creates a standard markdown link with URL and text fields | - |
+| Embed link | Format | Creates a rich link embed for enhanced previews | - |
+| Bullet list | Format | Inserts bullet point list formatting | - |
+| Numbered list | Format | Inserts numbered list formatting | - |
+| Heading 1-3 | Format | Inserts heading at specified level | - |
+
+#### Input Handling
+
+The palette supports multiple input modes:
+- **Dual Input Mode**: For link insertion (URL + text fields)
+- **Single Input Mode**: For embed links (URL only)
+- **Prompt Mode**: For AI interactions
+- **Selection Mode**: For command selection
+
+#### State Management
+
+The palette manages complex state flows:
+```typescript
+interface PaletteState {
+  showAIPrompt: boolean
+  showAnalysisTypes: boolean
+  showLinkInput: boolean
+  showLinkEmbedInput: boolean
+  selectedIndex: number
+  loadingCommand: string | null
+}
+```
+
+### Markdown Rendering (`MarkdownRenderer.tsx`)
+
+The markdown renderer has been enhanced to support the new formatting features:
+
+#### Custom Components
+
+- **LinkEmbed Component**: Handles rich link rendering with type detection
+- **Underline Component**: Supports HTML `<u>` tags with proper styling
+- **Enhanced List Rendering**: Improved spacing and typography for lists
+- **Responsive Media**: Automatic responsive handling for embedded content
+
+#### Plugins Used
+
+- **remark-gfm**: GitHub Flavored Markdown support
+- **rehype-raw**: Enables HTML tag rendering (required for underline support)
+
+#### Error Handling
+
+- **Broken Images**: Graceful degradation with `onError` handlers
+- **Invalid Embeds**: Fallback to generic link preview
+- **Network Issues**: Timeout and retry mechanisms for external content
+
+### Usage Guidelines
+
+#### For Developers
+
+1. **Adding New Link Types**: Extend the `LinkEmbed` component with new URL pattern detection
+2. **Custom Formatting**: Add new keyboard shortcuts to the `handleKeyDown` function in `RichTextEditor`
+3. **Command Palette Extensions**: Add new commands to the `mainCommands` array in `InlineCommandPalette`
+
+#### For Users
+
+1. **Keyboard Shortcuts**: Use `Cmd/Ctrl + [B/I/U]` for quick formatting
+2. **Command Access**: Use `Cmd/Ctrl + K` or type `/` at line start for command palette
+3. **Link Previews**: Use `[embed](url)` format for rich content previews
+4. **Preview Mode**: Click the Preview button to see rendered output with all enhancements
+
+#### Best Practices
+
+- Use regular links for simple references: `[GitHub](https://github.com)`
+- Use embed format for media content: `[embed](https://youtube.com/watch?v=...)`
+- Leverage keyboard shortcuts for efficient formatting workflows
+- Switch to preview mode to verify rich content rendering before saving 
