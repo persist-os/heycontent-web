@@ -132,14 +132,33 @@ export const useChat = (
         setSearchStatus(status);
         console.log('🔍 Vector Search Status:', status);
         
-        // Update the typing message with search status
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.status === 'typing' && msg.role === 'assistant' 
-              ? { ...msg, searchStatus: status }
-              : msg
-          )
-        );
+        // Check if this is a vector search results update
+        if (status.startsWith('VECTOR_SEARCH_RESULTS:')) {
+          const vectorSearchData = JSON.parse(status.replace('VECTOR_SEARCH_RESULTS:', ''));
+          console.log('📊 Received vector search results immediately:', vectorSearchData);
+          
+          // Update the typing message with vector search results
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.status === 'typing' && msg.role === 'assistant' 
+                ? { 
+                    ...msg, 
+                    searchStatus: `Found ${vectorSearchData.relevantItemsCount} relevant items`,
+                    vectorSearchMetadata: vectorSearchData
+                  }
+                : msg
+            )
+          );
+        } else {
+          // Update the typing message with search status
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.status === 'typing' && msg.role === 'assistant' 
+                ? { ...msg, searchStatus: status }
+                : msg
+            )
+          );
+        }
       };
 
       // Save persona conversations separately
