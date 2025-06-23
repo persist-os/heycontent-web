@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Bot, Brain, Lightbulb, Loader2, X, Sparkles, ArrowRight, List, Heading1, Heading2, Heading3 } from 'lucide-react';
+import { Bot, Brain, Lightbulb, Loader2, X, Sparkles, ArrowRight, List, Heading1, Heading2, Heading3, Link, ExternalLink } from 'lucide-react';
 
 interface InlineCommandPaletteProps {
   isOpen: boolean;
@@ -13,6 +13,8 @@ interface InlineCommandPaletteProps {
   onInsertBulletList: () => void;
   onInsertNumberedList: () => void;
   onInsertHeading: (level: number) => void;
+  onInsertLink?: (url: string, text: string) => void;
+  onInsertLinkEmbed?: (url: string) => void;
   noteType?: string;
 }
 
@@ -45,13 +47,19 @@ export function InlineCommandPalette({
   onInsertBulletList,
   onInsertNumberedList,
   onInsertHeading,
+  onInsertLink,
+  onInsertLinkEmbed,
   noteType = 'idea_bank'
 }: InlineCommandPaletteProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [loadingCommand, setLoadingCommand] = useState<string | null>(null);
   const [showAIPrompt, setShowAIPrompt] = useState(false);
   const [showAnalysisTypes, setShowAnalysisTypes] = useState(false);
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [showLinkEmbedInput, setShowLinkEmbedInput] = useState(false);
   const [aiPrompt, setAIPrompt] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkText, setLinkText] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -102,6 +110,36 @@ export function InlineCommandPalette({
     } finally {
       setLoadingCommand(null);
     }
+  };
+
+  const handleInsertLink = () => {
+    setShowLinkInput(true);
+    setSelectedIndex(0);
+    setTimeout(() => inputRef.current?.focus(), 100);
+  };
+
+  const handleInsertLinkEmbed = () => {
+    setShowLinkEmbedInput(true);
+    setSelectedIndex(0);
+    setTimeout(() => inputRef.current?.focus(), 100);
+  };
+
+  const handleSubmitLink = () => {
+    if (!linkUrl.trim()) return;
+    
+    if (onInsertLink) {
+      onInsertLink(linkUrl, linkText || linkUrl);
+    }
+    onClose();
+  };
+
+  const handleSubmitLinkEmbed = () => {
+    if (!linkUrl.trim()) return;
+    
+    if (onInsertLinkEmbed) {
+      onInsertLinkEmbed(linkUrl);
+    }
+    onClose();
   };
 
   const mainCommands: CommandOption[] = [
@@ -157,6 +195,22 @@ export function InlineCommandPalette({
       description: 'Small heading',
       icon: <Heading3 className="w-4 h-4" />,
       action: () => { onInsertHeading(3); onClose(); },
+      category: 'Format'
+    },
+    {
+      id: 'link',
+      label: 'Insert link',
+      description: 'Add a hyperlink with custom text',
+      icon: <Link className="w-4 h-4" />,
+      action: handleInsertLink,
+      category: 'Format'
+    },
+    {
+      id: 'embed',
+      label: 'Embed link',
+      description: 'Insert rich link preview',
+      icon: <ExternalLink className="w-4 h-4" />,
+      action: handleInsertLinkEmbed,
       category: 'Format'
     }
   ];
@@ -222,6 +276,10 @@ export function InlineCommandPalette({
           e.stopPropagation();
           if (showAIPrompt) {
             handleSubmitAIPrompt();
+          } else if (showLinkInput) {
+            handleSubmitLink();
+          } else if (showLinkEmbedInput) {
+            handleSubmitLinkEmbed();
           } else {
             currentOptions[selectedIndex]?.action();
           }
@@ -229,10 +287,14 @@ export function InlineCommandPalette({
         case 'Escape':
           e.preventDefault();
           e.stopPropagation();
-          if (showAIPrompt || showAnalysisTypes) {
+          if (showAIPrompt || showAnalysisTypes || showLinkInput || showLinkEmbedInput) {
             setShowAIPrompt(false);
             setShowAnalysisTypes(false);
+            setShowLinkInput(false);
+            setShowLinkEmbedInput(false);
             setAIPrompt('');
+            setLinkUrl('');
+            setLinkText('');
             setSelectedIndex(0);
           } else {
             onClose();
@@ -249,7 +311,7 @@ export function InlineCommandPalette({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, selectedIndex, showAIPrompt, showAnalysisTypes, aiPrompt, currentOptions]);
+        }, [isOpen, selectedIndex, showAIPrompt, showAnalysisTypes, showLinkInput, showLinkEmbedInput, aiPrompt, linkUrl, currentOptions]);
 
   // Handle click outside
   useEffect(() => {
@@ -272,7 +334,11 @@ export function InlineCommandPalette({
       setSelectedIndex(0);
       setShowAIPrompt(false);
       setShowAnalysisTypes(false);
+      setShowLinkInput(false);
+      setShowLinkEmbedInput(false);
       setAIPrompt('');
+      setLinkUrl('');
+      setLinkText('');
       setLoadingCommand(null);
     }
   }, [isOpen]);
@@ -302,31 +368,129 @@ export function InlineCommandPalette({
     >
       {/* Search Input */}
       <div className="p-3 border-b border-border">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Ask Content anything..."
-            className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
-            value={showAIPrompt ? aiPrompt : ''}
-            onChange={(e) => setAIPrompt(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && showAIPrompt && aiPrompt.trim()) {
-                handleSubmitAIPrompt();
-              }
-            }}
-            onFocus={() => {
-              if (!showAIPrompt) {
-                setShowAIPrompt(true);
-              }
-            }}
-          />
-        </div>
+        {showLinkInput ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Link className="w-4 h-4 text-muted-foreground" />
+              <input
+                type="url"
+                placeholder="Enter URL (e.g., https://www.example.com/page)"
+                className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && linkUrl.trim()) {
+                    if (!linkText) {
+                      document.getElementById('link-text-input')?.focus();
+                    } else {
+                      handleSubmitLink();
+                    }
+                  }
+                  if (e.key === 'Tab' && linkUrl.trim()) {
+                    e.preventDefault();
+                    document.getElementById('link-text-input')?.focus();
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4" /> {/* Spacer */}
+              <input
+                id="link-text-input"
+                type="text"
+                placeholder="Display text (e.g., 'Ancient History Timeline')"
+                className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
+                value={linkText}
+                onChange={(e) => setLinkText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && linkUrl.trim()) {
+                    handleSubmitLink();
+                  }
+                }}
+              />
+            </div>
+            {(linkUrl.trim() || linkText.trim()) && (
+              <div className="flex items-center gap-2 px-2 py-1 bg-muted/30 rounded text-xs text-muted-foreground">
+                <span className="font-mono">Preview:</span>
+                <span className="font-mono text-blue-600 dark:text-blue-400">
+                  [{linkText || linkUrl}]({linkUrl})
+                </span>
+              </div>
+            )}
+          </div>
+        ) : showLinkEmbedInput ? (
+          <div className="flex items-center gap-2">
+            <ExternalLink className="w-4 h-4 text-muted-foreground" />
+            <input
+              type="url"
+              placeholder="Enter URL to embed (YouTube, images, etc.)"
+              className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && linkUrl.trim()) {
+                  handleSubmitLinkEmbed();
+                }
+              }}
+              autoFocus
+            />
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Ask Content anything..."
+              className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
+              value={showAIPrompt ? aiPrompt : ''}
+              onChange={(e) => setAIPrompt(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && showAIPrompt && aiPrompt.trim()) {
+                  handleSubmitAIPrompt();
+                }
+              }}
+              onFocus={() => {
+                if (!showAIPrompt) {
+                  setShowAIPrompt(true);
+                }
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Content */}
       <div className="max-h-80 overflow-y-auto">
-        {showAIPrompt && aiPrompt.trim() ? (
+        {showLinkInput && linkUrl.trim() ? (
+          <div className="p-3">
+            <button
+              onClick={handleSubmitLink}
+              className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-muted/50 rounded-md transition-colors"
+            >
+              <Link className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <div className="flex-1 text-left">
+                <div className="text-sm font-medium">Insert aliased link</div>
+                <div className="text-xs text-muted-foreground truncate">
+                  Will insert: [{linkText || linkUrl}]({linkUrl})
+                </div>
+              </div>
+            </button>
+          </div>
+        ) : showLinkEmbedInput && linkUrl.trim() ? (
+          <div className="p-3">
+            <button
+              onClick={handleSubmitLinkEmbed}
+              className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-muted/50 rounded-md transition-colors"
+            >
+              <ExternalLink className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              <div className="flex-1 text-left">
+                <div className="text-sm font-medium">Embed link</div>
+                <div className="text-xs text-muted-foreground truncate">{linkUrl}</div>
+              </div>
+            </button>
+          </div>
+        ) : showAIPrompt && aiPrompt.trim() ? (
           <div className="p-3">
             <button
               onClick={handleSubmitAIPrompt}
@@ -391,14 +555,29 @@ export function InlineCommandPalette({
       <div className="px-3 py-2 border-t border-border bg-muted/5">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1">
-              <kbd className="px-1 py-0.5 bg-muted rounded text-xs">↑↓</kbd>
-              to navigate
-            </span>
-            <span className="flex items-center gap-1">
-              <kbd className="px-1 py-0.5 bg-muted rounded text-xs">↵</kbd>
-              to select
-            </span>
+            {showLinkInput ? (
+              <>
+                <span className="flex items-center gap-1">
+                  <kbd className="px-1 py-0.5 bg-muted rounded text-xs">Tab</kbd>
+                  to next field
+                </span>
+                <span className="flex items-center gap-1">
+                  <kbd className="px-1 py-0.5 bg-muted rounded text-xs">↵</kbd>
+                  to insert
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="flex items-center gap-1">
+                  <kbd className="px-1 py-0.5 bg-muted rounded text-xs">↑↓</kbd>
+                  to navigate
+                </span>
+                <span className="flex items-center gap-1">
+                  <kbd className="px-1 py-0.5 bg-muted rounded text-xs">↵</kbd>
+                  to select
+                </span>
+              </>
+            )}
           </div>
           <span className="flex items-center gap-1">
             <kbd className="px-1 py-0.5 bg-muted rounded text-xs">esc</kbd>

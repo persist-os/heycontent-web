@@ -252,6 +252,17 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
     formatText(prefix, '', true)
   }, [formatText])
 
+  // Link insertion handlers
+  const handleInsertLink = useCallback((url: string, text: string) => {
+    const linkMarkdown = `[${text}](${url})`
+    insertAtCursor(linkMarkdown)
+  }, [insertAtCursor])
+
+  const handleInsertLinkEmbed = useCallback((url: string) => {
+    const embedMarkdown = `[embed](${url})`
+    insertAtCursor(`\n\n${embedMarkdown}\n\n`)
+  }, [insertAtCursor])
+
   // Handle keyboard shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Cmd/Ctrl + K to open inline command palette
@@ -398,6 +409,8 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
         onInsertBulletList={handleInsertBulletList}
         onInsertNumberedList={handleInsertNumberedList}
         onInsertHeading={handleInsertHeading}
+        onInsertLink={handleInsertLink}
+        onInsertLinkEmbed={handleInsertLinkEmbed}
         noteType={noteType}
       />
     </div>
