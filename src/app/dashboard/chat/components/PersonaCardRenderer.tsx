@@ -147,10 +147,10 @@ export const PersonaCardRenderer: React.FC<PersonaCardRendererProps> = ({ messag
           <div className="flex justify-center mt-6">
             <button
               className="px-4 py-2 bg-gray-900 text-white font-semibold rounded-lg shadow-sm hover:bg-gray-800 transition-colors"
-              onClick={() => router.push('/settings')}
+              onClick={() => router.push('/dashboard/self-hub')}
               type="button"
             >
-              View Persona in Settings
+              View Persona in Self
             </button>
           </div>
         )}
