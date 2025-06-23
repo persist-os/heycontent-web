@@ -71,13 +71,13 @@ export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
           </span>
         );
       } else {
-        // Note not found, show the ID for debugging
+        // Note not found, show missing note indicator
         parts.push(
           <span
             key={`unknown-link-${partIndex}-${linkStartIndex}`}
-            className="text-red-500 italic text-xs"
+            className="text-red-500 italic"
           >
-            [Note ID: {noteId}]
+            [Missing Note]
           </span>
         );
       }
