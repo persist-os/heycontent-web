@@ -5,7 +5,7 @@ import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Note, NoteUpdate, NoteType } from './types';
 import { NoteHeader } from './components/NoteHeader';
-import { NoteEditor } from './components/NoteEditor';
+import { TiptapNoteEditor } from './components/TiptapNoteEditor';
 import { NoteMeta } from './components/NoteMeta';
 import { TypeSelector } from './components/TypeSelector';
 import type { Id } from "@/convex/_generated/dataModel";
@@ -17,6 +17,12 @@ interface NoteAreaProps {
   onToggleShortcuts: () => void;
   onBack: () => void;
   isMobile: boolean;
+  availableNotes?: Array<{ _id: string; title: string; type: string }>;
+  onLinkNote?: (noteId: string) => void;
+  // Navigation stack props
+  canGoBack?: boolean;
+  onNavigateBack?: () => void;
+  navigationStack?: string[];
 }
 
 export function NoteArea({
@@ -25,7 +31,13 @@ export function NoteArea({
   onSave,
   onToggleShortcuts,
   onBack,
-  isMobile
+  isMobile,
+  availableNotes = [],
+  onLinkNote,
+  // Navigation stack props
+  canGoBack,
+  onNavigateBack,
+  navigationStack
 }: NoteAreaProps) {
   // Only use the live query if the note is not temporary
   const liveNoteData = initialNote.isTemporary 
@@ -61,6 +73,13 @@ export function NoteArea({
     onSave(content, note.title);
   };
 
+  // Handle note linking
+  const handleLinkNote = (noteId: string) => {
+    if (onLinkNote) {
+      onLinkNote(noteId);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full w-full bg-background">
       {/* Header */}
@@ -71,6 +90,9 @@ export function NoteArea({
         onBack={onBack} 
         isMobile={isMobile}
         currentContent={content}
+        canGoBack={canGoBack}
+        onNavigateBack={onNavigateBack}
+        navigationStack={navigationStack}
       />
       
       {/* Note metadata and type selector */}
@@ -93,7 +115,7 @@ export function NoteArea({
       
       {/* Main editor area */}
       <div className="flex-1 overflow-hidden">
-        <NoteEditor
+        <TiptapNoteEditor
           content={content}
           onContentChange={handleContentChange}
           placeholder="Start writing your note..."
@@ -104,6 +126,8 @@ export function NoteArea({
           tags={note.tags}
           userId={String(note.userId)}
           noteType={note.type}
+          availableNotes={availableNotes}
+          onLinkNote={handleLinkNote}
         />
       </div>
     </div>

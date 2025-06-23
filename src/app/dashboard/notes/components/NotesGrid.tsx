@@ -57,11 +57,17 @@ export function NotesGrid({
     return matchesSearch && matchesTypeFilter;
   });
 
-  // Sort notes by importance and recency
+  // Sort notes by importance and recency (most recently edited first)
   const sortedNotes = [...filteredNotes].sort((a, b) => {
+    // First priority: Important (favorite) notes come first
     if (a.important && !b.important) return -1;
     if (!a.important && b.important) return 1;
-    return b.updatedAt - a.updatedAt;
+    
+    // Second priority: Within each group (important/non-important), 
+    // sort by most recently updated first (descending order)
+    const aTime = a.updatedAt || a._creationTime || 0;
+    const bTime = b.updatedAt || b._creationTime || 0;
+    return bTime - aTime;
   });
 
   if (isLoading) {
@@ -149,19 +155,21 @@ export function NotesGrid({
           </button>
         </div>
       ) : (
-        <div className="flex-1 overflow-auto px-4">
-          <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 gap-4 pb-6">
-            {sortedNotes.map((note) => (
-              <div key={String(note._id)} className="break-inside-avoid mb-4 w-full">
-                <NoteCard
-                  note={note}
-                  onEdit={onEditNote}
-                  onDelete={onDeleteNote}
-                  onToggleImportant={onToggleImportant}
-                  onUpdate={onUpdateNote}
-                />
-              </div>
-            ))}
+        <div className="flex-1 overflow-auto scrollbar-none">
+          <div className="px-4">
+            <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 gap-4 pb-6">
+              {sortedNotes.map((note) => (
+                <div key={String(note._id)} className="break-inside-avoid mb-4 w-full">
+                  <NoteCard
+                    note={note}
+                    onEdit={onEditNote}
+                    onDelete={onDeleteNote}
+                    onToggleImportant={onToggleImportant}
+                    onUpdate={onUpdateNote}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}

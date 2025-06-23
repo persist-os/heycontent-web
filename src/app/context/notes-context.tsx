@@ -15,6 +15,11 @@ interface NotesContextType {
   isSaving: boolean;
   activeNoteId: string | null;
   setActiveNoteId: (id: string | null) => void;
+  navigationStack: string[];
+  canGoBack: boolean;
+  navigateToNote: (noteId: string, fromLink?: boolean) => void;
+  navigateBack: () => void;
+  clearNavigationStack: () => void;
   deleteNote: (noteId: Id<"notes"> | string) => Promise<boolean>;
   updateNote: (noteId: string | Id<"notes">, updateFields: NoteUpdate, force?: boolean) => Promise<Note | null>;
   saveNoteContent: (noteId: string | Id<"notes">, content: string, title: string) => Promise<Note | null>;
@@ -38,6 +43,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const convexDeleteNote = useMutation(api.notes.deleteNote);
 
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
+  const [navigationStack, setNavigationStack] = useState<string[]>([]);
 
   const deleteNote = useCallback(async (noteId: Id<"notes"> | string): Promise<boolean> => {
     if (!userId) {
@@ -73,6 +79,37 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [createNote]);
 
+  const navigateToNote = useCallback((noteId: string, fromLink?: boolean) => {
+    console.log('navigateToNote called:', { noteId, fromLink, currentActiveNoteId: activeNoteId, currentStack: navigationStack });
+    if (fromLink && activeNoteId) {
+      setNavigationStack(prev => {
+        const newStack = [...prev, activeNoteId];
+        console.log('Updated navigation stack:', newStack);
+        return newStack;
+      });
+    }
+    setActiveNoteId(noteId);
+  }, [activeNoteId, navigationStack]);
+
+  const navigateBack = useCallback(() => {
+    console.log('navigateBack called:', { currentStack: navigationStack });
+    if (navigationStack.length > 0) {
+      const previousNoteId = navigationStack[navigationStack.length - 1];
+      setNavigationStack(prev => {
+        const newStack = prev.slice(0, -1);
+        console.log('Navigation stack after back:', newStack);
+        return newStack;
+      });
+      setActiveNoteId(previousNoteId);
+      console.log('Navigating back to:', previousNoteId);
+    }
+  }, [navigationStack]);
+
+  const clearNavigationStack = useCallback(() => {
+    setNavigationStack([]);
+    setActiveNoteId(null);
+  }, []);
+
   const value = {
     notes: fetchedNotes,
     setNotes: setFetchedNotes,
@@ -80,6 +117,11 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     isSaving,
     activeNoteId,
     setActiveNoteId,
+    navigationStack,
+    canGoBack: navigationStack.length > 0,
+    navigateToNote,
+    navigateBack,
+    clearNavigationStack,
     deleteNote,
     updateNote,
     saveNoteContent,

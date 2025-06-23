@@ -3,9 +3,11 @@ import { BaseCard } from './BaseCard';
 import { Note } from '../../types';
 import { Image, Video } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { NoteContentRenderer } from '../NoteContentRenderer';
 
 interface ContentCardProps {
   note: Note;
+  availableNotes?: Array<{ _id: string; title: string; type: string }>;
   onEdit?: (note: Note) => void;
   onDelete?: (noteId: string) => void;
   onToggleImportant?: (noteId: string) => void;
@@ -13,6 +15,7 @@ interface ContentCardProps {
 
 export function ContentCard({ 
   note, 
+  availableNotes = [],
   onEdit, 
   onDelete, 
   onToggleImportant 
@@ -58,7 +61,8 @@ export function ContentCard({
                           note.title?.toLowerCase().includes('vlog');
 
   const hashtags = extractHashtags(note.content || '');
-  const contentPreview = note.content?.replace(/#\w+/g, '').trim().substring(0, 150) || '';
+  // Don't truncate content before parsing - let CSS handle visual truncation
+  const contentForRendering = note.content?.replace(/#\w+/g, '').trim() || '';
 
   return (
     <BaseCard
@@ -85,9 +89,12 @@ export function ContentCard({
           </h3>
         </div>
 
-        {/* Content preview */}
+        {/* Content preview - CSS handles truncation after note links are rendered */}
         <div className="text-sm text-muted-foreground line-clamp-4">
-          {contentPreview}
+          <NoteContentRenderer 
+            content={contentForRendering} 
+            availableNotes={availableNotes}
+          />
         </div>
 
         {/* Media placeholder for certain content types */}

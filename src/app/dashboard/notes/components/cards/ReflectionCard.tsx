@@ -2,9 +2,11 @@ import React from 'react';
 import { BaseCard } from './BaseCard';
 import { Note } from '../../types';
 import { Heart, Smile, Brain, Lightbulb, Target, TrendingUp } from 'lucide-react';
+import { NoteContentRenderer } from '../NoteContentRenderer';
 
 interface ReflectionCardProps {
   note: Note;
+  availableNotes?: Array<{ _id: string; title: string; type: string }>;
   onEdit?: (note: Note) => void;
   onDelete?: (noteId: string) => void;
   onToggleImportant?: (noteId: string) => void;
@@ -12,6 +14,7 @@ interface ReflectionCardProps {
 
 export function ReflectionCard({ 
   note, 
+  availableNotes = [],
   onEdit, 
   onDelete, 
   onToggleImportant 
@@ -160,10 +163,17 @@ export function ReflectionCard({
 
         {/* Content preview */}
         <div className="text-sm text-muted-foreground line-clamp-4 mb-3">
-          {note.content && keyInsight 
-            ? note.content.replace(keyInsight, '').trim().substring(0, 150) + '...'
-            : note.content?.substring(0, 150) + '...' || 'Start your reflection...'
-          }
+          {note.content ? (
+            <NoteContentRenderer 
+              content={note.content && keyInsight 
+                ? note.content.replace(keyInsight, '').trim()
+                : note.content
+              }
+              availableNotes={availableNotes}
+            />
+          ) : (
+            'Start your reflection...'
+          )}
         </div>
 
       </div>

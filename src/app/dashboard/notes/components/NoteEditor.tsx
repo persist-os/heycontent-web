@@ -2,6 +2,7 @@
 import React, { useRef, useEffect, forwardRef, useState, useCallback } from 'react';
 import { InlineCommandPalette } from './InlineCommandPalette';
 import { useInlineAI } from '../hooks/useInlineAI';
+import { NoteContentRenderer } from './NoteContentRenderer';
 
 interface NoteEditorProps {
   content: string;
@@ -14,6 +15,8 @@ interface NoteEditorProps {
   tags?: string[];
   userId: string;
   noteType?: string;
+  availableNotes?: Array<{ _id: string; title: string; type: string }>;
+  onLinkNote?: (noteId: string) => void;
 }
 
 export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
@@ -27,15 +30,18 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
     platform,
     tags,
     userId,
-    noteType
+    noteType,
+    availableNotes = [],
+    onLinkNote
   }, 
   ref
 ) => {
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [palettePosition, setPalettePosition] = useState({ top: 0, left: 0 });
-  const [cursorPosition, setCursorPosition] = useState<number>(0);
   const [isFocused, setIsFocused] = useState(false);
+  const [paletteMode, setPaletteMode] = useState<'commands' | 'notes'>('commands');
 
   // Initialize the inline AI hook
   const { askAI, requestAnalysis, requestIdeas } = useInlineAI({
@@ -55,6 +61,14 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
       (ref as React.MutableRefObject<HTMLTextAreaElement | null>).current = textAreaRef.current;
     }
   }, [ref]);
+
+  // Sync scroll between textarea and overlay
+  const handleScroll = useCallback(() => {
+    if (textAreaRef.current && overlayRef.current) {
+      overlayRef.current.scrollTop = textAreaRef.current.scrollTop;
+      overlayRef.current.scrollLeft = textAreaRef.current.scrollLeft;
+    }
+  }, []);
 
   // Calculate cursor position for command palette
   const getCursorCoordinates = useCallback(() => {
@@ -92,8 +106,8 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
       const y = rect.top + paddingTop + (currentLineIndex * lineHeight) + lineHeight + 10;
       
       return {
-        top: Math.min(y, window.innerHeight - 300), // Ensure palette fits on screen
-        left: Math.min(x, window.innerWidth - 400)  // Ensure palette fits on screen
+        top: Math.min(y, window.innerHeight - 300),
+        left: Math.min(x, window.innerWidth - 400)
       };
     }
     
@@ -104,14 +118,20 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
     };
   }, []);
 
+  // Handle content changes
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    onContentChange(e.target.value);
+  }, [onContentChange]);
+
   // Handle keyboard shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Cmd/Ctrl + K to open inline command palette (only when textarea is focused)
+    // Cmd/Ctrl + K to open inline command palette
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
       e.preventDefault();
-      e.stopPropagation(); // Prevent global command palette from opening
+      e.stopPropagation();
       const coords = getCursorCoordinates();
       setPalettePosition(coords);
+      setPaletteMode('commands');
       setShowCommandPalette(true);
       return;
     }
@@ -125,15 +145,28 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
       const lineStart = content.lastIndexOf('\n', start - 1) + 1;
       const lineContent = content.substring(lineStart, start);
       
-      // If we're at the start of a line or only whitespace before cursor
       if (lineContent.trim() === '') {
         e.preventDefault();
-        e.stopPropagation(); // Prevent any potential conflicts
+        e.stopPropagation();
         const coords = getCursorCoordinates();
         setPalettePosition(coords);
+        setPaletteMode('commands');
         setShowCommandPalette(true);
         return;
       }
+    }
+
+    // '@' to open note linking palette
+    if (e.key === '@') {
+      // Don't prevent default - let the @ be typed first
+      // Open the palette after the @ is inserted
+      setTimeout(() => {
+        const coords = getCursorCoordinates();
+        setPalettePosition(coords);
+        setPaletteMode('notes');
+        setShowCommandPalette(true);
+      }, 0);
+      return;
     }
 
     // Handle ESC to close command palette
@@ -144,15 +177,6 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
       return;
     }
   }, [content, getCursorCoordinates, showCommandPalette]);
-
-  // Handle content changes
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newContent = e.target.value;
-    const newCursorPosition = e.target.selectionStart;
-    
-    onContentChange(newContent);
-    setCursorPosition(newCursorPosition);
-  }, [onContentChange]);
 
   // Insert content at cursor position
   const insertAtCursor = useCallback((text: string) => {
@@ -184,7 +208,6 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
       insertAtCursor(`\n\n${response}`);
     } catch (error) {
       console.error('Failed to get AI response:', error);
-      // Could show a toast notification here
     }
   }, [askAI, insertAtCursor]);
 
@@ -194,7 +217,6 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
       insertAtCursor(`\n\n## Analysis\n\n${analysis}`);
     } catch (error) {
       console.error('Failed to get analysis:', error);
-      // Could show a toast notification here
     }
   }, [requestAnalysis, insertAtCursor]);
 
@@ -205,29 +227,91 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
       insertAtCursor(`\n\n## Ideas\n\n${ideasText}`);
     } catch (error) {
       console.error('Failed to get ideas:', error);
-      // Could show a toast notification here
     }
   }, [requestIdeas, insertAtCursor]);
 
+  // Handle note linking - fixed to not replace the user's @ but just add title and closing @
+  const handleLinkNote = useCallback((noteId: string) => {
+    const textarea = textAreaRef.current;
+    if (!textarea) return;
+
+    const selectedNote = availableNotes.find(note => String(note._id) === noteId);
+    if (!selectedNote) return;
+
+    // Just add the title and closing @ (don't replace the user's @)
+    const linkText = `${selectedNote.title}@`;
+    const currentContent = content;
+    const cursorPos = textarea.selectionStart;
+
+    // Insert the title and closing @ at the current cursor position
+    const newContent = 
+      currentContent.substring(0, cursorPos) + 
+      linkText + 
+      currentContent.substring(cursorPos);
+
+    const newCursorPosition = cursorPos + linkText.length;
+    onContentChange(newContent);
+    
+    // Set cursor position after content update
+    setTimeout(() => {
+      if (textAreaRef.current) {
+        textAreaRef.current.selectionStart = newCursorPosition;
+        textAreaRef.current.selectionEnd = newCursorPosition;
+        textAreaRef.current.focus();
+      }
+    }, 0);
+  }, [availableNotes, content, onContentChange]);
+
+  const handleFocus = useCallback(() => {
+    setIsFocused(true);
+  }, []);
+
+  const handleBlur = useCallback(() => {
+    setIsFocused(false);
+  }, []);
+
   return (
     <div className="relative w-full h-full">
+      {/* Textarea for text input with visible cursor and selection, but invisible text */}
       <textarea
         ref={textAreaRef}
         value={content}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        className="w-full h-full min-h-[300px] resize-none p-4 text-base leading-relaxed 
-          bg-background text-foreground placeholder:text-muted-foreground/50
-          border-0 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2
-          transition-all duration-200 rounded-md
-          transform-gpu will-change-contents"
-        placeholder={`${placeholder}
-
-⌘K or / to open inline AI assistant • ⌘K outside editor for global search`}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onScroll={handleScroll}
+        className="absolute inset-0 w-full h-full min-h-[300px] resize-none p-4 text-base leading-relaxed bg-transparent caret-foreground border-0 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 transition-all duration-200 rounded-md z-0 selection:bg-primary/20"
+        placeholder=""
         disabled={disabled}
         spellCheck={true}
         autoFocus={!disabled}
+        style={{ 
+          color: 'transparent',
+          caretColor: 'var(--foreground)'
+        }}
       />
+      
+      {/* Visual overlay with rendered content and clickable links */}
+      <div 
+        ref={overlayRef}
+        className="absolute inset-0 p-4 text-base leading-relaxed whitespace-pre-wrap overflow-hidden bg-background text-foreground rounded-md pointer-events-none z-10"
+        onClick={() => textAreaRef.current?.focus()}
+      >
+        <NoteContentRenderer
+          content={content}
+          availableNotes={availableNotes}
+          onLinkNote={onLinkNote}
+        />
+        
+        {/* Placeholder text when empty */}
+        {!content && !isFocused && (
+          <div className="text-muted-foreground/50 pointer-events-none">
+            {placeholder}
+            {'\n\n⌘K or / to open inline AI assistant • @ to link notes • ⌘K outside editor for global search'}
+          </div>
+        )}
+      </div>
       
       <InlineCommandPalette
         isOpen={showCommandPalette}
@@ -236,7 +320,11 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
         onAskAI={handleAskAI}
         onRequestAnalysis={handleRequestAnalysis}
         onRequestIdeas={handleRequestIdeas}
+        onLinkNote={handleLinkNote}
         noteType={noteType}
+        availableNotes={availableNotes}
+        currentNoteId={noteId}
+        showNoteLinks={paletteMode === 'notes'}
       />
     </div>
   );

@@ -10,6 +10,7 @@ import { BaseCard } from './BaseCard';
 
 interface NoteCardProps {
   note: Note;
+  availableNotes?: Array<{ _id: string; title: string; type: string }>;
   onEdit?: (note: Note) => void;
   onDelete?: (noteId: string) => void;
   onToggleImportant?: (noteId: string) => void;
@@ -18,6 +19,7 @@ interface NoteCardProps {
 
 export function NoteCard({ 
   note, 
+  availableNotes = [],
   onEdit, 
   onDelete, 
   onToggleImportant, 
@@ -153,6 +155,7 @@ export function NoteCard({
       return (
         <ContentCard
           note={note}
+          availableNotes={availableNotes}
           onEdit={onEdit}
           onDelete={onDelete}
           onToggleImportant={onToggleImportant}
@@ -163,6 +166,7 @@ export function NoteCard({
       return (
         <AnalyticsCard
           note={note}
+          availableNotes={availableNotes}
           onEdit={onEdit}
           onDelete={onDelete}
           onToggleImportant={onToggleImportant}
@@ -173,6 +177,7 @@ export function NoteCard({
       return (
         <CollaborationCard
           note={note}
+          availableNotes={availableNotes}
           onEdit={onEdit}
           onDelete={onDelete}
           onToggleImportant={onToggleImportant}
@@ -183,6 +188,7 @@ export function NoteCard({
       return (
         <ReflectionCard
           note={note}
+          availableNotes={availableNotes}
           onEdit={onEdit}
           onDelete={onDelete}
           onToggleImportant={onToggleImportant}

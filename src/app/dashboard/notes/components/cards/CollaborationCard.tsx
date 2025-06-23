@@ -3,9 +3,11 @@ import { BaseCard } from './BaseCard';
 import { Note } from '../../types';
 import { Users, MessageCircle, UserPlus, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { NoteContentRenderer } from '../NoteContentRenderer';
 
 interface CollaborationCardProps {
   note: Note;
+  availableNotes?: Array<{ _id: string; title: string; type: string }>;
   onEdit?: (note: Note) => void;
   onDelete?: (noteId: string) => void;
   onToggleImportant?: (noteId: string) => void;
@@ -13,6 +15,7 @@ interface CollaborationCardProps {
 
 export function CollaborationCard({ 
   note, 
+  availableNotes = [],
   onEdit, 
   onDelete, 
   onToggleImportant 
@@ -81,7 +84,14 @@ export function CollaborationCard({
 
         {/* Content preview */}
         <div className="text-sm text-muted-foreground line-clamp-4">
-          {note.content?.replace(/@[\w]+/g, '').trim() || 'No content yet...'}
+          {note.content ? (
+            <NoteContentRenderer 
+              content={note.content} 
+              availableNotes={availableNotes}
+            />
+          ) : (
+            'No content yet...'
+          )}
         </div>
       </div>
     </BaseCard>

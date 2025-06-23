@@ -2,9 +2,11 @@ import React from 'react';
 import { BaseCard } from './BaseCard';
 import { Note } from '../../types';
 import { TrendingUp, BarChart3, Target } from 'lucide-react';
+import { NoteContentRenderer } from '../NoteContentRenderer';
 
 interface AnalyticsCardProps {
   note: Note;
+  availableNotes?: Array<{ _id: string; title: string; type: string }>;
   onEdit?: (note: Note) => void;
   onDelete?: (noteId: string) => void;
   onToggleImportant?: (noteId: string) => void;
@@ -12,6 +14,7 @@ interface AnalyticsCardProps {
 
 export function AnalyticsCard({ 
   note, 
+  availableNotes = [],
   onEdit, 
   onDelete, 
   onToggleImportant 
@@ -91,7 +94,14 @@ export function AnalyticsCard({
 
         {/* Content preview */}
         <div className="text-sm text-muted-foreground line-clamp-3">
-          {note.content || 'No content yet...'}
+          {note.content ? (
+            <NoteContentRenderer 
+              content={note.content} 
+              availableNotes={availableNotes}
+            />
+          ) : (
+            'No content yet...'
+          )}
         </div>
       </div>
     </BaseCard>
