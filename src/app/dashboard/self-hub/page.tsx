@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { PersonaTab } from './PersonaTab';
+import { TimelineTab } from './TimelineTab';
 import { UsageHeatmap } from './UsageHeatmap';
 import { getFirebaseAuth } from '@/app/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -43,9 +44,15 @@ export default function SelfHubPage() {
           <Tabs defaultValue="persona" className="space-y-4">
             <TabsList>
               <TabsTrigger value="persona">Persona</TabsTrigger>
+              <TabsTrigger value="timeline">Timeline</TabsTrigger>
               <TabsTrigger value="usage">Activity</TabsTrigger>
-             
             </TabsList>
+            <TabsContent value="persona" className="space-y-4">
+              <PersonaTab />
+            </TabsContent>
+            <TabsContent value="timeline" className="space-y-4">
+              <TimelineTab />
+            </TabsContent>
             <TabsContent value="usage" className="space-y-4">
               {userId ? (
                 <UsageHeatmap userId={userId} />
@@ -54,9 +61,6 @@ export default function SelfHubPage() {
                   <p className="text-gray-600 text-sm">Please sign in to view your activity.</p>
                 </div>
               )}
-            </TabsContent>
-            <TabsContent value="persona" className="space-y-4">
-              <PersonaTab />
             </TabsContent>
           </Tabs>
         </div>

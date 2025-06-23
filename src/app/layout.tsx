@@ -31,7 +31,7 @@ export default async function RootLayout({
           />
         )}
       </head>
-      <body className="font-sans">
+      <body className="font-sans min-h-screen">
         <Providers>
           <CommandPaletteProvider>
             <Toaster position="top-center" />

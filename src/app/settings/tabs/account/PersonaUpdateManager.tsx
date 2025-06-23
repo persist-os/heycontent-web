@@ -4,9 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { usePersonaManager } from '../../../dashboard/chat/hooks/usePersonaData';
 import { PersonaData } from '../../../dashboard/chat/types';
 import { Edit2, Plus } from 'lucide-react';
-import { Id } from '@/convex/_generated/dataModel';
 import { PersonaEditForm } from './PersonaEditForm';
-import { PersonaTimeline } from './PersonaTimeline';
 import { NewPersonaCard } from './NewPersonaCard';
 
 interface PersonaUpdateManagerProps {
@@ -17,13 +15,9 @@ interface PersonaUpdateManagerProps {
 export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ userId, renderNewPersonaButton }) => {
   const {
     currentPersona,
-    personaHistory,
     isLoading,
     hasPersona,
-    hasHistory,
     updatePersona,
-    activatePersona,
-    deletePersona,
   } = usePersonaManager(userId);
 
   const [isEditMode, setIsEditMode] = useState(false);
@@ -63,15 +57,7 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
     setIsEditMode(false);
   };
 
-  const handleRestore = async (personaId: Id<'personas'>) => {
-    await activatePersona(personaId);
-  };
 
-  const handleDelete = async (personaId: Id<'personas'>) => {
-    if (confirm('Delete this persona version permanently?')) {
-      await deletePersona(personaId);
-    }
-  };
 
   const updateField = (field: keyof PersonaData, value: string | string[]) => {
     if (!editedPersona) return;
@@ -195,22 +181,7 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
         )}
       </div>
 
-      {/* History */}
-      {hasHistory && (
-        <div>
-          <div className="mb-6">
-            <h3 className="font-medium text-foreground text-lg">Persona History</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Review and manage previous versions of your persona.
-            </p>
-          </div>
-          <PersonaTimeline
-            history={personaHistory}
-            onRestore={handleRestore}
-            onDelete={handleDelete}
-          />
-        </div>
-      )}
+
     </div>
   );
 }; 
