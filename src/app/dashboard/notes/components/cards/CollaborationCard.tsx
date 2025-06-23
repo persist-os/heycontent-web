@@ -78,7 +78,7 @@ export function CollaborationCard({
         <div className="flex items-center gap-2 mb-3">
           {getIcon()}
           <h3 className="font-semibold text-foreground flex-1 pr-8 line-clamp-1">
-            {note.title || getTypeLabel()}
+            {(note.title && note.title.trim()) || getTypeLabel()}
           </h3>
         </div>
 
