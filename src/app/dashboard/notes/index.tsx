@@ -104,6 +104,33 @@ export default function SmartNotes() {
     setActiveNoteId(null);
   };
 
+  // Handle note linking
+  const handleLinkNote = (noteId: string) => {
+    console.log('handleLinkNote called:', {
+      noteId,
+      currentActiveNoteId: activeNoteId,
+      notesCount: notes.length,
+      targetNote: notes.find(n => String(n._id) === noteId)
+    });
+    setActiveNoteId(noteId);
+  };
+
+  // Prepare available notes for linking (exclude current note)
+  const availableNotes = notes
+    .filter(note => String(note._id) !== activeNoteId)
+    .map(note => ({
+      _id: String(note._id),
+      title: note.title,
+      type: note.type || 'idea_bank'
+    }));
+
+  console.log('Available notes for linking:', {
+    totalNotes: notes.length,
+    availableNotesCount: availableNotes.length,
+    activeNoteId,
+    availableNotes: availableNotes.map(n => ({ id: n._id, title: n.title, type: n.type }))
+  });
+
   // If viewing a specific note, show the editor with smooth transition
   if (activeNote) {
     return (
@@ -134,6 +161,8 @@ export default function SmartNotes() {
           onToggleShortcuts={() => {}} // Not used in grid view
           onBack={handleBackToGrid}
           isMobile={true} // Always show back button in this context
+          availableNotes={availableNotes}
+          onLinkNote={handleLinkNote}
         />
       </div>
     );
