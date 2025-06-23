@@ -3,9 +3,11 @@ import { BaseCard } from './BaseCard';
 import { Note } from '../../types';
 import { Image, Video } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { NoteContentRenderer } from '../NoteContentRenderer';
 
 interface ContentCardProps {
   note: Note;
+  availableNotes?: Array<{ _id: string; title: string; type: string }>;
   onEdit?: (note: Note) => void;
   onDelete?: (noteId: string) => void;
   onToggleImportant?: (noteId: string) => void;
@@ -13,6 +15,7 @@ interface ContentCardProps {
 
 export function ContentCard({ 
   note, 
+  availableNotes = [],
   onEdit, 
   onDelete, 
   onToggleImportant 
@@ -87,7 +90,10 @@ export function ContentCard({
 
         {/* Content preview */}
         <div className="text-sm text-muted-foreground line-clamp-4">
-          {contentPreview}
+          <NoteContentRenderer 
+            content={contentPreview} 
+            availableNotes={availableNotes}
+          />
         </div>
 
         {/* Media placeholder for certain content types */}
