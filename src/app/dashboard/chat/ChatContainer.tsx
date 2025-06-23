@@ -440,7 +440,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     <>
       <div 
         data-chat-container
-        className="flex flex-col h-screen bg-background overflow-hidden"
+        className="flex flex-col min-h-screen bg-background"
         style={getMainContentStyle()}
       >
         {/* Header - Always render this static element */}
@@ -451,7 +451,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         />
 
         {/* Main Content - Always render the container, conditionally render content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col">
           {!user ? (
             // Static placeholder for unauthenticated state
             <div className="flex-1 flex items-center justify-center">
@@ -528,7 +528,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col">
               {/* AI Intelligence Status Display (user-friendly) - Only show when no embeddings */}
               <AmbientInsightsContainer 
                 handleSendMessage={(msg, context) => {

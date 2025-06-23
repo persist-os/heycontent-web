@@ -93,8 +93,15 @@
   * {
     @apply border-border;
   }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
+    min-height: 100vh;
   }
 
   /* ChatGPT-inspired font stack for chat interface */

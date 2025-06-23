@@ -20,7 +20,7 @@ export const PersonaTip: React.FC<PersonaTipProps> = ({ onTipClick }) => {
   };
 
   return (
-    <div className="fixed left-4 bottom-24 z-10">
+    <div className="fixed right-4 bottom-24 z-10">
       {isExpanded ? (
         <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-xs w-64 animate-in fade-in-20 slide-in-from-bottom-4 duration-300">
           <div className="flex justify-between items-start mb-2">
