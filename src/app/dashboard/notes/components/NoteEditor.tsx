@@ -2,8 +2,6 @@
 import React, { forwardRef, useCallback, useRef, useState, useEffect } from 'react';
 import { RichTextEditor } from '@/components/ui/rich-text-editor/rich-text-editor';
 import { useInlineAI } from '../hooks/useInlineAI';
-import { NoteContentRenderer } from './NoteContentRenderer';
-import { InlineCommandPalette } from './InlineCommandPalette';
 
 interface NoteEditorProps {
   content: string;
