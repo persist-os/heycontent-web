@@ -61,7 +61,8 @@ export function ContentCard({
                           note.title?.toLowerCase().includes('vlog');
 
   const hashtags = extractHashtags(note.content || '');
-  const contentPreview = note.content?.replace(/#\w+/g, '').trim().substring(0, 150) || '';
+  // Don't truncate content before parsing - let CSS handle visual truncation
+  const contentForRendering = note.content?.replace(/#\w+/g, '').trim() || '';
 
   return (
     <BaseCard
@@ -88,10 +89,10 @@ export function ContentCard({
           </h3>
         </div>
 
-        {/* Content preview */}
+        {/* Content preview - CSS handles truncation after note links are rendered */}
         <div className="text-sm text-muted-foreground line-clamp-4">
           <NoteContentRenderer 
-            content={contentPreview} 
+            content={contentForRendering} 
             availableNotes={availableNotes}
           />
         </div>

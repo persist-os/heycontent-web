@@ -166,6 +166,7 @@ export function NoteCard({
       return (
         <AnalyticsCard
           note={note}
+          availableNotes={availableNotes}
           onEdit={onEdit}
           onDelete={onDelete}
           onToggleImportant={onToggleImportant}
@@ -176,6 +177,7 @@ export function NoteCard({
       return (
         <CollaborationCard
           note={note}
+          availableNotes={availableNotes}
           onEdit={onEdit}
           onDelete={onDelete}
           onToggleImportant={onToggleImportant}
@@ -186,6 +188,7 @@ export function NoteCard({
       return (
         <ReflectionCard
           note={note}
+          availableNotes={availableNotes}
           onEdit={onEdit}
           onDelete={onDelete}
           onToggleImportant={onToggleImportant}
