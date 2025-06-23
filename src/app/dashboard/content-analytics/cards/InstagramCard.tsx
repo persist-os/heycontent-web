@@ -218,9 +218,9 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3">
+        <div className="flex gap-2 mt-4">
           <button
-            className="flex-1 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black px-4 py-2.5 rounded-lg font-medium text-sm transition-colors"
+            className="flex-1 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black px-3 py-2 rounded-lg text-sm font-medium transition-colors"
             onClick={() => onDiscussContent(item)}
           >
             <MessageSquare className="w-4 h-4 inline mr-2" />
@@ -228,14 +228,14 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
           </button>
           
           <button
-            className="px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 text-text-dark dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 font-medium text-sm transition-colors"
+            className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-text-dark dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium transition-colors"
             onClick={() => onViewDetailedAnalytics(item)}
           >
             Analytics
           </button>
           
           <button
-            className={`relative px-3 py-2.5 rounded-lg font-medium text-sm flex items-center gap-2 transition-colors disabled:opacity-50 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-text-dark dark:text-white`}
+            className={`relative px-2 py-2 rounded-lg font-medium flex items-center gap-1 transition-colors disabled:opacity-50 bg-gray-100 dark:bg-gray-700 text-text-dark dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600`}
             onClick={handleRefresh}
             disabled={loading}
             title={error ? `Refresh needed: ${error}` : "Refresh data"}

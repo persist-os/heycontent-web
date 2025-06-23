@@ -25,12 +25,6 @@ const navItems = [
     href: '/dashboard/content-hub',
   },
   {
-    id: 'self-hub',
-    label: 'Self',
-    icon: Users,
-    href: '/dashboard/self-hub',
-  },
-  {
     id: 'notes',
     label: 'Smart Notes',
     icon: FileText,
@@ -77,6 +71,31 @@ export function DashboardNav() {
     }
   }, [isExpanded]);
 
+  // Proximity-based sidebar toggle
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const proximityThreshold = 50; // pixels from left edge
+      const mouseX = e.clientX;
+      
+      // Open sidebar when mouse is near left edge
+      if (mouseX < proximityThreshold && !isExpanded) {
+        setIsExpanded(true);
+      }
+      // Close sidebar when mouse moves away (but not immediately)
+      else if (mouseX > 300 && isExpanded) {
+        setIsExpanded(false);
+      }
+    };
+
+    // Add event listener to document
+    document.addEventListener('mousemove', handleMouseMove);
+    
+    // Cleanup
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [isExpanded, setIsExpanded]);
+
   const isItemActive = (item: typeof navItems[0]) => {
     switch (item.id) {
       case 'content-hub':
@@ -97,14 +116,27 @@ export function DashboardNav() {
   return (
     <div className={`h-screen fixed top-0 left-0 bg-muted/20 shadow-lg flex flex-col justify-between transition-all duration-300 z-40 ${isExpanded ? 'w-64 translate-x-0' : 'w-64 -translate-x-full md:w-16 md:translate-x-0'}`}>
       <div>
-        <div className={`flex items-center h-20 ${isExpanded ? 'justify-between px-4' : 'justify-center'}`}>
-            <div className={`transition-opacity duration-200 ${isExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'}`}>
-                {isExpanded && <Logo />}
-                
-            </div>
-          <button onClick={() => setIsExpanded(!isExpanded)} className="p-2 rounded-md hover:bg-muted hidden md:flex" aria-label="Toggle navigation">
-            <Menu className="w-6 h-6"/>
-          </button>
+        <div className={`flex items-center h-20 ${isExpanded ? 'px-4' : 'justify-center'}`}>
+          <Link
+            href="/dashboard/self-hub"
+            onClick={() => setIsExpanded(false)}
+            className={`flex items-center transition-colors p-2 rounded-md ${
+              pathname.startsWith('/dashboard/self-hub')
+                ? 'bg-primary'
+                : 'hover:bg-muted/80'
+            }`}
+          >
+            <Users className={`w-6 h-6 ${
+              pathname.startsWith('/dashboard/self-hub')
+                ? 'text-black'
+                : 'text-foreground'
+            }`} />
+            {isExpanded && <span className={`ml-3 text-sm font-medium ${
+              pathname.startsWith('/dashboard/self-hub')
+                ? 'text-black'
+                : 'text-foreground'
+            }`}>Self</span>}
+          </Link>
         </div>
 
         <div className="flex flex-col items-center gap-4 mt-8">
@@ -121,13 +153,17 @@ export function DashboardNav() {
                   : 'hover:bg-muted/80'
               }`}
             >
-              <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center">
-                {item.id === 'chat' ? (
-                  <Logo disableLink />
-                ) : (
-                  <item.icon className="w-6 h-6 text-foreground" />
-                )}
-              </div>
+                          <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center">
+              {item.id === 'chat' ? (
+                <Logo disableLink />
+              ) : (
+                <item.icon className={`w-6 h-6 ${
+                  isItemActive(item)
+                    ? 'text-black'
+                    : 'text-foreground'
+                }`} />
+              )}
+            </div>
               {isExpanded && <span className="ml-4 text-sm font-medium">{isExpanded ? item.label : ''}</span>}
             </Link>
           ))}

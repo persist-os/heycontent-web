@@ -57,7 +57,7 @@ export function PlatformEmbeddingStatus({ platform, contentCount, userId }: Plat
         setEmbeddingInfo(info);
         
         if (info.hasEmbeddings) {
-          setEmbeddingStatus(`~${info.count} ${config.name} items indexed`);
+          setEmbeddingStatus(`~${info.count} ${config.name} content items remembered`);
         }
       }
     };
@@ -74,7 +74,7 @@ export function PlatformEmbeddingStatus({ platform, contentCount, userId }: Plat
     }
 
     setIsUpdatingEmbeddings(true);
-          setEmbeddingStatus(`Updating ${config.name} embeddings...`);
+    setEmbeddingStatus(`Learning about your ${config.name} content...`);
     
     try {
       const results = await generateEmbeddingsForPlatform(currentUserId, platform);
@@ -82,7 +82,7 @@ export function PlatformEmbeddingStatus({ platform, contentCount, userId }: Plat
       // Get platform-specific results from the results object
       const platformResults = results[platform];
       
-              setEmbeddingStatus(`Updated! ${platformResults.succeeded}/${platformResults.processed} ${config.name} items processed (${platformResults.skipped} skipped)`);
+      setEmbeddingStatus(`Updated! ${platformResults.succeeded}/${platformResults.processed} ${config.name} items processed (${platformResults.skipped} skipped)`);
       
       // Refresh embedding info
       const info = await checkPlatformEmbeddings(currentUserId, platform);
@@ -93,7 +93,7 @@ export function PlatformEmbeddingStatus({ platform, contentCount, userId }: Plat
         setEmbeddingStatus(prev => prev + ` (${results.errors.length} errors)`);
       }
     } catch (error: any) {
-              setEmbeddingStatus(`Failed: ${error.message}`);
+      setEmbeddingStatus(`Failed: ${error.message}`);
       console.error('Platform embedding update failed:', error);
     } finally {
       setIsUpdatingEmbeddings(false);
@@ -105,20 +105,20 @@ export function PlatformEmbeddingStatus({ platform, contentCount, userId }: Plat
   }
 
   return (
-    <div className={`${config.bgColor} border border-gray-200 rounded-lg p-4 mb-6`}>
+    <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-4 mb-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className={`bg-gradient-to-r ${config.color} p-2 rounded-lg`}>
             <Brain className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h4 className={`text-sm font-medium ${config.textColor}`}>
-              AI Search Index - {config.name}
+            <h4 className="text-sm font-medium text-foreground">
+              Smart Content Memory - {config.name}
             </h4>
-            <p className="text-xs text-gray-600 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               {embeddingInfo.hasEmbeddings 
-                ? `${contentCount} total items • Smart search enabled`
-                : `${contentCount} items available for indexing`
+                ? `${contentCount} total items • I can help you find and build on this content`
+                : `${contentCount} items ready for me to learn`
               }
             </p>
           </div>
@@ -126,7 +126,7 @@ export function PlatformEmbeddingStatus({ platform, contentCount, userId }: Plat
         
         <div className="flex items-center gap-2">
           {embeddingInfo.hasEmbeddings && (
-            <CheckCircle className="w-4 h-4 text-green-500" />
+            <CheckCircle className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
           )}
           <Button
             onClick={handleUpdatePlatformEmbeddings}
@@ -142,7 +142,7 @@ export function PlatformEmbeddingStatus({ platform, contentCount, userId }: Plat
             ) : (
               <>
                 <RefreshCw className="w-3 h-3 mr-1" />
-                {embeddingInfo.hasEmbeddings ? 'Update Index' : 'Create Index'}
+                {embeddingInfo.hasEmbeddings ? 'Update My Content' : 'Learn My Content'}
               </>
             )}
           </Button>
@@ -150,8 +150,8 @@ export function PlatformEmbeddingStatus({ platform, contentCount, userId }: Plat
       </div>
       
       {embeddingStatus && (
-        <div className="mt-3 bg-white/60 rounded p-2">
-          <p className="text-xs text-gray-700">
+        <div className="mt-3 bg-white/60 dark:bg-slate-700/50 rounded p-2 border border-slate-200/50 dark:border-slate-600/50">
+          <p className="text-xs text-slate-700 dark:text-slate-300">
             {embeddingStatus}
           </p>
         </div>

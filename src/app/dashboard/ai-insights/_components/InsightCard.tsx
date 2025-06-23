@@ -294,8 +294,8 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
 
           {/* Expected Outcome */}
           <div className={`${outcomeColor} p-4 rounded-lg`}>
-            <h4 className="font-medium text-text-dark dark:text-heycontent-green mb-2">Expected Outcome</h4>
-            <p className="text-sm text-text-dark dark:text-heycontent-green">{expectedOutcome}</p>
+            <h4 className="font-medium text-green-800 dark:text-green-900 mb-2">Expected Outcome</h4>
+            <p className="text-sm text-green-700 dark:text-green-800">{expectedOutcome}</p>
           </div>
 
           {/* Source Details Section */}

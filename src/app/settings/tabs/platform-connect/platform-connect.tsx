@@ -11,7 +11,7 @@ import { GmailPlatformCard } from './GmailPlatformCard';
 import { InstagramPlatformCard } from './InstagramPlatformCard';
 import { EmbeddingManagement } from './EmbeddingManagement';
 import { isError, getAccountDetails, ConnectedAccount } from './platform-utils';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 
 export function PlatformConnect() {
   const { firebaseUser } = useAuth();
@@ -48,6 +48,7 @@ export function PlatformConnect() {
   const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInstagramOptions, setShowInstagramOptions] = useState(false);
+  const [showComingSoon, setShowComingSoon] = useState(false);
   
   // Convex mutations
   const disconnectInstagramMutation = useMutation(api.instagramMutations.disconnectInstagram);
@@ -246,12 +247,27 @@ export function PlatformConnect() {
 
   return (
     <div key={refetchKey} className="space-y-6">
-      <div className="space-y-3">
-        <h2 className="text-2xl font-semibold tracking-tight">Platform Integrations</h2>
-        <p className="text-muted-foreground max-w-3xl">
-          Connect your social media accounts to unlock powerful analytics and insights.
-          Content will help you track engagement, monitor growth, and identify opportunities across all your platforms.
-        </p>
+      <div className="flex items-start justify-between">
+        <div className="space-y-3">
+          <h2 className="text-2xl font-semibold tracking-tight">Platform Integrations</h2>
+          <p className="text-muted-foreground max-w-3xl">
+            Connect your social media accounts to unlock powerful analytics and insights.
+            Content will help you track engagement, monitor growth, and identify opportunities across all your platforms.
+          </p>
+        </div>
+        <button
+          onClick={() => {
+            const element = document.querySelector('[data-content-memory]');
+            element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }}
+          className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors bg-muted/50 hover:bg-muted/80 rounded-lg border border-muted-foreground/20 hover:border-muted-foreground/40"
+          title="Scroll to Content Memory section"
+        >
+          <span>Content Memory</span>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          </svg>
+        </button>
       </div>
       
       {/* Connection Status */}
@@ -326,8 +342,54 @@ export function PlatformConnect() {
         })}
       </div>
       
+      {/* Coming Soon Section */}
+      <div className="space-y-4">
+        <button
+          onClick={() => setShowComingSoon(!showComingSoon)}
+          className="flex items-center gap-2 text-left hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors"
+        >
+          {showComingSoon ? (
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          )}
+          <div className="space-y-1">
+            <h3 className="text-lg font-medium text-foreground">Coming Soon</h3>
+            <p className="text-sm text-muted-foreground">
+              We're working on bringing you more platform integrations
+            </p>
+          </div>
+        </button>
+        
+        {showComingSoon && (
+          <div className="bg-muted/30 border border-dashed border-muted-foreground/20 rounded-lg p-6">
+            <div className="text-center space-y-3">
+              <div className="flex flex-wrap justify-center gap-3 text-sm text-muted-foreground">
+                <span className="px-3 py-1 bg-background/60 rounded-full border border-muted-foreground/10">
+                  𝕏 / Twitter
+                </span>
+                <span className="px-3 py-1 bg-background/60 rounded-full border border-muted-foreground/10">
+                  TikTok
+                </span>
+                <span className="px-3 py-1 bg-background/60 rounded-full border border-muted-foreground/10">
+                  Pinterest
+                </span>
+                <span className="px-3 py-1 bg-background/60 rounded-full border border-muted-foreground/10">
+                  + More
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                Get notified when these platforms become available to help you analyze and grow your content across all channels
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+      
       {/* AI Search Intelligence Section */}
-      <EmbeddingManagement userId={firebaseUser?.uid} />
+      <div data-content-memory>
+        <EmbeddingManagement userId={firebaseUser?.uid} />
+      </div>
     </div>
   );
 }
