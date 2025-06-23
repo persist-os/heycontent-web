@@ -12,7 +12,7 @@ export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
   availableNotes = [],
   onLinkNote
 }) => {
-  // Parse content and render with clickable links - using simple string parsing instead of regex
+  // Parse content and render note links with titles - handles @[noteId]@ format
   const renderedContent = useMemo(() => {
     if (!content) return [];
 
@@ -21,72 +21,74 @@ export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
     let partIndex = 0;
 
     while (remainingContent.length > 0) {
-      // Find the next potential link start
-      const atIndex = remainingContent.indexOf('@');
+      // Find the next potential link start @[
+      const linkStartIndex = remainingContent.indexOf('@[');
       
-      if (atIndex === -1) {
-        // No more @ symbols, add remaining content
+      if (linkStartIndex === -1) {
+        // No more @[ patterns, add remaining content
         if (remainingContent) {
           parts.push(remainingContent);
         }
         break;
       }
 
-      // Add text before the @
-      if (atIndex > 0) {
-        parts.push(remainingContent.substring(0, atIndex));
+      // Add text before the @[
+      if (linkStartIndex > 0) {
+        parts.push(remainingContent.substring(0, linkStartIndex));
       }
 
-      // Look for the closing @
-      const afterAt = remainingContent.substring(atIndex + 1);
-      const closingAtIndex = afterAt.indexOf('@');
+      // Look for the closing ]@
+      const afterLinkStart = remainingContent.substring(linkStartIndex + 2); // Skip @[
+      const linkEndIndex = afterLinkStart.indexOf(']@');
 
-      if (closingAtIndex === -1) {
-        // No closing @, treat as regular text
-        parts.push(remainingContent.substring(atIndex));
+      if (linkEndIndex === -1) {
+        // No closing ]@, treat as regular text
+        parts.push(remainingContent.substring(linkStartIndex));
         break;
       }
 
-      // Extract the potential link text
-      const linkText = afterAt.substring(0, closingAtIndex).trim();
+      // Extract the note ID
+      const noteId = afterLinkStart.substring(0, linkEndIndex).trim();
       
-      // Check if this is a valid note link
-      const linkedNote = availableNotes.find(note => note.title === linkText);
+      console.log('NoteContentRenderer: Looking for note with ID:', noteId);
+      console.log('Available notes:', availableNotes.map(n => ({ id: n._id, title: n.title })));
       
-      if (linkedNote && linkText && onLinkNote) {
-        // Render as clickable link
+      // Find the note by ID (try both string comparison and exact match)
+      const linkedNote = availableNotes.find(note => 
+        String(note._id) === String(noteId) || note._id === noteId
+      );
+      
+      console.log('Found linked note:', linkedNote);
+      
+      if (linkedNote) {
+        // Render as non-clickable underlined title
         parts.push(
-          <button
-            key={`link-${partIndex}-${atIndex}`}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              console.log('Note link clicked:', {
-                noteId: linkedNote._id,
-                noteTitle: linkedNote.title,
-                linkText,
-                onLinkNote: !!onLinkNote
-              });
-              onLinkNote(linkedNote._id);
-            }}
-            className="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300 cursor-pointer bg-transparent border-0 p-0 font-inherit text-inherit leading-inherit pointer-events-auto"
-            style={{ fontSize: 'inherit', lineHeight: 'inherit' }}
+          <span
+            key={`link-${partIndex}-${linkStartIndex}`}
+            className="font-medium underline"
           >
-            @{linkText}@
-          </button>
+            {linkedNote.title}
+          </span>
         );
       } else {
-        // Not a valid link, treat as regular text
-        parts.push(`@${linkText}@`);
+        // Note not found, show the ID for debugging
+        parts.push(
+          <span
+            key={`unknown-link-${partIndex}-${linkStartIndex}`}
+            className="text-red-500 italic text-xs"
+          >
+            [Note ID: {noteId}]
+          </span>
+        );
       }
 
       // Move past this link
-      remainingContent = afterAt.substring(closingAtIndex + 1);
+      remainingContent = afterLinkStart.substring(linkEndIndex + 2); // Skip ]@
       partIndex++;
     }
 
     return parts;
-  }, [content, availableNotes, onLinkNote]);
+  }, [content, availableNotes]);
 
   return (
     <>

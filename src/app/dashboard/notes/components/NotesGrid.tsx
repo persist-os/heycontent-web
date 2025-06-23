@@ -148,6 +148,7 @@ export function NotesGrid({
               <div key={String(note._id)} className="break-inside-avoid mb-4 w-full">
                 <NoteCard
                   note={note}
+                  availableNotes={notes.map(n => ({ _id: String(n._id), title: n.title, type: n.type }))}
                   onEdit={onEditNote}
                   onDelete={onDeleteNote}
                   onToggleImportant={onToggleImportant}
