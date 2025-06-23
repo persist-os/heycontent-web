@@ -1,9 +1,9 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import { Instagram, Mail, X, ExternalLink, Brain, Sparkles, ToggleLeft, ToggleRight, Target, MessageSquare } from 'lucide-react';
-import { YouTubeBrandIcon } from '../../../../lib/YoutubeBrandIcon';
-import { ContentContext } from '../types';
-import { MarkdownRenderer } from '../markdown-renderer';
+import { Instagram, Mail, X, ExternalLink, Brain, Sparkles, ToggleLeft, ToggleRight, MessageSquare } from 'lucide-react';
+import { YouTubeBrandIcon } from '../../../../../lib/YoutubeBrandIcon';
+import { ContentContext } from '../../types';
+import { MarkdownRenderer } from '../../markdown-renderer';
 import AIInsightDisplayCard from './AIInsightDisplayCard';
 
 interface ContextBoxProps {

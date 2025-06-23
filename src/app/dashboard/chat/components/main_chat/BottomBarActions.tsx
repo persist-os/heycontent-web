@@ -1,5 +1,5 @@
 import React from 'react';
-import { bottomBarActions } from '../data/bottom-bar-actions';
+import { bottomBarActions } from '../../data/bottom-bar-actions';
 
 interface BottomBarActionsProps {
   onActionClick: (action: string) => void;

@@ -4,7 +4,6 @@ import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useNotes } from '@/app/context/notes-context';
 import { getApiKey } from '@/app/lib/api-helpers';
-import { NoteType } from '../types';
 
 export const useCreateNote = () => {
   const router = useRouter();
@@ -52,35 +51,46 @@ export const useCreateNote = () => {
     }
   }, []);
 
-  const createNote = async (content: string, callback?: () => void, customTitle?: string, noteType?: NoteType) => {
-    // Allow empty content for new notes - users can fill them in later
-    // if (!content.trim()) return;
-    
+  const createNote = async (
+    content: string,
+    options: {
+      redirect?: boolean;
+      callback?: () => void;
+      customTitle?: string;
+    } = {}
+  ): Promise<string | null> => {
+    const { redirect = false, callback, customTitle } = options;
     setIsCreating(true);
-    
+
     try {
-      console.log("🚀 [useCreateNote] Starting note creation process");
+      console.log("🚀 [useCreateNote] Starting note creation process", { redirect });
       
-      const { success, noteId } = await saveNote(content, { title: customTitle, type: noteType });
+      const { success, noteId } = await saveNote(content, { title: customTitle });
       
       if (success && noteId) {
         console.log("✅ [useCreateNote] Note created successfully:", noteId);
         
-        // Only trigger metadata generation if content is substantial
-        if (content.trim().length >= 10) {
+        // Trigger metadata generation only if there is content
+        if (content && content.trim()) {
           await generateMetadata(noteId.toString(), content);
         }
 
-        setActiveNoteId(noteId.toString());
-        router.push('/dashboard/notes');
+        if (redirect) {
+          setActiveNoteId(noteId.toString());
+          router.push('/dashboard/notes');
+        }
+
         if (callback) {
           callback();
         }
+        return noteId.toString();
       } else {
         console.error("❌ [useCreateNote] Failed to create note - no ID returned");
+        return null;
       }
     } catch (error) {
       console.error("💥 [useCreateNote] Error creating note:", error);
+      return null;
     } finally {
       setIsCreating(false);
     }

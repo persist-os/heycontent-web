@@ -30,9 +30,30 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
   const storeInstagramAnalysis = useMutation(api.instagramMutations.storeInstagramBatchAnalysis);
 
   // Extract data - handle both old and new formats during transition
-  const insightsList: InsightCard[] = instagramInsights?.insights || [];
-  const metadata = (instagramInsights as any)?.metadata || null;
-  const status = instagramInsights?.status || null;
+  console.log('[useInstagramInsights] Raw Convex data:', instagramInsights);
+  console.log('[useInstagramInsights] instagramInsights?.insights:', instagramInsights?.insights);
+  console.log('[useInstagramInsights] Type of instagramInsights?.insights:', typeof instagramInsights?.insights);
+  console.log('[useInstagramInsights] Is array?', Array.isArray(instagramInsights?.insights));
+  
+  // Check if insights is the universal format object (with insights, metadata, status)
+  const rawInsights = instagramInsights?.insights;
+  const isUniversalFormat = rawInsights && typeof rawInsights === 'object' && 'insights' in rawInsights;
+  
+  console.log('[useInstagramInsights] Is universal format?', isUniversalFormat);
+  
+  const insightsList: InsightCard[] = isUniversalFormat 
+    ? (rawInsights as any).insights || []
+    : rawInsights || [];
+  const metadata = isUniversalFormat 
+    ? (rawInsights as any).metadata || null
+    : (instagramInsights as any)?.metadata || null;
+  const status = isUniversalFormat 
+    ? (rawInsights as any).status || null
+    : instagramInsights?.status || null;
+    
+  console.log('[useInstagramInsights] Extracted insightsList:', insightsList);
+  console.log('[useInstagramInsights] Extracted metadata:', metadata);
+  console.log('[useInstagramInsights] Extracted status:', status);
 
   // Only show as running if we're actively refreshing AND status is processing/enqueued
   // Don't auto-show loading for old stuck statuses

@@ -8,7 +8,6 @@ import { useAuth } from '@/app/context/auth-context';
 import type { Id } from '@/convex/_generated/dataModel';
 import { useNotes } from '@/app/context/notes-context';
 import { Note, NoteType } from './types';
-import { useCreateNote } from './hooks/useCreateNote';
 
 export default function SmartNotes() {
   const { firebaseUser } = useAuth();
@@ -24,15 +23,8 @@ export default function SmartNotes() {
     setNotes,
     activeNoteId,
     setActiveNoteId,
-    navigationStack,
-    canGoBack,
-    navigateToNote,
-    navigateBack,
-    clearNavigationStack,
   } = useNotes();
   
-  const { createNote: createNewNote, isCreating: isCreatingNote } = useCreateNote();
-
   useEffect(() => {
     if (activeNoteId) {
       const note = notes.find(n => n._id === activeNoteId);
@@ -44,14 +36,9 @@ export default function SmartNotes() {
     }
   }, [activeNoteId, notes]);
   
-  const createNote = React.useCallback(async (noteType?: NoteType) => {
-    if (isCreatingNote) return;
-    await createNewNote('', undefined, undefined, noteType);
-  }, [createNewNote, isCreatingNote]);
-
   // Handle note editing
   const handleEditNote = (note: Note) => {
-    navigateToNote(note._id, false); // Not from a link, so don't add to stack
+    setActiveNoteId(note._id);
   };
 
   // Handle note deletion
@@ -104,37 +91,18 @@ export default function SmartNotes() {
   };
 
   // Handle going back to grid view
-  const handleBackToGrid = () => {
-    clearNavigationStack();
+  const handleBackToGrid = async (currentContent?: string) => {
+    if (activeNote && currentContent !== undefined) {
+      // Save the note content without triggering metadata generation
+      try {
+        await updateNote(activeNote._id, { content: currentContent }, true); // force=true to skip metadata
+        console.log('Note saved before returning to grid');
+      } catch (error) {
+        console.error('Failed to save note before returning to grid:', error);
+      }
+    }
+    setActiveNoteId(null);
   };
-
-  // Handle note linking with navigation stack
-  const handleLinkNote = (noteId: string) => {
-    console.log('handleLinkNote called:', {
-      noteId,
-      currentActiveNoteId: activeNoteId,
-      notesCount: notes.length,
-      targetNote: notes.find(n => String(n._id) === noteId),
-      currentStack: navigationStack
-    });
-    navigateToNote(noteId, true); // From a link, so add to navigation stack
-  };
-
-  // Prepare available notes for linking (exclude current note)
-  const availableNotes = notes
-    .filter(note => String(note._id) !== activeNoteId)
-    .map(note => ({
-      _id: String(note._id),
-      title: note.title,
-      type: note.type || 'idea_bank'
-    }));
-
-  console.log('Available notes for linking:', {
-    totalNotes: notes.length,
-    availableNotesCount: availableNotes.length,
-    activeNoteId,
-    availableNotes: availableNotes.map(n => ({ id: n._id, title: n.title, type: n.type }))
-  });
 
   // If viewing a specific note, show the editor with smooth transition
   if (activeNote) {
@@ -166,11 +134,6 @@ export default function SmartNotes() {
           onToggleShortcuts={() => {}} // Not used in grid view
           onBack={handleBackToGrid}
           isMobile={true} // Always show back button in this context
-          availableNotes={availableNotes}
-          onLinkNote={handleLinkNote}
-          canGoBack={canGoBack}
-          onNavigateBack={navigateBack}
-          navigationStack={navigationStack}
         />
       </div>
     );
@@ -179,23 +142,13 @@ export default function SmartNotes() {
   // Show the grid view with loading state for note creation
   return (
     <div className="h-full w-full bg-background p-3 sm:p-4 md:p-6">
-      {isCreatingNote && (
-        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-background rounded-lg p-6 shadow-lg border border-border flex items-center gap-3">
-            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-            <span className="text-sm font-medium">Creating your note...</span>
-          </div>
-        </div>
-      )}
       <NotesGrid
         notes={notes}
-        onCreateNote={createNote}
         onEditNote={handleEditNote}
         onDeleteNote={handleDeleteNote}
         onToggleImportant={handleToggleImportant}
         onUpdateNote={handleUpdateNote}
         isLoading={isLoading}
-        isCreatingNote={isCreatingNote}
       />
     </div>
   );

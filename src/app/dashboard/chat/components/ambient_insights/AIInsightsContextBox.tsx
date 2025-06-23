@@ -1,5 +1,5 @@
 import React from 'react';
-import { ContextBox } from './ContextBox';
+import { ContextBox } from '../main_chat/ContextBox';
 
 interface AIInsightsContextBoxProps {
   currentContext: any;
