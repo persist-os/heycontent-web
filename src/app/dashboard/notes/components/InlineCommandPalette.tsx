@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Bot, Brain, Lightbulb, Loader2, X, Sparkles, ArrowRight } from 'lucide-react';
+import { Bot, Brain, Lightbulb, Loader2, X, Sparkles, ArrowRight, List, Heading1, Heading2, Heading3 } from 'lucide-react';
 
 interface InlineCommandPaletteProps {
   isOpen: boolean;
@@ -10,6 +10,9 @@ interface InlineCommandPaletteProps {
   onAskAI: (prompt: string) => Promise<void>;
   onRequestAnalysis: (noteType: string) => Promise<void>;
   onRequestIdeas: () => Promise<void>;
+  onInsertBulletList: () => void;
+  onInsertNumberedList: () => void;
+  onInsertHeading: (level: number) => void;
   noteType?: string;
 }
 
@@ -39,6 +42,9 @@ export function InlineCommandPalette({
   onAskAI,
   onRequestAnalysis,
   onRequestIdeas,
+  onInsertBulletList,
+  onInsertNumberedList,
+  onInsertHeading,
   noteType = 'idea_bank'
 }: InlineCommandPaletteProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -112,6 +118,46 @@ export function InlineCommandPalette({
       icon: <Brain className="w-4 h-4" />,
       action: handleRequestAnalysis,
       category: 'Write'
+    },
+    {
+      id: 'bullet-list',
+      label: 'Bullet list',
+      description: 'Insert bullet points',
+      icon: <List className="w-4 h-4" />,
+      action: () => { onInsertBulletList(); onClose(); },
+      category: 'Format'
+    },
+    {
+      id: 'numbered-list',
+      label: 'Numbered list',
+      description: 'Insert numbered list',
+      icon: <List className="w-4 h-4" />,
+      action: () => { onInsertNumberedList(); onClose(); },
+      category: 'Format'
+    },
+    {
+      id: 'heading-1',
+      label: 'Heading 1',
+      description: 'Large heading',
+      icon: <Heading1 className="w-4 h-4" />,
+      action: () => { onInsertHeading(1); onClose(); },
+      category: 'Format'
+    },
+    {
+      id: 'heading-2',
+      label: 'Heading 2',
+      description: 'Medium heading',
+      icon: <Heading2 className="w-4 h-4" />,
+      action: () => { onInsertHeading(2); onClose(); },
+      category: 'Format'
+    },
+    {
+      id: 'heading-3',
+      label: 'Heading 3',
+      description: 'Small heading',
+      icon: <Heading3 className="w-4 h-4" />,
+      action: () => { onInsertHeading(3); onClose(); },
+      category: 'Format'
     }
   ];
 
