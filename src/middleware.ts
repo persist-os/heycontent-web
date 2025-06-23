@@ -43,6 +43,11 @@ export function middleware(request: NextRequest) {
     "https://backend.hicontent.co",
     "http://127.0.0.1:8000",
     "http://localhost:8000",
+    "https://*.googleapis.com",
+    "https://*.cloudfunctions.net",
+    "https://storage.googleapis.com",
+    "https://*.storage.googleapis.com",
+    "https://us-central1-content-454219.cloudfunctions.net",
   ];
  
   const CSP = [

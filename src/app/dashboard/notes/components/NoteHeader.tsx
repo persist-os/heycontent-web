@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Lightbulb, Star, Brain, Save, Loader2, ArrowLeft, ChevronLeft } from 'lucide-react';
+import { Lightbulb, Star, Brain, Save, Loader2, ArrowLeft, ChevronLeft, Image, Upload } from 'lucide-react';
 import type { Note, NoteType } from '../types/index';
 import toast from 'react-hot-toast';
+import { useImageUpload } from '../hooks/useImageUpload';
 
 interface NoteHeaderProps {
   note: Note;
@@ -10,14 +11,27 @@ interface NoteHeaderProps {
   onBack: () => void;
   isMobile: boolean;
   currentContent?: string; // Add current content prop
+  onContentChange?: (content: string) => void; // Add content change handler
   // Navigation stack props
   canGoBack?: boolean;
   onNavigateBack?: () => void;
   navigationStack?: string[];
 }
 
-export function NoteHeader({ note, onUpdate, onSave, onBack, isMobile, currentContent, canGoBack, onNavigateBack, navigationStack }: NoteHeaderProps) {
+export function NoteHeader({ 
+  note, 
+  onUpdate, 
+  onSave, 
+  onBack, 
+  isMobile, 
+  currentContent, 
+  onContentChange,
+  canGoBack, 
+  onNavigateBack, 
+  navigationStack 
+}: NoteHeaderProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const { uploadImage, isUploading } = useImageUpload();
 
   // Handler for Save button that shows a toast
   const handleSave = async () => {
@@ -32,6 +46,44 @@ export function NoteHeader({ note, onUpdate, onSave, onBack, isMobile, currentCo
     } catch (err) {
       toast.error('Failed to save note');
     }
+  };
+
+  // Handler for image upload
+  const handleImageUpload = async () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      
+      try {
+        console.log('[NoteHeader] Starting image upload:', file.name);
+        toast.loading('Uploading image...', { duration: 2000 });
+        
+        const imageUrl = await uploadImage(file);
+        
+        if (imageUrl && onContentChange && currentContent !== undefined) {
+          // Insert markdown at the end of current content
+          const markdown = `\n![${file.name}](${imageUrl})\n`;
+          const newContent = currentContent + markdown;
+          onContentChange(newContent);
+          
+          toast.success('Image uploaded successfully!', { 
+            duration: 2000,
+            position: 'top-center'
+          });
+          
+          console.log('[NoteHeader] Image inserted into content:', imageUrl);
+        }
+      } catch (error) {
+        console.error('[NoteHeader] Image upload failed:', error);
+        toast.error(error instanceof Error ? error.message : 'Failed to upload image');
+      }
+    };
+    
+    input.click();
   };
 
   return (
@@ -90,6 +142,23 @@ export function NoteHeader({ note, onUpdate, onSave, onBack, isMobile, currentCo
           >
             <Star size={16} fill={note.important ? "currentColor" : "none"} />
           </button>
+            {/* Image Upload Button */}
+            <button
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
+                isUploading 
+                  ? 'bg-orange-500/20 text-orange-600 cursor-not-allowed' 
+                  : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent'
+              }`}
+              onClick={handleImageUpload}
+              disabled={isUploading}
+              title={isUploading ? 'Uploading...' : 'Upload image'}
+            >
+              {isUploading ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Image size={16} />
+              )}
+            </button>
             <button
               className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 shadow-sm"
               onClick={handleSave}

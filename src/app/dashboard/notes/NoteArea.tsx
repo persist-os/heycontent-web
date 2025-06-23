@@ -136,6 +136,7 @@ export function NoteArea({
         onBack={handleBack} 
         isMobile={isMobile}
         currentContent={content}
+        onContentChange={setContent}
         canGoBack={canGoBack}
         onNavigateBack={onNavigateBack}
         navigationStack={navigationStack}

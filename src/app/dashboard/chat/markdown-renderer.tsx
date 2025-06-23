@@ -201,6 +201,21 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
             </LinkEmbed>
           ),
           
+          // Images with proper styling and error handling
+          img: ({ src, alt }) => (
+            <img
+              src={src}
+              alt={alt || 'Uploaded image'}
+              className="w-full h-auto max-h-96 object-contain rounded-lg border border-gray-200 dark:border-gray-700 my-4"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                console.error(`Failed to load image: ${alt || 'Uploaded image'}`);
+              }}
+              loading="lazy"
+            />
+          ),
+          
           // Blockquotes with proper wrapping
           blockquote: ({ children }) => (
             <blockquote className="border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic text-gray-600 dark:text-gray-400 mb-3 text-base w-full break-words hyphens-auto">

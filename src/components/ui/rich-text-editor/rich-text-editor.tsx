@@ -5,6 +5,8 @@ import { InlineCommandPalette } from '@/app/dashboard/notes/components/InlineCom
 import { MarkdownRenderer } from '@/app/dashboard/chat/markdown-renderer'
 import { NoteContentRenderer } from '@/app/dashboard/notes/components/NoteContentRenderer'
 import { Eye, Edit } from 'lucide-react'
+import { useImageUpload } from '@/app/dashboard/notes/hooks/useImageUpload'
+import toast from 'react-hot-toast'
 
 // Import utilities
 import { 
@@ -76,8 +78,10 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
   const [palettePosition, setPalettePosition] = useState({ top: 100, left: 100 })
   const [paletteMode, setPaletteMode] = useState<'commands' | 'notes'>('commands')
   const [cursorPosition, setCursorPosition] = useState(0)
+  const [isDragOver, setIsDragOver] = useState(false)
   
   const textAreaRef = useRef<HTMLTextAreaElement>(null)
+  const { uploadImage, isUploading } = useImageUpload()
   
   // Sync external ref
   useEffect(() => {
@@ -457,6 +461,78 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
     setCurrentShowPreview(!currentShowPreview)
   }, [currentShowPreview, setCurrentShowPreview])
 
+  // Handle drag and drop
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    // Only set dragover to false if we're leaving the textarea itself
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragOver(false)
+    }
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }, [])
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+
+    const files = Array.from(e.dataTransfer.files)
+    const imageFiles = files.filter(file => file.type.startsWith('image/'))
+    
+    if (imageFiles.length === 0) {
+      toast.error('Please drop image files only')
+      return
+    }
+
+    if (imageFiles.length > 5) {
+      toast.error('Maximum 5 images at once')
+      return
+    }
+
+    try {
+      toast.loading(`Uploading ${imageFiles.length} image${imageFiles.length > 1 ? 's' : ''}...`)
+      
+      const uploadPromises = imageFiles.map(file => uploadImage(file))
+      const imageUrls = await Promise.all(uploadPromises)
+      
+      // Insert all images at cursor position
+      const textarea = textAreaRef.current
+      if (textarea) {
+        const cursorPos = textarea.selectionStart
+        const markdownImages = imageUrls
+          .filter(url => url !== null)
+          .map(url => `![${imageFiles.find((_, i) => imageUrls[i] === url)?.name || 'image'}](${url})`)
+          .join('\n')
+        
+        const newContent = content.slice(0, cursorPos) + '\n' + markdownImages + '\n' + content.slice(cursorPos)
+        onContentChange(newContent)
+        
+        // Set cursor after inserted images
+        setTimeout(() => {
+          const newCursorPos = cursorPos + markdownImages.length + 2
+          textarea.setSelectionRange(newCursorPos, newCursorPos)
+          textarea.focus()
+        }, 0)
+      }
+
+      toast.success(`${imageFiles.length} image${imageFiles.length > 1 ? 's' : ''} uploaded successfully!`)
+    } catch (error) {
+      console.error('Drag and drop upload failed:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to upload images')
+    }
+  }, [content, onContentChange, uploadImage])
+
   return (
     <div className={`relative w-full h-full ${className}`}>
       {/* Preview Toggle Button */}
@@ -511,13 +587,21 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
           value={getDisplayContent(content)}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          className="w-full h-full min-h-[300px] resize-none p-4 text-base leading-relaxed bg-background text-foreground placeholder:text-muted-foreground/50 border-0 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 transition-all duration-200 rounded-md transform-gpu will-change-contents"
+          className={`w-full h-full min-h-[300px] resize-none p-4 text-base leading-relaxed bg-background text-foreground placeholder:text-muted-foreground/50 border-0 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 transition-all duration-200 rounded-md transform-gpu will-change-contents ${
+            isDragOver ? 'ring-2 ring-blue-500 ring-offset-2 bg-blue-50/50 dark:bg-blue-900/10' : ''
+          } ${isUploading ? 'opacity-60 cursor-wait' : ''}`}
           placeholder={`${placeholder}
 
-⌘K or / for AI assistant • ⌘B bold • ⌘I italic • ⌘U underline • Click Preview to see rich text`}
-          disabled={disabled}
+⌘K or / for AI assistant • ⌘B bold • ⌘I italic • ⌘U underline • Click Preview to see rich text
+
+📎 Drag & drop images here or use the upload button`}
+          disabled={disabled || isUploading}
           spellCheck={true}
           autoFocus={!disabled}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
         />
       )}
       
