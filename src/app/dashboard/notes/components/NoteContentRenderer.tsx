@@ -61,15 +61,33 @@ export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
       console.log('Found linked note:', linkedNote);
       
       if (linkedNote) {
-        // Render as non-clickable underlined title
-        parts.push(
-          <span
-            key={`link-${partIndex}-${linkStartIndex}`}
-            className="font-medium underline"
-          >
-            {linkedNote.title}
-          </span>
-        );
+        // Render as clickable note link
+        if (onLinkNote) {
+          parts.push(
+            <button
+              key={`link-${partIndex}-${linkStartIndex}`}
+              onClick={(e) => {
+                e.preventDefault();
+                console.log('🔗 Note link clicked:', { noteId: linkedNote._id, title: linkedNote.title });
+                onLinkNote(linkedNote._id);
+              }}
+              className="text-blue-600 hover:text-blue-800 underline bg-transparent border-none p-0 m-0 cursor-pointer font-inherit text-inherit font-medium"
+              type="button"
+            >
+              {linkedNote.title}
+            </button>
+          );
+        } else {
+          // Fallback to non-clickable if no onLinkNote callback
+          parts.push(
+            <span
+              key={`link-${partIndex}-${linkStartIndex}`}
+              className="font-medium underline"
+            >
+              {linkedNote.title}
+            </span>
+          );
+        }
       } else {
         // Note not found, show missing note indicator
         parts.push(

@@ -6,7 +6,7 @@ import { CreateNoteButton } from '@/components/ui/CreateNoteButton'
 import { useTheme } from 'next-themes'
 import { useAuth } from '@/app/context/auth-context'
 import { useInlineAI } from '../../../notes/hooks/useInlineAI'
-import { RichTextEditor } from '@/components/ui/rich-text-editor'
+import { RichTextEditor } from '@/components/ui/rich-text-editor/rich-text-editor'
 
 interface MarkdownNotepadProps {
   isOpen: boolean
@@ -17,6 +17,9 @@ interface MarkdownNotepadProps {
   width: number
   onWidthChange: (width: number) => void
   style: React.CSSProperties
+  // Note linking
+  availableNotes?: Array<{ _id: string; title: string; type: string }>
+  onLinkNote?: (noteId: string) => void
 }
 
 export function MarkdownNotepad({ 
@@ -27,15 +30,22 @@ export function MarkdownNotepad({
   onClearQuoted, 
   width, 
   onWidthChange, 
-  style 
+  style,
+  availableNotes = [],
+  onLinkNote
 }: MarkdownNotepadProps) {
   const [content, setContent] = useState('')
   const [isResizing, setIsResizing] = useState(false)
+  const resizeStartX = useRef<number>(0)
+  const resizeStartWidth = useRef<number>(0)
   const { theme } = useTheme()
   const { firebaseUser } = useAuth()
   const isDark = theme === 'dark'
   const accentBg = isDark ? 'bg-primary' : 'bg-purple-600'
   const accentBgHover = isDark ? 'hover:bg-primary/90' : 'hover:bg-purple-700'
+
+  // --- Add sidebar container ref ---
+  const sidebarRef = useRef<HTMLDivElement>(null)
 
   const { askAI, requestAnalysis, requestIdeas } = useInlineAI({
     noteContent: content,
@@ -82,29 +92,25 @@ export function MarkdownNotepad({
     }
   }, [requestIdeas])
 
-  // Handle resizing
+  // Handle resizing with improved logic
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing) return
       
-      const newWidth = Math.max(280, Math.min(600, window.innerWidth - e.clientX))
+      // Calculate the change in X position since resize started
+      const deltaX = resizeStartX.current - e.clientX
+      // Apply delta to the starting width
+      const newWidth = Math.max(300, Math.min(800, resizeStartWidth.current + deltaX))
       onWidthChange(newWidth)
     }
 
     const handleMouseUp = () => {
       setIsResizing(false)
-      const chatContainer = document.querySelector('[data-chat-container]') as HTMLElement
-      if (chatContainer) {
-        chatContainer.style.transition = 'margin-right 0.1s ease-out'
-      }
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
     }
 
     if (isResizing) {
-      const chatContainer = document.querySelector('[data-chat-container]') as HTMLElement
-      if (chatContainer) {
-        chatContainer.style.transition = 'none'
-      }
-
       document.addEventListener('mousemove', handleMouseMove)
       document.addEventListener('mouseup', handleMouseUp)
       document.body.style.cursor = 'col-resize'
@@ -118,6 +124,14 @@ export function MarkdownNotepad({
       }
     }
   }, [isResizing, onWidthChange])
+
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    resizeStartX.current = e.clientX
+    resizeStartWidth.current = width
+    setIsResizing(true)
+  }, [width])
 
   const handleClear = () => {
     setContent('')
@@ -150,18 +164,17 @@ export function MarkdownNotepad({
 
   return (
     <div 
+      ref={sidebarRef}
       className="fixed top-0 right-0 h-full bg-background border-l border-border z-40 flex flex-col shadow-lg"
       style={{ ...style, width: `${width}px` }}
     >
       {/* Resize Handle */}
       <div
-        className={`absolute left-0 top-0 w-1 h-full cursor-col-resize ${isDark ? 'hover:bg-primary/20' : 'hover:bg-purple-600/20'} transition-colors group`}
-        onMouseDown={(e) => {
-          e.preventDefault()
-          setIsResizing(true)
-        }}
+        className={`absolute left-0 top-0 w-2 h-full cursor-col-resize z-50 ${isDark ? 'hover:bg-primary/10' : 'hover:bg-purple-600/10'} transition-colors group flex items-center justify-center`}
+        onMouseDown={handleResizeStart}
       >
-        <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-12 bg-border ${isDark ? 'group-hover:bg-primary' : 'group-hover:bg-purple-600'} transition-colors rounded-r-sm`} />
+        {/* Visual indicator for the resize handle */}
+        <div className={`w-0.5 h-8 bg-border ${isDark ? 'group-hover:bg-primary/50' : 'group-hover:bg-purple-600/50'} transition-colors rounded-full`} />
       </div>
 
       {/* Header */}
@@ -217,7 +230,7 @@ export function MarkdownNotepad({
       </div>
 
       {/* Rich Text Editor */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-auto relative">
         <RichTextEditor
           content={content}
           onContentChange={setContent}
@@ -226,13 +239,16 @@ export function MarkdownNotepad({
           onRequestAnalysis={handleRequestAnalysis}
           onRequestIdeas={handleRequestIdeas}
           userId={firebaseUser?.uid}
+          availableNotes={availableNotes}
+          onLinkNote={onLinkNote}
           className="h-full border-0"
+          containerRef={sidebarRef}
         />
       </div>
 
       {/* Footer */}
       <div className="px-4 py-2 border-t border-border text-xs text-muted-foreground/80 shrink-0">
-        Markdown supported • ⌘K for AI assistant • ⌘B bold • ⌘I italic • ⌘U underline
+        Markdown supported • ⌘K for AI assistant • @ to link notes • ⌘B bold • ⌘I italic • ⌘U underline
       </div>
     </div>
   )

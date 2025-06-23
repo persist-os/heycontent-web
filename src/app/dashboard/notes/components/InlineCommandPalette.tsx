@@ -328,16 +328,15 @@ export function InlineCommandPalette({
     .filter(note => 
       String(note._id) !== currentNoteId && 
       note.title.toLowerCase().includes(noteSearchTerm.toLowerCase())
-    )
-    .map(note => ({
-      id: String(note._id),
-      title: note.title,
-      type: note.type,
-      icon: NOTE_TYPE_ICONS[note.type] || <Link className="w-4 h-4" />,
-      action: () => handleNoteLinkSelect(String(note._id))
-    }));
+    );
 
-  const noteCommands: NoteOption[] = filteredNotes;
+  const noteCommands: NoteOption[] = filteredNotes.map(note => ({
+    id: String(note._id),
+    title: note.title,
+    type: note.type,
+    icon: NOTE_TYPE_ICONS[note.type] || <Link className="w-4 h-4" />,
+    action: () => handleNoteLinkSelect(String(note._id)),
+  }));
 
   const currentOptions = showAnalysisTypes ? analysisCommands : showNoteLinks ? noteCommands : mainCommands;
 
@@ -370,21 +369,26 @@ export function InlineCommandPalette({
     const menuHeight = 400;
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
+    const margin = 20;
     
+    // The position is already calculated by getCursorCoordinates with boundary checking
+    // But we can do a final validation here
     let finalLeft = position.left;
     let finalTop = position.top;
     
-    // Prevent horizontal cutoff
-    if (finalLeft + menuWidth > viewportWidth - 20) {
-      finalLeft = viewportWidth - menuWidth - 20;
+    // Additional safety checks for extreme cases
+    if (finalLeft + menuWidth > viewportWidth - margin) {
+      finalLeft = Math.max(margin, viewportWidth - menuWidth - margin);
     }
-    if (finalLeft < 20) {
-      finalLeft = 20;
+    if (finalLeft < margin) {
+      finalLeft = margin;
     }
     
-    // Prevent vertical cutoff
-    if (finalTop + menuHeight > viewportHeight - 20) {
-      finalTop = Math.max(20, viewportHeight - menuHeight - 20);
+    if (finalTop + menuHeight > viewportHeight - margin) {
+      finalTop = Math.max(margin, viewportHeight - menuHeight - margin);
+    }
+    if (finalTop < margin) {
+      finalTop = margin;
     }
     
     return { left: finalLeft, top: finalTop };
@@ -507,12 +511,13 @@ export function InlineCommandPalette({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 bg-background border border-border rounded-lg shadow-2xl overflow-hidden backdrop-blur-sm"
+      className="fixed z-[200] bg-background border border-border rounded-lg shadow-2xl overflow-hidden backdrop-blur-sm"
       style={{
         top: finalPosition.top + 'px',
         left: finalPosition.left + 'px',
         width: '600px',
-        maxHeight: '400px'
+        maxHeight: '400px',
+        maxWidth: 'calc(100vw - 40px)' // Ensure it doesn't exceed viewport width
       }}
     >
       {/* Search Input */}
