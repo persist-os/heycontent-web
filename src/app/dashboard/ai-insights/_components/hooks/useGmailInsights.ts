@@ -30,9 +30,30 @@ export function useGmailInsights(userId?: string): BatchAnalysisHookReturn {
   const storeGmailBatchAnalysis = useMutation(api.gmailMutations.storeGmailBatchAnalysis);
 
   // Extract data - handle both old and new formats during transition
-  const insightsList: InsightCard[] = gmailInsights?.insights || [];
-  const metadata = (gmailInsights as any)?.metadata || null;
-  const status = gmailInsights?.status || null;
+  console.log('[useGmailInsights] Raw Convex data:', gmailInsights);
+  console.log('[useGmailInsights] gmailInsights?.insights:', gmailInsights?.insights);
+  console.log('[useGmailInsights] Type of gmailInsights?.insights:', typeof gmailInsights?.insights);
+  console.log('[useGmailInsights] Is array?', Array.isArray(gmailInsights?.insights));
+  
+  // Check if insights is the universal format object (with insights, metadata, status)
+  const rawInsights = gmailInsights?.insights;
+  const isUniversalFormat = rawInsights && typeof rawInsights === 'object' && 'insights' in rawInsights;
+  
+  console.log('[useGmailInsights] Is universal format?', isUniversalFormat);
+  
+  const insightsList: InsightCard[] = isUniversalFormat 
+    ? (rawInsights as any).insights || []
+    : rawInsights || [];
+  const metadata = isUniversalFormat 
+    ? (rawInsights as any).metadata || null
+    : (gmailInsights as any)?.metadata || null;
+  const status = isUniversalFormat 
+    ? (rawInsights as any).status || null
+    : gmailInsights?.status || null;
+    
+  console.log('[useGmailInsights] Extracted insightsList:', insightsList);
+  console.log('[useGmailInsights] Extracted metadata:', metadata);
+  console.log('[useGmailInsights] Extracted status:', status);
 
   // Only show as running if we're actively refreshing AND status is processing/enqueued
   // Don't auto-show loading for old stuck statuses

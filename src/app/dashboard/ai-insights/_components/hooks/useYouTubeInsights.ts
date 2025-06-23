@@ -30,9 +30,30 @@ export function useYouTubeInsights(userId?: string): BatchAnalysisHookReturn {
   const storeYoutubeBatchAnalysis = useMutation(api.youtubeMutations.storeYoutubeBatchAnalysis);
 
   // Extract data - handle both old and new formats during transition
-  const insightsList: InsightCard[] = youtubeInsights?.insights || [];
-  const metadata = (youtubeInsights as any)?.metadata || null;
-  const status = youtubeInsights?.status || null;
+  console.log('[useYouTubeInsights] Raw Convex data:', youtubeInsights);
+  console.log('[useYouTubeInsights] youtubeInsights?.insights:', youtubeInsights?.insights);
+  console.log('[useYouTubeInsights] Type of youtubeInsights?.insights:', typeof youtubeInsights?.insights);
+  console.log('[useYouTubeInsights] Is array?', Array.isArray(youtubeInsights?.insights));
+  
+  // Check if insights is the universal format object (with insights, metadata, status)
+  const rawInsights = youtubeInsights?.insights;
+  const isUniversalFormat = rawInsights && typeof rawInsights === 'object' && 'insights' in rawInsights;
+  
+  console.log('[useYouTubeInsights] Is universal format?', isUniversalFormat);
+  
+  const insightsList: InsightCard[] = isUniversalFormat 
+    ? (rawInsights as any).insights || []
+    : rawInsights || [];
+  const metadata = isUniversalFormat 
+    ? (rawInsights as any).metadata || null
+    : (youtubeInsights as any)?.metadata || null;
+  const status = isUniversalFormat 
+    ? (rawInsights as any).status || null
+    : youtubeInsights?.status || null;
+    
+  console.log('[useYouTubeInsights] Extracted insightsList:', insightsList);
+  console.log('[useYouTubeInsights] Extracted metadata:', metadata);
+  console.log('[useYouTubeInsights] Extracted status:', status);
 
   // Only show as running if we're actively refreshing AND status is processing/enqueued
   // Don't auto-show loading for old stuck statuses
