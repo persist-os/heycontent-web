@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import { Instagram } from 'lucide-react';
+import { Instagram, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { ConnectedAccount } from './platform-utils';
 import { fetchWithApiKey } from '@/app/lib/api-helpers';
 
@@ -52,6 +52,20 @@ export function InstagramPlatformCard({
 
   return (
     <Card className="p-6 relative">
+      {account && !isLoading && (
+        <div className="absolute top-4 right-4">
+          {account.isActive ? (
+            <CheckCircle2 className="w-5 h-5 text-green-500" />
+          ) : (
+            <AlertCircle className="w-5 h-5 text-yellow-500" />
+          )}
+        </div>
+      )}
+      {isLoading && (
+        <div className="absolute top-4 right-4">
+          <Loader2 className="w-5 h-5 animate-spin" />
+        </div>
+      )}
       <div className="flex items-center gap-3 mb-2">
         <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
           <Instagram className="w-6 h-6 text-white" />
@@ -124,7 +138,6 @@ export function InstagramPlatformCard({
         <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
           <div>Followers: {account.metadata.followers ?? 0}</div>
           <div>Posts: {account.metadata.posts ?? 0}</div>
-          <div>Engagement: {account.metadata.engagement ?? 0}</div>
         </div>
       )}
       {account && (
