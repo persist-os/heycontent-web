@@ -175,16 +175,16 @@ export default function LandingPage() {
             <div className="max-w-6xl mx-auto">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-10 lg:gap-12">
                 {/* First Card - Feels Like You */}
-                <div className="rainbow-glow-border rounded-2xl p-[3px] overflow-visible">
+                <div className="rainbow-glow-border rounded-2xl p-[3px] overflow-visible w-full max-w-full">
                   <Tilt
                     tiltMaxAngleX={10}
                     tiltMaxAngleY={10}
                     perspective={1000}
                     scale={1.05}
                     transitionSpeed={2000}
-                    className="will-change-transform"
+                    className="will-change-transform w-full max-w-full"
                   >
-                    <div className="aspect-[16/9] relative rounded-2xl overflow-hidden">
+                    <div className="relative rounded-2xl overflow-hidden p-4 sm:p-0 w-full max-w-full min-w-0 flex flex-col justify-between px-6 py-10 sm:px-10 sm:py-14" style={{ minHeight: 270 }}>
                       <div className="absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_60%_40%,_#fa8bff_0%,_#fbc2eb_100%)] transition-all duration-300" />
                       <div className="card-noise-overlay absolute inset-0 rounded-2xl pointer-events-none z-10" />
                       {/* Icon in corner */}
@@ -194,19 +194,17 @@ export default function LandingPage() {
                           <path d="M12 14C8.13 14 5 17.13 5 21H7C7 18.24 9.24 16 12 16C14.76 16 17 18.24 17 21H19C19 17.13 15.87 14 12 14Z" fill="currentColor"/>
                         </svg>
                       </div>
-                      <div className="absolute inset-0 p-8 flex flex-col justify-between h-full">
-                        <div>
-                          <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2 bg-white/10 backdrop-blur-sm rounded-lg">
-                              <svg className="w-6 h-6 text-black" viewBox="0 0 24 24" fill="none">
-                                <path d="M12 2C9.24 2 7 4.24 7 7C7 9.76 9.24 12 12 12C14.76 12 17 9.76 17 7C17 4.24 14.76 2 12 2ZM12 10C10.35 10 9 8.65 9 7C9 5.35 10.35 4 12 4C13.65 4 15 5.35 15 7C15 8.65 13.65 10 12 10Z" fill="currentColor"/>
-                                <path d="M12 14C8.13 14 5 17.13 5 21H7C7 18.24 9.24 16 12 16C14.76 16 17 18.24 17 21H19C19 17.13 15.87 14 12 14Z" fill="currentColor"/>
-                              </svg>
-                            </div>
-                            <h3 className="text-2xl font-bold text-black" style={{color: '#111827'}}>Feels Like You</h3>
+                      <div className="relative z-10 flex flex-col justify-between h-full w-full max-w-full min-w-0">
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="p-2 bg-white/10 backdrop-blur-sm rounded-lg">
+                            <svg className="w-6 h-6 text-black" viewBox="0 0 24 24" fill="none">
+                              <path d="M12 2C9.24 2 7 4.24 7 7C7 9.76 9.24 12 12 12C14.76 12 17 9.76 17 7C17 4.24 14.76 2 12 2ZM12 10C10.35 10 9 8.65 9 7C9 5.35 10.35 4 12 4C13.65 4 15 5.35 15 7C15 8.65 13.65 10 12 10Z" fill="currentColor"/>
+                              <path d="M12 14C8.13 14 5 17.13 5 21H7C7 18.24 9.24 16 12 16C14.76 16 17 18.24 17 21H19C19 17.13 15.87 14 12 14Z" fill="currentColor"/>
+                            </svg>
                           </div>
+                          <h3 className="text-2xl font-bold text-black" style={{color: '#111827'}}>Feels Like You</h3>
                         </div>
-                        <p className="text-black/90 text-lg font-semibold max-w-[80%]" style={{color: '#111827'}}>
+                        <p className="text-black/90 text-lg font-semibold max-w-[90%]" style={{color: '#111827', lineHeight: 1.7}}>
                           Your vibe, your voice. HeyContent adapts to your style so your ideas come out sounding like you on your best day.
                         </p>
                       </div>
@@ -215,16 +213,16 @@ export default function LandingPage() {
                 </div>
                 
                 {/* Second Card - Creative Intelligence */}
-                <div className="rainbow-glow-border rounded-2xl p-[3px] overflow-visible">
+                <div className="rainbow-glow-border rounded-2xl p-[3px] overflow-visible w-full max-w-full">
                   <Tilt
                     tiltMaxAngleX={10}
                     tiltMaxAngleY={10}
                     perspective={1000}
                     scale={1.05}
                     transitionSpeed={2000}
-                    className="will-change-transform"
+                    className="will-change-transform w-full max-w-full"
                   >
-                    <div className="aspect-[16/9] relative rounded-2xl overflow-hidden">
+                    <div className="relative rounded-2xl overflow-hidden p-4 sm:p-0 w-full max-w-full min-w-0 flex flex-col justify-between px-6 py-10 sm:px-10 sm:py-14" style={{ minHeight: 270 }}>
                       <div className="absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_60%_40%,_#43e97b_0%,_#38f9d7_50%,_#fa8bff_100%)] transition-all duration-300" />
                       <div className="card-noise-overlay absolute inset-0 rounded-2xl pointer-events-none z-10" />
                       {/* Icon in corner */}
@@ -234,19 +232,17 @@ export default function LandingPage() {
                           <path d="M12 6C8.69 6 6 8.69 6 12C6 15.31 8.69 18 12 18C15.31 18 18 15.31 18 12C18 8.69 15.31 6 12 6ZM12 16C9.79 16 8 14.21 8 12C8 9.79 9.79 8 12 8C14.21 8 16 9.79 16 12C16 14.21 14.21 16 12 16Z" fill="currentColor"/>
                         </svg>
                       </div>
-                      <div className="absolute inset-0 p-8 flex flex-col justify-between h-full">
-                        <div>
-                          <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2 bg-white/10 backdrop-blur-sm rounded-lg">
-                              <svg className="w-6 h-6 text-black" viewBox="0 0 24 24" fill="none">
-                                <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20Z" fill="currentColor"/>
-                                <path d="M12 6C8.69 6 6 8.69 6 12C6 15.31 8.69 18 12 18C15.31 18 18 15.31 18 12C18 8.69 15.31 6 12 6ZM12 16C9.79 16 8 14.21 8 12C8 9.79 9.79 8 12 8C14.21 8 16 9.79 16 12C16 14.21 14.21 16 12 16Z" fill="currentColor"/>
-                              </svg>
-                            </div>
-                            <h3 className="text-2xl font-bold text-black" style={{color: '#111827'}}>Creative Intelligence</h3>
+                      <div className="relative z-10 flex flex-col justify-between h-full w-full max-w-full min-w-0">
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="p-2 bg-white/10 backdrop-blur-sm rounded-lg">
+                            <svg className="w-6 h-6 text-black" viewBox="0 0 24 24" fill="none">
+                              <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20Z" fill="currentColor"/>
+                              <path d="M12 6C8.69 6 6 8.69 6 12C6 15.31 8.69 18 12 18C15.31 18 18 15.31 18 12C18 8.69 15.31 6 12 6ZM12 16C9.79 16 8 14.21 8 12C8 9.79 9.79 8 12 8C14.21 8 16 9.79 16 12C16 14.21 14.21 16 12 16Z" fill="currentColor"/>
+                            </svg>
                           </div>
+                          <h3 className="text-2xl font-bold text-black" style={{color: '#111827'}}>Creative Intelligence</h3>
                         </div>
-                        <p className="text-black/90 text-lg font-semibold max-w-[80%]" style={{color: '#111827'}}>
+                        <p className="text-black/90 text-lg font-semibold max-w-[90%]" style={{color: '#111827', lineHeight: 1.7}}>
                           Fueled by your content, your goals, and real-world trends. HeyContent learns how you think and helps you think better.
                         </p>
                       </div>
@@ -273,40 +269,36 @@ export default function LandingPage() {
             className="px-4 sm:px-6 mb-8 sm:mb-12 overflow-x-auto overflow-y-visible hide-scrollbar scroll-smooth mt-2 py-8"
           >
             <div className="max-w-6xl mx-auto">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-10 lg:gap-12">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-10 lg:gap-12 items-stretch">
                 {featureCards.map((card, index) => (
-                  <div key={index} className="rainbow-glow-border rounded-2xl p-[3px] group cursor-pointer overflow-visible">
+                  <div key={index} className="rainbow-glow-border rounded-2xl p-[3px] group cursor-pointer overflow-visible w-full max-w-full h-full">
                     <Tilt
                       tiltMaxAngleX={10}
                       tiltMaxAngleY={10}
                       perspective={1000}
                       scale={1.05}
                       transitionSpeed={2000}
-                      className="will-change-transform"
+                      className="will-change-transform w-full max-w-full h-full"
                     >
                       <div 
-                        className="overflow-hidden relative rounded-2xl transition-all duration-300"
+                        className="overflow-hidden relative rounded-2xl transition-all duration-300 w-full max-w-full min-w-0 flex flex-col justify-between px-6 py-10 sm:px-10 sm:py-14 h-full" style={{ minHeight: 270 }}
                       >
-                        <div className="aspect-[3/4] relative">
-                          <div className={`absolute inset-0 rounded-2xl ${card.gradient} transition-all duration-300`} />
-                          <div className="card-noise-overlay absolute inset-0 rounded-2xl pointer-events-none z-10" />
-                          {/* Decorative pattern */}
-                          <div className="absolute top-0 right-0 w-32 h-32 transform translate-x-8 -translate-y-8 opacity-20">
-                            <card.icon className="w-6 h-6 text-black" />
-                          </div>
-                          <div className="absolute inset-0 p-8 flex flex-col justify-between h-full">
-                            <div>
-                              <div className="flex items-center gap-3 mb-4">
-                                <div className="p-2 bg-white/10 backdrop-blur-sm rounded-lg">
-                                  <card.icon className="w-6 h-6 text-black" />
-                                </div>
-                                <h3 className="text-2xl font-bold text-black" style={{color: '#111827'}}>{card.title}</h3>
-                              </div>
+                        <div className={`absolute inset-0 rounded-2xl ${card.gradient} transition-all duration-300`} />
+                        <div className="card-noise-overlay absolute inset-0 rounded-2xl pointer-events-none z-10" />
+                        {/* Decorative pattern */}
+                        <div className="absolute top-0 right-0 w-32 h-32 transform translate-x-8 -translate-y-8 opacity-20">
+                          <card.icon className="w-6 h-6 text-black" />
+                        </div>
+                        <div className="relative z-10 flex flex-col justify-between h-full w-full max-w-full min-w-0">
+                          <div className="flex items-center gap-3 mb-6">
+                            <div className="p-2 bg-white/10 backdrop-blur-sm rounded-lg">
+                              <card.icon className="w-6 h-6 text-black" />
                             </div>
-                            <p className="text-black/90 text-lg font-semibold max-w-[80%]" style={{color: '#111827'}}>
-                              {card.description}
-                            </p>
+                            <h3 className="text-2xl font-bold text-black" style={{color: '#111827'}}>{card.title}</h3>
                           </div>
+                          <p className="text-black/90 text-lg font-semibold max-w-[90%]" style={{color: '#111827', lineHeight: 1.7}}>
+                            {card.description}
+                          </p>
                         </div>
                       </div>
                     </Tilt>
