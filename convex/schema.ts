@@ -662,6 +662,19 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_user_channel", ["userId", "channelId"]),
 
+    // Gmail Batch Analysis
+  gmailBatchAnalysis: defineTable({
+    insights: v.optional(v.any()),
+    status: v.optional(v.any()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    userId: v.string(),
+    gmailAccountId: v.string(),
+    analysisType: v.literal("batch"),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_user_account", ["userId", "gmailAccountId"]),
+
   // Vector embeddings for search
   contentEmbeddings: defineTable({
     userId: v.string(),

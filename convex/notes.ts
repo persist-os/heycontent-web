@@ -42,6 +42,16 @@ export const updateNote = mutation({
       fields: v.optional(v.any()),
       titleGenerated: v.optional(v.boolean()),
       typeGenerated: v.optional(v.boolean()),
+      images: v.optional(v.array(v.object({
+        url: v.string(),
+        filename: v.string(),
+        originalFilename: v.optional(v.string()),
+        uploadedAt: v.number(),
+        size: v.optional(v.number()),
+        mimeType: v.optional(v.string()),
+        width: v.optional(v.number()),
+        height: v.optional(v.number())
+      }))),
     })
   },
   handler: async (ctx, args) => {

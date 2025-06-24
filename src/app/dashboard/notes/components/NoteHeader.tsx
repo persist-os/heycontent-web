@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Lightbulb, Star, Brain, Save, Loader2, ArrowLeft, ChevronLeft } from 'lucide-react';
+import { Lightbulb, Star, Brain, Save, Loader2, ArrowLeft, ChevronLeft, Image } from 'lucide-react';
 import type { Note, NoteType } from '../types/index';
 import toast from 'react-hot-toast';
+import { ImageGalleryModal } from './ImageGalleryModal';
 
 interface NoteHeaderProps {
   note: Note;
@@ -18,6 +19,7 @@ interface NoteHeaderProps {
 
 export function NoteHeader({ note, onUpdate, onSave, onBack, isMobile, currentContent, canGoBack, onNavigateBack, navigationStack }: NoteHeaderProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showImageGallery, setShowImageGallery] = useState(false);
 
   // Handler for Save button that shows a toast
   const handleSave = async () => {
@@ -35,71 +37,96 @@ export function NoteHeader({ note, onUpdate, onSave, onBack, isMobile, currentCo
   };
 
   return (
-    <div className="border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-10">
-      <div className="px-4 py-3 flex items-center">
-        {/* Left spacer for centering */}
-        <div className="flex-1"></div>
-        
-        {/* Centered title */}
-        <div className="text-center">
-          <h1 className="text-base font-medium text-primary">Smart Notes</h1>
-        </div>
-        
-        {/* Right side with back button and action buttons */}
-        <div className="flex-1 flex justify-end">
-          <div className="flex gap-2">
-            {/* Navigation back button (for note links) */}
-            {canGoBack && onNavigateBack && (
+    <>
+      <div className="border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-10">
+        <div className="px-4 py-3 flex items-center">
+          {/* Left spacer for centering */}
+          <div className="flex-1"></div>
+          
+          {/* Centered title */}
+          <div className="text-center">
+            <h1 className="text-base font-medium text-primary">Smart Notes</h1>
+          </div>
+          
+          {/* Right side with back button and action buttons */}
+          <div className="flex-1 flex justify-end">
+            <div className="flex gap-2">
+              {/* Navigation back button (for note links) */}
+              {canGoBack && onNavigateBack && (
+                <button
+                  onClick={onNavigateBack}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted/60 transition-all duration-200 group"
+                  title={`Back to previous note (${navigationStack?.length || 0} in history)`}
+                >
+                  <ChevronLeft className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors duration-200" />
+                </button>
+              )}
+              {/* Main back button (to grid) */}
+              {isMobile && (
+                <button
+                  onClick={onBack}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted/60 transition-all duration-200 group"
+                  title="Back to notes grid"
+                >
+                  <ArrowLeft className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors duration-200" />
+                </button>
+              )}
+              
               <button
-                onClick={onNavigateBack}
-                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted/60 transition-all duration-200 group"
-                title={`Back to previous note (${navigationStack?.length || 0} in history)`}
+                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
+                  note.type === 'idea_bank' 
+                    ? 'bg-primary/15 text-primary border border-primary/30' 
+                    : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent'
+                }`}
+                onClick={() => onUpdate(String(note._id), { type: note.type === 'idea_bank' ? 'content_script' : 'idea_bank' as NoteType })}
+                title={note.type === 'idea_bank' ? 'Switch to content script' : 'Mark as idea bank'}
               >
-                <ChevronLeft className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors duration-200" />
+                <Lightbulb size={16} />
               </button>
-            )}
-            {/* Main back button (to grid) */}
-            {isMobile && (
               <button
-                onClick={onBack}
-                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted/60 transition-all duration-200 group"
-                title="Back to notes grid"
+                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
+                  note.important 
+                    ? 'bg-primary/15 text-primary border border-primary/30' 
+                    : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent'
+                }`}
+                onClick={() => onUpdate(String(note._id), { important: !note.important })}
+                title={note.important ? 'Remove importance' : 'Mark as important'}
               >
-                <ArrowLeft className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors duration-200" />
+                <Star size={16} fill={note.important ? "currentColor" : "none"} />
               </button>
-            )}
-          <button
-            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
-              note.type === 'idea_bank' 
-                ? 'bg-primary/15 text-primary border border-primary/30' 
-                : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent'
-            }`}
-            onClick={() => onUpdate(note._id, { type: note.type === 'idea_bank' ? 'content_script' : 'idea_bank' as NoteType })}
-            title={note.type === 'idea_bank' ? 'Switch to content script' : 'Mark as idea bank'}
-          >
-            <Lightbulb size={16} />
-          </button>
-          <button
-            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
-              note.important 
-                ? 'bg-primary/15 text-primary border border-primary/30' 
-                : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent'
-            }`}
-            onClick={() => onUpdate(note._id, { important: !note.important })}
-            title={note.important ? 'Remove importance' : 'Mark as important'}
-          >
-            <Star size={16} fill={note.important ? "currentColor" : "none"} />
-          </button>
-            <button
-              className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 shadow-sm"
-              onClick={handleSave}
-              title="Save note"
-            >
-              <Save size={16} />
-            </button>
+              
+              {/* Image Gallery Button - moved next to Save */}
+              <button
+                onClick={() => setShowImageGallery(true)}
+                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
+                  note.images && note.images.length > 0
+                    ? 'bg-primary/15 text-primary border border-primary/30' 
+                    : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent'
+                }`}
+                title={`View Image Gallery${note.images && note.images.length > 0 ? ` (${note.images.length})` : ''}`}
+              >
+                <Image size={16} />
+              </button>
+              
+              <button
+                className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 shadow-sm"
+                onClick={handleSave}
+                title="Save note"
+              >
+                <Save size={16} />
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Image Gallery Modal */}
+      <ImageGalleryModal
+        isOpen={showImageGallery}
+        noteId={String(note._id)}
+        images={note.images || []}
+        onClose={() => setShowImageGallery(false)}
+      />
+    </>
   );
 }
