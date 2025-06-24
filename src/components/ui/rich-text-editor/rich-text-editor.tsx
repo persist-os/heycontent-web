@@ -75,7 +75,6 @@ export const RichTextEditor = forwardRef<HTMLDivElement, RichTextEditorProps>(({
   const [paletteMode, setPaletteMode] = useState<'commands' | 'notes'>('commands')
   const [isDragOver, setIsDragOver] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
-  const [editorKey, setEditorKey] = useState(0) // Key to force re-render
   
   const textAreaRef = useRef<HTMLDivElement>(null)
   const lastContentRef = useRef<string>('')
@@ -115,48 +114,68 @@ export const RichTextEditor = forwardRef<HTMLDivElement, RichTextEditorProps>(({
     }
   }, [onContentChange])
 
-  // Switch to edit mode - restore previous content
+  // Switch to edit mode - restore previous content IMMEDIATELY
   const switchToEditMode = useCallback(() => {
     console.log('[RichTextEditor] Switching to edit mode')
-    console.log('[RichTextEditor] lastContentRef.current:', lastContentRef.current?.substring(0, 100))
     console.log('[RichTextEditor] content prop:', content?.substring(0, 100))
     
     setShowPreview(false)
-    setEditorKey(prev => prev + 1) // Force re-render of contentEditable
+    
+    // Use requestAnimationFrame to ensure DOM update completes, then setTimeout for additional safety
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        if (textAreaRef.current) {
+          // Always use the content prop as the source of truth
+          const contentToRestore = content
+          console.log('[RichTextEditor] Restoring content:', contentToRestore?.substring(0, 100))
+          
+          if (contentToRestore && contentToRestore.trim()) {
+            const htmlToRestore = markdownToHTML(contentToRestore)
+            console.log('[RichTextEditor] Restoring HTML:', htmlToRestore.substring(0, 100))
+            textAreaRef.current.innerHTML = htmlToRestore
+          } else {
+            // Clear content if empty
+            textAreaRef.current.innerHTML = ''
+          }
+          
+          // Ensure the contentEditable is properly activated
+          textAreaRef.current.contentEditable = 'true'
+          
+          // Focus and place cursor at end
+          textAreaRef.current.focus()
+          
+          // Ensure lastContentRef is updated
+          lastContentRef.current = contentToRestore || ''
+          
+          const range = document.createRange()
+          const selection = window.getSelection()
+          try {
+            if (textAreaRef.current.childNodes.length > 0) {
+              range.selectNodeContents(textAreaRef.current)
+              range.collapse(false)
+              selection?.removeAllRanges()
+              selection?.addRange(range)
+            }
+          } catch (e) {
+            // Fallback if range selection fails
+            console.log('[RichTextEditor] Range selection failed, using fallback')
+          }
+        }
+      }, 20)
+    })
   }, [content])
 
-  // Restore content when switching back to edit mode
-  useEffect(() => {
-    if (!showPreview && textAreaRef.current) {
-      const contentToRestore = lastContentRef.current || content
-      console.log('[RichTextEditor] useEffect - Restoring content:', contentToRestore?.substring(0, 100))
-      if (contentToRestore && contentToRestore.trim()) {
-        const htmlToRestore = markdownToHTML(contentToRestore)
-        console.log('[RichTextEditor] useEffect - Restoring HTML:', htmlToRestore.substring(0, 100))
-        textAreaRef.current.innerHTML = htmlToRestore
-      }
+  // Toggle preview mode with event handling
+  const togglePreview = useCallback((e?: React.MouseEvent) => {
+    // Prevent event bubbling to avoid conflicts
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
     }
-  }, [showPreview, content])
-
-  // Toggle preview mode
-  const togglePreview = useCallback(() => {
+    
     console.log('[RichTextEditor] Toggling preview, current showPreview:', showPreview)
-    if (!showPreview) {
-      // Save current content when switching TO preview
-      console.log('[RichTextEditor] About to save content before preview')
-      saveCurrentContent()
-    }
     setShowPreview(!showPreview)
-  }, [showPreview, saveCurrentContent])
-
-  // Get current content for preview (either from editor or props)
-  const getCurrentContent = useCallback(() => {
-    if (showPreview) {
-      // In preview mode, use the latest content (either from lastContentRef or props)
-      return lastContentRef.current || content
-    }
-    return content
-  }, [showPreview, content])
+  }, [showPreview])
 
   // Create AI handlers
   const aiHandlers: AIHandlers = {
@@ -270,9 +289,20 @@ export const RichTextEditor = forwardRef<HTMLDivElement, RichTextEditorProps>(({
       if (selection && selection.rangeCount > 0) {
         const range = selection.getRangeAt(0)
         range.deleteContents()
-        range.insertNode(document.createElement('br'))
-        range.insertNode(document.createTextNode('\u00A0'))
-        range.collapse(false)
+        
+        // Insert line break
+        const br = document.createElement('br')
+        range.insertNode(br)
+        
+        // Insert an empty text node after the br for proper cursor positioning
+        const textNode = document.createTextNode('')
+        range.setStartAfter(br)
+        range.insertNode(textNode)
+        
+        // Position cursor in the text node
+        range.setStart(textNode, 0)
+        range.setEnd(textNode, 0)
+        
         selection.removeAllRanges()
         selection.addRange(range)
       }
@@ -446,11 +476,10 @@ export const RichTextEditor = forwardRef<HTMLDivElement, RichTextEditorProps>(({
       {showPreview ? (
         /* Preview Mode - ONLY show this, hide edit completely */
         <div 
-          className="w-full h-full min-h-[300px] p-4 text-base leading-relaxed bg-background text-foreground overflow-auto cursor-text"
-          onClick={switchToEditMode}
+          className="w-full h-full min-h-[300px] p-4 text-base leading-relaxed bg-background text-foreground overflow-auto"
         >
-          {getCurrentContent() ? (
-            <MarkdownRenderer content={getCurrentContent()} />
+          {content ? (
+            <MarkdownRenderer content={content} />
           ) : (
             <div className="text-muted-foreground/50 italic">
               {placeholder}
@@ -479,7 +508,6 @@ export const RichTextEditor = forwardRef<HTMLDivElement, RichTextEditorProps>(({
 
 📎 Drag & drop images here`}
             suppressContentEditableWarning={true}
-            key={editorKey}
           />
           
           {/* Inline Command Palette - only show in edit mode */}
