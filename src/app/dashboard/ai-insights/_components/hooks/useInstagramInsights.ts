@@ -62,6 +62,12 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
   const nestedStatus = status?.status;
   const databaseStatus = rootStatus || nestedStatus;
   
+  // Extract progress from the correct status object
+  // Priority: root-level status (current) > nested status (cached)
+  const currentProgress = instagramInsights?.status?.progress !== undefined 
+    ? instagramInsights.status.progress 
+    : status?.progress || 0;
+  
   // Fix: Handle race condition between local refresh state and database updates
   // When user clicks refresh, show refreshing state immediately, even if database hasn't updated yet
   // Once database status updates to processing/enqueued, continue showing refreshing state
@@ -75,6 +81,9 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
     isActuallyRunning,
     status: status,
     rootStatusObject: instagramInsights?.status,
+    currentProgress,
+    rootProgress: instagramInsights?.status?.progress,
+    nestedProgress: status?.progress,
     hasAccount: !!instagramAccount?.instagramAccountId,
     hasInsights: !!insightsList?.length
   });
@@ -218,7 +227,10 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
   return {
     insights: insightsList,
     metadata,
-    status,
+    status: {
+      ...status,
+      progress: currentProgress // Use the correct progress value
+    },
     loading: instagramInsights === undefined,
     refreshing: isActuallyRunning, // Use combined local + database state
     error,

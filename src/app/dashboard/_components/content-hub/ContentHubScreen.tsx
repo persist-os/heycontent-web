@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Instagram, Mail, BarChart3, Brain, Settings, Sparkles, RefreshCw } from 'lucide-react'
 import { useAuth } from '@/app/context/auth-context'
 import { RefreshState } from '@/components/ui/refresh-state'
+import { ProgressInsightsState } from '@/components/ui/progress-insights-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -121,19 +122,29 @@ export function ContentHubScreen() {
       gmail: gmailRefreshing,
       youtubeStatus: youtubeInsights.status,
       instagramStatus: instagramInsights.status,
-      gmailStatus: gmailInsights.status
+      gmailStatus: gmailInsights.status,
+      youtubeProgress: youtubeInsights.status?.progress,
+      instagramProgress: instagramInsights.status?.progress,
+      gmailProgress: gmailInsights.status?.progress
     });
     
     return youtubeRefreshing || instagramRefreshing || gmailRefreshing;
   }, [youtubeInsights.refreshing, instagramInsights.refreshing, gmailInsights.refreshing, youtubeInsights.status, instagramInsights.status, gmailInsights.status])
 
-  // Get the platform that's currently refreshing for better messaging
-  const getRefreshingPlatform = useCallback(() => {
-    if (youtubeInsights.refreshing) return 'YouTube'
-    if (instagramInsights.refreshing) return 'Instagram'
-    if (gmailInsights.refreshing) return 'Gmail'
-    return 'platforms'
+  // Get all platforms that are currently refreshing for better messaging
+  const getRefreshingPlatforms = useCallback(() => {
+    const refreshing = []
+    if (youtubeInsights.refreshing) refreshing.push('YouTube')
+    if (instagramInsights.refreshing) refreshing.push('Instagram')
+    if (gmailInsights.refreshing) refreshing.push('Gmail')
+    
+    if (refreshing.length === 0) return 'platforms'
+    if (refreshing.length === 1) return refreshing[0]
+    if (refreshing.length === 2) return `${refreshing[0]} and ${refreshing[1]}`
+    return `${refreshing.slice(0, -1).join(', ')}, and ${refreshing[refreshing.length - 1]}`
   }, [youtubeInsights.refreshing, instagramInsights.refreshing, gmailInsights.refreshing])
+
+
 
   // Combined data for "all" tab analytics
   const allContentItems = useMemo(() => {
@@ -452,10 +463,10 @@ export function ContentHubScreen() {
             <div className="flex items-center justify-center gap-3 text-sm">
               <RefreshCw className="w-4 h-4 text-purple-600 dark:text-purple-400 animate-spin" />
               <span className="text-purple-700 dark:text-purple-300 font-medium">
-                Refreshing {getRefreshingPlatform()} insights...
+                Refreshing {getRefreshingPlatforms()} insights...
               </span>
               <span className="text-purple-600 dark:text-purple-400">
-                You can navigate between tabs while we process your data
+                Navigate freely while we process your data
               </span>
             </div>
           </div>
@@ -567,10 +578,12 @@ export function ContentHubScreen() {
                         <>
                           {youtubeInsights.refreshing && (
                             <div className="mb-4">
-                              <RefreshState
-                                title="Refreshing YouTube insights..."
+                              <ProgressInsightsState
+                                title="Analyzing YouTube content..."
                                 quote={currentQuote}
-                                subtitle="Feel free to navigate to other tabs while we process your data"
+                                subtitle="Navigating freely while we process your data"
+                                progress={youtubeInsights.status?.progress || 0}
+                                platform="youtube"
                               />
                             </div>
                           )}
@@ -586,10 +599,12 @@ export function ContentHubScreen() {
                         <>
                           {instagramInsights.refreshing && (
                             <div className="mb-4">
-                              <RefreshState
-                                title="Refreshing Instagram insights..."
+                              <ProgressInsightsState
+                                title="Analyzing Instagram content..."
                                 quote={currentQuote}
-                                subtitle="Feel free to navigate to other tabs while we process your data"
+                                subtitle="Navigating freely while we process your data"
+                                progress={instagramInsights.status?.progress || 0}
+                                platform="instagram"
                               />
                             </div>
                           )}
@@ -605,10 +620,12 @@ export function ContentHubScreen() {
                         <>
                           {gmailInsights.refreshing && (
                             <div className="mb-4">
-                              <RefreshState
-                                title="Refreshing Gmail insights..."
+                              <ProgressInsightsState
+                                title="Analyzing Gmail content..."
                                 quote={currentQuote}
-                                subtitle="Feel free to navigate to other tabs while we process your data"
+                                subtitle="Navigating freely while we process your data"
+                                progress={gmailInsights.status?.progress || 0}
+                                platform="gmail"
                               />
                             </div>
                           )}

@@ -62,6 +62,12 @@ export function useGmailInsights(userId?: string): BatchAnalysisHookReturn {
   const nestedStatus = status?.status;
   const databaseStatus = rootStatus || nestedStatus;
   
+  // Extract progress from the correct status object
+  // Priority: root-level status (current) > nested status (cached)
+  const currentProgress = gmailInsights?.status?.progress !== undefined 
+    ? gmailInsights.status.progress 
+    : status?.progress || 0;
+  
   // Fix: Handle race condition between local refresh state and database updates
   // When user clicks refresh, show refreshing state immediately, even if database hasn't updated yet
   // Once database status updates to processing/enqueued, continue showing refreshing state
@@ -75,6 +81,9 @@ export function useGmailInsights(userId?: string): BatchAnalysisHookReturn {
     isActuallyRunning,
     status: status,
     rootStatusObject: gmailInsights?.status,
+    currentProgress,
+    rootProgress: gmailInsights?.status?.progress,
+    nestedProgress: status?.progress,
     hasAccount: !!(gmailAccount && gmailAccount.length > 0),
     hasInsights: !!insightsList?.length
   });
@@ -196,7 +205,10 @@ export function useGmailInsights(userId?: string): BatchAnalysisHookReturn {
   return {
     insights: insightsList,
     metadata,
-    status,
+    status: {
+      ...status,
+      progress: currentProgress // Use the correct progress value
+    },
     loading: gmailInsights === undefined,
     refreshing: isActuallyRunning, // Use combined local + database state
     error,

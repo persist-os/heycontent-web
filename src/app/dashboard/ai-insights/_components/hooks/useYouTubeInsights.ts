@@ -62,6 +62,12 @@ export function useYouTubeInsights(userId?: string): BatchAnalysisHookReturn {
   const nestedStatus = status?.status;
   const databaseStatus = rootStatus || nestedStatus;
   
+  // Extract progress from the correct status object
+  // Priority: root-level status (current) > nested status (cached)
+  const currentProgress = youtubeInsights?.status?.progress !== undefined 
+    ? youtubeInsights.status.progress 
+    : status?.progress || 0;
+  
   // Fix: Handle race condition between local refresh state and database updates
   // When user clicks refresh, show refreshing state immediately, even if database hasn't updated yet
   // Once database status updates to processing/enqueued, continue showing refreshing state
@@ -75,6 +81,9 @@ export function useYouTubeInsights(userId?: string): BatchAnalysisHookReturn {
     isActuallyRunning,
     status: status,
     rootStatusObject: youtubeInsights?.status,
+    currentProgress,
+    rootProgress: youtubeInsights?.status?.progress,
+    nestedProgress: status?.progress,
     hasChannel: !!youtubeChannel?.id,
     hasInsights: !!insightsList?.length
   });
@@ -195,7 +204,10 @@ export function useYouTubeInsights(userId?: string): BatchAnalysisHookReturn {
   return {
     insights: insightsList,
     metadata,
-    status,
+    status: {
+      ...status,
+      progress: currentProgress // Use the correct progress value
+    },
     loading: youtubeInsights === undefined,
     refreshing: isActuallyRunning, // Use combined local + database state
     error,
