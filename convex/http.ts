@@ -1325,7 +1325,7 @@ app.get("/api/users/:id/instagram/post/:postId", async (c) => {
 
     return c.json({ 
       success: true,
-      post: post.data
+      post: post
     });
   } catch (error) {
     console.error("Error fetching Instagram post:", error);
