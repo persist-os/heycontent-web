@@ -140,6 +140,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
                 required
                 placeholder="Enter your email"
                 title="Email address"
+                style={{ background: '#fff', color: '#111827', borderColor: '#E5E7EB' }}
               />
               <Mail className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 transform -translate-y-1/2" />
             </div>
@@ -155,6 +156,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
                 required
                 placeholder="Enter your password"
                 title="Password"
+                style={{ background: '#fff', color: '#111827', borderColor: '#E5E7EB' }}
               />
               <Lock className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 transform -translate-y-1/2" />
               <button
