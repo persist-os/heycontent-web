@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Instagram, Mail, BarChart3, Brain, Settings, Sparkles } from 'lucide-react'
+import { Instagram, Mail, BarChart3, Brain, Settings, Sparkles, RefreshCw } from 'lucide-react'
 import { useAuth } from '@/app/context/auth-context'
 import { RefreshState } from '@/components/ui/refresh-state'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -108,6 +108,32 @@ export function ContentHubScreen() {
       if (interval) clearInterval(interval)
     }
   }, [])
+
+  // Global refresh state management
+  const isAnyPlatformRefreshing = useMemo(() => {
+    const youtubeRefreshing = youtubeInsights.refreshing;
+    const instagramRefreshing = instagramInsights.refreshing;
+    const gmailRefreshing = gmailInsights.refreshing;
+    
+    console.log('[ContentHubScreen] Refresh states:', {
+      youtube: youtubeRefreshing,
+      instagram: instagramRefreshing,
+      gmail: gmailRefreshing,
+      youtubeStatus: youtubeInsights.status,
+      instagramStatus: instagramInsights.status,
+      gmailStatus: gmailInsights.status
+    });
+    
+    return youtubeRefreshing || instagramRefreshing || gmailRefreshing;
+  }, [youtubeInsights.refreshing, instagramInsights.refreshing, gmailInsights.refreshing, youtubeInsights.status, instagramInsights.status, gmailInsights.status])
+
+  // Get the platform that's currently refreshing for better messaging
+  const getRefreshingPlatform = useCallback(() => {
+    if (youtubeInsights.refreshing) return 'YouTube'
+    if (instagramInsights.refreshing) return 'Instagram'
+    if (gmailInsights.refreshing) return 'Gmail'
+    return 'platforms'
+  }, [youtubeInsights.refreshing, instagramInsights.refreshing, gmailInsights.refreshing])
 
   // Combined data for "all" tab analytics
   const allContentItems = useMemo(() => {
@@ -419,6 +445,23 @@ export function ContentHubScreen() {
         </div>
       </div>
 
+      {/* Refresh Notification Banner */}
+      {isAnyPlatformRefreshing && (
+        <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-b border-purple-200 dark:border-purple-800">
+          <div className="px-6 py-3">
+            <div className="flex items-center justify-center gap-3 text-sm">
+              <RefreshCw className="w-4 h-4 text-purple-600 dark:text-purple-400 animate-spin" />
+              <span className="text-purple-700 dark:text-purple-300 font-medium">
+                Refreshing {getRefreshingPlatform()} insights...
+              </span>
+              <span className="text-purple-600 dark:text-purple-400">
+                You can navigate between tabs while we process your data
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-6">
@@ -521,27 +564,60 @@ export function ContentHubScreen() {
                       {selectedView === 'all' && renderAllPlatformsInsights()}
                       
                       {selectedView === 'youtube' && (
-                        <YouTubeInsightsPlatform 
-                          userId={userId} 
-                          currentQuote={currentQuote} 
-                          loading={youtubeInsights.loading} 
-                        />
+                        <>
+                          {youtubeInsights.refreshing && (
+                            <div className="mb-4">
+                              <RefreshState
+                                title="Refreshing YouTube insights..."
+                                quote={currentQuote}
+                                subtitle="Feel free to navigate to other tabs while we process your data"
+                              />
+                            </div>
+                          )}
+                          <YouTubeInsightsPlatform 
+                            userId={userId} 
+                            currentQuote={currentQuote} 
+                            loading={youtubeInsights.loading} 
+                          />
+                        </>
                       )}
                       
                       {selectedView === 'instagram' && (
-                        <InstagramInsightsPlatform 
-                          userId={userId} 
-                          currentQuote={currentQuote} 
-                          loading={instagramInsights.loading} 
-                        />
+                        <>
+                          {instagramInsights.refreshing && (
+                            <div className="mb-4">
+                              <RefreshState
+                                title="Refreshing Instagram insights..."
+                                quote={currentQuote}
+                                subtitle="Feel free to navigate to other tabs while we process your data"
+                              />
+                            </div>
+                          )}
+                          <InstagramInsightsPlatform 
+                            userId={userId} 
+                            currentQuote={currentQuote} 
+                            loading={instagramInsights.loading} 
+                          />
+                        </>
                       )}
                       
                       {selectedView === 'gmail' && (
-                        <GmailInsightsPlatform 
-                          userId={userId} 
-                          currentQuote={currentQuote} 
-                          loading={gmailInsights.loading} 
-                        />
+                        <>
+                          {gmailInsights.refreshing && (
+                            <div className="mb-4">
+                              <RefreshState
+                                title="Refreshing Gmail insights..."
+                                quote={currentQuote}
+                                subtitle="Feel free to navigate to other tabs while we process your data"
+                              />
+                            </div>
+                          )}
+                          <GmailInsightsPlatform 
+                            userId={userId} 
+                            currentQuote={currentQuote} 
+                            loading={gmailInsights.loading} 
+                          />
+                        </>
                       )}
                     </TabsContent>
                   </Tabs>

@@ -53,52 +53,51 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
 
   return (
     <div className="space-y-6">
-      <AnalysisDepthPicker
-        platform="Instagram"
-        isRefreshing={refreshing}
-        error={error}
-        onRefresh={refresh}
-        disabled={!userId || !isConnected}
-        postLimit={postLimit}
-        setPostLimit={setPostLimit}
-        customPostLimit={customPostLimit}
-        setCustomPostLimit={setCustomPostLimit}
-        showCustomInput={showCustomInput}
-        setShowCustomInput={setShowCustomInput}
-        handleCustomSubmit={handleCustomSubmit}
-      />
-      
-      {loading ? (
-        <div className="grid gap-6">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 flex flex-col space-y-4">
-              <Skeleton className="h-5 w-3/4" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6" />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : refreshing ? (
-        <RefreshState
-          title="Refreshing Instagram insights..."
-          quote={currentQuote}
+      {!refreshing && (
+        <AnalysisDepthPicker
+          platform="Instagram"
+          isRefreshing={refreshing}
+          error={error}
+          onRefresh={refresh}
+          disabled={!userId || !isConnected}
+          postLimit={postLimit}
+          setPostLimit={setPostLimit}
+          customPostLimit={customPostLimit}
+          setCustomPostLimit={setCustomPostLimit}
+          showCustomInput={showCustomInput}
+          setShowCustomInput={setShowCustomInput}
+          handleCustomSubmit={handleCustomSubmit}
         />
-      ) : (
-        <div className="grid gap-6">
-          {(insights || []).length === 0 && !error && (
-            <div className="text-center text-gray-400">No Instagram insights available.</div>
-          )}
-          {(insights || []).map((insight, idx) => (
-            <InsightCard
-              key={idx}
-              {...insight}
-              expanded={expandedInsight === idx}
-              onExpand={() => setExpandedInsight(expandedInsight === idx ? null : idx)}
-            />
-          ))}
-        </div>
+      )}
+      
+      {!refreshing && (
+        loading ? (
+          <div className="grid gap-6">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 flex flex-col space-y-4">
+                <Skeleton className="h-5 w-3/4" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-5/6" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-6">
+            {(insights || []).length === 0 && !error && (
+              <div className="text-center text-gray-400">No Instagram insights available.</div>
+            )}
+            {(insights || []).map((insight, idx) => (
+              <InsightCard
+                key={idx}
+                {...insight}
+                expanded={expandedInsight === idx}
+                onExpand={() => setExpandedInsight(expandedInsight === idx ? null : idx)}
+              />
+            ))}
+          </div>
+        )
       )}
     </div>
   )
