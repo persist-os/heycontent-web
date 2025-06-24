@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Command } from '../types/command';
 import { searchCommands, parseCommandString, createQuickAskCommand } from '../lib/commands';
 
@@ -13,6 +13,7 @@ interface CommandHistory {
 
 export function useCommandPaletteState() {
   const router = useRouter();
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
@@ -22,6 +23,11 @@ export function useCommandPaletteState() {
   const [shortcutTimeout, setShortcutTimeout] = useState<NodeJS.Timeout | null>(null);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+
+  // Check if we're on a route where command palette should be disabled
+  const isCommandPaletteDisabled = pathname === '/' || 
+                                   pathname.startsWith('/auth/') || 
+                                   pathname.startsWith('/waitlist');
 
   // Debounced search effect
   useEffect(() => {
@@ -124,6 +130,11 @@ export function useCommandPaletteState() {
 
   // Handle keyboard navigation
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    // Disable command palette on landing page and auth screens
+    if (isCommandPaletteDisabled) {
+      return;
+    }
+
     if (!isOpen) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
@@ -200,7 +211,7 @@ export function useCommandPaletteState() {
         setIsOpen(false);
         break;
     }
-  }, [isOpen, searchResults, activeIndex, input, executeCommand, shortcutBuffer, shortcutTimeout]);
+  }, [isOpen, searchResults, activeIndex, input, executeCommand, shortcutBuffer, shortcutTimeout, isCommandPaletteDisabled]);
 
   // Set up keyboard listeners
   useEffect(() => {
