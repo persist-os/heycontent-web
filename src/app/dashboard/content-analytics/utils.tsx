@@ -105,7 +105,7 @@ export const getMetricsDisplay = (item: AnyContentItem) => {
     primaryMetricLabel = 'Reach'; // Prioritize Reach for Insta
     primaryMetricValue = item.metrics.reach ?? item.metrics.impressions ?? 0; // Fallback to Impressions if Reach is null/undefined
     secondaryMetricLabel = 'Likes';
-    secondaryMetricValue = item.metrics.likes ?? 0;
+    secondaryMetricValue = item.metrics.likes ?? item.metrics.like_count ?? 0; // Use insights likes or fallback to post data
   }
 
   // Common metric
@@ -162,15 +162,19 @@ export function sortContent(items: AnyContentItem[], sortOption: SortOption): An
       case 'likes': { // Instagram & YouTube
         let valA = -1;
         let valB = -1;
-        if (a.platform === 'instagram' || a.platform === 'youtube') valA = a.metrics.likes ?? 0;
-        if (b.platform === 'instagram' || b.platform === 'youtube') valB = b.metrics.likes ?? 0;
+        if (a.platform === 'instagram') valA = a.metrics.likes ?? a.metrics.like_count ?? 0;
+        if (a.platform === 'youtube') valA = a.metrics.likes ?? 0;
+        if (b.platform === 'instagram') valB = b.metrics.likes ?? b.metrics.like_count ?? 0;
+        if (b.platform === 'youtube') valB = b.metrics.likes ?? 0;
         return valB - valA;
       }
       case 'comments': { // Instagram & YouTube
         let valA = -1;
         let valB = -1;
-        if (a.platform === 'instagram' || a.platform === 'youtube') valA = a.metrics.comments ?? 0;
-        if (b.platform === 'instagram' || b.platform === 'youtube') valB = b.metrics.comments ?? 0;
+        if (a.platform === 'instagram') valA = a.metrics.comments ?? a.metrics.comments_count ?? 0;
+        if (a.platform === 'youtube') valA = a.metrics.comments ?? 0;
+        if (b.platform === 'instagram') valB = b.metrics.comments ?? b.metrics.comments_count ?? 0;
+        if (b.platform === 'youtube') valB = b.metrics.comments ?? 0;
         return valB - valA;
       }
       case 'views': { // YouTube only
@@ -332,16 +336,20 @@ export const getMockInstagramItem = (idSuffix: string): InstagramContentItem => 
     content: {
       text: caption,
       mediaUrl: `https://picsum.photos/seed/ig${idSuffix}/1080/1080`,
-      mediaType: Math.random() > 0.8 ? 'video' : (Math.random() > 0.6 ? 'carousel' : 'image'), // Vary media type
+      mediaType: Math.random() > 0.8 ? 'VIDEO' : (Math.random() > 0.6 ? 'CAROUSEL_ALBUM' : 'IMAGE'), // Vary media type
       thumbnailUrl: `https://picsum.photos/seed/igthumb${idSuffix}/200/200`,
       permalink: `https://instagram.com/p/mock${idSuffix}`,
     },
     metrics: {
+      // Insights data (primary)
       likes,
       comments,
       impressions,
       reach,
       shares,
+      // Fallback data
+      like_count: likes,
+      comments_count: comments,
     },
   };
 };

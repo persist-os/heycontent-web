@@ -475,18 +475,7 @@ export default defineSchema({
   .index("by_views", ["statistics.views"])
   .index("by_likes", ["statistics.likes"]),
 
-  // Instagram Tokens
-  instagramTokens: defineTable({
-    userId: v.string(),
-    instagramAccountId: v.string(),
-    accessToken: v.string(),
-    refreshToken: v.string(),
-    expiryDate: v.number(),
-    scope: v.string(),
-    lastRefreshed: v.number(),
-  }).index("by_userId", ["userId"]),
-
-  // Instagram Accounts
+  // Instagram Accounts (consolidated with tokens and insights)
   instagramAccounts: defineTable({
     userId: v.string(),
     instagramAccountId: v.string(),
@@ -499,7 +488,26 @@ export default defineSchema({
       followers_count: v.any(),
       follows_count: v.any(),
       media_count: v.any(),
+      name: v.optional(v.string()),
+      biography: v.optional(v.string()),
+      website: v.optional(v.string()),
     }),
+    // Token data (consolidated from instagramTokens table)
+    token: v.optional(v.object({
+      accessToken: v.string(),
+      expiryDate: v.number(),
+      scope: v.string(),
+      lastRefreshed: v.number(),
+    })),
+    // Profile insights data
+    profileInsights: v.optional(v.object({
+      reach: v.optional(v.number()),
+      profile_views: v.optional(v.number()),
+      website_clicks: v.optional(v.number()),
+      follower_count: v.optional(v.number()),
+      period: v.optional(v.string()),
+      lastUpdated: v.optional(v.number()),
+    })),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -507,165 +515,88 @@ export default defineSchema({
   .index("by_username", ["username"])
   .index("by_instagramAccountId", ["instagramAccountId"]),
 
-  // Instagram Posts
+  // Unified Instagram Posts Table - Handles all media types (IMAGE, VIDEO, CAROUSEL_ALBUM, REELS)
   instagramPosts: defineTable({
-    instagramAccountId: v.string(),
     userId: v.string(),
+    instagramAccountId: v.string(),
     postId: v.string(),
-    analysis: v.optional(v.any()), // From second schema
-    analysisMarkdown: v.optional(v.string()), // From second schema
+    mediaType: v.union(
+      v.literal("IMAGE"),
+      v.literal("VIDEO"), 
+      v.literal("CAROUSEL_ALBUM"),
+      v.literal("REELS")
+    ),
     data: v.object({
+      // Core fields (common to all types)
       id: v.string(),
       caption: v.string(),
-      media_type: v.union(
-        v.literal("IMAGE"),
-        v.literal("VIDEO"),
-        v.literal("CAROUSEL_ALBUM")
-      ),
-      like_count: v.optional(v.number()),
       media_url: v.string(),
       permalink: v.string(),
+      timestamp: v.number(),
       username: v.string(),
-      timestamp: v.optional(v.number()),
+      like_count: v.optional(v.number()),
       comments_count: v.optional(v.number()),
-      thumbnail_url: v.optional(v.string()),
-      comments: v.optional(v.any()),
-      children: v.optional(v.array(v.object({
+      
+      // Type-specific fields (made optional since different media types have different fields)
+      thumbnail_url: v.optional(v.union(v.string(), v.null())), // For videos/reels only
+      children: v.optional(v.union(v.array(v.object({
         id: v.string(),
         media_url: v.string(),
         media_type: v.string(),
-        thumbnail_url: v.optional(v.string())
-      })))
-    }),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_instagramAccountId", ["instagramAccountId"])
-  .index("by_userId", ["userId"])
-  .index("by_postId", ["postId"])
-  .index("by_timestamp", ["data.timestamp"]),
-
-  // Instagram Profile Insights
-  instagramProfileInsights: defineTable({
-    userId: v.string(),
-    instagramAccountId: v.string(),
-    data: v.object({
-      impressions: v.optional(v.number()),
-      reach: v.optional(v.number()),
-      profile_views: v.optional(v.number()),
-      website_clicks: v.optional(v.number()),
-      follower_count: v.optional(v.number()),
-      follows_count: v.optional(v.number()),
-      media_count: v.optional(v.number()),
-      saved_count: v.optional(v.number()),
-      engagement_rate: v.optional(v.number()),
-      period: v.string(),
-      timestamp: v.number()
-    }),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_instagramAccountId", ["instagramAccountId"])
-  .index("by_timestamp", ["data.timestamp"]),
-
-  // Instagram Stories
-  instagramStories: defineTable({
-    userId: v.string(),
-    instagramAccountId: v.string(),
-    data: v.array(v.object({
-      id: v.string(),
-      media_type: v.string(),
-      media_url: v.string(),
-      permalink: v.string(),
-      timestamp: v.number(),
+        thumbnail_url: v.optional(v.union(v.string(), v.null()))
+      })), v.null())), // For carousels only
+      
+      // Embedded insights (flattened for easy access)
       insights: v.optional(v.object({
         impressions: v.optional(v.number()),
         reach: v.optional(v.number()),
-        exits: v.optional(v.number()),
-        replies: v.optional(v.number()),
-        taps_forward: v.optional(v.number()),
-        taps_back: v.optional(v.number()),
-        navigation: v.optional(v.object({
-          next: v.optional(v.number()),
-          back: v.optional(v.number()),
-          exit: v.optional(v.number())
-        }))
-      }))
-    })),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_instagramAccountId", ["instagramAccountId"]),
-
-  // Instagram Post Insights
-  instagramPostInsights: defineTable({
-    userId: v.string(),
-    postId: v.string(),
-    data: v.object({
-      impressions: v.optional(v.number()),
-      reach: v.optional(v.number()),
-      saved: v.optional(v.number()),
-      shares: v.optional(v.number()),
-      comments: v.optional(v.number()),
-      likes: v.optional(v.number()),
-      total_interactions: v.optional(v.number()),
-      follows: v.optional(v.number()),
-      profile_visits: v.optional(v.number()),
-      profile_activity: v.optional(v.number()),
-      views: v.optional(v.number()),
-      period: v.string(),
-      timestamp: v.number()
-    }),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_postId", ["postId"])
-  .index("by_timestamp", ["data.timestamp"]),
-
-  // Instagram Post Comments
-  instagramPostComments: defineTable({
-    userId: v.string(),
-    postId: v.string(),
-    data: v.array(v.object({
-      id: v.string(),
-      text: v.string(),
-      timestamp: v.number(),
-      username: v.string(),
-      replies: v.optional(v.object({
-        data: v.array(v.object({
+        likes: v.optional(v.number()),
+        comments: v.optional(v.number()),
+        saved: v.optional(v.number()),
+        shares: v.optional(v.number()),
+        total_interactions: v.optional(v.number()),
+        profile_visits: v.optional(v.number()),
+        profile_activity: v.optional(v.number()),
+        views: v.optional(v.number()),
+        follows: v.optional(v.number()),
+        // Reels-specific insights
+        ig_reels_avg_watch_time: v.optional(v.number()),
+        ig_reels_video_view_total_time: v.optional(v.number()),
+        period: v.optional(v.string()),
+        timestamp: v.optional(v.number())
+      })),
+      
+      // Embedded comments (for recent/important ones)
+      comments: v.optional(v.array(v.object({
+        id: v.string(),
+        text: v.string(),
+        timestamp: v.number(),
+        username: v.string(),
+        like_count: v.optional(v.number()),
+        replies: v.optional(v.array(v.object({
           id: v.string(),
           text: v.string(),
           timestamp: v.number(),
-          username: v.string()
-        })),
-        paging: v.optional(v.object({
-          cursors: v.object({
-            before: v.string(),
-            after: v.string()
-          })
-        }))
-      }))
-    })),
+          username: v.optional(v.string())
+        })))
+      })))
+    }),
+    
+    // Analysis fields
+    analysis: v.optional(v.any()),
+    analysisMarkdown: v.optional(v.string()),
+    
     createdAt: v.number(),
     updatedAt: v.number(),
   })
   .index("by_userId", ["userId"])
-  .index("by_postId", ["postId"]),
+  .index("by_instagramAccountId", ["instagramAccountId"])
+  .index("by_postId", ["postId"])
+  .index("by_mediaType", ["mediaType"])
+  .index("by_timestamp", ["data.timestamp"])
+  .index("by_user_account", ["userId", "instagramAccountId"]),
 
-  // Instagram Analysis Tables
-  instagramTracker: defineTable({
-    userId: v.string(),
-    instagramAccountId: v.string(),
-    analysis: v.any(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_instagramAccountId", ["instagramAccountId"]),
-
+  // Instagram Analysis Tables (keeping these for backward compatibility and specific analysis tracking)
   instagramTrackerAnalysis: defineTable({
     userId: v.string(),
     instagramAccountId: v.string(),
@@ -675,6 +606,19 @@ export default defineSchema({
   })
   .index("by_userId", ["userId"])
   .index("by_account", ["instagramAccountId"]),
+
+  instagramBatchAnalysis: defineTable({
+    insights: v.optional(v.any()),
+    status: v.optional(v.any()),
+    createdAt: v.float64(),
+    instagramAccountId: v.string(),
+    updatedAt: v.float64(),
+    userId: v.string(),
+    analysisType: v.literal("batch"),
+  })
+    .index("by_account", ["instagramAccountId"])
+    .index("by_userId", ["userId"])
+    .index("by_user_account", ["userId", "instagramAccountId"]),
 
   // Usage Events
   usageEvents: defineTable({
@@ -704,33 +648,6 @@ export default defineSchema({
     status: v.string(),
   })
   .index("by_email", ["email"]),
-
-  instagramBatchAnalysis: defineTable({
-    insights: v.optional(v.any()),
-    status: v.optional(v.any()),
-    createdAt: v.float64(),
-    instagramAccountId: v.string(),
-    updatedAt: v.float64(),
-    userId: v.string(),
-    analysisType: v.literal("batch"),
-  })
-    .index("by_account", ["instagramAccountId"])
-    .index("by_userId", ["userId"])
-    .index("by_user_account", ["userId", "instagramAccountId"]),
-
-  // Gmail Batch Analysis
-  gmailBatchAnalysis: defineTable({
-    insights: v.optional(v.any()),
-    status: v.optional(v.any()),
-    createdAt: v.number(),
-    gmailAccountId: v.string(),
-    updatedAt: v.number(),
-    userId: v.string(),
-    analysisType: v.literal("batch"),
-  })
-    .index("by_account", ["gmailAccountId"])
-    .index("by_userId", ["userId"])
-    .index("by_user_account", ["userId", "gmailAccountId"]),
 
   // YouTube Batch Analysis
   youtubeBatchAnalysis: defineTable({

@@ -9,21 +9,40 @@ export interface BaseContentItem {
 
 // --- Platform Specific Details --- //
 
-// Instagram Post
+// Instagram Post (Updated to match schema)
 export interface InstagramContentDetails {
   text?: string; // Caption
   mediaUrl: string; // URL of the primary image/video
-  mediaType: 'image' | 'video' | 'carousel'; // More specific type
+  mediaType: 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM' | 'REELS'; // Match schema exactly
   thumbnailUrl?: string; // Optional specific thumbnail
   permalink: string; // Direct link to the post
   timestamp?: number; // Unix timestamp of the post
 }
 export interface InstagramMetrics {
+  // From embedded insights
   impressions?: number;
   reach?: number;
-  likes: number;
-  comments: number;
-  shares?: number; // Corresponds to saves/shares
+  likes?: number; // From insights.likes
+  comments?: number; // From insights.comments
+  saved?: number; // From insights.saved
+  shares?: number; // From insights.shares
+  total_interactions?: number;
+  profile_visits?: number;
+  profile_activity?: number;
+  views?: number;
+  follows?: number;
+  // Reels-specific
+  ig_reels_avg_watch_time?: number;
+  ig_reels_video_view_total_time?: number;
+  // From post data (fallback)
+  like_count?: number; // From data.like_count
+  comments_count?: number; // From data.comments_count
+}
+export interface InstagramChildMedia {
+  id: string;
+  media_url: string;
+  media_type: string;
+  thumbnail_url?: string | null;
 }
 export interface InstagramContentItem extends BaseContentItem {
   platform: 'instagram';
@@ -31,7 +50,7 @@ export interface InstagramContentItem extends BaseContentItem {
   metrics: InstagramMetrics;
   analysis?: any; // Analysis data can be any type since it's stored as JSON
   analysisMarkdown?: string; // Markdown formatted analysis for display
-  children?: any[]; // Array of child media items for carousel posts
+  children?: InstagramChildMedia[]; // Array of child media items for carousel posts (typed properly)
 }
 
 // YouTube Video

@@ -119,11 +119,12 @@ export function useInstagramAnalytics(userId?: string) {
     userId ? { userId } : "skip"
   );
 
-  // Get Instagram post insights
-  const instagramPostInsights = useQuery(
-    api.instagramQueries.getAllPostInsights,
-    { userId: userId || '' }
-  );
+  // Get Instagram post insights - REMOVED: This query doesn't exist in the new schema
+  // Insights are now embedded within the posts themselves
+  // const instagramPostInsights = useQuery(
+  //   api.instagramQueries.getAllPostInsights,
+  //   { userId: userId || '' }
+  // );
 
   // Memoize the Instagram account ID
   const instagramAccountId = useMemo(() => instagramAccount?.instagramAccountId, [instagramAccount?.instagramAccountId]);
@@ -161,50 +162,66 @@ export function useInstagramAnalytics(userId?: string) {
     } : "skip"
   );
 
-  // Map Instagram items with caching
+  // Map Instagram items with caching - UPDATED for new schema
   const mappedInstagramItems = useMemo(() => {
     if (Array.isArray(instagramPosts)) {
       return instagramPosts.map((post: any): InstagramContentItem => {
         let mediaUrl = post.data.media_url;
-        if (post.data.media_type === 'CAROUSEL_ALBUM' && post.data.children?.length > 0) {
+        if (post.mediaType === 'CAROUSEL_ALBUM' && post.data.children?.length > 0) {
           const imageChild = post.data.children.find((c: any) => c.media_type === 'IMAGE');
           mediaUrl = imageChild?.media_url || post.data.children[0]?.media_url || mediaUrl;
         }
 
-        // Get insights for this post
-        const postId = post.postId || post.data.id;
-        const insights = instagramPostInsights?.find(insight => insight?.postId === postId);
-
-        // Extract metrics from both post data and insights
+        // Extract metrics from post data and embedded insights (new schema)
+        const postInsights = post.data?.insights || {};
         const metrics = {
-          // From insights data
-          impressions: insights?.data?.impressions ?? 0,
-          reach: insights?.data?.reach ?? 0,
-          shares: insights?.data?.shares ?? 0,
-          // From post data (these might be more up-to-date)
-          likes: post.data.like_count ?? insights?.data?.likes ?? 0,
-          comments: post.data.comments_count ?? insights?.data?.comments ?? 0
+          // From embedded insights data (new schema) - comprehensive metrics
+          impressions: postInsights?.impressions,
+          reach: postInsights?.reach,
+          likes: postInsights?.likes,
+          comments: postInsights?.comments,
+          saved: postInsights?.saved,
+          shares: postInsights?.shares,
+          total_interactions: postInsights?.total_interactions,
+          profile_visits: postInsights?.profile_visits,
+          profile_activity: postInsights?.profile_activity,
+          views: postInsights?.views,
+          follows: postInsights?.follows,
+          ig_reels_avg_watch_time: postInsights?.ig_reels_avg_watch_time,
+          ig_reels_video_view_total_time: postInsights?.ig_reels_video_view_total_time,
+          // From post data (fallback values)
+          like_count: post.data.like_count,
+          comments_count: post.data.comments_count
         };
 
         return {
-          id: postId,
+          id: post.postId || post.data.id,
           platform: 'instagram',
           publishedAt: post.data.timestamp ? new Date(post.data.timestamp).toISOString() : new Date().toISOString(),
           content: {
             text: post.data.caption,
             mediaUrl,
-            mediaType: post.data.media_type === 'IMAGE' ? 'image' : post.data.media_type === 'VIDEO' ? 'video' : 'carousel',
+            mediaType: post.mediaType as 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM' | 'REELS', // Use actual mediaType from schema
             thumbnailUrl: post.data.thumbnail_url,
             permalink: post.data.permalink,
+            timestamp: post.data.timestamp,
           },
           metrics,
-          // Include children array for carousel posts
-          children: post.data.children || [],
+          // Include properly typed children array for carousel posts
+          children: post.data.children?.map((child: any) => ({
+            id: child.id,
+            media_url: child.media_url,
+            media_type: child.media_type,
+            thumbnail_url: child.thumbnail_url
+          })) || [],
+          // Include analysis data if available
+          analysis: post.analysis,
+          analysisMarkdown: post.analysisMarkdown,
         };
       });
     }
     return [];
-  }, [instagramPosts, instagramPostInsights]);
+  }, [instagramPosts]);
 
   // Initialize with cached data on mount only
   useEffect(() => {

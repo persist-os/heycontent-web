@@ -109,13 +109,13 @@ export const getContentHubDataBundle = query({
     let youtubeConnected = false;
     let gmailConnected = false;
 
-    // Check Instagram connection
+    // Check Instagram connection (now using instagramAccounts table)
     try {
-      const instagramToken = await ctx.db
-        .query("instagramTokens")
+      const instagramAccount = await ctx.db
+        .query("instagramAccounts")
         .withIndex("by_userId", q => q.eq("userId", userId))
         .first();
-      instagramConnected = !!instagramToken;
+      instagramConnected = !!instagramAccount;
       console.log(`[getContentHubDataBundle] Instagram connected: ${instagramConnected}`);
     } catch (e) {
       console.error("Error checking Instagram connection:", e);

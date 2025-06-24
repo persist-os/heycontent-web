@@ -23,10 +23,9 @@ export const InstagramCardPlaceholder: React.FC = () => (
 );
 
 export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDiscussContent, onViewDetailedAnalytics }) => {
-  const { content, metrics, publishedAt } = item;
-  // Access children from the item directly (now passed through from mapping)
-  const children = (item as any)?.children || [];
-  const isCarousel = content.mediaType === 'carousel' && Array.isArray(children) && children.length > 0;
+  const { content, metrics, publishedAt, children = [] } = item;
+  // Use properly typed children from the item
+  const isCarousel = content.mediaType === 'CAROUSEL_ALBUM' && Array.isArray(children) && children.length > 0;
   const fallbackImg = '/no-image.png';
 
   // Carousel state
@@ -77,7 +76,7 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
       <div className="relative aspect-video bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
         {isCarousel ? (
           <div className="relative w-full h-full">
-            {children.map((child: any, idx: number) => (
+            {children.map((child, idx: number) => (
               <div
                 key={child.id || idx}
                 className={`absolute inset-0 transition-all duration-500 ease-in-out ${
@@ -89,7 +88,7 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
                 }`}
               >
                 <img
-                  src={child.media_type === 'VIDEO' ? child.thumbnail_url : child.media_url}
+                  src={child.media_type === 'VIDEO' ? child.thumbnail_url || child.media_url : child.media_url}
                   alt={content.text || `Instagram Carousel Item ${idx + 1}`}
                   className="w-full h-full object-cover"
                   style={{ aspectRatio: '16/9', objectFit: 'cover' }}
@@ -100,7 +99,7 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
             
             {/* Carousel indicators */}
             <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex gap-2">
-              {children.map((_: any, idx: number) => (
+              {children.map((_, idx: number) => (
                 <div
                   key={idx}
                   className={`w-2 h-2 rounded-full transition-all duration-300 ${
@@ -118,27 +117,27 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
               {currentSlide + 1} / {children.length}
             </div>
           </div>
-        ) : (
-          content.permalink ? (
-            <a href={content.permalink} target="_blank" rel="noopener noreferrer" className="block w-full h-full group-hover:scale-105 transition-transform duration-300">
+                  ) : (
+            content.permalink ? (
+              <a href={content.permalink} target="_blank" rel="noopener noreferrer" className="block w-full h-full group-hover:scale-105 transition-transform duration-300">
+                <img
+                  src={content.mediaType === 'VIDEO' || content.mediaType === 'REELS' ? content.thumbnailUrl : content.mediaUrl || content.thumbnailUrl || fallbackImg}
+                  alt={content.text || 'Instagram Post'}
+                  className="w-full h-full object-cover"
+                  style={{ aspectRatio: '16/9', objectFit: 'cover' }}
+                  onError={handleImgError}
+                />
+              </a>
+            ) : (
               <img
-                src={content.mediaType === 'video' ? content.thumbnailUrl : content.mediaUrl || content.thumbnailUrl || fallbackImg}
+                src={content.mediaUrl || content.thumbnailUrl || fallbackImg}
                 alt={content.text || 'Instagram Post'}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 style={{ aspectRatio: '16/9', objectFit: 'cover' }}
                 onError={handleImgError}
               />
-            </a>
-          ) : (
-            <img
-              src={content.mediaUrl || content.thumbnailUrl || fallbackImg}
-              alt={content.text || 'Instagram Post'}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              style={{ aspectRatio: '16/9', objectFit: 'cover' }}
-              onError={handleImgError}
-            />
-          )
-        )}
+            )
+          )}
 
         {/* Media Type Badge */}
         <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium text-white capitalize">
@@ -191,7 +190,7 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
               <Heart className="w-4 h-4 text-red-500" />
             </div>
             <div>
-              <div className="text-sm font-semibold text-gray-900 dark:text-white">{formatNumber(metrics?.likes)}</div>
+              <div className="text-sm font-semibold text-gray-900 dark:text-white">{formatNumber(metrics?.likes || metrics?.like_count)}</div>
               <div className="text-xs text-gray-500 dark:text-gray-400">Likes</div>
             </div>
           </div>
@@ -201,8 +200,8 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
               <Forward className="w-4 h-4 text-blue-600" />
             </div>
             <div>
-              <div className="text-sm font-semibold text-gray-900 dark:text-white">{formatNumber(metrics?.shares)}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Shares</div>
+              <div className="text-sm font-semibold text-gray-900 dark:text-white">{formatNumber(metrics?.shares || metrics?.saved)}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Saves</div>
             </div>
           </div>
           
@@ -211,7 +210,7 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
               <MessageSquare className="w-4 h-4 text-heycontent-green" />
             </div>
             <div>
-              <div className="text-sm font-semibold text-gray-900 dark:text-white">{formatNumber(metrics?.comments)}</div>
+              <div className="text-sm font-semibold text-gray-900 dark:text-white">{formatNumber(metrics?.comments || metrics?.comments_count)}</div>
               <div className="text-xs text-gray-500 dark:text-gray-400">Comments</div>
             </div>
           </div>
