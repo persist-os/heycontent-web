@@ -18,7 +18,7 @@ interface NoteEditorProps {
   onLinkNote?: (noteId: string) => void;
 }
 
-export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
+export const NoteEditor = forwardRef<HTMLDivElement, NoteEditorProps>((
   {
     content,
     onContentChange,
@@ -35,7 +35,7 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
   }, 
   ref
 ) => {
-  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const textAreaRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [palettePosition, setPalettePosition] = useState({ top: 0, left: 0 });
@@ -57,7 +57,7 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
     if (ref && typeof ref === 'function') {
       ref(textAreaRef.current);
     } else if (ref) {
-      (ref as React.MutableRefObject<HTMLTextAreaElement | null>).current = textAreaRef.current;
+      (ref as React.MutableRefObject<HTMLDivElement | null>).current = textAreaRef.current;
     }
   }, [ref]);
 
@@ -73,57 +73,34 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
   const getCursorCoordinates = useCallback(() => {
     if (!textAreaRef.current) return { top: 100, left: 100 };
     
-    const textarea = textAreaRef.current;
-    const rect = textarea.getBoundingClientRect();
-    const start = textarea.selectionStart;
-    const value = textarea.value;
+    const element = textAreaRef.current;
+    const rect = element.getBoundingClientRect();
     
-    // Simple approach: calculate approximate position based on text dimensions
-    const textBeforeCursor = value.substring(0, start);
-    const lines = textBeforeCursor.split('\n');
-    const currentLineIndex = lines.length - 1;
-    const currentLineText = lines[currentLineIndex] || '';
-    
-    // Get computed styles
-    const computed = window.getComputedStyle(textarea);
-    const fontSize = parseInt(computed.fontSize, 10) || 16;
-    const lineHeight = computed.lineHeight === 'normal' 
-      ? fontSize * 1.2 
-      : parseInt(computed.lineHeight, 10) || fontSize * 1.2;
-    const paddingTop = parseInt(computed.paddingTop, 10) || 0;
-    const paddingLeft = parseInt(computed.paddingLeft, 10) || 0;
-    
-    // Create a temporary canvas to measure text width
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.font = computed.font;
-      const textWidth = ctx.measureText(currentLineText).width;
-      
-      // Calculate position
-      const x = rect.left + paddingLeft + textWidth;
-      const y = rect.top + paddingTop + (currentLineIndex * lineHeight) + lineHeight + 10;
-      
+    // For contentEditable, we need to use Selection API
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
       return {
-        top: Math.min(y, window.innerHeight - 300),
-        left: Math.min(x, window.innerWidth - 400)
+        top: rect.top + 50,
+        left: rect.left + 50
       };
     }
     
-    // Fallback if canvas fails
+    const range = selection.getRangeAt(0);
+    const rangeRect = range.getBoundingClientRect();
+    
     return {
-      top: rect.top + 50,
-      left: rect.left + 50
+      top: Math.min(rangeRect.bottom + 10, window.innerHeight - 300),
+      left: Math.min(rangeRect.left, window.innerWidth - 400)
     };
   }, []);
 
   // Handle content changes
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onContentChange(e.target.value);
+  const handleChange = useCallback((content: string) => {
+    onContentChange(content);
   }, [onContentChange]);
 
   // Handle keyboard shortcuts
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     // Cmd/Ctrl + K to open inline command palette
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
       e.preventDefault();
@@ -137,12 +114,33 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
 
     // '/' at the start of a line to open command palette
     if (e.key === '/') {
-      const textarea = textAreaRef.current;
-      if (!textarea) return;
+      const selection = window.getSelection();
+      if (!selection || !textAreaRef.current) return;
       
-      const start = textarea.selectionStart;
-      const lineStart = content.lastIndexOf('\n', start - 1) + 1;
-      const lineContent = content.substring(lineStart, start);
+      const range = selection.getRangeAt(0);
+      const textContent = textAreaRef.current.textContent || '';
+      
+      // Get cursor position in text
+      let cursorOffset = 0;
+      const walker = document.createTreeWalker(
+        textAreaRef.current,
+        NodeFilter.SHOW_TEXT,
+        null
+      );
+      
+      let node;
+      while (node = walker.nextNode()) {
+        if (node === range.startContainer) {
+          cursorOffset += range.startOffset;
+          break;
+        }
+        cursorOffset += node.textContent?.length || 0;
+      }
+      
+      // Find the start of the current line
+      const beforeCursor = textContent.substring(0, cursorOffset);
+      const lastNewline = beforeCursor.lastIndexOf('\n');
+      const lineContent = beforeCursor.substring(lastNewline + 1);
       
       if (lineContent.trim() === '') {
         e.preventDefault();
@@ -181,24 +179,22 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
   const insertAtCursor = useCallback((text: string) => {
     if (!textAreaRef.current) return;
     
-    const textarea = textAreaRef.current;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+    range.deleteContents();
+    range.insertNode(document.createTextNode(text));
     
-    const newContent = content.substring(0, start) + text + content.substring(end);
-    const newCursorPosition = start + text.length;
+    // Move cursor after the inserted text
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
     
+    // Trigger content change
+    const newContent = textAreaRef.current.textContent || '';
     onContentChange(newContent);
-    
-    // Set cursor position after content update
-    setTimeout(() => {
-      if (textAreaRef.current) {
-        textAreaRef.current.selectionStart = newCursorPosition;
-        textAreaRef.current.selectionEnd = newCursorPosition;
-        textAreaRef.current.focus();
-      }
-    }, 0);
-  }, [content, onContentChange]);
+  }, [onContentChange]);
 
   // Handle AI responses
   const handleAskAI = useCallback(async (prompt: string) => {
@@ -231,37 +227,32 @@ export const NoteEditor = forwardRef<HTMLTextAreaElement, NoteEditorProps>((
     }
   }, [requestIdeas]);
 
-  // Handle note linking - fixed to not replace the user's @ but just add title and closing @
+  // Handle note linking - updated for contentEditable
   const handleLinkNote = useCallback((noteId: string) => {
-    const textarea = textAreaRef.current;
-    if (!textarea) return;
+    if (!textAreaRef.current) return;
 
     const selectedNote = availableNotes.find(note => String(note._id) === noteId);
     if (!selectedNote) return;
 
-    // Just add the title and closing @ (don't replace the user's @)
-    const linkText = `${selectedNote.title}@`;
-    const currentContent = content;
-    const cursorPos = textarea.selectionStart;
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
 
-    // Insert the title and closing @ at the current cursor position
-    const newContent = 
-      currentContent.substring(0, cursorPos) + 
-      linkText + 
-      currentContent.substring(cursorPos);
-
-    const newCursorPosition = cursorPos + linkText.length;
-    onContentChange(newContent);
+    const range = selection.getRangeAt(0);
+    const linkText = `@[${selectedNote.title}]@`;
     
-    // Set cursor position after content update
-    setTimeout(() => {
-      if (textAreaRef.current) {
-        textAreaRef.current.selectionStart = newCursorPosition;
-        textAreaRef.current.selectionEnd = newCursorPosition;
-        textAreaRef.current.focus();
-      }
-    }, 0);
-  }, [availableNotes, content, onContentChange]);
+    // Insert the link text at cursor position
+    range.deleteContents();
+    range.insertNode(document.createTextNode(linkText));
+    
+    // Move cursor after the inserted text
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    
+    // Trigger content change
+    const newContent = textAreaRef.current.textContent || '';
+    onContentChange(newContent);
+  }, [availableNotes, onContentChange]);
 
   const handleFocus = useCallback(() => {
     setIsFocused(true);

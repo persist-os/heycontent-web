@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef, useCallback, forwardRef } from 'react'
 import { InlineCommandPalette } from '@/app/dashboard/notes/components/InlineCommandPalette'
 import { MarkdownRenderer } from '@/app/dashboard/chat/markdown-renderer'
-import { NoteContentRenderer } from '@/app/dashboard/notes/components/NoteContentRenderer'
 import { Eye, Edit } from 'lucide-react'
 import { useImageUpload } from '@/app/dashboard/notes/hooks/useImageUpload'
 import toast from 'react-hot-toast'
@@ -24,6 +23,7 @@ import {
 } from './formatting-utils'
 
 import { AIHandlers, createAIHandlers } from './ai-utils'
+import { markdownToHTML, htmlToMarkdown } from './markdown-utils'
 
 interface RichTextEditorProps {
   content: string
@@ -31,8 +31,6 @@ interface RichTextEditorProps {
   placeholder?: string
   disabled?: boolean
   className?: string
-  showPreview?: boolean
-  onShowPreviewChange?: (show: boolean) => void
   // AI handlers
   onAskAI?: (prompt: string) => Promise<string>
   onRequestAnalysis?: (noteType: string) => Promise<string>
@@ -47,18 +45,16 @@ interface RichTextEditorProps {
   // Note linking
   availableNotes?: Array<{ _id: string; title: string; type: string }>
   onLinkNote?: (noteId: string) => void
-  // --- NEW: Optional container ref for palette positioning ---
+  // Container ref for palette positioning
   containerRef?: React.RefObject<HTMLElement>
 }
 
-export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProps>(({
+export const RichTextEditor = forwardRef<HTMLDivElement, RichTextEditorProps>(({
   content,
   onContentChange,
   placeholder = 'Start writing...',
   disabled = false,
   className = '',
-  showPreview = true,
-  onShowPreviewChange,
   onAskAI,
   onRequestAnalysis,
   onRequestIdeas,
@@ -73,175 +69,94 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
   containerRef,
   ...rest
 }, ref) => {
-  const [localShowPreview, setLocalShowPreview] = useState(true)
+  const [showPreview, setShowPreview] = useState(false) // Default to edit mode
   const [showCommandPalette, setShowCommandPalette] = useState(false)
   const [palettePosition, setPalettePosition] = useState({ top: 100, left: 100 })
   const [paletteMode, setPaletteMode] = useState<'commands' | 'notes'>('commands')
-  const [cursorPosition, setCursorPosition] = useState(0)
   const [isDragOver, setIsDragOver] = useState(false)
+  const [isInitialized, setIsInitialized] = useState(false)
+  const [editorKey, setEditorKey] = useState(0) // Key to force re-render
   
-  const textAreaRef = useRef<HTMLTextAreaElement>(null)
+  const textAreaRef = useRef<HTMLDivElement>(null)
+  const lastContentRef = useRef<string>('')
   const { uploadImage, isUploading } = useImageUpload()
   
   // Sync external ref
   useEffect(() => {
     if (ref && typeof ref === 'function') {
-      ref(textAreaRef.current)
+      ref(textAreaRef.current as any)
     } else if (ref) {
-      (ref as React.MutableRefObject<HTMLTextAreaElement | null>).current = textAreaRef.current
+      (ref as any).current = textAreaRef.current
     }
   }, [ref])
 
-  // Sync preview state - default to showing rich text
-  const currentShowPreview = onShowPreviewChange ? showPreview : localShowPreview
-  const setCurrentShowPreview = onShowPreviewChange || setLocalShowPreview
-
-  // Custom Note Link Component
-  const NoteLinkCard = ({ note, onClick }: { note: { _id: string; title: string; type: string }, onClick: () => void }) => (
-    <span
-      onClick={onClick}
-      className="inline-flex items-center px-4 py-2 mx-1 my-1 rounded-lg border border-border bg-muted text-lg font-semibold text-foreground cursor-pointer align-middle min-h-[2.8em]"
-      style={{ whiteSpace: 'normal', lineHeight: '1.4' }}
-    >
-      {note.title}
-    </span>
-  )
-
-  // Function to render content with embedded note link components
-  const renderContentWithNoteLinks = useCallback((rawContent: string) => {
-    if (!rawContent) return []
-
-    const parts: React.ReactNode[] = []
-    let remainingContent = rawContent
-    let partIndex = 0
-
-    while (remainingContent.length > 0) {
-      // Find the next potential link start @[
-      const linkStartIndex = remainingContent.indexOf('@[')
-      
-      if (linkStartIndex === -1) {
-        // No more @[ patterns, add remaining content as markdown
-        if (remainingContent) {
-          parts.push(
-            <MarkdownRenderer 
-              key={`markdown-${partIndex}`} 
-              content={remainingContent} 
-            />
-          )
-        }
-        break
+  // Initialize content ONLY ONCE and prevent loops
+  useEffect(() => {
+    if (!showPreview && textAreaRef.current && !isInitialized) {
+      if (content.trim() && content !== lastContentRef.current) {
+        textAreaRef.current.innerHTML = markdownToHTML(content)
+        lastContentRef.current = content
       }
-
-      // Add text before the @[ as markdown
-      if (linkStartIndex > 0) {
-        const beforeLink = remainingContent.substring(0, linkStartIndex)
-        parts.push(
-          <MarkdownRenderer 
-            key={`markdown-before-${partIndex}`} 
-            content={beforeLink} 
-          />
-        )
-      }
-
-      // Look for the closing ]@
-      const afterLinkStart = remainingContent.substring(linkStartIndex + 2) // Skip @[
-      const linkEndIndex = afterLinkStart.indexOf(']@')
-
-      if (linkEndIndex === -1) {
-        // No closing ]@, treat as regular text
-        parts.push(
-          <MarkdownRenderer 
-            key={`markdown-incomplete-${partIndex}`} 
-            content={remainingContent.substring(linkStartIndex)} 
-          />
-        )
-        break
-      }
-
-      // Extract the note ID
-      const noteId = afterLinkStart.substring(0, linkEndIndex).trim()
-      // Only match by ID
-      const linkedNote = availableNotes.find(note => String(note._id) === String(noteId))
-      
-      if (linkedNote) {
-        // Render as embedded note link component
-        parts.push(
-          <NoteLinkCard
-            key={`note-link-${partIndex}-${linkStartIndex}`}
-            note={linkedNote}
-            onClick={() => {
-              if (onLinkNote) {
-                onLinkNote(linkedNote._id)
-              }
-            }}
-          />
-        )
-      } else {
-        // Note not found, show missing note badge
-        parts.push(
-          <span
-            key={`missing-note-${partIndex}-${linkStartIndex}`}
-            className="inline-flex items-center gap-1 px-2 py-1 mx-1 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-red-700 dark:text-red-300 text-xs"
-          >
-            ⚠️ Missing Note: {noteId}
-          </span>
-        )
-      }
-
-      // Move past this link
-      remainingContent = afterLinkStart.substring(linkEndIndex + 2) // Skip ]@
-      partIndex++
+      setIsInitialized(true)
     }
+  }, [content, showPreview, isInitialized])
 
-    return parts
-  }, [availableNotes, onLinkNote])
-
-  // Function to convert note IDs to titles for display in edit mode
-  const getDisplayContent = useCallback((rawContent: string) => {
-    if (!rawContent || availableNotes.length === 0) return rawContent
-    
-    let displayContent = rawContent
-    const linkRegex = /@\[([^\]]+)\]@/g
-    let match
-    
-    while ((match = linkRegex.exec(rawContent)) !== null) {
-      const noteId = match[1].trim()
-      const linkedNote = availableNotes.find(note => String(note._id) === String(noteId))
-      
-      if (linkedNote) {
-        // Replace @[id]@ with @[Title]@ for display
-        displayContent = displayContent.replace(match[0], `@[${linkedNote.title}]@`)
-      } else {
-        // Show [Missing Note] for unknown IDs
-        displayContent = displayContent.replace(match[0], `@[Missing Note]@`)
+  // Save current editor content to lastContentRef
+  const saveCurrentContent = useCallback(() => {
+    if (textAreaRef.current) {
+      const html = textAreaRef.current.innerHTML
+      console.log('[RichTextEditor] Saving content - HTML:', html.substring(0, 100))
+      if (html.trim()) {
+        const markdown = htmlToMarkdown(html)
+        console.log('[RichTextEditor] Saving content - Markdown:', markdown.substring(0, 100))
+        lastContentRef.current = markdown
+        onContentChange(markdown)
       }
     }
-    
-    return displayContent
-  }, [availableNotes])
+  }, [onContentChange])
 
-  // Function to convert display content back to storage format (titles back to IDs)
-  const getStorageContent = useCallback((displayContent: string) => {
-    if (!displayContent || availableNotes.length === 0) return displayContent
+  // Switch to edit mode - restore previous content
+  const switchToEditMode = useCallback(() => {
+    console.log('[RichTextEditor] Switching to edit mode')
+    console.log('[RichTextEditor] lastContentRef.current:', lastContentRef.current?.substring(0, 100))
+    console.log('[RichTextEditor] content prop:', content?.substring(0, 100))
     
-    let storageContent = displayContent
-    const linkRegex = /@\[([^\]]+)\]@/g
-    let match
-    
-    while ((match = linkRegex.exec(displayContent)) !== null) {
-      const titleOrId = match[1].trim()
-      // Skip if it's already an ID format (looks like an ID)
-      const idMatch = availableNotes.find(note => String(note._id) === titleOrId)
-      if (idMatch) continue
-      // Find note by title
-      const linkedNote = availableNotes.find(note => note.title === titleOrId)
-      if (linkedNote) {
-        // Replace @[Title]@ with @[id]@ for storage
-        storageContent = storageContent.replace(match[0], `@[${linkedNote._id}]@`)
+    setShowPreview(false)
+    setEditorKey(prev => prev + 1) // Force re-render of contentEditable
+  }, [content])
+
+  // Restore content when switching back to edit mode
+  useEffect(() => {
+    if (!showPreview && textAreaRef.current) {
+      const contentToRestore = lastContentRef.current || content
+      console.log('[RichTextEditor] useEffect - Restoring content:', contentToRestore?.substring(0, 100))
+      if (contentToRestore && contentToRestore.trim()) {
+        const htmlToRestore = markdownToHTML(contentToRestore)
+        console.log('[RichTextEditor] useEffect - Restoring HTML:', htmlToRestore.substring(0, 100))
+        textAreaRef.current.innerHTML = htmlToRestore
       }
     }
-    return storageContent
-  }, [availableNotes])
+  }, [showPreview, content])
+
+  // Toggle preview mode
+  const togglePreview = useCallback(() => {
+    console.log('[RichTextEditor] Toggling preview, current showPreview:', showPreview)
+    if (!showPreview) {
+      // Save current content when switching TO preview
+      console.log('[RichTextEditor] About to save content before preview')
+      saveCurrentContent()
+    }
+    setShowPreview(!showPreview)
+  }, [showPreview, saveCurrentContent])
+
+  // Get current content for preview (either from editor or props)
+  const getCurrentContent = useCallback(() => {
+    if (showPreview) {
+      // In preview mode, use the latest content (either from lastContentRef or props)
+      return lastContentRef.current || content
+    }
+    return content
+  }, [showPreview, content])
 
   // Create AI handlers
   const aiHandlers: AIHandlers = {
@@ -251,131 +166,78 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
   }
 
   const { handleAskAI, handleRequestAnalysis, handleRequestIdeas, handleGenerateTableFromContent } = createAIHandlers(
-    { content, textAreaRef, onContentChange },
+    { content, textAreaRef: { current: textAreaRef.current as any }, onContentChange },
     aiHandlers
   )
 
-  // Formatting handlers with proper parameters
+  // Formatting handlers
   const handleInsertBulletList = useCallback(() => {
-    const params = { content, textAreaRef, onContentChange }
+    const params = { content, textAreaRef: { current: textAreaRef.current as any }, onContentChange }
     insertBulletList(params)
   }, [content, onContentChange])
 
   const handleInsertNumberedList = useCallback(() => {
-    const params = { content, textAreaRef, onContentChange }
+    const params = { content, textAreaRef: { current: textAreaRef.current as any }, onContentChange }
     insertNumberedList(params)
   }, [content, onContentChange])
 
   const handleInsertHeading = useCallback((level: number) => {
-    const params = { content, textAreaRef, onContentChange }
+    const params = { content, textAreaRef: { current: textAreaRef.current as any }, onContentChange }
     insertHeading(params, level)
   }, [content, onContentChange])
 
   const handleInsertLink = useCallback((url: string, text: string) => {
-    const params = { content, textAreaRef, onContentChange }
+    const params = { content, textAreaRef: { current: textAreaRef.current as any }, onContentChange }
     insertLink(params, url, text)
   }, [content, onContentChange])
 
   const handleInsertLinkEmbed = useCallback((url: string) => {
-    const params = { content, textAreaRef, onContentChange }
+    const params = { content, textAreaRef: { current: textAreaRef.current as any }, onContentChange }
     insertLinkEmbed(params, url)
   }, [content, onContentChange])
 
   const handleInsertTable = useCallback((rows: number = 3, cols: number = 3) => {
-    const params = { content, textAreaRef, onContentChange }
+    const params = { content, textAreaRef: { current: textAreaRef.current as any }, onContentChange }
     insertTable(params, rows, cols)
   }, [content, onContentChange])
 
   // Handle note linking
   const handleLinkNote = useCallback((noteId: string) => {
-    console.log('🔗 handleLinkNote called with noteId:', noteId)
-    
-    if (!textAreaRef.current) {
-      console.log('❌ No textarea available')
-      return
-    }
+    if (!textAreaRef.current) return
 
     const selectedNote = availableNotes.find(note => String(note._id) === noteId)
-    if (!selectedNote) {
-      console.log('❌ Selected note not found:', noteId)
-      return
-    }
-
-    console.log('✅ Selected note found:', selectedNote)
+    if (!selectedNote) return
     
-    // Close the palette immediately
+    // Close the palette
     setShowCommandPalette(false)
 
-    const textarea = textAreaRef.current
-    const cursorPos = textarea.selectionStart
-    const displayContent = getDisplayContent(content)
-    const beforeCursor = displayContent.substring(0, cursorPos)
-    
-    // Look for @ symbol by checking backwards
-    let atPosition = -1
-    for (let i = cursorPos - 1; i >= Math.max(0, cursorPos - 20); i--) {
-      if (beforeCursor[i] === '@') {
-        atPosition = i
-        console.log('📍 Found @ at position:', atPosition)
-        break
-      }
-      // Stop if we hit whitespace or newline
-      if (beforeCursor[i] === ' ' || beforeCursor[i] === '\n') {
-        console.log('📍 Hit whitespace, stopping search')
-        break
-      }
-    }
-    
+    // Insert note link at cursor position
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return
+
+    const range = selection.getRangeAt(0)
     const linkText = `@[${selectedNote.title}]@`
     
-    if (atPosition !== -1) {
-      // Replace @ and any typed text with note link
-      const beforeAt = displayContent.substring(0, atPosition)
-      const afterCursor = displayContent.substring(cursorPos)
-      const newDisplayContent = beforeAt + linkText + afterCursor
-      const newCursorPos = atPosition + linkText.length
-      
-      // Convert back to storage format and save
-      const newStorageContent = getStorageContent(newDisplayContent)
-      onContentChange(newStorageContent)
-      
-      // Set cursor position after the link
-      setTimeout(() => {
-        textarea.setSelectionRange(newCursorPos, newCursorPos)
-        textarea.focus()
-      }, 0)
-      
-      console.log('🔄 Replaced @ and text with note link')
-    } else {
-      // No @ found, just insert the note link
-      const beforeCursor = displayContent.substring(0, cursorPos)
-      const afterCursor = displayContent.substring(cursorPos)
-      const newDisplayContent = beforeCursor + linkText + afterCursor
-      const newCursorPos = cursorPos + linkText.length
-      
-      // Convert back to storage format and save
-      const newStorageContent = getStorageContent(newDisplayContent)
-      onContentChange(newStorageContent)
-      
-      // Set cursor position after the link
-      setTimeout(() => {
-        textarea.setSelectionRange(newCursorPos, newCursorPos)
-        textarea.focus()
-      }, 0)
-      
-      console.log('➕ Inserted note link at cursor')
-    }
-  }, [content, onContentChange, availableNotes])
+    range.deleteContents()
+    range.insertNode(document.createTextNode(linkText))
+    range.collapse(false)
+    selection.removeAllRanges()
+    selection.addRange(range)
+    
+    // Trigger content change
+    const html = textAreaRef.current.innerHTML
+    const markdown = htmlToMarkdown(html)
+    onContentChange(markdown)
+  }, [availableNotes, onContentChange])
 
   // Handle keyboard shortcuts
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Cmd/Ctrl + K to open inline command palette
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    // Cmd/Ctrl + K to open command palette
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
       e.preventDefault()
       e.stopPropagation()
-      // Small delay to ensure textarea is focused and cursor position is accurate
       setTimeout(() => {
-        const coords = getCursorCoordinates(textAreaRef, containerRef)
+        const coords = getCursorCoordinates({ current: textAreaRef.current as any }, containerRef)
         setPalettePosition(coords)
         setPaletteMode('commands')
         setShowCommandPalette(true)
@@ -388,33 +250,53 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
       switch (e.key.toLowerCase()) {
         case 'b':
           e.preventDefault()
-          formatText({ content, textAreaRef, onContentChange }, '**', '**')
+          document.execCommand('bold')
           return
         case 'i':
           e.preventDefault()
-          formatText({ content, textAreaRef, onContentChange }, '*', '*')
+          document.execCommand('italic')
           return
         case 'u':
           e.preventDefault()
-          formatText({ content, textAreaRef, onContentChange }, '<u>', '</u>')
+          document.execCommand('underline')
           return
       }
     }
 
-    // '/' at the start of a line to open command palette
+    // Handle Enter key for line breaks
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      const selection = window.getSelection()
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0)
+        range.deleteContents()
+        range.insertNode(document.createElement('br'))
+        range.insertNode(document.createTextNode('\u00A0'))
+        range.collapse(false)
+        selection.removeAllRanges()
+        selection.addRange(range)
+      }
+      return
+    }
+
+    // '/' to open command palette
     if (e.key === '/') {
-      const textarea = textAreaRef.current
-      if (!textarea) return
+      const selection = window.getSelection()
+      if (!selection || !textAreaRef.current) return
       
-      const start = textarea.selectionStart
-      const lineStart = content.lastIndexOf('\n', start - 1) + 1
-      const lineContent = content.substring(lineStart, start)
+      const range = selection.getRangeAt(0)
+      const textContent = textAreaRef.current.textContent || ''
+      const cursorOffset = range.startOffset
+      
+      const beforeCursor = textContent.substring(0, cursorOffset)
+      const lastNewline = beforeCursor.lastIndexOf('\n')
+      const lineContent = beforeCursor.substring(lastNewline + 1)
       
       if (lineContent.trim() === '') {
         e.preventDefault()
         e.stopPropagation()
         setTimeout(() => {
-          const coords = getCursorCoordinates(textAreaRef, containerRef)
+          const coords = getCursorCoordinates({ current: textAreaRef.current as any }, containerRef)
           setPalettePosition(coords)
           setPaletteMode('commands')
           setShowCommandPalette(true)
@@ -425,43 +307,39 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
 
     // '@' to open note linking palette
     if (e.key === '@') {
-      // Let the @ be typed first, then open palette
       setTimeout(() => {
         if (textAreaRef.current) {
-          const coords = getCursorCoordinates(textAreaRef, containerRef)
+          const coords = getCursorCoordinates({ current: textAreaRef.current as any }, containerRef)
           setPalettePosition(coords)
           setPaletteMode('notes')
           setShowCommandPalette(true)
         }
-      }, 10) // Slightly longer delay to ensure @ is typed and cursor updated
+      }, 10)
       return
     }
 
-    // Handle ESC to close command palette
+    // ESC to close command palette
     if (e.key === 'Escape' && showCommandPalette) {
       e.preventDefault()
       e.stopPropagation()
       setShowCommandPalette(false)
       return
     }
-  }, [content, showCommandPalette, onContentChange, containerRef])
+  }, [showCommandPalette, containerRef])
 
-  // Handle content changes
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const displayContent = e.target.value
-    const newCursorPosition = e.target.selectionStart
+  // Handle content changes - convert HTML to markdown with debouncing
+  const handleContentChange = useCallback((e: React.FormEvent<HTMLDivElement>) => {
+    const html = (e.target as HTMLDivElement).innerHTML
+    const markdown = htmlToMarkdown(html)
     
-    // Convert display content (with titles) back to storage format (with IDs)
-    const storageContent = getStorageContent(displayContent)
-    onContentChange(storageContent)
-    setCursorPosition(newCursorPosition)
-  }, [onContentChange, getStorageContent])
+    // Prevent unnecessary updates if content hasn't actually changed
+    if (markdown !== lastContentRef.current) {
+      lastContentRef.current = markdown
+      onContentChange(markdown)
+    }
+  }, [onContentChange])
 
-  const togglePreview = useCallback(() => {
-    setCurrentShowPreview(!currentShowPreview)
-  }, [currentShowPreview, setCurrentShowPreview])
-
-  // Handle drag and drop
+  // Handle drag and drop for images
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -471,7 +349,6 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    // Only set dragover to false if we're leaving the textarea itself
     if (!e.currentTarget.contains(e.relatedTarget as Node)) {
       setIsDragOver(false)
     }
@@ -506,24 +383,34 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
       const uploadPromises = imageFiles.map(file => uploadImage(file))
       const imageUrls = await Promise.all(uploadPromises)
       
-      // Insert all images at cursor position
-      const textarea = textAreaRef.current
-      if (textarea) {
-        const cursorPos = textarea.selectionStart
-        const markdownImages = imageUrls
-          .filter(url => url !== null)
-          .map(url => `![${imageFiles.find((_, i) => imageUrls[i] === url)?.name || 'image'}](${url})`)
-          .join('\n')
+      // Insert images at cursor position
+      if (textAreaRef.current) {
+        const selection = window.getSelection()
+        const range = selection?.getRangeAt(0)
         
-        const newContent = content.slice(0, cursorPos) + '\n' + markdownImages + '\n' + content.slice(cursorPos)
-        onContentChange(newContent)
-        
-        // Set cursor after inserted images
-        setTimeout(() => {
-          const newCursorPos = cursorPos + markdownImages.length + 2
-          textarea.setSelectionRange(newCursorPos, newCursorPos)
-          textarea.focus()
-        }, 0)
+        if (range) {
+          const imageElements = imageUrls
+            .filter(url => url !== null)
+            .map(url => {
+              const img = document.createElement('img')
+              img.src = url
+              img.alt = 'Uploaded image'
+              img.style.cssText = 'max-width: 100%; height: auto; max-height: 300px; border-radius: 8px; margin: 8px 0; display: block;'
+              return img
+            })
+          
+          range.deleteContents()
+          imageElements.forEach(img => range.insertNode(img))
+          range.collapse(false)
+          selection?.removeAllRanges()
+          selection?.addRange(range)
+          
+          // Force content change detection
+          const html = textAreaRef.current.innerHTML
+          const markdown = htmlToMarkdown(html)
+          lastContentRef.current = markdown
+          onContentChange(markdown)
+        }
       }
 
       toast.success(`${imageFiles.length} image${imageFiles.length > 1 ? 's' : ''} uploaded successfully!`)
@@ -531,7 +418,7 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
       console.error('Drag and drop upload failed:', error)
       toast.error(error instanceof Error ? error.message : 'Failed to upload images')
     }
-  }, [content, onContentChange, uploadImage])
+  }, [uploadImage, onContentChange])
 
   return (
     <div className={`relative w-full h-full ${className}`}>
@@ -539,10 +426,10 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
       <div className="absolute top-2 right-2 z-10">
         <button
           onClick={togglePreview}
-          className="flex items-center gap-1 px-2 py-1.5 rounded-md bg-background/90 backdrop-blur-sm border border-border hover:bg-muted transition-colors text-xs font-medium"
-          title={currentShowPreview ? 'Switch to edit mode' : 'Switch to preview mode'}
+          className="flex items-center gap-1 px-2 py-1 text-xs bg-background/80 backdrop-blur-sm border border-border rounded-md hover:bg-muted transition-colors"
+          title={showPreview ? "Switch to Edit Mode" : "Switch to Preview Mode"}
         >
-          {currentShowPreview ? (
+          {showPreview ? (
             <>
               <Edit className="w-3 h-3" />
               Edit
@@ -556,78 +443,70 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
         </button>
       </div>
 
-      {currentShowPreview ? (
-        /* Markdown Preview */
+      {showPreview ? (
+        /* Preview Mode - ONLY show this, hide edit completely */
         <div 
-          className="w-full h-full overflow-auto p-4 prose prose-sm dark:prose-invert prose-p:my-2 prose-headings:my-3 max-w-none cursor-text"
-          onClick={() => setCurrentShowPreview(false)}
+          className="w-full h-full min-h-[300px] p-4 text-base leading-relaxed bg-background text-foreground overflow-auto cursor-text"
+          onClick={switchToEditMode}
         >
-          {content ? (
-            <div className="prose prose-sm dark:prose-invert prose-p:my-2 prose-headings:my-3 max-w-none">
-              {renderContentWithNoteLinks(content).map((part, index) => (
-                <React.Fragment key={index}>{part}</React.Fragment>
-              ))}
-            </div>
+          {getCurrentContent() ? (
+            <MarkdownRenderer content={getCurrentContent()} />
           ) : (
-            <div className="text-muted-foreground italic">
-              Click here to start writing, or use the Edit button to switch to edit mode.
-              <br/><br/>
-              <strong>Keyboard shortcuts:</strong><br/>
-              • ⌘B for bold<br/>
-              • ⌘I for italic<br/>
-              • ⌘U for underline<br/>
-              • ⌘K or / for AI assistant
+            <div className="text-muted-foreground/50 italic">
+              {placeholder}
             </div>
           )}
         </div>
       ) : (
-        /* Text Editor */
-        <textarea
-          ref={textAreaRef}
-          value={getDisplayContent(content)}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          className={`w-full h-full min-h-[300px] resize-none p-4 text-base leading-relaxed bg-background text-foreground placeholder:text-muted-foreground/50 border-0 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 transition-all duration-200 rounded-md transform-gpu will-change-contents ${
-            isDragOver ? 'ring-2 ring-blue-500 ring-offset-2 bg-blue-50/50 dark:bg-blue-900/10' : ''
-          } ${isUploading ? 'opacity-60 cursor-wait' : ''}`}
-          placeholder={`${placeholder}
+        /* Edit Mode - ContentEditable - ONLY show this when not in preview */
+        <>
+          <div
+            ref={textAreaRef}
+            contentEditable={!disabled && !isUploading}
+            className={`w-full h-full min-h-[300px] resize-none p-4 text-base leading-relaxed bg-background text-foreground placeholder:text-muted-foreground/50 border-0 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 transition-all duration-200 rounded-md ${
+              isDragOver ? 'ring-2 ring-blue-500 ring-offset-2 bg-blue-50/50 dark:bg-blue-900/10' : ''
+            } ${isUploading ? 'opacity-60 cursor-wait' : ''}`}
+            onInput={handleContentChange}
+            onKeyDown={handleKeyDown}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            onFocus={switchToEditMode}
+            data-placeholder={`${placeholder}
 
-⌘K or / for AI assistant • ⌘B bold • ⌘I italic • ⌘U underline • Click Preview to see rich text
+⌘K or / for AI assistant • ⌘B bold • ⌘I italic • ⌘U underline
 
-📎 Drag & drop images here or use the upload button`}
-          disabled={disabled || isUploading}
-          spellCheck={true}
-          autoFocus={!disabled}
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-        />
+📎 Drag & drop images here`}
+            suppressContentEditableWarning={true}
+            key={editorKey}
+          />
+          
+          {/* Inline Command Palette - only show in edit mode */}
+          <InlineCommandPalette
+            isOpen={showCommandPalette}
+            onClose={() => setShowCommandPalette(false)}
+            position={palettePosition}
+            onAskAI={handleAskAI}
+            onRequestAnalysis={handleRequestAnalysis}
+            onRequestIdeas={handleRequestIdeas}
+            onInsertBulletList={handleInsertBulletList}
+            onInsertNumberedList={handleInsertNumberedList}
+            onInsertHeading={handleInsertHeading}
+            onInsertLink={handleInsertLink}
+            onInsertLinkEmbed={handleInsertLinkEmbed}
+            onInsertTable={handleInsertTable}
+            onGenerateTableFromContent={handleGenerateTableFromContent}
+            onLinkNote={handleLinkNote}
+            noteType={noteType}
+            availableNotes={availableNotes}
+            currentNoteId={noteId}
+            showNoteLinks={paletteMode === 'notes'}
+          />
+        </>
       )}
-      
-      {/* Inline Command Palette */}
-      <InlineCommandPalette
-        isOpen={showCommandPalette}
-        onClose={() => setShowCommandPalette(false)}
-        position={palettePosition}
-        onAskAI={handleAskAI}
-        onRequestAnalysis={handleRequestAnalysis}
-        onRequestIdeas={handleRequestIdeas}
-        onInsertBulletList={handleInsertBulletList}
-        onInsertNumberedList={handleInsertNumberedList}
-        onInsertHeading={handleInsertHeading}
-        onInsertLink={handleInsertLink}
-        onInsertLinkEmbed={handleInsertLinkEmbed}
-        onInsertTable={handleInsertTable}
-        onGenerateTableFromContent={handleGenerateTableFromContent}
-        onLinkNote={handleLinkNote}
-        noteType={noteType}
-        availableNotes={availableNotes}
-        currentNoteId={noteId}
-        showNoteLinks={paletteMode === 'notes'}
-      />
     </div>
   )
 })
 
-RichTextEditor.displayName = 'RichTextEditor' 
+RichTextEditor.displayName = 'RichTextEditor'
