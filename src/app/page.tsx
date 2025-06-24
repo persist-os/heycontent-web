@@ -79,33 +79,33 @@ export default function LandingPage() {
       <section className="bg-gradient-to-r from-[#F8F0F9] to-blue-50 pt-0 pb-8">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 text-center">
           <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-500/10 to-blue-500/10 backdrop-blur-sm rounded-full border border-white/20 mb-6">
-            <span className="text-sm font-medium bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+            <span className="text-sm font-medium bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent" style={{color: '#6D28D9'}}>
               ✨ The Future of Content Creation
             </span>
           </div>
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-gray-900 via-purple-800 to-blue-800 bg-clip-text text-transparent leading-relaxed tracking-tight py-2">
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-gray-900 via-purple-800 to-blue-800 bg-clip-text text-transparent leading-relaxed tracking-tight py-2" style={{color: '#111827'}}>
             Where Creativity Meets Intelligence
           </h2>
-          <p className="text-xl sm:text-2xl text-gray-600 leading-relaxed mt-6 max-w-4xl mx-auto">
+          <p className="text-xl sm:text-2xl text-gray-600 leading-relaxed mt-6 max-w-4xl mx-auto" style={{color: '#374151'}}>
             Experience the perfect blend of human creativity and AI intelligence. 
             Transform your ideas into engaging content that resonates with your audience.
           </p>
           
           {/* Compact Feature Badges */}
           <div className="flex flex-wrap justify-center gap-3 mt-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/30 backdrop-blur-sm rounded-full border border-white/40 text-sm font-medium text-gray-700">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/30 backdrop-blur-sm rounded-full border border-white/40 text-sm font-medium text-gray-700" style={{color: '#374151'}}>
               <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
               Smart Content Analysis
             </div>
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/30 backdrop-blur-sm rounded-full border border-white/40 text-sm font-medium text-gray-700">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/30 backdrop-blur-sm rounded-full border border-white/40 text-sm font-medium text-gray-700" style={{color: '#374151'}}>
               <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full"></div>
               Personalized Insights
             </div>
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/30 backdrop-blur-sm rounded-full border border-white/40 text-sm font-medium text-gray-700">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/30 backdrop-blur-sm rounded-full border border-white/40 text-sm font-medium text-gray-700" style={{color: '#374151'}}>
               <div className="w-2 h-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full"></div>
               Growth Optimization
             </div>
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/30 backdrop-blur-sm rounded-full border border-white/40 text-sm font-medium text-gray-700">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/30 backdrop-blur-sm rounded-full border border-white/40 text-sm font-medium text-gray-700" style={{color: '#374151'}}>
               <div className="w-2 h-2 bg-gradient-to-r from-orange-500 to-red-500 rounded-full"></div>
               Real-time Feedback
             </div>
@@ -162,7 +162,9 @@ export default function LandingPage() {
         <div className="relative">
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 sm:px-6 mb-3 pt-8 sm:pt-12">
             <div>
-              <h2 className="text-3xl sm:text-4xl font-extrabold mb-2">Vibe. Create. Repeat.</h2>
+              <h2 className="text-3xl sm:text-4xl font-extrabold mb-2" style={{color: '#111827'}}>
+                Vibe. Create. Repeat.
+              </h2>
             </div>
           </div>
           
@@ -201,10 +203,10 @@ export default function LandingPage() {
                                 <path d="M12 14C8.13 14 5 17.13 5 21H7C7 18.24 9.24 16 12 16C14.76 16 17 18.24 17 21H19C19 17.13 15.87 14 12 14Z" fill="currentColor"/>
                               </svg>
                             </div>
-                            <h3 className="text-2xl font-bold text-black">Feels Like You</h3>
+                            <h3 className="text-2xl font-bold text-black" style={{color: '#111827'}}>Feels Like You</h3>
                           </div>
                         </div>
-                        <p className="text-black/90 text-lg font-semibold max-w-[80%]">
+                        <p className="text-black/90 text-lg font-semibold max-w-[80%]" style={{color: '#111827'}}>
                           Your vibe, your voice. HeyContent adapts to your style so your ideas come out sounding like you on your best day.
                         </p>
                       </div>
@@ -241,10 +243,10 @@ export default function LandingPage() {
                                 <path d="M12 6C8.69 6 6 8.69 6 12C6 15.31 8.69 18 12 18C15.31 18 18 15.31 18 12C18 8.69 15.31 6 12 6ZM12 16C9.79 16 8 14.21 8 12C8 9.79 9.79 8 12 8C14.21 8 16 9.79 16 12C16 14.21 14.21 16 12 16Z" fill="currentColor"/>
                               </svg>
                             </div>
-                            <h3 className="text-2xl font-bold text-black">Creative Intelligence</h3>
+                            <h3 className="text-2xl font-bold text-black" style={{color: '#111827'}}>Creative Intelligence</h3>
                           </div>
                         </div>
-                        <p className="text-black/90 text-lg font-semibold max-w-[80%]">
+                        <p className="text-black/90 text-lg font-semibold max-w-[80%]" style={{color: '#111827'}}>
                           Fueled by your content, your goals, and real-world trends. HeyContent learns how you think and helps you think better.
                         </p>
                       </div>
@@ -260,7 +262,9 @@ export default function LandingPage() {
         <div className="relative">
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 sm:px-6 mb-3 pt-8 sm:pt-12">
             <div>
-              <h2 className="text-3xl sm:text-4xl font-extrabold mb-2">Always Evolving.</h2>
+              <h2 className="text-3xl sm:text-4xl font-extrabold mb-2" style={{color: '#111827'}}>
+                Always Evolving.
+              </h2>
             </div>
           </div>
           
@@ -296,10 +300,10 @@ export default function LandingPage() {
                                 <div className="p-2 bg-white/10 backdrop-blur-sm rounded-lg">
                                   <card.icon className="w-6 h-6 text-black" />
                                 </div>
-                                <h3 className="text-2xl font-bold text-black">{card.title}</h3>
+                                <h3 className="text-2xl font-bold text-black" style={{color: '#111827'}}>{card.title}</h3>
                               </div>
                             </div>
-                            <p className="text-black/90 text-lg font-semibold max-w-[80%]">
+                            <p className="text-black/90 text-lg font-semibold max-w-[80%]" style={{color: '#111827'}}>
                               {card.description}
                             </p>
                           </div>
@@ -317,9 +321,9 @@ export default function LandingPage() {
         <section className="bg-gradient-to-r from-[#F8F0F9] to-blue-50 py-12 sm:py-16">
           <div className="max-w-6xl mx-auto text-center px-4 sm:px-6">
             <div className="bg-white/40 backdrop-blur-md rounded-3xl p-8 sm:p-24 border border-white/50 shadow-lg">
-              <h2 className="text-2xl sm:text-4xl font-medium mb-6 sm:mb-8 text-gray-800">
+              <h2 className="text-2xl sm:text-4xl font-medium mb-6 sm:mb-8 text-gray-800" style={{color: '#111827'}}>
                 Instant insights. Smarter strategy.{' '}
-                <span className="block mt-2">Limitless growth for creators.</span>
+                <span className="block mt-2" style={{color: '#111827'}}>Limitless growth for creators.</span>
               </h2>
               <button
                 onClick={() => router.push('/auth/register')}
