@@ -293,6 +293,13 @@ export function MessageBubble({
               </button>
             )}
 
+            {/* Vector Search Context Display - ABOVE message content */}
+            {!isUser && message.vectorSearchMetadata && (
+              <VectorSearchContext
+                vectorSearchMetadata={message.vectorSearchMetadata}
+              />
+            )}
+
             {/* Main message content */}
             <div className="prose prose-sm dark:prose-invert prose-p:my-2 prose-headings:my-3 max-w-none break-words">
               {message.status === 'typing' ? (
@@ -303,13 +310,6 @@ export function MessageBubble({
                 <MarkdownRenderer content={message.chat_response || message.content} />
               )}
             </div>
-            
-            {/* Vector Search Context Display */}
-            {!isUser && message.metadata?.vector_search_context && (
-              <VectorSearchContext
-                vectorSearchMetadata={message.metadata.vector_search_context}
-              />
-            )}
 
             {/* Message Actions */}
             <div className="absolute -bottom-2.5 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">

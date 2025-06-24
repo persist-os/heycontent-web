@@ -50,7 +50,7 @@ export function AnalyticsCard({
         <div className="flex items-center gap-2 mb-3">
           <BarChart3 className="w-4 h-4 text-pink-600" />
           <h3 className="font-semibold text-foreground flex-1 pr-8 line-clamp-1">
-            {note.title || 'Analytics Insight'}
+            {(note.title && note.title.trim()) || 'Analytics Insight'}
           </h3>
         </div>
 

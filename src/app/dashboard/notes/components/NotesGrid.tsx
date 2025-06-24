@@ -29,7 +29,11 @@ export function NotesGrid({
   const { setActiveNoteId } = useNotes();
 
   const handleCreateNote = async () => {
-    const newNoteId = await createNote('');
+    // Use the current filter as the note type, unless it's 'all'
+    const noteType = selectedTypeFilter !== 'all' ? selectedTypeFilter : undefined;
+    const newNoteId = await createNote('', { 
+      customType: noteType 
+    });
     if (newNoteId) {
       setActiveNoteId(newNoteId);
     }
