@@ -5,6 +5,7 @@ import { api } from "./_generated/api";
 import { cors } from "hono/cors";
 import { Id } from "./_generated/dataModel";
 import * as usageEventsApi from "./usageEvents";
+// Removed unused imports for httpRouter and httpAction
 
 const app: HonoWithConvex<ActionCtx> = new Hono();
 
@@ -1018,207 +1019,11 @@ try {
 }
 });
 
-// Get Instagram profile insights
-app.get("/api/users/:id/instagram/profile/insights", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const instagramAccountId = c.req.query("instagramAccountId");
+// Legacy Instagram endpoints - deprecated in favor of unified approach
+// These endpoints are commented out since we now use the unified instagramPosts table
+// Insights and comments are stored within each post record
 
-  if (!instagramAccountId) {
-    return c.json({ success: false, error: "Missing instagramAccountId query parameter" }, 400);
-  }
-
-  try {
-    const insights = await ctx.runQuery(api.instagramQueries.getProfileInsights, { 
-      userId,
-      instagramAccountId
-    });
-    
-    if (!insights) {
-      return c.json({ 
-        success: false, 
-        error: "Profile insights not found" 
-      }, 404);
-    }
-
-    return c.json({ 
-      success: true,
-      insights
-    });
-  } catch (error) {
-    console.error("Error fetching Instagram profile insights:", error);
-    return c.json({ 
-      success: false, 
-      error: `Server error: ${error instanceof Error ? error.message : 'Unknown error'}` 
-    }, 500);
-  }
-});
-
-// Get Instagram stories
-app.get("/api/users/:id/instagram/stories", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const instagramAccountId = c.req.query("instagramAccountId");
-
-  if (!instagramAccountId) {
-    return c.json({ success: false, error: "Missing instagramAccountId query parameter" }, 400);
-  }
-
-  try {
-    const stories = await ctx.runQuery(api.instagramQueries.getStories, { 
-      userId,
-      instagramAccountId
-    });
-    
-    if (!stories) {
-      return c.json({ 
-        success: false, 
-        error: "Stories not found" 
-      }, 404);
-    }
-
-    return c.json({ 
-      success: true,
-      stories
-    });
-  } catch (error) {
-    console.error("Error fetching Instagram stories:", error);
-    return c.json({ 
-      success: false, 
-      error: `Server error: ${error instanceof Error ? error.message : 'Unknown error'}` 
-    }, 500);
-  }
-});
-
-// Store Instagram profile insights
-app.post("/api/users/:id/instagram/profile/insights", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const { instagramAccountId, insightsData } = await c.req.json();
-
-  if (!instagramAccountId || !insightsData) {
-    return c.json({ success: false, error: "Missing required fields" }, 400);
-  }
-
-  try {
-    const result = await ctx.runMutation(api.instagramMutations.storeProfileInsights, {
-      userId,
-      instagramAccountId,
-      insightsData,
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    });
-
-    return c.json({ 
-      success: true,
-      result
-    });
-  } catch (error) {
-    console.error("Error storing Instagram profile insights:", error);
-    return c.json({ 
-      success: false, 
-      error: `Server error: ${error instanceof Error ? error.message : 'Unknown error'}` 
-    }, 500);
-  }
-});
-
-// Store Instagram stories
-app.post("/api/users/:id/instagram/stories", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const { instagramAccountId, storiesData } = await c.req.json();
-
-  if (!instagramAccountId || !storiesData) {
-    return c.json({ success: false, error: "Missing required fields" }, 400);
-  }
-
-  try {
-    const result = await ctx.runMutation(api.instagramMutations.storeStories, {
-      userId,
-      instagramAccountId,
-      storiesData,
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    });
-
-    return c.json({ 
-      success: true,
-      result
-    });
-  } catch (error) {
-    console.error("Error storing Instagram stories:", error);
-    return c.json({ 
-      success: false, 
-      error: `Server error: ${error instanceof Error ? error.message : 'Unknown error'}` 
-    }, 500);
-  }
-});
-
-// Store Instagram post insights
-app.post("/api/users/:id/instagram/post/:postId/insights", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const postId = c.req.param("postId");
-  const { insightsData } = await c.req.json();
-
-  if (!insightsData) {
-    return c.json({ success: false, error: "Missing insightsData" }, 400);
-  }
-
-  try {
-    const result = await ctx.runMutation(api.instagramMutations.storePostInsights, {
-      userId,
-      postId,
-      insightsData,
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    });
-
-    return c.json({ 
-      success: true,
-      result
-    });
-  } catch (error) {
-    console.error("Error storing Instagram post insights:", error);
-    return c.json({ 
-      success: false, 
-      error: `Server error: ${error instanceof Error ? error.message : 'Unknown error'}` 
-    }, 500);
-  }
-});
-
-// Store Instagram post comments
-app.post("/api/users/:id/instagram/post/:postId/comments", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const postId = c.req.param("postId");
-  const { commentsData } = await c.req.json();
-
-  if (!commentsData) {
-    return c.json({ success: false, error: "Missing commentsData" }, 400);
-  }
-
-  try {
-    const result = await ctx.runMutation(api.instagramMutations.storePostComments, {
-      userId,
-      postId,
-      commentsData,
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    });
-
-    return c.json({ 
-      success: true,
-      result
-    });
-  } catch (error) {
-    console.error("Error storing Instagram post comments:", error);
-    return c.json({ 
-      success: false, 
-      error: `Server error: ${error instanceof Error ? error.message : 'Unknown error'}` 
-    }, 500);
-  }
-});
+// TODO: Remove these endpoints after migration is complete
 
 // Get all Instagram posts for a user
 app.get("/api/users/:id/instagram/posts/all", async (c) => {
@@ -1513,38 +1318,8 @@ app.get("/api/users/:id/instagram/post/:postId", async (c) => {
   }
 });
 
-// Store Instagram post insights
-app.post("/api/users/:id/instagram/post/:postId/insights", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const postId = c.req.param("postId");
-  const { insightsData } = await c.req.json();
-
-  if (!insightsData) {
-    return c.json({ success: false, error: "Missing insightsData" }, 400);
-  }
-
-  try {
-    const result = await ctx.runMutation(api.instagramMutations.storePostInsights, {
-      userId,
-      postId,
-      insightsData,
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    });
-
-    return c.json({ 
-      success: true,
-      result
-    });
-  } catch (error) {
-    console.error("Error storing Instagram post insights:", error);
-    return c.json({ 
-      success: false, 
-      error: `Server error: ${error instanceof Error ? error.message : 'Unknown error'}` 
-    }, 500);
-  }
-});
+// Legacy Instagram post insights endpoint - deprecated
+// Insights are now stored within the unified instagramPosts table
 
 
 // Get Instagram post comments
@@ -2182,6 +1957,39 @@ app.get("/api/collision/gmail", async (c) => {
   } catch (error) {
     console.error("Error checking Gmail collision:", error);
     return c.json({ error: "Failed to check collision" }, 500);
+  }
+});
+
+// Add unified Instagram posts endpoint
+app.post("/api/instagram/unified_posts", async (c) => {
+  const ctx = c.env;
+  const { userId, instagramAccountId, posts } = await c.req.json();
+
+  if (!userId || !instagramAccountId || !posts) {
+    return c.json({
+      success: false,
+      error: "Missing required fields: userId, instagramAccountId, posts"
+    }, 400);
+  }
+
+  try {
+    // Call the unified post storage mutation
+    const result = await ctx.runMutation(api.instagramMutations.storeUnifiedPostData, {
+      userId,
+      instagramAccountId,
+      posts
+    });
+
+    return c.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error("Error in unified posts endpoint:", error);
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error"
+    }, 500);
   }
 });
 

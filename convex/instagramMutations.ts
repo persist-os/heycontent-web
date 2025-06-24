@@ -3,7 +3,133 @@ import { mutation, action } from "./_generated/server";
 import { MutationCtx, ActionCtx } from "./_generated/server";
 import { api } from "./_generated/api";
 
-// Store Instagram post data
+// Store unified Instagram post data (all media types with insights and comments)
+export const storeUnifiedPostData = mutation({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+    posts: v.array(v.object({
+      id: v.string(),
+      caption: v.string(),
+      media_type: v.union(
+        v.literal("IMAGE"),
+        v.literal("VIDEO"),
+        v.literal("CAROUSEL_ALBUM"),
+        v.literal("REELS")
+      ),
+      media_url: v.string(),
+      permalink: v.string(),
+      timestamp: v.number(),
+      username: v.string(),
+      like_count: v.optional(v.number()),
+      comments_count: v.optional(v.number()),
+      thumbnail_url: v.optional(v.union(v.string(), v.null())),
+      children: v.optional(v.union(v.array(v.object({
+        id: v.string(),
+        media_url: v.string(),
+        media_type: v.string(),
+        thumbnail_url: v.optional(v.union(v.string(), v.null()))
+      })), v.null())),
+      insights: v.optional(v.object({
+        impressions: v.optional(v.number()),
+        reach: v.optional(v.number()),
+        likes: v.optional(v.number()),
+        comments: v.optional(v.number()),
+        saved: v.optional(v.number()),
+        shares: v.optional(v.number()),
+        total_interactions: v.optional(v.number()),
+        profile_visits: v.optional(v.number()),
+        profile_activity: v.optional(v.number()),
+        views: v.optional(v.number()),
+        follows: v.optional(v.number()),
+        ig_reels_avg_watch_time: v.optional(v.number()),
+        ig_reels_video_view_total_time: v.optional(v.number()),
+        period: v.optional(v.string()),
+        timestamp: v.optional(v.number())
+      })),
+      comments: v.optional(v.array(v.object({
+        id: v.string(),
+        text: v.string(),
+        timestamp: v.number(),
+        username: v.string(),
+        like_count: v.optional(v.number()),
+        replies: v.optional(v.array(v.object({
+          id: v.string(),
+          text: v.string(),
+          timestamp: v.number(),
+          username: v.optional(v.string())
+        })))
+      })))
+    }))
+  },
+  handler: async (ctx, args) => {
+    const { userId, instagramAccountId, posts } = args;
+    const now = Date.now();
+    const results = [];
+
+    for (const post of posts) {
+      try {
+        // Check if post already exists
+        const existingPost = await ctx.db
+          .query("instagramPosts")
+          .withIndex("by_postId", q => q.eq("postId", post.id))
+          .first();
+
+        const processedData = {
+          id: post.id,
+          caption: post.caption,
+          media_url: post.media_url,
+          permalink: post.permalink,
+          timestamp: post.timestamp,
+          username: post.username,
+          like_count: post.like_count,
+          comments_count: post.comments_count,
+          thumbnail_url: post.thumbnail_url,
+          children: post.children,
+          insights: post.insights,
+          comments: post.comments
+        };
+
+        if (existingPost) {
+          // Update existing post
+          await ctx.db.patch(existingPost._id, {
+            mediaType: post.media_type,
+            data: processedData,
+            updatedAt: now,
+          });
+          results.push({ status: "updated", postId: post.id, internalId: existingPost._id });
+        } else {
+          // Insert new post
+          const internalId = await ctx.db.insert("instagramPosts", {
+            userId,
+            instagramAccountId,
+            postId: post.id,
+            mediaType: post.media_type,
+            data: processedData,
+            createdAt: now,
+            updatedAt: now,
+          });
+          results.push({ status: "created", postId: post.id, internalId });
+        }
+      } catch (error) {
+        console.error(`Error storing Instagram post ${post.id}:`, error);
+        results.push({ 
+          status: "error", 
+          postId: post.id, 
+          error: error instanceof Error ? error.message : 'Unknown error' 
+        });
+      }
+    }
+
+    return {
+      success: true,
+      processed: results.length,
+      results
+    };
+  },
+});
+
+// Legacy support - Store single Instagram post data
 export const storePostData = mutation({
   args: {
     userId: v.string(),
@@ -16,15 +142,25 @@ export const storePostData = mutation({
     const now = Date.now();
 
     try {
-      // Convert ISO timestamp to Unix timestamp if present
+      // Convert to unified format
+      const mediaType = (postData.media_type || "IMAGE") as "IMAGE" | "VIDEO" | "CAROUSEL_ALBUM" | "REELS";
+      
       const processedData = {
-        ...postData,
-        timestamp: postData.timestamp ? new Date(postData.timestamp).getTime() : undefined,
-        // Handle nested children data structure
-        children: postData.children?.data || postData.children
+        id: postData.id || postId,
+        caption: postData.caption || "",
+        media_url: postData.media_url || "",
+        permalink: postData.permalink || "",
+        timestamp: postData.timestamp ? new Date(postData.timestamp).getTime() : now,
+        username: postData.username || "",
+        like_count: postData.like_count,
+        comments_count: postData.comments_count,
+        thumbnail_url: postData.thumbnail_url,
+        children: postData.children?.data || postData.children,
+        insights: postData.insights,
+        comments: postData.comments
       };
 
-      // Check if post already exists using postId index
+      // Check if post already exists
       const existingPost = await ctx.db
         .query("instagramPosts")
         .withIndex("by_postId", q => q.eq("postId", postId))
@@ -33,29 +169,23 @@ export const storePostData = mutation({
       if (existingPost) {
         // Update existing post
         await ctx.db.patch(existingPost._id, {
-          instagramAccountId,
-          postId,
-          data: {
-            id: postId,
-            ...processedData,
-          },
+          mediaType: mediaType,
+          data: processedData,
           updatedAt: now,
         });
         return { status: "updated", postId: existingPost._id };
       } else {
         // Insert new post
-        const id = await ctx.db.insert("instagramPosts", {
+        const internalId = await ctx.db.insert("instagramPosts", {
           userId,
           instagramAccountId,
           postId,
-          data: {
-            id: postId,
-            ...processedData,
-          },
+          mediaType: mediaType,
+          data: processedData,
           createdAt: now,
           updatedAt: now,
         });
-        return { status: "created", postId: id };
+        return { status: "created", postId: internalId };
       }
     } catch (error) {
       console.error(`Error storing Instagram post ${postId}:`, error);
@@ -162,16 +292,10 @@ export const disconnectInstagram = mutation({
     const { userId } = args;
 
     try {
-      // Delete data from all Instagram-related tables for the given userId
       const results = {
         tokensDeleted: 0,
         accountsDeleted: 0,
         postsDeleted: 0,
-        insightsDeleted: 0,
-        storiesDeleted: 0,
-        postInsightsDeleted: 0,
-        postCommentsDeleted: 0,
-        trackersDeleted: 0,
         trackerAnalysesDeleted: 0,
         batchAnalysesDeleted: 0
       };
@@ -196,7 +320,7 @@ export const disconnectInstagram = mutation({
         results.accountsDeleted++;
       }
 
-      // Delete Instagram posts
+      // Delete unified Instagram posts
       const posts = await ctx.db
         .query("instagramPosts")
         .withIndex("by_userId", (q) => q.eq("userId", userId))
@@ -204,56 +328,6 @@ export const disconnectInstagram = mutation({
       for (const post of posts) {
         await ctx.db.delete(post._id);
         results.postsDeleted++;
-      }
-
-      // Delete Instagram profile insights
-      const insights = await ctx.db
-        .query("instagramProfileInsights")
-        .withIndex("by_userId", (q) => q.eq("userId", userId))
-        .collect();
-      for (const insight of insights) {
-        await ctx.db.delete(insight._id);
-        results.insightsDeleted++;
-      }
-
-      // Delete Instagram stories
-      const stories = await ctx.db
-        .query("instagramStories")
-        .withIndex("by_userId", (q) => q.eq("userId", userId))
-        .collect();
-      for (const story of stories) {
-        await ctx.db.delete(story._id);
-        results.storiesDeleted++;
-      }
-
-      // Delete Instagram post insights
-      const postInsights = await ctx.db
-        .query("instagramPostInsights")
-        .withIndex("by_userId", (q) => q.eq("userId", userId))
-        .collect();
-      for (const postInsight of postInsights) {
-        await ctx.db.delete(postInsight._id);
-        results.postInsightsDeleted++;
-      }
-
-      // Delete Instagram post comments
-      const postComments = await ctx.db
-        .query("instagramPostComments")
-        .withIndex("by_userId", (q) => q.eq("userId", userId))
-        .collect();
-      for (const postComment of postComments) {
-        await ctx.db.delete(postComment._id);
-        results.postCommentsDeleted++;
-      }
-
-      // Delete Instagram tracker data
-      const trackers = await ctx.db
-        .query("instagramTracker")
-        .withIndex("by_userId", (q) => q.eq("userId", userId))
-        .collect();
-      for (const tracker of trackers) {
-        await ctx.db.delete(tracker._id);
-        results.trackersDeleted++;
       }
 
       // Delete Instagram tracker analysis
@@ -277,7 +351,6 @@ export const disconnectInstagram = mutation({
       }
 
       console.log(`Successfully disconnected Instagram for user ${userId}:`, results);
-
       return { success: true };
     } catch (error) {
       console.error('Error disconnecting Instagram:', error);
@@ -286,263 +359,78 @@ export const disconnectInstagram = mutation({
   },
 });
 
-// Store Instagram profile insights
-export const storeProfileInsights = mutation({
-  args: {
-    userId: v.string(),
-    instagramAccountId: v.string(),
-    insightsData: v.object({
-      impressions: v.optional(v.number()),
-      reach: v.optional(v.number()),
-      profile_views: v.optional(v.number()),
-      follower_count: v.optional(v.number()),
-      follows_count: v.optional(v.number()),
-      media_count: v.optional(v.number()),
-      saved_count: v.optional(v.number()),
-      engagement_rate: v.optional(v.number()),
-      period: v.string(),
-      timestamp: v.number()
-    }),
-    createdAt: v.optional(v.number()),
-    updatedAt: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const { userId, instagramAccountId, insightsData, createdAt, updatedAt } = args;
-    const now = Date.now();
-
-    try {
-      // Check if insights already exist
-      const existingInsights = await ctx.db
-        .query("instagramProfileInsights")
-        .withIndex("by_userId", q => q.eq("userId", userId))
-        .filter(q => q.eq(q.field("instagramAccountId"), String(instagramAccountId)))
-        .first();
-
-      if (existingInsights) {
-        // Update existing insights
-        await ctx.db.patch(existingInsights._id, {
-          data: insightsData,
-          updatedAt: updatedAt ?? now,
-        });
-        return { status: "updated", insightsId: existingInsights._id };
-      } else {
-        // Insert new insights
-        const id = await ctx.db.insert("instagramProfileInsights", {
-          userId,
-          instagramAccountId: String(instagramAccountId),
-          data: insightsData,
-          createdAt: createdAt ?? now,
-          updatedAt: updatedAt ?? now,
-        });
-        return { status: "created", insightsId: id };
-      }
-    } catch (error) {
-      console.error(`Error storing profile insights for user ${userId}:`, error);
-      throw new Error(`Failed to store profile insights: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  },
-});
-
-// Store Instagram stories
-export const storeStories = mutation({
-  args: {
-    userId: v.string(),
-    instagramAccountId: v.string(),
-    storiesData: v.array(v.object({
-      id: v.string(),
-      media_type: v.string(),
-      media_url: v.string(),
-      permalink: v.string(),
-      timestamp: v.number(),
-      insights: v.optional(v.object({
-        impressions: v.optional(v.number()),
-        reach: v.optional(v.number()),
-        exits: v.optional(v.number()),
-        replies: v.optional(v.number()),
-        taps_forward: v.optional(v.number()),
-        taps_back: v.optional(v.number()),
-        navigation: v.optional(v.object({
-          next: v.optional(v.number()),
-          back: v.optional(v.number()),
-          exit: v.optional(v.number())
-        }))
-      }))
-    })),
-    createdAt: v.optional(v.number()),
-    updatedAt: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const { userId, instagramAccountId, storiesData, createdAt, updatedAt } = args;
-    const now = Date.now();
-
-    try {
-      // Check if stories already exist
-      const existingStories = await ctx.db
-        .query("instagramStories")
-        .withIndex("by_userId", q => q.eq("userId", userId))
-        .filter(q => q.eq(q.field("instagramAccountId"), String(instagramAccountId)))
-        .first();
-
-      if (existingStories) {
-        // Update existing stories
-        await ctx.db.patch(existingStories._id, {
-          data: storiesData,
-          updatedAt: updatedAt ?? now,
-        });
-        return { status: "updated", storiesId: existingStories._id };
-      } else {
-        // Insert new stories
-        const id = await ctx.db.insert("instagramStories", {
-          userId,
-          instagramAccountId: String(instagramAccountId),
-          data: storiesData,
-          createdAt: createdAt ?? now,
-          updatedAt: updatedAt ?? now,
-        });
-        return { status: "created", storiesId: id };
-      }
-    } catch (error) {
-      console.error(`Error storing stories for user ${userId}:`, error);
-      throw new Error(`Failed to store stories: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  },
-});
-
-// Store Instagram post insights
-export const storePostInsights = mutation({
+// Store Instagram post analysis data directly in instagramPosts table
+export const storePostAnalysis = mutation({
   args: {
     userId: v.string(),
     postId: v.string(),
-    insightsData: v.object({
-      impressions: v.optional(v.number()),
-      reach: v.optional(v.number()),
-      saved: v.optional(v.number()),
-      shares: v.optional(v.number()),
-      comments: v.optional(v.number()),
-      likes: v.optional(v.number()),
-      total_interactions: v.optional(v.number()),
-      follows: v.optional(v.number()),
-      profile_visits: v.optional(v.number()),
-      profile_activity: v.optional(v.number()),
-      views: v.optional(v.number()),
-      period: v.string(),
-      timestamp: v.number()
-    }),
-    createdAt: v.optional(v.number()),
-    updatedAt: v.optional(v.number()),
+    analysisData: v.any(),
   },
   handler: async (ctx, args) => {
-    const { userId, postId, insightsData, createdAt, updatedAt } = args;
+    const { userId, postId, analysisData } = args;
     const now = Date.now();
 
-    try {
-      // Check if insights already exist
-      const existingInsights = await ctx.db
-        .query("instagramPostInsights")
-        .withIndex("by_postId", q => q.eq("postId", postId))
-        .filter(q => q.eq(q.field("userId"), userId))
-        .first();
+    const post = await ctx.db
+      .query("instagramPosts")
+      .withIndex("by_postId", (q) => q.eq("postId", postId))
+      .first();
 
-      if (existingInsights) {
-        // Update existing insights
-        await ctx.db.patch(existingInsights._id, {
-          data: insightsData,
-          updatedAt: updatedAt ?? now,
-        });
-        return { status: "updated", insightsId: existingInsights._id };
+    if (!post) {
+      // Create a minimal post record if it doesn't exist
+      const postId_internal = await ctx.db.insert("instagramPosts", {
+        userId,
+        instagramAccountId: "unknown",
+        postId,
+        mediaType: "IMAGE",
+        data: {
+          id: postId,
+          caption: "Instagram Post",
+          media_url: "",
+          permalink: "",
+          username: "",
+          timestamp: now,
+        },
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const updateData: any = { updatedAt: now };
+      if (analysisData && typeof analysisData === 'object') {
+        if (analysisData.markdown) {
+          updateData.analysisMarkdown = analysisData.markdown;
+        }
+        if (analysisData.analysis) {
+          updateData.analysis = analysisData.analysis;
+        }
+        if (!analysisData.markdown && !analysisData.analysis && typeof analysisData === 'string') {
+          updateData.analysisMarkdown = analysisData;
+        }
       } else {
-        // Insert new insights
-        const id = await ctx.db.insert("instagramPostInsights", {
-          userId,
-          postId,
-          data: insightsData,
-          createdAt: createdAt ?? now,
-          updatedAt: updatedAt ?? now,
-        });
-        return { status: "created", insightsId: id };
+        updateData.analysis = analysisData;
       }
-    } catch (error) {
-      console.error(`Error storing post insights for post ${postId}:`, error);
-      throw new Error(`Failed to store post insights: ${error instanceof Error ? error.message : 'Unknown error'}`);
+
+      await ctx.db.patch(postId_internal, updateData);
+      return { success: true, status: "created", postId: postId_internal };
     }
-  },
-});
 
-// Store Instagram post comments
-export const storePostComments = mutation({
-  args: {
-    userId: v.string(),
-    postId: v.string(),
-    commentsData: v.array(v.object({
-      id: v.string(),
-      text: v.string(),
-      timestamp: v.number(),
-      username: v.optional(v.string()),
-      replies: v.optional(v.object({
-        data: v.array(v.object({
-          id: v.string(),
-          text: v.string(),
-          timestamp: v.number(),
-          username: v.optional(v.string())
-        })),
-        paging: v.optional(v.object({
-          cursors: v.object({
-            before: v.string(),
-            after: v.string()
-          })
-        }))
-      }))
-    })),
-    createdAt: v.optional(v.number()),
-    updatedAt: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const { userId, postId, commentsData, createdAt, updatedAt } = args;
-    const now = Date.now();
-
-    try {
-      // Format comments data to match schema and handle missing usernames
-      const formattedComments = commentsData.map(comment => ({
-        ...comment,
-        username: comment.username || 'anonymous', // Provide default username if missing
-        replies: comment.replies ? {
-          data: Array.isArray(comment.replies.data) ? comment.replies.data.map(reply => ({
-            ...reply,
-            username: reply.username || 'anonymous' // Provide default username for replies if missing
-          })) : [],
-          paging: comment.replies.paging
-        } : undefined
-      }));
-
-      // Check if comments already exist
-      const existingComments = await ctx.db
-        .query("instagramPostComments")
-        .withIndex("by_postId", q => q.eq("postId", postId))
-        .filter(q => q.eq(q.field("userId"), userId))
-        .first();
-
-      if (existingComments) {
-        // Update existing comments
-        await ctx.db.patch(existingComments._id, {
-          data: formattedComments,
-          updatedAt: updatedAt ?? now,
-        });
-        return { status: "updated", commentsId: existingComments._id };
-      } else {
-        // Insert new comments
-        const id = await ctx.db.insert("instagramPostComments", {
-          userId,
-          postId,
-          data: formattedComments,
-          createdAt: createdAt ?? now,
-          updatedAt: updatedAt ?? now,
-        });
-        return { status: "created", commentsId: id };
+    // Update existing post with analysis
+    const updateData: any = { updatedAt: now };
+    if (analysisData && typeof analysisData === 'object') {
+      if (analysisData.markdown) {
+        updateData.analysisMarkdown = analysisData.markdown;
       }
-    } catch (error) {
-      console.error(`Error storing post comments for post ${postId}:`, error);
-      throw new Error(`Failed to store post comments: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      if (analysisData.analysis) {
+        updateData.analysis = analysisData.analysis;
+      }
+      if (!analysisData.markdown && !analysisData.analysis && typeof analysisData === 'string') {
+        updateData.analysisMarkdown = analysisData;
+      }
+    } else {
+      updateData.analysis = analysisData;
     }
+
+    await ctx.db.patch(post._id, updateData);
+    return { success: true, status: "updated", postId: post._id };
   },
 });
 
@@ -558,7 +446,6 @@ export const storeInstagramTrackerAnalysis = mutation({
     const now = Date.now();
 
     try {
-      // Check if analysis already exists
       const existingAnalysis = await ctx.db
         .query("instagramTrackerAnalysis")
         .withIndex("by_userId", q => q.eq("userId", userId))
@@ -566,14 +453,12 @@ export const storeInstagramTrackerAnalysis = mutation({
         .first();
 
       if (existingAnalysis) {
-        // Update existing analysis
         await ctx.db.patch(existingAnalysis._id, {
           analysis,
           updatedAt: now,
         });
         return { status: "updated", analysisId: existingAnalysis._id };
       } else {
-        // Insert new analysis
         const id = await ctx.db.insert("instagramTrackerAnalysis", {
           userId,
           instagramAccountId,
@@ -602,7 +487,6 @@ export const storeInstagramBatchAnalysis = mutation({
     const now = Date.now();
 
     try {
-      // Check if batch analysis already exists
       const existingAnalysis = await ctx.db
         .query("instagramBatchAnalysis")
         .withIndex("by_userId", q => q.eq("userId", userId))
@@ -610,19 +494,17 @@ export const storeInstagramBatchAnalysis = mutation({
         .first();
 
       if (existingAnalysis) {
-        // Update existing batch analysis
         await ctx.db.patch(existingAnalysis._id, {
           insights,
           updatedAt: now,
         });
         return { status: "updated", analysisId: existingAnalysis._id };
       } else {
-        // Insert new batch analysis
         const id = await ctx.db.insert("instagramBatchAnalysis", {
           userId,
           instagramAccountId,
           insights,
-          analysisType: "batch",
+          analysisType: "batch" as const,
           createdAt: now,
           updatedAt: now,
         });
@@ -632,107 +514,6 @@ export const storeInstagramBatchAnalysis = mutation({
       console.error(`Error storing Instagram batch analysis for user ${userId}:`, error);
       throw new Error(`Failed to store Instagram batch analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-  },
-});
-
-// Store Instagram post analysis data directly in instagramPosts table
-export const storePostAnalysis = mutation({
-  args: {
-    userId: v.string(), // Accept userId for compatibility/auditing
-    postId: v.string(),
-    analysisData: v.any(),
-  },
-  handler: async (ctx, args) => {
-    const { userId, postId, analysisData } = args;
-    const now = Date.now();
-
-    // Find the post by postId (similar to YouTube's videoId lookup)
-    const post = await ctx.db
-      .query("instagramPosts")
-      .withIndex("by_postId", (q) => q.eq("postId", postId))
-      .first();
-
-    if (!post) {
-      // Create a minimal post record if it doesn't exist
-      console.log(`Creating new Instagram post record for postId: ${postId}, userId: ${userId}`);
-      const postId_internal = await ctx.db.insert("instagramPosts", {
-        userId,
-        instagramAccountId: "unknown", // Placeholder - should be updated when actual post data is available
-        postId,
-        data: {
-          id: postId,
-          caption: "Instagram Post",
-          media_type: "IMAGE",
-          media_url: "",
-          permalink: "",
-          username: "",
-        },
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      // Store the analysis on the newly created record
-      const updateData: any = { updatedAt: now };
-
-      if (analysisData && typeof analysisData === 'object') {
-        if (analysisData.markdown) {
-          // Store markdown for display
-          updateData.analysisMarkdown = analysisData.markdown;
-          console.log(`Storing markdown analysis for new Instagram post ${postId}`);
-        }
-        
-        if (analysisData.analysis) {
-          // Store JSON analysis data
-          updateData.analysis = analysisData.analysis;
-          console.log(`Storing JSON analysis data for new Instagram post ${postId}`);
-        }
-        
-        // Legacy support: if analysisData has markdown directly (old format)
-        if (!analysisData.markdown && !analysisData.analysis && typeof analysisData === 'string') {
-          updateData.analysisMarkdown = analysisData;
-          console.log(`Storing legacy markdown analysis for new Instagram post ${postId}`);
-        }
-      } else {
-        // Legacy format: Store as JSON analysis
-        updateData.analysis = analysisData;
-        console.log(`Storing legacy JSON analysis for new Instagram post ${postId}`);
-      }
-
-      await ctx.db.patch(postId_internal, updateData);
-
-      return { success: true, status: "created", postId: postId_internal };
-    }
-
-    // Update existing post with analysis
-    const updateData: any = { updatedAt: now };
-
-    if (analysisData && typeof analysisData === 'object') {
-      if (analysisData.markdown) {
-        // Store markdown for display
-        updateData.analysisMarkdown = analysisData.markdown;
-        console.log(`Storing markdown analysis for Instagram post ${postId}`);
-      }
-      
-      if (analysisData.analysis) {
-        // Store JSON analysis data
-        updateData.analysis = analysisData.analysis;
-        console.log(`Storing JSON analysis data for Instagram post ${postId}`);
-      }
-      
-      // Legacy support: if analysisData has markdown directly (old format)
-      if (!analysisData.markdown && !analysisData.analysis && typeof analysisData === 'string') {
-        updateData.analysisMarkdown = analysisData;
-        console.log(`Storing legacy markdown analysis for Instagram post ${postId}`);
-      }
-    } else {
-      // Legacy format: Store as JSON analysis
-      updateData.analysis = analysisData;
-      console.log(`Storing legacy JSON analysis for Instagram post ${postId}`);
-    }
-
-    await ctx.db.patch(post._id, updateData);
-
-    return { success: true, status: "updated", postId: post._id };
   },
 });
 
@@ -756,7 +537,6 @@ export const updateInstagramBatchAnalysisStatus = mutation({
     const now = Date.now();
 
     try {
-      // Check if batch analysis already exists
       const existingAnalysis = await ctx.db
         .query("instagramBatchAnalysis")
         .withIndex("by_userId", q => q.eq("userId", userId))
@@ -764,13 +544,11 @@ export const updateInstagramBatchAnalysisStatus = mutation({
         .first();
 
       if (existingAnalysis) {
-        // Update existing batch analysis with status and insights
         const updateData: any = {
           status: statusUpdate,
           updatedAt: now,
         };
         
-        // Add insights if provided
         if (insights !== null && insights !== undefined) {
           updateData.insights = insights;
         }
@@ -778,7 +556,6 @@ export const updateInstagramBatchAnalysisStatus = mutation({
         await ctx.db.patch(existingAnalysis._id, updateData);
         return { status: "updated", analysisId: existingAnalysis._id };
       } else {
-        // Insert new batch analysis with status
         const insertData: any = {
           userId,
           instagramAccountId,
@@ -788,7 +565,6 @@ export const updateInstagramBatchAnalysisStatus = mutation({
           updatedAt: now,
         };
         
-        // Add insights if provided
         if (insights !== null && insights !== undefined) {
           insertData.insights = insights;
         }

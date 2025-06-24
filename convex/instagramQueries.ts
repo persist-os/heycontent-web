@@ -129,6 +129,30 @@ export const getInstagramPostsByTimeRange = query({
   },
 });
 
+// Get posts by media type
+export const getInstagramPostsByMediaType = query({
+  args: { userId: v.string(), mediaType: v.union(v.literal("IMAGE"), v.literal("VIDEO"), v.literal("CAROUSEL_ALBUM"), v.literal("REELS")) },
+  handler: async (ctx, args) => {
+    const account = await ctx.db
+      .query("instagramAccounts")
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
+      .first();
+    
+    if (!account) {
+      return [];
+    }
+
+    const posts = await ctx.db
+      .query("instagramPosts")
+      .withIndex("by_mediaType", q => q.eq("mediaType", args.mediaType))
+      .filter(q => q.eq(q.field("userId"), args.userId))
+      .filter(q => q.eq(q.field("instagramAccountId"), account.instagramAccountId))
+      .order("desc")
+      .collect();
+    return posts;
+  },
+});
+
 // Get the latest Instagram post for a user
 export const getLatestInstagramPost = query({
   args: { userId: v.string() },
@@ -178,121 +202,51 @@ export const getInstagramPostsByUsername = query({
   },
 });
 
-// Get Instagram profile insights
-export const getProfileInsights = query({
-  args: {
-    userId: v.string(),
-    instagramAccountId: v.string(),
-  },
+// Get posts with insights (posts that have embedded insights data)
+export const getInstagramPostsWithInsights = query({
+  args: { userId: v.string() },
   handler: async (ctx, args) => {
-    const { userId, instagramAccountId } = args;
-
-    try {
-      const insights = await ctx.db
-        .query("instagramProfileInsights")
-        .withIndex("by_userId", q => q.eq("userId", userId))
-        .filter(q => q.eq(q.field("instagramAccountId"), String(instagramAccountId)))
-        .first();
-
-      return insights?.data || null;
-    } catch (error) {
-      console.error(`Error fetching profile insights for user ${userId}:`, error);
-      throw new Error(`Failed to fetch profile insights: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    const account = await ctx.db
+      .query("instagramAccounts")
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
+      .first();
+    
+    if (!account) {
+      return [];
     }
+
+    const posts = await ctx.db
+      .query("instagramPosts")
+      .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", account.instagramAccountId))
+      .filter(q => q.eq(q.field("userId"), args.userId))
+      .filter(q => q.neq(q.field("data.insights"), undefined))
+      .order("desc")
+      .collect();
+    return posts;
   },
 });
 
-// Get Instagram stories
-export const getStories = query({
-  args: {
-    userId: v.string(),
-    instagramAccountId: v.string(),
-  },
+// Get posts with comments (posts that have embedded comments data)
+export const getInstagramPostsWithComments = query({
+  args: { userId: v.string() },
   handler: async (ctx, args) => {
-    const { userId, instagramAccountId } = args;
-
-    try {
-      const stories = await ctx.db
-        .query("instagramStories")
-        .withIndex("by_userId", q => q.eq("userId", userId))
-        .filter(q => q.eq(q.field("instagramAccountId"), String(instagramAccountId)))
-        .first();
-
-      return stories?.data || null;
-    } catch (error) {
-      console.error(`Error fetching stories for user ${userId}:`, error);
-      throw new Error(`Failed to fetch stories: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    const account = await ctx.db
+      .query("instagramAccounts")
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
+      .first();
+    
+    if (!account) {
+      return [];
     }
-  },
-});
 
-// Get Instagram post insights
-export const getPostInsights = query({
-  args: {
-    userId: v.string(),
-    postId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const { userId, postId } = args;
-
-    try {
-      // First get the post to verify ownership
-      const post = await ctx.db
-        .query("instagramPosts")
-        .withIndex("by_postId", q => q.eq("postId", postId))
-        .filter(q => q.eq(q.field("userId"), userId))
-        .first();
-
-      if (!post) {
-        return null;
-      }
-
-      const insights = await ctx.db
-        .query("instagramPostInsights")
-        .withIndex("by_postId", q => q.eq("postId", postId))
-        .filter(q => q.eq(q.field("userId"), userId))
-        .first();
-
-      return insights?.data || null;
-    } catch (error) {
-      console.error(`Error fetching post insights for post ${postId}:`, error);
-      throw new Error(`Failed to fetch post insights: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  },
-});
-
-// Get Instagram post comments
-export const getPostComments = query({
-  args: {
-    userId: v.string(),
-    postId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const { userId, postId } = args;
-
-    try {
-      // First get the post to verify ownership
-      const post = await ctx.db
-        .query("instagramPosts")
-        .withIndex("by_postId", q => q.eq("postId", postId))
-        .filter(q => q.eq(q.field("userId"), userId))
-        .first();
-
-      if (!post) {
-        return null;
-      }
-
-      const comments = await ctx.db
-        .query("instagramPostComments")
-        .withIndex("by_postId", q => q.eq("postId", postId))
-        .filter(q => q.eq(q.field("userId"), userId))
-        .first();
-
-      return comments?.data || null;
-    } catch (error) {
-      console.error(`Error fetching post comments for post ${postId}:`, error);
-      throw new Error(`Failed to fetch post comments: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    const posts = await ctx.db
+      .query("instagramPosts")
+      .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", account.instagramAccountId))
+      .filter(q => q.eq(q.field("userId"), args.userId))
+      .filter(q => q.neq(q.field("data.comments"), undefined))
+      .order("desc")
+      .collect();
+    return posts;
   },
 });
 
@@ -367,28 +321,6 @@ export const getInstagramTrackerAnalysis = query({
     } catch (error) {
       console.error(`Error fetching tracker analysis for user ${userId}:`, error);
       throw new Error(`Failed to fetch tracker analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  },
-});
-
-// Get all Instagram post insights for a user
-export const getAllPostInsights = query({
-  args: {
-    userId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const { userId } = args;
-
-    try {
-      const insights = await ctx.db
-        .query("instagramPostInsights")
-        .withIndex("by_userId", q => q.eq("userId", userId))
-        .collect();
-
-      return insights;
-    } catch (error) {
-      console.error(`Error fetching post insights for user ${userId}:`, error);
-      throw new Error(`Failed to fetch post insights: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
 });
@@ -625,12 +557,14 @@ export const getRecentPostsWithAnalysis = query({
       const postsWithAnalysis = posts.map(post => ({
         id: post.postId,
         caption: post.data?.caption || '',
-        mediaType: post.data?.media_type || 'UNKNOWN',
+        mediaType: post.mediaType || 'IMAGE',
         mediaUrl: post.data?.media_url || '',
         permalink: post.data?.permalink || '',
         timestamp: post.data?.timestamp || post.createdAt,
         likeCount: post.data?.like_count || 0,
         commentsCount: post.data?.comments_count || 0,
+        insights: post.data?.insights || null,
+        comments: post.data?.comments || null,
         analysis: post.analysis || null,
         analysisMarkdown: post.analysisMarkdown || null
       }));
