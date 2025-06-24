@@ -194,7 +194,7 @@ export const storePostData = mutation({
   },
 });
 
-// Save Instagram profile data
+// Save Instagram profile data (updated for consolidated schema)
 export const storeProfileData = mutation({
   args: {
     userId: v.string(),
@@ -208,34 +208,53 @@ export const storeProfileData = mutation({
       followers_count: v.any(),
       follows_count: v.any(),
       media_count: v.any(),
+      name: v.optional(v.string()),
+      biography: v.optional(v.string()),
+      website: v.optional(v.string()),
     }),
+    token: v.optional(v.object({
+      accessToken: v.string(),
+      expiryDate: v.number(),
+      scope: v.string(),
+      lastRefreshed: v.number(),
+    })),
+    profileInsights: v.optional(v.object({
+      reach: v.optional(v.number()),
+      profile_views: v.optional(v.number()),
+      website_clicks: v.optional(v.number()),
+      follower_count: v.optional(v.number()),
+      period: v.optional(v.string()),
+      lastUpdated: v.optional(v.number()),
+    })),
     createdAt: v.number(),
     updatedAt: v.number(),
   },
   handler: async (ctx, args) => {
-    const { userId, instagramAccountId, username, profileData, createdAt, updatedAt } = args;
+    const { userId, instagramAccountId, username, profileData, token, profileInsights, createdAt, updatedAt } = args;
     try {
       // Check if account already exists
       const existingAccount = await ctx.db
         .query("instagramAccounts")
         .withIndex("by_userId", (q) => q.eq("userId", userId))
         .first();
+      
+      const accountData = {
+        username,
+        instagramAccountId: String(instagramAccountId),
+        profileData,
+        updatedAt,
+        ...(token && { token }),
+        ...(profileInsights && { profileInsights }),
+      };
+
       if (existingAccount) {
-        await ctx.db.patch(existingAccount._id, {
-          username,
-          instagramAccountId: String(instagramAccountId),
-          profileData,
-          updatedAt,
-        });
+        await ctx.db.patch(existingAccount._id, accountData);
         return { status: "updated", instagramAccountId: String(instagramAccountId) };
       } else {
         const id = await ctx.db.insert("instagramAccounts", {
           userId,
-          instagramAccountId: String(instagramAccountId),
-          username,
-          profileData,
+          ...accountData,
           createdAt,
-          updatedAt,
         });
         return { status: "created", instagramAccountId: String(instagramAccountId) };
       }
@@ -246,40 +265,52 @@ export const storeProfileData = mutation({
   },
 });
 
-// Update Instagram token
+// Update Instagram token (now stored in instagramAccounts)
 export const updateInstagramToken = mutation({
   args: {
     userId: v.string(),
     instagramAccountId: v.string(),
     accessToken: v.string(),
-    refreshToken: v.string(),
     expiresAt: v.number(),
     scope: v.array(v.string())
   },
   handler: async (ctx, args) => {
-    // Upsert logic: patch if exists, insert if not
+    // Update token in the instagramAccounts table
     const existing = await ctx.db
-      .query("instagramTokens")
+      .query("instagramAccounts")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .first();
+    
+    const tokenData = {
+      accessToken: args.accessToken,
+      expiryDate: args.expiresAt,
+      scope: args.scope.join(" "),
+      lastRefreshed: Date.now()
+    };
+
     if (existing) {
       await ctx.db.patch(existing._id, {
         instagramAccountId: String(args.instagramAccountId),
-        accessToken: args.accessToken,
-        refreshToken: args.refreshToken,
-        expiryDate: args.expiresAt,
-        scope: args.scope.join(" "),
-        lastRefreshed: Date.now()
+        token: tokenData,
+        updatedAt: Date.now()
       });
     } else {
-      await ctx.db.insert("instagramTokens", {
+      // Create new account record with token
+      await ctx.db.insert("instagramAccounts", {
         instagramAccountId: String(args.instagramAccountId),
         userId: args.userId,
-        accessToken: args.accessToken,
-        refreshToken: args.refreshToken,
-        expiryDate: args.expiresAt,
-        scope: args.scope.join(" "),
-        lastRefreshed: Date.now()
+        username: "unknown", // Will be updated when profile data is stored
+        profileData: {
+          id: String(args.instagramAccountId),
+          username: "unknown",
+          account_type: "unknown",
+          followers_count: 0,
+          follows_count: 0,
+          media_count: 0,
+        },
+        token: tokenData,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
       });
     }
   },
@@ -300,15 +331,8 @@ export const disconnectInstagram = mutation({
         batchAnalysesDeleted: 0
       };
 
-      // Delete Instagram tokens
-      const tokens = await ctx.db
-        .query("instagramTokens")
-        .withIndex("by_userId", (q) => q.eq("userId", userId))
-        .collect();
-      for (const token of tokens) {
-        await ctx.db.delete(token._id);
-        results.tokensDeleted++;
-      }
+      // Instagram tokens are now part of instagramAccounts, so no separate deletion needed
+      results.tokensDeleted = 0; // Tokens will be deleted with accounts
 
       // Delete Instagram accounts
       const accounts = await ctx.db

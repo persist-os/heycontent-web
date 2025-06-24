@@ -475,18 +475,7 @@ export default defineSchema({
   .index("by_views", ["statistics.views"])
   .index("by_likes", ["statistics.likes"]),
 
-  // Instagram Tokens
-  instagramTokens: defineTable({
-    userId: v.string(),
-    instagramAccountId: v.string(),
-    accessToken: v.string(),
-    refreshToken: v.string(),
-    expiryDate: v.number(),
-    scope: v.string(),
-    lastRefreshed: v.number(),
-  }).index("by_userId", ["userId"]),
-
-  // Instagram Accounts
+  // Instagram Accounts (consolidated with tokens and insights)
   instagramAccounts: defineTable({
     userId: v.string(),
     instagramAccountId: v.string(),
@@ -499,7 +488,26 @@ export default defineSchema({
       followers_count: v.any(),
       follows_count: v.any(),
       media_count: v.any(),
+      name: v.optional(v.string()),
+      biography: v.optional(v.string()),
+      website: v.optional(v.string()),
     }),
+    // Token data (consolidated from instagramTokens table)
+    token: v.optional(v.object({
+      accessToken: v.string(),
+      expiryDate: v.number(),
+      scope: v.string(),
+      lastRefreshed: v.number(),
+    })),
+    // Profile insights data
+    profileInsights: v.optional(v.object({
+      reach: v.optional(v.number()),
+      profile_views: v.optional(v.number()),
+      website_clicks: v.optional(v.number()),
+      follower_count: v.optional(v.number()),
+      period: v.optional(v.string()),
+      lastUpdated: v.optional(v.number()),
+    })),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

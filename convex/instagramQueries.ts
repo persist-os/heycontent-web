@@ -250,7 +250,7 @@ export const getInstagramPostsWithComments = query({
   },
 });
 
-// Get Instagram tokens
+// Get Instagram tokens (now from instagramAccounts table)
 export const getInstagramTokens = query({
   args: {
     userId: v.string(),
@@ -259,12 +259,24 @@ export const getInstagramTokens = query({
     const { userId } = args;
 
     try {
-      const tokens = await ctx.db
-        .query("instagramTokens")
+      const account = await ctx.db
+        .query("instagramAccounts")
         .withIndex("by_userId", q => q.eq("userId", userId))
         .first();
 
-      return tokens || null;
+      if (!account || !account.token) {
+        return null;
+      }
+
+      // Return token data in the expected format for backward compatibility
+      return {
+        userId: account.userId,
+        instagramAccountId: account.instagramAccountId,
+        accessToken: account.token.accessToken,
+        expiryDate: account.token.expiryDate,
+        scope: account.token.scope,
+        lastRefreshed: account.token.lastRefreshed,
+      };
     } catch (error) {
       console.error(`Error fetching Instagram tokens for user ${userId}:`, error);
       throw new Error(`Failed to fetch Instagram tokens: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -574,6 +586,28 @@ export const getRecentPostsWithAnalysis = query({
     } catch (error) {
       console.error('Error getting recent posts with analysis:', error);
       return [];
+    }
+  },
+});
+
+// Get Instagram profile insights
+export const getInstagramProfileInsights = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    try {
+      const account = await ctx.db
+        .query("instagramAccounts")
+        .withIndex("by_userId", q => q.eq("userId", args.userId))
+        .first();
+
+      if (!account) {
+        return null;
+      }
+
+      return account.profileInsights || null;
+    } catch (error) {
+      console.error('Error getting Instagram profile insights:', error);
+      throw new Error(`Failed to get Instagram profile insights: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
 });

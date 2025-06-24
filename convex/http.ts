@@ -843,7 +843,7 @@ try {
 }
 });
 
-// Get Instagram tokens for a user
+// Get Instagram tokens for a user (now from instagramAccounts)
 app.get("/api/users/:id/instagram/tokens", async (c) => {
 const ctx = c.env;
 const userId = c.req.param("id");
@@ -869,11 +869,11 @@ try {
 }
 });
 
-// Update Instagram token
+// Update Instagram token (updated for consolidated schema)
 app.post("/api/users/:id/instagram/token", async (c) => {
 const ctx = c.env;
 const userId = c.req.param("id");
-const { instagramAccountId, accessToken, refreshToken, expiresAt, scope } = await c.req.json();
+const { instagramAccountId, accessToken, expiresAt, scope } = await c.req.json();
 
 // Ensure scope is an array of strings
 const scopeArray = Array.isArray(scope)
@@ -887,7 +887,6 @@ try {
     userId,
     instagramAccountId,
     accessToken: accessToken as string,
-    refreshToken: refreshToken as string,
     expiresAt: expiresAt as number,
     scope: scopeArray as string[],
     });
@@ -976,11 +975,11 @@ app.post("/api/users/:id/instagram/posts/single", async (c) => {
   }
 });
 
-// Store Instagram profile data
+// Store Instagram profile data (updated for consolidated schema)
 app.post("/api/users/:id/instagram/profile", async (c) => {
 const ctx = c.env;
 const userId = c.req.param("id");
-const { username, instagramAccountId, profileData, createdAt, updatedAt } = await c.req.json();
+const { username, instagramAccountId, profileData, token, profileInsights, createdAt, updatedAt } = await c.req.json();
 
 // Validate required fields
 if (!profileData || !profileData.id || !username || !instagramAccountId) {
@@ -1000,7 +999,12 @@ try {
         followers_count: any;
         follows_count: any;
         media_count: any;
+        name?: string;
+        biography?: string;
+        website?: string;
     },
+    ...(token && { token }),
+    ...(profileInsights && { profileInsights }),
     createdAt: (createdAt ?? Date.now()) as number,
     updatedAt: (updatedAt ?? Date.now()) as number,
     });
@@ -1016,6 +1020,20 @@ try {
     success: false, 
     error: `Failed to store Instagram profile data: ${error instanceof Error ? error.message : 'Unknown error'}`
     }, 500);
+}
+});
+
+// Get Instagram profile insights
+app.get("/api/users/:id/instagram/profile/insights", async (c) => {
+const ctx = c.env;
+const userId = c.req.param("id");
+
+try {
+    const insights = await ctx.runQuery(api.instagramQueries.getInstagramProfileInsights, { userId });
+    return c.json({ success: true, insights });
+} catch (error) {
+    console.error("Failed to get Instagram profile insights:", error);
+    return c.json({ success: false, error: "Failed to retrieve Instagram profile insights" }, 500);
 }
 });
 
