@@ -43,7 +43,7 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={e => setPassword(e.target.value)}
-            className="w-full px-4 py-3 pl-11 pr-11 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            className="w-full px-4 py-3 pl-11 pr-11 bg-white text-black border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-gray-500"
             required
             placeholder="Create a password"
           />

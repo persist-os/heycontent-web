@@ -65,7 +65,10 @@ export function HeroSection() {
   }
 
   return (
-    <div className="bg-gradient-to-r from-[#F8F0F9] to-blue-50 min-h-[80vh] flex flex-col">
+    <div className="bg-gradient-to-r from-[#F8F0F9] to-blue-50 min-h-[80vh] flex flex-col light-mode-forced" style={{
+      background: 'linear-gradient(to right, #F8F0F9, #EFF6FF)',
+      color: '#111827',
+    }}>
       {/* Header */}
       <div className="relative">
         <nav className="sticky top-0 z-50 backdrop-blur-sm bg-white/50">

@@ -27,7 +27,7 @@ export const ReferralStep: React.FC<ReferralStepProps> = ({
             type="text"
             value={referralCode}
             onChange={e => handleReferralCodeChange(e.target.value)}
-            className={`w-full px-4 py-3 pl-11 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+            className={`w-full px-4 py-3 pl-11 bg-white text-black border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-gray-500 ${
               referralCodeValid ? 'border-green-500' : 'border-gray-200'
             }`}
             placeholder="Enter your referral code"

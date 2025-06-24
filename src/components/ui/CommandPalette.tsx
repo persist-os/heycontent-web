@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Command } from 'cmdk';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Search, Send, Clock, History } from 'lucide-react';
 import { useCommandPaletteState } from '../../app/hooks/useCommandPalette';
 import { commandGroups, parseSearchQuery, createQuickAskCommand } from '../../app/lib/commands';
@@ -16,6 +16,7 @@ import { ActiveFilters } from './command-palette/ActiveFilters';
 import { CommandHistory } from './command-palette/types';
 
 export function CommandPalette() {
+  const pathname = usePathname();
   const {
     isOpen,
     setIsOpen,
@@ -41,6 +42,15 @@ export function CommandPalette() {
       inputRef.current?.focus();
     }
   }, [isOpen]);
+  
+  // Don't render command palette on landing page and auth screens
+  const isCommandPaletteDisabled = pathname === '/' || 
+                                   pathname.startsWith('/auth/') || 
+                                   pathname.startsWith('/waitlist');
+  
+  if (isCommandPaletteDisabled) {
+    return null;
+  }
 
   const renderSlashCommandHelp = () => {
     if (!isSlashCommand) return null;
