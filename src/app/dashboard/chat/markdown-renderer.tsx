@@ -2,6 +2,7 @@
 
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import remarkBreaks from 'remark-breaks'
 import rehypeRaw from 'rehype-raw'
 import { ExternalLink, Play, Image } from 'lucide-react'
 
@@ -94,28 +95,48 @@ function LinkEmbed({ href, children }: { href: string; children: React.ReactNode
 }
 
 export function MarkdownRenderer({ content, className = '' }: MarkdownRendererProps) {
-  // Convert all variations of ~~~ delimiters to newlines
+  // Enhanced preprocessing to preserve empty lines and handle line breaks better
   const processedContent = content
-    .replace(/~~~+/g, '\n')  // Convert any sequence of ~~~ to single newline
-    .replace(/\n\n+/g, '\n\n')  // Clean up excessive newlines (max 2)
-    // Add empty lines between consecutive bold labels for proper paragraph separation
-    .replace(/(\*\*[^*]+:\*\*[^\n]*)\n(\*\*[^*]+:\*\*)/g, '$1\n\n$2')
-    .split('\n')
-    .join('\n')
-    .trim();
+    // First, preserve empty lines by replacing them with a placeholder
+    .replace(/\n\s*\n/g, '\n&nbsp;\n')
+    // Handle completely empty lines (just whitespace)
+    .replace(/^[\s]*$/gm, '&nbsp;')
+    // Convert single line breaks to double when they separate numbered items
+    .replace(/(\d+\.\s[^\n]+)\n(?=\d+\.\s)/g, '$1\n\n')
+    // Handle multi-line numbered items
+    .replace(/(\d+\.\s[^\n]+(?:\n(?!\d+\.\s)[^\n]*)*)\n(?=\d+\.\s)/g, '$1\n\n')
+    // Preserve single line breaks as proper breaks
+    .replace(/(?<!\n)\n(?!\n)/g, '  \n');
 
   return (
     <div className={`markdown-content w-full ${className}`}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkBreaks]}
         rehypePlugins={[rehypeRaw]}
         components={{
-          // Paragraph styling with better spacing and proper word wrapping
-          p: ({ children }) => (
-            <p className="mb-3 last:mb-0 text-base leading-relaxed w-full break-words hyphens-auto">
-              {children}
-            </p>
-          ),
+          // Handle line breaks explicitly
+          br: () => <br className="block" />,
+          
+          // Enhanced paragraph styling with empty paragraph support
+          p: ({ children }) => {
+            // Check if this is an empty paragraph (just &nbsp; or empty)
+            const isEmptyParagraph = children === '&nbsp;' || 
+                                   (Array.isArray(children) && children.length === 1 && children[0] === '\u00A0') ||
+                                   (typeof children === 'string' && children.trim() === '') ||
+                                   (Array.isArray(children) && children.every(child => 
+                                     typeof child === 'string' && child.trim() === ''
+                                   ));
+            
+            if (isEmptyParagraph) {
+              return <div className="h-6 w-full" />; // Empty line with proper height
+            }
+            
+            return (
+              <p className="mb-3 last:mb-0 text-base leading-relaxed w-full break-words hyphens-auto">
+                {children}
+              </p>
+            );
+          },
           
           // Bold text
           strong: ({ children }) => (
