@@ -1,350 +1,156 @@
-# ImageMosaic Preview System – PRD
+# ImageMosaic Preview System – Product Requirements
 
 ## Overview
 
-Implement a simple, responsive image preview mosaic in each `BaseCard` component. If a note contains image attachments, the mosaic will visually summarize up to 4 images with a "+X more" overlay if applicable. Clicking the preview opens the existing `ImageGalleryModal` for full image management.
+Enhance note cards with visual image previews to improve content discovery and user engagement. When notes contain image attachments, display them as an organized mosaic preview that allows users to quickly scan visual content without opening individual notes.
 
 ---
 
-## Goals
+## Business Goals
 
-* Add visual image previews to cards with image attachments
-* Keep the implementation modular, fast, and clean
-* Ensure it is mobile-first and responsive
-* Reuse the existing modal system for full viewing
-* Maintain clear, testable layout logic
-* Follow existing codebase TypeScript and component patterns
+### **User Experience**
+- **Faster Content Discovery**: Users can quickly identify notes with relevant visual content
+- **Improved Note Navigation**: Visual previews make it easier to find specific notes
+- **Reduced Clicks**: See image content at a glance without opening notes
+- **Better Mobile Experience**: Touch-friendly previews optimized for small screens
 
----
-
-## Non-Goals
-
-* No AI-driven layout logic
-* No dynamic image cropping
-* No CDN/image optimization
+### **Product Benefits**
+- **Increased Engagement**: Visual content catches attention and encourages interaction
+- **Content Organization**: Users can better organize and categorize visual notes
+- **Workflow Efficiency**: Streamlined process for managing notes with multiple images
+- **Platform Differentiation**: Rich visual previews set HeyContent apart from text-only note apps
 
 ---
 
-## Architecture Plan
+## User Stories
 
-```
-BaseCard
-├── useState for modal control (existing pattern)
-└── ImageMosaic (New)
-    ├── SingleImageLayout
-    ├── DualImageLayout
-    ├── TrioImageLayout
-    └── QuadImageLayout (+X more)
-```
+### **As a Content Creator, I want to:**
+- See thumbnails of my image attachments directly on note cards
+- Quickly browse through multiple images without opening each note
+- Identify notes with visual content when scrolling through my feed
+- Access the full image gallery with a single tap/click
 
----
-
-## File Structure
-
-```
-src/
-└── app/
-    └── dashboard/
-        └── notes/
-            └── components/
-                ├── BaseCard.tsx (modified)
-                └── ImageMosaic.tsx (new - all layouts in one file)
-```
-
-**Note**: Based on codebase patterns, keeping all layout components in one file to avoid over-fragmentation.
+### **As a Mobile User, I want to:**
+- Preview images that don't get cropped or cut off
+- Have smooth, responsive interactions when browsing image previews
+- See auto-cycling previews for notes with many images
+- Pause auto-cycling when I want to examine a specific image
 
 ---
 
-## Implementation Steps
+## Feature Specifications
 
-### Step 1: Create the ImageMosaic Component
+### **Image Display Logic**
+- **1 Image**: Single large preview with rounded corners
+- **2 Images**: Side-by-side equal-width layout
+- **3 Images**: Three-column equal-width layout  
+- **4+ Images**: Auto-cycling slideshow showing 4 images at a time
 
-**File**: `src/app/dashboard/notes/components/ImageMosaic.tsx`
+### **Auto-Cycling Behavior**
+- **Trigger**: Automatically activates for notes with 5+ images
+- **Timing**: Advances every 2 seconds through different image sets
+- **User Control**: Pauses on hover/touch, resumes when interaction ends
+- **Loop**: Continuously cycles through all images, returning to start
+- **Indicator**: Shows total image count (e.g., "12 images") during cycling
 
-```tsx
-'use client';
+### **Interactive Elements**
+- **Click to Open**: Tapping preview opens full image gallery modal
+- **Event Handling**: Preview clicks don't trigger note editing
+- **Visual Feedback**: Subtle hover effects and smooth transitions
+- **Accessibility**: Proper alt text and keyboard navigation support
 
-import React from 'react';
-import { ImageData } from '../types';
-import { cn } from '@/lib/utils';
-
-interface ImageMosaicProps {
-  images: ImageData[];
-  onOpenGallery: () => void;
-  className?: string;
-}
-
-interface SingleImageProps {
-  image: ImageData;
-}
-
-interface MultiImageProps {
-  images: ImageData[];
-}
-
-interface QuadImageProps {
-  images: ImageData[];
-  remainingCount: number;
-}
-
-// Layout Components
-const SingleImageLayout: React.FC<SingleImageProps> = ({ image }) => (
-  <img
-    src={image.url}
-    alt={image.originalFilename || image.filename || 'Note image'}
-    loading="lazy"
-    className="w-full h-full object-cover rounded-lg"
-  />
-);
-
-const DualImageLayout: React.FC<MultiImageProps> = ({ images }) => (
-  <div className="grid grid-cols-2 gap-1 h-full">
-    {images.map((img, i) => (
-      <img
-        key={img.filename || i}
-        src={img.url}
-        alt={img.originalFilename || img.filename || `Note image ${i + 1}`}
-        loading="lazy"
-        className="w-full h-full object-cover"
-      />
-    ))}
-  </div>
-);
-
-const TrioImageLayout: React.FC<MultiImageProps> = ({ images }) => (
-  <div className="grid grid-cols-2 gap-1 h-full">
-    <div className="row-span-2">
-      <img
-        src={images[0].url}
-        alt={images[0].originalFilename || images[0].filename || 'Note image 1'}
-        loading="lazy"
-        className="w-full h-full object-cover"
-      />
-    </div>
-    <div className="grid grid-rows-2 gap-1">
-      <img
-        src={images[1].url}
-        alt={images[1].originalFilename || images[1].filename || 'Note image 2'}
-        loading="lazy"
-        className="w-full h-full object-cover"
-      />
-      <img
-        src={images[2].url}
-        alt={images[2].originalFilename || images[2].filename || 'Note image 3'}
-        loading="lazy"
-        className="w-full h-full object-cover"
-      />
-    </div>
-  </div>
-);
-
-const QuadImageLayout: React.FC<QuadImageProps> = ({ images, remainingCount }) => (
-  <div className="grid grid-cols-2 gap-1 h-full">
-    {images.slice(0, 3).map((img, i) => (
-      <img
-        key={img.filename || i}
-        src={img.url}
-        alt={img.originalFilename || img.filename || `Note image ${i + 1}`}
-        loading="lazy"
-        className="w-full h-full object-cover"
-      />
-    ))}
-    <div className="relative">
-      <img
-        src={images[3].url}
-        alt={images[3].originalFilename || images[3].filename || 'Note image 4'}
-        loading="lazy"
-        className="w-full h-full object-cover"
-      />
-      {remainingCount > 0 && (
-        <div className="absolute inset-0 bg-black/50 text-white flex items-center justify-center text-sm font-medium rounded">
-          +{remainingCount} more
-        </div>
-      )}
-    </div>
-  </div>
-);
-
-// Main Component
-export const ImageMosaic: React.FC<ImageMosaicProps> = ({ 
-  images, 
-  onOpenGallery, 
-  className 
-}) => {
-  const previewImages = images.slice(0, 4);
-
-  return (
-    <div
-      className={cn(
-        "relative rounded-lg overflow-hidden cursor-pointer group",
-        "aspect-[3/2] sm:aspect-[4/3]",
-        "transition-all duration-200 hover:shadow-sm",
-        className
-      )}
-      onClick={onOpenGallery}
-    >
-      {previewImages.length === 1 && <SingleImageLayout image={previewImages[0]} />}
-      {previewImages.length === 2 && <DualImageLayout images={previewImages} />}
-      {previewImages.length === 3 && <TrioImageLayout images={previewImages} />}
-      {previewImages.length >= 4 && (
-        <QuadImageLayout 
-          images={previewImages} 
-          remainingCount={images.length - 4} 
-        />
-      )}
-      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200" />
-    </div>
-  );
-};
-```
+### **Responsive Design**
+- **Mobile-First**: Optimized for touch interactions and small screens
+- **Flexible Sizing**: Images scale appropriately without cropping
+- **Performance**: Lazy loading and optimized rendering for smooth scrolling
 
 ---
 
-### Step 2: Update BaseCard Component
+## Technical Approach
 
-**File**: `src/app/dashboard/notes/components/cards/BaseCard.tsx`
+### **Component Architecture**
+- **ImageMosaic**: New component handling all preview layouts
+- **BaseCard Integration**: Seamlessly embedded into existing note cards
+- **Modal Reuse**: Leverages existing ImageGalleryModal for full viewing
 
-```tsx
-// Add these imports at the top
-import { useState } from 'react';
-import { ImageMosaic } from '../ImageMosaic';
-import { ImageGalleryModal } from '../ImageGalleryModal';
+### **Layout Strategy**
+- **Flexible Heights**: No fixed aspect ratios to prevent image cropping
+- **Grid Layouts**: Simple CSS Grid for reliable, predictable positioning  
+- **Object Scaling**: Uses `object-scale-down` to preserve image quality
 
-// Add this state inside the BaseCard component
-export function BaseCard({
-  note,
-  className,
-  children,
-  onEdit,
-  onDelete,
-  onToggleImportant
-}: BaseCardProps) {
-  const [showImageGallery, setShowImageGallery] = useState(false);
-  
-  const hasImages = note.images && note.images.length > 0;
-
-  // ... existing handlers ...
-
-  return (
-    <>
-      <div
-        className={cn(
-          "group relative bg-background border border-border rounded-lg shadow-sm transition-all duration-200",
-          "hover:shadow-md hover:border-border/60 cursor-pointer",
-          className
-        )}
-        onClick={handleEdit}
-      >
-        {/* Header with actions */}
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          {/* ... existing action buttons ... */}
-        </div>
-
-        {/* NEW: Image Mosaic Preview */}
-        {hasImages && (
-          <div className="p-3 pb-0">
-            <ImageMosaic
-              images={note.images}
-              onOpenGallery={(e) => {
-                e.stopPropagation(); // Prevent card click
-                setShowImageGallery(true);
-              }}
-            />
-          </div>
-        )}
-
-        {/* Card content */}
-        <div className={cn("p-4", hasImages && "pt-3")}>
-          {children}
-        </div>
-
-        {/* Tags */}
-        {note.tags && note.tags.length > 0 && (
-          <div className="px-4 pt-2 pb-1">
-            {/* ... existing tags ... */}
-          </div>
-        )}
-
-        {/* Date footer */}
-        <div className="px-3 pb-2 text-xs text-muted-foreground">
-          {/* ... existing date ... */}
-        </div>
-      </div>
-
-      {/* Image Gallery Modal */}
-      {showImageGallery && (
-        <ImageGalleryModal
-          isOpen={showImageGallery}
-          noteId={String(note._id)}
-          images={note.images || []}
-          onClose={() => setShowImageGallery(false)}
-        />
-      )}
-    </>
-  );
-}
-```
+### **State Management**
+- **Local State**: Component-level state for cycling and pause controls
+- **Event Propagation**: Proper handling to prevent conflicts with card actions
+- **Performance**: Efficient re-renders and memory cleanup
 
 ---
 
-## Testing Checklist
+## Success Metrics
 
-| Task                                     | Status |
-| ---------------------------------------- | ------ |
-| Preview shows 1 image                    |        |
-| Preview shows 2 images side by side      |        |
-| Preview shows 3 in stacked layout        |        |
-| Preview shows 4 with "+X more" overlay   |        |
-| Clicking preview opens ImageGalleryModal |        |
-| Clicking preview doesn't trigger card edit |      |
-| Layout works well on mobile and desktop  |        |
-| Images are lazy-loaded                   |        |
-| No layout shift or broken aspect ratios  |        |
-| TypeScript compiles without errors       |        |
-| Proper alt text for accessibility        |        |
+### **User Engagement**
+- **Preview Click Rate**: % of users who click image previews
+- **Gallery Open Rate**: % of preview clicks that open full gallery
+- **Time on Page**: Increased engagement with visual note content
 
----
+### **User Experience**
+- **Mobile Usage**: Improved mobile interaction rates
+- **Content Discovery**: Faster time to find specific visual notes
+- **User Satisfaction**: Reduced complaints about cropped or hidden images
 
-## Mobile Optimizations
-
-* **Touch Targets**: Minimum 44px height maintained
-* **Aspect Ratios**: `aspect-[3/2]` on mobile, `aspect-[4/3]` on desktop
-* **Responsive Grid**: Uses existing Tailwind responsive breakpoints
-* **Hover States**: Only show on devices that support hover
+### **Technical Performance**
+- **Load Times**: No significant impact on note card rendering speed
+- **Memory Usage**: Efficient handling of multiple images
+- **Error Rates**: Minimal issues with image loading or display
 
 ---
 
-## Accessibility Considerations
+## Implementation Phases
 
-* **Alt Text**: Uses `originalFilename` or `filename` as fallback
-* **Keyboard Navigation**: Inherits from parent card focus behavior
-* **Screen Readers**: Proper semantic structure maintained
+### **Phase 1: Core Preview System** ✅
+- Basic image mosaic layouts (1-4 images)
+- Integration with BaseCard component
+- Click-to-open modal functionality
 
----
+### **Phase 2: Auto-Cycling Enhancement** ✅
+- Slideshow for 5+ images
+- Pause/resume on user interaction
+- Visual indicators and smooth transitions
 
-## Integration Notes
-
-* **Event Propagation**: `e.stopPropagation()` prevents mosaic click from opening card editor
-* **State Management**: Uses local `useState` following existing BaseCard patterns
-* **Modal Integration**: Reuses existing `ImageGalleryModal` component
-* **TypeScript**: Full type safety with existing `ImageData` interface
-
----
-
-## Performance Considerations
-
-* **Lazy Loading**: All images use `loading="lazy"`
-* **Key Props**: Uses `filename` for stable React keys
-* **Transition Classes**: Consistent with existing component animations
-* **Bundle Size**: Single file approach reduces import overhead
+### **Phase 3: Polish & Optimization** 
+- Performance optimizations
+- Advanced loading states
+- Enhanced accessibility features
 
 ---
 
 ## Future Enhancements
 
-* Replace `<img>` with Next.js `<Image>` component for optimization
-* Add blurhash or shimmer placeholders
-* Implement virtual scrolling for notes with many images
-* Add keyboard shortcuts for gallery navigation
+### **Advanced Features**
+- **Smart Cropping**: AI-powered focal point detection
+- **Image Filters**: Quick preview filters (brightness, contrast)
+- **Batch Actions**: Select multiple images from preview
+- **Drag & Drop**: Reorder images directly in preview
+
+### **Platform Integration**
+- **CDN Optimization**: Automatic image resizing and compression
+- **Caching Strategy**: Intelligent preview caching for faster loads
+- **Offline Support**: Cached previews for offline viewing
 
 ---
+
+## Design Considerations
+
+### **Visual Hierarchy**
+- **Subtle Integration**: Previews enhance but don't overwhelm note content
+- **Consistent Spacing**: Proper padding and margins for clean appearance
+- **Brand Alignment**: Follows HeyContent design system and colors
+
+### **User Control**
+- **Non-Intrusive**: Auto-cycling doesn't distract from other tasks
+- **Predictable Behavior**: Clear feedback on interactive elements
+- **Escape Routes**: Easy way to dismiss or navigate away from previews
+
+### **Content Strategy**
+- **Quality Over Quantity**: Better to show fewer, high-quality previews
+- **Context Awareness**: Previews provide meaningful content hints
+- **Progressive Enhancement**: Graceful degradation when images fail to load
