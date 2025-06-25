@@ -219,15 +219,28 @@ export function NoteArea({
     }
   }, [requestIdeas]);
 
-  // Handle note linking
-  const handleLinkNote = (noteId: string) => {
+  // Handle note linking with save
+  const handleLinkNote = async (noteId: string) => {
+    // Always save current note before navigating to linked note
+    await autosave();
     if (onLinkNote) {
       onLinkNote(noteId);
     }
   };
 
-  const handleBack = () => {
+  // Unified back handler that saves first, then navigates
+  const handleBack = async () => {
+    // Always save before navigating back
+    await autosave();
     onBack(content);
+  };
+
+  const handleNavigateBack = async () => {
+    // Always save before navigating to previous note
+    await autosave();
+    if (onNavigateBack) {
+      onNavigateBack();
+    }
   };
 
   return (
@@ -241,7 +254,7 @@ export function NoteArea({
         isMobile={isMobile}
         currentContent={content}
         canGoBack={canGoBack}
-        onNavigateBack={onNavigateBack}
+        onNavigateBack={handleNavigateBack}
         navigationStack={navigationStack}
       />
       
