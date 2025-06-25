@@ -176,11 +176,39 @@ export const TimelineScroller: React.FC = () => {
   const [isExtending, setIsExtending] = useState(false);
   const isExtendingRef = useRef(false);
   const [centerDate, setCenterDate] = useState(new Date());
+  
+  // Add flag to prevent ALL automatic changes - user must explicitly navigate
+  const [hasInitialized, setHasInitialized] = useState(false);
+  const [isUserDriven, setIsUserDriven] = useState(false); // Track if changes are user-initiated
+
+  // Performance optimization refs
+  const throttleRef = useRef<NodeJS.Timeout | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const scrollThrottleRef = useRef<NodeJS.Timeout | null>(null);
+  const zoomThrottleRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get user ID from API key in cookies
   useEffect(() => {
     const currentUserId = getCurrentUserId();
     setUserId(currentUserId || undefined);
+  }, []);
+
+  // Cleanup all performance-related refs on unmount
+  useEffect(() => {
+    return () => {
+      if (throttleRef.current) {
+        clearTimeout(throttleRef.current);
+      }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (scrollThrottleRef.current) {
+        clearTimeout(scrollThrottleRef.current);
+      }
+      if (zoomThrottleRef.current) {
+        clearTimeout(zoomThrottleRef.current);
+      }
+    };
   }, []);
 
   // Fetch timeline data for all loaded periods
@@ -195,57 +223,45 @@ export const TimelineScroller: React.FC = () => {
     getFolderItems
   } = usePersonaTimelineData(userId);
 
-  // Initialize periods when zoom level changes or on first load
+  // Initialize periods ONLY ONCE on first load - no automatic updates
   useEffect(() => {
-    const initialPeriods = generatePeriodsForZoom(centerDate, zoomLevel, 7); // Load 7 periods initially
+    if (hasInitialized) return; // Only run once
+    
+    console.log('🚀 TimelineScroller: Initial setup only');
+    
+    const initialPeriods = generatePeriodsForZoom(centerDate, zoomLevel, 7);
     setLoadedPeriods(initialPeriods);
     
     // Set the visible date range to the center period
     const centerPeriod = initialPeriods[Math.floor(initialPeriods.length / 2)];
     if (centerPeriod) {
+      console.log('✅ TimelineScroller: Initial date range set');
       setVisibleDateRange(centerPeriod.start, centerPeriod.end);
     }
-  }, [zoomLevel, centerDate, setVisibleDateRange]);
+    
+    setHasInitialized(true);
+  }, []); // Only run on mount
 
-  // Listen for external date range changes (e.g., from TimelineControls) and update periods
-  useEffect(() => {
-    if (!visibleDateRange.start || !visibleDateRange.end) return;
-    
-    // Check if the current visible range is covered by loaded periods
-    const isRangeCovered = loadedPeriods.some(period => 
-      visibleDateRange.start >= period.start && visibleDateRange.end <= period.end
-    );
-    
-    if (!isRangeCovered) {
-      // Use the middle of the visible range as the new center date
-      const newCenterDate = new Date(
-        (visibleDateRange.start.getTime() + visibleDateRange.end.getTime()) / 2
-      );
-      // Generate new periods around the visible range
-      const newPeriods = generatePeriodsForZoom(newCenterDate, zoomLevel, 7);
-      // Only update if periods are actually different
-      if (!isEqual(newPeriods, loadedPeriods)) {
-        setLoadedPeriods(newPeriods);
-      }
-    }
-  }, [visibleDateRange, zoomLevel]);
+  // REMOVE automatic external date range handling - let user control navigation
+  // Users can navigate using TimelineControls or explicit interactions
 
   useEffect(() => {
     isExtendingRef.current = isExtending;
   }, [isExtending]);
 
-  // Extend periods when near edges
+  // DISABLE automatic period extension - only extend on explicit user scroll
   const extendPeriodsIfNeeded = useCallback((scrollLeft: number, containerWidth: number, scrollWidth: number) => {
-    if (isExtendingRef.current) return;
+    // Only extend if user is actively scrolling (not automatic changes)
+    if (isExtendingRef.current || !isUserDriven) return;
     
     const maxScrollLeft = scrollWidth - containerWidth;
-    const leftThreshold = scrollWidth * 0.15; // Extend when 15% from left
-    const rightThreshold = scrollWidth * 0.85; // Extend when 85% from left
+    const leftThreshold = scrollWidth * 0.1; // Reduce sensitivity
+    const rightThreshold = scrollWidth * 0.9; // Reduce sensitivity
     
     if (scrollLeft <= leftThreshold) {
       setIsExtending(true);
       isExtendingRef.current = true;
-      const newPeriods = extendPeriods(loadedPeriods, 'left', zoomLevel, 3);
+      const newPeriods = extendPeriods(loadedPeriods, 'left', zoomLevel, 2); // Extend less
       setLoadedPeriods(prev => [...newPeriods, ...prev]);
       // Adjust scroll position to prevent jumping
       setTimeout(() => {
@@ -260,18 +276,19 @@ export const TimelineScroller: React.FC = () => {
     } else if (scrollLeft >= rightThreshold) {
       setIsExtending(true);
       isExtendingRef.current = true;
-      const newPeriods = extendPeriods(loadedPeriods, 'right', zoomLevel, 3);
+      const newPeriods = extendPeriods(loadedPeriods, 'right', zoomLevel, 2); // Extend less
       setLoadedPeriods(prev => [...prev, ...newPeriods]);
       setTimeout(() => {
         setIsExtending(false);
         isExtendingRef.current = false;
       }, 50);
     }
-  }, [loadedPeriods, zoomLevel]);
+  }, [loadedPeriods, zoomLevel, isUserDriven]);
 
-  // Update visible date range based on scroll position
+  // DISABLE automatic visible date range updates - only update on user scroll
   const updateVisibleDateRange = useCallback((scrollLeft: number, containerWidth: number, scrollWidth: number) => {
-    if (loadedPeriods.length === 0) return;
+    // Only update if user is actively scrolling
+    if (loadedPeriods.length === 0 || !isUserDriven) return;
     
     // Calculate which period is most visible based on scroll position
     const scrollProgress = scrollLeft / (scrollWidth - containerWidth);
@@ -284,7 +301,7 @@ export const TimelineScroller: React.FC = () => {
          visibleDateRange.end.getTime() !== visiblePeriod.end.getTime())) {
       setVisibleDateRange(visiblePeriod.start, visiblePeriod.end);
     }
-  }, [loadedPeriods, visibleDateRange, setVisibleDateRange]);
+  }, [loadedPeriods, visibleDateRange, setVisibleDateRange, isUserDriven]);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const scrollLeft = e.currentTarget.scrollLeft;
@@ -292,56 +309,128 @@ export const TimelineScroller: React.FC = () => {
     const scrollWidth = e.currentTarget.scrollWidth;
     
     setScrollPosition(scrollLeft);
+    setIsUserDriven(true); // Mark as user-driven
     
-    // Extend periods if near edges
-    extendPeriodsIfNeeded(scrollLeft, containerWidth, scrollWidth);
+    // Throttle expensive operations during scroll
+    if (scrollThrottleRef.current) return;
     
-    // Update visible date range
-    updateVisibleDateRange(scrollLeft, containerWidth, scrollWidth);
+    scrollThrottleRef.current = setTimeout(() => {
+      // Extend periods if near edges (only if user-driven)
+      extendPeriodsIfNeeded(scrollLeft, containerWidth, scrollWidth);
+      
+      // Update visible date range (only if user-driven)
+      updateVisibleDateRange(scrollLeft, containerWidth, scrollWidth);
+      
+      scrollThrottleRef.current = null;
+      
+      // Reset user-driven flag after scroll operations
+      setTimeout(() => setIsUserDriven(false), 200);
+    }, 150); // Increase throttle delay
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
+    setIsUserDriven(true); // Mark as user-driven
     setDragStart({
       x: e.pageX,
       scrollLeft: scrollContainerRef.current?.scrollLeft || 0,
     });
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isDragging || !scrollContainerRef.current) return;
     
-    e.preventDefault();
-    const x = e.pageX;
-    const walk = (x - dragStart.x) * 1;
-    scrollContainerRef.current.scrollLeft = dragStart.scrollLeft - walk;
-  };
+    // Use requestAnimationFrame for smoother dragging instead of throttling
+    if (animationFrameRef.current) return;
+    
+    animationFrameRef.current = requestAnimationFrame(() => {
+      if (!scrollContainerRef.current) {
+        animationFrameRef.current = null;
+        return;
+      }
+      
+      const x = e.pageX;
+      const walk = (x - dragStart.x) * 1;
+      scrollContainerRef.current.scrollLeft = dragStart.scrollLeft - walk;
+      animationFrameRef.current = null;
+    });
+  }, [isDragging, dragStart]);
 
   const handleMouseUp = () => {
     setIsDragging(false);
+    // Reset user-driven flag after drag ends
+    setTimeout(() => setIsUserDriven(false), 200);
   };
 
   const handleWheel = (e: React.WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
+      // Re-enable zoom but keep it controlled - don't prevent default to avoid passive listener errors
+      // Throttle zoom events to prevent rapid zoom level changes
+      if (zoomThrottleRef.current) return;
+      
       // Handle zoom with wheel - year -> month -> week sequence
       const zoomSequence = ['year', 'month', 'week'];
       const currentZoomIndex = zoomSequence.indexOf(zoomLevel);
       
+      // Set zoom throttle to prevent rapid changes
+      zoomThrottleRef.current = setTimeout(() => {
+        zoomThrottleRef.current = null;
+      }, 300);
+      
       if (e.deltaY < 0 && currentZoomIndex < zoomSequence.length - 1) {
         // Zoom in (year -> month -> week)
-        const nextZoom = zoomSequence[currentZoomIndex + 1];
-        useTimelineStore.getState().setZoomLevel(nextZoom as any);
+        const nextZoom = zoomSequence[currentZoomIndex + 1] as ZoomLevel;
+        
+        // Update zoom level but keep current date range
+        useTimelineStore.getState().setZoomLevel(nextZoom);
+        
+        // Generate new periods around the CURRENT visible date range instead of jumping
+        const currentCenter = new Date(
+          (visibleDateRange.start.getTime() + visibleDateRange.end.getTime()) / 2
+        );
+        
+        setTimeout(() => {
+          const newPeriods = generatePeriodsForZoom(currentCenter, nextZoom, 7);
+          setLoadedPeriods(newPeriods);
+        }, 100);
+        
       } else if (e.deltaY > 0 && currentZoomIndex > 0) {
         // Zoom out (week -> month -> year)
-        const nextZoom = zoomSequence[currentZoomIndex - 1];
-        useTimelineStore.getState().setZoomLevel(nextZoom as any);
+        const nextZoom = zoomSequence[currentZoomIndex - 1] as ZoomLevel;
+        
+        // Update zoom level but keep current date range
+        useTimelineStore.getState().setZoomLevel(nextZoom);
+        
+        // Generate new periods around the CURRENT visible date range instead of jumping
+        const currentCenter = new Date(
+          (visibleDateRange.start.getTime() + visibleDateRange.end.getTime()) / 2
+        );
+        
+        setTimeout(() => {
+          const newPeriods = generatePeriodsForZoom(currentCenter, nextZoom, 7);
+          setLoadedPeriods(newPeriods);
+        }, 100);
       }
-    } else {
-      // Horizontal scroll - reduced sensitivity
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.scrollLeft += e.deltaY * 0.2;
-      }
+      
+      return; // Don't process as horizontal scroll
     }
+    
+    // Allow horizontal scroll but mark as user-driven
+    setIsUserDriven(true);
+    
+    // Horizontal scroll - use throttling
+    if (throttleRef.current) return;
+    
+    // Reduce scroll sensitivity
+    throttleRef.current = setTimeout(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollLeft += e.deltaY * 0.05; // Reduced sensitivity
+      }
+      throttleRef.current = null;
+      
+      // Reset user-driven flag
+      setTimeout(() => setIsUserDriven(false), 200);
+    }, 50); // Increased throttle delay
   };
 
   const renderCurrentView = () => {

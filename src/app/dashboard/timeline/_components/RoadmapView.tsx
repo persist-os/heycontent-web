@@ -132,21 +132,25 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
 
   // Auto-snap to available data: if we have personas, adjust visible date range to include them
   useEffect(() => {
-    if (sortedPersonas.length > 0) {
-      const personaDates = sortedPersonas.map(p => new Date(p.createdAt));
-      const minDate = new Date(Math.min(...personaDates.map(d => d.getTime())));
-      const maxDate = new Date(Math.max(...personaDates.map(d => d.getTime())));
-      
-      // Expand the range slightly to provide padding
-      const padding = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
-      const expandedMinDate = new Date(minDate.getTime() - padding);
-      const expandedMaxDate = new Date(maxDate.getTime() + padding);
-      
-      // Only update if the current range doesn't contain all personas
-      if (visibleDateRange.start > expandedMinDate || visibleDateRange.end < expandedMaxDate) {
-        setVisibleDateRange(expandedMinDate, expandedMaxDate);
-      }
-    }
+    // Disable auto-snap to preserve cursor focus during zoom operations
+    // Let the user manually navigate to see historical personas instead
+    // This prevents the timeline from jumping away from where the user is focused
+    
+    // if (sortedPersonas.length > 0) {
+    //   const personaDates = sortedPersonas.map(p => new Date(p.createdAt));
+    //   const minDate = new Date(Math.min(...personaDates.map(d => d.getTime())));
+    //   const maxDate = new Date(Math.max(...personaDates.map(d => d.getTime())));
+    //   
+    //   // Expand the range slightly to provide padding
+    //   const padding = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+    //   const expandedMinDate = new Date(minDate.getTime() - padding);
+    //   const expandedMaxDate = new Date(maxDate.getTime() + padding);
+    //   
+    //   // Only update if the current range doesn't contain all personas
+    //   if (visibleDateRange.start > expandedMinDate || visibleDateRange.end < expandedMaxDate) {
+    //     setVisibleDateRange(expandedMinDate, expandedMaxDate);
+    //   }
+    // }
   }, [sortedPersonas, visibleDateRange, setVisibleDateRange]);
 
 

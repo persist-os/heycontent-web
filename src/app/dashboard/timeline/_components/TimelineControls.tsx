@@ -111,6 +111,40 @@ export const TimelineControls: React.FC = () => {
     return mostRecentDate;
   };
 
+  // Function to go to today's date for any zoom level
+  const goToToday = (newZoomLevel?: ZoomLevel) => {
+    const targetZoom = newZoomLevel || zoomLevel;
+    const today = new Date();
+    let start: Date, end: Date;
+
+    switch (targetZoom) {
+      case 'year':
+        start = new Date(today.getFullYear(), 0, 1);
+        end = new Date(today.getFullYear(), 11, 31);
+        break;
+      case 'month':
+        start = new Date(today.getFullYear(), today.getMonth(), 1);
+        end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        break;
+      case 'week':
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay());
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        start = startOfWeek;
+        end = endOfWeek;
+        break;
+      default:
+        start = new Date(today.getFullYear(), 0, 1);
+        end = new Date(today.getFullYear(), 11, 31);
+    }
+
+    if (newZoomLevel) {
+      setZoomLevel(newZoomLevel);
+    }
+    setVisibleDateRange(start, end);
+  };
+
   // Function to snap to period with most recent data based on zoom level
   const snapToPresent = (newZoomLevel: ZoomLevel) => {
     const mostRecentDate = findMostRecentDataDate();
@@ -280,7 +314,9 @@ export const TimelineControls: React.FC = () => {
                     : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
                 }`}
                 onClick={() => {
-                  snapToPresent(period.value);
+                  // Simply set zoom level and stay on current date
+                  // Don't automatically jump to historical data
+                  goToToday(period.value);
                 }}
               >
                 {period.label}
