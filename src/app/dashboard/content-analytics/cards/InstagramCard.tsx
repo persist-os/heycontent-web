@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Instagram, Users, RefreshCw, MessageSquare, Heart, Forward } from 'lucide-react';
 
@@ -42,7 +42,14 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
     return () => clearInterval(slideInterval);
   }, [isCarousel, children.length]);
 
-  const { refresh, loading, error } = useInstagramRefresh();
+  // Create a callback to trigger refetch of posts data
+  const handleRefreshComplete = useCallback(() => {
+    // This will be called after successful refresh
+    // The parent component should handle the refetch
+    console.log('🔄 Instagram: Post refresh completed, triggering refetch');
+  }, []);
+
+  const { refresh, loading, error } = useInstagramRefresh(handleRefreshComplete);
 
   const handleImgError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     if (e.currentTarget.src !== window.location.origin + fallbackImg) {

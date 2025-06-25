@@ -97,15 +97,16 @@ const saveCachedData = (userId: string, instagramAccountId: string, data: any) =
 };
 
 export function useInstagramAnalytics(userId?: string) {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<InstagramAnalysis | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [lastFetchTime, setLastFetchTime] = useState<number | null>(null);
+  const [refreshTimestamp, setRefreshTimestamp] = useState<number>(Date.now());
   
   // Refs to track if component is mounted and previous userId
   const isMountedRef = useRef(true);
-  const prevUserIdRef = useRef<string | undefined>(userId);
+  const prevUserIdRef = useRef<string | undefined>(undefined);
 
   // Get Instagram account data from Convex
   const instagramAccount = useQuery(
@@ -116,7 +117,7 @@ export function useInstagramAnalytics(userId?: string) {
   // Get Instagram posts
   const instagramPosts = useQuery(
     api.instagramQueries.getAllInstagramPosts,
-    userId ? { userId } : "skip"
+    userId ? { userId, refreshTimestamp } : "skip"
   );
 
   // Get Instagram post insights - REMOVED: This query doesn't exist in the new schema
@@ -164,6 +165,19 @@ export function useInstagramAnalytics(userId?: string) {
 
   // Map Instagram items with caching - UPDATED for new schema
   const mappedInstagramItems = useMemo(() => {
+    console.log('🔄 Instagram: Mapping posts data:', {
+      hasPosts: !!instagramPosts,
+      postsType: typeof instagramPosts,
+      postsLength: Array.isArray(instagramPosts) ? instagramPosts.length : 'not array',
+      samplePost: Array.isArray(instagramPosts) && instagramPosts.length > 0 ? {
+        id: instagramPosts[0].postId,
+        hasInsights: !!instagramPosts[0].data?.insights,
+        insightsKeys: instagramPosts[0].data?.insights ? Object.keys(instagramPosts[0].data.insights) : null,
+        hasComments: !!instagramPosts[0].data?.comments,
+        commentsLength: instagramPosts[0].data?.comments?.length || 0
+      } : null
+    });
+    
     if (Array.isArray(instagramPosts)) {
       return instagramPosts.map((post: any): InstagramContentItem => {
         let mediaUrl = post.data.media_url;
@@ -363,6 +377,11 @@ export function useInstagramAnalytics(userId?: string) {
         saveCachedData(userId, instagramAccountId, analysisToSet);
         setError(null);
         console.log('✅ Instagram: Successfully cached fresh data from backend API');
+        
+        // Force refetch of posts by updating the refresh timestamp
+        // This will trigger getAllInstagramPosts to refetch with new insights and comments
+        console.log('🔄 Instagram: Forcing refetch of posts with new insights and comments');
+        setRefreshTimestamp(Date.now());
       } else if (isMountedRef.current) {
         console.warn('⚠️ Instagram: No valid analysis data found in API response');
         setError('No analysis data available');
