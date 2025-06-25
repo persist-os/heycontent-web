@@ -8,6 +8,7 @@ import { RoadmapView } from './RoadmapView';
 import { TimelineControls } from './TimelineControls';
 import { usePersonaTimelineData } from '../hooks/usePersonaTimelineData';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
+import isEqual from 'lodash/isEqual';
 
 // Period interface for managing loaded timeline segments
 interface Period {
@@ -173,6 +174,7 @@ export const TimelineScroller: React.FC = () => {
   // Infinite scroll state
   const [loadedPeriods, setLoadedPeriods] = useState<Period[]>([]);
   const [isExtending, setIsExtending] = useState(false);
+  const isExtendingRef = useRef(false);
   const [centerDate, setCenterDate] = useState(new Date());
 
   // Get user ID from API key in cookies
@@ -188,7 +190,9 @@ export const TimelineScroller: React.FC = () => {
     allContentData, 
     allAnalyticsData, 
     personas,
-    isLoading 
+    isLoading,
+    getFolderCount,
+    getFolderItems
   } = usePersonaTimelineData(userId);
 
   // Initialize periods when zoom level changes or on first load
@@ -203,9 +207,36 @@ export const TimelineScroller: React.FC = () => {
     }
   }, [zoomLevel, centerDate, setVisibleDateRange]);
 
+  // Listen for external date range changes (e.g., from TimelineControls) and update periods
+  useEffect(() => {
+    if (!visibleDateRange.start || !visibleDateRange.end) return;
+    
+    // Check if the current visible range is covered by loaded periods
+    const isRangeCovered = loadedPeriods.some(period => 
+      visibleDateRange.start >= period.start && visibleDateRange.end <= period.end
+    );
+    
+    if (!isRangeCovered) {
+      // Use the middle of the visible range as the new center date
+      const newCenterDate = new Date(
+        (visibleDateRange.start.getTime() + visibleDateRange.end.getTime()) / 2
+      );
+      // Generate new periods around the visible range
+      const newPeriods = generatePeriodsForZoom(newCenterDate, zoomLevel, 7);
+      // Only update if periods are actually different
+      if (!isEqual(newPeriods, loadedPeriods)) {
+        setLoadedPeriods(newPeriods);
+      }
+    }
+  }, [visibleDateRange, zoomLevel]);
+
+  useEffect(() => {
+    isExtendingRef.current = isExtending;
+  }, [isExtending]);
+
   // Extend periods when near edges
   const extendPeriodsIfNeeded = useCallback((scrollLeft: number, containerWidth: number, scrollWidth: number) => {
-    if (isExtending) return;
+    if (isExtendingRef.current) return;
     
     const maxScrollLeft = scrollWidth - containerWidth;
     const leftThreshold = scrollWidth * 0.15; // Extend when 15% from left
@@ -213,9 +244,9 @@ export const TimelineScroller: React.FC = () => {
     
     if (scrollLeft <= leftThreshold) {
       setIsExtending(true);
+      isExtendingRef.current = true;
       const newPeriods = extendPeriods(loadedPeriods, 'left', zoomLevel, 3);
       setLoadedPeriods(prev => [...newPeriods, ...prev]);
-      
       // Adjust scroll position to prevent jumping
       setTimeout(() => {
         if (scrollContainerRef.current) {
@@ -224,17 +255,19 @@ export const TimelineScroller: React.FC = () => {
           scrollContainerRef.current.scrollLeft = scrollLeft + addedWidth;
         }
         setIsExtending(false);
+        isExtendingRef.current = false;
       }, 50);
     } else if (scrollLeft >= rightThreshold) {
       setIsExtending(true);
+      isExtendingRef.current = true;
       const newPeriods = extendPeriods(loadedPeriods, 'right', zoomLevel, 3);
       setLoadedPeriods(prev => [...prev, ...newPeriods]);
-      
       setTimeout(() => {
         setIsExtending(false);
+        isExtendingRef.current = false;
       }, 50);
     }
-  }, [loadedPeriods, zoomLevel, isExtending]);
+  }, [loadedPeriods, zoomLevel]);
 
   // Update visible date range based on scroll position
   const updateVisibleDateRange = useCallback((scrollLeft: number, containerWidth: number, scrollWidth: number) => {
@@ -318,7 +351,9 @@ export const TimelineScroller: React.FC = () => {
       notes: notes || [],
       allContentData: allContentData || [],
       allAnalyticsData: allAnalyticsData || [],
-      personas: personas || []
+      personas: personas || [],
+      getFolderCount,
+      getFolderItems
     };
 
     switch (zoomLevel) {

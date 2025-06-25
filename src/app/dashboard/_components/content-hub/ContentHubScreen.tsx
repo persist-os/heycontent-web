@@ -57,17 +57,27 @@ const platformOptions = [
 export function ContentHubScreen() {
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab')
+  const contentIdParam = searchParams.get('contentId')
+  const analyticsIdParam = searchParams.get('analyticsId')
+  const platformParam = searchParams.get('platform')
+  const insightParam = searchParams.get('insight') // e.g., ?insight=open
   
   const [selectedView, setSelectedView] = useState<ViewType>(
+    analyticsIdParam && platformParam ? (platformParam as ViewType) :
     tabParam === 'posts' ? 'all' : 
     tabParam === 'analytics' ? 'all' : // Legacy support
     tabParam === 'ai-insights' ? 'all' :
+    tabParam === 'hub-insights' ? 'hub-insights' : // Support direct navigation
     'hub-insights' // Default to Content Hub Insights as home
   )
-  const [selectedDataType, setSelectedDataType] = useState<DataType>('posts')
+  const [selectedDataType, setSelectedDataType] = useState<DataType>(
+    // Set to posts when coming from analytics
+    analyticsIdParam ? 'posts' : 'posts'
+  )
   const [selectedContent, setSelectedContent] = useState<AnyContentItem | null>(null)
   const [currentQuote, setCurrentQuote] = useState<string>('')
   const [expandedInsight, setExpandedInsight] = useState<string | null>(null);
+  const [expandHubInsight, setExpandHubInsight] = useState(false);
   
   const { firebaseUser, authLoading } = useAuth()
   const userId = firebaseUser?.uid
@@ -112,24 +122,8 @@ export function ContentHubScreen() {
 
   // Global refresh state management
   const isAnyPlatformRefreshing = useMemo(() => {
-    const youtubeRefreshing = youtubeInsights.refreshing;
-    const instagramRefreshing = instagramInsights.refreshing;
-    const gmailRefreshing = gmailInsights.refreshing;
-    
-    console.log('[ContentHubScreen] Refresh states:', {
-      youtube: youtubeRefreshing,
-      instagram: instagramRefreshing,
-      gmail: gmailRefreshing,
-      youtubeStatus: youtubeInsights.status,
-      instagramStatus: instagramInsights.status,
-      gmailStatus: gmailInsights.status,
-      youtubeProgress: youtubeInsights.status?.progress,
-      instagramProgress: instagramInsights.status?.progress,
-      gmailProgress: gmailInsights.status?.progress
-    });
-    
-    return youtubeRefreshing || instagramRefreshing || gmailRefreshing;
-  }, [youtubeInsights.refreshing, instagramInsights.refreshing, gmailInsights.refreshing, youtubeInsights.status, instagramInsights.status, gmailInsights.status])
+    return youtubeInsights.refreshing || instagramInsights.refreshing || gmailInsights.refreshing;
+  }, [youtubeInsights.refreshing, instagramInsights.refreshing, gmailInsights.refreshing]);
 
   // Get all platforms that are currently refreshing for better messaging
   const getRefreshingPlatforms = useCallback(() => {
@@ -164,20 +158,9 @@ export function ContentHubScreen() {
   // Combined insights for "all" tab
   const allInsights = useMemo(() => {
     // Hooks return insights as direct arrays
-    console.log('[ContentHubScreen] Raw hook data:');
-    console.log('  - youtubeInsights:', youtubeInsights);
-    console.log('  - youtubeInsights.insights:', youtubeInsights.insights);
-    console.log('  - instagramInsights.insights:', instagramInsights.insights);
-    console.log('  - gmailInsights.insights:', gmailInsights.insights);
-    
     const youtubeInsightsArray = Array.isArray(youtubeInsights.insights) ? youtubeInsights.insights : [];
     const instagramInsightsArray = Array.isArray(instagramInsights.insights) ? instagramInsights.insights : [];
     const gmailInsightsArray = Array.isArray(gmailInsights.insights) ? gmailInsights.insights : [];
-    
-    console.log('[ContentHubScreen] Extracted arrays:');
-    console.log('  - youtubeInsightsArray:', youtubeInsightsArray);
-    console.log('  - instagramInsightsArray:', instagramInsightsArray);
-    console.log('  - gmailInsightsArray:', gmailInsightsArray);
     
     const combined = [
       ...youtubeInsightsArray,
@@ -185,21 +168,64 @@ export function ContentHubScreen() {
       ...gmailInsightsArray,
     ];
     
-    console.log('[ContentHubScreen] Combined insights:', combined);
     return combined;
   }, [youtubeInsights.insights, instagramInsights.insights, gmailInsights.insights])
 
   const isAnalyticsLoading = youtubeAnalytics.loading || instagramAnalytics.loading || gmailAnalytics.loading
   const isInsightsLoading = youtubeInsights.loading || instagramInsights.loading || gmailInsights.loading
 
-  if (!firebaseUser || !userId) {
-    return (
-      <RefreshState
-        title="Authenticating..."
-        quote="Verifying your credentials"
-      />
-    )
-  }
+  // Open content modal if contentId is present in query
+  useEffect(() => {
+    if (contentIdParam && allDisplayItems.length > 0) {
+      const found = allDisplayItems.find(item => String(item.id) === String(contentIdParam));
+      if (found) {
+        setSelectedView('all');
+        setSelectedDataType('posts');
+        setSelectedContent(found);
+      }
+    }
+  }, [contentIdParam, allDisplayItems]);
+
+  // Helper to clear contentId from URL
+  const clearContentIdFromUrl = useCallback(() => {
+    const params = new URLSearchParams(window.location.search);
+    params.delete('contentId');
+    const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
+    router.replace(newUrl);
+  }, [router]);
+
+  // Helper to clear analytics parameters from URL
+  const clearAnalyticsFromUrl = useCallback(() => {
+    const params = new URLSearchParams(window.location.search);
+    params.delete('analyticsId');
+    params.delete('platform');
+    const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
+    router.replace(newUrl);
+  }, [router]);
+
+  // Handle analytics navigation - show notification or highlight when coming from timeline
+  useEffect(() => {
+    if (analyticsIdParam && platformParam) {
+      // Clear analytics params after a short delay to clean up URL
+      const timeout = setTimeout(() => {
+        clearAnalyticsFromUrl();
+      }, 2000);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [analyticsIdParam, platformParam, clearAnalyticsFromUrl]);
+
+  // Open Content Hub Insights tab and expand if ?tab=hub-insights or ?insight=open
+  useEffect(() => {
+    if (tabParam === 'hub-insights' || insightParam === 'open') {
+      setSelectedView('hub-insights');
+      setExpandHubInsight(true);
+    }
+  }, [tabParam, insightParam]);
+
+  // Always show the main layout, even if not authenticated or loading
+  // If not authenticated, pass empty userId and show empty data
+  const safeUserId = userId || '';
 
   const discussContent = async (item: AnyContentItem) => {
     try {
@@ -253,7 +279,6 @@ export function ContentHubScreen() {
         router.push(fullUrl)
       }
     } catch (error) {
-      console.error('Error creating discussion context:', error)
       router.push('/dashboard/chat')
     }
   }
@@ -477,7 +502,6 @@ export function ContentHubScreen() {
       <div className="flex-1 overflow-y-auto">
         <div className="p-6">
           <div className="max-w-7xl mx-auto space-y-6">
-            
             {/* Main Navigation - Content Hub Insights + Platform Selection */}
             <Tabs value={selectedView} onValueChange={(value) => setSelectedView(value as ViewType)} className="w-full">
               {/* Mobile Select */}
@@ -516,7 +540,7 @@ export function ContentHubScreen() {
 
               {/* Content Hub Insights - Home Screen */}
               <TabsContent value="hub-insights" className="space-y-6">
-                <ContentHubInsights userId={userId} />
+                <ContentHubInsights userId={safeUserId} forceExpand={expandHubInsight} />
               </TabsContent>
 
               {/* Platform-based content - Posts and AI Insights */}
@@ -547,21 +571,18 @@ export function ContentHubScreen() {
                     {/* Posts Screen */}
                     <TabsContent value="posts" className="space-y-6">
                       {selectedView === 'all' && renderAllPlatformsAnalytics()}
-                      
                       {selectedView === 'youtube' && (
                         <YouTubeAnalyticsPlatform 
                           userId={userId} 
                           {...youtubeAnalytics} 
                         />
                       )}
-                      
                       {selectedView === 'instagram' && (
                         <InstagramAnalyticsPlatform 
                           userId={userId} 
                           {...instagramAnalytics}
                         />
                       )}
-                      
                       {selectedView === 'gmail' && (
                         <GmailAnalyticsPlatform 
                           userId={userId}
@@ -573,7 +594,6 @@ export function ContentHubScreen() {
                     {/* AI Insights Screen */}
                     <TabsContent value="ai-insights" className="space-y-6">
                       {selectedView === 'all' && renderAllPlatformsInsights()}
-                      
                       {selectedView === 'youtube' && (
                         <>
                           {youtubeInsights.refreshing && (
@@ -594,7 +614,6 @@ export function ContentHubScreen() {
                           />
                         </>
                       )}
-                      
                       {selectedView === 'instagram' && (
                         <>
                           {instagramInsights.refreshing && (
@@ -615,7 +634,6 @@ export function ContentHubScreen() {
                           />
                         </>
                       )}
-                      
                       {selectedView === 'gmail' && (
                         <>
                           {gmailInsights.refreshing && (
@@ -651,21 +669,30 @@ export function ContentHubScreen() {
           {selectedContent.platform === 'gmail' && (
             <GmailModal
               selectedContent={selectedContent as GmailContentItem}
-              onClose={() => setSelectedContent(null)}
+              onClose={() => {
+                setSelectedContent(null);
+                clearContentIdFromUrl();
+              }}
               onDiscussContent={() => discussContent(selectedContent)}
             />
           )}
           {selectedContent.platform === 'instagram' && (
             <InstagramModal
               selectedContent={selectedContent as InstagramContentItem}
-              onClose={() => setSelectedContent(null)}
+              onClose={() => {
+                setSelectedContent(null);
+                clearContentIdFromUrl();
+              }}
               onDiscussContent={() => discussContent(selectedContent)}
             />
           )}
           {selectedContent.platform === 'youtube' && (
             <YoutubeModal
               selectedContent={selectedContent as YouTubeContentItem}
-              onClose={() => setSelectedContent(null)}
+              onClose={() => {
+                setSelectedContent(null);
+                clearContentIdFromUrl();
+              }}
               onDiscussContent={() => discussContent(selectedContent)}
             />
           )}

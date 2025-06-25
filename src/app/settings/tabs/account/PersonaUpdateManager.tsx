@@ -13,7 +13,6 @@ interface PersonaUpdateManagerProps {
 }
 
 export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ userId, renderNewPersonaButton }) => {
-  console.log('🎨 [PERSONA UPDATE MANAGER] Component rendering for userId:', userId, 'at:', new Date().toISOString());
   const renderStartTime = performance.now();
   
   const {

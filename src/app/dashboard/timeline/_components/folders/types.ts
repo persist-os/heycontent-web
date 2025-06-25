@@ -11,6 +11,7 @@ export interface FolderModalProps {
   isOpen: boolean;
   onClose: () => void;
   folderData: FolderData;
+  onNoteClick?: (noteId: string) => void; // Optional handler for note navigation
 }
 
 export interface FolderItem {

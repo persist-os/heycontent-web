@@ -193,26 +193,14 @@ export const PersonaTab = React.memo(() => {
     return <QuickLoadingIndicator />;
   }
 
-  if (!firebaseUser?.uid) {
-    console.log('🎯 [PERSONA TAB] No Firebase user found, showing sign-in message');
-    return (
-      <div className="flex justify-center items-center min-h-[200px] px-4 group">
-        <div className="text-center space-y-4 max-w-sm p-8 rounded-xl bg-muted/50 transition-all group-hover:shadow-lg">
-          <p className="text-muted-foreground text-sm leading-relaxed">
-            Please sign in to view your persona settings
-          </p>
-        </div>
-      </div>
-    );
-  }
-
+  // Always render PersonaUpdateManager, even if firebaseUser is not present
   const finalRenderTime = performance.now();
   console.log('🎯 [PERSONA TAB] ⚡ LAZY Rendering PersonaUpdateManager at:', new Date().toISOString(), 'total render time:', Math.round(finalRenderTime - renderStartTime), 'ms');
 
   return (
     <div className="w-full">
       <Suspense fallback={<QuickLoadingIndicator />}>
-        <PersonaUpdateManager userId={firebaseUser.uid} renderNewPersonaButton={handleNewPersona} />
+        <PersonaUpdateManager userId={firebaseUser?.uid} renderNewPersonaButton={handleNewPersona} />
       </Suspense>
     </div>
   );

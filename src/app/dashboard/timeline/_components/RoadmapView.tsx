@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useTimelineStore } from './useTimelineStore';
-import { TimelineControls } from './TimelineControls';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -24,6 +23,8 @@ interface RoadmapViewProps {
   allContentData: any[];
   allAnalyticsData: any[];
   personas: any[];
+  getFolderCount: (personaId: string, folderType: 'blue' | 'purple' | 'orange' | 'yellow') => number;
+  getFolderItems: (personaId: string, folderType: 'blue' | 'purple' | 'orange' | 'yellow') => any[];
 }
 
 export const RoadmapView: React.FC<RoadmapViewProps> = ({ 
@@ -32,12 +33,15 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
   notes, 
   allContentData, 
   allAnalyticsData, 
-  personas 
+  personas,
+  getFolderCount,
+  getFolderItems
 }) => {
   const { visibleDateRange, setVisibleDateRange } = useTimelineStore();
   const [userId, setUserId] = useState<string | undefined>();
   const [selectedPersona, setSelectedPersona] = useState<any>(null);
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
+  const [activePersonaIndex, setActivePersonaIndex] = useState<{ [dateKey: string]: number }>({});
   const router = useRouter();
 
   // Get user ID from API key in cookies
@@ -48,37 +52,6 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
 
   // Use personas from props
   const allPersonas = personas;
-
-  // Helper functions to get folder data from props
-  const getFolderCount = (personaId: string, folderType: 'blue' | 'purple' | 'orange' | 'yellow') => {
-    switch (folderType) {
-      case 'blue': // conversations
-        return conversations.filter(conv => conv.personaId === personaId).length;
-      case 'purple': // notes
-        return notes.filter(note => note.personaId === personaId).length;
-      case 'orange': // content
-        return allContentData.filter(item => item.personaId === personaId).length;
-      case 'yellow': // analytics
-        return allAnalyticsData.filter(item => item.personaId === personaId).length;
-      default:
-        return 0;
-    }
-  };
-
-  const getFolderItems = (personaId: string, folderType: 'blue' | 'purple' | 'orange' | 'yellow') => {
-    switch (folderType) {
-      case 'blue': // conversations
-        return conversations.filter(conv => conv.personaId === personaId);
-      case 'purple': // notes
-        return notes.filter(note => note.personaId === personaId);
-      case 'orange': // content
-        return allContentData.filter(item => item.personaId === personaId);
-      case 'yellow': // analytics
-        return allAnalyticsData.filter(item => item.personaId === personaId);
-      default:
-        return [];
-    }
-  };
 
   const formatDate = (date: Date) => {
     const month = date.toLocaleDateString('en-US', { month: 'short' });
@@ -101,15 +74,58 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
     router.push('/dashboard/self-hub?tab=persona');
   };
 
+  // Handle clicking through stacked personas on the same day
+  const handlePersonaStackClick = (dateKey: string, personasArray: any[]) => {
+    if (!personasArray || personasArray.length === 0) return;
+    
+    const currentIndex = activePersonaIndex[dateKey] || 0;
+    const safeCurrentIndex = Math.max(0, Math.min(currentIndex, personasArray.length - 1));
+    const nextIndex = (safeCurrentIndex + 1) % personasArray.length;
+    
+    setActivePersonaIndex(prev => ({
+      ...prev,
+      [dateKey]: nextIndex
+    }));
+  };
+
   const getPersonaCreationDate = (persona: any) => {
     return new Date(persona.createdAt);
   };
 
-  // Sort personas by creation date - always show all available personas
+  // Sort personas by creation date and group by day
   const allSortedPersonas = allPersonas ? [...allPersonas].sort((a, b) => a.createdAt - b.createdAt) : [];
   
+  // Group personas by creation date (day)
+  const personasByDate = useMemo(() => {
+    const grouped = {};
+    allSortedPersonas.forEach(persona => {
+      const creationDate = new Date(persona.createdAt);
+      const dateKey = creationDate.toISOString().slice(0, 10); // YYYY-MM-DD format
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = [];
+      }
+      grouped[dateKey].push(persona);
+    });
+    return grouped;
+  }, [allSortedPersonas]);
+
   // Always show all personas, don't filter by date range to prevent data disappearing
   const sortedPersonas = allSortedPersonas;
+
+  // Generate all days in the visible date range for timeline
+  const allDaysInRange = useMemo(() => {
+    if (!visibleDateRange.start || !visibleDateRange.end) return [];
+    
+    const days = [];
+    const start = new Date(visibleDateRange.start);
+    const end = new Date(visibleDateRange.end);
+    
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      days.push(new Date(d));
+    }
+    
+    return days;
+  }, [visibleDateRange]);
 
   // If no personas available at all
   const hasPersonasInRange = sortedPersonas.length > 0;
@@ -187,16 +203,28 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
               {/* Complete Timeline Container */}
               <div className="relative" style={{ height: '450px' }}>
                 
-                {/* Persona Cards */}
-                {sortedPersonas.map((persona, index) => {
-                  const position = getPersonaPosition(index, sortedPersonas.length);
-                  const isAbove = index % 2 === 0; // Alternate above and below
-                  const cardTop = isAbove ? 20 : 300; // Position above or below road with more spacing
-                  const cardHeight = expandedCard === persona._id ? 120 : 100; // Dynamic card height based on expansion
+                {/* Stacked Persona Cards by Date */}
+                {Object.entries(personasByDate).map(([dateKey, personasOnDate], groupIndex) => {
+                  // Type guard to ensure personasOnDate is an array
+                  const personasArray = Array.isArray(personasOnDate) ? personasOnDate : [];
+                  
+                  // Find the exact day position for this persona group (same as dots)
+                  const dayIndex = allDaysInRange.findIndex(day => 
+                    day.toISOString().slice(0, 10) === dateKey
+                  );
+                  
+                  if (dayIndex === -1) return null; // Date not in visible range
+                  
+                  const position = allDaysInRange.length > 1 ? (dayIndex / (allDaysInRange.length - 1)) * 100 : 50;
+                  const isAbove = groupIndex % 2 === 0; // Alternate above and below
+                  const cardTop = isAbove ? 60 : 320; // Position above or below lowered road
+                  const activeIndex = activePersonaIndex[dateKey] || 0;
+                  const currentPersona = personasArray[activeIndex];
+                  const cardHeight = expandedCard === currentPersona._id ? 120 : 100;
                   
                   return (
-                    <div key={persona._id}>
-                      {/* Persona Card */}
+                    <div key={dateKey}>
+                      {/* Persona Stack */}
                       <div
                         className="absolute"
                         style={{ 
@@ -205,37 +233,77 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
                           top: `${cardTop}px`,
                         }}
                       >
+                        {/* Background cards for stack effect */}
+                        {personasArray.length > 1 && (
+                          <>
+                            {Array.from({ length: Math.min(personasArray.length - 1, 3) }, (_, index) => (
+                              <div 
+                                key={`stack-bg-${index}`}
+                                className="absolute bg-card rounded-lg border border-border shadow-sm cursor-pointer"
+                                style={{
+                                  width: '192px', // w-48 equivalent
+                                  height: '100px',
+                                  top: `${(index + 1) * 2}px`,
+                                  left: `${(index + 1) * 2}px`,
+                                  zIndex: Math.max(0, 3 - index),
+                                  opacity: 0.7 - (index * 0.2)
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePersonaStackClick(dateKey, personasArray);
+                                }}
+                                title="Click to cycle through personas"
+                              />
+                            ))}
+                          </>
+                        )}
+
+                        {/* Active persona card */}
                         <div 
-                          className={`bg-card rounded-lg border border-border shadow-md hover:shadow-xl transition-all duration-500 cursor-pointer group hover:border-primary/30 overflow-hidden ${
-                            expandedCard === persona._id ? 'w-96' : 'w-48'
+                          className={`bg-card rounded-lg border border-border shadow-md hover:shadow-xl transition-all duration-500 cursor-pointer group hover:border-primary/30 overflow-hidden relative z-10 ${
+                            expandedCard === currentPersona._id ? 'w-96' : 'w-48'
                           }`}
-                          onMouseEnter={() => setExpandedCard(persona._id)}
+                          onMouseEnter={() => setExpandedCard(currentPersona._id)}
                           onMouseLeave={() => setExpandedCard(null)}
                           onClick={() => {
-                            setExpandedCard(expandedCard === persona._id ? null : persona._id);
+                            setExpandedCard(expandedCard === currentPersona._id ? null : currentPersona._id);
                           }}
                         >
-                                                      <div className="flex h-full">
-                              {/* Left Section - Always Visible */}
-                              <div className="p-3 w-48 flex-shrink-0 flex flex-col justify-center">
-                                <div className="text-center">
-                                  <div className="text-lg font-bold text-foreground mb-3">
-                                    {persona.current_name || 'Unnamed Persona'}
-                                  </div>
+                          <div className="flex h-full">
+                            {/* Left Section - Always Visible */}
+                            <div className="p-3 w-48 flex-shrink-0 flex flex-col justify-center">
+                              <div className="text-center">
+                                <div className="text-lg font-bold text-foreground mb-3">
+                                  {currentPersona.current_name || 'Unnamed Persona'}
                                 </div>
+                                
+                                {/* Stack indicator */}
+                                {personasArray.length > 1 && (
+                                  <div 
+                                    className="text-xs text-muted-foreground bg-muted rounded-full px-2 py-1 cursor-pointer hover:bg-muted/80 transition-colors"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handlePersonaStackClick(dateKey, personasArray);
+                                    }}
+                                    title="Click to cycle through personas"
+                                  >
+                                    {activeIndex + 1} / {personasArray.length}
+                                  </div>
+                                )}
                               </div>
+                            </div>
 
                             {/* Right Section - Expandable */}
                             <div 
                               className={`transition-all duration-500 overflow-hidden border-l border-border/30 ${
-                                expandedCard === persona._id ? 'w-48 opacity-100' : 'w-0 opacity-0'
+                                expandedCard === currentPersona._id ? 'w-48 opacity-100' : 'w-0 opacity-0'
                               }`}
                             >
                               <div className="p-3 w-48">
                                 {/* Description Preview */}
                                 <div className="mb-3">
                                   <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
-                                    {persona.current_description || 'No description available'}
+                                    {currentPersona.current_description || 'No description available'}
                                   </p>
                                 </div>
                                 
@@ -246,7 +314,7 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
                                     className="w-full bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 mb-2 text-xs py-1"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      handlePersonaClick(persona);
+                                      handlePersonaClick(currentPersona);
                                     }}
                                   >
                                     <Eye className="w-3 h-3 mr-1" />
@@ -256,10 +324,10 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
                                   {/* Folder Icons with Real Data */}
                                   <div className="flex space-x-1 justify-center">
                                     {[
-                                      { color: 'blue' as const, count: getFolderCount(persona._id, 'blue'), src: '/folders/folder_chat.svg' },
-                                      { color: 'purple' as const, count: getFolderCount(persona._id, 'purple'), src: '/folders/folder_smartnotes.svg' },
-                                      { color: 'orange' as const, count: getFolderCount(persona._id, 'orange'), src: '/folders/Folder_content.svg' },
-                                      { color: 'yellow' as const, count: getFolderCount(persona._id, 'yellow'), src: '/folders/folder_analytics.svg' },
+                                      { color: 'blue' as const, count: getFolderCount(currentPersona._id, 'blue'), src: '/folders/folder_chat.svg' },
+                                      { color: 'purple' as const, count: getFolderCount(currentPersona._id, 'purple'), src: '/folders/folder_smartnotes.svg' },
+                                      { color: 'orange' as const, count: getFolderCount(currentPersona._id, 'orange'), src: '/folders/Folder_content.svg' },
+                                      { color: 'yellow' as const, count: getFolderCount(currentPersona._id, 'yellow'), src: '/folders/folder_analytics.svg' },
                                     ].map((folder, idx) => (
                                       <div 
                                         key={idx} 
@@ -267,12 +335,12 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
                                         title={`${folder.color} folder - ${folder.count} items`}
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          const folderItems = getFolderItems(persona._id, folder.color);
+                                          const folderItems = getFolderItems(currentPersona._id, folder.color);
                                           openModal({ 
                                             color: folder.color, 
                                             count: folder.count,
                                             items: folderItems,
-                                            personaId: persona._id
+                                            personaId: currentPersona._id
                                           });
                                         }}
                                       >
@@ -297,7 +365,7 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
                       </div>
 
                       {/* Colorful dots outside card with real data - only when collapsed */}
-                      {expandedCard !== persona._id && (
+                      {expandedCard !== currentPersona._id && (
                         <div 
                           className="absolute flex flex-col space-y-2 z-30"
                           style={{
@@ -307,14 +375,14 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
                           }}
                         >
                           {[
-                            { color: '#3B82F6', shadow: '0 0 8px rgba(59, 130, 246, 0.6)', folderType: 'blue' as const }, // blue
-                            { color: '#8B5CF6', shadow: '0 0 8px rgba(139, 92, 246, 0.6)', folderType: 'purple' as const }, // purple  
-                            { color: '#F97316', shadow: '0 0 8px rgba(249, 115, 22, 0.6)', folderType: 'orange' as const }, // orange
-                            { color: '#EAB308', shadow: '0 0 8px rgba(234, 179, 8, 0.6)', folderType: 'yellow' as const }, // yellow
+                            { color: '#3B82F6', shadow: '0 0 8px rgba(59, 130, 246, 0.6)', folderType: 'blue' as const },
+                            { color: '#8B5CF6', shadow: '0 0 8px rgba(139, 92, 246, 0.6)', folderType: 'purple' as const },
+                            { color: '#F97316', shadow: '0 0 8px rgba(249, 115, 22, 0.6)', folderType: 'orange' as const },
+                            { color: '#EAB308', shadow: '0 0 8px rgba(234, 179, 8, 0.6)', folderType: 'yellow' as const },
                           ]
-                          .filter(folder => getFolderCount(persona._id, folder.folderType) > 0) // Only show dots with data
+                          .filter(folder => getFolderCount(currentPersona._id, folder.folderType) > 0)
                           .map((folder, idx) => {
-                            const count = getFolderCount(persona._id, folder.folderType);
+                            const count = getFolderCount(currentPersona._id, folder.folderType);
                             return (
                               <div 
                                 key={folder.folderType} 
@@ -325,12 +393,12 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
                                 }}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  const folderItems = getFolderItems(persona._id, folder.folderType);
+                                  const folderItems = getFolderItems(currentPersona._id, folder.folderType);
                                   openModal({ 
                                     color: folder.folderType, 
                                     count: count,
                                     items: folderItems,
-                                    personaId: persona._id
+                                    personaId: currentPersona._id
                                   });
                                 }}
                               >
@@ -343,14 +411,14 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
                         </div>
                       )}
 
-                      {/* Connecting line from card to road */}
+                      {/* Connecting line from under card to road */}
                       <div
-                        className="absolute w-0.5 bg-muted-foreground/60 z-10"
+                        className="absolute w-0.5 bg-muted-foreground/80 z-10"
                         style={{
                           left: `${position}%`,
                           transform: 'translateX(-50%)',
-                          top: isAbove ? `${cardTop + cardHeight}px` : `212px`, // Start from card edge or road bottom
-                          height: isAbove ? `${200 - (cardTop + cardHeight)}px` : `${cardTop - 212}px`,
+                          top: isAbove ? `${cardTop + cardHeight + 8}px` : `282px`, // Bigger gap for top cards
+                          height: isAbove ? `${282 - (cardTop + cardHeight + 8)}px` : `${cardTop - 282 - 8}px`, // Adjusted calculations
                         }}
                       />
                     </div>
@@ -360,20 +428,24 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
                 {/* Road Section - Positioned in center */}
                 <div 
                   className="absolute left-0 right-0 z-20"
-                  style={{ top: '200px' }} // Centered between cards
+                  style={{ top: '280px' }} // Much lower position
                 >
-                  {/* Road base - gray background */}
-                  <div className="w-full h-6 bg-gray-600 relative">
-                    {/* Yellow dashed road line */}
+                  {/* Road base - no background */}
+                  <div className="w-full h-3 relative">
+                    {/* White edge lines - much further apart */}
+                    <div className="absolute left-0 right-0 h-0.5" style={{ backgroundColor: '#E5E7EB', top: '-8px' }} />
+                    <div className="absolute left-0 right-0 h-0.5" style={{ backgroundColor: '#E5E7EB', bottom: '-8px' }} />
+                    
+                    {/* Yellow dashed center line */}
                     <div className="absolute top-1/2 left-0 right-0 transform -translate-y-1/2">
                       <div 
-                        className="w-full h-1"
+                        className="w-full h-0.5"
                         style={{
                           background: `repeating-linear-gradient(
                             to right,
-                            #fbbf24 0px,
-                            #fbbf24 30px,
-                            transparent 30px,
+                            #FDE047 0px,
+                            #FDE047 20px,
+                            transparent 20px,
                             transparent 50px
                           )`
                         }}
@@ -381,38 +453,80 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Milestone points and dates */}
-                  {sortedPersonas.map((persona, index) => {
-                    const position = getPersonaPosition(index, sortedPersonas.length);
-                    const creationDate = getPersonaCreationDate(persona);
+                  {/* Day labels below road */}
+                  {allDaysInRange.map((day, index) => {
+                    const dayPercent = allDaysInRange.length > 1 ? (index / (allDaysInRange.length - 1)) * 100 : 50;
+                    const isMonday = day.getDay() === 1;
+                    const isFirstOfMonth = day.getDate() === 1;
+                    const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+                    
+                    // Show day of week for Mondays, date for first of month, or day number for others
+                    const getLabel = () => {
+                      if (isFirstOfMonth) {
+                        return day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                      } else if (isMonday) {
+                        return day.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
+                      } else {
+                        return day.getDate().toString();
+                      }
+                    };
                     
                     return (
-                      <div key={`milestone-${persona._id}`}>
-                        {/* Milestone point */}
+                      <div
+                        key={`day-label-${day.toISOString().slice(0, 10)}`}
+                        className={`absolute text-xs whitespace-nowrap ${
+                          isMonday ? 'font-semibold text-yellow-400' : 
+                          isFirstOfMonth ? 'font-medium text-foreground' :
+                          isWeekend ? 'text-muted-foreground/70' : 'text-muted-foreground'
+                        }`}
+                        style={{
+                          left: `${dayPercent}%`,
+                          transform: 'translateX(-50%)',
+                          top: '20px',
+                        }}
+                      >
+                        {getLabel()}
+                      </div>
+                    );
+                  })}
+
+                  {/* Big glowing yellow dots on days with personas */}
+                  {Object.entries(personasByDate).map(([dateKey, personasArray], groupIndex) => {
+                    // Find the day position for this persona group
+                    const personaDate = new Date(dateKey);
+                    const dayIndex = allDaysInRange.findIndex(day => 
+                      day.toISOString().slice(0, 10) === dateKey
+                    );
+                    
+                    if (dayIndex === -1) return null; // Date not in visible range
+                    
+                    const dayPercent = allDaysInRange.length > 1 ? (dayIndex / (allDaysInRange.length - 1)) * 100 : 50;
+                    
+                    return (
+                      <div key={`milestone-${dateKey}`}>
+                        {/* Big glowing yellow dot in middle of road */}
                         <div
-                          className="absolute top-1/2 transform -translate-y-1/2 z-30"
+                          className="absolute z-30"
                           style={{ 
-                            left: `${position}%`,
+                            left: `${dayPercent}%`,
+                            top: '50%',
                             transform: 'translate(-50%, -50%)',
                           }}
                         >
-                          <div className="w-4 h-4 bg-yellow-400 rounded-full border-2 border-gray-700 shadow-lg relative">
-                            {persona.isActive && (
-                              <div className="absolute inset-0 bg-yellow-400 rounded-full animate-ping opacity-30" />
-                            )}
+                          <div 
+                            className="w-6 h-6 rounded-full relative animate-pulse" 
+                            style={{ 
+                              backgroundColor: '#FDE047', 
+                              boxShadow: '0 0 20px #FDE047, 0 0 40px #FDE047, 0 0 60px #FDE047',
+                              border: '2px solid #FBBF24'
+                            }}
+                          >
+                            {/* Glowing effect */}
+                            <div 
+                              className="absolute inset-0 rounded-full animate-ping opacity-75" 
+                              style={{ backgroundColor: '#FDE047' }}
+                            />
                           </div>
-                        </div>
-
-                        {/* Date label below road */}
-                        <div
-                          className="absolute text-sm font-medium text-foreground whitespace-nowrap"
-                          style={{
-                            left: `${position}%`,
-                            transform: 'translateX(-50%)',
-                            top: '30px',
-                          }}
-                        >
-                          {formatDate(creationDate)}
                         </div>
                       </div>
                     );

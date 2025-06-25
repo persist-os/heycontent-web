@@ -58,10 +58,11 @@ const getStatusColor = (status: string) => {
   }
 };
 
-export const ContentFolderModal: React.FC<FolderModalProps> = ({
+export const ContentFolderModal: React.FC<FolderModalProps & { onContentClick?: (contentId: string, item?: any) => void }> = ({
   isOpen,
   onClose,
-  folderData
+  folderData,
+  onContentClick,
 }) => {
   // Transform real content data into display format
   const contentItems = useMemo(() => {
@@ -101,7 +102,17 @@ export const ContentFolderModal: React.FC<FolderModalProps> = ({
               return (
                 <div
                   key={item.id}
-                  className="border border-border rounded-lg p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+                  className="border border-border rounded-lg p-4 hover:bg-muted/50 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Open content: ${item.title}`}
+                  onClick={() => onContentClick && onContentClick(item.id, item)}
+                  onKeyDown={(e) => {
+                    if ((e.key === 'Enter' || e.key === ' ') && onContentClick) {
+                      e.preventDefault();
+                      onContentClick(item.id, item);
+                    }
+                  }}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <h3 className="font-semibold text-foreground">{item.title}</h3>

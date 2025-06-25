@@ -177,10 +177,9 @@ export const YearView: React.FC<YearViewProps> = ({
     });
   });
 
-  // Group personas by creation month for all loaded periods
+  // Group personas by month for all loaded periods
   const personasInAllPeriods = useMemo(() => {
     if (!allPersonas) return {};
-    
     // Filter personas created in any loaded period
     const personasInRange = allPersonas.filter(persona => {
       const createdDate = new Date(persona.createdAt);
@@ -188,79 +187,58 @@ export const YearView: React.FC<YearViewProps> = ({
         return createdDate >= period.start && createdDate <= period.end;
       });
     });
-    
-    // Group by month
+    // Group by month (YYYY-MM)
     const personasByMonth = {};
     personasInRange.forEach(persona => {
       const createdDate = new Date(persona.createdAt);
-      const monthKey = `${createdDate.getFullYear()}-${createdDate.getMonth()}`;
+      const monthKey = `${createdDate.getFullYear()}-${String(createdDate.getMonth() + 1).padStart(2, '0')}`;
       if (!personasByMonth[monthKey]) {
         personasByMonth[monthKey] = [];
       }
       personasByMonth[monthKey].push(persona);
     });
-    
     return personasByMonth;
   }, [allPersonas, loadedPeriods]);
 
+  // Get horizontal position for a persona stack (by month)
   const getPersonaPositionForMonth = (monthKey: string) => {
     const [year, month] = monthKey.split('-');
-    const monthIndex = parseInt(month);
-    
-    // Find the corresponding month in the allMonthsInPeriods array
-    const monthInArray = allMonthsInPeriods.find(m => 
-      m.getFullYear() === parseInt(year) && m.getMonth() === monthIndex
+    const monthIndex = allMonthsInPeriods.findIndex(m =>
+      m.getFullYear() === parseInt(year) && m.getMonth() === parseInt(month) - 1
     );
-    const arrayIndex = allMonthsInPeriods.indexOf(monthInArray);
-    
-    if (arrayIndex === -1) return 50; // Default to center if not found
-    
-    // Use the exact same positioning logic as the monthly ticks
-    const position = allMonthsInPeriods.length > 1 ? (arrayIndex / (allMonthsInPeriods.length - 1)) * 80 + 10 : 50;
+    if (monthIndex === -1) return 50;
+    const position = allMonthsInPeriods.length > 1 ? (monthIndex / (allMonthsInPeriods.length - 1)) * 80 + 10 : 50;
     return Math.max(5, Math.min(95, position));
   };
 
-  // Smart positioning to avoid overlaps
+  // Smart vertical stacking for persona stacks by month
   const getVerticalPosition = (monthKey: string) => {
     const sortedMonths = Object.keys(personasInAllPeriods).sort();
     const monthIndex = sortedMonths.indexOf(monthKey);
-    
-    // Get horizontal position for this month
     const horizontalPosition = getPersonaPositionForMonth(monthKey);
-    
-    // Check for horizontal proximity conflicts with other cards
     const proximityThreshold = 8;
     const conflictingMonths = sortedMonths.filter((otherMonthKey, otherIndex) => {
       if (otherMonthKey === monthKey || otherIndex >= monthIndex) return false;
       const otherPosition = getPersonaPositionForMonth(otherMonthKey);
       return Math.abs(horizontalPosition - otherPosition) < proximityThreshold;
     });
-    
-    // Determine positioning based on conflicts and index
     let isAbove: boolean;
     let verticalOffset: number;
-    
     if (conflictingMonths.length === 0) {
-      // No conflicts, use simple alternating
       isAbove = monthIndex % 2 === 0;
       verticalOffset = 0;
     } else {
-      // Have conflicts, need smarter positioning
       const conflictCount = conflictingMonths.length;
-      
       if (conflictCount < 4) {
         isAbove = conflictCount % 2 === 0;
         verticalOffset = Math.floor(conflictCount / 2) * 90;
       } else {
-        // For many conflicts, use both sides
         isAbove = monthIndex % 2 === 0;
         verticalOffset = Math.floor(conflictCount / 3) * 70;
       }
     }
-    
     const baseOffset = isAbove ? -140 : 60;
     const finalTop = baseOffset + (isAbove ? -verticalOffset : verticalOffset);
-    
     return {
       isAbove,
       top: finalTop
@@ -268,19 +246,17 @@ export const YearView: React.FC<YearViewProps> = ({
   };
 
   // State for managing stacked persona cards
-  const [activePersonaIndex, setActivePersonaIndex] = useState<{ [dayKey: string]: number }>({});
+  const [activePersonaIndex, setActivePersonaIndex] = useState<{ [monthKey: string]: number }>({});
 
   // Handle clicking through stacked personas
-  const handlePersonaStackClick = (dayKey: string, personasArray: any[]) => {
+  const handlePersonaStackClick = (monthKey: string, personasArray: any[]) => {
     if (!personasArray || personasArray.length === 0) return;
-    
-    const currentIndex = activePersonaIndex[dayKey] || 0;
+    const currentIndex = activePersonaIndex[monthKey] || 0;
     const safeCurrentIndex = Math.max(0, Math.min(currentIndex, personasArray.length - 1));
     const nextIndex = (safeCurrentIndex + 1) % personasArray.length;
-    
     setActivePersonaIndex(prev => ({
       ...prev,
-      [dayKey]: nextIndex
+      [monthKey]: nextIndex
     }));
   };
 
@@ -398,9 +374,7 @@ export const YearView: React.FC<YearViewProps> = ({
                     const activeIndex = activePersonaIndex[monthKey] || 0;
                     const currentPersona = personasArray[activeIndex];
                     const { isAbove, top } = getVerticalPosition(monthKey);
-                    
                     if (personasArray.length === 0) return null;
-                    
                     return (
                       <div key={monthKey} className="persona-stack-wrapper">
                         {/* Connection dot on timeline */}
@@ -410,7 +384,6 @@ export const YearView: React.FC<YearViewProps> = ({
                             left: `${position}%`,
                           }}
                         />
-                        
                         {/* Connecting line from card to timeline */}
                         <div
                           className="absolute w-0.5 bg-muted-foreground/60 z-10"
@@ -421,7 +394,6 @@ export const YearView: React.FC<YearViewProps> = ({
                             height: isAbove ? `${Math.abs(top)}px` : `${top - 120}px`,
                           }}
                         />
-
                         {/* Stacked persona cards */}
                         <div
                           className="persona-stack"
@@ -447,7 +419,6 @@ export const YearView: React.FC<YearViewProps> = ({
                               ))}
                             </>
                           )}
-                          
                           {/* Active persona card */}
                           <div 
                             className="persona-card"
@@ -465,7 +436,6 @@ export const YearView: React.FC<YearViewProps> = ({
                             <div className="persona-name">
                               {currentPersona.current_name || 'Unnamed Persona'}
                             </div>
-                            
                             {/* Stack indicator */}
                             {personasArray.length > 1 && (
                               <div 

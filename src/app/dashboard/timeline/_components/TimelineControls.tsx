@@ -1,39 +1,143 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTimelineStore, ZoomLevel } from './useTimelineStore';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { usePersonaTimelineData } from '../hooks/usePersonaTimelineData';
+import { getCurrentUserId } from '@/app/lib/api-helpers';
 
 export const TimelineControls: React.FC = () => {
   const { visibleDateRange, zoomLevel, setZoomLevel, setVisibleDateRange } = useTimelineStore();
+  const [userId, setUserId] = useState<string | undefined>();
 
-  // Function to snap to present based on zoom level - use current date
+  // Get user ID from API key in cookies
+  useEffect(() => {
+    const currentUserId = getCurrentUserId();
+    setUserId(currentUserId || undefined);
+  }, []);
+
+  // Fetch timeline data to find most recent activity
+  const { 
+    conversations, 
+    notes, 
+    allContentData, 
+    allAnalyticsData, 
+    personas,
+    isLoading
+  } = usePersonaTimelineData(userId);
+
+  // Function to extract date from an item using multiple possible date fields
+  const extractDate = (item: any) => {
+    // Try common date fields in order of preference (consistent with MonthView.tsx)
+    const dateFields = ['date', 'createdAt', '_creationTime', 'updatedAt'];
+    
+    for (const field of dateFields) {
+      const value = item[field];
+      if (value) {
+        if (typeof value === 'number') {
+          return new Date(value);
+        } else if (value instanceof Date) {
+          return value;
+        } else if (typeof value === 'string') {
+          const parsed = new Date(value);
+          if (!isNaN(parsed.getTime())) {
+            return parsed;
+          }
+        }
+      }
+    }
+    
+    // For content items, also check nested date fields
+    if (item.data?.timestamp) {
+      return new Date(item.data.timestamp);
+    }
+    if (item.snippet?.published_at) {
+      return new Date(item.snippet.published_at);
+    }
+    
+    return null;
+  };
+
+  // Function to find the most recent data across all timeline sources
+  const findMostRecentDataDate = () => {
+    const allDates: Date[] = [];
+
+    // Add conversation dates
+    if (conversations) {
+      conversations.forEach(conv => {
+        const date = extractDate(conv);
+        if (date) allDates.push(date);
+      });
+    }
+
+    // Add note dates
+    if (notes) {
+      notes.forEach(note => {
+        const date = extractDate(note);
+        if (date) allDates.push(date);
+      });
+    }
+
+    // Add content data dates
+    if (allContentData) {
+      allContentData.forEach(content => {
+        const date = extractDate(content);
+        if (date) allDates.push(date);
+      });
+    }
+
+    // Add analytics data dates
+    if (allAnalyticsData) {
+      allAnalyticsData.forEach(analytics => {
+        const date = extractDate(analytics);
+        if (date) allDates.push(date);
+      });
+    }
+
+    // Add persona dates
+    if (personas) {
+      personas.forEach(persona => {
+        const date = extractDate(persona);
+        if (date) allDates.push(date);
+      });
+    }
+
+    // Find the most recent date, or fall back to current date if no data
+    if (allDates.length === 0) {
+      return new Date();
+    }
+
+    const mostRecentDate = new Date(Math.max(...allDates.map(date => date.getTime())));
+    return mostRecentDate;
+  };
+
+  // Function to snap to period with most recent data based on zoom level
   const snapToPresent = (newZoomLevel: ZoomLevel) => {
-    const now = new Date();
+    const mostRecentDate = findMostRecentDataDate();
     let start: Date, end: Date;
 
     switch (newZoomLevel) {
       case 'year':
-        start = new Date(now.getFullYear(), 0, 1);
-        end = new Date(now.getFullYear(), 11, 31);
+        start = new Date(mostRecentDate.getFullYear(), 0, 1);
+        end = new Date(mostRecentDate.getFullYear(), 11, 31);
         break;
       case 'month':
-        // Use current month
-        start = new Date(now.getFullYear(), now.getMonth(), 1);
-        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        // Use the month containing the most recent data
+        start = new Date(mostRecentDate.getFullYear(), mostRecentDate.getMonth(), 1);
+        end = new Date(mostRecentDate.getFullYear(), mostRecentDate.getMonth() + 1, 0);
         break;
       case 'week':
-        // Use current week
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay());
+        // Use the week containing the most recent data
+        const startOfWeek = new Date(mostRecentDate);
+        startOfWeek.setDate(mostRecentDate.getDate() - mostRecentDate.getDay());
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(startOfWeek.getDate() + 6);
         start = startOfWeek;
         end = endOfWeek;
         break;
       default:
-        start = new Date(now.getFullYear(), 0, 1);
-        end = new Date(now.getFullYear(), 11, 31);
+        start = new Date(mostRecentDate.getFullYear(), 0, 1);
+        end = new Date(mostRecentDate.getFullYear(), 11, 31);
     }
 
     setZoomLevel(newZoomLevel);
@@ -176,8 +280,7 @@ export const TimelineControls: React.FC = () => {
                     : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
                 }`}
                 onClick={() => {
-                  console.log('🔴 TimelineControls button clicked:', period.value);
-                  setZoomLevel(period.value);
+                  snapToPresent(period.value);
                 }}
               >
                 {period.label}

@@ -54,7 +54,6 @@ export function filterDataByTimespan<T extends Record<string, any>>(
       if (typeof fallbackTimestamp === 'number') {
         itemTimestamp = fallbackTimestamp
       } else {
-        console.warn(`[filterDataByTimespan] Invalid date field "${dateField}" for item:`, item)
         return false
       }
     }
@@ -102,7 +101,6 @@ export function calculatePersonaFolderData(
         // YouTube videos use data.published_at  
         timestamp = new Date(item.data.published_at).getTime()
       } else {
-        console.warn('[calculatePersonaFolderData] No valid date found for content item:', item)
         return false
       }
       
@@ -113,21 +111,31 @@ export function calculatePersonaFolderData(
     const timespanAnalytics = analyticsData ? analyticsData.filter(item => {
       let timestamp: number
       
+      // Try different date fields in order of preference
       if (item.date instanceof Date) {
         timestamp = item.date.getTime()
+      } else if (typeof item.date === 'number') {
+        timestamp = item.date
+      } else if (typeof item.date === 'string') {
+        timestamp = new Date(item.date).getTime()
       } else if (typeof item.createdAt === 'number') {
         timestamp = item.createdAt
+      } else if (item.createdAt instanceof Date) {
+        timestamp = item.createdAt.getTime()
       } else if (typeof item._creationTime === 'number') {
         timestamp = item._creationTime
       } else if (typeof item.updatedAt === 'number') {
         // Analytics often use updatedAt for when analysis was generated
         timestamp = item.updatedAt
+      } else if (item.updatedAt instanceof Date) {
+        timestamp = item.updatedAt.getTime()
       } else {
-        console.warn('[calculatePersonaFolderData] No valid date found for analytics item:', item)
         return false
       }
       
-      return timestamp >= timespan.startDate.getTime() && timestamp < timespan.endDate.getTime()
+      const isInTimespan = timestamp >= timespan.startDate.getTime() && timestamp < timespan.endDate.getTime()
+      
+      return isInTimespan
     }) : []
     
     result.set(persona._id, {

@@ -5,10 +5,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { FolderModalProps } from './types';
 import { MessageCircle, Users, Clock } from 'lucide-react';
 
-export const ChatFolderModal: React.FC<FolderModalProps> = ({
+export const ChatFolderModal: React.FC<FolderModalProps & { onChatClick?: (chatId: string) => void }> = ({
   isOpen,
   onClose,
-  folderData
+  folderData,
+  onChatClick,
 }) => {
   // Transform real conversation data into display format
   const chatItems = useMemo(() => {
@@ -53,7 +54,17 @@ export const ChatFolderModal: React.FC<FolderModalProps> = ({
               chatItems.map((item) => (
                 <div
                   key={item.id}
-                  className="border border-border rounded-lg p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+                  className="border border-border rounded-lg p-4 hover:bg-muted/50 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Open chat: ${item.title}`}
+                  onClick={() => onChatClick && onChatClick(item.id)}
+                  onKeyDown={(e) => {
+                    if ((e.key === 'Enter' || e.key === ' ') && onChatClick) {
+                      e.preventDefault();
+                      onChatClick(item.id);
+                    }
+                  }}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <h3 className="font-semibold text-foreground">{item.title}</h3>

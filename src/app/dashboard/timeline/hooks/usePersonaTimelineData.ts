@@ -63,6 +63,29 @@ export function usePersonaTimelineData(userId: string | undefined) {
     
     const analyticsArray = []
     
+    // Add YouTube batch insights if available
+    if (analytics.youtubeAnalytics?.insights?.insights && Array.isArray(analytics.youtubeAnalytics.insights.insights)) {
+      const youtubeAnalysis = analytics.youtubeAnalytics;
+      const insightsArray = youtubeAnalysis.insights.insights;
+      const analysisDate = new Date(youtubeAnalysis.updatedAt || youtubeAnalysis.createdAt || youtubeAnalysis._creationTime || Date.now());
+      
+      insightsArray.forEach((insight, idx) => {
+        analyticsArray.push({
+          id: `youtube-batch-${idx}`,
+          type: 'analytics',
+          title: insight.title || 'YouTube Batch Insight',
+          date: analysisDate,
+          createdAt: analysisDate,
+          metric: insight.impact || 'Insight',
+          value: null, // No numeric value for batch insights
+          trend: 'stable',
+          period: 'Batch Analysis',
+          preview: insight.expectedOutcome || '',
+          platform: 'YouTube'
+        });
+      });
+    }
+    
     // Add Instagram analytics if available
     if (analytics.instagramAnalytics?.insights?.overview) {
       const insights = analytics.instagramAnalytics.insights
@@ -96,43 +119,6 @@ export function usePersonaTimelineData(userId: string | undefined) {
           period: 'This month',
           preview: 'Geographic distribution and audience reach analysis',
           platform: 'Instagram'
-        })
-      }
-    }
-    
-    // Add YouTube analytics if available
-    if (analytics.youtubeAnalytics?.insights?.overview) {
-      const insights = analytics.youtubeAnalytics.insights
-      // Use the analysis creation date, not current date
-      const analysisDate = new Date(analytics.youtubeAnalytics._creationTime || analytics.youtubeAnalytics.updatedAt || Date.now())
-      
-      analyticsArray.push({
-        id: 'youtube-views',
-        type: 'analytics',
-        title: 'YouTube Total Views',
-        date: analysisDate, // Use actual analysis date
-        createdAt: analysisDate, // Add for consistency
-        metric: 'Views',
-        value: insights.overview.totalViews || 0,
-        trend: 'up',
-        period: 'All time',
-        preview: 'Total video views and performance metrics',
-        platform: 'YouTube'
-      })
-      
-      if (insights.overview.subscriberCount) {
-        analyticsArray.push({
-          id: 'youtube-subscribers',
-          type: 'analytics',
-          title: 'YouTube Subscriber Growth',
-          date: analysisDate, // Use actual analysis date
-          createdAt: analysisDate, // Add for consistency
-          metric: 'Subscribers',
-          value: insights.overview.subscriberCount || 0,
-          trend: 'up',
-          period: 'Current',
-          preview: 'Channel subscriber count and growth analysis',
-          platform: 'YouTube'
         })
       }
     }

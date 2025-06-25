@@ -8,7 +8,8 @@ import { FileText, Tags, Clock, Lightbulb } from 'lucide-react';
 export const SmartNotesFolderModal: React.FC<FolderModalProps> = ({
   isOpen,
   onClose,
-  folderData
+  folderData,
+  onNoteClick,
 }) => {
   // Transform real note data into display format
   const noteItems = useMemo(() => {
@@ -51,7 +52,17 @@ export const SmartNotesFolderModal: React.FC<FolderModalProps> = ({
               noteItems.map((item) => (
                 <div
                   key={item.id}
-                  className="border border-border rounded-lg p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+                  className="border border-border rounded-lg p-4 hover:bg-muted/50 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Open note: ${item.title}`}
+                  onClick={() => onNoteClick && onNoteClick(item.id)}
+                  onKeyDown={(e) => {
+                    if ((e.key === 'Enter' || e.key === ' ') && onNoteClick) {
+                      e.preventDefault();
+                      onNoteClick(item.id);
+                    }
+                  }}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-2">
