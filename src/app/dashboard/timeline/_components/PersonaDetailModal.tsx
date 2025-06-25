@@ -1,8 +1,13 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Eye, User } from 'lucide-react';
+import { Eye, User, RotateCcw } from 'lucide-react';
 import { NewPersonaCard } from '@/app/settings/tabs/account/NewPersonaCard';
+import { useMutation, useConvex } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { getCurrentUserId } from '@/app/lib/api-helpers';
+import { toast } from 'react-hot-toast';
+import { usePersonaStore } from '@/store/persona-store';
 
 interface PersonaDetailModalProps {
   persona: any;
@@ -11,6 +16,12 @@ interface PersonaDetailModalProps {
 }
 
 export const PersonaDetailModal: React.FC<PersonaDetailModalProps> = ({ persona, onClose, onViewFull }) => {
+  const [isRestoring, setIsRestoring] = React.useState(false);
+  const activatePersona = useMutation(api.personas.activatePersona);
+  const userId = getCurrentUserId();
+  const convex = useConvex();
+  const refreshPersonaData = usePersonaStore(state => state.refreshPersonaData);
+
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -39,6 +50,24 @@ export const PersonaDetailModal: React.FC<PersonaDetailModalProps> = ({ persona,
     style_descriptors: persona.style_descriptors || [],
     audience_type: persona.audience_type || '',
     engagement_style: persona.engagement_style || [],
+  };
+
+  const handleRestore = async () => {
+    if (!userId || !persona?._id) {
+      toast.error('User or persona ID missing.');
+      return;
+    }
+    setIsRestoring(true);
+    try {
+      await activatePersona({ personaId: persona._id, userId });
+      await refreshPersonaData(userId, convex);
+      toast.success('Persona restored as active!');
+      onClose();
+    } catch (err) {
+      toast.error('Failed to restore persona.');
+    } finally {
+      setIsRestoring(false);
+    }
   };
 
   return (
@@ -91,12 +120,13 @@ export const PersonaDetailModal: React.FC<PersonaDetailModalProps> = ({ persona,
               Close
             </Button>
             <Button
-              onClick={onViewFull}
+              onClick={handleRestore}
               className="bg-primary hover:bg-primary/90"
               size="sm"
+              disabled={persona.isActive || isRestoring}
             >
-              <Eye className="w-4 h-4 mr-2" />
-              Edit in Settings
+              <RotateCcw className="w-4 h-4 mr-2" />
+              {isRestoring ? 'Restoring...' : persona.isActive ? 'Active' : 'Restore as Active'}
             </Button>
           </div>
         </div>
