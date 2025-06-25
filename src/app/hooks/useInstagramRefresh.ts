@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { getApiKey } from '@/app/lib/api-helpers';
 
-export function useInstagramRefresh() {
+export function useInstagramRefresh(onRefreshComplete?: () => void) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,13 +26,18 @@ export function useInstagramRefresh() {
       const data = await res.json();
       if (!res.ok || data.status !== 'success') {
         setError(data.error || 'Failed to refresh post');
+      } else {
+        // Call the callback to trigger refetch of posts data
+        if (onRefreshComplete) {
+          onRefreshComplete();
+        }
       }
     } catch (e: any) {
       setError(e.message || 'Unknown error');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [onRefreshComplete]);
 
   return { refresh, loading, error };
 } 

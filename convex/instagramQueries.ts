@@ -60,7 +60,7 @@ export const getInstagramPost = query({
 
 // Get all Instagram posts for a user
 export const getAllInstagramPosts = query({
-  args: { userId: v.string() },
+  args: { userId: v.string(), refreshTimestamp: v.optional(v.number()) },
   handler: async (ctx, args) => {
     try {
       // First get the account ID for this user
@@ -76,8 +76,9 @@ export const getAllInstagramPosts = query({
       // Then get all posts for this account
       const posts = await ctx.db
         .query("instagramPosts")
-        .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", account.instagramAccountId))
+        .withIndex("by_timestamp")
         .filter(q => q.eq(q.field("userId"), args.userId))
+        .filter(q => q.eq(q.field("instagramAccountId"), account.instagramAccountId))
         .order("desc")
         .collect();
       
@@ -95,8 +96,9 @@ export const getInstagramPostsByAccount = query({
   handler: async (ctx, args) => {
     const posts = await ctx.db
       .query("instagramPosts")
-      .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", args.instagramAccountId))
+      .withIndex("by_timestamp")
       .filter(q => q.eq(q.field("userId"), args.userId))
+      .filter(q => q.eq(q.field("instagramAccountId"), args.instagramAccountId))
       .order("desc")
       .collect();
     return posts;
@@ -119,8 +121,9 @@ export const getInstagramPostsByTimeRange = query({
 
     const posts = await ctx.db
       .query("instagramPosts")
-      .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", account.instagramAccountId))
+      .withIndex("by_timestamp")
       .filter(q => q.eq(q.field("userId"), args.userId))
+      .filter(q => q.eq(q.field("instagramAccountId"), account.instagramAccountId))
       .filter(q => q.gte(q.field("data.timestamp"), args.start))
       .filter(q => q.lte(q.field("data.timestamp"), args.end))
       .order("desc")
@@ -169,8 +172,9 @@ export const getLatestInstagramPost = query({
 
     const post = await ctx.db
       .query("instagramPosts")
-      .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", account.instagramAccountId))
+      .withIndex("by_timestamp")
       .filter(q => q.eq(q.field("userId"), args.userId))
+      .filter(q => q.eq(q.field("instagramAccountId"), account.instagramAccountId))
       .order("desc")
       .first();
     return post;
@@ -193,8 +197,9 @@ export const getInstagramPostsByUsername = query({
 
     const posts = await ctx.db
       .query("instagramPosts")
-      .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", account.instagramAccountId))
+      .withIndex("by_timestamp")
       .filter(q => q.eq(q.field("userId"), args.userId))
+      .filter(q => q.eq(q.field("instagramAccountId"), account.instagramAccountId))
       .filter(q => q.eq(q.field("data.username"), args.username))
       .order("desc")
       .collect();
@@ -217,8 +222,9 @@ export const getInstagramPostsWithInsights = query({
 
     const posts = await ctx.db
       .query("instagramPosts")
-      .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", account.instagramAccountId))
+      .withIndex("by_timestamp")
       .filter(q => q.eq(q.field("userId"), args.userId))
+      .filter(q => q.eq(q.field("instagramAccountId"), account.instagramAccountId))
       .filter(q => q.neq(q.field("data.insights"), undefined))
       .order("desc")
       .collect();
@@ -241,8 +247,9 @@ export const getInstagramPostsWithComments = query({
 
     const posts = await ctx.db
       .query("instagramPosts")
-      .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", account.instagramAccountId))
+      .withIndex("by_timestamp")
       .filter(q => q.eq(q.field("userId"), args.userId))
+      .filter(q => q.eq(q.field("instagramAccountId"), account.instagramAccountId))
       .filter(q => q.neq(q.field("data.comments"), undefined))
       .order("desc")
       .collect();
