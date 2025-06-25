@@ -42,10 +42,52 @@ export const updateNote = mutation({
       fields: v.optional(v.any()),
       titleGenerated: v.optional(v.boolean()),
       typeGenerated: v.optional(v.boolean()),
+      images: v.optional(v.array(v.object({
+        url: v.string(),
+        filename: v.string(),
+        originalFilename: v.optional(v.string()),
+        uploadedAt: v.number(),
+        size: v.optional(v.number()),
+        mimeType: v.optional(v.string()),
+        width: v.optional(v.number()),
+        height: v.optional(v.number())
+      }))),
     })
   },
   handler: async (ctx, args) => {
     const { noteId, userId, updates } = args;
+
+    // DEBUG: Log all incoming parameters
+    console.log('🔍 [Convex updateNote] Received args:', {
+      noteId,
+      noteIdType: typeof noteId,
+      userId,
+      userIdType: typeof userId,
+      updatesKeys: Object.keys(updates),
+      hasImages: 'images' in updates,
+      imagesCount: updates.images?.length || 0
+    });
+
+    // DEBUG: If images are being updated, log their structure
+    if (updates.images) {
+      console.log('🖼️ [Convex updateNote] Images update detected:');
+      console.log('Images array:', updates.images);
+      updates.images.forEach((img, index) => {
+        console.log(`Image ${index}:`, {
+          url: img.url,
+          urlType: typeof img.url,
+          filename: img.filename,
+          filenameType: typeof img.filename,
+          originalFilename: img.originalFilename,
+          uploadedAt: img.uploadedAt,
+          uploadedAtType: typeof img.uploadedAt,
+          size: img.size,
+          mimeType: img.mimeType,
+          width: img.width,
+          height: img.height
+        });
+      });
+    }
 
     // CREATE new note if no ID is provided
     if (!noteId) {
@@ -84,6 +126,10 @@ export const updateNote = mutation({
     }
 
     const updateObj = { ...updates, updatedAt: Date.now() };
+    
+    // DEBUG: Log the exact object being patched
+    console.log('📝 [Convex updateNote] Patching note with:', updateObj);
+    
     await ctx.db.patch(noteId, updateObj);
     const updatedNote = await ctx.db.get(noteId);
 

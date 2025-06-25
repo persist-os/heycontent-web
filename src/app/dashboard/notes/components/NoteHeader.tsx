@@ -68,28 +68,30 @@ export function NoteHeader({ note, onUpdate, onSave, onBack, isMobile, currentCo
                 <ArrowLeft className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors duration-200" />
               </button>
             )}
-          <button
-            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
-              note.type === 'idea_bank' 
-                ? 'bg-primary/15 text-primary border border-primary/30' 
-                : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent'
-            }`}
-            onClick={() => onUpdate(note._id, { type: note.type === 'idea_bank' ? 'content_script' : 'idea_bank' as NoteType })}
-            title={note.type === 'idea_bank' ? 'Switch to content script' : 'Mark as idea bank'}
-          >
-            <Lightbulb size={16} />
-          </button>
-          <button
-            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
-              note.important 
-                ? 'bg-primary/15 text-primary border border-primary/30' 
-                : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent'
-            }`}
-            onClick={() => onUpdate(note._id, { important: !note.important })}
-            title={note.important ? 'Remove importance' : 'Mark as important'}
-          >
-            <Star size={16} fill={note.important ? "currentColor" : "none"} />
-          </button>
+            
+            <button
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
+                note.type === 'idea_bank' 
+                  ? 'bg-primary/15 text-primary border border-primary/30' 
+                  : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent'
+              }`}
+              onClick={() => onUpdate(String(note._id), { type: note.type === 'idea_bank' ? 'content_script' : 'idea_bank' as NoteType })}
+              title={note.type === 'idea_bank' ? 'Switch to content script' : 'Mark as idea bank'}
+            >
+              <Lightbulb size={16} />
+            </button>
+            <button
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
+                note.important 
+                  ? 'bg-primary/15 text-primary border border-primary/30' 
+                  : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent'
+              }`}
+              onClick={() => onUpdate(String(note._id), { important: !note.important })}
+              title={note.important ? 'Remove importance' : 'Mark as important'}
+            >
+              <Star size={16} fill={note.important ? "currentColor" : "none"} />
+            </button>
+            
             <button
               className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 shadow-sm"
               onClick={handleSave}

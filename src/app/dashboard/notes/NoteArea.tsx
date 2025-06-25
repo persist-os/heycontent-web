@@ -9,6 +9,8 @@ import { NoteHeader } from './components/NoteHeader';
 import { RichTextEditor } from '@/components/ui/rich-text-editor/rich-text-editor';
 import { NoteMeta } from './components/NoteMeta';
 import { TypeSelector } from './components/TypeSelector';
+import { ImageGalleryModal } from './components/ImageGalleryModal';
+import { Image } from 'lucide-react';
 import type { Id } from "@/convex/_generated/dataModel";
 
 interface NoteAreaProps {
@@ -56,6 +58,7 @@ export function NoteArea({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [content, setContent] = useState(note.content || '');
   const [lastSavedContent, setLastSavedContent] = useState(note.content || '');
+  const [showImageGallery, setShowImageGallery] = useState(false);
 
   // Initialize the inline AI hook
   const { askAI, requestAnalysis, requestIdeas } = useInlineAI({
@@ -228,7 +231,7 @@ export function NoteArea({
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-background">
+    <div className="flex flex-col h-full w-full bg-background relative">
       {/* Header */}
       <NoteHeader 
         note={note}
@@ -281,6 +284,34 @@ export function NoteArea({
           className="h-full border-0"
         />
       </div>
+
+      {/* Floating Image Gallery Button */}
+      <button
+        onClick={() => setShowImageGallery(true)}
+        className={`fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center z-20 ${
+          note.images && note.images.length > 0
+            ? 'bg-primary text-primary-foreground hover:bg-primary/90 ring-2 ring-primary/20' 
+            : 'bg-muted/80 backdrop-blur-sm text-muted-foreground hover:bg-muted hover:text-foreground border border-border'
+        }`}
+        title={`Image Gallery${note.images && note.images.length > 0 ? ` (${note.images.length})` : ''}`}
+      >
+        <div className="relative">
+          <Image size={20} />
+          {note.images && note.images.length > 0 && (
+            <span className="absolute -top-5 -right-5 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center font-medium shadow-md">
+              {note.images.length}
+            </span>
+          )}
+        </div>
+      </button>
+
+      {/* Image Gallery Modal */}
+      <ImageGalleryModal
+        isOpen={showImageGallery}
+        noteId={String(note._id)}
+        images={note.images || []}
+        onClose={() => setShowImageGallery(false)}
+      />
     </div>
   );
 }

@@ -483,14 +483,22 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
       {currentShowPreview ? (
         /* Markdown Preview */
         <div 
-          className="w-full h-full overflow-auto p-4 prose prose-sm dark:prose-invert prose-p:my-2 prose-headings:my-3 max-w-none cursor-text"
+          className="w-full h-full overflow-auto p-4 cursor-text"
           onClick={() => setCurrentShowPreview(false)}
         >
           {content ? (
-            <div className="prose prose-sm dark:prose-invert prose-p:my-2 prose-headings:my-3 max-w-none">
-              {renderContentWithNoteLinks(content).map((part, index) => (
-                <React.Fragment key={index}>{part}</React.Fragment>
-              ))}
+            <div className="w-full max-w-none">
+              {content.includes('@[') ? (
+                // Only use complex rendering when there are note links
+                <div className="space-y-0">
+                  {renderContentWithNoteLinks(content).map((part, index) => (
+                    <React.Fragment key={index}>{part}</React.Fragment>
+                  ))}
+                </div>
+              ) : (
+                // Use direct MarkdownRenderer for simple content
+                <MarkdownRenderer content={content} />
+              )}
             </div>
           ) : (
             <div className="text-muted-foreground italic">

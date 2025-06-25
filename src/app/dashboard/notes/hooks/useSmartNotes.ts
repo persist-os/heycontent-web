@@ -132,39 +132,115 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
   ): Promise<Note | null> => {
     if (!userId) return null;
 
-    // Always use Convex IDs
-    const convexNoteId = noteId as Id<"notes">;
-    
     console.log("🔄 [updateNote] Starting note update:", {
-      noteId: String(convexNoteId),
+      noteId: String(noteId),
       updateFields: Object.keys(updateFields),
       userId,
       hasContent: 'content' in updateFields,
       contentLength: updateFields.content?.length || 0
     });
     
+    // DEBUG: Add detailed logging for image updates
+    if (updateFields.images) {
+      console.log("🖼️ [updateNote] DEBUG - Image update detected:");
+      console.log("Raw noteId:", noteId);
+      console.log("Raw noteId type:", typeof noteId);
+      console.log("Images array length:", updateFields.images.length);
+      console.log("Images array:", updateFields.images);
+      console.log("UserId:", userId);
+      console.log("UserId type:", typeof userId);
+      
+      // DETAILED TYPE CHECKING
+      console.log("🔬 [updateNote] DETAILED IMAGE ANALYSIS:");
+      updateFields.images.forEach((img, index) => {
+        console.log(`Image ${index} FULL ANALYSIS:`, {
+          // Raw values
+          url: img.url,
+          filename: img.filename,
+          originalFilename: img.originalFilename,
+          uploadedAt: img.uploadedAt,
+          size: img.size,
+          mimeType: img.mimeType,
+          width: img.width,
+          height: img.height,
+          // Type checking
+          urlType: typeof img.url,
+          urlValid: typeof img.url === 'string' && img.url.length > 0,
+          filenameType: typeof img.filename,
+          filenameValid: typeof img.filename === 'string' && img.filename.length > 0,
+          originalFilenameType: typeof img.originalFilename,
+          originalFilenameValid: img.originalFilename === undefined || typeof img.originalFilename === 'string',
+          uploadedAtType: typeof img.uploadedAt,
+          uploadedAtValid: typeof img.uploadedAt === 'number' && !isNaN(img.uploadedAt),
+          sizeType: typeof img.size,
+          sizeValid: img.size === undefined || (typeof img.size === 'number' && !isNaN(img.size)),
+          mimeTypeType: typeof img.mimeType,
+          mimeTypeValid: img.mimeType === undefined || typeof img.mimeType === 'string',
+          widthType: typeof img.width,
+          widthValid: img.width === undefined || (typeof img.width === 'number' && !isNaN(img.width)),
+          heightType: typeof img.height,
+          heightValid: img.height === undefined || (typeof img.height === 'number' && !isNaN(img.height)),
+        });
+        
+        // Check for NaN values specifically
+        if (typeof img.uploadedAt === 'number' && isNaN(img.uploadedAt)) {
+          console.error(`❌ Image ${index} uploadedAt is NaN!`);
+        }
+        if (img.size !== undefined && typeof img.size === 'number' && isNaN(img.size)) {
+          console.error(`❌ Image ${index} size is NaN!`);
+        }
+        if (img.width !== undefined && typeof img.width === 'number' && isNaN(img.width)) {
+          console.error(`❌ Image ${index} width is NaN!`);
+        }
+        if (img.height !== undefined && typeof img.height === 'number' && isNaN(img.height)) {
+          console.error(`❌ Image ${index} height is NaN!`);
+        }
+      });
+    }
+    
     setIsSaving(true);
     try {
       console.log('Updating note:', {
-        id: String(convexNoteId),
+        id: String(noteId),
         fields: Object.keys(updateFields),
         userId
       });
       
       console.log("updateFields being sent to Convex:", updateFields);
       
-      const updatedNote = await updateNoteConvex({
-        noteId: convexNoteId,
+      // CLEAN IMAGE OBJECTS - Remove any extra fields not in schema
+      let cleanedUpdateFields = { ...updateFields };
+      if (cleanedUpdateFields.images) {
+        cleanedUpdateFields.images = cleanedUpdateFields.images.map(img => ({
+          url: img.url,
+          filename: img.filename,
+          ...(img.originalFilename !== undefined && { originalFilename: img.originalFilename }),
+          uploadedAt: img.uploadedAt,
+          ...(img.size !== undefined && { size: img.size }),
+          ...(img.mimeType !== undefined && { mimeType: img.mimeType }),
+          ...(img.width !== undefined && { width: img.width }),
+          ...(img.height !== undefined && { height: img.height }),
+        }));
+        console.log("🧹 [updateNote] CLEANED images for Convex:", cleanedUpdateFields.images);
+      }
+      
+      // Construct the mutation arguments properly
+      const mutationArgs = {
+        noteId: noteId as Id<"notes">,
         userId,
-        updates: updateFields,
-      });
+        updates: cleanedUpdateFields,
+      };
+      
+      console.log("Final mutation args:", mutationArgs);
+      
+      const updatedNote = await updateNoteConvex(mutationArgs);
       console.log('Raw response from updateNoteConvex:', updatedNote);
       
       if (updatedNote) {
         console.log('Note updated successfully:', updatedNote);
         setNotes(prev => {
           const updated = prev.map(n => 
-            n._id === convexNoteId ? { ...n, ...updatedNote } : n
+            n._id === noteId ? { ...n, ...updatedNote } : n
           );
           console.log('[useSmartNotes] Notes after update:', updated);
           return updated;
@@ -179,11 +255,11 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
         if (shouldGenerateMetadata) {
           console.log(
             "🎯 [updateNote] Auto-generating metadata for updated note:",
-            convexNoteId
+            noteId
           );
           try {
             await generateMetadata(
-              String(convexNoteId),
+              String(noteId),
               updateFields.content.trim()
             );
           } catch (metadataError) {
@@ -201,7 +277,7 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
         return updatedNote;
       } else {
         console.warn('updateNoteConvex returned null or invalid note!', {
-          noteId: convexNoteId,
+          noteId,
           userId,
           updateFields
         });
