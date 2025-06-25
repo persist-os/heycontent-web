@@ -1,168 +1,125 @@
-Here is the **full PRD** for the Infinite Timeline + Roadmap view, tailored for a **Next.js + Convex frontend-only architecture**.
+# 🛠️ Timeline System: Contributor Guide
+
+This document is a technical guide for developers working on the Infinite Timeline and Roadmap feature. It covers the architecture, state management, component responsibilities, and best practices for extending or debugging the timeline system.
 
 ---
 
-# 🧾 Product Requirements Document (PRD)
+## 🏗️ Architecture Overview
 
-## 🗂️ Title
-
-**Infinite Timeline + Roadmap View with Zoom Transitions**
-
----
-
-## 📌 Overview
-
-This feature introduces an infinite-scrolling, zoom-responsive timeline for creators. Users can horizontally scroll through time (years, months, weeks), with the interface dynamically transforming from a compact timeline to a stylized roadmap view as they zoom in. The frontend-only implementation uses **Convex subscriptions** to load content progressively and reflect updates in real time.
+- **Frontend:** Next.js (React) with Zustand for state, Convex for backend data.
+- **Infinite Scroll:** Timeline is horizontally infinite in both directions. Periods (years, months, weeks) are loaded and extended as the user scrolls.
+- **Zoom Levels:** Three main views: Year (`YearView`), Month (`MonthView`), Week/Roadmap (`RoadmapView`).
+- **State:** Timeline state (zoom, scroll, visible range, events) is managed by `useTimelineStore` (Zustand). Persona and content data is managed by `@persona-store.ts`.
 
 ---
 
-## 🎯 Goals
+## 🧩 Main Components & Responsibilities
 
-* Allow infinite horizontal scrolling through time (both past and future).
-* Dynamically zoom between 3 views: Yearly → Monthly → Weekly (Roadmap).
-* Never overwrite content — always append or expand data contextually.
-* Build entirely in the frontend using `useQuery`/`usePaginatedQuery` from Convex.
-
----
-
-## 🖥️ User Interface States
-
-### 1. 📅 Yearly View (Default)
-
-#### Description:
-
-* The user sees a dense, ruler-style timeline with monthly ticks.
-* Key events appear as vertical lines with emoji dots and folder icons.
-* Persona cards only show on milestone dates.
-
-#### UI Elements:
-
-* Yellow ruler ticks (`01`, `15` of each month).
-* Slim folder stat stacks per date (10 blue, 2 purple, etc.).
-* Milestone highlight bubbles (e.g., “First Post Published!”).
-* Time scrubber at the bottom (`2025`, `2024`, etc.) and view toggles (`Yearly`, `Monthly`, `Weekly`).
-
-#### Behavior:
-
-* Infinite scroll left/right.
-* Scroll position determines visible year range.
-* Content is pulled incrementally based on scroll distance.
+| Component                | Responsibility                                                      |
+|--------------------------|---------------------------------------------------------------------|
+| `TimelineScroller.tsx`   | Manages scroll, zoom, period loading, and view switching.            |
+| `YearView.tsx`           | Renders compact, tick-based timeline for yearly view.                |
+| `MonthView.tsx`          | Renders expanded monthly view with persona and content context.      |
+| `RoadmapView.tsx`        | Renders stylized roadmap (weekly) with milestone cards.              |
+| `TimelineCard.tsx`       | Renders individual event cards (date, persona, folders, etc).        |
+| `TimelineControls.tsx`   | Zoom controls, navigation, and snapping to present.                  |
+| `useTimelineStore.ts`    | Zustand store for timeline UI state (zoom, scroll, visible range).   |
+| `@persona-store.ts`      | Zustand store for persona data, CRUD, and backend sync.              |
 
 ---
 
-### 2. 📆 Monthly View (Zoomed In)
+## 🗃️ State Management
 
-#### Description:
+### Timeline Store (`useTimelineStore.ts`)
+- **zoomLevel:** `'year' | 'month' | 'week'` — controls which view is rendered.
+- **scrollPosition:** Horizontal scroll offset (in px).
+- **visibleDateRange:** `{ start: Date, end: Date }` — current visible window.
+- **events:** Array of timeline events (posts, milestones, etc.).
+- **isLoading:** UI loading state.
+- **Actions:** `setZoomLevel`, `setScrollPosition`, `setVisibleDateRange`, `addEvents`, `setLoading`.
 
-* The monthly view expands the timeline: more spacing between dates.
-* Each post cluster for the month is now rendered with actual context: e.g., persona name, level badge, folders, and highlight bars.
-* Vertical lines still appear but with additional indicators (streaks, level-ups, etc.).
-
-#### UI Elements:
-
-* Persona card with badge (e.g., `The Aspiring Experimentalist – Lv.2`).
-* 3–4 emoji folder icons.
-* Streak bars (`Streak of 3`, etc.).
-* Event hover states with tooltips.
-
-#### Behavior:
-
-* Appears automatically when zoom crosses threshold (pinch, button).
-* Scroll behavior remains horizontal.
-* Visible data window is \~3 months.
+### Persona Store (`@persona-store.ts`)
+- **allPersonas, personaHistory, currentPersona:** All personas, historical, and active.
+- **Actions:** `initializePersonaData`, `refreshPersonaData`, `activatePersona`, `updatePersona`, `deletePersona`, etc.
+- **Best Practice:** Always call `refreshPersonaData` after a mutation to ensure UI consistency.
 
 ---
 
-### 3. 🛣️ Weekly View (Roadmap Mode)
+## 🔁 Infinite Scroll & Period Management
 
-#### Description:
-
-* Morphs into a stylized horizontal roadmap with milestones.
-* Road is a dashed yellow line with dots at weekly intervals.
-* Events are stacked as floating cards, descending from the road.
-
-#### UI Elements:
-
-* Large event card: Persona + Content Highlights + Folder icons.
-* Road path (Framer Motion or SVG).
-* Checkpoint dots (one per major post day).
-* Decorative emojis animated near checkpoints.
-
-#### Behavior:
-
-* Smooth animated transition from monthly view.
-* Only visible if zoomLevel is set to `week`.
-* Infinite scroll continues but on a zoomed-in scale (\~7–14 days visible).
+- **Periods:** Timeline is divided into periods (years, months, weeks) depending on zoom.
+- **Dynamic Loading:** As the user scrolls near the edges, new periods are generated and appended/prepended.
+- **Data Fetching:** Data for each period is fetched using Convex queries (see `usePersonaTimelineData`).
+- **Snapping:** The timeline attempts to keep the user's focus centered, but this can be fragile with infinite scroll.
 
 ---
 
-## 🧠 Zooming Behavior
+## 🔍 Zoom & View Logic
 
-### Zoom Levels
-
-| Zoom Level | Label   | Behavior                           | Triggers                       |
-| ---------- | ------- | ---------------------------------- | ------------------------------ |
-| `year`     | Yearly  | Default compact view               | App load, manual button toggle |
-| `month`    | Monthly | Expands spacing, more detail       | Pinch-in, zoom toggle          |
-| `week`     | Weekly  | Roadmap mode, full milestone cards | Zoom further, toggle button    |
-
-### Zoom Transitions
-
-* Triggered by:
-
-  * Scroll wheel or trackpad zoom
-  * Manual toggle (`Yearly / Monthly / Weekly`)
-  * Pinch gesture on touch devices
-* Uses Framer Motion for smooth layout transitions.
-* Retains scroll position and offset when switching views.
+- **Zoom Transitions:** Controlled by `zoomLevel` in the timeline store. Can be changed via controls, scroll wheel, or pinch.
+- **View Switching:** `TimelineScroller` renders the appropriate view (`YearView`, `MonthView`, `RoadmapView`) based on `zoomLevel`.
+- **Scroll Preservation:** Attempts to preserve scroll position and visible range across zooms.
 
 ---
 
-## 🔁 Infinite Scroll
+## 🧑‍💻 Extending the Timeline
 
-### Behavior:
-
-* The timeline is horizontally infinite in both directions.
-* As the user scrolls, the app:
-
-  * Subscribes to new data using `usePaginatedQuery` from Convex.
-  * Caches previously loaded segments to avoid redundant fetches.
-  * Uses `IntersectionObserver` to lazily mount new cards/events.
-
-### Data Strategy:
-
-* Convex Query: `timelineEventsByRange({ startDate, endDate })`
-* Prefetch + extend on scroll.
-* Use client-side store (Zustand or internal context) to avoid flickering.
+- **To add a new event type:**
+  - Update the `TimelineEvent` type in `useTimelineStore.ts`.
+  - Update data fetching logic to include the new event type.
+  - Update `TimelineCard.tsx` to render the new event appropriately.
+- **To add new persona or content features:**
+  - Update the persona store and data queries.
+  - Update the relevant view(s) to display new data.
+- **To change period logic:**
+  - Edit `generatePeriodsForZoom` and `extendPeriods` in `TimelineScroller.tsx`.
 
 ---
 
-## 📦 Component Breakdown
+## ⚠️ Common Pitfalls & Debugging Tips
 
-| Component              | Responsibility                                                |
-| ---------------------- | ------------------------------------------------------------- |
-| `TimelineScroller.tsx` | Handles horizontal scroll, zoom levels, and data subscription |
-| `YearView.tsx`         | Renders minimal tick-based timeline                           |
-| `MonthView.tsx`        | Shows expanded view with contextual persona info              |
-| `RoadmapView.tsx`      | Animated horizontal road with large milestone cards           |
-| `TimelineCard.tsx`     | Renders each event’s visual payload (date, folders, etc.)     |
-| `ZoomControls.tsx`     | Manual zoom buttons and level indicator                       |
-| `useTimelineStore.ts`  | Handles zoom level, scroll state, and loaded event cache      |
+- **Alignment Issues:** Persona cards and events may misalign if period logic or stacking math is off. Check period generation and position calculations.
+- **Infinite Scroll Bugs:** If the timeline jumps or loses sync, check the logic for extending periods and updating `visibleDateRange`.
+- **State Sync:** Always refresh the persona store after mutations to avoid stale UI.
+- **Zoom/Scroll Sync:** If zooming causes the timeline to lose the user's place, review how scroll position and visible range are managed.
+- **Performance:** Large numbers of periods or events can cause slowdowns. Use memoization and avoid unnecessary re-renders.
 
 ---
 
-## 🧪 Edge Behavior
+## 📝 Best Practices
 
-* Scroll position is preserved across zoom levels.
-* Always appends to timeline — no events are removed.
-* Cards animate into view from fade + scale (for delight).
-* Handles rapid zoom or scroll without performance degradation.
+- **Memoize** expensive calculations (e.g., grouping events, generating periods).
+- **Keep stores single-responsibility:** Timeline UI state in `useTimelineStore`, data in `@persona-store.ts`.
+- **Test edge cases:** Rapid zooming, scrolling, and data updates.
+- **Document** any new event types or view logic in this file for future contributors.
 
 ---
 
-## ✅ Success Criteria
+## 🧪 Testing & Edge Cases
 
-* Smooth, infinite scroll with no major performance drops.
-* Responsive zoom transitions between views.
-* Roadmap mode activates and renders without layout shift.
-* All views dynamically subscribe to the latest Convex data.
+- Test with no data, lots of data, and rapid user interactions.
+- Check that scroll and zoom transitions are smooth and state is preserved.
+- Ensure that restoring personas or updating data is reflected everywhere in the UI.
+
+---
+
+## 🚩 Gotchas
+
+- **Snapping and visible range logic** is fragile with true infinite scroll.
+- **Persona stacking and alignment** is complex and can break with dynamic data.
+- **UI state** (e.g., which persona is active in a stack) can get out of sync if the underlying data changes.
+- **Analytics and folder linking** in the modal is not implemented.
+- **UI polish and accessibility** need improvement, especially for edge cases and responsiveness.
+
+---
+
+## 📚 Further Reading
+- See `@persona-store.ts` for persona state logic.
+- See `useTimelineStore.ts` for timeline UI state.
+- See `TimelineScroller.tsx` for period and scroll logic.
+- See `YearView.tsx`, `MonthView.tsx`, `RoadmapView.tsx` for view-specific logic.
+- See `TimelineCard.tsx` for event rendering.
+
+---
+
+*Update this guide as the timeline evolves!*

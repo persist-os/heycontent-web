@@ -1,58 +1,50 @@
-# Roadmap Data Integration PRD
+# Roadmap Data Integration: Implementation & Guide
 
 ## Overview
 
-This PRD outlines the implementation plan for integrating real data into the RoadmapView folder modals based on persona generation timespans. The implementation will use existing Convex queries and follow the infinite timeline architecture outlined in `timeline_infinite.md`.
+This document describes the current state of data integration in the RoadmapView and folder modals. All roadmap data integrations are **complete**. The system uses real Convex data for all folder types, with accurate counts and real-time updates, following the infinite timeline architecture outlined in `timeline_infinite.md`.
 
-## Current State Analysis
+## Current State
 
-### RoadmapView.tsx Current Behavior
-- Displays personas sorted by creation date (`createdAt`)
-- Shows 4 folder types with hardcoded counts:
-  - Blue folder (Chat): 3 items
-  - Purple folder (Smart Notes): 2 items  
-  - Orange folder (Content): 5 items
-  - Yellow folder (Analytics): 4 items
-- Each folder opens a modal via `FolderModalManager`
+### RoadmapView.tsx Behavior
+- Displays personas sorted by creation date (`createdAt`).
+- Shows 4 folder types with **real, live counts**:
+  - Blue folder (Chat): Chat conversations
+  - Purple folder (Smart Notes): Notes
+  - Orange folder (Content): Content Hub Insights
+  - Yellow folder (Analytics): Analytics Insights (notes of type `analytics_insight`)
+- Each folder opens a modal via `FolderModalManager`, passing real data.
 
-### Existing Convex Queries to Leverage
+### Data Sources & Queries
 
-| Folder Color | Data Type | Existing Convex Query | Schema Table |
-|--------------|-----------|---------------------|--------------|
-| Blue | Chat Conversations | `api.chatQueries.getHistory` | `conversations` |
-| Purple | Smart Notes | `api.notes.getNotesByUser` | `notes` |
-| Orange | Content Hub Items | `api.contentHub.getByUserId` | `contentHubInsights` |
-| Yellow | Analytics Insights | `api.notes.getAnalyticsInsights` | `notes` (type: `analytics_insight`) |
+| Folder Color | Data Type | Convex Query Used                | Schema Table         |
+|--------------|----------|----------------------------------|---------------------|
+| Blue         | Chat     | `api.chatQueries.getHistory`     | `conversations`     |
+| Purple       | Notes    | `api.notes.getNotesByUser`       | `notes`             |
+| Orange       | Content  | `api.contentHub.getByUserId`     | `contentHubInsights`|
+| Yellow       | Analytics| `api.notes.getAnalyticsInsights` | `notes` (analytics) |
 
-## Implementation Plan
+- All queries are used with `useQuery` for real-time subscriptions.
+- Client-side filtering by persona timespan is implemented for all data types.
 
-### Phase 1: Utility Creation
-Create `src/app/dashboard/timeline/utils/personaDataCalculator.ts` with:
-- `calculatePersonaTimespan(personas: Persona[], currentPersonaIndex: number)` 
-- `filterDataByTimespan<T>(items: T[], timespan: PersonaTimespan, dateField: string)`
+## Architecture & Implementation
 
-### Phase 2: Data Aggregation Hook  
-Create `src/app/dashboard/timeline/hooks/usePersonaTimelineData.ts` that:
-- Uses existing Convex subscriptions (`useQuery`)
-- Aggregates all data types in one hook
-- Calculates counts per persona timespan
-- Returns real-time updating data
+- **Timespan Calculation:**
+  - Each persona's timespan is calculated using their `createdAt` and the next persona's `createdAt` (or now, if latest).
+  - Utility: `calculatePersonaTimespan(personas, index)`
+- **Data Aggregation:**
+  - All data is fetched via Convex queries and filtered by persona timespan.
+  - Utility: `filterDataByTimespan(items, timespan, dateField)`
+- **Data Hook:**
+  - `usePersonaTimelineData` aggregates all data types and provides counts/items per persona timespan.
+- **Component Integration:**
+  - `RoadmapView.tsx` uses the hook to display real counts.
+  - `FolderModalManager.tsx` passes real data to modals.
+  - Modal components (`ChatFolderModal`, `SmartNotesFolderModal`, `ContentFolderModal`, `AnalyticsFolderModal`) display real user content, with loading skeletons and empty states as needed.
 
-### Phase 3: Component Updates
-- Update `RoadmapView.tsx` to use real data counts from the hook
-- Update `FolderModalManager.tsx` to pass real data to modals
-- Update individual modal components to display real data with **skeletons only**
+## Technical Details
 
-### Phase 4: Modal Content Components
-Enhance existing modal components to display real data:
-- `ChatFolderModal.tsx` - Display actual conversation previews
-- `SmartNotesFolderModal.tsx` - Display real note previews with types
-- `ContentFolderModal.tsx` - Display actual content hub insights
-- `AnalyticsFolderModal.tsx` - Display real analytics insight notes
-
-## Technical Specifications
-
-### Timespan Calculation Logic
+### Data Structures
 ```typescript
 interface PersonaTimespan {
   personaId: string
@@ -61,27 +53,6 @@ interface PersonaTimespan {
   isLatest: boolean
 }
 
-function calculatePersonaTimespan(personas: Persona[], index: number): PersonaTimespan {
-  const current = personas[index]
-  const next = personas[index + 1]
-  
-  return {
-    personaId: current._id,
-    startDate: new Date(current.createdAt),
-    endDate: next ? new Date(next.createdAt) : new Date(), // Now if latest
-    isLatest: !next
-  }
-}
-```
-
-### Convex Query Strategy (Using Existing Queries)
-- Use `useQuery` with existing Convex functions for real-time subscriptions
-- Client-side filtering by date ranges (no new Convex functions needed)
-- Leverage existing caching and optimization in Convex queries
-- Follow infinite timeline pattern from `timeline_infinite.md`
-
-### Data Aggregation Strategy
-```typescript
 interface PersonaFolderData {
   personaId: string
   timespan: PersonaTimespan
@@ -92,55 +63,37 @@ interface PersonaFolderData {
     yellow: { count: number, items: Note[] } // analytics_insight type
   }
 }
-
-interface PersonaTimespan {
-  personaId: string
-  startDate: Date
-  endDate: Date
-  isLatest: boolean
-}
 ```
 
-## Success Criteria
-
-1. **Accurate Counts**: Folder badges show real item counts for each persona timespan
-2. **Real Data Display**: Modals show actual user-generated content
-3. **Performance**: No degradation in scroll or interaction performance
-4. **Real-time Updates**: Data updates when new content is created
-5. **Clean Architecture**: Components remain modular and reusable
-
-## Implementation Phases
-
-### Phase 1: Foundation (Week 1)
-- [ ] Create utility functions for timespan calculation
-- [ ] Set up basic Convex queries for each data type
-- [ ] Create initial hooks structure
-
-### Phase 2: Integration (Week 2)  
-- [ ] Update RoadmapView to use real data counts
-- [ ] Implement FolderModalManager data passing
-- [ ] Create modal content display components
-
-### Phase 3: Polish (Week 3)
-- [ ] Add loading states and error handling
-- [ ] Implement pagination for large datasets
-- [ ] Add real-time updates and optimizations
-
-## Technical Considerations
+### Real-Time Updates
+- All folder counts and modal content update in real time as new data is created.
+- Uses Convex subscriptions and client-side filtering for performance.
 
 ### Performance
-- Use `usePaginatedQuery` for large datasets
-- Implement virtual scrolling if needed
-- Cache timespan calculations
-- Debounce rapid scroll updates
+- Uses `usePaginatedQuery` for large datasets where needed.
+- Timespan calculations and data filtering are memoized.
+- Loading skeletons and empty states are shown for a smooth UX.
 
-### Data Consistency
-- Handle edge cases (no data, single persona, etc.)
-- Ensure date calculations are timezone-aware
-- Handle persona deletion/updates gracefully
+## Maintenance & Extension Guide
 
-### User Experience
-- Show loading skeletons during data fetch
-- Display empty states with helpful messaging
-- Maintain smooth transitions between views
-- Preserve modal state during data updates 
+- **To add a new folder/data type:**
+  - Add the Convex query and schema mapping.
+  - Update the aggregation hook and modal component.
+- **To change timespan logic:**
+  - Update the utility functions in `personaDataCalculator.ts`.
+- **To optimize performance:**
+  - Use pagination and memoization for large datasets.
+- **To debug:**
+  - Check that all queries return expected data and that timespan filtering is correct.
+
+## Success Criteria (All Met)
+
+1. **Accurate Counts:** Folder badges show real item counts for each persona timespan.
+2. **Real Data Display:** Modals show actual user-generated content.
+3. **Performance:** No degradation in scroll or interaction performance.
+4. **Real-time Updates:** Data updates when new content is created.
+5. **Clean Architecture:** Components remain modular and reusable.
+
+---
+
+*Update this guide as the roadmap data model or UI evolves!* 
