@@ -57,8 +57,36 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
 
   // Only show as running if we're actively refreshing AND status is processing/enqueued
   // Don't auto-show loading for old stuck statuses
-  const databaseStatus = status?.status;
-  const isActuallyRunning = isRefreshing && (databaseStatus === 'processing' || databaseStatus === 'enqueued');
+  // Check both root-level status (updated by mutations) and nested status (from insights)
+  const rootStatus = instagramInsights?.status?.status;
+  const nestedStatus = status?.status;
+  const databaseStatus = rootStatus || nestedStatus;
+  
+  // Extract progress from the correct status object
+  // Priority: root-level status (current) > nested status (cached)
+  const currentProgress = instagramInsights?.status?.progress !== undefined 
+    ? instagramInsights.status.progress 
+    : status?.progress || 0;
+  
+  // Fix: Handle race condition between local refresh state and database updates
+  // When user clicks refresh, show refreshing state immediately, even if database hasn't updated yet
+  // Once database status updates to processing/enqueued, continue showing refreshing state
+  const isActuallyRunning = isRefreshing || databaseStatus === 'processing' || databaseStatus === 'enqueued' || databaseStatus === 'running';
+  
+  console.log('[useInstagramInsights] Refresh state debug:', {
+    localIsRefreshing: isRefreshing,
+    rootStatus,
+    nestedStatus,
+    databaseStatus,
+    isActuallyRunning,
+    status: status,
+    rootStatusObject: instagramInsights?.status,
+    currentProgress,
+    rootProgress: instagramInsights?.status?.progress,
+    nestedProgress: status?.progress,
+    hasAccount: !!instagramAccount?.instagramAccountId,
+    hasInsights: !!insightsList?.length
+  });
 
   // Check if there's an error in the batch analysis
   const batchError = status?.error;
@@ -70,10 +98,17 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
     }
   }, [batchError, error]);
 
-  // Reset refreshing state when task completes
+  // Reset local refreshing state when task completes or database state becomes definitive
   useEffect(() => {
-    if (isRefreshing && databaseStatus && databaseStatus !== 'processing' && databaseStatus !== 'enqueued') {
-      setIsRefreshing(false);
+    if (isRefreshing && databaseStatus) {
+      if (databaseStatus === 'completed' || databaseStatus === 'failed') {
+        // Task definitively finished - clear local state
+        console.log('[useInstagramInsights] Task completed/failed, clearing local refresh state');
+        setIsRefreshing(false);
+      } else if (databaseStatus === 'processing' || databaseStatus === 'enqueued' || databaseStatus === 'running') {
+        // Database caught up with our refresh request - database now drives the state
+        console.log('[useInstagramInsights] Database status updated to active, local state can continue');
+      }
     }
   }, [isRefreshing, databaseStatus]);
 
@@ -82,6 +117,23 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
       setError('Instagram account not connected');
       return;
     }
+
+    // Prevent multiple concurrent refresh attempts
+    if (isRefreshing || databaseStatus === 'processing' || databaseStatus === 'enqueued' || databaseStatus === 'running') {
+      console.log('[useInstagramInsights] Refresh already in progress, ignoring click', {
+        isRefreshing,
+        databaseStatus,
+        currentTime: new Date().toISOString()
+      });
+      return;
+    }
+
+    console.log('[useInstagramInsights] Starting refresh...', {
+      userId,
+      hasAccount: !!instagramAccount?.instagramAccountId,
+      postLimit,
+      currentTime: new Date().toISOString()
+    });
 
     // Set local refreshing state
     setIsRefreshing(true);
@@ -120,8 +172,9 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
       if (data.status === 'enqueued') {
         // Instagram analysis is now async - the status is tracked in the database
         // The results will be automatically available in the query once completed
-        console.log(`Instagram analysis enqueued with task ID: ${data.task_id}`);
-        // Keep refreshing state until task completes
+        console.log(`✅ Instagram analysis enqueued with task ID: ${data.task_id}`);
+        console.log('[useInstagramInsights] Task enqueued, keeping local refresh state until database updates');
+        // Keep refreshing state until task completes - database will update via real-time subscription
       } else if (data.status === 'success') {
         // Log optimization information
         if (data.analysis_summary) {
@@ -174,7 +227,10 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
   return {
     insights: insightsList,
     metadata,
-    status,
+    status: {
+      ...status,
+      progress: currentProgress // Use the correct progress value
+    },
     loading: instagramInsights === undefined,
     refreshing: isActuallyRunning, // Use combined local + database state
     error,

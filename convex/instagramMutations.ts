@@ -513,8 +513,10 @@ export const storeInstagramBatchAnalysis = mutation({
     try {
       const existingAnalysis = await ctx.db
         .query("instagramBatchAnalysis")
-        .withIndex("by_userId", q => q.eq("userId", userId))
-        .filter(q => q.eq(q.field("instagramAccountId"), instagramAccountId))
+        .withIndex("by_user_account", q => 
+          q.eq("userId", userId)
+           .eq("instagramAccountId", instagramAccountId)
+        )
         .first();
 
       if (existingAnalysis) {
@@ -560,11 +562,20 @@ export const updateInstagramBatchAnalysisStatus = mutation({
     const { userId, instagramAccountId, statusUpdate, insights } = args;
     const now = Date.now();
 
+    console.log('[updateInstagramBatchAnalysisStatus] Called with:', {
+      userId,
+      instagramAccountId,
+      statusUpdate,
+      hasInsights: !!insights
+    });
+
     try {
       const existingAnalysis = await ctx.db
         .query("instagramBatchAnalysis")
-        .withIndex("by_userId", q => q.eq("userId", userId))
-        .filter(q => q.eq(q.field("instagramAccountId"), instagramAccountId))
+        .withIndex("by_user_account", q => 
+          q.eq("userId", userId)
+           .eq("instagramAccountId", instagramAccountId)
+        )
         .first();
 
       if (existingAnalysis) {
@@ -578,6 +589,7 @@ export const updateInstagramBatchAnalysisStatus = mutation({
         }
         
         await ctx.db.patch(existingAnalysis._id, updateData);
+        console.log('[updateInstagramBatchAnalysisStatus] Updated existing record:', existingAnalysis._id);
         return { status: "updated", analysisId: existingAnalysis._id };
       } else {
         const insertData: any = {
@@ -594,6 +606,7 @@ export const updateInstagramBatchAnalysisStatus = mutation({
         }
         
         const id = await ctx.db.insert("instagramBatchAnalysis", insertData);
+        console.log('[updateInstagramBatchAnalysisStatus] Created new record:', id);
         return { status: "created", analysisId: id };
       }
     } catch (error) {
