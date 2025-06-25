@@ -64,70 +64,69 @@ export function YouTubePlatform({ userId, currentQuote, loading }: YouTubePlatfo
 
   return (
     <div className="space-y-6">
-      <AnalysisDepthPicker
-        platform="YouTube"
-        isRefreshing={refreshing}
-        error={error}
-        onRefresh={handleRefreshOrConnect}
-        disabled={!userId}
-        postLimit={postLimit}
-        setPostLimit={setPostLimit}
-        customPostLimit={customPostLimit}
-        setCustomPostLimit={setCustomPostLimit}
-        showCustomInput={showCustomInput}
-        setShowCustomInput={setShowCustomInput}
-        handleCustomSubmit={handleCustomSubmit}
-      />
-      
-      {!isConnected ? (
-        <div className="text-center py-12 px-4">
-          <YouTubeBrandIcon href="https://youtube.com/" className="w-16 h-16 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Connect Your YouTube Channel
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-4">
-            Connect your YouTube channel to view detailed analytics, track video performance, 
-            and get insights on your content strategy.
-          </p>
-          <Button 
-            onClick={() => window.location.href = '/settings?tab=integrations'}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
-          >
-            <YouTubeBrandIcon href="https://youtube.com/" className="w-4 h-4" />
-            Connect YouTube
-          </Button>
-        </div>
-      ) : loading ? (
-        <div className="grid gap-6">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 flex flex-col space-y-4">
-              <Skeleton className="h-5 w-3/4" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6" />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : refreshing ? (
-        <RefreshState
-          title="Refreshing YouTube insights..."
-          quote={currentQuote}
+      {!refreshing && (
+        <AnalysisDepthPicker
+          platform="YouTube"
+          isRefreshing={refreshing}
+          error={error}
+          onRefresh={handleRefreshOrConnect}
+          disabled={!userId}
+          postLimit={postLimit}
+          setPostLimit={setPostLimit}
+          customPostLimit={customPostLimit}
+          setCustomPostLimit={setCustomPostLimit}
+          showCustomInput={showCustomInput}
+          setShowCustomInput={setShowCustomInput}
+          handleCustomSubmit={handleCustomSubmit}
         />
-      ) : (
-        <div className="grid gap-6">
-          {(insights || []).length === 0 && !error && (
-            <div className="text-center text-gray-400">No YouTube insights available.</div>
-          )}
-          {(insights || []).map((insight, idx) => (
-            <InsightCard
-              key={idx}
-              {...insight}
-              expanded={expandedInsight === idx}
-              onExpand={() => setExpandedInsight(expandedInsight === idx ? null : idx)}
-            />
-          ))}
-        </div>
+      )}
+      
+      {!refreshing && (
+        !isConnected ? (
+          <div className="text-center py-12 px-4">
+            <YouTubeBrandIcon href="https://youtube.com/" className="w-16 h-16 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              Connect Your YouTube Channel
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-4">
+              Connect your YouTube channel to view detailed analytics, track video performance, 
+              and get insights on your content strategy.
+            </p>
+            <Button 
+              onClick={() => window.location.href = '/settings?tab=integrations'}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+            >
+              <YouTubeBrandIcon href="https://youtube.com/" className="w-4 h-4" />
+              Connect YouTube
+            </Button>
+          </div>
+        ) : loading ? (
+          <div className="grid gap-6">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 flex flex-col space-y-4">
+                <Skeleton className="h-5 w-3/4" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-5/6" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-6">
+            {(insights || []).length === 0 && !error && (
+              <div className="text-center text-gray-400">No YouTube insights available.</div>
+            )}
+            {(insights || []).map((insight, idx) => (
+              <InsightCard
+                key={idx}
+                {...insight}
+                expanded={expandedInsight === idx}
+                onExpand={() => setExpandedInsight(expandedInsight === idx ? null : idx)}
+              />
+            ))}
+          </div>
+        )
       )}
     </div>
   )

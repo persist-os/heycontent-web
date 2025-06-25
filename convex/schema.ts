@@ -662,7 +662,7 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_user_channel", ["userId", "channelId"]),
 
-    // Gmail Batch Analysis
+  // Gmail Batch Analysis
   gmailBatchAnalysis: defineTable({
     insights: v.optional(v.any()),
     status: v.optional(v.any()),

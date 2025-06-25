@@ -5,11 +5,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { ImageData } from '../types';
 import { useImageUpload } from '../hooks/useImageUpload';
-import { useMutation } from 'convex/react';
-import { api } from '@/convex/_generated/api';
 import { Upload, X, Trash2, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import { useNotes } from '@/app/context/notes-context';
+import { useAuth } from '@/app/context/auth-context';
 
 interface ImageGalleryModalProps {
   isOpen: boolean;
@@ -22,32 +22,78 @@ export function ImageGalleryModal({ isOpen, noteId, images, onClose }: ImageGall
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { uploadImage, uploadMultipleImages, isUploading, error, clearError } = useImageUpload();
-  const updateNote = useMutation(api.notes.updateNote);
+  const { updateNote } = useNotes();
+  const { firebaseUser } = useAuth();
+
+  // DEBUG: Check authentication
+  console.log('🔍 [ImageGalleryModal] Authentication check:', {
+    hasFirebaseUser: !!firebaseUser,
+    userId: firebaseUser?.uid,
+    noteId,
+    noteIdType: typeof noteId
+  });
 
   const handleAddImages = useCallback(async (newImages: ImageData[]) => {
     if (newImages.length === 0) return;
 
+    // Check authentication
+    if (!firebaseUser?.uid) {
+      console.error('❌ [ImageGalleryModal] User not authenticated');
+      toast.error('You must be logged in to upload images');
+      return;
+    }
+
     try {
       const updatedImages = [...images, ...newImages];
-      await updateNote({
-        noteId: noteId as any,
-        updates: { images: updatedImages }
+      
+      // DEBUG: Log the exact data structure being sent
+      console.log('🔍 [ImageGalleryModal] DEBUG - Adding images:');
+      console.log('Current images:', images);
+      console.log('New images:', newImages);
+      console.log('Updated images array:', updatedImages);
+      console.log('Sample image structure:', updatedImages[0]);
+      console.log('Note ID:', noteId);
+      console.log('Note ID type:', typeof noteId);
+      
+      // Validate each image object structure
+      updatedImages.forEach((img, index) => {
+        console.log(`Image ${index} validation:`, {
+          hasUrl: typeof img.url === 'string',
+          hasFilename: typeof img.filename === 'string',
+          hasOriginalFilename: img.originalFilename === undefined || typeof img.originalFilename === 'string',
+          hasUploadedAt: typeof img.uploadedAt === 'number',
+          hasSize: img.size === undefined || typeof img.size === 'number',
+          hasMimeType: img.mimeType === undefined || typeof img.mimeType === 'string',
+          hasWidth: img.width === undefined || typeof img.width === 'number',
+          hasHeight: img.height === undefined || typeof img.height === 'number',
+        });
       });
+
+      // TEST: First try a simple update to see if the noteId works
+      console.log('🧪 [ImageGalleryModal] TEST - Trying simple update first...');
+      await updateNote(noteId, { title: "Test update" });
+      console.log('✅ [ImageGalleryModal] TEST - Simple update worked!');
+      
+      // Now try the images update
+      console.log('🖼️ [ImageGalleryModal] Now trying images update...');
+      await updateNote(noteId, { images: updatedImages });
       
       toast.success(`${newImages.length} image${newImages.length > 1 ? 's' : ''} uploaded successfully`);
     } catch (error) {
-      console.error('Failed to save images to note:', error);
+      console.error('❌ [ImageGalleryModal] Failed to save images to note:', error);
+      // Log more details about the error
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
       toast.error('Failed to save images to note');
     }
-  }, [images, noteId, updateNote]);
+  }, [images, noteId, updateNote, firebaseUser]);
 
   const handleDeleteImage = useCallback(async (imageToDelete: ImageData) => {
     try {
       const updatedImages = images.filter(img => img.filename !== imageToDelete.filename);
-      await updateNote({
-        noteId: noteId as any,
-        updates: { images: updatedImages }
-      });
+      await updateNote(noteId, { images: updatedImages });
       
       toast.success('Image deleted successfully');
     } catch (error) {

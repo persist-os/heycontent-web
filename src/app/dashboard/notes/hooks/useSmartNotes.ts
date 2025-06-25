@@ -132,39 +132,52 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
   ): Promise<Note | null> => {
     if (!userId) return null;
 
-    // Always use Convex IDs
-    const convexNoteId = noteId as Id<"notes">;
-    
     console.log("🔄 [updateNote] Starting note update:", {
-      noteId: String(convexNoteId),
+      noteId: String(noteId),
       updateFields: Object.keys(updateFields),
       userId,
       hasContent: 'content' in updateFields,
       contentLength: updateFields.content?.length || 0
     });
     
+    // DEBUG: Add detailed logging for image updates
+    if (updateFields.images) {
+      console.log("🖼️ [updateNote] DEBUG - Image update detected:");
+      console.log("Raw noteId:", noteId);
+      console.log("Raw noteId type:", typeof noteId);
+      console.log("Images array length:", updateFields.images.length);
+      console.log("Images array:", updateFields.images);
+      console.log("UserId:", userId);
+      console.log("UserId type:", typeof userId);
+    }
+    
     setIsSaving(true);
     try {
       console.log('Updating note:', {
-        id: String(convexNoteId),
+        id: String(noteId),
         fields: Object.keys(updateFields),
         userId
       });
       
       console.log("updateFields being sent to Convex:", updateFields);
       
-      const updatedNote = await updateNoteConvex({
-        noteId: convexNoteId,
+      // Construct the mutation arguments properly
+      const mutationArgs = {
+        noteId: noteId as Id<"notes">,
         userId,
         updates: updateFields,
-      });
+      };
+      
+      console.log("Final mutation args:", mutationArgs);
+      
+      const updatedNote = await updateNoteConvex(mutationArgs);
       console.log('Raw response from updateNoteConvex:', updatedNote);
       
       if (updatedNote) {
         console.log('Note updated successfully:', updatedNote);
         setNotes(prev => {
           const updated = prev.map(n => 
-            n._id === convexNoteId ? { ...n, ...updatedNote } : n
+            n._id === noteId ? { ...n, ...updatedNote } : n
           );
           console.log('[useSmartNotes] Notes after update:', updated);
           return updated;
@@ -179,11 +192,11 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
         if (shouldGenerateMetadata) {
           console.log(
             "🎯 [updateNote] Auto-generating metadata for updated note:",
-            convexNoteId
+            noteId
           );
           try {
             await generateMetadata(
-              String(convexNoteId),
+              String(noteId),
               updateFields.content.trim()
             );
           } catch (metadataError) {
@@ -201,7 +214,7 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
         return updatedNote;
       } else {
         console.warn('updateNoteConvex returned null or invalid note!', {
-          noteId: convexNoteId,
+          noteId,
           userId,
           updateFields
         });

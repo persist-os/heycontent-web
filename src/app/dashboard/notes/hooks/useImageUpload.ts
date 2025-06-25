@@ -62,6 +62,8 @@ export const useImageUpload = () => {
 
       const result: UploadResponse = await response.json();
 
+      console.log('🔍 [useImageUpload] DEBUG - Cloud function response:', result);
+
       if (!result.success || !result.data) {
         throw new Error(result.error || 'Upload failed');
       }
@@ -77,6 +79,18 @@ export const useImageUpload = () => {
         // Note: width and height are not provided by the current cloud function
         // They could be added later if needed
       };
+
+      console.log('🖼️ [useImageUpload] DEBUG - Transformed ImageData:', imageData);
+      console.log('🔍 [useImageUpload] DEBUG - ImageData validation:', {
+        hasUrl: typeof imageData.url === 'string' && imageData.url.length > 0,
+        hasFilename: typeof imageData.filename === 'string' && imageData.filename.length > 0,
+        hasOriginalFilename: !imageData.originalFilename || typeof imageData.originalFilename === 'string',
+        hasUploadedAt: typeof imageData.uploadedAt === 'number',
+        hasSize: !imageData.size || typeof imageData.size === 'number',
+        hasMimeType: !imageData.mimeType || typeof imageData.mimeType === 'string',
+        hasWidth: !imageData.width || typeof imageData.width === 'number',
+        hasHeight: !imageData.height || typeof imageData.height === 'number',
+      });
 
       return imageData;
     } catch (error) {
