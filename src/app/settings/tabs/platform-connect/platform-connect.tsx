@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { fetchWithAuth } from '@/app/lib/api-helpers';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useAuth } from '@/app/context/auth-context';
 import { SocialPlatform } from '@/app/types/social-platforms';
@@ -50,8 +50,7 @@ export function PlatformConnect() {
   const [showInstagramOptions, setShowInstagramOptions] = useState(false);
   const [showComingSoon, setShowComingSoon] = useState(false);
   
-  // Convex mutations
-  const disconnectInstagramMutation = useMutation(api.instagramMutations.disconnectInstagram);
+
 
   // Define fetchConnectedPlatforms before using it in any hooks
   const fetchConnectedPlatforms = async () => {
@@ -198,24 +197,16 @@ export function PlatformConnect() {
     try {
       setDisconnecting(platform);
       
-      if (platform === 'instagram' && firebaseUser?.uid) {
-        // Use Convex mutation directly for Instagram
-        const result = await disconnectInstagramMutation({ userId: firebaseUser.uid });
-        if (!result.success) {
-          throw new Error('Failed to disconnect Instagram');
-        }
-      } else {
-        // Use HTTP endpoint for other platforms
-        const response = await fetchWithAuth('/api/social/disconnect', {
-          method: 'POST',
-          body: JSON.stringify({ platform })
-        });
-        if (!response) {
-          throw new Error('No response from server');
-        }
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+      // Use unified HTTP endpoint for all platforms
+      const response = await fetchWithAuth('/api/social/disconnect', {
+        method: 'POST',
+        body: JSON.stringify({ platform })
+      });
+      if (!response) {
+        throw new Error('No response from server');
+      }
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       // Refresh the connected platforms list
