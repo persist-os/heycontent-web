@@ -187,6 +187,21 @@ export default defineSchema({
   .index("by_creation", ["createdAt"])
   .index("by_type", ["type"]),
 
+  // Projects
+  projects: defineTable({
+    userId: v.string(),
+    name: v.string(),
+    description: v.optional(v.string()),
+    noteIds: v.optional(v.array(v.string())),
+    conversationIds: v.optional(v.array(v.string())),
+    instagramPostIds: v.optional(v.array(v.string())),
+    youtubeVideoIds: v.optional(v.array(v.string())),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_creation", ["createdAt"]),
+
   // API Keys
   api_keys: defineTable({
     user_id: v.string(),
