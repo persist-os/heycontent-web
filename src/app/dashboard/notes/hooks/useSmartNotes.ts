@@ -149,6 +149,53 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
       console.log("Images array:", updateFields.images);
       console.log("UserId:", userId);
       console.log("UserId type:", typeof userId);
+      
+      // DETAILED TYPE CHECKING
+      console.log("🔬 [updateNote] DETAILED IMAGE ANALYSIS:");
+      updateFields.images.forEach((img, index) => {
+        console.log(`Image ${index} FULL ANALYSIS:`, {
+          // Raw values
+          url: img.url,
+          filename: img.filename,
+          originalFilename: img.originalFilename,
+          uploadedAt: img.uploadedAt,
+          size: img.size,
+          mimeType: img.mimeType,
+          width: img.width,
+          height: img.height,
+          // Type checking
+          urlType: typeof img.url,
+          urlValid: typeof img.url === 'string' && img.url.length > 0,
+          filenameType: typeof img.filename,
+          filenameValid: typeof img.filename === 'string' && img.filename.length > 0,
+          originalFilenameType: typeof img.originalFilename,
+          originalFilenameValid: img.originalFilename === undefined || typeof img.originalFilename === 'string',
+          uploadedAtType: typeof img.uploadedAt,
+          uploadedAtValid: typeof img.uploadedAt === 'number' && !isNaN(img.uploadedAt),
+          sizeType: typeof img.size,
+          sizeValid: img.size === undefined || (typeof img.size === 'number' && !isNaN(img.size)),
+          mimeTypeType: typeof img.mimeType,
+          mimeTypeValid: img.mimeType === undefined || typeof img.mimeType === 'string',
+          widthType: typeof img.width,
+          widthValid: img.width === undefined || (typeof img.width === 'number' && !isNaN(img.width)),
+          heightType: typeof img.height,
+          heightValid: img.height === undefined || (typeof img.height === 'number' && !isNaN(img.height)),
+        });
+        
+        // Check for NaN values specifically
+        if (typeof img.uploadedAt === 'number' && isNaN(img.uploadedAt)) {
+          console.error(`❌ Image ${index} uploadedAt is NaN!`);
+        }
+        if (img.size !== undefined && typeof img.size === 'number' && isNaN(img.size)) {
+          console.error(`❌ Image ${index} size is NaN!`);
+        }
+        if (img.width !== undefined && typeof img.width === 'number' && isNaN(img.width)) {
+          console.error(`❌ Image ${index} width is NaN!`);
+        }
+        if (img.height !== undefined && typeof img.height === 'number' && isNaN(img.height)) {
+          console.error(`❌ Image ${index} height is NaN!`);
+        }
+      });
     }
     
     setIsSaving(true);
@@ -161,11 +208,27 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
       
       console.log("updateFields being sent to Convex:", updateFields);
       
+      // CLEAN IMAGE OBJECTS - Remove any extra fields not in schema
+      let cleanedUpdateFields = { ...updateFields };
+      if (cleanedUpdateFields.images) {
+        cleanedUpdateFields.images = cleanedUpdateFields.images.map(img => ({
+          url: img.url,
+          filename: img.filename,
+          ...(img.originalFilename !== undefined && { originalFilename: img.originalFilename }),
+          uploadedAt: img.uploadedAt,
+          ...(img.size !== undefined && { size: img.size }),
+          ...(img.mimeType !== undefined && { mimeType: img.mimeType }),
+          ...(img.width !== undefined && { width: img.width }),
+          ...(img.height !== undefined && { height: img.height }),
+        }));
+        console.log("🧹 [updateNote] CLEANED images for Convex:", cleanedUpdateFields.images);
+      }
+      
       // Construct the mutation arguments properly
       const mutationArgs = {
         noteId: noteId as Id<"notes">,
         userId,
-        updates: updateFields,
+        updates: cleanedUpdateFields,
       };
       
       console.log("Final mutation args:", mutationArgs);
