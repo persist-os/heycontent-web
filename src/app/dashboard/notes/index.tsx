@@ -8,11 +8,15 @@ import { useAuth } from '@/app/context/auth-context';
 import type { Id } from '@/convex/_generated/dataModel';
 import { useNotes } from '@/app/context/notes-context';
 import { Note, NoteType } from './types';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 export default function SmartNotes() {
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid;
   const [activeNote, setActiveNote] = useState<Note | null>(null);
+  const searchParams = useSearchParams();
+  const noteIdParam = searchParams.get('noteId');
+  const router = useRouter();
   
   const { 
     notes, 
@@ -40,7 +44,29 @@ export default function SmartNotes() {
       setActiveNote(null);
     }
   }, [activeNoteId, notes]);
+
+  // Auto-select note if noteId param is present in URL
+  useEffect(() => {
+    if (noteIdParam && notes.length > 0) {
+      try {
+        const found = notes.find(n => String(n._id) === String(noteIdParam));
+        if (found) {
+          setActiveNoteId(found._id);
+        }
+      } catch (error) {
+        console.error('Error selecting note by noteId param:', error);
+      }
+    }
+  }, [noteIdParam, notes, setActiveNoteId]);
   
+  // Helper to clear noteId from URL
+  const clearNoteIdFromUrl = React.useCallback(() => {
+    const params = new URLSearchParams(window.location.search);
+    params.delete('noteId');
+    const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
+    router.replace(newUrl);
+  }, [router]);
+
   // Handle note editing
   const handleEditNote = (note: Note) => {
     navigateToNote(note._id, false); // Not from a link, so don't add to stack
@@ -112,6 +138,7 @@ export default function SmartNotes() {
       }
     }
     clearNavigationStack();
+    clearNoteIdFromUrl();
   };
 
   // Handle note linking with navigation stack

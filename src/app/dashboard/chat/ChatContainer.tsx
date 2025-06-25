@@ -531,6 +531,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             <div className="flex-1 flex flex-col">
               {/* AI Intelligence Status Display (user-friendly) - Only show when no embeddings */}
               <AmbientInsightsContainer 
+                userId={userId}
                 handleSendMessage={(msg, context) => {
                   // Start a new chat with the context from the insight
                   handleNewChat();

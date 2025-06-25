@@ -48,10 +48,9 @@ export const NewPersonaCard: React.FC<NewPersonaCardProps> = ({ persona }) => {
   if (!persona) return null;
 
   return (
-    <div className="bg-card rounded-lg group transition-all duration-300 
-      hover:ring-2 hover:ring-purple-500 dark:hover:ring-accent hover:ring-offset-2 hover:ring-offset-background">
+    <div className="bg-card rounded-lg transition-all duration-300">
       <div className="p-6">
-        <h2 className="text-2xl font-bold text-foreground group-hover:text-purple-500 dark:group-hover:text-accent transition-colors">{persona.current_name}</h2>
+        <h2 className="text-2xl font-bold text-foreground transition-colors">{persona.current_name}</h2>
         <p className="mt-2 text-base text-muted-foreground leading-relaxed">{persona.current_description}</p>
       </div>
 

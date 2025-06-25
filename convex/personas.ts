@@ -78,6 +78,44 @@ export const getPersonaHistory = query({
   },
 });
 
+// Optimized query to get all persona data in a single call
+export const getPersonaData = query({
+  args: {
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const { userId } = args;
+
+      // Single query to get all personas, sorted by creation date
+      const allPersonas = await ctx.db
+        .query("personas")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .order("desc")
+        .collect();
+
+      // Separate active from inactive personas in memory (faster than separate queries)
+      const activePersona = allPersonas.find(p => p.isActive) || null;
+      const personaHistory = allPersonas.filter(p => !p.isActive);
+
+      return {
+        allPersonas,
+        activePersona,
+        personaHistory,
+        count: allPersonas.length
+      };
+    } catch (error) {
+      console.error("Error fetching persona data:", error);
+      return {
+        allPersonas: [],
+        activePersona: null,
+        personaHistory: [],
+        count: 0
+      };
+    }
+  },
+});
+
 // Mutation to create a new persona
 export const createPersona = mutation({
   args: {

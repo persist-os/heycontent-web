@@ -343,10 +343,7 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
                 // For now, it just creates the note and navigates.
               }}
               className="flex-1"
-              onClick={(e: React.MouseEvent) => e.stopPropagation()}
-            >
-              Create Note
-            </CreateNoteButton>
+            />
             
             {/* Legacy discuss button if provided */}
             {onDiscuss && (

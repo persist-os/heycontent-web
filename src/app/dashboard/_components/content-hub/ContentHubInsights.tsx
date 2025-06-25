@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -13,10 +13,11 @@ import { ContentHubInsight } from '@/convex/contentHub'
 
 interface ContentHubInsightsProps {
   userId: string
+  forceExpand?: boolean
 }
 
-export function ContentHubInsights({ userId }: ContentHubInsightsProps) {
-  const [expanded, setExpanded] = useState(true)
+export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsProps) {
+  const [expanded, setExpanded] = useState(forceExpand ?? true)
   const router = useRouter()
   const {
     latestInsight,
@@ -29,6 +30,11 @@ export function ContentHubInsights({ userId }: ContentHubInsightsProps) {
   } = useContentHubInsights(userId)
 
   const isLoading = dataBundle === undefined
+
+  // Expand if forceExpand is set
+  useEffect(() => {
+    if (forceExpand) setExpanded(true);
+  }, [forceExpand]);
 
   const handleGenerateInsights = async () => {
     await generateNewInsights()

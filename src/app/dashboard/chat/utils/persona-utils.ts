@@ -1,34 +1,38 @@
-import { api } from '@/convex/_generated/api';
-import { useMutation } from 'convex/react';
 import { Message } from '@/app/types/chat';
+import { useOptimizedPersonaManager } from '@/store/persona-store';
 
 /**
- * Saves a persona to Convex database
- * @param personaData The persona data to save
- * @param userId The Firebase user ID
- * @returns Promise resolving to the ID of the saved persona or false if save failed
+ * Checks if a message contains a completed persona
+ * @param message The message to check
+ * @returns True if the message contains a completed persona
  */
-export async function savePersonaToConvex(
-  personaData: NonNullable<Message['metadata']>['persona'],
-  userId: string,
-  createPersonaMutation: any
-): Promise<string | false> {
-  if (!personaData || !userId) {
-    console.error('[persona-utils] Cannot save persona: missing data or user ID');
-    return false;
-  }
+export function hasCompletedPersona(message: Message): boolean {
+  return (
+    message.role === 'assistant' &&
+    !!message.metadata?.is_persona_complete &&
+    !!message.metadata.persona
+  );
+}
+
+/**
+ * Hook to save personas using optimized store
+ * @returns An object with functions to save personas
+ */
+export function usePersonaManager(userId?: string) {
+  const { createPersona } = useOptimizedPersonaManager(userId);
   
-  try {
-    console.log('[persona-utils] Saving persona to Convex for user:', userId);
-    console.log('[persona-utils] Persona data:', JSON.stringify({
-      current_name: personaData.current_name,
-      experience_level: personaData.experience_level,
-      content_tone: personaData.content_tone,
-    }));
+  /**
+   * Save a persona from a chat message
+   */
+  const savePersonaFromMessage = async (message: Message, userId: string): Promise<boolean> => {
+    if (!hasCompletedPersona(message) || !userId) {
+      return false;
+    }
     
-    // Call the Convex mutation with all required fields
-    const result = await createPersonaMutation({
-      userId,
+    const personaData = message.metadata!.persona;
+    
+    // Prepare the data with defaults for required fields
+    const personaPayload = {
       current_name: personaData.current_name || 'Unnamed Persona',
       current_description: personaData.current_description || '',
       experience_level: personaData.experience_level || 'Beginner',
@@ -47,47 +51,9 @@ export async function savePersonaToConvex(
       style_descriptors: Array.isArray(personaData.style_descriptors) ? personaData.style_descriptors : [],
       audience_type: personaData.audience_type || '',
       engagement_style: Array.isArray(personaData.engagement_style) ? personaData.engagement_style : [],
-    });
+    };
     
-    console.log('[persona-utils] Persona saved successfully with ID:', result);
-    return result;
-  } catch (error) {
-    console.error('[persona-utils] Failed to save persona:', error);
-    return false;
-  }
-}
-
-/**
- * Checks if a message contains a completed persona
- * @param message The message to check
- * @returns True if the message contains a completed persona
- */
-export function hasCompletedPersona(message: Message): boolean {
-  return (
-    message.role === 'assistant' &&
-    !!message.metadata?.is_persona_complete &&
-    !!message.metadata.persona
-  );
-}
-
-/**
- * Hook to save personas to Convex
- * @returns An object with functions to save personas
- */
-export function usePersonaManager() {
-  const createPersona = useMutation(api.personas.createPersona);
-  
-  /**
-   * Save a persona from a chat message
-   */
-  const savePersonaFromMessage = async (message: Message, userId: string): Promise<boolean> => {
-    if (!hasCompletedPersona(message) || !userId) {
-      return false;
-    }
-    
-    const personaData = message.metadata!.persona;
-    const result = await savePersonaToConvex(personaData, userId, createPersona);
-    return !!result;
+    return await createPersona(personaPayload);
   };
   
   /**
@@ -101,8 +67,17 @@ export function usePersonaManager() {
       return false;
     }
     
-    const result = await savePersonaToConvex(metadata.persona, userId, createPersona);
-    return !!result;
+    // Create a fake message structure to reuse the same logic
+    const fakeMessage: Message = {
+      id: 'temp',
+      role: 'assistant',
+      content: '',
+      timestamp: new Date().toISOString(),
+      chat_response: '',
+      metadata
+    };
+    
+    return await savePersonaFromMessage(fakeMessage, userId);
   };
   
   /**
@@ -119,11 +94,8 @@ export function usePersonaManager() {
     
     if (messagesWithPersona.length > 0) {
       const latestPersonaMessage = messagesWithPersona[0];
-      const personaData = latestPersonaMessage.metadata!.persona;
-      
       console.log('[persona-utils] Found completed persona in message history, saving');
-      const result = await savePersonaToConvex(personaData, userId, createPersona);
-      return !!result;
+      return await savePersonaFromMessage(latestPersonaMessage, userId);
     }
     
     return false;

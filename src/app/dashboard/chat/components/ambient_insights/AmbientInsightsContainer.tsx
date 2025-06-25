@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import { getApiKey } from '@/app/lib/api-helpers';
 
-export function AmbientInsightsContainer({ handleSendMessage }: { handleSendMessage?: (msg: string, context?: any) => void }) {
+export function AmbientInsightsContainer({ userId, handleSendMessage }: { userId: string | undefined; handleSendMessage?: (msg: string, context?: any) => void }) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState(false);
 
@@ -83,6 +83,7 @@ export function AmbientInsightsContainer({ handleSendMessage }: { handleSendMess
         <div className="max-w-4xl sm:max-w-5xl lg:max-w-7xl mx-auto px-6 sm:px-8">
           <AmbientInsights 
             key={refreshKey}
+            userId={userId}
             onInsightClick={handleInsightClick}
             loading={loading}
             error={null}
