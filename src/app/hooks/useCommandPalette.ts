@@ -29,7 +29,7 @@ export function useCommandPaletteState() {
                                    pathname.startsWith('/auth/') || 
                                    pathname.startsWith('/waitlist');
 
-  // Debounced search effect
+  // Debounced search effect with longer delay to prevent violations
   useEffect(() => {
     const timeoutId = setTimeout(async () => {
       setIsSearching(true);
@@ -42,7 +42,7 @@ export function useCommandPaletteState() {
       } finally {
         setIsSearching(false);
       }
-    }, 300); // 300ms debounce
+    }, 500); // Increased from 300ms to 500ms to reduce violations
 
     return () => clearTimeout(timeoutId);
   }, [input]);

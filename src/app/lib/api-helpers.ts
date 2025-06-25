@@ -8,15 +8,17 @@ import Cookies from 'js-cookie';
  * Get API key from cookies or request a new one
  */
 export async function getApiKey(): Promise<string | null> {
+  let needsRefresh = false;
   try {
-    // First try to get the API key from cookies
     const storedApiKey = Cookies.get('apiKey');
-    let needsRefresh = false;
-    let auth;
+    let auth = null;
     try {
       auth = getFirebaseAuth();
     } catch (e) {
-      console.warn('getFirebaseAuth() failed:', e);
+      // Silently handle auth unavailable - don't spam console
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('getFirebaseAuth() failed:', e);
+      }
       return null;
     }
     if (storedApiKey) {
@@ -35,10 +37,19 @@ export async function getApiKey(): Promise<string | null> {
           userMatches = keyUserId === firebaseUserId;
         }
       }
-      if (!isValid || !userMatches) {
-        console.warn('API key in cookies is invalid or does not match current user. Removing and refreshing...');
+      // Only remove the API key if we are sure the user does not match
+      if (!isValid || (auth && auth.currentUser && !userMatches)) {
+        if (process.env.NODE_ENV === 'development') {
+          console.info('[api-helpers] API key in cookies did not match current user or is invalid. Removing and refreshing...');
+        }
         Cookies.remove('apiKey');
         needsRefresh = true;
+      } else if (isValid && auth && !auth.currentUser) {
+        // If the Firebase user is not yet loaded, do not remove the API key, just return null and try again later
+        if (process.env.NODE_ENV === 'development') {
+          console.info('[api-helpers] Firebase user not loaded yet. Skipping API key validation for now.');
+        }
+        return null;
       } else {
         // Valid key found for current user
         return apiKey;
@@ -77,17 +88,23 @@ export async function getApiKey(): Promise<string | null> {
             Cookies.set('apiKey', JSON.stringify(apiKeyValue), { expires: 7, sameSite: 'Lax', secure: process.env.NODE_ENV === 'production', path: '/' });
             return apiKeyValue;
           } else {
-            console.warn('Received invalid or temporary API key from backend:', apiKeyValue);
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('Received invalid or temporary API key from backend:', apiKeyValue);
+            }
             Cookies.remove('apiKey');
             return null;
           }
         } else {
           const errorData = await response.json();
-          console.warn('Failed to get API key from backend:', errorData);
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Failed to get API key from backend:', errorData);
+          }
           return null;
         }
       } catch (apiError) {
-        console.error('Error requesting API key from backend:', apiError);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error requesting API key from backend:', apiError);
+        }
         return null;
       }
       // No API key available if backend fails
@@ -97,28 +114,32 @@ export async function getApiKey(): Promise<string | null> {
     // If we get here, it means needsRefresh is true but no auth/currentUser is available
     return null;
   } catch (error) {
-    console.error('Error getting API key:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error getting API key:', error);
+    }
     throw new Error('No valid API key available. Please contact support.');
   }
 }
 
 /**
- * Get the current user ID from Firebase Auth
+ * Get the current user ID from API key stored in cookies
  */
 export function getCurrentUserId(): string | null {
-  try {
-    const authInstance = getFirebaseAuth();
-    if (authInstance.currentUser) {
-      return authInstance.currentUser.uid;
-    }
-  } catch (e) {
-    // get it from cookies if auth is not available
-  }
+  // Get user ID directly from API key in cookies
   const apiKey = Cookies.get('apiKey');
   if (apiKey) {
-    const keyParts = apiKey.split('_');
-    if (keyParts.length >= 3) {
-      return keyParts[1];
+    try {
+      const parsedApiKey = JSON.parse(apiKey);
+      const keyParts = parsedApiKey.split('_');
+      if (keyParts.length >= 3) {
+        return keyParts[1];
+      }
+    } catch (e) {
+      // If parsing fails, try using the raw value
+      const keyParts = apiKey.split('_');
+      if (keyParts.length >= 3) {
+        return keyParts[1];
+      }
     }
   }
   return null;

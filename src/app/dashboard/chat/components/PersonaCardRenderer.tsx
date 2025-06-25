@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getApiKey } from '@/app/lib/api-helpers';
 import { NewPersonaCard } from '@/app/settings/tabs/account/NewPersonaCard';
-import { usePersonaData } from '../hooks/usePersonaData';
+import { usePersonaData } from '@/store/persona-store';
 import { Message } from '@/app/types/chat';
 import { useRouter } from 'next/navigation';
 
@@ -20,7 +20,7 @@ export const PersonaCardRenderer: React.FC<PersonaCardRendererProps> = ({ messag
   const isAssistantMessage = message.role === 'assistant';
   const shouldFetchPersona = isAssistantMessage && !!userId;
 
-  const { persona, isLoading, hasPersona, isError } = usePersonaData(userId, shouldFetchPersona);
+  const { persona, isLoading, hasPersona, isError } = usePersonaData();
 
   // Check if this message indicates persona completion
   const hasPersonaCompletionFlags = message.metadata?.is_persona_complete === true || 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { memo, useCallback, useMemo, useRef, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Logo } from '@/components/ui/logo'
@@ -14,8 +14,8 @@ import { getApiKey } from '@/app/lib/api-helpers'
 const navItems = [
   {
     id: 'chat',
-    label: 'Chat With Content',
-    icon: Logo,
+    label: 'Chat',
+    icon: BarChart3,
     href: '/dashboard/chat',
   },
   {
@@ -38,65 +38,85 @@ interface ChatHistory {
   preview?: string;
 }
 
-export function DashboardNav() {
+export const DashboardNav = memo(function DashboardNav() {
   const pathname = usePathname()
   const router = useRouter()
   const { isExpanded, setIsExpanded } = useSidebar();
   const [recentChats, setRecentChats] = useState<ChatHistory[]>([])
+  const [apiKeyError, setApiKeyError] = useState(false);
+  
+  // Refs for throttling
+  const lastMouseMoveTime = useRef(0);
+  const mouseMoveThrottleMs = 100; // Throttle to 10fps max
 
-  useEffect(() => {
-    const fetchRecentChats = async () => {
-      try {
-        const apiKey = await getApiKey();
-        if (!apiKey) {
-          // Silently fail if no API key, as the user might not be logged in yet
-          return;
-        }
-        const response = await fetch('/api/chat/history?limit=5', {
-          headers: { 'Authorization': `Bearer ${apiKey}` },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.conversations) {
-            setRecentChats(data.conversations);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch recent chats:', error);
+  // Memoized fetch function to prevent recreation
+  const fetchRecentChats = useCallback(async () => {
+    try {
+      const apiKey = await getApiKey();
+      if (!apiKey) {
+        // Silently fail if no API key, but track the error
+        setApiKeyError(true);
+        return;
       }
-    };
+      
+      setApiKeyError(false);
+      const response = await fetch('/api/chat/history?limit=5', {
+        headers: { 'Authorization': `Bearer ${apiKey}` },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.conversations) {
+          setRecentChats(data.conversations);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch recent chats:', error);
+      setApiKeyError(true);
+    }
+  }, []);
 
-    if (isExpanded) {
+  // Only fetch when sidebar expands and we don't have an API key error
+  useEffect(() => {
+    if (isExpanded && !apiKeyError) {
       fetchRecentChats();
     }
-  }, [isExpanded]);
+  }, [isExpanded, fetchRecentChats, apiKeyError]);
 
-  // Proximity-based sidebar toggle
+  // Throttled proximity-based sidebar toggle
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    const now = Date.now();
+    if (now - lastMouseMoveTime.current < mouseMoveThrottleMs) {
+      return; // Throttle to reduce excessive calls
+    }
+    lastMouseMoveTime.current = now;
+    
+    const proximityThreshold = 50; // pixels from left edge
+    const mouseX = e.clientX;
+    
+    // Open sidebar when mouse is near left edge
+    if (mouseX < proximityThreshold && !isExpanded) {
+      setIsExpanded(true);
+    }
+    // Close sidebar when mouse moves away (but not immediately)
+    else if (mouseX > 300 && isExpanded) {
+      setIsExpanded(false);
+    }
+  }, [isExpanded, setIsExpanded]);
+
+  // Proximity-based sidebar toggle with throttling
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      const proximityThreshold = 50; // pixels from left edge
-      const mouseX = e.clientX;
-      
-      // Open sidebar when mouse is near left edge
-      if (mouseX < proximityThreshold && !isExpanded) {
-        setIsExpanded(true);
-      }
-      // Close sidebar when mouse moves away (but not immediately)
-      else if (mouseX > 300 && isExpanded) {
-        setIsExpanded(false);
-      }
-    };
-
     // Add event listener to document
-    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mousemove', handleMouseMove, { passive: true });
     
     // Cleanup
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
     };
-  }, [isExpanded, setIsExpanded]);
+  }, [handleMouseMove]);
 
-  const isItemActive = (item: typeof navItems[0]) => {
+  // Memoize active item calculation
+  const isItemActive = useCallback((item: typeof navItems[0]) => {
     switch (item.id) {
       case 'content-hub':
         // This tab is active for multiple, non-nested routes
@@ -111,32 +131,55 @@ export function DashboardNav() {
       default:
         return false;
     }
-  }
+  }, [pathname]);
+
+  // Memoize the self hub link
+  const selfHubLink = useMemo(() => (
+    <Link
+      href="/dashboard/self-hub"
+      onClick={() => setIsExpanded(false)}
+      className={`flex items-center transition-colors p-2 rounded-md ${
+        pathname.startsWith('/dashboard/self-hub')
+          ? 'bg-primary'
+          : 'hover:bg-muted/80'
+      }`}
+    >
+      <Users className={`w-6 h-6 ${
+        pathname.startsWith('/dashboard/self-hub')
+          ? 'text-black'
+          : 'text-foreground'
+      }`} />
+      {isExpanded && <span className={`ml-3 text-sm font-medium ${
+        pathname.startsWith('/dashboard/self-hub')
+          ? 'text-black'
+          : 'text-foreground'
+      }`}>Self</span>}
+    </Link>
+  ), [pathname, isExpanded, setIsExpanded]);
+
+  // Memoize the settings link
+  const settingsLink = useMemo(() => (
+    <Link
+      href="/settings"
+      onClick={() => setIsExpanded(false)}
+      className={`flex items-center w-full h-12 rounded-none transition-all ${
+        isExpanded ? 'px-6' : 'justify-center'
+      } ${
+        pathname === '/settings'
+          ? 'bg-muted font-medium'
+          : 'hover:bg-muted'
+      }`}
+    >
+      <Settings className="w-6 h-6 text-foreground" />
+      {isExpanded && <span className="ml-4 text-sm font-medium">Settings</span>}
+    </Link>
+  ), [pathname, isExpanded, setIsExpanded]);
 
   return (
     <div className={`h-screen fixed top-0 left-0 bg-muted/20 shadow-lg flex flex-col justify-between transition-all duration-300 z-40 ${isExpanded ? 'w-64 translate-x-0' : 'w-64 -translate-x-full md:w-16 md:translate-x-0'}`}>
       <div>
         <div className={`flex items-center h-20 ${isExpanded ? 'px-4' : 'justify-center'}`}>
-          <Link
-            href="/dashboard/self-hub"
-            onClick={() => setIsExpanded(false)}
-            className={`flex items-center transition-colors p-2 rounded-md ${
-              pathname.startsWith('/dashboard/self-hub')
-                ? 'bg-primary'
-                : 'hover:bg-muted/80'
-            }`}
-          >
-            <Users className={`w-6 h-6 ${
-              pathname.startsWith('/dashboard/self-hub')
-                ? 'text-black'
-                : 'text-foreground'
-            }`} />
-            {isExpanded && <span className={`ml-3 text-sm font-medium ${
-              pathname.startsWith('/dashboard/self-hub')
-                ? 'text-black'
-                : 'text-foreground'
-            }`}>Self</span>}
-          </Link>
+          {selfHubLink}
         </div>
 
         <div className="flex flex-col items-center gap-4 mt-8">
@@ -153,17 +196,17 @@ export function DashboardNav() {
                   : 'hover:bg-muted/80'
               }`}
             >
-                          <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center">
-              {item.id === 'chat' ? (
-                <Logo disableLink />
-              ) : (
-                <item.icon className={`w-6 h-6 ${
-                  isItemActive(item)
-                    ? 'text-black'
-                    : 'text-foreground'
-                }`} />
-              )}
-            </div>
+              <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center">
+                {item.id === 'chat' ? (
+                  <Logo disableLink />
+                ) : (
+                  <item.icon className={`w-6 h-6 ${
+                    isItemActive(item)
+                      ? 'text-black'
+                      : 'text-foreground'
+                  }`} />
+                )}
+              </div>
               {isExpanded && <span className="ml-4 text-sm font-medium">{isExpanded ? item.label : ''}</span>}
             </Link>
           ))}
@@ -199,23 +242,10 @@ export function DashboardNav() {
           </div>
         )}
         <div className="flex flex-col items-center gap-2 mb-4">
-          <Link
-            href="/settings"
-            onClick={() => setIsExpanded(false)}
-            className={`flex items-center w-full h-12 rounded-none transition-all ${
-              isExpanded ? 'px-6' : 'justify-center'
-            } ${
-              pathname === '/settings'
-                ? 'bg-muted font-medium'
-                : 'hover:bg-muted'
-            }`}
-          >
-            <Settings className="w-6 h-6 text-foreground" />
-            {isExpanded && <span className="ml-4 text-sm font-medium">Settings</span>}
-          </Link>
+          {settingsLink}
           <ThemeToggle />
         </div>
       </div>
     </div>
   )
-}
+});

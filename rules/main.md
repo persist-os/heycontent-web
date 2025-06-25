@@ -69,14 +69,15 @@ State and logic should live in hooks.
 **STRICT THEME REQUIREMENTS:**
 - **Dark mode background**: MUST be `#202020` (never navy blue or gray-900)
 - **Light mode background**: MUST be white (`#FFFFFF`)
-- **Primary accent color**: `heycontent-yellow` (`#FFDF39`)
+- **Primary accent color**: Lean purple for light mode, yellow for dark mode
 - **NO hardcoded colors**: Use CSS variables and semantic color classes only
 
 **Required approach:**
 - Use `bg-background`, `text-foreground`, `border-border`, etc.
-- Use `bg-primary`, `bg-accent` for heycontent-yellow elements
+- Use `bg-primary`, `bg-accent` for theme-appropriate accent colors
 - Use `bg-muted`, `bg-secondary` for subtle backgrounds
-- NEVER use `dark:bg-gray-800`, `dark:bg-gray-900`, or similar hardcoded values
+- Use `bg-destructive`, `bg-success` for status colors
+- NEVER use `dark:bg-gray-800`, `bg-blue-500`, or similar hardcoded values
 
 **Theme toggle requirements:**
 - Must support Light, Dark, and System modes

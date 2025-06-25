@@ -35,6 +35,7 @@ import type * as rateLimiting from "../rateLimiting.js";
 import type * as smartNotesMutation from "../smartNotesMutation.js";
 import type * as subscriptionActions from "../subscriptionActions.js";
 import type * as subscriptionQueries from "../subscriptionQueries.js";
+import type * as timelineQueries from "../timelineQueries.js";
 import type * as usageEvents from "../usageEvents.js";
 import type * as userMutations from "../userMutations.js";
 import type * as userQueries from "../userQueries.js";
@@ -74,6 +75,7 @@ declare const fullApi: ApiFromModules<{
   smartNotesMutation: typeof smartNotesMutation;
   subscriptionActions: typeof subscriptionActions;
   subscriptionQueries: typeof subscriptionQueries;
+  timelineQueries: typeof timelineQueries;
   usageEvents: typeof usageEvents;
   userMutations: typeof userMutations;
   userQueries: typeof userQueries;

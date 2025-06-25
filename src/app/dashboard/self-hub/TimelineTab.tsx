@@ -1,10 +1,9 @@
 'use client'
 
-import React, { useEffect, useState } from 'react';
-import { getFirebaseAuth } from '@/app/lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import React from 'react';
+import { useAuth } from '@/app/context/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
-import { usePersonaManager } from '../chat/hooks/usePersonaData';
+import { useOptimizedPersonaManager } from '@/store/persona-store';
 import { PersonaTimeline } from '@/app/settings/tabs/account/PersonaTimeline';
 import { Id } from '@/convex/_generated/dataModel';
 import { History } from 'lucide-react';
@@ -37,23 +36,7 @@ const TimelineTabSkeleton = () => (
 );
 
 export const TimelineTab: React.FC = () => {
-  const [userId, setUserId] = useState<string | undefined>();
-
-  useEffect(() => {
-    let auth;
-    try {
-      auth = getFirebaseAuth();
-    } catch (e) {
-      auth = null;
-    }
-    if (!auth) return;
-    
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUserId(firebaseUser?.uid);
-    });
-    
-    return () => unsubscribe();
-  }, []);
+  const { firebaseUser, authLoading } = useAuth();
 
   const {
     personaHistory,
@@ -61,7 +44,7 @@ export const TimelineTab: React.FC = () => {
     hasHistory,
     activatePersona,
     deletePersona,
-  } = usePersonaManager(userId || '');
+  } = useOptimizedPersonaManager(firebaseUser?.uid);
 
   const handleRestore = async (personaId: Id<'personas'>) => {
     await activatePersona(personaId);
@@ -73,7 +56,7 @@ export const TimelineTab: React.FC = () => {
     }
   };
 
-  if (!userId) {
+  if (authLoading || !firebaseUser?.uid) {
     return (
       <div className="flex justify-center items-center min-h-[200px] px-4 rounded-lg border border-dashed">
         <p className="text-gray-600 text-sm">Please sign in to view your timeline.</p>

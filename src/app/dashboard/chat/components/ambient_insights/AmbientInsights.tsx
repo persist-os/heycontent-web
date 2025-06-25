@@ -22,6 +22,7 @@ type InsightWithOptionalIcon = Omit<AmbientInsight, 'icon'> & {
 };
 
 interface AmbientInsightsProps {
+  userId: string | undefined | null;
   loading?: boolean;
   error?: string | null;
   onInsightClick?: (action: string, insight: InsightWithOptionalIcon) => void;
@@ -42,50 +43,44 @@ const InsightSkeleton = () => (
 );
 
 export const AmbientInsights: React.FC<AmbientInsightsProps> = ({ 
+  userId,
   loading = false,
   error: propError, 
   onInsightClick
 }) => {
-  const [userId, setUserId] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(propError || null);
 
-  // Get user ID from API key
-  useEffect(() => {
-    async function fetchUserId() {
-      try {
-        const apiKey = await getApiKey();
-        if (apiKey) {
-          const parts = apiKey.split('_');
-          if (parts.length >= 3) {
-            setUserId(parts[1]);
-          } else {
-            setFetchError('Invalid API key format');
-          }
-        } else {
-          setFetchError('No API key found');
-        }
-      } catch (error) {
-        setFetchError(error instanceof Error ? error.message : 'Failed to get user ID');
-      }
-    }
-    fetchUserId();
-  }, []);
-
-  // Fetch insights from Convex
+  // Always call useQuery, passing undefined if userId is not available
   const convexInsights = useQuery(
     api.ambientInsights.getMostRecentByUserId,
-    userId ? { userId } : "skip"
+    userId ? { userId } : undefined
   );
 
-  console.log('AmbientInsights: Convex query result:', convexInsights);
-  console.log('AmbientInsights: Current userId:', userId);
+  // Render loader until userId is available
+  if (!userId) {
+    return (
+      <div className="space-y-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <InsightSkeleton key={index} />
+        ))}
+      </div>
+    );
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('AmbientInsights: Convex query result:', convexInsights);
+    console.log('AmbientInsights: Current userId:', userId);
+  }
 
   // Map Convex data to insights format
   const insights = useMemo<InsightWithOptionalIcon[]>(() => {
-    console.log('AmbientInsights: Mapping insights. Convex data:', convexInsights);
-
+    if (process.env.NODE_ENV === 'development') {
+      console.log('AmbientInsights: Mapping insights. Convex data:', convexInsights);
+    }
     if (convexInsights && Array.isArray(convexInsights.data) && convexInsights.data.length > 0) {
-      console.log('AmbientInsights: Using Convex data array, length:', convexInsights.data.length);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('AmbientInsights: Using Convex data array, length:', convexInsights.data.length);
+      }
       return convexInsights.data.slice(0, 6).map((item: ConvexInsight) => ({
         type: item.category || 'auto_generated',
         title: item.title,
@@ -94,7 +89,6 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
         id: Math.random().toString()
       }));
     }
-
     // Return empty array if no insights from Convex
     return [];
   }, [convexInsights]);
@@ -104,44 +98,42 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
 
   // Set error if Convex query fails
   useEffect(() => {
-    if (convexInsights === null) {
+    if (userId && convexInsights === null) {
       setFetchError('Failed to load insights');
     }
-  }, [convexInsights]);
+  }, [userId, convexInsights]);
 
-  // Log errors
-  useEffect(() => {
-    const error = propError || fetchError;
-    if (error) {
-      console.error('Error loading insights:', error);
-    }
-  }, [propError, fetchError]);
-  
-  // Request new insights if none are available from Convex
+  // Prevent duplicate requests for new insights
   const [isRequestingInsights, setIsRequestingInsights] = useState(false);
-  
+  const requestedInsightsRef = React.useRef<string | null>(null);
+
   useEffect(() => {
     const requestNewInsights = async () => {
       // Only request new insights if we have a userId and no insights from Convex
-      if (userId && 
-          typeof convexInsights !== 'string' &&
-          convexInsights !== undefined && 
-          (!convexInsights || 
-           !Array.isArray(convexInsights?.data) || 
-           convexInsights.data?.length === 0) && 
-          !isRequestingInsights) {
-        
+      if (
+        userId &&
+        typeof convexInsights !== 'string' &&
+        convexInsights !== undefined &&
+        (!convexInsights ||
+          !Array.isArray(convexInsights?.data) ||
+          convexInsights.data?.length === 0) &&
+        !isRequestingInsights &&
+        requestedInsightsRef.current !== userId
+      ) {
         try {
           setIsRequestingInsights(true);
-          console.log('Requesting new ambient insights');
-          
+          requestedInsightsRef.current = userId;
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Requesting new ambient insights');
+          }
           const apiKey = await getApiKey();
           if (!apiKey) {
-            console.error('No API key found for ambient_insights request');
+            if (process.env.NODE_ENV === 'development') {
+              console.error('No API key found for ambient_insights request');
+            }
             setIsRequestingInsights(false);
             return;
           }
-          
           const response = await fetch('/api/ambient_insights', {
             method: 'POST',
             headers: {
@@ -153,22 +145,26 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
               content: JSON.stringify({ user_id: userId })
             })
           });
-          
           if (!response.ok) {
             const errorData = await response.json();
-            console.error('Error requesting ambient insights:', errorData);
+            if (process.env.NODE_ENV === 'development') {
+              console.error('Error requesting ambient insights:', errorData);
+            }
           } else {
             const data = await response.json();
-            console.log('Ambient insights requested successfully:', data);
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Ambient insights requested successfully:', data);
+            }
           }
         } catch (error) {
-          console.error('Exception requesting ambient insights:', error);
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Exception requesting ambient insights:', error);
+          }
         } finally {
           setIsRequestingInsights(false);
         }
       }
     };
-    
     requestNewInsights();
   }, [userId, convexInsights, isRequestingInsights]);
 

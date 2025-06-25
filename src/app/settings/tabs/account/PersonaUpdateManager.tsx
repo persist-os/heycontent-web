@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { usePersonaManager } from '../../../dashboard/chat/hooks/usePersonaData';
+import { useOptimizedPersonaManager } from '@/store/persona-store';
 import { PersonaData } from '../../../dashboard/chat/types';
 import { Edit2, Plus } from 'lucide-react';
 import { PersonaEditForm } from './PersonaEditForm';
@@ -13,12 +13,25 @@ interface PersonaUpdateManagerProps {
 }
 
 export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ userId, renderNewPersonaButton }) => {
+  console.log('🎨 [PERSONA UPDATE MANAGER] Component rendering for userId:', userId, 'at:', new Date().toISOString());
+  const renderStartTime = performance.now();
+  
   const {
     currentPersona,
     isLoading,
     hasPersona,
     updatePersona,
-  } = usePersonaManager(userId);
+  } = useOptimizedPersonaManager(userId);
+
+  const managerDataTime = performance.now();
+  console.log('🎨 [PERSONA UPDATE MANAGER] Data retrieved in:', Math.round(managerDataTime - renderStartTime), 'ms');
+  console.log('🎨 [PERSONA UPDATE MANAGER] Component state:', {
+    hasCurrentPersona: !!currentPersona,
+    isLoading,
+    hasPersona,
+    userId,
+    timestamp: new Date().toISOString()
+  });
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedPersona, setEditedPersona] = useState<PersonaData | null>(null);
