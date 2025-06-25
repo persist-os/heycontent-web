@@ -72,7 +72,7 @@ export function NotesGrid({
   // Note type configurations with colors - matching exact schema types
   const noteTypes = [
     { key: 'all', label: 'All Items', color: 'bg-gray-500' },
-    { key: 'projects', label: 'Projects Only', color: 'bg-blue-500' },
+    { key: 'projects', label: 'Projects', color: 'bg-blue-500' },
     { key: 'task_checklist', label: 'To-Do List', color: 'bg-yellow-500' },
     { key: 'collaboration_note', label: 'Collaboration', color: 'bg-green-500' },
     { key: 'reflection_journal', label: 'Journal', color: 'bg-blue-500' },

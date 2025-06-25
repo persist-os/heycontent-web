@@ -14,7 +14,7 @@ import { getApiKey } from '@/app/lib/api-helpers'
 const navItems = [
   {
     id: 'chat',
-    label: 'Chat',
+    label: 'Chat with Content',
     icon: BarChart3,
     href: '/dashboard/chat',
   },
