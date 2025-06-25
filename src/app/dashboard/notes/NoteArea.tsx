@@ -298,7 +298,7 @@ export function NoteArea({
         <div className="relative">
           <Image size={20} />
           {note.images && note.images.length > 0 && (
-            <span className="absolute -top-2 -right-2 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center font-medium">
+            <span className="absolute -top-5 -right-5 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center font-medium shadow-md">
               {note.images.length}
             </span>
           )}
