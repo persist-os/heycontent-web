@@ -181,6 +181,7 @@ export function ImageGalleryModal({ isOpen, noteId, images, onClose }: ImageGall
             onDragLeave={handleDragLeave}
           >
             <input
+              title="Upload images"
               ref={fileInputRef}
               type="file"
               accept="image/*"
