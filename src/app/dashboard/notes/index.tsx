@@ -153,6 +153,37 @@ export default function SmartNotes() {
     navigateToNote(noteId, true); // From a link, so add to navigation stack
   };
 
+  // Handle content linking (YouTube, Instagram, etc.)
+  const handleLinkContent = (prefixedId: string) => {
+    console.log('handleLinkContent called:', {
+      prefixedId,
+      currentActiveNoteId: activeNoteId,
+      currentStack: navigationStack
+    });
+    
+    // Parse the prefixed ID to determine the content type
+    const [contentType, contentId] = prefixedId.split(':', 2);
+    
+    switch (contentType) {
+      case 'note':
+        // Handle note linking (existing functionality)
+        handleLinkNote(contentId);
+        break;
+      case 'youtube':
+        // For now, just log - could open YouTube video in new tab or modal
+        console.log('YouTube video linked:', contentId);
+        // TODO: Implement YouTube video viewing
+        break;
+      case 'instagram':
+        // For now, just log - could open Instagram post in new tab or modal
+        console.log('Instagram post linked:', contentId);
+        // TODO: Implement Instagram post viewing
+        break;
+      default:
+        console.warn('Unknown content type:', contentType);
+    }
+  };
+
   // Prepare available notes for linking (exclude current note)
   const availableNotes = notes
     .filter(note => String(note._id) !== activeNoteId)
@@ -201,6 +232,7 @@ export default function SmartNotes() {
           isMobile={true} // Always show back button in this context
           availableNotes={availableNotes}
           onLinkNote={handleLinkNote}
+          onLinkContent={handleLinkContent}
           canGoBack={canGoBack}
           onNavigateBack={navigateBack}
           navigationStack={navigationStack}

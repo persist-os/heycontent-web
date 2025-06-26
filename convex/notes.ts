@@ -305,3 +305,385 @@ export const getNote = query({
     }
   },
 });
+
+// Get content by prefixed ID (supports note:, youtube:, instagram: prefixes)
+export const getContentByPrefixedId = query({
+  args: { 
+    prefixedId: v.string(),
+    userId: v.string() 
+  },
+  handler: async (ctx, args) => {
+    const { prefixedId, userId } = args;
+    
+    // Parse the prefixed ID
+    const [contentType, contentId] = prefixedId.split(':', 2);
+    
+    if (!contentType || !contentId) {
+      throw new Error("Invalid prefixed ID format. Expected format: type:id");
+    }
+    
+    switch (contentType) {
+      case 'note':
+        // Get note by Convex ID
+        const note = await ctx.db.get(contentId as Id<"notes">);
+        if (note && note.userId === userId) {
+          return {
+            type: 'note',
+            id: prefixedId,
+            title: note.title,
+            content: note.content,
+            contentType: note.type,
+            createdAt: note.createdAt,
+            updatedAt: note.updatedAt,
+            platform: note.platform,
+            tags: note.tags,
+            important: note.important,
+            analysis: note.analysis
+          };
+        }
+        break;
+        
+      case 'youtube':
+        // Get YouTube video by videoId
+        const video = await ctx.db
+          .query("youtubeVideos")
+          .withIndex("by_videoId", (q) => q.eq("videoId", contentId))
+          .filter((q) => q.eq(q.field("userId"), userId))
+          .first();
+          
+        if (video) {
+          return {
+            type: 'youtube',
+            id: prefixedId,
+            title: video.snippet?.title || 'Untitled Video',
+            content: video.snippet?.description || '',
+            contentType: 'video',
+            createdAt: video.createdAt || Date.now(),
+            updatedAt: video.updatedAt || Date.now(),
+            platform: 'youtube',
+            tags: video.snippet?.tags || [],
+            important: false,
+            analysis: video.analysis,
+            videoId: video.videoId,
+            url: video.url,
+            thumbnailUrl: video.snippet?.thumbnails?.high || video.snippet?.thumbnails?.medium || '',
+            statistics: {
+              views: video.statistics?.views ? Number(video.statistics.views) : 0,
+              likes: video.statistics?.likes ? Number(video.statistics.likes) : 0,
+              dislikes: video.statistics?.dislikes ? Number(video.statistics.dislikes) : 0,
+              comments: video.statistics?.comments ? Number(video.statistics.comments) : 0
+            }
+          };
+        }
+        break;
+        
+      case 'instagram':
+        // Get Instagram post by postId
+        const post = await ctx.db
+          .query("instagramPosts")
+          .withIndex("by_postId", (q) => q.eq("postId", contentId))
+          .filter((q) => q.eq(q.field("userId"), userId))
+          .first();
+          
+        if (post) {
+          return {
+            type: 'instagram',
+            id: prefixedId,
+            title: post.data.caption?.slice(0, 100) || 'Instagram Post',
+            content: post.data.caption || '',
+            contentType: post.mediaType.toLowerCase(),
+            createdAt: post.createdAt || (post.data.timestamp ? post.data.timestamp * 1000 : Date.now()),
+            updatedAt: post.updatedAt,
+            platform: 'instagram',
+            tags: [],
+            important: false,
+            analysis: post.analysis,
+            postId: post.postId,
+            mediaUrl: post.data.media_url,
+            permalink: post.data.permalink,
+            insights: post.data.insights ? {
+              impressions: post.data.insights.impressions || 0,
+              reach: post.data.insights.reach || 0,
+              likes: post.data.insights.likes || 0,
+              comments: post.data.insights.comments || 0,
+              saved: post.data.insights.saved || 0,
+              shares: post.data.insights.shares || 0
+            } : null
+          };
+        }
+        break;
+        
+      default:
+        throw new Error(`Unsupported content type: ${contentType}`);
+    }
+    
+    return null; // Content not found
+  },
+});
+
+// Get content by platform type
+export const getContentByPlatform = query({
+  args: { 
+    userId: v.string(),
+    platform: v.union(
+      v.literal("smart-notes"),
+      v.literal("youtube"), 
+      v.literal("instagram")
+    )
+  },
+  returns: v.array(v.object({
+    id: v.string(),
+    title: v.string(),
+    type: v.union(v.literal("note"), v.literal("youtube"), v.literal("instagram")),
+    contentType: v.string(),
+    platform: v.string(),
+    createdAt: v.number(),
+    important: v.boolean(),
+    tags: v.array(v.string()),
+    analysis: v.optional(v.any()),
+    thumbnailUrl: v.optional(v.string()),
+    statistics: v.optional(v.any()),
+    mediaUrl: v.optional(v.string()),
+    insights: v.optional(v.any())
+  })),
+  handler: async (ctx, args) => {
+    const { userId, platform } = args;
+    
+    try {
+      // Validate input
+      if (!userId || userId.trim() === '') {
+        console.warn('getContentByPlatform: Empty userId provided');
+        return [];
+      }
+
+      switch (platform) {
+        case 'smart-notes':
+          const notes = await ctx.db
+            .query("notes")
+            .withIndex("by_user", (q) => q.eq("userId", userId))
+            .collect();
+            
+          return notes.map(note => ({
+            id: `note:${note._id}`,
+            title: note.title || 'Untitled Note',
+            type: 'note' as const,
+            contentType: note.type || 'idea_bank',
+            platform: 'smart-notes',
+            createdAt: note.createdAt || Date.now(),
+            important: note.important || false,
+            tags: note.tags || [],
+            analysis: note.analysis
+          }));
+          
+        case 'youtube':
+          const videos = await ctx.db
+            .query("youtubeVideos")
+            .withIndex("by_userId", (q) => q.eq("userId", userId))
+            .collect();
+            
+          return videos.map(video => ({
+            id: `youtube:${video.videoId}`,
+            title: video.snippet?.title || 'Untitled Video',
+            type: 'youtube' as const,
+            contentType: 'video',
+            platform: 'youtube',
+            createdAt: video.createdAt || Date.now(),
+            important: false,
+            tags: video.snippet?.tags || [],
+            analysis: video.analysis,
+            thumbnailUrl: video.snippet?.thumbnails?.high || video.snippet?.thumbnails?.medium || '',
+            statistics: {
+              views: video.statistics?.views ? Number(video.statistics.views) : 0,
+              likes: video.statistics?.likes ? Number(video.statistics.likes) : 0,
+              dislikes: video.statistics?.dislikes ? Number(video.statistics.dislikes) : 0,
+              comments: video.statistics?.comments ? Number(video.statistics.comments) : 0
+            }
+          }));
+          
+        case 'instagram':
+          const posts = await ctx.db
+            .query("instagramPosts")
+            .withIndex("by_userId", (q) => q.eq("userId", userId))
+            .collect();
+            
+          return posts.map(post => ({
+            id: `instagram:${post.postId}`,
+            title: post.data?.caption?.slice(0, 100) || 'Instagram Post',
+            type: 'instagram' as const,
+            contentType: post.mediaType?.toLowerCase() || 'image',
+            platform: 'instagram',
+            createdAt: post.createdAt || (post.data?.timestamp ? post.data.timestamp * 1000 : Date.now()),
+            important: false,
+            tags: [],
+            analysis: post.analysis,
+            mediaUrl: post.data?.media_url || '',
+            insights: post.data?.insights ? {
+              impressions: post.data.insights.impressions || 0,
+              reach: post.data.insights.reach || 0,
+              likes: post.data.insights.likes || 0,
+              comments: post.data.insights.comments || 0,
+              saved: post.data.insights.saved || 0,
+              shares: post.data.insights.shares || 0
+            } : null
+          }));
+          
+        default:
+          return [];
+      }
+    } catch (error) {
+      console.error('Error in getContentByPlatform:', error);
+      // Return empty array instead of throwing to prevent client crashes
+      return [];
+    }
+  },
+});
+
+// Get all available content for linking (notes, YouTube videos, Instagram posts)
+export const getAllLinkableContent = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    console.log('=== getAllLinkableContent START ===');
+    console.log('Input userId:', args.userId);
+    console.log('Input type:', typeof args.userId);
+    
+    try {
+      // Validate input
+      if (!args.userId || args.userId.trim() === '') {
+        console.warn('getAllLinkableContent: Empty userId provided');
+        return [];
+      }
+
+      console.log('Starting database queries...');
+      
+      // Query notes
+      console.log('Querying notes...');
+      let notes;
+      try {
+        notes = await ctx.db
+          .query("notes")
+          .withIndex("by_user", (q) => q.eq("userId", args.userId))
+          .collect();
+        console.log('Notes query successful, count:', notes.length);
+      } catch (notesError) {
+        console.error('Error querying notes:', notesError);
+        notes = [];
+      }
+      
+      // Query YouTube videos
+      console.log('Querying YouTube videos...');
+      let videos;
+      try {
+        videos = await ctx.db
+          .query("youtubeVideos")
+          .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+          .collect();
+        console.log('YouTube videos query successful, count:', videos.length);
+      } catch (videosError) {
+        console.error('Error querying YouTube videos:', videosError);
+        videos = [];
+      }
+      
+      // Query Instagram posts
+      console.log('Querying Instagram posts...');
+      let posts;
+      try {
+        posts = await ctx.db
+          .query("instagramPosts")
+          .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+          .collect();
+        console.log('Instagram posts query successful, count:', posts.length);
+      } catch (postsError) {
+        console.error('Error querying Instagram posts:', postsError);
+        posts = [];
+      }
+      
+      console.log('All database queries completed');
+      console.log('Transforming data...');
+      
+      // Transform into unified format
+      const linkableContent = [
+        // Transform notes
+        ...notes.map((note, index) => {
+          console.log(`Processing note ${index}:`, note._id);
+          return {
+            id: `note:${note._id}`,
+            title: note.title || 'Untitled Note',
+            type: 'note' as const,
+            contentType: note.type || 'idea_bank',
+            platform: note.platform || 'smart-notes',
+            createdAt: note.createdAt || Date.now(),
+            important: note.important || false,
+            tags: note.tags || [],
+            analysis: note.analysis
+          };
+        }),
+        
+        // Transform YouTube videos
+        ...videos.map((video, index) => {
+          console.log(`Processing video ${index}:`, video.videoId);
+          return {
+            id: `youtube:${video.videoId}`,
+            title: video.snippet?.title || 'Untitled Video',
+            type: 'youtube' as const,
+            contentType: 'video',
+            platform: 'youtube',
+            createdAt: video.createdAt || Date.now(),
+            important: false,
+            tags: video.snippet?.tags || [],
+            analysis: video.analysis,
+            thumbnailUrl: video.snippet?.thumbnails?.high || video.snippet?.thumbnails?.medium || '',
+            statistics: {
+              views: video.statistics?.views ? Number(video.statistics.views) : 0,
+              likes: video.statistics?.likes ? Number(video.statistics.likes) : 0,
+              dislikes: video.statistics?.dislikes ? Number(video.statistics.dislikes) : 0,
+              comments: video.statistics?.comments ? Number(video.statistics.comments) : 0
+            }
+          };
+        }),
+        
+        // Transform Instagram posts
+        ...posts.map((post, index) => {
+          console.log(`Processing post ${index}:`, post.postId);
+          return {
+            id: `instagram:${post.postId}`,
+            title: post.data?.caption?.slice(0, 100) || 'Instagram Post',
+            type: 'instagram' as const,
+            contentType: post.mediaType?.toLowerCase() || 'image',
+            platform: 'instagram',
+            createdAt: post.createdAt || (post.data?.timestamp ? post.data.timestamp * 1000 : Date.now()),
+            important: false,
+            tags: [],
+            analysis: post.analysis,
+            mediaUrl: post.data?.media_url || '',
+            insights: post.data?.insights ? {
+              impressions: post.data.insights.impressions || 0,
+              reach: post.data.insights.reach || 0,
+              likes: post.data.insights.likes || 0,
+              comments: post.data.insights.comments || 0,
+              saved: post.data.insights.saved || 0,
+              shares: post.data.insights.shares || 0
+            } : null
+          };
+        })
+      ];
+      
+      console.log('Data transformation completed');
+      console.log('Total items:', linkableContent.length);
+      
+      // Sort by creation date (newest first)
+      const sortedContent = linkableContent.sort((a, b) => b.createdAt - a.createdAt);
+      console.log('Sorting completed');
+      
+      console.log('=== getAllLinkableContent SUCCESS ===');
+      return sortedContent;
+    } catch (error) {
+      console.error('=== getAllLinkableContent ERROR ===');
+      console.error('Error type:', typeof error);
+      console.error('Error message:', error instanceof Error ? error.message : String(error));
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      console.error('Full error object:', error);
+      // Return empty array instead of throwing to prevent client crashes
+      return [];
+    }
+  },
+});

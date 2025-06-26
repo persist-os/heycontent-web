@@ -23,6 +23,7 @@ interface NoteAreaProps {
   isMobile: boolean;
   availableNotes?: Array<{ _id: string; title: string; type: string }>;
   onLinkNote?: (noteId: string) => void;
+  onLinkContent?: (prefixedId: string) => void;
   // Navigation stack props
   canGoBack?: boolean;
   onNavigateBack?: () => void;
@@ -38,6 +39,7 @@ export function NoteArea({
   isMobile,
   availableNotes = [],
   onLinkNote,
+  onLinkContent,
   // Navigation stack props
   canGoBack,
   onNavigateBack,
@@ -335,6 +337,7 @@ export function NoteArea({
           noteType={note.type}
           availableNotes={availableNotes}
           onLinkNote={handleLinkNote}
+          onLinkContent={onLinkContent}
           className="h-full border-0"
         />
       </div>

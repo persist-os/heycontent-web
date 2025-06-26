@@ -1,16 +1,19 @@
 "use client";
 import React, { useMemo } from 'react';
+import { LinkedContentRenderer } from './LinkedContentRenderer';
 
 interface NoteContentRendererProps {
   content: string;
   availableNotes?: Array<{ _id: string; title: string; type: string }>;
   onLinkNote?: (noteId: string) => void;
+  onLinkContent?: (prefixedId: string) => void;
 }
 
 export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
   content,
   availableNotes = [],
-  onLinkNote
+  onLinkNote,
+  onLinkContent
 }) => {
   // Parse content and render note links with titles - handles @[noteId]@ format
   const renderedContent = useMemo(() => {
@@ -47,57 +50,119 @@ export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
         break;
       }
 
-      // Extract the note ID
-      const noteId = afterLinkStart.substring(0, linkEndIndex).trim();
+      // Extract the content ID
+      const contentId = afterLinkStart.substring(0, linkEndIndex).trim();
       
-      console.log('NoteContentRenderer: Looking for note with ID:', noteId);
-      console.log('Available notes:', availableNotes.map(n => ({ id: n._id, title: n.title })));
+      console.log('NoteContentRenderer: Looking for content with ID:', contentId);
       
-      // Find the note by ID (try both string comparison and exact match)
-      const linkedNote = availableNotes.find(note => 
-        String(note._id) === String(noteId) || note._id === noteId
-      );
-      
-      console.log('Found linked note:', linkedNote);
-      
-      if (linkedNote) {
-        // Render as clickable note link
-        if (onLinkNote) {
-          parts.push(
-            <button
-              key={`link-${partIndex}-${linkStartIndex}`}
-              onClick={(e) => {
-                e.preventDefault();
-                console.log('🔗 Note link clicked:', { noteId: linkedNote._id, title: linkedNote.title });
-                onLinkNote(linkedNote._id);
-              }}
-              className="text-blue-600 hover:text-blue-800 underline bg-transparent border-none p-0 m-0 cursor-pointer font-inherit text-inherit font-medium"
-              type="button"
-            >
-              {linkedNote.title}
-            </button>
+      // Check if it's a prefixed ID (youtube:, instagram:, etc.)
+      if (contentId.includes(':')) {
+        const [contentType, id] = contentId.split(':', 2);
+        
+        if (contentType === 'note') {
+          // Handle note linking (existing functionality)
+          const linkedNote = availableNotes.find(note => 
+            String(note._id) === String(id) || note._id === id
           );
+          
+          console.log('Found linked note:', linkedNote);
+          
+          if (linkedNote) {
+            // Render as clickable note link
+            if (onLinkNote) {
+              parts.push(
+                <button
+                  key={`link-${partIndex}-${linkStartIndex}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    console.log('🔗 Note link clicked:', { noteId: linkedNote._id, title: linkedNote.title });
+                    onLinkNote(linkedNote._id);
+                  }}
+                  className="text-blue-600 hover:text-blue-800 underline bg-transparent border-none p-0 m-0 cursor-pointer font-inherit text-inherit font-medium"
+                  type="button"
+                >
+                  {linkedNote.title}
+                </button>
+              );
+            } else {
+              // Fallback to non-clickable if no onLinkNote callback
+              parts.push(
+                <span
+                  key={`link-${partIndex}-${linkStartIndex}`}
+                  className="font-medium underline"
+                >
+                  {linkedNote.title}
+                </span>
+              );
+            }
+          } else {
+            // Note not found, show missing note indicator
+            parts.push(
+              <span
+                key={`unknown-link-${partIndex}-${linkStartIndex}`}
+                className="text-red-500 italic"
+              >
+                [Missing Note]
+              </span>
+            );
+          }
         } else {
-          // Fallback to non-clickable if no onLinkNote callback
+          // Handle other content types (youtube, instagram, etc.)
           parts.push(
-            <span
-              key={`link-${partIndex}-${linkStartIndex}`}
-              className="font-medium underline"
-            >
-              {linkedNote.title}
-            </span>
+            <LinkedContentRenderer
+              key={`content-link-${partIndex}-${linkStartIndex}`}
+              prefixedId={contentId}
+              onLinkContent={onLinkContent}
+            />
           );
         }
       } else {
-        // Note not found, show missing note indicator
-        parts.push(
-          <span
-            key={`unknown-link-${partIndex}-${linkStartIndex}`}
-            className="text-red-500 italic"
-          >
-            [Missing Note]
-          </span>
+        // Legacy note ID format (no prefix)
+        const linkedNote = availableNotes.find(note => 
+          String(note._id) === String(contentId) || note._id === contentId
         );
+        
+        console.log('Found linked note (legacy):', linkedNote);
+        
+        if (linkedNote) {
+          // Render as clickable note link
+          if (onLinkNote) {
+            parts.push(
+              <button
+                key={`link-${partIndex}-${linkStartIndex}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  console.log('🔗 Note link clicked:', { noteId: linkedNote._id, title: linkedNote.title });
+                  onLinkNote(linkedNote._id);
+                }}
+                className="text-blue-600 hover:text-blue-800 underline bg-transparent border-none p-0 m-0 cursor-pointer font-inherit text-inherit font-medium"
+                type="button"
+              >
+                {linkedNote.title}
+              </button>
+            );
+          } else {
+            // Fallback to non-clickable if no onLinkNote callback
+            parts.push(
+              <span
+                key={`link-${partIndex}-${linkStartIndex}`}
+                className="font-medium underline"
+              >
+                {linkedNote.title}
+              </span>
+            );
+          }
+        } else {
+          // Note not found, show missing note indicator
+          parts.push(
+            <span
+              key={`unknown-link-${partIndex}-${linkStartIndex}`}
+              className="text-red-500 italic"
+            >
+              [Missing Note]
+            </span>
+          );
+        }
       }
 
       // Move past this link
@@ -106,7 +171,7 @@ export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
     }
 
     return parts;
-  }, [content, availableNotes]);
+  }, [content, availableNotes, onLinkNote, onLinkContent]);
 
   return (
     <>

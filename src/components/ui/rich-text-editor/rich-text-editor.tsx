@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef, useCallback, forwardRef } from 'rea
 import { InlineCommandPalette } from '@/app/dashboard/notes/components/InlineCommandPalette'
 import { MarkdownRenderer } from '@/app/dashboard/chat/markdown-renderer'
 import { NoteContentRenderer } from '@/app/dashboard/notes/components/NoteContentRenderer'
+import { EnhancedContentSelector } from '@/app/dashboard/notes/components/EnhancedContentSelector'
+import { LinkedContentRenderer } from '@/app/dashboard/notes/components/LinkedContentRenderer'
 import { Eye, Edit } from 'lucide-react'
 
 // Import utilities
@@ -42,9 +44,10 @@ interface RichTextEditorProps {
   tags?: string[]
   userId?: string
   noteType?: string
-  // Note linking
+  // Content linking
   availableNotes?: Array<{ _id: string; title: string; type: string }>
   onLinkNote?: (noteId: string) => void
+  onLinkContent?: (prefixedId: string) => void // New handler for prefixed content IDs
   // --- NEW: Optional container ref for palette positioning ---
   containerRef?: React.RefObject<HTMLElement>
 }
@@ -68,14 +71,17 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
   noteType = 'idea_bank',
   availableNotes = [],
   onLinkNote,
+  onLinkContent,
   containerRef,
   ...rest
 }, ref) => {
   const [localShowPreview, setLocalShowPreview] = useState(true)
   const [showCommandPalette, setShowCommandPalette] = useState(false)
+  const [showEnhancedContentSelector, setShowEnhancedContentSelector] = useState(false)
   const [palettePosition, setPalettePosition] = useState({ top: 100, left: 100 })
   const [paletteMode, setPaletteMode] = useState<'commands' | 'notes'>('commands')
   const [cursorPosition, setCursorPosition] = useState(0)
+  const [contentSearchTerm, setContentSearchTerm] = useState('')
   
   const textAreaRef = useRef<HTMLTextAreaElement>(null)
   
@@ -154,34 +160,79 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
         break
       }
 
-      // Extract the note ID
-      const noteId = afterLinkStart.substring(0, linkEndIndex).trim()
-      // Only match by ID
-      const linkedNote = availableNotes.find(note => String(note._id) === String(noteId))
+      // Extract the content ID
+      const contentId = afterLinkStart.substring(0, linkEndIndex).trim()
       
-      if (linkedNote) {
-        // Render as embedded note link component
-        parts.push(
-          <NoteLinkCard
-            key={`note-link-${partIndex}-${linkStartIndex}`}
-            note={linkedNote}
-            onClick={() => {
-              if (onLinkNote) {
-                onLinkNote(linkedNote._id)
-              }
-            }}
-          />
-        )
+      // Check if it's a prefixed ID (youtube:, instagram:, etc.)
+      if (contentId.includes(':')) {
+        const [contentType, id] = contentId.split(':', 2)
+        
+        if (contentType === 'note') {
+          // Handle note linking (existing functionality)
+          const linkedNote = availableNotes.find(note => String(note._id) === String(id))
+          
+          if (linkedNote) {
+            // Render as embedded note link component
+            parts.push(
+              <NoteLinkCard
+                key={`note-link-${partIndex}-${linkStartIndex}`}
+                note={linkedNote}
+                onClick={() => {
+                  if (onLinkNote) {
+                    onLinkNote(linkedNote._id)
+                  }
+                }}
+              />
+            )
+          } else {
+            // Note not found, show missing note badge
+            parts.push(
+              <span
+                key={`missing-note-${partIndex}-${linkStartIndex}`}
+                className="inline-flex items-center gap-1 px-2 py-1 mx-1 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-red-700 dark:text-red-300 text-xs"
+              >
+                ⚠️ Missing Note: {id}
+              </span>
+            )
+          }
+        } else {
+          // Handle other content types (youtube, instagram, etc.)
+          parts.push(
+            <LinkedContentRenderer
+              key={`content-link-${partIndex}-${linkStartIndex}`}
+              prefixedId={contentId}
+              onLinkContent={onLinkContent}
+            />
+          )
+        }
       } else {
-        // Note not found, show missing note badge
-        parts.push(
-          <span
-            key={`missing-note-${partIndex}-${linkStartIndex}`}
-            className="inline-flex items-center gap-1 px-2 py-1 mx-1 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-red-700 dark:text-red-300 text-xs"
-          >
-            ⚠️ Missing Note: {noteId}
-          </span>
-        )
+        // Legacy note ID format (no prefix)
+        const linkedNote = availableNotes.find(note => String(note._id) === String(contentId))
+        
+        if (linkedNote) {
+          // Render as embedded note link component
+          parts.push(
+            <NoteLinkCard
+              key={`note-link-${partIndex}-${linkStartIndex}`}
+              note={linkedNote}
+              onClick={() => {
+                if (onLinkNote) {
+                  onLinkNote(linkedNote._id)
+                }
+              }}
+            />
+          )
+        } else {
+          // Note not found, show missing note badge
+          parts.push(
+            <span
+              key={`missing-note-${partIndex}-${linkStartIndex}`}
+              className="inline-flex items-center gap-1 px-2 py-1 mx-1 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-red-700 dark:text-red-300 text-xs"
+            >
+              ⚠️ Missing Note: {contentId}
+            </span>
+          )
+        }
       }
 
       // Move past this link
@@ -190,7 +241,7 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
     }
 
     return parts
-  }, [availableNotes, onLinkNote])
+  }, [availableNotes, onLinkNote, onLinkContent])
 
   // Function to convert note IDs to titles for display in edit mode
   const getDisplayContent = useCallback((rawContent: string) => {
@@ -363,6 +414,79 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
     }
   }, [content, onContentChange, availableNotes])
 
+  // Handle content linking
+  const handleLinkContent = useCallback((prefixedId: string) => {
+    console.log('🔗 handleLinkContent called with prefixedId:', prefixedId)
+    
+    if (!textAreaRef.current) {
+      console.log('❌ No textarea available')
+      return
+    }
+
+    // Close the selector immediately
+    setShowEnhancedContentSelector(false)
+
+    const textarea = textAreaRef.current
+    const cursorPos = textarea.selectionStart
+    const displayContent = getDisplayContent(content)
+    const beforeCursor = displayContent.substring(0, cursorPos)
+    
+    // Look for @ symbol by checking backwards
+    let atPosition = -1
+    for (let i = cursorPos - 1; i >= Math.max(0, cursorPos - 20); i--) {
+      if (beforeCursor[i] === '@') {
+        atPosition = i
+        console.log('📍 Found @ at position:', atPosition)
+        break
+      }
+      // Stop if we hit whitespace or newline
+      if (beforeCursor[i] === ' ' || beforeCursor[i] === '\n') {
+        console.log('📍 Hit whitespace, stopping search')
+        break
+      }
+    }
+    
+    const linkText = `@[${prefixedId}]@`
+    
+    if (atPosition !== -1) {
+      // Replace @ and any typed text with content link
+      const beforeAt = displayContent.substring(0, atPosition)
+      const afterCursor = displayContent.substring(cursorPos)
+      const newDisplayContent = beforeAt + linkText + afterCursor
+      const newCursorPos = atPosition + linkText.length
+      
+      // Convert back to storage format and save
+      const newStorageContent = getStorageContent(newDisplayContent)
+      onContentChange(newStorageContent)
+      
+      // Set cursor position after the link
+      setTimeout(() => {
+        textarea.setSelectionRange(newCursorPos, newCursorPos)
+        textarea.focus()
+      }, 0)
+      
+      console.log('🔄 Replaced @ and text with content link')
+    } else {
+      // No @ found, just insert the content link
+      const beforeCursor = displayContent.substring(0, cursorPos)
+      const afterCursor = displayContent.substring(cursorPos)
+      const newDisplayContent = beforeCursor + linkText + afterCursor
+      const newCursorPos = cursorPos + linkText.length
+      
+      // Convert back to storage format and save
+      const newStorageContent = getStorageContent(newDisplayContent)
+      onContentChange(newStorageContent)
+      
+      // Set cursor position after the link
+      setTimeout(() => {
+        textarea.setSelectionRange(newCursorPos, newCursorPos)
+        textarea.focus()
+      }, 0)
+      
+      console.log('➕ Inserted content link at cursor')
+    }
+  }, [content, onContentChange, getDisplayContent, getStorageContent])
+
   // Handle keyboard shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Cmd/Ctrl + K to open inline command palette
@@ -426,8 +550,8 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
         if (textAreaRef.current) {
           const coords = getCursorCoordinates(textAreaRef, containerRef)
           setPalettePosition(coords)
-          setPaletteMode('notes')
-          setShowCommandPalette(true)
+          setShowEnhancedContentSelector(true)
+          setShowCommandPalette(false)
         }
       }, 10) // Slightly longer delay to ensure @ is typed and cursor updated
       return
@@ -442,8 +566,8 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
     }
   }, [content, showCommandPalette, onContentChange, containerRef])
 
-  // Handle content changes
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  // Handle content changes from typing
+  const handleContentChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const displayContent = e.target.value
     const newCursorPosition = e.target.selectionStart
     
@@ -517,7 +641,7 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
         <textarea
           ref={textAreaRef}
           value={getDisplayContent(content)}
-          onChange={handleChange}
+          onChange={handleContentChange}
           onKeyDown={handleKeyDown}
           className="w-full h-full min-h-[300px] resize-none p-4 text-base leading-relaxed bg-background text-foreground placeholder:text-muted-foreground/50 border-0 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 transition-all duration-200 rounded-md transform-gpu will-change-contents"
           placeholder={`${placeholder}
@@ -549,6 +673,17 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
         availableNotes={availableNotes}
         currentNoteId={noteId}
         showNoteLinks={paletteMode === 'notes'}
+      />
+
+      {/* Enhanced Content Selector */}
+      <EnhancedContentSelector
+        isOpen={showEnhancedContentSelector}
+        onClose={() => setShowEnhancedContentSelector(false)}
+        onSelect={handleLinkContent}
+        position={palettePosition}
+        searchTerm={contentSearchTerm}
+        onSearchChange={setContentSearchTerm}
+        excludeContentId={noteId ? `note:${noteId}` : undefined}
       />
     </div>
   )
