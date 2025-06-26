@@ -7,6 +7,8 @@ import { ReflectionCard } from './ReflectionCard';
 import { TipsCard } from './TipsCard';
 import { CollaborationCard } from './CollaborationCard';
 import { BaseCard } from './BaseCard';
+import { useDraggable } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 
 interface NoteCardProps {
   note: Note;
@@ -15,6 +17,8 @@ interface NoteCardProps {
   onDelete?: (noteId: string) => void;
   onToggleImportant?: (noteId: string) => void;
   onUpdate?: (noteId: string, updates: any) => void;
+  isDraggable?: boolean;
+  isOverlay?: boolean;
 }
 
 export function NoteCard({ 
@@ -23,8 +27,30 @@ export function NoteCard({
   onEdit, 
   onDelete, 
   onToggleImportant, 
-  onUpdate 
+  onUpdate,
+  isDraggable = false,
+  isOverlay = false
 }: NoteCardProps) {
+  // Set up draggable functionality
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: String(note._id),
+    data: {
+      type: 'note',
+      note,
+    },
+    disabled: !isDraggable || isOverlay,
+  });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+  };
+
   // Determine card type based on note properties and content
   // Priority: Convex note type first, then content-based detection
   const getCardType = (): 'todo' | 'content' | 'analytics' | 'reflection' | 'tips' | 'collaboration' | 'default' => {
@@ -153,82 +179,85 @@ export function NoteCard({
 
   const cardType = getCardType();
 
-  switch (cardType) {
-    case 'todo':
-      return (
-        <TodoCard
-          note={note}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onToggleImportant={onToggleImportant}
-          onUpdate={onUpdate}
-        />
-      );
+  const renderCard = () => {
+    const commonProps = {
+      note,
+      availableNotes,
+      onEdit,
+      onDelete,
+      onToggleImportant,
+      onUpdate,
+      isDragging: isDraggable && isDragging,
+      isOverlay,
+    };
 
-    case 'content':
-      return (
-        <ContentCard
-          note={note}
-          availableNotes={availableNotes}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onToggleImportant={onToggleImportant}
-        />
-      );
+    switch (cardType) {
+      case 'todo':
+        return (
+          <TodoCard
+            {...commonProps}
+          />
+        );
 
-    case 'analytics':
-      return (
-        <AnalyticsCard
-          note={note}
-          availableNotes={availableNotes}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onToggleImportant={onToggleImportant}
-        />
-      );
+      case 'content':
+        return (
+          <ContentCard
+            {...commonProps}
+          />
+        );
 
-    case 'collaboration':
-      return (
-        <CollaborationCard
-          note={note}
-          availableNotes={availableNotes}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onToggleImportant={onToggleImportant}
-        />
-      );
+      case 'analytics':
+        return (
+          <AnalyticsCard
+            {...commonProps}
+          />
+        );
 
-    case 'reflection':
-      return (
-        <ReflectionCard
-          note={note}
-          availableNotes={availableNotes}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onToggleImportant={onToggleImportant}
-        />
-      );
+      case 'collaboration':
+        return (
+          <CollaborationCard
+            {...commonProps}
+          />
+        );
 
-    case 'tips':
-      return (
-        <TipsCard
-          note={note}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onToggleImportant={onToggleImportant}
-        />
-      );
+      case 'reflection':
+        return (
+          <ReflectionCard
+            {...commonProps}
+          />
+        );
 
-    default:
-      // This should never be reached since we default to 'content' type
-      return (
-        <ContentCard
-          note={note}
-          availableNotes={availableNotes}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onToggleImportant={onToggleImportant}
-        />
-      );
+      case 'tips':
+        return (
+          <TipsCard
+            {...commonProps}
+          />
+        );
+
+      default:
+        return (
+          <ContentCard
+            {...commonProps}
+          />
+        );
+    }
+  };
+
+  // If draggable, wrap with draggable functionality
+  if (isDraggable && !isOverlay) {
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...listeners}
+        {...attributes}
+        className={isDragging ? 'opacity-50 cursor-grabbing' : 'cursor-grab'}
+      >
+        {renderCard()}
+      </div>
+    );
   }
+
+  // For overlay or non-draggable cards, render directly
+  return renderCard();
 }
