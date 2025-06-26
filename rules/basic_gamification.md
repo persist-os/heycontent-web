@@ -117,21 +117,11 @@
 **Enhanced Analytics**:
 
 - **Historical trend analysis** (beyond 30 days): 100 points
-- **Cross-platform content remix suggestions**: 150 points
+- **Cross-platform content remix suggestions**: 100 points
 
 **Advanced AI Features**:
 
 - **Multi-note AI analysis**: 125 points
-- **Advanced content templates**: 100 points
-- **AI content calendar generation**: 200 points
-- **Extended chat context** (20+ messages): 100 points
-
-**Project & Organization**:
-
-- **Premium project templates**: 75 points
-- **Advanced export options**: 100 points
-- **Team collaboration features**: 250 points/month
-- **Custom project automation**: 300 points
 
 ### 5.3 Reward-Then-Require Strategy
 
@@ -142,7 +132,7 @@
 1. User completes "Cross-Platform Creator" achievement
 2. Automatically unlock 1 free cross-platform analysis  
 3. Show what the feature can do
-4. Subsequent uses cost 150 points
+4. Subsequent uses cost 100 points
 5. Achievement unlocks permanent 50% discount (75 points)
 
 ## 6. Implementation Schema
@@ -510,10 +500,9 @@ Instead of just "daily activity", track:
 
 **Inline Command Palette Rate Limiting:**
 
-- Maximum 10 AI commands per hour
 - Cooldown periods between identical commands (5 minutes)
 - Session-based tracking to prevent rapid-fire usage
-- No points awarded for commands used more than 3 times in 10 minutes
+- No points awarded for inline command palette.
 
 **Content Analysis Restrictions:**
 
