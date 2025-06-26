@@ -673,7 +673,6 @@ export function ContentHubScreen() {
                 setSelectedContent(null);
                 clearContentIdFromUrl();
               }}
-              onDiscussContent={() => discussContent(selectedContent)}
             />
           )}
           {selectedContent.platform === 'instagram' && (
