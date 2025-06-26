@@ -1,0 +1,112 @@
+
+Ran tool
+Here’s a detailed audit of **all usages of date range calculations** in your timeline codebase, focusing on how `visibleDateRange` and related logic are handled. This will help you spot sources of bugs, desyncs, or volatility.
+
+---
+
+## 1. **Central State: `useTimelineStore.ts`**
+- **`visibleDateRange`** is the single source of truth for the current visible time window.
+- **`getDefaultDateRange(zoomLevel)`** returns the default range for year/month/week, always based on the current date.
+- **`setZoomLevel(level)`** resets `visibleDateRange` to the default for that zoom.
+- **`setVisibleDateRange(start, end)`** is the only way to update the range.
+
+**Potential Issue:**  
+If you want to preserve the user’s current position when zooming, you may want to center the new range on the current visible date, not always reset to “now.”
+
+---
+
+## 2. **Timeline Controls: `TimelineControls.tsx`**
+- **Navigation functions** (next/prev month, week, etc.) update `visibleDateRange` by incrementing/decrementing the start/end dates.
+- **Snap to present** uses the most recent data date or current date, and sets the range accordingly.
+- **Display formatting** always uses `visibleDateRange`.
+
+**Potential Issue:**  
+If multiple controls or effects try to update `visibleDateRange` at once, you may get race conditions or flicker.
+
+---
+
+## 3. **Timeline Scroller: `TimelineScroller.tsx`**
+- **`generatePeriodsForZoom(centerDate, zoomLevel, count)`** creates a list of periods (years/months/weeks) centered on a date.
+- **`extendPeriods`** adds more periods to the left/right for infinite scroll.
+- **`useEffect` on `visibleDateRange` and `zoomLevel`**:  
+  - If the current range isn’t covered by loaded periods, it recenters the periods around the middle of the visible range.
+- **`updateVisibleDateRange`**:  
+  - As you scroll, it sets `visibleDateRange` to the period most visible in the viewport.
+
+**Potential Issue:**  
+If the period generation or scroll logic is off, you may get constant regeneration, flicker, or the timeline “stuck” on the wrong period.
+
+---
+
+## 4. **MonthView: `MonthView.tsx`**
+- **`groupDataByDay`**:  
+  - Filters all data to only include items within `visibleDateRange`.
+- **`dayMapsByPeriod`**:  
+  - For each loaded period, groups data by day, using the period’s start/end as the range.
+- **`allDaysInPeriods`**:  
+  - Generates all days for each loaded period (not strictly tied to `visibleDateRange`, but to the periods).
+- **Rendering:**  
+  - Uses `loadedPeriods` and their start/end to determine what days to show and what data to include.
+
+**Potential Issue:**  
+If `loadedPeriods` and `visibleDateRange` get out of sync, you may see the wrong days or data.
+
+---
+
+## 5. **YearView: `YearView.tsx`**
+- **`groupDataByMonth`**:  
+  - Filters data by `visibleDateRange`.
+- **`monthMapsByPeriod`**:  
+  - For each loaded period, groups data by month, using the period’s start/end.
+- **`allMonthsInPeriods`/`allDaysInPeriods`**:  
+  - Generates months/days for each loaded period.
+- **Rendering:**  
+  - Uses `loadedPeriods` and their start/end.
+
+**Potential Issue:**  
+Same as MonthView: if `loadedPeriods` and `visibleDateRange` are not in sync, the UI may show the wrong range.
+
+---
+
+## 6. **RoadmapView: `RoadmapView.tsx`**
+- **`allDaysInRange`**:  
+  - Directly uses `visibleDateRange` to generate the list of days to display.
+- **Auto-snap effect:**  
+  - If personas exist and the current range doesn’t cover all of them, it expands `visibleDateRange` to fit.
+
+**Potential Issue:**  
+This effect can override the user’s navigation and cause the timeline to “jump” unexpectedly if new data arrives.
+
+---
+
+## 7. **General Patterns and Issues**
+
+- **Most views use `loadedPeriods` for rendering, but filter/group data by `visibleDateRange` or the period’s range.**
+- **If `loadedPeriods` and `visibleDateRange` are not tightly coupled, you can get out-of-sync UI.**
+- **Multiple components can update `visibleDateRange` (controls, scroller, effects), which can cause race conditions or flicker.**
+- **Auto-snap logic (e.g., in RoadmapView) can override user intent.**
+
+---
+
+## **Recommendations**
+
+1. **Single Source of Truth:**  
+   - Always derive what to render from `visibleDateRange`.  
+   - Make sure `loadedPeriods` always covers `visibleDateRange` (and not more).
+
+2. **Avoid Competing Updates:**  
+   - Only allow one component (ideally the scroller) to update `visibleDateRange` in response to scroll/zoom.
+   - Controls should request a new range, not set it directly.
+
+3. **Sync Periods and Range:**  
+   - When `visibleDateRange` changes, always update `loadedPeriods` to cover it (and only it, plus a small buffer for smooth scroll).
+
+4. **Remove/Refactor Auto-Snap:**  
+   - Avoid effects that override `visibleDateRange` based on data unless explicitly triggered by the user.
+
+5. **Debug Output:**  
+   - Temporarily render the current `visibleDateRange` and `loadedPeriods` in the UI to spot desyncs.
+
+---
+
+**If you want, I can propose a refactor plan or help you implement a more robust date range/period sync. Let me know how you want to proceed!**

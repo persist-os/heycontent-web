@@ -34,7 +34,7 @@ interface TimelineStore {
   isLoading: boolean;
   
   // Actions
-  setZoomLevel: (level: ZoomLevel) => void;
+  setZoomLevel: (level: ZoomLevel, centerDate?: Date) => void;
   setScrollPosition: (position: number) => void;
   setVisibleDateRange: (start: Date, end: Date) => void;
   addEvents: (events: TimelineEvent[]) => void;
@@ -72,6 +72,33 @@ const getDefaultDateRange = (zoomLevel: ZoomLevel) => {
   }
 };
 
+// Helper function to get date range for a zoom level centered on a given date
+const getDateRangeForZoomLevel = (zoomLevel: ZoomLevel, centerDate: Date) => {
+  switch (zoomLevel) {
+    case 'year':
+      return {
+        start: new Date(centerDate.getFullYear(), 0, 1),
+        end: new Date(centerDate.getFullYear(), 11, 31),
+      };
+    case 'month':
+      return {
+        start: new Date(centerDate.getFullYear(), centerDate.getMonth(), 1),
+        end: new Date(centerDate.getFullYear(), centerDate.getMonth() + 1, 0),
+      };
+    case 'week':
+      const startOfWeek = new Date(centerDate);
+      startOfWeek.setDate(centerDate.getDate() - centerDate.getDay());
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      return {
+        start: startOfWeek,
+        end: endOfWeek,
+      };
+    default:
+      return getDefaultDateRange(zoomLevel);
+  }
+};
+
 export const useTimelineStore = create<TimelineStore>((set, get) => ({
   zoomLevel: 'year',
   scrollPosition: 0,
@@ -79,13 +106,13 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
   events: [],
   isLoading: false,
 
-  setZoomLevel: (level) => {
-    const currentState = get();
-    const currentRange = currentState.visibleDateRange;
-    
-    set({ 
+  setZoomLevel: (level, centerDate) => {
+    const range = centerDate
+      ? getDateRangeForZoomLevel(level, centerDate)
+      : getDefaultDateRange(level);
+    set({
       zoomLevel: level,
-      visibleDateRange: getDefaultDateRange(level)
+      visibleDateRange: range,
     });
   },
   setScrollPosition: (position) => set({ scrollPosition: position }),

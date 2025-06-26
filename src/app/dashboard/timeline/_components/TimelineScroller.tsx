@@ -176,6 +176,8 @@ export const TimelineScroller: React.FC = () => {
   const [isExtending, setIsExtending] = useState(false);
   const isExtendingRef = useRef(false);
   const [centerDate, setCenterDate] = useState(new Date());
+  const zoomThrottleRef = useRef(0);
+  const ZOOM_THROTTLE_MS = 400; // adjust as needed
 
   // Get user ID from API key in cookies
   useEffect(() => {
@@ -323,18 +325,49 @@ export const TimelineScroller: React.FC = () => {
 
   const handleWheel = (e: React.WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
-      // Handle zoom with wheel - year -> month -> week sequence
-      const zoomSequence = ['year', 'month', 'week'];
-      const currentZoomIndex = zoomSequence.indexOf(zoomLevel);
-      
-      if (e.deltaY < 0 && currentZoomIndex < zoomSequence.length - 1) {
-        // Zoom in (year -> month -> week)
-        const nextZoom = zoomSequence[currentZoomIndex + 1];
-        useTimelineStore.getState().setZoomLevel(nextZoom as any);
-      } else if (e.deltaY > 0 && currentZoomIndex > 0) {
-        // Zoom out (week -> month -> year)
-        const nextZoom = zoomSequence[currentZoomIndex - 1];
-        useTimelineStore.getState().setZoomLevel(nextZoom as any);
+      const now = Date.now();
+      if (now - zoomThrottleRef.current < ZOOM_THROTTLE_MS) return;
+      zoomThrottleRef.current = now;
+
+      if (scrollContainerRef.current) {
+        const rect = scrollContainerRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left; // x position within the container
+        const percent = Math.max(0, Math.min(1, x / rect.width));
+        const start = visibleDateRange.start.getTime();
+        const end = visibleDateRange.end.getTime();
+        const dateUnderCursor = new Date(start + (end - start) * percent);
+
+        // Handle zoom with wheel - year -> month -> week sequence
+        const zoomSequence = ['year', 'month', 'week'];
+        const currentZoomIndex = zoomSequence.indexOf(zoomLevel);
+        let nextZoom: ZoomLevel | null = null;
+        if (e.deltaY < 0 && currentZoomIndex < zoomSequence.length - 1) {
+          nextZoom = zoomSequence[currentZoomIndex + 1] as ZoomLevel;
+        } else if (e.deltaY > 0 && currentZoomIndex > 0) {
+          nextZoom = zoomSequence[currentZoomIndex - 1] as ZoomLevel;
+        }
+        if (nextZoom) {
+          // Calculate new span for the next zoom level
+          let newSpanMs = 0;
+          if (nextZoom === 'year') {
+            const year = dateUnderCursor.getFullYear();
+            newSpanMs = new Date(year + 1, 0, 1).getTime() - new Date(year, 0, 1).getTime();
+          } else if (nextZoom === 'month') {
+            const year = dateUnderCursor.getFullYear();
+            const month = dateUnderCursor.getMonth();
+            newSpanMs = new Date(year, month + 1, 1).getTime() - new Date(year, month, 1).getTime();
+          } else if (nextZoom === 'week') {
+            newSpanMs = 7 * 24 * 60 * 60 * 1000;
+          }
+          // Set new start so dateUnderCursor is at the same percent in the new range
+          const newStartMs = dateUnderCursor.getTime() - percent * newSpanMs;
+          const newEndMs = newStartMs + newSpanMs;
+          const newStart = new Date(newStartMs);
+          const newEnd = new Date(newEndMs);
+          // Only update zoomLevel, do not reset visibleDateRange
+          useTimelineStore.getState().setZoomLevel(nextZoom); // only update zoomLevel
+          useTimelineStore.getState().setVisibleDateRange(newStart, newEnd);
+        }
       }
     } else {
       // Horizontal scroll - reduced sensitivity
