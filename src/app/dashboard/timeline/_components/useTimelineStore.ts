@@ -44,6 +44,7 @@ interface TimelineStore {
 // Helper function to get default date range for zoom level - use current dates
 const getDefaultDateRange = (zoomLevel: ZoomLevel) => {
   const now = new Date();
+  
   switch (zoomLevel) {
     case 'year':
       return {
@@ -72,28 +73,37 @@ const getDefaultDateRange = (zoomLevel: ZoomLevel) => {
   }
 };
 
-export const useTimelineStore = create<TimelineStore>((set, get) => ({
-  zoomLevel: 'year',
-  scrollPosition: 0,
-  visibleDateRange: getDefaultDateRange('year'),
-  events: [],
-  isLoading: false,
+export const useTimelineStore = create<TimelineStore>((set, get) => {
+  return {
+    zoomLevel: 'year',
+    scrollPosition: 0,
+    // Force fresh current date calculation on every store creation
+    visibleDateRange: (() => {
+      const currentDate = new Date();
+      return {
+        start: new Date(currentDate.getFullYear(), 0, 1),
+        end: new Date(currentDate.getFullYear(), 11, 31),
+      };
+    })(),
+    events: [],
+    isLoading: false,
 
-  setZoomLevel: (level) => {
-    const currentState = get();
-    const currentRange = currentState.visibleDateRange;
-    
-    set({ 
-      zoomLevel: level,
-      visibleDateRange: getDefaultDateRange(level)
-    });
-  },
-  setScrollPosition: (position) => set({ scrollPosition: position }),
-  setVisibleDateRange: (start, end) => set({ visibleDateRange: { start, end } }),
-  addEvents: (newEvents) => set((state) => ({
-    events: [...state.events, ...newEvents.filter(
-      (newEvent) => !state.events.some((existing) => existing.id === newEvent.id)
-    )],
-  })),
-  setLoading: (loading) => set({ isLoading: loading }),
-})); 
+    setZoomLevel: (level) => {
+      // Just set the zoom level without changing the visible date range
+      // The calling code (wheel zoom, buttons) will handle date range updates if needed
+      set({ 
+        zoomLevel: level
+      });
+    },
+    setScrollPosition: (position) => set({ scrollPosition: position }),
+    setVisibleDateRange: (start, end) => {
+      set({ visibleDateRange: { start, end } });
+    },
+    addEvents: (newEvents) => set((state) => ({
+      events: [...state.events, ...newEvents.filter(
+        (newEvent) => !state.events.some((existing) => existing.id === newEvent.id)
+      )],
+    })),
+    setLoading: (loading) => set({ isLoading: loading }),
+  };
+}); 
