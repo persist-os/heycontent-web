@@ -48,7 +48,11 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
   error: propError, 
   onInsightClick
 }) => {
+  // All hooks must be at the top level
   const [fetchError, setFetchError] = useState<string | null>(propError || null);
+  const [lastLoggedInsights, setLastLoggedInsights] = useState<string | null>(null);
+  const [isRequestingInsights, setIsRequestingInsights] = useState(false);
+  const requestedInsightsRef = React.useRef<string | null>(null);
 
   // Always call useQuery, passing undefined if userId is not available
   const convexInsights = useQuery(
@@ -56,42 +60,32 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
     userId ? { userId } : undefined
   );
 
-  // Render loader until userId is available
-  if (!userId) {
-    return (
-      <div className="space-y-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <InsightSkeleton key={index} />
-        ))}
-      </div>
-    );
-  }
-
-  if (process.env.NODE_ENV === 'development') {
-    console.log('AmbientInsights: Convex query result:', convexInsights);
-    console.log('AmbientInsights: Current userId:', userId);
-  }
-
-  // Map Convex data to insights format
-  const insights = useMemo<InsightWithOptionalIcon[]>(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('AmbientInsights: Mapping insights. Convex data:', convexInsights);
+  // Only log once when insights actually change, not on every render
+  useEffect(() => {
+    const insightsId = convexInsights?._id;
+    if (process.env.NODE_ENV === 'development' && insightsId && insightsId !== lastLoggedInsights && userId) {
+      console.log('AmbientInsights: New insights loaded:', {
+        id: insightsId,
+        dataCount: convexInsights?.data?.length || 0,
+        userId
+      });
+      setLastLoggedInsights(insightsId);
     }
+  }, [convexInsights?._id, userId, lastLoggedInsights]);
+
+  // Map Convex data to insights format - memoize with stable dependency
+  const insights = useMemo<InsightWithOptionalIcon[]>(() => {
     if (convexInsights && Array.isArray(convexInsights.data) && convexInsights.data.length > 0) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('AmbientInsights: Using Convex data array, length:', convexInsights.data.length);
-      }
-      return convexInsights.data.slice(0, 6).map((item: ConvexInsight) => ({
+      return convexInsights.data.slice(0, 6).map((item: ConvexInsight, index: number) => ({
         type: item.category || 'auto_generated',
         title: item.title,
         description: item.content,
         action: item.recommendation || '',
-        id: Math.random().toString()
+        id: `${convexInsights._id}-${index}` // Use stable ID based on convex data
       }));
     }
-    // Return empty array if no insights from Convex
     return [];
-  }, [convexInsights]);
+  }, [convexInsights?._id, convexInsights?.data]);
 
   // Combine prop error with fetch error
   const error = propError || fetchError;
@@ -102,10 +96,6 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
       setFetchError('Failed to load insights');
     }
   }, [userId, convexInsights]);
-
-  // Prevent duplicate requests for new insights
-  const [isRequestingInsights, setIsRequestingInsights] = useState(false);
-  const requestedInsightsRef = React.useRef<string | null>(null);
 
   useEffect(() => {
     const requestNewInsights = async () => {
@@ -173,6 +163,17 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
     !userId || 
     convexInsights === undefined || 
     isRequestingInsights;
+
+  // Render loader until userId is available
+  if (!userId) {
+    return (
+      <div className="space-y-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <InsightSkeleton key={index} />
+        ))}
+      </div>
+    );
+  }
 
   // Show skeleton loading state
   if (isLoading && !error) {

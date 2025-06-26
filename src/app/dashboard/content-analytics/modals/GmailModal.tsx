@@ -4,21 +4,24 @@ import { X, MessageSquare, Mail, Sparkles, Bot } from 'lucide-react';
 import { GmailContentItem } from '../types';
 import { getMetricsDisplay } from '../utils';
 import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
+import { useContentContextActions } from '@/store/content-context-store';
 
 interface GmailModalProps {
   selectedContent: GmailContentItem;
   onClose: () => void;
-  onDiscussContent: (item: GmailContentItem) => void;
 }
 
 export const GmailModal: React.FC<GmailModalProps> = ({
   selectedContent,
-  onClose,
-  onDiscussContent
+  onClose
 }) => {
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+
+  const router = useRouter();
+  const { setGmailContext } = useContentContextActions();
 
   const requestAiAnalysis = async () => {
     setLoading(true);
@@ -26,6 +29,54 @@ export const GmailModal: React.FC<GmailModalProps> = ({
     await new Promise(resolve => setTimeout(resolve, 1200));
     setAiAnalysis(`AI Analysis for "${selectedContent.content.data.subject}":\n- Open rate (${selectedContent.metrics.openRate}%) is strong. \n- Click rate (${selectedContent.metrics.clickRate}%) could be improved.\n- Consider A/B testing subject lines or call-to-action placement.`);
     setLoading(false);
+  };
+
+  // Handle discuss content with Zustand store
+  const handleDiscussContent = () => {
+    // Use the full Convex document if available, otherwise create a fallback
+    if (selectedContent.convexData) {
+      // Use the complete Convex document with all fields
+      console.log('🔍 [GMAIL MODAL] Using full Convex document:', {
+        hasData: !!selectedContent.convexData.data,
+        dataKeys: selectedContent.convexData.data ? Object.keys(selectedContent.convexData.data) : 'none',
+        fullConvexData: selectedContent.convexData
+      });
+      
+      // Update the analysis markdown if we have fresh analysis
+      const updatedConvexData = {
+        ...selectedContent.convexData,
+        analysisMarkdown: aiAnalysis || selectedContent.analysisMarkdown || selectedContent.convexData.analysisMarkdown
+      };
+      
+      setGmailContext(updatedConvexData);
+    } else {
+      // Fallback to creating a mock object (shouldn't happen with proper data)
+      console.warn('🔍 [GMAIL MODAL] No convexData available, using fallback mock object');
+      
+      // Create a mock Convex document structure
+      const mockConvexData = {
+        _id: selectedContent.id as any,
+        _creationTime: Date.now(),
+        userId: '',
+        gmailAccountId: '',
+        threadId: selectedContent.content.data?.threadId || selectedContent.id,
+        subject: selectedContent.content.data?.subject || 'No Subject',
+        from: selectedContent.content.data?.from || 'Unknown',
+        snippet: selectedContent.content.data?.snippet || '',
+        message_count: selectedContent.metrics?.replies || 0,
+        messages: selectedContent.content.data?.messages || [],
+        data: selectedContent.content.data || {},
+        analysis: selectedContent.analysis || null,
+        analysisMarkdown: aiAnalysis || selectedContent.analysisMarkdown || null,
+        createdAt: new Date(selectedContent.publishedAt).getTime(),
+        updatedAt: Date.now(),
+      };
+
+      setGmailContext(mockConvexData as any);
+    }
+    
+    // Navigate to chat
+    router.push('/dashboard/chat');
   };
 
   // Handle backdrop click to close modal
@@ -106,7 +157,7 @@ export const GmailModal: React.FC<GmailModalProps> = ({
 
         {/* Footer */}
         <div className="px-6 py-4 border-t dark:border-gray-800 flex items-center justify-end gap-3 flex-shrink-0">
-          <Button onClick={() => onDiscussContent(selectedContent)} className="bg-heycontent-light-yellow hover:bg-heycontent-yellow/90 text-black">
+          <Button onClick={handleDiscussContent} className="bg-heycontent-light-yellow hover:bg-heycontent-yellow/90 text-black">
             <MessageSquare className="w-4 h-4 mr-2" />
             Discuss with Content
           </Button>

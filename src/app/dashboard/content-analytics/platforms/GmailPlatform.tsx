@@ -16,24 +16,24 @@ import { PlatformConnectionPrompt } from '../../_components/content-hub/Platform
 
 interface GmailPlatformProps {
   userId: string;
-  items: GmailContentItem[];
+  gmailItems: GmailContentItem[];
   loading: boolean;
-  isConnected: boolean;
+  hasConnectedAccounts: boolean;
   error: string | null;
 }
 
 export function GmailPlatform({ 
   userId,
-  items,
+  gmailItems,
   loading,
-  isConnected,
+  hasConnectedAccounts,
   error,
 }: GmailPlatformProps) {
   const router = useRouter();
   const [selectedContent, setSelectedContent] = useState<GmailContentItem | null>(null);
 
   // Sort items by date
-  const displayItems = sortContent(items, 'date');
+  const displayItems = sortContent(gmailItems, 'date');
 
   const discussContent = async (item: AnyContentItem) => {
     try {
@@ -89,7 +89,7 @@ export function GmailPlatform({
   };
 
   // Show Gmail connect card if no Gmail account found
-  if (!isConnected) {
+  if (!hasConnectedAccounts) {
     return (
       <PlatformConnectionPrompt
         platformName="Gmail"
@@ -180,7 +180,6 @@ export function GmailPlatform({
         <GmailModal
           selectedContent={selectedContent}
           onClose={() => setSelectedContent(null)}
-          onDiscussContent={() => discussContent(selectedContent)}
         />
       )}
     </>

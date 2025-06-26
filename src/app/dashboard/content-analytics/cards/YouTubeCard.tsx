@@ -3,6 +3,8 @@ import { Card } from '@/components/ui/card';
 import { MessageSquare, ThumbsUp, PlayCircle, Eye, Clock, BarChart3, RefreshCw } from 'lucide-react';
 import { useYouTubeRefresh } from '@/app/hooks/useYouTubeRefresh';
 import { YouTubeBrandIcon } from '../../../../lib/YoutubeBrandIcon';
+import { useRouter } from 'next/navigation';
+import { useContentContextActions } from '@/store/content-context-store';
 
 import { YouTubeContentItem } from '../types';
 
@@ -47,6 +49,9 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
   // Extract clean video ID
   const cleanVideoId = extractVideoId(item.id, content.videoUrl);
   
+  const router = useRouter();
+  const { setYouTubeContext } = useContentContextActions();
+  
   // Create a direct thumbnail URL - prioritize our stored data first
   let thumbnailUrl = '';
 
@@ -69,6 +74,55 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
   const handleRefresh = async () => {
     const videoUrl = content.videoUrl || `https://www.youtube.com/watch?v=${cleanVideoId}`;
     await refresh(cleanVideoId, videoUrl);
+  };
+
+  // Handle discuss content with Zustand store
+  const handleDiscussContent = () => {
+    // Use the full Convex document if available, otherwise create a fallback
+    if (item.convexData) {
+      // Use the complete Convex document with all fields
+      console.log('🔍 [YOUTUBE CARD] Using full Convex document:', {
+        hasData: !!item.convexData.data,
+        dataKeys: item.convexData.data ? Object.keys(item.convexData.data) : 'none',
+        fullConvexData: item.convexData
+      });
+      
+      setYouTubeContext(item.convexData);
+    } else {
+      // Fallback to creating a mock object (shouldn't happen with proper data)
+      console.warn('🔍 [YOUTUBE CARD] No convexData available, using fallback mock object');
+      
+      // Create a mock Convex document structure
+      const mockConvexData = {
+        _id: item.id as any,
+        _creationTime: Date.now(),
+        userId: '',
+        channelId: '',
+        videoId: item.id,
+        snippet: {
+          title: content.title,
+          description: content.description,
+          channel: content.channelTitle,
+          published_at: publishedAt,
+          thumbnails: {
+            high: { url: content.thumbnailUrl }
+          }
+        },
+        statistics: metrics,
+        content_details: {
+          duration: content.duration
+        },
+        analysis: item.analysis || null,
+        analysisMarkdown: item.analysisMarkdown || null,
+        createdAt: new Date(publishedAt).getTime(),
+        updatedAt: Date.now(),
+      };
+
+      setYouTubeContext(mockConvexData as any);
+    }
+    
+    // Navigate to chat
+    router.push('/dashboard/chat');
   };
 
   return (
@@ -157,7 +211,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
         <div className="flex gap-2 mt-4">
           <button
             className="flex-1 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-            onClick={() => onDiscussContent(item)}
+            onClick={handleDiscussContent}
           >
             <MessageSquare className="w-4 h-4 inline mr-2" />
             Discuss With Content

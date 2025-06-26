@@ -903,16 +903,105 @@ export async function sendChatMessage(
 
   // Include content context if available
   if (contentContext) {
-    requestBody.content_context = {
+    // Debug logging for content context
+    console.log('🔍 [CONTENT CONTEXT DEBUG] Full content context:', {
       platform: contentContext.platform,
-      content_id: contentContext.contentId,
+      contentId: contentContext.contentId,
       title: contentContext.title,
-      analysis: contentContext.analysis,
-      thumbnail_url: contentContext.thumbnailUrl,
-      published_at: contentContext.publishedAt,
-      metrics: contentContext.metrics,
-      content: contentContext.content
-    };
+      hasAnalysis: !!contentContext.analysis,
+      hasConvexData: !!contentContext.convexData,
+      convexDataKeys: contentContext.convexData ? Object.keys(contentContext.convexData) : 'none',
+      contentKeys: contentContext.content ? Object.keys(contentContext.content) : 'none',
+      fullContext: contentContext
+    });
+
+    // Additional debug logging specifically for YouTube
+    if (contentContext.platform === 'youtube') {
+      console.log('🎥 [YOUTUBE CONTEXT DEBUG] YouTube-specific context details:', {
+        videoId: contentContext.contentId,
+        title: contentContext.title,
+        hasAnalysis: !!contentContext.analysis,
+        hasDescription: !!(contentContext.content?.description),
+        descriptionLength: contentContext.content?.description?.length || 0,
+        descriptionPreview: contentContext.content?.description?.substring(0, 100) + (contentContext.content?.description?.length > 100 ? '...' : ''),
+        channelTitle: contentContext.content?.channelTitle,
+        duration: contentContext.content?.duration,
+        hasBasicInfo: !!(contentContext.content?.basicInfo),
+        hasRichContext: !!(contentContext.content?.richContext),
+        // Rich context details
+        hasCaptions: contentContext.content?.hasCaptions,
+        captionsStatus: contentContext.content?.captionsStatus,
+        captionsLength: contentContext.content?.captions?.length || 0,
+        hasComments: contentContext.content?.hasComments,
+        commentsCount: contentContext.content?.comments?.length || 0,
+        totalComments: contentContext.content?.totalComments || 0,
+        tagsCount: contentContext.content?.tags?.length || 0,
+        tags: contentContext.content?.tags?.slice(0, 3) || [],
+        hasTranscript: !!(contentContext.content?.richContext?.transcript),
+        transcriptLength: contentContext.content?.richContext?.transcript?.length || 0,
+        videoMetrics: contentContext.metrics,
+        convexDataSnippet: contentContext.convexData?.snippet ? {
+          title: contentContext.convexData.snippet.title,
+          hasDescription: !!contentContext.convexData.snippet.description,
+          channel: contentContext.convexData.snippet.channel,
+          tagsCount: contentContext.convexData.snippet.tags?.length || 0,
+        } : 'none',
+        convexDataCaptions: contentContext.convexData?.captions ? {
+          status: contentContext.convexData.captions.status,
+          hasText: !!(contentContext.convexData.captions.caption_track?.text),
+        } : 'none',
+        convexDataComments: contentContext.convexData?.comments ? {
+          status: contentContext.convexData.comments.status,
+          count: contentContext.convexData.comments.comments?.length || 0,
+          total: contentContext.convexData.comments.total_comments || 0,
+        } : 'none'
+      });
+    }
+
+    // Handle both old ContentContext format and new Zustand store format
+    if (contentContext.convexData) {
+      // New Zustand store format with full Convex data
+      const convexData = contentContext.convexData;
+      
+      // Debug logging for Convex data
+      console.log('🔍 [CONVEX DATA DEBUG] Instagram post data:', {
+        hasData: !!convexData.data,
+        dataKeys: convexData.data ? Object.keys(convexData.data) : 'none',
+        hasComments: !!convexData.data?.comments,
+        commentsLength: convexData.data?.comments?.length || 0,
+        hasChildren: !!convexData.data?.children,
+        childrenLength: convexData.data?.children?.length || 0,
+        hasInsights: !!convexData.data?.insights,
+        insightsKeys: convexData.data?.insights ? Object.keys(convexData.data.insights) : 'none',
+        fullConvexData: convexData
+      });
+      
+      requestBody.content_context = {
+        platform: contentContext.platform,
+        content_id: contentContext.contentId,
+        title: contentContext.title,
+        analysis: contentContext.analysis,
+        thumbnail_url: contentContext.thumbnailUrl,
+        published_at: contentContext.publishedAt,
+        metrics: contentContext.metrics,
+        content: contentContext.content,
+        // Include the full Convex document for backend processing
+        convex_data: convexData
+      };
+    } else {
+      // Legacy ContentContext format
+      console.log('🔍 [LEGACY CONTEXT DEBUG] Using legacy format');
+      requestBody.content_context = {
+        platform: contentContext.platform,
+        content_id: contentContext.contentId,
+        title: contentContext.title,
+        analysis: contentContext.analysis,
+        thumbnail_url: contentContext.thumbnailUrl,
+        published_at: contentContext.publishedAt,
+        metrics: contentContext.metrics,
+        content: contentContext.content
+      };
+    }
   }
 
   // Do NOT include user_id in the request body; backend extracts it from API key

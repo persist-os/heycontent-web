@@ -12,39 +12,69 @@ export function useYouTubeAnalytics(userId?: string) {
     userId ? { userId } : "skip"
   );
 
-  // Convex query for YouTube videos
+  // Use the raw Convex query that returns the exact schema structure
   const youtubeVideos = useQuery(
-    api.youtubeQueries.listUserYouTubeVideos,
+    api.youtubeQueries.getYouTubeVideos,
     userId ? { userId } : "skip"
   );
 
   const loading = youtubeVideos === undefined;
 
-  // Map YouTube items
+  // Map YouTube items using the raw Convex document structure
   const mappedYouTubeItems: YouTubeContentItem[] = useMemo(() => {
     if (youtubeVideos && Array.isArray(youtubeVideos)) {
-      return youtubeVideos.map((video: any): YouTubeContentItem => ({
-        id: video.id || '',
-        platform: 'youtube' as const,
-        publishedAt: video.publishedAt || new Date().toISOString(),
-        content: {
-          title: video.content?.title || 'Untitled Video',
-          description: video.content?.description || '',
-          thumbnailUrl: video.content?.thumbnailUrl || '',
-          videoUrl: video.content?.videoUrl || `https://www.youtube.com/watch?v=${video.id}`,
-          channelTitle: video.content?.channelTitle || '',
-        },
-        metrics: {
-          views: video.metrics?.views || 0,
-          likes: video.metrics?.likes || 0,
-          dislikes: video.metrics?.dislikes || 0,
-          comments: video.metrics?.comments || 0,
-          watchTimeMinutes: video.metrics?.watchTimeMinutes || 0,
-          averageViewDurationSeconds: video.metrics?.averageViewDurationSeconds || 0,
-        },
-        analysis: video.analysis || null,
-        aiAnalysis: video.aiAnalysis || null,
-      }));
+      return youtubeVideos.map((video: any): YouTubeContentItem => {
+        // Extract data according to the Convex schema structure
+        const videoId = video.videoId || video.id || '';
+        const title = video.snippet?.title || 'Untitled Video';
+        const description = video.snippet?.description || '';
+        const publishedAt = video.snippet?.published_at || new Date(video.createdAt || Date.now()).toISOString();
+        const channelTitle = video.snippet?.channel?.title || '';
+        const channelId = video.snippet?.channel?.id || '';
+        
+        // Get thumbnail URL from the schema structure
+        const thumbnailUrl = video.snippet?.thumbnails?.high?.url || 
+                           video.snippet?.thumbnails?.medium?.url || 
+                           video.snippet?.thumbnails?.default?.url || '';
+        
+        // Get video URL
+        const videoUrl = video.url || `https://www.youtube.com/watch?v=${videoId}`;
+        
+        // Extract metrics from the schema structure
+        const views = Number(video.statistics?.views || 0);
+        const likes = Number(video.statistics?.likes || 0);
+        const dislikes = Number(video.statistics?.dislikes || 0);
+        const comments = Number(video.statistics?.comments || 0);
+        
+        // Get duration from content_details
+        const duration = video.content_details?.duration || '';
+        
+        return {
+          id: videoId,
+          platform: 'youtube' as const,
+          publishedAt: publishedAt,
+          content: {
+            title: title,
+            description: description,
+            thumbnailUrl: thumbnailUrl,
+            videoUrl: videoUrl,
+            channelTitle: channelTitle,
+            channelId: channelId,
+            duration: duration,
+          },
+          metrics: {
+            views: views,
+            likes: likes,
+            dislikes: dislikes,
+            comments: comments,
+            watchTimeMinutes: 0, // Not available in standard YouTube API data
+            averageViewDurationSeconds: 0, // Not available in standard YouTube API data
+          },
+          analysis: video.analysis || null,
+          analysisMarkdown: video.analysisMarkdown || null,
+          convexData: video, // Store the complete raw Convex document
+        };
+      });
     }
     return [];
   }, [youtubeVideos]);
@@ -55,7 +85,7 @@ export function useYouTubeAnalytics(userId?: string) {
     error,
     isConnected: !!youtubeChannelData,
     rawData: youtubeVideos,
-    lastFetchTime: new Date(), // No longer tracking cache time
-    isCached: false // Cache is disabled
+    lastFetchTime: new Date(),
+    isCached: false
   };
 } 
