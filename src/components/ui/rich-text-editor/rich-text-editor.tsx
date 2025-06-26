@@ -82,6 +82,7 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
   const [paletteMode, setPaletteMode] = useState<'commands' | 'notes'>('commands')
   const [cursorPosition, setCursorPosition] = useState(0)
   const [contentSearchTerm, setContentSearchTerm] = useState('')
+  const [fetchedContentTitles, setFetchedContentTitles] = useState<Record<string, string>>({})
   
   const textAreaRef = useRef<HTMLTextAreaElement>(null)
   
@@ -93,6 +94,63 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
       (ref as React.MutableRefObject<HTMLTextAreaElement | null>).current = textAreaRef.current
     }
   }, [ref])
+
+  // Function to fetch content titles for prefixed IDs
+  const fetchContentTitles = useCallback(async (prefixedIds: string[]) => {
+    if (!userId || prefixedIds.length === 0) return
+    
+    console.log('🔍 Fetching titles for:', prefixedIds)
+    
+    const newTitles: Record<string, string> = {}
+    
+    for (const prefixedId of prefixedIds) {
+      if (fetchedContentTitles[prefixedId]) {
+        console.log('✅ Already have title for:', prefixedId, fetchedContentTitles[prefixedId])
+        continue // Already fetched
+      }
+      
+      try {
+        // Import the Convex query dynamically
+        const { api } = await import('@/convex/_generated/api')
+        const contentData = await api.notes.getContentByPrefixedId({ prefixedId, userId })
+        
+        if (contentData) {
+          newTitles[prefixedId] = contentData.title || 'Untitled'
+          console.log('✅ Fetched title for:', prefixedId, '->', contentData.title)
+        } else {
+          console.log('❌ No content data found for:', prefixedId)
+        }
+      } catch (error) {
+        console.error('❌ Error fetching content title:', error)
+        newTitles[prefixedId] = 'Error loading title'
+      }
+    }
+    
+    if (Object.keys(newTitles).length > 0) {
+      console.log('📝 Setting new titles:', newTitles)
+      setFetchedContentTitles(prev => ({ ...prev, ...newTitles }))
+    }
+  }, [userId, fetchedContentTitles])
+
+  // Extract prefixed IDs from content and fetch titles
+  useEffect(() => {
+    if (!content || !userId) return
+    
+    const linkRegex = /@\[([^\]]+)\]@/g
+    const prefixedIds: string[] = []
+    let match
+    
+    while ((match = linkRegex.exec(content)) !== null) {
+      const id = match[1].trim()
+      if (id.includes(':') && !id.startsWith('note:')) {
+        prefixedIds.push(id)
+      }
+    }
+    
+    if (prefixedIds.length > 0) {
+      fetchContentTitles(prefixedIds)
+    }
+  }, [content, userId, fetchContentTitles])
 
   // Sync preview state - default to showing rich text
   const currentShowPreview = onShowPreviewChange ? showPreview : localShowPreview
@@ -206,7 +264,7 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
           )
         }
       } else {
-        // Legacy note ID format (no prefix)
+        // Raw note ID format (no prefix) - check if it's a note ID
         const linkedNote = availableNotes.find(note => String(note._id) === String(contentId))
         
         if (linkedNote) {
@@ -223,7 +281,8 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
             />
           )
         } else {
-          // Note not found, show missing note badge
+          // Check if it might be a YouTube or Instagram ID without prefix
+          // For now, show as missing note
           parts.push(
             <span
               key={`missing-note-${partIndex}-${linkStartIndex}`}
@@ -243,9 +302,9 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
     return parts
   }, [availableNotes, onLinkNote, onLinkContent])
 
-  // Function to convert note IDs to titles for display in edit mode
+  // Function to convert storage content to display format (IDs to titles)
   const getDisplayContent = useCallback((rawContent: string) => {
-    if (!rawContent || availableNotes.length === 0) return rawContent
+    if (!rawContent) return rawContent
     
     let displayContent = rawContent
     const linkRegex = /@\[([^\]]+)\]@/g
@@ -253,11 +312,54 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
     
     while ((match = linkRegex.exec(rawContent)) !== null) {
       const noteId = match[1].trim()
-      const linkedNote = availableNotes.find(note => String(note._id) === String(noteId))
+      
+      console.log('🔄 Converting to display:', noteId)
+      
+      // Handle both prefixed and raw note IDs
+      let linkedNote = null
+      if (noteId.includes(':')) {
+        const [contentType, id] = noteId.split(':', 2)
+        if (contentType === 'note') {
+          linkedNote = availableNotes.find(note => String(note._id) === String(id))
+        } else if (contentType === 'youtube') {
+          // Use fetched title or show loading state
+          const title = fetchedContentTitles[noteId]
+          if (title) {
+            console.log('✅ Using fetched YouTube title:', title)
+            displayContent = displayContent.replace(match[0], `@[YouTube: ${title}]@`)
+          } else {
+            console.log('⏳ YouTube title not fetched yet, keeping ID:', noteId)
+            // Keep the original prefixed ID if title not fetched yet
+            displayContent = displayContent.replace(match[0], `@[youtube:${id}]@`)
+          }
+          continue
+        } else if (contentType === 'instagram') {
+          // Use fetched title or show loading state
+          const title = fetchedContentTitles[noteId]
+          if (title) {
+            console.log('✅ Using fetched Instagram title:', title)
+            displayContent = displayContent.replace(match[0], `@[Instagram: ${title}]@`)
+          } else {
+            console.log('⏳ Instagram title not fetched yet, keeping ID:', noteId)
+            // Keep the original prefixed ID if title not fetched yet
+            displayContent = displayContent.replace(match[0], `@[instagram:${id}]@`)
+          }
+          continue
+        }
+      } else {
+        // Raw note ID (legacy format) - convert to prefixed format
+        linkedNote = availableNotes.find(note => String(note._id) === String(noteId))
+        if (linkedNote) {
+          // Convert legacy format to new prefixed format
+          displayContent = displayContent.replace(match[0], `@[note:${linkedNote._id}]@`)
+          // Then convert to display format
+          displayContent = displayContent.replace(`@[note:${linkedNote._id}]@`, `@[Smart Note: ${linkedNote.title}]@`)
+        }
+      }
       
       if (linkedNote) {
-        // Replace @[id]@ with @[Title]@ for display
-        displayContent = displayContent.replace(match[0], `@[${linkedNote.title}]@`)
+        // Replace @[note:id]@ with @[Smart Note: Title]@ for display
+        displayContent = displayContent.replace(match[0], `@[Smart Note: ${linkedNote.title}]@`)
       } else {
         // Show [Missing Note] for unknown IDs
         displayContent = displayContent.replace(match[0], `@[Missing Note]@`)
@@ -265,11 +367,11 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
     }
     
     return displayContent
-  }, [availableNotes])
+  }, [availableNotes, fetchedContentTitles])
 
   // Function to convert display content back to storage format (titles back to IDs)
   const getStorageContent = useCallback((displayContent: string) => {
-    if (!displayContent || availableNotes.length === 0) return displayContent
+    if (!displayContent) return displayContent
     
     let storageContent = displayContent
     const linkRegex = /@\[([^\]]+)\]@/g
@@ -277,18 +379,69 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
     
     while ((match = linkRegex.exec(displayContent)) !== null) {
       const titleOrId = match[1].trim()
-      // Skip if it's already an ID format (looks like an ID)
-      const idMatch = availableNotes.find(note => String(note._id) === titleOrId)
-      if (idMatch) continue
-      // Find note by title
+      
+      // If it's already a prefixed ID format, keep it as is
+      if (titleOrId.includes(':')) {
+        const [contentType, id] = titleOrId.split(':', 2)
+        if (contentType === 'note' || contentType === 'youtube' || contentType === 'instagram') {
+          // Already in storage format, don't change
+          continue
+        }
+      }
+      
+      // Handle Smart Note display format
+      if (titleOrId.startsWith('Smart Note: ')) {
+        const noteTitle = titleOrId.replace('Smart Note: ', '')
+        const linkedNote = availableNotes.find(note => note.title === noteTitle)
+        if (linkedNote) {
+          storageContent = storageContent.replace(match[0], `@[note:${linkedNote._id}]@`)
+        }
+        continue
+      }
+      
+      // Handle YouTube display format - find the original prefixed ID
+      if (titleOrId.startsWith('YouTube: ')) {
+        const videoTitle = titleOrId.replace('YouTube: ', '')
+        // Find the prefixed ID that matches this title
+        const prefixedId = Object.keys(fetchedContentTitles).find(
+          id => id.startsWith('youtube:') && fetchedContentTitles[id] === videoTitle
+        )
+        if (prefixedId) {
+          storageContent = storageContent.replace(match[0], `@[${prefixedId}]@`)
+        } else {
+          // If we can't find the prefixed ID, keep the display format
+          // This prevents conversion to "Missing Note"
+          continue
+        }
+        continue
+      }
+      
+      // Handle Instagram display format - find the original prefixed ID
+      if (titleOrId.startsWith('Instagram: ')) {
+        const postTitle = titleOrId.replace('Instagram: ', '')
+        // Find the prefixed ID that matches this title
+        const prefixedId = Object.keys(fetchedContentTitles).find(
+          id => id.startsWith('instagram:') && fetchedContentTitles[id] === postTitle
+        )
+        if (prefixedId) {
+          storageContent = storageContent.replace(match[0], `@[${prefixedId}]@`)
+        } else {
+          // If we can't find the prefixed ID, keep the display format
+          // This prevents conversion to "Missing Note"
+          continue
+        }
+        continue
+      }
+      
+      // Find note by title (fallback for old format)
       const linkedNote = availableNotes.find(note => note.title === titleOrId)
       if (linkedNote) {
-        // Replace @[Title]@ with @[id]@ for storage
-        storageContent = storageContent.replace(match[0], `@[${linkedNote._id}]@`)
+        // Replace @[Title]@ with @[note:id]@ for storage (use prefixed format)
+        storageContent = storageContent.replace(match[0], `@[note:${linkedNote._id}]@`)
       }
     }
     return storageContent
-  }, [availableNotes])
+  }, [availableNotes, fetchedContentTitles])
 
   // Create AI handlers
   const aiHandlers: AIHandlers = {
@@ -373,7 +526,7 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
       }
     }
     
-    const linkText = `@[${selectedNote.title}]@`
+    const linkText = `@[note:${selectedNote._id}]@`
     
     if (atPosition !== -1) {
       // Replace @ and any typed text with note link
@@ -571,9 +724,26 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
     const displayContent = e.target.value
     const newCursorPosition = e.target.selectionStart
     
-    // Convert display content (with titles) back to storage format (with IDs)
-    const storageContent = getStorageContent(displayContent)
-    onContentChange(storageContent)
+    // Only convert if the content actually contains link patterns
+    if (displayContent.includes('@[')) {
+      // Convert display content (with titles) back to storage format (with IDs)
+      const storageContent = getStorageContent(displayContent)
+      
+      // Debug logging
+      if (displayContent !== storageContent) {
+        console.log('🔄 Content conversion:', {
+          display: displayContent,
+          storage: storageContent,
+          changed: displayContent !== storageContent
+        })
+      }
+      
+      onContentChange(storageContent)
+    } else {
+      // No links, just pass through the content
+      onContentChange(displayContent)
+    }
+    
     setCursorPosition(newCursorPosition)
   }, [onContentChange, getStorageContent])
 

@@ -55,7 +55,7 @@ export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
       
       console.log('NoteContentRenderer: Looking for content with ID:', contentId);
       
-      // Check if it's a prefixed ID (youtube:, instagram:, etc.)
+      // Check if it's a prefixed ID (youtube:, instagram:, note:, etc.)
       if (contentId.includes(':')) {
         const [contentType, id] = contentId.split(':', 2);
         
@@ -117,51 +117,110 @@ export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
           );
         }
       } else {
-        // Legacy note ID format (no prefix)
-        const linkedNote = availableNotes.find(note => 
-          String(note._id) === String(contentId) || note._id === contentId
-        );
-        
-        console.log('Found linked note (legacy):', linkedNote);
-        
-        if (linkedNote) {
-          // Render as clickable note link
-          if (onLinkNote) {
-            parts.push(
-              <button
-                key={`link-${partIndex}-${linkStartIndex}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  console.log('🔗 Note link clicked:', { noteId: linkedNote._id, title: linkedNote.title });
-                  onLinkNote(linkedNote._id);
-                }}
-                className="text-blue-600 hover:text-blue-800 underline bg-transparent border-none p-0 m-0 cursor-pointer font-inherit text-inherit font-medium"
-                type="button"
-              >
-                {linkedNote.title}
-              </button>
-            );
+        // Handle display format content (Smart Note: Title, YouTube: Title, etc.)
+        if (contentId.startsWith('Smart Note: ')) {
+          const noteTitle = contentId.replace('Smart Note: ', '');
+          const linkedNote = availableNotes.find(note => note.title === noteTitle);
+          
+          console.log('Found linked note (display format):', linkedNote);
+          
+          if (linkedNote) {
+            // Render as clickable note link
+            if (onLinkNote) {
+              parts.push(
+                <button
+                  key={`link-${partIndex}-${linkStartIndex}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    console.log('🔗 Note link clicked:', { noteId: linkedNote._id, title: linkedNote.title });
+                    onLinkNote(linkedNote._id);
+                  }}
+                  className="text-blue-600 hover:text-blue-800 underline bg-transparent border-none p-0 m-0 cursor-pointer font-inherit text-inherit font-medium"
+                  type="button"
+                >
+                  {linkedNote.title}
+                </button>
+              );
+            } else {
+              // Fallback to non-clickable if no onLinkNote callback
+              parts.push(
+                <span
+                  key={`link-${partIndex}-${linkStartIndex}`}
+                  className="font-medium underline"
+                >
+                  {linkedNote.title}
+                </span>
+              );
+            }
           } else {
-            // Fallback to non-clickable if no onLinkNote callback
+            // Note not found, show missing note indicator
             parts.push(
               <span
-                key={`link-${partIndex}-${linkStartIndex}`}
-                className="font-medium underline"
+                key={`unknown-link-${partIndex}-${linkStartIndex}`}
+                className="text-red-500 italic"
               >
-                {linkedNote.title}
+                [Missing Note]
               </span>
             );
           }
-        } else {
-          // Note not found, show missing note indicator
+        } else if (contentId.startsWith('YouTube: ') || contentId.startsWith('Instagram: ')) {
+          // For YouTube and Instagram display format, we can't resolve them here
+          // They should be handled by the LinkedContentRenderer with proper prefixed IDs
           parts.push(
             <span
               key={`unknown-link-${partIndex}-${linkStartIndex}`}
-              className="text-red-500 italic"
+              className="text-orange-500 italic"
             >
-              [Missing Note]
+              {contentId}
             </span>
           );
+        } else {
+          // Raw note ID format (legacy format) - check if it's a note ID
+          const linkedNote = availableNotes.find(note => 
+            String(note._id) === String(contentId) || note._id === contentId
+          );
+          
+          console.log('Found linked note (raw ID):', linkedNote);
+          
+          if (linkedNote) {
+            // Render as clickable note link
+            if (onLinkNote) {
+              parts.push(
+                <button
+                  key={`link-${partIndex}-${linkStartIndex}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    console.log('🔗 Note link clicked:', { noteId: linkedNote._id, title: linkedNote.title });
+                    onLinkNote(linkedNote._id);
+                  }}
+                  className="text-blue-600 hover:text-blue-800 underline bg-transparent border-none p-0 m-0 cursor-pointer font-inherit text-inherit font-medium"
+                  type="button"
+                >
+                  {linkedNote.title}
+                </button>
+              );
+            } else {
+              // Fallback to non-clickable if no onLinkNote callback
+              parts.push(
+                <span
+                  key={`link-${partIndex}-${linkStartIndex}`}
+                  className="font-medium underline"
+                >
+                  {linkedNote.title}
+                </span>
+              );
+            }
+          } else {
+            // Note not found, show missing note indicator
+            parts.push(
+              <span
+                key={`unknown-link-${partIndex}-${linkStartIndex}`}
+                className="text-red-500 italic"
+              >
+                [Missing Note]
+              </span>
+            );
+          }
         }
       }
 

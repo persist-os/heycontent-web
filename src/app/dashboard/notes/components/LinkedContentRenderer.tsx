@@ -39,6 +39,36 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
   });
 
   if (!contentData) {
+    // Extract video ID from prefixed ID for fallback
+    const [contentType, contentId] = prefixedId.split(':', 2);
+    
+    if (contentType === 'youtube') {
+      return (
+        <div className="inline-flex items-center gap-2 px-3 py-2 mx-1 my-1 rounded-lg border border-border bg-muted/50 text-sm">
+          <Youtube className="w-4 h-4 text-red-500" />
+          <span className="text-muted-foreground">YouTube Video</span>
+        </div>
+      );
+    }
+    
+    if (contentType === 'instagram') {
+      return (
+        <div className="inline-flex items-center gap-2 px-3 py-2 mx-1 my-1 rounded-lg border border-border bg-muted/50 text-sm">
+          <Instagram className="w-4 h-4 text-pink-500" />
+          <span className="text-muted-foreground">Instagram Post</span>
+        </div>
+      );
+    }
+    
+    if (contentType === 'note') {
+      return (
+        <div className="inline-flex items-center gap-2 px-3 py-2 mx-1 my-1 rounded-lg border border-border bg-muted/50 text-sm">
+          <ImageIcon className="w-4 h-4" />
+          <span className="text-muted-foreground">Note</span>
+        </div>
+      );
+    }
+    
     return (
       <div className="inline-flex items-center gap-2 px-3 py-2 mx-1 my-1 rounded-lg border border-border bg-muted/50 text-sm">
         <div className="w-4 h-4 bg-muted rounded animate-pulse" />
@@ -107,6 +137,22 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
   };
 
   const handleClick = () => {
+    // For YouTube videos, show preview card instead of opening in new tab
+    if (contentData.type === 'youtube') {
+      // Call onLinkContent to trigger preview card
+      if (onLinkContent) {
+        onLinkContent(prefixedId);
+      }
+      return;
+    }
+    
+    // Handle Instagram posts - open in new tab if permalink exists
+    if (contentData.type === 'instagram' && contentData.permalink) {
+      window.open(contentData.permalink, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    
+    // For other content types, call the onLinkContent callback
     if (onLinkContent) {
       onLinkContent(prefixedId);
     }
@@ -130,7 +176,11 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
           <h4 className="font-medium text-sm truncate">
-            {contentData.title}
+            {contentData.title || 
+              (contentData.type === 'youtube' ? 'YouTube Video' : 
+               contentData.type === 'instagram' ? 'Instagram Post' : 
+               contentData.type === 'note' ? 'Note' :
+               'Content')}
           </h4>
           {contentData.important && (
             <span className="text-yellow-500">⭐</span>

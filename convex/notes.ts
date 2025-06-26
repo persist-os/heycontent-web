@@ -312,112 +312,179 @@ export const getContentByPrefixedId = query({
     prefixedId: v.string(),
     userId: v.string() 
   },
+  returns: v.union(
+    v.null(),
+    v.any()
+  ),
   handler: async (ctx, args) => {
-    const { prefixedId, userId } = args;
-    
-    // Parse the prefixed ID
-    const [contentType, contentId] = prefixedId.split(':', 2);
-    
-    if (!contentType || !contentId) {
-      throw new Error("Invalid prefixed ID format. Expected format: type:id");
-    }
-    
-    switch (contentType) {
-      case 'note':
-        // Get note by Convex ID
-        const note = await ctx.db.get(contentId as Id<"notes">);
-        if (note && note.userId === userId) {
-          return {
-            type: 'note',
-            id: prefixedId,
-            title: note.title,
-            content: note.content,
-            contentType: note.type,
-            createdAt: note.createdAt,
-            updatedAt: note.updatedAt,
-            platform: note.platform,
-            tags: note.tags,
-            important: note.important,
-            analysis: note.analysis
-          };
-        }
-        break;
-        
-      case 'youtube':
-        // Get YouTube video by videoId
-        const video = await ctx.db
-          .query("youtubeVideos")
-          .withIndex("by_videoId", (q) => q.eq("videoId", contentId))
-          .filter((q) => q.eq(q.field("userId"), userId))
-          .first();
-          
-        if (video) {
-          return {
-            type: 'youtube',
-            id: prefixedId,
-            title: video.snippet?.title || 'Untitled Video',
-            content: video.snippet?.description || '',
-            contentType: 'video',
-            createdAt: video.createdAt || Date.now(),
-            updatedAt: video.updatedAt || Date.now(),
-            platform: 'youtube',
-            tags: video.snippet?.tags || [],
-            important: false,
-            analysis: video.analysis,
-            videoId: video.videoId,
-            url: video.url,
-            thumbnailUrl: video.snippet?.thumbnails?.high || video.snippet?.thumbnails?.medium || '',
-            statistics: {
-              views: video.statistics?.views ? Number(video.statistics.views) : 0,
-              likes: video.statistics?.likes ? Number(video.statistics.likes) : 0,
-              dislikes: video.statistics?.dislikes ? Number(video.statistics.dislikes) : 0,
-              comments: video.statistics?.comments ? Number(video.statistics.comments) : 0
+    try {
+      const { prefixedId, userId } = args;
+      
+      // Validate inputs
+      if (!prefixedId || !userId) {
+        console.warn('getContentByPrefixedId: Missing required parameters', { prefixedId, userId });
+        return null;
+      }
+      
+      // Parse the prefixed ID
+      const [contentType, contentId] = prefixedId.split(':', 2);
+      
+      if (!contentType || !contentId) {
+        console.warn('getContentByPrefixedId: Invalid prefixed ID format', { prefixedId });
+        return null;
+      }
+      
+      switch (contentType) {
+        case 'note':
+          // Get note by Convex ID
+          try {
+            const note = await ctx.db.get(contentId as Id<"notes">);
+            if (note && note.userId === userId) {
+              return {
+                type: 'note',
+                id: prefixedId,
+                title: note.title || 'Untitled Note',
+                content: note.content || '',
+                contentType: note.type || 'idea_bank',
+                createdAt: note.createdAt || Date.now(),
+                updatedAt: note.updatedAt || Date.now(),
+                platform: note.platform || 'smart-notes',
+                tags: note.tags || [],
+                important: note.important || false,
+                analysis: note.analysis
+              };
             }
-          };
-        }
-        break;
-        
-      case 'instagram':
-        // Get Instagram post by postId
-        const post = await ctx.db
-          .query("instagramPosts")
-          .withIndex("by_postId", (q) => q.eq("postId", contentId))
-          .filter((q) => q.eq(q.field("userId"), userId))
-          .first();
+          } catch (error) {
+            console.error('Error fetching note:', error);
+          }
+          break;
           
-        if (post) {
-          return {
-            type: 'instagram',
-            id: prefixedId,
-            title: post.data.caption?.slice(0, 100) || 'Instagram Post',
-            content: post.data.caption || '',
-            contentType: post.mediaType.toLowerCase(),
-            createdAt: post.createdAt || (post.data.timestamp ? post.data.timestamp * 1000 : Date.now()),
-            updatedAt: post.updatedAt,
-            platform: 'instagram',
-            tags: [],
-            important: false,
-            analysis: post.analysis,
-            postId: post.postId,
-            mediaUrl: post.data.media_url,
-            permalink: post.data.permalink,
-            insights: post.data.insights ? {
-              impressions: post.data.insights.impressions || 0,
-              reach: post.data.insights.reach || 0,
-              likes: post.data.insights.likes || 0,
-              comments: post.data.insights.comments || 0,
-              saved: post.data.insights.saved || 0,
-              shares: post.data.insights.shares || 0
-            } : null
-          };
-        }
-        break;
-        
-      default:
-        throw new Error(`Unsupported content type: ${contentType}`);
+        case 'youtube':
+          // Get YouTube video by videoId
+          try {
+            console.log('Looking for YouTube video:', { contentId, userId });
+            
+            const video = await ctx.db
+              .query("youtubeVideos")
+              .withIndex("by_videoId", (q) => q.eq("videoId", contentId))
+              .filter((q) => q.eq(q.field("userId"), userId))
+              .first();
+              
+            console.log('Found YouTube video:', video);
+              
+            if (video) {
+              return {
+                type: 'youtube',
+                id: prefixedId,
+                title: video.snippet?.title || 'YouTube Video',
+                content: video.snippet?.description || '',
+                contentType: 'video',
+                createdAt: video.createdAt || Date.now(),
+                updatedAt: video.updatedAt || Date.now(),
+                platform: 'youtube',
+                tags: video.snippet?.tags || [],
+                important: false,
+                analysis: video.analysis,
+                videoId: video.videoId,
+                url: video.url,
+                thumbnailUrl: video.snippet?.thumbnails?.high || video.snippet?.thumbnails?.medium || '',
+                statistics: {
+                  views: video.statistics?.views ? Number(video.statistics.views) : 0,
+                  likes: video.statistics?.likes ? Number(video.statistics.likes) : 0,
+                  dislikes: video.statistics?.dislikes ? Number(video.statistics.dislikes) : 0,
+                  comments: video.statistics?.comments ? Number(video.statistics.comments) : 0
+                }
+              };
+            }
+            
+            // If not found, try without userId filter as fallback
+            console.log('Trying fallback query without userId filter');
+            const fallbackVideo = await ctx.db
+              .query("youtubeVideos")
+              .withIndex("by_videoId", (q) => q.eq("videoId", contentId))
+              .first();
+              
+            console.log('Fallback video found:', fallbackVideo);
+            
+            if (fallbackVideo) {
+              return {
+                type: 'youtube',
+                id: prefixedId,
+                title: fallbackVideo.snippet?.title || 'YouTube Video',
+                content: fallbackVideo.snippet?.description || '',
+                contentType: 'video',
+                createdAt: fallbackVideo.createdAt || Date.now(),
+                updatedAt: fallbackVideo.updatedAt || Date.now(),
+                platform: 'youtube',
+                tags: fallbackVideo.snippet?.tags || [],
+                important: false,
+                analysis: fallbackVideo.analysis,
+                videoId: fallbackVideo.videoId,
+                url: fallbackVideo.url,
+                thumbnailUrl: fallbackVideo.snippet?.thumbnails?.high || fallbackVideo.snippet?.thumbnails?.medium || '',
+                statistics: {
+                  views: fallbackVideo.statistics?.views ? Number(fallbackVideo.statistics.views) : 0,
+                  likes: fallbackVideo.statistics?.likes ? Number(fallbackVideo.statistics.likes) : 0,
+                  dislikes: fallbackVideo.statistics?.dislikes ? Number(fallbackVideo.statistics.dislikes) : 0,
+                  comments: fallbackVideo.statistics?.comments ? Number(fallbackVideo.statistics.comments) : 0
+                }
+              };
+            }
+          } catch (error) {
+            console.error('Error fetching YouTube video:', error);
+          }
+          break;
+          
+        case 'instagram':
+          // Get Instagram post by postId
+          try {
+            const post = await ctx.db
+              .query("instagramPosts")
+              .withIndex("by_postId", (q) => q.eq("postId", contentId))
+              .filter((q) => q.eq(q.field("userId"), userId))
+              .first();
+              
+            if (post) {
+              return {
+                type: 'instagram',
+                id: prefixedId,
+                title: post.data.caption?.slice(0, 100) || 'Instagram Post',
+                content: post.data.caption || '',
+                contentType: post.mediaType.toLowerCase(),
+                createdAt: post.createdAt || (post.data.timestamp ? post.data.timestamp * 1000 : Date.now()),
+                updatedAt: post.updatedAt,
+                platform: 'instagram',
+                tags: [],
+                important: false,
+                analysis: post.analysis,
+                postId: post.postId,
+                mediaUrl: post.data.media_url,
+                permalink: post.data.permalink,
+                insights: post.data.insights ? {
+                  impressions: post.data.insights.impressions || 0,
+                  reach: post.data.insights.reach || 0,
+                  likes: post.data.insights.likes || 0,
+                  comments: post.data.insights.comments || 0,
+                  saved: post.data.insights.saved || 0,
+                  shares: post.data.insights.shares || 0
+                } : null
+              };
+            }
+          } catch (error) {
+            console.error('Error fetching Instagram post:', error);
+          }
+          break;
+          
+        default:
+          console.warn('getContentByPrefixedId: Unsupported content type', { contentType });
+          return null;
+      }
+      
+      return null; // Content not found
+    } catch (error) {
+      console.error('getContentByPrefixedId: Unexpected error', error);
+      return null;
     }
-    
-    return null; // Content not found
   },
 });
 
@@ -464,7 +531,7 @@ export const getContentByPlatform = query({
             .collect();
             
           return notes.map(note => ({
-            id: `note:${note._id}`,
+            id: String(note._id), // Use raw ID, not prefixed
             title: note.title || 'Untitled Note',
             type: 'note' as const,
             contentType: note.type || 'idea_bank',
@@ -606,7 +673,7 @@ export const getAllLinkableContent = query({
         ...notes.map((note, index) => {
           console.log(`Processing note ${index}:`, note._id);
           return {
-            id: `note:${note._id}`,
+            id: String(note._id), // Use raw ID, not prefixed
             title: note.title || 'Untitled Note',
             type: 'note' as const,
             contentType: note.type || 'idea_bank',

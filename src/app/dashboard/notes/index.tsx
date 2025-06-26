@@ -1,6 +1,6 @@
 'use client';
 
-import * as React from 'react';
+import React from 'react';
 import { useState, useEffect } from 'react';
 import { NotesGrid } from './components/NotesGrid';
 import { NoteArea } from './NoteArea';
@@ -9,6 +9,10 @@ import type { Id } from '@/convex/_generated/dataModel';
 import { useNotes } from '@/app/context/notes-context';
 import { Note, NoteType } from './types';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { deleteNote, updateNote } from '@/convex/notes';
+import { YouTubeVideoCard } from './components/YouTubeVideoCard';
 
 export default function SmartNotes() {
   const { firebaseUser } = useAuth();
@@ -20,7 +24,7 @@ export default function SmartNotes() {
   
   const { 
     notes, 
-    isLoading, 
+    isLoading: notesIsLoading, 
     updateNote, 
     deleteNote, 
     saveNoteContent, 
@@ -33,6 +37,9 @@ export default function SmartNotes() {
     navigateBack,
     clearNavigationStack,
   } = useNotes();
+  
+  // YouTube video card state
+  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   
   useEffect(() => {
     if (activeNoteId) {
@@ -170,9 +177,8 @@ export default function SmartNotes() {
         handleLinkNote(contentId);
         break;
       case 'youtube':
-        // For now, just log - could open YouTube video in new tab or modal
-        console.log('YouTube video linked:', contentId);
-        // TODO: Implement YouTube video viewing
+        // Show YouTube video card
+        setSelectedVideoId(contentId);
         break;
       case 'instagram':
         // For now, just log - could open Instagram post in new tab or modal
@@ -199,6 +205,12 @@ export default function SmartNotes() {
     activeNoteId,
     availableNotes: availableNotes.map(n => ({ id: n._id, title: n.title, type: n.type }))
   });
+
+  // Handle YouTube video analysis navigation
+  const handleOpenAnalysis = (videoId: string) => {
+    setSelectedVideoId(null); // Close the card
+    router.push(`/dashboard/notes/youtube-analysis/${videoId}`);
+  };
 
   // If viewing a specific note, show the editor with smooth transition
   if (activeNote) {
@@ -237,6 +249,15 @@ export default function SmartNotes() {
           onNavigateBack={navigateBack}
           navigationStack={navigationStack}
         />
+        
+        {/* YouTube Video Card */}
+        {selectedVideoId && (
+          <YouTubeVideoCard
+            videoId={selectedVideoId}
+            onClose={() => setSelectedVideoId(null)}
+            onOpenAnalysis={handleOpenAnalysis}
+          />
+        )}
       </div>
     );
   }
@@ -250,7 +271,7 @@ export default function SmartNotes() {
         onDeleteNote={handleDeleteNote}
         onToggleImportant={handleToggleImportant}
         onUpdateNote={handleUpdateNote}
-        isLoading={isLoading}
+        isLoading={notesIsLoading}
       />
     </div>
   );
