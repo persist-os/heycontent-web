@@ -488,6 +488,120 @@ export const getContentByPrefixedId = query({
   },
 });
 
+// Batch query to get multiple content titles by prefixed IDs
+export const getContentTitlesByPrefixedIds = query({
+  args: { 
+    prefixedIds: v.array(v.string()),
+    userId: v.string() 
+  },
+  returns: v.record(v.string(), v.union(v.string(), v.null())),
+  handler: async (ctx, args) => {
+    try {
+      const { prefixedIds, userId } = args;
+      
+      // Validate inputs
+      if (!prefixedIds || prefixedIds.length === 0 || !userId) {
+        console.warn('getContentTitlesByPrefixedIds: Missing required parameters', { prefixedIds, userId });
+        return {};
+      }
+      
+      const titles: Record<string, string | null> = {};
+      
+      for (const prefixedId of prefixedIds) {
+        try {
+          // Parse the prefixed ID
+          const [contentType, contentId] = prefixedId.split(':', 2);
+          
+          if (!contentType || !contentId) {
+            console.warn('getContentTitlesByPrefixedIds: Invalid prefixed ID format', { prefixedId });
+            titles[prefixedId] = null;
+            continue;
+          }
+          
+          switch (contentType) {
+            case 'note':
+              // Get note by Convex ID
+              try {
+                const note = await ctx.db.get(contentId as Id<"notes">);
+                if (note && note.userId === userId) {
+                  titles[prefixedId] = note.title || 'Untitled Note';
+                } else {
+                  titles[prefixedId] = null;
+                }
+              } catch (error) {
+                console.error('Error fetching note:', error);
+                titles[prefixedId] = null;
+              }
+              break;
+              
+            case 'youtube':
+              // Get YouTube video by videoId
+              try {
+                const video = await ctx.db
+                  .query("youtubeVideos")
+                  .withIndex("by_videoId", (q) => q.eq("videoId", contentId))
+                  .filter((q) => q.eq(q.field("userId"), userId))
+                  .first();
+                  
+                if (video) {
+                  titles[prefixedId] = video.snippet?.title || 'YouTube Video';
+                } else {
+                  // Try fallback without userId filter
+                  const fallbackVideo = await ctx.db
+                    .query("youtubeVideos")
+                    .withIndex("by_videoId", (q) => q.eq("videoId", contentId))
+                    .first();
+                    
+                  if (fallbackVideo) {
+                    titles[prefixedId] = fallbackVideo.snippet?.title || 'YouTube Video';
+                  } else {
+                    titles[prefixedId] = null;
+                  }
+                }
+              } catch (error) {
+                console.error('Error fetching YouTube video:', error);
+                titles[prefixedId] = null;
+              }
+              break;
+              
+            case 'instagram':
+              // Get Instagram post by postId
+              try {
+                const post = await ctx.db
+                  .query("instagramPosts")
+                  .withIndex("by_postId", (q) => q.eq("postId", contentId))
+                  .filter((q) => q.eq(q.field("userId"), userId))
+                  .first();
+                  
+                if (post) {
+                  titles[prefixedId] = post.data.caption?.slice(0, 100) || 'Instagram Post';
+                } else {
+                  titles[prefixedId] = null;
+                }
+              } catch (error) {
+                console.error('Error fetching Instagram post:', error);
+                titles[prefixedId] = null;
+              }
+              break;
+              
+            default:
+              console.warn('getContentTitlesByPrefixedIds: Unsupported content type', { contentType });
+              titles[prefixedId] = null;
+          }
+        } catch (error) {
+          console.error('Error processing prefixed ID:', prefixedId, error);
+          titles[prefixedId] = null;
+        }
+      }
+      
+      return titles;
+    } catch (error) {
+      console.error('getContentTitlesByPrefixedIds: Unexpected error', error);
+      return {};
+    }
+  },
+});
+
 // Get content by platform type
 export const getContentByPlatform = query({
   args: { 
