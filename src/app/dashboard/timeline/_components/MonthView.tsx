@@ -162,7 +162,13 @@ export const MonthView: React.FC<MonthViewProps> = ({
     // Only set zoom level if we're not already in month view
     if (hasInitializedDateRange.current) return;
     
+    // Set zoom level to month AND update date range to current month
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    
     setZoomLevel('month');
+    setVisibleDateRange(start, end);
     hasInitializedDateRange.current = true;
   }, []); // Run only once on mount
 
@@ -184,26 +190,17 @@ export const MonthView: React.FC<MonthViewProps> = ({
     return periodMaps;
   }, [loadedPeriods, conversations, notes, allContentData, allAnalyticsData]);
 
-  // Generate days for all loaded periods
+  // Generate days for the current visible date range only (not entire year)
   const allDaysInPeriods = useMemo(() => {
-    const daySet = new Set();
+    if (!visibleDateRange?.start || !visibleDateRange?.end) return [];
     const allDays = [];
-    
-    loadedPeriods.forEach(period => {
-      const start = new Date(period.start.getFullYear(), period.start.getMonth(), 1);
-      const end = new Date(period.start.getFullYear(), period.start.getMonth() + 1, 0);
-      
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        const dayString = d.toISOString().split('T')[0]; // YYYY-MM-DD format
-        if (!daySet.has(dayString)) {
-          daySet.add(dayString);
-          allDays.push(new Date(d));
-        }
-      }
-    });
-    
-    return allDays.sort((a, b) => a.getTime() - b.getTime());
-  }, [loadedPeriods]);
+    const d = new Date(visibleDateRange.start);
+    while (d <= visibleDateRange.end) {
+      allDays.push(new Date(d));
+      d.setDate(d.getDate() + 1);
+    }
+    return allDays;
+  }, [visibleDateRange]);
 
   // Folder dot offsets for vertical line heights
   const folderDotOffsets = {
@@ -223,13 +220,6 @@ export const MonthView: React.FC<MonthViewProps> = ({
     const position = ((eventTime - startTime) / (endTime - startTime)) * 100;
     return Math.max(0, Math.min(100, position));
   };
-
-  // Filter events for all loaded periods
-  const eventsInAllPeriods = events.filter(event => {
-    return loadedPeriods.some(period => {
-      return event.date >= period.start && event.date <= period.end;
-    });
-  });
 
   // Group personas by 3-day buckets for all loaded periods
   const personasInAllPeriods = useMemo(() => {
@@ -550,8 +540,8 @@ export const MonthView: React.FC<MonthViewProps> = ({
               )}
 
               {/* Events with expanded cards */}
-              <div className="events-container" style={{ paddingBottom: `${eventsInAllPeriods.length * 120 + 100}px` }}>
-                {eventsInAllPeriods.map((event, index) => {
+              <div className="events-container" style={{ paddingBottom: `${events.length * 120 + 100}px` }}>
+                {events.map((event, index) => {
                   const position = getEventPosition(event.date);
                   const isEven = index % 2 === 0;
                   

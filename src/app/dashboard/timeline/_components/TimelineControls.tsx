@@ -111,33 +111,33 @@ export const TimelineControls: React.FC = () => {
     return mostRecentDate;
   };
 
-  // Function to snap to period with most recent data based on zoom level
+  // Function to snap to period with current date based on zoom level
   const snapToPresent = (newZoomLevel: ZoomLevel) => {
-    const mostRecentDate = findMostRecentDataDate();
+    const now = new Date();
     let start: Date, end: Date;
 
     switch (newZoomLevel) {
       case 'year':
-        start = new Date(mostRecentDate.getFullYear(), 0, 1);
-        end = new Date(mostRecentDate.getFullYear(), 11, 31);
+        start = new Date(now.getFullYear(), 0, 1);
+        end = new Date(now.getFullYear(), 11, 31);
         break;
       case 'month':
-        // Use the month containing the most recent data
-        start = new Date(mostRecentDate.getFullYear(), mostRecentDate.getMonth(), 1);
-        end = new Date(mostRecentDate.getFullYear(), mostRecentDate.getMonth() + 1, 0);
+        // Use the current month
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         break;
       case 'week':
-        // Use the week containing the most recent data
-        const startOfWeek = new Date(mostRecentDate);
-        startOfWeek.setDate(mostRecentDate.getDate() - mostRecentDate.getDay());
+        // Use the current week
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(startOfWeek.getDate() + 6);
         start = startOfWeek;
         end = endOfWeek;
         break;
       default:
-        start = new Date(mostRecentDate.getFullYear(), 0, 1);
-        end = new Date(mostRecentDate.getFullYear(), 11, 31);
+        start = new Date(now.getFullYear(), 0, 1);
+        end = new Date(now.getFullYear(), 11, 31);
     }
 
     setZoomLevel(newZoomLevel);
@@ -216,6 +216,7 @@ export const TimelineControls: React.FC = () => {
 
   // Format date for display in month view
   const formatMonthRange = () => {
+    // Always show the specific month and year from the current visible range
     return visibleDateRange.start.toLocaleDateString('en-US', { 
       month: 'long', 
       year: 'numeric' 

@@ -186,6 +186,9 @@ export const TimelineScroller: React.FC = () => {
   const scrollThrottleRef = useRef<NodeJS.Timeout | null>(null);
   const zoomThrottleRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Throttle ref for scroll operations
+  const scrollToPositionThrottleRef = useRef<NodeJS.Timeout | null>(null);
+
   // Get user ID from API key in cookies
   useEffect(() => {
     const currentUserId = getCurrentUserId();
@@ -206,6 +209,9 @@ export const TimelineScroller: React.FC = () => {
       }
       if (zoomThrottleRef.current) {
         clearTimeout(zoomThrottleRef.current);
+      }
+      if (scrollToPositionThrottleRef.current) {
+        clearTimeout(scrollToPositionThrottleRef.current);
       }
     };
   }, []);
@@ -420,7 +426,7 @@ export const TimelineScroller: React.FC = () => {
           if (centerPeriod) {
             setVisibleDateRange(centerPeriod.start, centerPeriod.end);
           }
-        }, 100);
+        }, 50);
         
       } else if (e.deltaY > 0 && currentZoomIndex > 0) {
         // Zoom out (week -> month -> year)
@@ -488,6 +494,39 @@ export const TimelineScroller: React.FC = () => {
         return <YearView {...viewProps} />;
     }
   };
+
+  // Listen for external date range changes (from TimelineControls) and scroll to correct position
+  useEffect(() => {
+    if (!hasInitialized || loadedPeriods.length === 0 || !scrollContainerRef.current) return;
+    
+    // Throttle scroll operations to prevent rapid firing
+    if (scrollToPositionThrottleRef.current) {
+      clearTimeout(scrollToPositionThrottleRef.current);
+    }
+    
+    scrollToPositionThrottleRef.current = setTimeout(() => {
+      if (!scrollContainerRef.current) return;
+      
+      // Find which loaded period contains the new visibleDateRange
+      const targetPeriodIndex = loadedPeriods.findIndex(period => 
+        visibleDateRange.start >= period.start && visibleDateRange.end <= period.end
+      );
+      
+      // If we found the target period, scroll to it
+      if (targetPeriodIndex !== -1) {
+        console.log('📍 TimelineScroller: Scrolling to existing period', targetPeriodIndex);
+        
+        const containerWidth = scrollContainerRef.current.clientWidth;
+        const scrollWidth = scrollContainerRef.current.scrollWidth;
+        const periodWidth = scrollWidth / loadedPeriods.length;
+        const targetScrollLeft = (targetPeriodIndex * periodWidth) - (containerWidth / 2) + (periodWidth / 2);
+        
+        scrollContainerRef.current.scrollLeft = Math.max(0, targetScrollLeft);
+      }
+      
+      scrollToPositionThrottleRef.current = null;
+    }, 150); // Throttle to 150ms
+  }, [visibleDateRange, hasInitialized, loadedPeriods]);
 
   // Calculate dynamic width based on loaded periods
   const dynamicWidth = Math.max(300, loadedPeriods.length * 100); // Minimum 300vw, scale with periods
