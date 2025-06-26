@@ -12,6 +12,7 @@ import { TypeSelector } from './components/TypeSelector';
 import { ImageGalleryModal } from './components/ImageGalleryModal';
 import { Image } from 'lucide-react';
 import type { Id } from "@/convex/_generated/dataModel";
+import { useNotes } from '@/app/context/notes-context';
 
 interface NoteAreaProps {
   note: Note;
@@ -42,6 +43,8 @@ export function NoteArea({
   onNavigateBack,
   navigationStack
 }: NoteAreaProps) {
+  // Get all notes from context for tag suggestions
+  const { notes } = useNotes();
   // Use the live query conditionally with "skip" parameter to avoid conditional hook call
   const liveNoteData = useQuery(
     api.notes.getNote, 
@@ -69,6 +72,16 @@ export function NoteArea({
     tags: note.tags,
     userId: String(note.userId),
   });
+
+  // Prepare tag data for suggestions (excluding current note to avoid bias)
+  const noteTagData = React.useMemo(() => 
+    notes
+      .filter(n => String(n._id) !== String(note._id)) // Exclude current note
+      .map(n => ({
+        tags: n.tags || [],
+        updatedAt: n.updatedAt || n._creationTime || 0
+      }))
+  , [notes, note._id]);
 
   // Keep content in sync with note prop
   React.useEffect(() => {
@@ -265,6 +278,7 @@ export function NoteArea({
           onUpdate={onUpdate}
           onTitleChange={() => {}} // Title changes are handled by NoteMeta internally
           onEditingTitleChange={setIsEditingTitle}
+          noteTagData={noteTagData}
         />
         
         <TypeSelector
