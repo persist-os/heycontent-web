@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Note, NoteType } from '../types';
 import { NoteCard } from './cards/NoteCard';
 import { ProjectCard } from './projects/ProjectCard';
 import { CreateProjectModal } from './projects/CreateProjectModal';
-import { Plus, Search, Folder } from 'lucide-react';
+import { Plus, Search, Folder, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCreateNote } from '../hooks/useCreateNote';
 import { useProjects } from '../hooks/useProjects';
@@ -29,6 +29,7 @@ export function NotesGrid({
 }: NotesGridProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<'all' | 'projects' | NoteType>('all');
+  const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null);
   const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
   
   const { createNote, isCreating: isCreatingNote } = useCreateNote();
@@ -43,6 +44,33 @@ export function NotesGrid({
     createProject,
     deleteProject 
   } = useProjects(firebaseUser?.uid);
+
+  // Extract and sort top tags from all notes
+  const topTags = useMemo(() => {
+    const tagCounts = new Map<string, number>();
+    
+    // Count tag occurrences across all notes
+    notes.forEach(note => {
+      note.tags?.forEach(tag => {
+        if (tag.trim()) { // Only include non-empty tags
+          tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+        }
+      });
+    });
+    
+    // Convert to array and sort by frequency (descending), then alphabetically
+    return Array.from(tagCounts.entries())
+      .sort((a, b) => {
+        // First sort by count (descending)
+        if (b[1] !== a[1]) {
+          return b[1] - a[1];
+        }
+        // Then sort alphabetically
+        return a[0].toLowerCase().localeCompare(b[0].toLowerCase());
+      })
+      .slice(0, 15) // Show top 15 tags
+      .map(([tag, count]) => ({ tag, count }));
+  }, [notes]);
 
   const handleCreateNote = async () => {
     if (selectedTypeFilter === 'projects') {
@@ -69,6 +97,14 @@ export function NotesGrid({
     window.location.href = `/dashboard/notes/projects/${project._id}`;
   };
 
+  const handleTagFilter = (tag: string) => {
+    setSelectedTagFilter(selectedTagFilter === tag ? null : tag);
+  };
+
+  const clearTagFilter = () => {
+    setSelectedTagFilter(null);
+  };
+
   // Note type configurations with colors - matching exact schema types
   const noteTypes = [
     { key: 'all', label: 'All Items', color: 'bg-gray-500' },
@@ -85,7 +121,7 @@ export function NotesGrid({
   const showingProjectsOnly = selectedTypeFilter === 'projects';
   const showingAll = selectedTypeFilter === 'all';
   
-  // Filter notes based on search and type filter
+  // Filter notes based on search, type filter, and tag filter
   const filteredNotes = showingProjectsOnly ? [] : notes.filter(note => {
     const matchesSearch = searchTerm === '' || 
       note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -93,7 +129,10 @@ export function NotesGrid({
 
     const matchesTypeFilter = selectedTypeFilter === 'all' || note.type === selectedTypeFilter;
 
-    return matchesSearch && matchesTypeFilter;
+    const matchesTagFilter = !selectedTagFilter || 
+      note.tags?.some(tag => tag.toLowerCase() === selectedTagFilter.toLowerCase());
+
+    return matchesSearch && matchesTypeFilter && matchesTagFilter;
   });
   
   // Filter projects based on search - show in 'all' view and 'projects' view
@@ -163,7 +202,7 @@ export function NotesGrid({
       </div>
 
       {/* Type filter buttons */}
-      <div className="flex flex-wrap gap-2 justify-center mb-6">
+      <div className="flex flex-wrap gap-2 justify-center mb-4">
         {noteTypes.map((type) => (
           <button
             key={type.key}
@@ -181,6 +220,41 @@ export function NotesGrid({
         ))}
       </div>
 
+      {/* Tag filter pills */}
+      {topTags.length > 0 && (
+        <div className="px-4 mb-6">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <span className="text-xs text-muted-foreground font-medium">Popular Tags:</span>
+            {selectedTagFilter && (
+              <button
+                onClick={clearTagFilter}
+                className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+              >
+                <X className="w-3 h-3" />
+                Clear
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1 justify-center max-w-4xl mx-auto">
+            {topTags.map(({ tag, count }) => (
+              <button
+                key={tag}
+                onClick={() => handleTagFilter(tag)}
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors",
+                  selectedTagFilter === tag
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/80"
+                )}
+              >
+                <span>{tag}</span>
+                <span className="text-xs opacity-70">({count})</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Content Grid */}
       {totalItems === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
@@ -188,14 +262,14 @@ export function NotesGrid({
             {showingProjectsOnly ? <Folder className="w-8 h-8 text-muted-foreground" /> : <Plus className="w-8 h-8 text-muted-foreground" />}
           </div>
           <h3 className="text-lg font-semibold text-foreground mb-2">
-            {searchTerm || (selectedTypeFilter !== 'all' && selectedTypeFilter !== 'projects') 
+            {searchTerm || (selectedTypeFilter !== 'all' && selectedTypeFilter !== 'projects') || selectedTagFilter
               ? `No ${showingProjectsOnly ? 'projects' : showingAll ? 'items' : 'notes'} found` 
               : `No ${showingProjectsOnly ? 'projects' : showingAll ? 'items' : 'notes'} yet`
             }
           </h3>
           <p className="text-muted-foreground mb-6 max-w-md">
-            {searchTerm || (selectedTypeFilter !== 'all' && selectedTypeFilter !== 'projects')
-              ? "Try adjusting your search or filters to find what you're looking for."
+            {searchTerm || (selectedTypeFilter !== 'all' && selectedTypeFilter !== 'projects') || selectedTagFilter
+              ? "Try adjusting your search, filters, or tags to find what you're looking for."
               : showingProjectsOnly 
                 ? 'Create your first project to start organizing your notes, conversations, and content together.'
                 : showingAll
