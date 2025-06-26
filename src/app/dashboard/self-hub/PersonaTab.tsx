@@ -97,6 +97,7 @@ export const PersonaTab = React.memo(() => {
   const allPersonas = usePersonaStore(state => state.allPersonas);
   const isCacheValid = usePersonaStore(state => state.isCacheValid);
   const initializePersonaData = usePersonaStore(state => state.initializePersonaData);
+  const refreshPersonaData = usePersonaStore(state => state.refreshPersonaData);
   const lastFetchedUserId = usePersonaStore(state => state.lastFetchedUserId);
 
   console.log('🎯 [PERSONA TAB] ⚡ LAZY Auth state:', {
@@ -120,23 +121,26 @@ export const PersonaTab = React.memo(() => {
     const effectStartTime = performance.now();
     console.log('🎯 [PERSONA TAB] ⚡ LAZY useEffect triggered for persona initialization');
     
-    if (firebaseUser?.uid && (!isPersonaInitialized || lastFetchedUserId !== firebaseUser.uid)) {
-      console.log('🎯 [PERSONA TAB] ⚡ LAZY Initializing persona data for first time in this tab!');
-      initializePersonaData(firebaseUser.uid, convex).then(() => {
-        const effectEndTime = performance.now();
-        console.log('🎯 [PERSONA TAB] ⚡ LAZY Persona initialization completed in:', Math.round(effectEndTime - effectStartTime), 'ms');
-      }).catch((error) => {
-        const effectErrorTime = performance.now();
-        console.error('❌ [PERSONA TAB] LAZY Persona initialization failed in:', Math.round(effectErrorTime - effectStartTime), 'ms, error:', error);
-      });
-    } else {
-      console.log('🎯 [PERSONA TAB] ⚡ LAZY Skipping persona initialization:', {
-        hasUser: !!firebaseUser?.uid,
-        isInitialized: isPersonaInitialized,
-        userMatches: lastFetchedUserId === firebaseUser?.uid
-      });
+    if (firebaseUser?.uid) {
+      // Always ensure we have fresh data for this user
+      if (!isPersonaInitialized || lastFetchedUserId !== firebaseUser.uid || !currentPersona) {
+        console.log('🎯 [PERSONA TAB] ⚡ LAZY Initializing persona data - fresh fetch needed!');
+        initializePersonaData(firebaseUser.uid, convex).then(() => {
+          const effectEndTime = performance.now();
+          console.log('🎯 [PERSONA TAB] ⚡ LAZY Persona initialization completed in:', Math.round(effectEndTime - effectStartTime), 'ms');
+        }).catch((error) => {
+          const effectErrorTime = performance.now();
+          console.error('❌ [PERSONA TAB] LAZY Persona initialization failed in:', Math.round(effectErrorTime - effectStartTime), 'ms, error:', error);
+        });
+      } else if (!isCacheValid()) {
+        // If cache is stale, refresh the data
+        console.log('🎯 [PERSONA TAB] ⚡ LAZY Cache is stale - refreshing persona data');
+        refreshPersonaData(firebaseUser.uid, convex);
+      } else {
+        console.log('🎯 [PERSONA TAB] ⚡ LAZY Using valid cached data');
+      }
     }
-  }, [firebaseUser?.uid, isPersonaInitialized, lastFetchedUserId, initializePersonaData, convex]);
+  }, [firebaseUser?.uid, isPersonaInitialized, lastFetchedUserId, currentPersona, isCacheValid, initializePersonaData, refreshPersonaData, convex]);
 
   // Memoize the new persona handler
   const handleNewPersona = React.useCallback(() => {
@@ -144,28 +148,28 @@ export const PersonaTab = React.memo(() => {
     router.push('/dashboard/chat?ask=' + encodeURIComponent('hey content update persona'));
   }, [router]);
 
-  // Determine loading state more intelligently
+  // Simplified loading state - prioritize showing persona when available
   const loadingState = useMemo(() => {
-    // If we have cached persona data, show content immediately
-    if (currentPersona && allPersonas.length > 0) {
-      console.log('🎯 [PERSONA TAB] ⚡ LAZY - showing content from cache!');
+    // Always show persona if we have it, even if loading in background
+    if (currentPersona) {
+      console.log('🎯 [PERSONA TAB] ⚡ LAZY - showing current persona!');
       return 'ready';
     }
     
-    // If auth is loading and no cached data, show full skeleton
-    if (authLoading && !currentPersona) return 'initializing';
+    // If we're still waiting for auth, show loading
+    if (authLoading) return 'initializing';
     
-    // If we have cached data but loading fresh data, show quick loading
-    if (isPersonaLoading && allPersonas.length > 0) return 'refreshing';
+    // If we have a user but no persona and we're loading, show loading
+    if (firebaseUser && isPersonaLoading) return 'loading';
     
-    // If we have a user but no data and store is loading, show full skeleton
-    if (firebaseUser && !currentPersona && isPersonaLoading) return 'loading';
+    // If we have a user but no persona and store isn't initialized, show loading
+    if (firebaseUser && !isPersonaInitialized) return 'loading';
     
-    // If we have a user but store isn't initialized, show quick loading
-    if (firebaseUser && !isPersonaInitialized && !currentPersona) return 'initializing';
+    // If we have a user but still no persona, we're ready (will show empty state)
+    if (firebaseUser) return 'ready';
     
-    return 'ready';
-  }, [authLoading, firebaseUser, isPersonaLoading, isPersonaInitialized, currentPersona, allPersonas.length]);
+    return 'initializing';
+  }, [authLoading, firebaseUser, isPersonaLoading, isPersonaInitialized, currentPersona]);
   
   console.log('🎯 [PERSONA TAB] ⚡ LAZY Loading state:', loadingState, {
     authLoading,
@@ -179,7 +183,7 @@ export const PersonaTab = React.memo(() => {
   // Show appropriate loading UI based on state
   if (loadingState === 'initializing' || loadingState === 'loading') {
     const skeletonStartTime = performance.now();
-    console.log('🎯 [PERSONA TAB] Showing full skeleton at:', new Date().toISOString(), 'render time so far:', Math.round(skeletonStartTime - renderStartTime), 'ms');
+    console.log('🎯 [PERSONA TAB] Showing loading state at:', new Date().toISOString(), 'render time so far:', Math.round(skeletonStartTime - renderStartTime), 'ms');
     
     return (
       <div className="flex justify-center items-start min-h-[400px] px-4 py-8">
@@ -188,12 +192,7 @@ export const PersonaTab = React.memo(() => {
     );
   }
 
-  if (loadingState === 'refreshing') {
-    console.log('🎯 [PERSONA TAB] ⚡ LAZY - showing quick loading indicator');
-    return <QuickLoadingIndicator />;
-  }
-
-  // Always render PersonaUpdateManager, even if firebaseUser is not present
+  // Always render PersonaUpdateManager when ready
   const finalRenderTime = performance.now();
   console.log('🎯 [PERSONA TAB] ⚡ LAZY Rendering PersonaUpdateManager at:', new Date().toISOString(), 'total render time:', Math.round(finalRenderTime - renderStartTime), 'ms');
 

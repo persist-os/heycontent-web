@@ -40,6 +40,8 @@ import { MarkdownNotepad } from './components/notepad/MarkdownNotepad'
 import { useNotepadUI } from './hooks/useNotepadUI'
 import { NotepadToggle } from './components/notepad/NotepadToggle'
 import { useNotes } from '@/app/context/notes-context'
+import { usePersonaStore } from '@/store/persona-store'
+import { useConvex } from 'convex/react'
 
 
 const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery }) => {
@@ -98,13 +100,39 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       .trim();
   };
 
+  // Get convex client for persona operations
+  const convex = useConvex()
+
+  // Get persona data from the centralized store
+  const currentPersona = usePersonaStore(state => state.currentPersona)
+  const isPersonaLoading = usePersonaStore(state => state.isLoading)
+  const initializePersonaData = usePersonaStore(state => state.initializePersonaData)
+  const refreshPersonaData = usePersonaStore(state => state.refreshPersonaData)
+  const invalidatePersonaData = usePersonaStore(state => state.invalidatePersonaData)
+  
   // Check if user has an existing persona
   const { hasPersona } = usePersonaData(userId, !!userId)
+  
+  // Initialize persona store when userId changes
+  useEffect(() => {
+    if (userId && convex) {
+      initializePersonaData(userId, convex);
+    }
+  }, [userId, convex, initializePersonaData]);
 
-  // Set content context when component mounts or when contentContext prop changes
+
+
+  // Set content context when component mounts or when contentContext prop changes (but not on refresh)
   useEffect(() => {
     if (contentContext && contentContext !== currentContext) {
-      setContentContext(contentContext)
+      // Only set context if the URL still has the contentContext parameter
+      // This prevents auto-setting context on page refresh
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('contentContext')) {
+          setContentContext(contentContext);
+        }
+      }
     }
   }, [contentContext, currentContext, setContentContext])
 
@@ -138,21 +166,44 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   // Track onboarding state for persona tip
   const onboardingState = useOnboardingState(messages, chatState.sessionId)
 
-  // Effect to detect persona completion and trigger persona display
+  // Effect to detect persona completion and trigger persona refresh
   useEffect(() => {
     if (!userId || messages.length === 0) return;
 
     // Check if the last message indicates persona completion
     const lastMessage = messages[messages.length - 1];
+    
+    // Check metadata flags
+    const hasPersonaCompletionFlags = lastMessage.metadata?.is_persona_complete === true || 
+                                     lastMessage.metadata?.persona_created === true;
+    
+    // FALLBACK: Check message content for persona indicators since metadata is unreliable
+    const hasPersonaContentPattern = lastMessage.content && (
+      lastMessage.content.includes('*Your Content Persona*') ||
+      lastMessage.content.includes('Content Persona') ||
+      (lastMessage.content.includes('*Content Style*')) ||
+      (lastMessage.content.includes('*Content Focus*') && lastMessage.content.includes('*Future Goals*'))
+    );
+
+    // Combined trigger: metadata flags OR content pattern
     const isPersonaCompleted = lastMessage.role === 'assistant' && 
-                              (lastMessage.metadata?.is_persona_complete === true || 
-                               lastMessage.metadata?.persona_created === true);
+                              (hasPersonaCompletionFlags || hasPersonaContentPattern);
 
     if (isPersonaCompleted) {
       setUpdatePersonaRequested(false);
-  
+      
+      // Force refresh persona data to get the latest persona
+      if (userId && convex) {
+        // Add a delay to ensure the backend has time to save the persona
+        setTimeout(() => {
+          // Invalidate cache first to ensure fresh data
+          invalidatePersonaData();
+          // Then refresh with fresh data
+          refreshPersonaData(userId, convex);
+        }, 1000); // 1 second delay to allow backend processing
+      }
     }
-  }, [messages, userId]);
+  }, [messages, userId, convex, refreshPersonaData, invalidatePersonaData]);
 
   // Base reference click handler
   const handleReferenceClick = (messageId: string) => {
@@ -205,9 +256,20 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   
   // Modified handleSendMessage to detect persona update request
   const handleSendMessageWithUpdateCheck = (message: string) => {
-    if (message.toLowerCase().trim() === 'hey content update persona') {
+    const lowerMessage = message.toLowerCase().trim();
+    
+    if (lowerMessage === 'hey content update persona') {
       setUpdatePersonaRequested(true);
     }
+    
+    // Also refresh persona when "hey content write my persona" is triggered
+    if (lowerMessage === 'hey content write my persona') {
+      if (userId && convex) {
+        // Force refresh to ensure we have the latest persona data
+        refreshPersonaData(userId, convex);
+      }
+    }
+    
     handleSendMessage(message);
   }
 
@@ -237,7 +299,12 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     // Clear the loaded conversation ref to allow loading new conversations
     loadedConversationRef.current = null;
     
-    // Navigate to a clean chat URL without chatId
+    // Force refresh persona data to ensure we have the latest
+    if (userId && convex) {
+      refreshPersonaData(userId, convex);
+    }
+    
+    // Navigate to a clean chat URL without any parameters
     router.push('/dashboard/chat');
 
     // Reset askQuery processing to allow new auto-sends
@@ -257,7 +324,30 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     router.replace(url.pathname + url.search);
   };
 
-  // Handle initial ask query if provided
+  // Clear specific auto-restart parameters on component mount to prevent auto-restart
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      let shouldUpdateUrl = false;
+      
+      // Only clear askQuery parameter on mount to prevent auto-restart on refresh
+      // But preserve it for initial processing if it's a fresh navigation
+      if (url.searchParams.has('ask') && document.referrer === window.location.origin) {
+        // This is likely a refresh, not a fresh navigation - clear it
+        url.searchParams.delete('ask');
+        shouldUpdateUrl = true;
+      }
+      
+      // Don't auto-clear contentContext - let it persist for legitimate use
+      // It will be handled by the contentContext effect logic
+      
+      if (shouldUpdateUrl) {
+        window.history.replaceState({}, '', url.toString());
+      }
+    }
+  }, []);
+
+  // Handle initial ask query if provided (only on first load, not refresh)
   useEffect(() => {
     // Only process askQuery if we haven't processed it yet, we're not in a loading state, and we have a user
     if (askQuery && 
@@ -273,6 +363,12 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       // Send the message with a small delay to ensure context is properly set
       setTimeout(() => {
         handleSendMessageWithUpdateCheck(askQuery);
+        // Clear the ask parameter after processing to prevent re-processing
+        if (typeof window !== 'undefined') {
+          const url = new URL(window.location.href);
+          url.searchParams.delete('ask');
+          window.history.replaceState({}, '', url.toString());
+        }
       }, 100);
     }
   }, [askQuery, isLoading, welcome, handleSendMessage, messages.length, user, currentContext]);
@@ -433,6 +529,15 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     type: note.type || 'idea_bank',
   }));
 
+  // Cleanup effect to prevent auto-restart on unmount
+  useEffect(() => {
+    return () => {
+      // Clear processed refs on unmount to prevent auto-restart
+      askQueryProcessedRef.current = null;
+      loadedConversationRef.current = null;
+    };
+  }, []);
+
   // Always render the static UI shell, even when authentication is in progress
   // User-dependent content will be conditionally rendered
 
@@ -440,7 +545,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     <>
       <div 
         data-chat-container
-        className="flex flex-col min-h-screen bg-background"
+        className="flex flex-col h-screen bg-background"
         style={getMainContentStyle()}
       >
         {/* Header - Always render this static element */}
@@ -451,7 +556,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         />
 
         {/* Main Content - Always render the container, conditionally render content */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col overflow-hidden">
           {!user ? (
             // Static placeholder for unauthenticated state
             <div className="flex-1 flex items-center justify-center">
@@ -463,7 +568,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             </div>
           ) : hasMessagesOrContext ? (
             <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
-              <div className="p-2 sm:p-4">
+              <div className="p-2 sm:p-4 pb-4">
                 <div className="max-w-4xl sm:max-w-6xl mx-auto space-y-3">
                   {/* Show context box when context is available */}
                   {currentContext && (
@@ -528,7 +633,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col overflow-hidden">
               {/* AI Intelligence Status Display (user-friendly) - Only show when no embeddings */}
               <AmbientInsightsContainer 
                 userId={userId}
@@ -543,15 +648,17 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
               />
             </div>
           )}
+
+          {/* Bottom Bar Actions - Only show when authenticated and there are no messages */}
+          {user && messages.length === 0 && (
+            <div className="flex-shrink-0">
+              <BottomBarActions onActionClick={handleActionClick} onInputPopulate={handleInputAppend} />
+            </div>
+          )}
         </div>
 
-        {/* Bottom Bar Actions - Only show when authenticated and there are no messages */}
-        {user && messages.length === 0 && (
-          <BottomBarActions onActionClick={handleActionClick} onInputPopulate={handleInputAppend} />
-        )}
-
-        {/* Input Bar - Always render the container, but conditionally enable functionality */}
-        <div className="flex-shrink-0 border-t border-border">
+        {/* Input Bar - Fixed to bottom, always rendered but conditionally enabled */}
+        <div className="flex-shrink-0 border-t border-border bg-background">
           <ChatInputArea
             showAmbient={false}
             currentContext={currentContext}

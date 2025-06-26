@@ -60,6 +60,7 @@ export const PersonaDetailModal: React.FC<PersonaDetailModalProps> = ({ persona,
     setIsRestoring(true);
     try {
       await activatePersona({ personaId: persona._id, userId });
+      // Ensure we see the latest data immediately
       await refreshPersonaData(userId, convex);
       toast.success('Persona restored as active!');
       onClose();

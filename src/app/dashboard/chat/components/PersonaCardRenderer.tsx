@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { getApiKey } from '@/app/lib/api-helpers';
 import { NewPersonaCard } from '@/app/settings/tabs/account/NewPersonaCard';
-import { usePersonaData } from '@/store/persona-store';
+import { usePersonaData, usePersonaStore } from '@/store/persona-store';
 import { Message } from '@/app/types/chat';
 import { useRouter } from 'next/navigation';
+import { useConvex } from 'convex/react';
 
 interface PersonaCardRendererProps {
   message: Message;
