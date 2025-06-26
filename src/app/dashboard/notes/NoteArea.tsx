@@ -61,6 +61,8 @@ export function NoteArea({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [content, setContent] = useState(note.content || '');
   const [lastSavedContent, setLastSavedContent] = useState(note.content || '');
+  const [tags, setTags] = useState<string[]>(note.tags || []);
+  const [lastSavedTags, setLastSavedTags] = useState<string[]>(note.tags || []);
   const [showImageGallery, setShowImageGallery] = useState(false);
 
   // Initialize the inline AI hook
@@ -83,50 +85,63 @@ export function NoteArea({
       }))
   , [notes, note._id]);
 
-  // Keep content in sync with note prop
+  // Keep content and tags in sync with note prop
   React.useEffect(() => {
     if (note.content !== content) {
       setContent(note.content || '');
       setLastSavedContent(note.content || '');
     }
+    if (JSON.stringify(note.tags || []) !== JSON.stringify(tags)) {
+      setTags(note.tags || []);
+      setLastSavedTags(note.tags || []);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [note._id, note.content]);
+  }, [note._id, note.content, note.tags]);
 
   // Autosave function that uses existing updateNote logic
   const autosave = React.useCallback(async () => {
-    // Only autosave if content has changed and note is not temporary
+    // Only autosave if content or tags have changed and note is not temporary
     const isTemporary = 'isTemporary' in note ? note.isTemporary : false;
-    if (content !== lastSavedContent && !isTemporary && content.length > 0) {
+    const contentChanged = content !== lastSavedContent;
+    const tagsChanged = JSON.stringify(tags) !== JSON.stringify(lastSavedTags);
+    
+    if ((contentChanged || tagsChanged) && !isTemporary && content.length > 0) {
       console.log('🔄 [NoteArea] Autosaving note:', {
         noteId: note._id,
-        contentChanged: content !== lastSavedContent,
-        contentLength: content.length
+        contentChanged,
+        tagsChanged,
+        contentLength: content.length,
+        tags
       });
       
       try {
         // Use onUpdate which already includes metadata generation logic
         await onUpdate(note._id, { 
           content, 
-          title: note.title || '' 
+          title: note.title || '',
+          tags: tags // Tags are already cleaned in handleTagsChange
         });
         
         setLastSavedContent(content);
+        setLastSavedTags([...tags]);
         console.log('✅ [NoteArea] Autosave successful');
       } catch (error) {
         console.error('❌ [NoteArea] Autosave failed:', error);
       }
     }
-  }, [content, lastSavedContent, note._id, note.title, note, onUpdate]);
+  }, [content, lastSavedContent, tags, lastSavedTags, note._id, note.title, note, onUpdate]);
 
-  // Debounced autosave that waits for a pause in typing
+  // Debounced autosave that waits for a pause in typing or tag changes
   React.useEffect(() => {
     const isTemporary = 'isTemporary' in note ? note.isTemporary : false;
+    const contentChanged = content !== lastSavedContent;
+    const tagsChanged = JSON.stringify(tags) !== JSON.stringify(lastSavedTags);
     
-    // Only set up debounced autosave if content has changed and note is not temporary
-    if (content !== lastSavedContent && !isTemporary && content.length > 0) {
-      console.log('⌨️ [NoteArea] Content changed, setting up debounced autosave');
+    // Only set up debounced autosave if content or tags have changed and note is not temporary
+    if ((contentChanged || tagsChanged) && !isTemporary && content.length > 0) {
+      console.log('⌨️ [NoteArea] Content or tags changed, setting up debounced autosave');
       
-      // Wait 3 seconds after last keystroke before autosaving
+      // Wait 3 seconds after last change before autosaving
       const debounceTimer = setTimeout(() => {
         console.log('🔄 [NoteArea] Debounced autosave triggered');
         autosave();
@@ -136,7 +151,7 @@ export function NoteArea({
         clearTimeout(debounceTimer);
       };
     }
-  }, [content, lastSavedContent, note, autosave]);
+  }, [content, lastSavedContent, tags, lastSavedTags, note, autosave]);
 
   // Handle page visibility change (when switching tabs or minimizing)
   React.useEffect(() => {
@@ -155,9 +170,11 @@ export function NoteArea({
   React.useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       const isTemporary = 'isTemporary' in note ? note.isTemporary : false;
+      const contentChanged = content !== lastSavedContent;
+      const tagsChanged = JSON.stringify(tags) !== JSON.stringify(lastSavedTags);
       
       // Only show warning and autosave if there are unsaved changes
-      if (content !== lastSavedContent && !isTemporary && content.length > 0) {
+      if ((contentChanged || tagsChanged) && !isTemporary && content.length > 0) {
         console.log('⚠️ [NoteArea] Before unload, triggering autosave');
         
         // Try to save synchronously (limited time)
@@ -172,25 +189,32 @@ export function NoteArea({
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [content, lastSavedContent, note, autosave]);
+  }, [content, lastSavedContent, tags, lastSavedTags, note, autosave]);
 
   // Periodic autosave (every 2 minutes as a safety net, but debounced autosave should handle most cases)
   React.useEffect(() => {
     const interval = setInterval(() => {
       const isTemporary = 'isTemporary' in note ? note.isTemporary : false;
+      const contentChanged = content !== lastSavedContent;
+      const tagsChanged = JSON.stringify(tags) !== JSON.stringify(lastSavedTags);
       
-      if (content !== lastSavedContent && !isTemporary && content.length > 0) {
+      if ((contentChanged || tagsChanged) && !isTemporary && content.length > 0) {
         console.log('⏰ [NoteArea] Periodic safety autosave triggered');
         autosave();
       }
     }, 120000); // 2 minutes
 
     return () => clearInterval(interval);
-  }, [content, lastSavedContent, note, autosave]);
+  }, [content, lastSavedContent, tags, lastSavedTags, note, autosave]);
 
   // Handle content changes with debounced save
   const handleContentChange = (newContent: string) => {
     setContent(newContent);
+  };
+
+  // Handle tag changes from NoteMeta
+  const handleTagsChange = (newTags: string[]) => {
+    setTags(newTags);
   };
 
   const handleTypeChange = async (newType: NoteType) => {
@@ -199,6 +223,8 @@ export function NoteArea({
 
   const handleSave = () => {
     onSave(content, note.title);
+    // Also trigger autosave to ensure tags are saved
+    autosave();
   };
 
   // AI handlers that return values for RichTextEditor
@@ -274,9 +300,10 @@ export function NoteArea({
       {/* Note metadata and type selector */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/95">
         <NoteMeta
-          note={note}
+          note={{...note, tags}} // Pass current tags state to NoteMeta
           onUpdate={onUpdate}
           onTitleChange={() => {}} // Title changes are handled by NoteMeta internally
+          onTagsChange={handleTagsChange} // Pass cleaned tags change handler
           onEditingTitleChange={setIsEditingTitle}
           noteTagData={noteTagData}
         />
