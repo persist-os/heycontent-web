@@ -9,6 +9,7 @@ import { useCreateNote } from '../hooks/useCreateNote';
 import { useProjects } from '../hooks/useProjects';
 import { useNotes } from '@/app/context/notes-context';
 import { useAuth } from '@/app/context/auth-context';
+import { getPopularTags } from '../utils/tag-utils';
 import {
   DndContext,
   DragEndEvent,
@@ -101,31 +102,14 @@ export function NotesGrid({
     })
   );
 
-  // Extract and sort top tags from all notes
+  // Extract and sort top tags from all notes using utility function
   const topTags = useMemo(() => {
-    const tagCounts = new Map<string, number>();
+    const noteTagData = notes.map(note => ({
+      tags: note.tags || [],
+      updatedAt: note.updatedAt || note._creationTime || 0
+    }));
     
-    // Count tag occurrences across all notes
-    notes.forEach(note => {
-      note.tags?.forEach(tag => {
-        if (tag.trim()) { // Only include non-empty tags
-          tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
-        }
-      });
-    });
-    
-    // Convert to array and sort by frequency (descending), then alphabetically
-    return Array.from(tagCounts.entries())
-      .sort((a, b) => {
-        // First sort by count (descending)
-        if (b[1] !== a[1]) {
-          return b[1] - a[1];
-        }
-        // Then sort alphabetically
-        return a[0].toLowerCase().localeCompare(b[0].toLowerCase());
-      })
-      .slice(0, 15) // Show top 15 tags
-      .map(([tag, count]) => ({ tag, count }));
+    return getPopularTags(noteTagData, 15);
   }, [notes]);
 
   const handleCreateNote = async () => {
@@ -494,7 +478,7 @@ export function NotesGrid({
         <button
           onClick={handleCreateNote}
           disabled={isCreatingNote}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors flex items-center justify-center shadow-lg hover:shadow-xl z-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="fixed bottom-6 right-6 w-14 h-14 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors flex items-center justify-center shadow-lg hover:shadow-xl z-50 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
           title={isCreatingNote ? "Creating..." : "Create new item"}
         >
           {isCreatingNote ? (

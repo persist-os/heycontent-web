@@ -1,18 +1,39 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Note } from '../types';
 import { MinimalTypeDisplay } from './TypeSelector';
+import { X, Plus, Edit2 } from 'lucide-react';
+import { getRecentTags, type NoteTagData } from '../utils/tag-utils';
 
 interface NoteMetaProps {
   note: Note;
-  onUpdate: (noteId: string, updates: { title: string }) => Promise<any>;
+  onUpdate: (noteId: string, updates: { title?: string; tags?: string[] }) => Promise<any>;
   onTitleChange?: (title: string) => void;
+  onTagsChange?: (tags: string[]) => void;
   onEditingTitleChange?: (isEditing: boolean) => void;
+  noteTagData?: NoteTagData[]; // Array of tag data from all notes for suggestions
 }
 
-export function NoteMeta({ note, onUpdate, onTitleChange, onEditingTitleChange }: NoteMetaProps) {
+export function NoteMeta({ note, onUpdate, onTitleChange, onTagsChange, onEditingTitleChange, noteTagData = [] }: NoteMetaProps) {
   const [editedTitle, setEditedTitle] = useState<string | null>(null);
+  const [editingTags, setEditingTags] = useState(false);
+  const [newTag, setNewTag] = useState('');
+  const newTagInputRef = useRef<HTMLInputElement>(null);
+  
   const isEditing = editedTitle !== null;
+  const currentTags = note.tags || [];
+
+  // Calculate recent tag suggestions (excluding tags already on this note)
+  const recentTagSuggestions = React.useMemo(() => {
+    if (!editingTags || noteTagData.length === 0) return [];
+    
+    const recentTags = getRecentTags(noteTagData, 6); // Get more than 3 in case some are filtered out
+    const currentNoteTags = new Set(currentTags);
+    
+    return recentTags
+      .filter(tag => !currentNoteTags.has(tag))
+      .slice(0, 3); // Show max 3 suggestions
+  }, [editingTags, noteTagData, currentTags]);
 
   const displayTitle = isEditing ? editedTitle : (note.title || "Untitled Note");
 
@@ -45,6 +66,53 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onEditingTitleChange }
       if (onEditingTitleChange) onEditingTitleChange(false);
     }
   };
+
+  // Tag editing functions
+  const handleStartEditingTags = () => {
+    setEditingTags(true);
+    setNewTag('');
+  };
+
+  const handleStopEditingTags = () => {
+    setEditingTags(false);
+    setNewTag('');
+  };
+
+  const handleRemoveTag = (indexToRemove: number) => {
+    onTagsChange?.(currentTags.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleEditTag = (index: number, newValue: string) => {
+    onTagsChange?.(currentTags.map((tag, i) => i === index ? newValue : tag));
+  };
+
+  const handleAddNewTag = () => {
+    if (newTag && !currentTags.includes(newTag)) {
+      onTagsChange?.([...currentTags, newTag]);
+      setNewTag('');
+      // Keep focus for continuous tag adding
+      newTagInputRef.current?.focus();
+    }
+  };
+
+  const handleAddSuggestedTag = (tag: string) => {
+    if (!currentTags.includes(tag)) {
+      onTagsChange?.([...currentTags, tag]);
+    }
+  };
+
+  const handleNewTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (newTag && !currentTags.includes(newTag)) {
+        onTagsChange?.([...currentTags, newTag]);
+        setNewTag('');
+        newTagInputRef.current?.focus();
+      }
+    } else if (e.key === 'Escape') {
+      handleStopEditingTags();
+    }
+  };
   
   return (
     <div className="flex-1 min-w-0">
@@ -68,30 +136,144 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onEditingTitleChange }
           {displayTitle}
         </h1>
       )}
-      <div className="flex flex-wrap items-center mt-2 text-xs text-muted-foreground">
-        <span className="font-medium">
-          {note.updatedAt
-            ? new Date(note.updatedAt).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })
-            : 'Just now'
-          }
-        </span>
-        <span className="mx-2 text-muted-foreground/60">•</span>
-        <MinimalTypeDisplay currentType={note.type || 'idea_bank'} />
-        {note.tags && note.tags.length > 0 && (
-          <div className="flex flex-wrap items-center ml-3">
-            <span className="mr-2 text-muted-foreground/60">•</span>
-            <div className="flex flex-wrap gap-1.5">
-              {note.tags.map((tag, idx) => (
-                <span key={idx} className="bg-muted/60 px-2 py-1 rounded-full text-muted-foreground text-xs font-medium border border-border/40 hover:border-border transition-colors duration-200">
-                  #{tag}
-                </span>
-              ))}
-            </div>
+      <div className="mt-2 text-xs text-muted-foreground max-w-full overflow-visible">
+        <div className="flex items-center">
+          <span className="font-medium">
+            {note.updatedAt
+              ? new Date(note.updatedAt).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })
+              : 'Just now'
+            }
+          </span>
+          <span className="mx-2 text-muted-foreground/60">•</span>
+          <MinimalTypeDisplay currentType={note.type || 'idea_bank'} />
+        </div>
+        
+        {/* Tags Section */}
+        {((note.tags && note.tags.length > 0) || editingTags) && (
+          <div className="flex items-center mt-3 max-w-full overflow-hidden">
+            <span className="mr-2 text-muted-foreground/60 flex-shrink-0">Tags:</span>
+            {editingTags ? (
+              <div className="flex gap-3 items-center min-w-0 flex-1 overflow-x-auto scrollbar-hide py-2">
+                {currentTags.map((tag, idx) => (
+                  <div key={idx} className="flex items-center bg-muted/60 rounded-full border border-border/40 overflow-hidden">
+                    <input
+                      type="text"
+                      value={tag}
+                      onChange={(e) => handleEditTag(idx, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          newTagInputRef.current?.focus();
+                        } else if (e.key === 'Escape') {
+                          handleStopEditingTags();
+                        }
+                      }}
+                      className="bg-transparent px-3 py-1.5 text-xs font-medium text-muted-foreground border-none outline-none min-w-[40px] flex-shrink-0"
+                      style={{ width: `${Math.max(40, (tag.length + 2) * 8)}px` }}
+                      title={`Edit tag: ${tag}`}
+                      aria-label={`Edit tag: ${tag}`}
+                    />
+                    <button
+                      onClick={() => handleRemoveTag(idx)}
+                      className="p-1.5 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                      title={`Remove tag: ${tag}`}
+                      aria-label={`Remove tag: ${tag}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                
+                {/* Add new tag input */}
+                <div className="flex items-center bg-muted/40 border-2 border-dashed border-border/60 rounded-full overflow-hidden">
+                  <input
+                    ref={newTagInputRef}
+                    type="text"
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyDown={handleNewTagKeyDown}
+                    placeholder="Add tag..."
+                    className="bg-transparent px-3 py-1.5 text-xs font-medium text-muted-foreground border-none outline-none min-w-[60px] flex-shrink-0"
+                    style={{ width: `${Math.max(60, (newTag.length + 8) * 8)}px` }}
+                  />
+                  <button
+                    onClick={handleAddNewTag}
+                    disabled={!newTag.trim()}
+                    className="p-1.5 hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+                    title="Add new tag"
+                    aria-label="Add new tag"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
+
+                {/* Done button */}
+                <button
+                  onClick={() => {
+                    // Add pending tag if any
+                    if (newTag && !currentTags.includes(newTag)) {
+                      onTagsChange?.([...currentTags, newTag]);
+                    }
+                    handleStopEditingTags();
+                  }}
+                  className="ml-2 px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                >
+                  Done
+                </button>
+
+                {/* Recent tag suggestions */}
+                {recentTagSuggestions.length > 0 && (
+                  <div className="flex gap-1 min-w-0 flex-shrink-0">
+                    <span className="text-xs text-muted-foreground/60 self-center flex-shrink-0 whitespace-nowrap">Recent:</span>
+                    {recentTagSuggestions.map((tag) => (
+                      <button
+                        key={tag}
+                        onClick={() => handleAddSuggestedTag(tag)}
+                        className="px-2 py-1 text-xs bg-primary/10 text-primary border border-primary/20 rounded-full hover:bg-primary/20 transition-colors flex-shrink-0 whitespace-nowrap"
+                        title={`Add "${tag}" tag`}
+                      >
+                        +{tag}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+              </div>
+            ) : (
+              <div className="flex gap-3 items-center min-w-0 flex-1 overflow-x-auto scrollbar-hide py-2">
+                {note.tags!.map((tag, idx) => (
+                  <span key={idx} className="bg-muted/60 px-3 py-1.5 rounded-full text-muted-foreground text-xs font-medium border border-border/40 hover:border-border transition-colors duration-200 flex-shrink-0 whitespace-nowrap">
+                    #{tag}
+                  </span>
+                ))}
+                <button
+                  onClick={handleStartEditingTags}
+                  className="ml-2 p-1.5 hover:bg-muted/60 rounded text-muted-foreground hover:text-foreground transition-colors"
+                  title="Edit tags"
+                >
+                  <Edit2 className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Add tags button when no tags exist and not editing */}
+        {!note.tags?.length && !editingTags && (
+          <div className="flex items-center mt-3">
+            <span className="mr-2 text-muted-foreground/60 flex-shrink-0">Tags:</span>
+            <button
+              onClick={handleStartEditingTags}
+              className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted/60 rounded-full border border-dashed border-border/60 transition-colors flex-shrink-0"
+            >
+              <Plus className="w-3 h-3" />
+              Add tags
+            </button>
           </div>
         )}
       </div>

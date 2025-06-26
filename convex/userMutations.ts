@@ -234,10 +234,6 @@ export const deleteUserAndData = mutation({
     await batchDelete("youtubeVideos", () =>
       ctx.db.query("youtubeVideos").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
-    // instagramTokens
-    await batchDelete("instagramTokens", () =>
-      ctx.db.query("instagramTokens").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
     // instagramAccounts
     await batchDelete("instagramAccounts", () =>
       ctx.db.query("instagramAccounts").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
@@ -245,6 +241,14 @@ export const deleteUserAndData = mutation({
     // instagramPosts
     await batchDelete("instagramPosts", () =>
       ctx.db.query("instagramPosts").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // instagramTrackerAnalysis
+    await batchDelete("instagramTrackerAnalysis", () =>
+      ctx.db.query("instagramTrackerAnalysis").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // instagramBatchAnalysis
+    await batchDelete("instagramBatchAnalysis", () =>
+      ctx.db.query("instagramBatchAnalysis").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     // usageEvents
     await batchDelete("usageEvents", () =>

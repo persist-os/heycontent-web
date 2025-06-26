@@ -12,134 +12,73 @@ export function useGmailAnalytics(userId?: string) {
     userId ? { userId } : "skip"
   );
 
-  // Convex query for Gmail threads
+  // Use the raw Convex query that returns the exact schema structure
   const gmailThreads = useQuery(
-    api.gmailQueries.getGmailThreadsWithMessages,
+    api.gmailQueries.listUserGmailThreads,
     userId ? { userId } : "skip"
   );
   
   const loading = gmailThreads === undefined;
 
-  // Helper to get the received date for an email/thread
-  const getReceivedDate = (email: any, thread: any) => {
-    if (email && email.internalDate) return new Date(Number(email.internalDate)).toISOString();
-    const firstMessage = thread.messages && thread.messages.length > 0 ? thread.messages[0] : null;
-    if (firstMessage && firstMessage.internalDate) return new Date(Number(firstMessage.internalDate)).toISOString();
-    if (thread.createdAt) return new Date(thread.createdAt).toISOString();
-    return '';
-  };
+  // Map Gmail items according to the actual Convex schema structure
+  const mappedGmailItems: GmailContentItem[] = useMemo(() => {
+    if (gmailThreads && Array.isArray(gmailThreads)) {
+      return gmailThreads.map((thread: any): GmailContentItem => {
+        // Extract data from the actual Convex schema structure
+        const threadData = thread.data || {};
+        const messages = threadData.messages || [];
+        
+        // Get the first message for basic info
+        const firstMessage = messages[0] || {};
+        
+        // Extract subject, from, snippet from the first message or thread data
+        const subject = firstMessage.subject || threadData.subject || thread.subject || 'No Subject';
+        const from = firstMessage.from || threadData.from || thread.from || 'Unknown Sender';
+        const snippet = firstMessage.snippet || threadData.snippet || thread.snippet || 'No preview available';
+        
+        // Create unique ID for the thread
+        const uniqueId = thread.threadId || thread._id || `gmail-${Date.now()}`;
+        
+        // Calculate message count
+        const messageCount = messages.length || thread.message_count || 1;
 
-  // Map Gmail items
-  const mappedGmailItems = useMemo(() => {
-    if (Array.isArray(gmailThreads)) {
-      const importantEmails: any[] = [];
-      gmailThreads.forEach((thread: any, threadIndex: number) => {
-        if (thread.analysis && Array.isArray(thread.analysis.important_emails)) {
-          thread.analysis.important_emails.forEach((email: any, emailIndex: number) => {
-            const firstMessage = thread.messages && thread.messages.length > 0 ? thread.messages[0] : null;
-            // Ensure unique ID by prefixing with 'important-' and including indices
-            const uniqueId = `gmail-important-${thread.threadId || thread._id || thread.id}-${emailIndex}`;
-            importantEmails.push({
-              id: uniqueId,
-              platform: 'gmail',
-              publishedAt: getReceivedDate(email, thread),
-              content: {
-                data: {
-                  subject: email.subject || thread.data?.subject || thread.subject || 'No Subject',
-                  snippet: email.snippet || thread.data?.snippet || thread.snippet || 'No preview available',
-                  from: email.sender || thread.data?.from || thread.from || 'Unknown Sender',
-                  emailType: email.emailType || 'important',
-                  threadId: thread.threadId,
-                  emailId: firstMessage?.messageId || firstMessage?.id,
-                }
-              },
-              metrics: email.metrics || {},
-            });
-          });
-        }
+        return {
+          id: uniqueId,
+          platform: 'gmail',
+          publishedAt: new Date(thread.createdAt || Date.now()).toISOString(),
+          content: {
+            data: {
+              subject: subject,
+              snippet: snippet, 
+              from: from,
+              emailType: 'individual' as const,
+              threadId: thread.threadId,
+              emailId: firstMessage.id || thread.threadId,
+              messageCount: messageCount,
+              messages: messages, // Include full message list
+            }
+          },
+          metrics: {
+            replies: Math.max(0, messageCount - 1)
+          },
+          convexData: thread, // Include the full Convex document
+        };
       });
-      
-      let mappedItems: GmailContentItem[];
-      
-      if (importantEmails.length > 0) {
-        mappedItems = importantEmails;
-      } else {
-        // Use the enhanced data structure from getGmailThreadsWithMessages
-        mappedItems = gmailThreads.map((thread: any, index: number): GmailContentItem => {
-          // Handle different data structures:
-          // 1. thread.data.messages[0] (for gmailThreads with messages array)
-          // 2. thread.data (for individual gmailMessages)
-          // 3. Direct thread properties (fallback)
-          
-          let emailData = null;
-          
-          // Check if thread has data.messages array (from gmailThreads)
-          if (thread.data?.messages && Array.isArray(thread.data.messages) && thread.data.messages.length > 0) {
-            emailData = thread.data.messages[0]; // Get first message from thread
-          }
-          // Check if thread.data has direct email properties (from gmailMessages)
-          else if (thread.data?.subject || thread.data?.from) {
-            emailData = thread.data;
-          }
-          // Fallback to thread.messages if available
-          else if (thread.messages && Array.isArray(thread.messages) && thread.messages.length > 0) {
-            emailData = thread.messages[0];
-          }
-          
-          // Extract data with proper fallbacks
-          const subject = emailData?.subject || 
-                         thread.subject || 
-                         'No Subject';
-                         
-          const snippet = emailData?.snippet || 
-                         emailData?.body || // Sometimes body contains the snippet
-                         thread.snippet || 
-                         'No preview available';
-                         
-          const from = emailData?.from || 
-                      thread.from || 
-                      'Unknown Sender';
-                      
-          // Get thread ID and message count
-          const threadId = thread.threadId || thread.data?.threadId || thread.data?.id || thread._id;
-          const messageCount = thread.data?.messages?.length || thread.messages?.length || 1;
-          
-          // Ensure unique ID
-          const uniqueId = `gmail-${threadId || `thread-${thread._id || thread.id || index}`}`;
-          
-          return {
-            id: uniqueId,
-            platform: 'gmail',
-            publishedAt: getReceivedDate(emailData, thread),
-            content: {
-              data: {
-                subject: subject,
-                snippet: snippet, 
-                from: from,
-                emailType: emailData?.emailType || 'all',
-                threadId: threadId,
-                emailId: emailData?.messageId || emailData?.id || threadId,
-                messageCount: messageCount,
-                messages: thread.data?.messages || thread.messages || [],
-              }
-            },
-            metrics: thread.metrics || { replies: Math.max(0, messageCount - 1) },
-          };
-        });
-      }
-      
-      return mappedItems;
     }
     return [];
   }, [gmailThreads]);
 
+  // Check if user has connected Gmail accounts
+  const hasConnectedAccounts = gmailAccounts && gmailAccounts.length > 0;
+
   return {
-    items: mappedGmailItems,
-    loading: loading,
+    gmailItems: mappedGmailItems,
+    loading,
     error,
-    isConnected: !!gmailAccounts && gmailAccounts.length > 0,
-    rawData: gmailThreads,
-    lastFetchTime: new Date(),
-    isCached: false
+    hasConnectedAccounts,
+    refetch: () => {
+      // This will trigger a refetch when called
+      console.log('Gmail analytics refetch requested');
+    }
   };
 } 

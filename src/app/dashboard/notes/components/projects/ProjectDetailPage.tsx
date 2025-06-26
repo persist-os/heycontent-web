@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { ProjectWithItems } from '../../types/project';
 import { useProjectDetails } from '../../hooks/useProjectDetails';
 import { useProjects } from '../../hooks/useProjects';
+import { useCreateNote } from '../../hooks/useCreateNote';
 import { useAuth } from '@/app/context/auth-context';
+import { useNotes } from '@/app/context/notes-context';
 import { Id } from '@/convex/_generated/dataModel';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, Trash2, Plus } from 'lucide-react';
@@ -22,7 +24,9 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
   const router = useRouter();
   const { firebaseUser } = useAuth();
   const { project, isLoading } = useProjectDetails(projectId);
-  const { deleteProject, updateProject, isUpdating } = useProjects(firebaseUser?.uid);
+  const { deleteProject, updateProject, addItemToProject, isUpdating } = useProjects(firebaseUser?.uid);
+  const { createNote, isCreating: isCreatingNote } = useCreateNote();
+  const { setActiveNoteId } = useNotes();
   
   const [showAttachmentPanel, setShowAttachmentPanel] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -56,7 +60,31 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
       setShowEditModal(false);
     }
     return success;
-    };
+  };
+
+  const handleCreateNote = async () => {
+    try {
+      // Create a new note
+      const newNoteId = await createNote('', {
+        customTitle: 'New Note',
+        redirect: false
+      });
+      
+      if (newNoteId) {
+        // Add the note to the current project
+        const success = await addItemToProject(projectId, 'note', newNoteId);
+        
+        if (success) {
+          // Set the note as active so it opens in the editor
+          setActiveNoteId(newNoteId);
+          toast.success('Note created and added to project');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to create note for project:', error);
+      toast.error('Failed to create note');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -207,6 +235,20 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
           isUpdating={isUpdating}
         />
       )}
+
+      {/* Floating Create Note Button */}
+      <button
+        onClick={handleCreateNote}
+        disabled={isCreatingNote}
+        className="fixed bottom-6 right-6 w-14 h-14 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors flex items-center justify-center shadow-lg hover:shadow-xl z-50 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+        title={isCreatingNote ? "Creating note..." : "Create new note in project"}
+      >
+        {isCreatingNote ? (
+          <div className="w-6 h-6 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
+        ) : (
+          <Plus className="w-6 h-6" />
+        )}
+      </button>
     </div>
   );
 } 
