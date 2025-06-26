@@ -8,17 +8,17 @@ import {
   Youtube, 
   ExternalLink,
   Play,
-  Eye,
-  Heart,
-  MessageCircle,
   Calendar,
   X,
   BarChart3,
   TrendingUp,
-  Users,
-  Clock
+  FileText,
+  Lightbulb,
+  Target,
+  Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 interface YouTubeVideoCardProps {
   videoId: string;
@@ -33,6 +33,7 @@ export const YouTubeVideoCard: React.FC<YouTubeVideoCardProps> = ({
 }) => {
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid;
+  const router = useRouter();
 
   // Fetch video data
   const videoData = useQuery(api.notes.getContentByPrefixedId, {
@@ -42,33 +43,30 @@ export const YouTubeVideoCard: React.FC<YouTubeVideoCardProps> = ({
 
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // Directly navigate to the analysis page
+  React.useEffect(() => {
+    if (onOpenAnalysis) {
+      onOpenAnalysis(videoId);
+    } else {
+      // Fallback: navigate directly to the analysis page
+      router.push(`/dashboard/notes/youtube-analysis/${videoId}`);
+    }
+    // Close the modal after navigation
+    onClose();
+  }, [videoId, onOpenAnalysis, router, onClose]);
+
   if (!videoData) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Loading Video...</h3>
-            <button
-              onClick={onClose}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <X className="w-5 h-5" />
-            </button>
+          <div className="flex items-center justify-center mb-4">
+            <h3 className="text-lg font-semibold">Opening Analysis...</h3>
           </div>
           <div className="w-full h-32 bg-muted rounded animate-pulse" />
         </div>
       </div>
     );
   }
-
-  const formatNumber = (num: number) => {
-    if (num >= 1000000) {
-      return (num / 1000000).toFixed(1) + 'M';
-    } else if (num >= 1000) {
-      return (num / 1000).toFixed(1) + 'K';
-    }
-    return num.toString();
-  };
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -79,11 +77,80 @@ export const YouTubeVideoCard: React.FC<YouTubeVideoCardProps> = ({
     });
   };
 
-  const getEngagementRate = () => {
-    if (!videoData.statistics) return 0;
-    const views = videoData.statistics.views || 0;
-    const likes = videoData.statistics.likes || 0;
-    return views > 0 ? ((likes / views) * 100).toFixed(2) : '0';
+  // Helper function to render analysis content
+  const renderAnalysisContent = (analysis: any) => {
+    if (!analysis) return null;
+    
+    // Handle different analysis formats
+    if (typeof analysis === 'string') {
+      return (
+        <div className="bg-background rounded-lg p-3">
+          <h5 className="text-sm font-medium mb-2 flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Content Analysis
+          </h5>
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+            {analysis}
+          </p>
+        </div>
+      );
+    }
+    
+    if (typeof analysis === 'object') {
+      return (
+        <div className="space-y-3">
+          {analysis.keyInsights && (
+            <div className="bg-background rounded-lg p-3">
+              <h5 className="text-sm font-medium mb-2 flex items-center gap-2">
+                <Lightbulb className="w-4 h-4" />
+                Key Insights
+              </h5>
+              <p className="text-sm text-muted-foreground">
+                {analysis.keyInsights}
+              </p>
+            </div>
+          )}
+          
+          {analysis.contentSummary && (
+            <div className="bg-background rounded-lg p-3">
+              <h5 className="text-sm font-medium mb-2 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Content Summary
+              </h5>
+              <p className="text-sm text-muted-foreground">
+                {analysis.contentSummary}
+              </p>
+            </div>
+          )}
+          
+          {analysis.targetAudience && (
+            <div className="bg-background rounded-lg p-3">
+              <h5 className="text-sm font-medium mb-2 flex items-center gap-2">
+                <Target className="w-4 h-4" />
+                Target Audience
+              </h5>
+              <p className="text-sm text-muted-foreground">
+                {analysis.targetAudience}
+              </p>
+            </div>
+          )}
+          
+          {analysis.recommendations && (
+            <div className="bg-background rounded-lg p-3">
+              <h5 className="text-sm font-medium mb-2 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" />
+                Recommendations
+              </h5>
+              <p className="text-sm text-muted-foreground">
+                {analysis.recommendations}
+              </p>
+            </div>
+          )}
+        </div>
+      );
+    }
+    
+    return null;
   };
 
   return (
@@ -148,23 +215,15 @@ export const YouTubeVideoCard: React.FC<YouTubeVideoCardProps> = ({
               {videoData.content}
             </p>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-              <div className="flex items-center gap-2 text-sm">
-                <Eye className="w-4 h-4 text-blue-500" />
-                <span>{formatNumber(videoData.statistics?.views || 0)} views</span>
+            {/* Video Details */}
+            <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                <span>Published {formatDate(videoData.createdAt)}</span>
               </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Heart className="w-4 h-4 text-red-500" />
-                <span>{formatNumber(videoData.statistics?.likes || 0)} likes</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <MessageCircle className="w-4 h-4 text-green-500" />
-                <span>{formatNumber(videoData.statistics?.comments || 0)} comments</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Users className="w-4 h-4 text-purple-500" />
-                <span>{getEngagementRate()}% engagement</span>
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                <span>Video ID: {videoId}</span>
               </div>
             </div>
 
@@ -187,58 +246,25 @@ export const YouTubeVideoCard: React.FC<YouTubeVideoCardProps> = ({
             </div>
           </div>
 
-          {/* Analytics Section */}
+          {/* Analysis Section */}
           {isExpanded && (
-            <div className="w-full lg:w-80 border-l bg-muted/30 p-4">
+            <div className="w-full lg:w-80 border-l bg-muted/30 p-4 overflow-y-auto">
               <h4 className="font-semibold mb-4 flex items-center gap-2">
                 <BarChart3 className="w-4 h-4" />
-                Performance Analytics
+                Content Analysis
               </h4>
               
               <div className="space-y-4">
-                {/* Engagement Metrics */}
-                <div className="bg-background rounded-lg p-3">
-                  <h5 className="text-sm font-medium mb-2">Engagement Metrics</h5>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Engagement Rate</span>
-                      <span className="font-medium">{getEngagementRate()}%</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Like/View Ratio</span>
-                      <span className="font-medium">
-                        {videoData.statistics?.views ? 
-                          ((videoData.statistics.likes || 0) / videoData.statistics.views * 100).toFixed(3) + '%' : 
-                          '0%'
-                        }
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Comment/View Ratio</span>
-                      <span className="font-medium">
-                        {videoData.statistics?.views ? 
-                          ((videoData.statistics.comments || 0) / videoData.statistics.views * 100).toFixed(3) + '%' : 
-                          '0%'
-                        }
-                      </span>
-                    </div>
+                {/* Textual Analysis */}
+                {videoData.analysis ? (
+                  renderAnalysisContent(videoData.analysis)
+                ) : (
+                  <div className="bg-background rounded-lg p-3">
+                    <p className="text-sm text-muted-foreground">
+                      No analysis available for this video.
+                    </p>
                   </div>
-                </div>
-
-                {/* Video Details */}
-                <div className="bg-background rounded-lg p-3">
-                  <h5 className="text-sm font-medium mb-2">Video Details</h5>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span>Published</span>
-                      <span>{formatDate(videoData.createdAt)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Video ID</span>
-                      <span className="font-mono text-xs">{videoId}</span>
-                    </div>
-                  </div>
-                </div>
+                )}
 
                 {/* Tags */}
                 {videoData.tags && videoData.tags.length > 0 && (

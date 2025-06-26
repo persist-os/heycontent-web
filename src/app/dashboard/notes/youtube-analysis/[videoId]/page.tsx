@@ -8,25 +8,24 @@ import { useAuth } from '@/app/context/auth-context';
 import { 
   Youtube, 
   ArrowLeft,
+  Calendar,
+  Users,
+  Play,
+  ExternalLink,
+  FileText,
+  Lightbulb,
+  Target,
+  TrendingUp,
+  Activity,
   Eye,
   Heart,
   MessageCircle,
-  TrendingUp,
-  BarChart3,
-  Calendar,
-  Users,
-  Clock,
-  Target,
-  Zap,
-  Activity,
-  Share2,
-  Play,
-  ExternalLink
+  Clock
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import { MarkdownRenderer } from '@/app/dashboard/chat/markdown-renderer';
 
 export default function YouTubeAnalysisPage() {
   const params = useParams();
@@ -36,13 +35,21 @@ export default function YouTubeAnalysisPage() {
   
   const videoId = params.videoId as string;
 
-  // Fetch video data
-  const videoData = useQuery(api.notes.getContentByPrefixedId, {
-    prefixedId: `youtube:${videoId}`,
+  // Fetch video data using the direct YouTube query
+  const videoData = useQuery(api.youtubeQueries.getFullVideoDetails, {
+    videoId: videoId,
     userId: userId || ''
   });
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'performance' | 'engagement' | 'content'>('overview');
+  // Debug logging
+  console.log('YouTube Analysis Page Debug:', {
+    videoId,
+    userId,
+    videoData,
+    hasAnalysisMarkdown: !!videoData?.analysisMarkdown,
+    analysisMarkdownLength: videoData?.analysisMarkdown?.length,
+    analysisMarkdownPreview: videoData?.analysisMarkdown?.substring(0, 100)
+  });
 
   if (!videoData) {
     return (
@@ -90,33 +97,40 @@ export default function YouTubeAnalysisPage() {
     });
   };
 
-  const getEngagementRate = () => {
-    if (!videoData.statistics) return 0;
-    const views = videoData.statistics.views || 0;
-    const likes = videoData.statistics.likes || 0;
-    return views > 0 ? ((likes / views) * 100) : 0;
+  const formatDuration = (duration: string) => {
+    // Convert YouTube duration format (PT4M13S) to readable format
+    const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    if (!match) return duration;
+    
+    const hours = match[1] ? parseInt(match[1]) : 0;
+    const minutes = match[2] ? parseInt(match[2]) : 0;
+    const seconds = match[3] ? parseInt(match[3]) : 0;
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    } else {
+      return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
   };
 
-  const getLikeRatio = () => {
-    if (!videoData.statistics) return 0;
-    const views = videoData.statistics.views || 0;
-    const likes = videoData.statistics.likes || 0;
-    return views > 0 ? ((likes / views) * 100) : 0;
+  // Helper function to render analysis content
+  const renderAnalysisContent = (analysisMarkdown: string) => {
+    if (!analysisMarkdown) return null;
+    
+    return (
+      <div className="space-y-4">
+        <div className="bg-muted/50 rounded-lg p-4">
+          <h4 className="font-semibold mb-2 flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Content Analysis
+          </h4>
+          <div className="text-sm text-muted-foreground">
+            <MarkdownRenderer content={analysisMarkdown} />
+          </div>
+        </div>
+      </div>
+    );
   };
-
-  const getCommentRatio = () => {
-    if (!videoData.statistics) return 0;
-    const views = videoData.statistics.views || 0;
-    const comments = videoData.statistics.comments || 0;
-    return views > 0 ? ((comments / views) * 100) : 0;
-  };
-
-  const tabs = [
-    { id: 'overview', label: 'Overview', icon: BarChart3 },
-    { id: 'performance', label: 'Performance', icon: TrendingUp },
-    { id: 'engagement', label: 'Engagement', icon: Target },
-    { id: 'content', label: 'Content', icon: Activity }
-  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -133,7 +147,7 @@ export default function YouTubeAnalysisPage() {
                 <Youtube className="w-8 h-8 text-red-500" />
                 <div>
                   <h1 className="text-2xl font-bold">YouTube Video Analysis</h1>
-                  <p className="text-muted-foreground">{videoData.title}</p>
+                  <p className="text-muted-foreground">{videoData.snippet?.title || 'YouTube Video'}</p>
                 </div>
               </div>
             </div>
@@ -143,7 +157,7 @@ export default function YouTubeAnalysisPage() {
                 className="bg-red-600 hover:bg-red-700"
               >
                 <Play className="w-4 h-4 mr-2" />
-                Watch Video
+                Watch on YouTube
               </Button>
               <Button variant="outline">
                 <ExternalLink className="w-4 h-4 mr-2" />
@@ -155,154 +169,52 @@ export default function YouTubeAnalysisPage() {
       </div>
 
       <div className="max-w-7xl mx-auto p-6">
-        {/* Tabs */}
-        <div className="flex space-x-1 mb-8">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <Button
-                key={tab.id}
-                variant={activeTab === tab.id ? "default" : "ghost"}
-                onClick={() => setActiveTab(tab.id as any)}
-                className="flex items-center gap-2"
-              >
-                <Icon className="w-4 h-4" />
-                {tab.label}
-              </Button>
-            );
-          })}
-        </div>
-
-        {/* Content */}
-        {activeTab === 'overview' && (
-          <div className="space-y-6">
-            {/* Key Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Views</CardTitle>
-                  <Eye className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{formatNumber(videoData.statistics?.views || 0)}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Published {formatDate(videoData.createdAt)}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Likes</CardTitle>
-                  <Heart className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{formatNumber(videoData.statistics?.likes || 0)}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {getLikeRatio().toFixed(3)}% of views
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Comments</CardTitle>
-                  <MessageCircle className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{formatNumber(videoData.statistics?.comments || 0)}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {getCommentRatio().toFixed(3)}% of views
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Engagement Rate</CardTitle>
-                  <Target className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{getEngagementRate().toFixed(2)}%</div>
-                  <p className="text-xs text-muted-foreground">
-                    Likes + Comments / Views
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Video Details */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Video Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="aspect-video bg-muted rounded-lg overflow-hidden">
-                    {videoData.thumbnailUrl ? (
+        {/* Video and Stats Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Video */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardContent className="p-0">
+                <div className="relative aspect-video bg-muted rounded-lg overflow-hidden cursor-pointer group">
+                  {videoData.snippet?.thumbnails?.high || videoData.snippet?.thumbnails?.medium ? (
+                    <>
                       <img
-                        src={videoData.thumbnailUrl}
-                        alt={videoData.title}
+                        src={videoData.snippet.thumbnails.high || videoData.snippet.thumbnails.medium}
+                        alt={videoData.snippet?.title || 'YouTube Video'}
                         className="w-full h-full object-cover"
                       />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Play className="w-16 h-16 text-muted-foreground" />
+                      {/* Play overlay */}
+                      <div 
+                        className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => window.open(videoData.url || `https://www.youtube.com/watch?v=${videoId}`, '_blank')}
+                      >
+                        <div className="bg-red-600 rounded-full p-4">
+                          <Play className="w-8 h-8 text-white fill-white" />
+                        </div>
                       </div>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h3 className="font-semibold">{videoData.title}</h3>
-                    <p className="text-sm text-muted-foreground">{videoData.content}</p>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="w-4 h-4" />
-                    <span>Published {formatDate(videoData.createdAt)}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Users className="w-4 h-4" />
-                    <span>Video ID: {videoId}</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Performance Insights</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span>Engagement Rate</span>
-                      <span className="font-medium">{getEngagementRate().toFixed(2)}%</span>
+                      {/* Duration badge */}
+                      {videoData.content_details?.duration && (
+                        <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
+                          {formatDuration(videoData.content_details.duration)}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Play className="w-16 h-16 text-muted-foreground" />
                     </div>
-                    <Progress value={getEngagementRate()} className="h-2" />
-                  </div>
+                  )}
+                </div>
+                
+                <div className="p-4 space-y-2">
+                  <h3 className="font-semibold text-lg">{videoData.snippet?.title || 'YouTube Video'}</h3>
+                  <p className="text-sm text-muted-foreground line-clamp-3">{videoData.snippet?.description || ''}</p>
 
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span>Like/View Ratio</span>
-                      <span className="font-medium">{getLikeRatio().toFixed(3)}%</span>
-                    </div>
-                    <Progress value={getLikeRatio()} className="h-2" />
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span>Comment/View Ratio</span>
-                      <span className="font-medium">{getCommentRatio().toFixed(3)}%</span>
-                    </div>
-                    <Progress value={getCommentRatio()} className="h-2" />
-                  </div>
-
-                  {videoData.tags && videoData.tags.length > 0 && (
+                  {videoData.snippet?.tags && videoData.snippet.tags.length > 0 && (
                     <div>
                       <h4 className="text-sm font-medium mb-2">Tags</h4>
                       <div className="flex flex-wrap gap-1">
-                        {videoData.tags.map((tag, idx) => (
+                        {videoData.snippet.tags.map((tag, idx) => (
                           <Badge key={idx} variant="outline" className="text-xs">
                             {tag}
                           </Badge>
@@ -310,116 +222,76 @@ export default function YouTubeAnalysisPage() {
                       </div>
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'performance' && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Performance Metrics</CardTitle>
-                <CardDescription>Detailed performance analysis of your video</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <h4 className="font-semibold">View Metrics</h4>
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <span>Total Views</span>
-                        <span className="font-medium">{formatNumber(videoData.statistics?.views || 0)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Average View Duration</span>
-                        <span className="font-medium">N/A</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>View Rate</span>
-                        <span className="font-medium">N/A</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h4 className="font-semibold">Interaction Metrics</h4>
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <span>Likes</span>
-                        <span className="font-medium">{formatNumber(videoData.statistics?.likes || 0)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Comments</span>
-                        <span className="font-medium">{formatNumber(videoData.statistics?.comments || 0)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Dislikes</span>
-                        <span className="font-medium">{formatNumber(videoData.statistics?.dislikes || 0)}</span>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
-        )}
 
-        {activeTab === 'engagement' && (
-          <div className="space-y-6">
-            <Card>
+          {/* Stats */}
+          <div className="lg:col-span-1">
+            <Card className="h-full">
               <CardHeader>
-                <CardTitle>Engagement Analysis</CardTitle>
-                <CardDescription>How your audience interacts with your content</CardDescription>
+                <CardTitle>Video Statistics</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-blue-600">{getEngagementRate().toFixed(2)}%</div>
-                    <div className="text-sm text-muted-foreground">Overall Engagement</div>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center p-3 bg-muted/50 rounded-lg">
+                    <Eye className="w-6 h-6 text-blue-500 mx-auto mb-2" />
+                    <div className="text-2xl font-bold">{formatNumber(videoData.statistics?.views || 0)}</div>
+                    <div className="text-xs text-muted-foreground">Views</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-green-600">{getLikeRatio().toFixed(3)}%</div>
-                    <div className="text-sm text-muted-foreground">Like Rate</div>
+                  
+                  <div className="text-center p-3 bg-muted/50 rounded-lg">
+                    <Heart className="w-6 h-6 text-red-500 mx-auto mb-2" />
+                    <div className="text-2xl font-bold">{formatNumber(videoData.statistics?.likes || 0)}</div>
+                    <div className="text-xs text-muted-foreground">Likes</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-purple-600">{getCommentRatio().toFixed(3)}%</div>
-                    <div className="text-sm text-muted-foreground">Comment Rate</div>
+                  
+                  <div className="text-center p-3 bg-muted/50 rounded-lg">
+                    <MessageCircle className="w-6 h-6 text-green-500 mx-auto mb-2" />
+                    <div className="text-2xl font-bold">{formatNumber(videoData.statistics?.comments || 0)}</div>
+                    <div className="text-xs text-muted-foreground">Comments</div>
                   </div>
+                  
+                  <div className="text-center p-3 bg-muted/50 rounded-lg">
+                    <Clock className="w-6 h-6 text-purple-500 mx-auto mb-2" />
+                    <div className="text-2xl font-bold">
+                      {videoData.content_details?.duration ? formatDuration(videoData.content_details.duration) : 'N/A'}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Duration</div>
+                  </div>
+                </div>
+
+                {/* Publication Date */}
+                <div className="text-center p-3 bg-muted/50 rounded-lg">
+                  <Calendar className="w-6 h-6 text-orange-500 mx-auto mb-2" />
+                  <div className="text-sm font-medium">
+                    {formatDate(videoData.snippet?.published_at ? new Date(videoData.snippet.published_at).getTime() : videoData.createdAt)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Published</div>
                 </div>
               </CardContent>
             </Card>
           </div>
-        )}
+        </div>
 
-        {activeTab === 'content' && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Content Analysis</CardTitle>
-                <CardDescription>AI-powered insights about your video content</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {videoData.analysis ? (
-                  <div className="space-y-4">
-                    <div className="bg-muted/50 rounded-lg p-4">
-                      <h4 className="font-semibold mb-2">Content Summary</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {typeof videoData.analysis === 'string' ? videoData.analysis : 'Analysis available'}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">No content analysis available yet</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        )}
+        {/* Analysis Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Content Analysis</CardTitle>
+            <CardDescription>AI-powered insights about your video content</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {videoData.analysisMarkdown ? (
+              renderAnalysisContent(videoData.analysisMarkdown)
+            ) : (
+              <div className="text-center py-8">
+                <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No content analysis available yet</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
