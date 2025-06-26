@@ -5,6 +5,7 @@ import { YouTubeBrandIcon } from '../../../../../lib/YoutubeBrandIcon';
 import { ContentContext } from '../../types';
 import { MarkdownRenderer } from '../../markdown-renderer';
 import AIInsightDisplayCard from './AIInsightDisplayCard';
+import { processContentIfNeeded } from '../../../content-analytics/utils/markdown-processor';
 
 interface ContextBoxProps {
   context: ContentContext;
@@ -311,7 +312,7 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
               )}
             </div>
             <div className="text-sm text-blue-800 dark:text-blue-200 max-h-32 overflow-y-auto">
-              <MarkdownRenderer content={context.analysis} />
+              <MarkdownRenderer content={processContentIfNeeded(context.analysis)} />
             </div>
           </div>
         ) : null}

@@ -74,6 +74,7 @@ export interface YouTubeContentDetails {
   thumbnailUrl: string; // Mandatory thumbnail
   videoUrl?: string; // Link to video
   channelTitle?: string;
+  duration?: string; // Video duration
 }
 export interface YouTubeMetrics {
   views: number;
@@ -89,6 +90,7 @@ export interface YouTubeContentItem extends BaseContentItem {
   content: YouTubeContentDetails;
   metrics: YouTubeMetrics;
   analysis?: any; // Analysis data can be any type since it's stored as JSON
+  analysisMarkdown?: string; // Markdown formatted analysis for display
   aiAnalysis?: string; // For backward compatibility with existing code
   convexData?: any; // Full Convex document for complete data access
 }

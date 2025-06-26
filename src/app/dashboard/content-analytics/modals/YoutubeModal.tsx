@@ -7,11 +7,12 @@ import { getCurrentUserId, getApiKey } from '@/app/lib/api-helpers';
 import { YouTubeContentItem } from '../types';
 import { getMetricsDisplay } from '../utils';
 import { Button } from '@/components/ui/button';
-import { MarkdownRenderer } from '../../chat/markdown-renderer';
+import { MarkdownRenderer } from '@/app/dashboard/chat/markdown-renderer';
 import { YouTubeBrandIcon } from '../../../../lib/YoutubeBrandIcon';
 import { ThreeColumnHeader } from '@/components/ui/ThreeColumnHeader';
 import { useRouter } from 'next/navigation';
 import { useContentContextActions } from '@/store/content-context-store';
+import { processContentIfNeeded } from '../utils/markdown-processor';
 
 interface YoutubeModalProps {
   selectedContent: YouTubeContentItem;
@@ -339,7 +340,7 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
                 </div>
               ) : aiAnalysis ? (
                 <div className="space-y-3">
-                  <MarkdownRenderer content={aiAnalysis} />
+                  <MarkdownRenderer content={processContentIfNeeded(aiAnalysis)} />
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-24">
