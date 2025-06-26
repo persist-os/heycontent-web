@@ -8,6 +8,8 @@ import { InstagramContentItem } from '../types';
 import { getMetricsDisplay } from '../utils';
 import { Button } from '@/components/ui/button';
 import { MarkdownRenderer } from '../../chat/markdown-renderer';
+import { useRouter } from 'next/navigation';
+import { useContentContextActions } from '@/store/content-context-store';
 
 interface InstagramModalProps {
   selectedContent: InstagramContentItem;
@@ -28,6 +30,8 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
   const [userId, setUserId] = useState<string | null>(null);
 
   const postId = selectedContent.id;
+  const router = useRouter();
+  const { setInstagramContext } = useContentContextActions();
 
   // Extract user ID from the API key on component mount
   useEffect(() => {
@@ -276,28 +280,62 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
   };
 
   const navigateToChat = () => {
-    // Create a more suitable title for Instagram content
-    const caption = selectedContent.content.text || 'Instagram Post';
-    const truncatedTitle = caption.length > 60 
-      ? caption.substring(0, 60) + '...' 
-      : caption;
+    // Use the full Convex document if available, otherwise create a fallback
+    if (selectedContent.convexData) {
+      // Use the complete Convex document with all fields
+      console.log('🔍 [INSTAGRAM MODAL] Using full Convex document:', {
+        hasData: !!selectedContent.convexData.data,
+        dataKeys: selectedContent.convexData.data ? Object.keys(selectedContent.convexData.data) : 'none',
+        hasComments: !!selectedContent.convexData.data?.comments,
+        commentsLength: selectedContent.convexData.data?.comments?.length || 0,
+        hasInsights: !!selectedContent.convexData.data?.insights,
+        insightsKeys: selectedContent.convexData.data?.insights ? Object.keys(selectedContent.convexData.data.insights) : 'none',
+        fullConvexData: selectedContent.convexData
+      });
+      
+      // Update the analysis markdown if we have fresh analysis
+      const updatedConvexData = {
+        ...selectedContent.convexData,
+        analysisMarkdown: aiAnalysis || selectedContent.analysisMarkdown || selectedContent.convexData.analysisMarkdown
+      };
+      
+      setInstagramContext(updatedConvexData);
+    } else {
+      // Fallback to creating a mock object (shouldn't happen with proper data)
+      console.warn('🔍 [INSTAGRAM MODAL] No convexData available, using fallback mock object');
+      
+      const convexInstagramPost = {
+        _id: selectedContent.id as any,
+        _creationTime: Date.now(),
+        userId: userId || '',
+        instagramAccountId: '',
+        postId: selectedContent.id,
+        mediaType: selectedContent.content.mediaType,
+        data: {
+          id: selectedContent.id,
+          caption: selectedContent.content.text || '',
+          media_url: selectedContent.content.mediaUrl || '',
+          permalink: selectedContent.content.permalink || '',
+          timestamp: new Date(selectedContent.publishedAt || Date.now()).getTime(),
+          username: '',
+          like_count: selectedContent.metrics?.likes || selectedContent.metrics?.like_count || 0,
+          comments_count: selectedContent.metrics?.comments || selectedContent.metrics?.comments_count || 0,
+          thumbnail_url: selectedContent.content.thumbnailUrl || null,
+          children: selectedContent.children || null,
+          comments: selectedContent.content.comments || [],
+          insights: selectedContent.metrics || null,
+        },
+        analysis: selectedContent.analysis || null,
+        analysisMarkdown: aiAnalysis || selectedContent.analysisMarkdown || null,
+        createdAt: new Date(selectedContent.publishedAt || Date.now()).getTime(),
+        updatedAt: Date.now(),
+      };
+
+      setInstagramContext(convexInstagramPost as any);
+    }
     
-    const context = {
-      platform: 'instagram',
-      contentId: postId,
-      title: truncatedTitle, // Use truncated caption as title
-      fullCaption: selectedContent.content.text, // Include full caption separately
-      analysis: aiAnalysis,
-      metrics: selectedContent.metrics,
-      // Additional context for better chat experience
-      mediaType: selectedContent.content.mediaType,
-      publishedAt: selectedContent.publishedAt,
-      thumbnailUrl: selectedContent.content.mediaUrl || selectedContent.content.thumbnailUrl,
-      permalink: selectedContent.content.permalink
-    };
-    
-    const encodedContext = encodeURIComponent(JSON.stringify(context));
-    window.location.href = `/dashboard/chat?contentContext=${encodedContext}`;
+    // Navigate to chat
+    router.push('/dashboard/chat');
   };
 
   const mediaUrl = selectedContent.content.mediaUrl || selectedContent.content.thumbnailUrl;

@@ -903,16 +903,62 @@ export async function sendChatMessage(
 
   // Include content context if available
   if (contentContext) {
-    requestBody.content_context = {
+    // Debug logging for content context
+    console.log('🔍 [CONTENT CONTEXT DEBUG] Full content context:', {
       platform: contentContext.platform,
-      content_id: contentContext.contentId,
+      contentId: contentContext.contentId,
       title: contentContext.title,
-      analysis: contentContext.analysis,
-      thumbnail_url: contentContext.thumbnailUrl,
-      published_at: contentContext.publishedAt,
-      metrics: contentContext.metrics,
-      content: contentContext.content
-    };
+      hasAnalysis: !!contentContext.analysis,
+      hasConvexData: !!contentContext.convexData,
+      convexDataKeys: contentContext.convexData ? Object.keys(contentContext.convexData) : 'none',
+      contentKeys: contentContext.content ? Object.keys(contentContext.content) : 'none',
+      fullContext: contentContext
+    });
+
+    // Handle both old ContentContext format and new Zustand store format
+    if (contentContext.convexData) {
+      // New Zustand store format with full Convex data
+      const convexData = contentContext.convexData;
+      
+      // Debug logging for Convex data
+      console.log('🔍 [CONVEX DATA DEBUG] Instagram post data:', {
+        hasData: !!convexData.data,
+        dataKeys: convexData.data ? Object.keys(convexData.data) : 'none',
+        hasComments: !!convexData.data?.comments,
+        commentsLength: convexData.data?.comments?.length || 0,
+        hasChildren: !!convexData.data?.children,
+        childrenLength: convexData.data?.children?.length || 0,
+        hasInsights: !!convexData.data?.insights,
+        insightsKeys: convexData.data?.insights ? Object.keys(convexData.data.insights) : 'none',
+        fullConvexData: convexData
+      });
+      
+      requestBody.content_context = {
+        platform: contentContext.platform,
+        content_id: contentContext.contentId,
+        title: contentContext.title,
+        analysis: contentContext.analysis,
+        thumbnail_url: contentContext.thumbnailUrl,
+        published_at: contentContext.publishedAt,
+        metrics: contentContext.metrics,
+        content: contentContext.content,
+        // Include the full Convex document for backend processing
+        convex_data: convexData
+      };
+    } else {
+      // Legacy ContentContext format
+      console.log('🔍 [LEGACY CONTEXT DEBUG] Using legacy format');
+      requestBody.content_context = {
+        platform: contentContext.platform,
+        content_id: contentContext.contentId,
+        title: contentContext.title,
+        analysis: contentContext.analysis,
+        thumbnail_url: contentContext.thumbnailUrl,
+        published_at: contentContext.publishedAt,
+        metrics: contentContext.metrics,
+        content: contentContext.content
+      };
+    }
   }
 
   // Do NOT include user_id in the request body; backend extracts it from API key

@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { MarkdownRenderer } from '../../chat/markdown-renderer';
 import { YouTubeBrandIcon } from '../../../../lib/YoutubeBrandIcon';
 import { ThreeColumnHeader } from '@/components/ui/ThreeColumnHeader';
+import { useRouter } from 'next/navigation';
+import { useContentContextActions } from '@/store/content-context-store';
 
 interface YoutubeModalProps {
   selectedContent: YouTubeContentItem;
@@ -30,6 +32,8 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
   const [userId, setUserId] = useState<string | null>(null);
 
   const videoId = selectedContent.id;
+  const router = useRouter();
+  const { setYouTubeContext } = useContentContextActions();
 
   // Extract user ID from the API key on component mount
   useEffect(() => {
@@ -187,16 +191,57 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
   };
 
   const navigateToChat = () => {
-    const context = {
-      platform: 'youtube',
-      contentId: videoId,
-      title: selectedContent.content?.title,
-      analysis: aiAnalysis,
-      metrics: selectedContent.metrics
-    };
+    // Use the full Convex document if available, otherwise create a fallback
+    if (selectedContent.convexData) {
+      // Use the complete Convex document with all fields
+      console.log('🔍 [YOUTUBE MODAL] Using full Convex document:', {
+        hasData: !!selectedContent.convexData.data,
+        dataKeys: selectedContent.convexData.data ? Object.keys(selectedContent.convexData.data) : 'none',
+        fullConvexData: selectedContent.convexData
+      });
+      
+      // Update the analysis markdown if we have fresh analysis
+      const updatedConvexData = {
+        ...selectedContent.convexData,
+        analysisMarkdown: aiAnalysis || selectedContent.analysisMarkdown || selectedContent.convexData.analysisMarkdown
+      };
+      
+      setYouTubeContext(updatedConvexData);
+    } else {
+      // Fallback to creating a mock object (shouldn't happen with proper data)
+      console.warn('🔍 [YOUTUBE MODAL] No convexData available, using fallback mock object');
+      
+      // Create a mock Convex document structure
+      const mockConvexData = {
+        _id: selectedContent.id as any,
+        _creationTime: Date.now(),
+        userId: userId || '',
+        channelId: '',
+        videoId: selectedContent.id,
+        snippet: {
+          title: selectedContent.content.title,
+          description: selectedContent.content.description,
+          channel: selectedContent.content.channelTitle,
+          published_at: selectedContent.publishedAt,
+          thumbnails: {
+            high: { url: selectedContent.content.thumbnailUrl }
+          }
+        },
+        statistics: selectedContent.metrics,
+        content_details: {
+          duration: selectedContent.content.duration
+        },
+        analysis: selectedContent.analysis || null,
+        analysisMarkdown: aiAnalysis || selectedContent.analysisMarkdown || null,
+        createdAt: new Date(selectedContent.publishedAt).getTime(),
+        updatedAt: Date.now(),
+      };
+
+      setYouTubeContext(mockConvexData as any);
+    }
     
-    const encodedContext = encodeURIComponent(JSON.stringify(context));
-    window.location.href = `/dashboard/chat?contentContext=${encodedContext}`;
+    // Navigate to chat
+    router.push('/dashboard/chat');
   };
 
   // Handle backdrop click to close modal

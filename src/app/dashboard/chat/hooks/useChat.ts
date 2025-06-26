@@ -5,6 +5,7 @@ import { ChatStateReturnType } from './useChatState'
 import { getHelpMessage } from '../data/help-message'
 import { useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
+import { useContentContext } from '@/store/content-context-store'
 
 import { v4 as uuidv4 } from 'uuid';
 
@@ -24,9 +25,12 @@ export const useChat = (
     setError,
     isFirstMessage,
     setIsFirstMessage,
-    contentContext,
     includeAnalysisInQuery,
   } = chatState
+
+  // Get content context from Zustand store
+  const { context: contentContext } = useContentContext()
+
   const [referencedMessage, setReferencedMessage] = useState<Message | null>(null)
   const [searchStatus, setSearchStatus] = useState<string>('')
   
@@ -299,13 +303,13 @@ export const useChat = (
     setError,
     isFirstMessage,
     setIsFirstMessage,
-    contentContext,
     includeAnalysisInQuery,
     referencedMessage,
     userId,
     createConversationMutation,
     addMessageToConversationMutation,
-    useContextSearch
+    useContextSearch,
+    contentContext
   ]);
 
   const handleMessageReference = useCallback((message: Message) => {

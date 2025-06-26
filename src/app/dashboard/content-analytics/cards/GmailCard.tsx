@@ -2,6 +2,8 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { MessageSquare, Mail, RefreshCw } from 'lucide-react';
 import { useGmailRefresh } from '@/app/hooks/useGmailRefresh';
+import { useRouter } from 'next/navigation';
+import { useContentContextActions } from '@/store/content-context-store';
 
 import { GmailContentItem } from '../types';
 
@@ -22,6 +24,9 @@ export const GmailCard: React.FC<GmailCardProps> = ({ item, onDiscussContent, on
 
   // Use the Gmail refresh hook
   const { refresh, loading, error } = useGmailRefresh();
+  
+  const router = useRouter();
+  const { setGmailContext } = useContentContextActions();
 
   const handleRefresh = async () => {
     // Use the correct threadId from the data structure and the first message ID
@@ -30,6 +35,47 @@ export const GmailCard: React.FC<GmailCardProps> = ({ item, onDiscussContent, on
     if (threadId && messageId) {
       await refresh(threadId, messageId);
     }
+  };
+
+  // Handle discuss content with Zustand store
+  const handleDiscussContent = () => {
+    // Use the full Convex document if available, otherwise create a fallback
+    if (item.convexData) {
+      // Use the complete Convex document with all fields
+      console.log('🔍 [GMAIL CARD] Using full Convex document:', {
+        hasData: !!item.convexData.data,
+        dataKeys: item.convexData.data ? Object.keys(item.convexData.data) : 'none',
+        fullConvexData: item.convexData
+      });
+      
+      setGmailContext(item.convexData);
+    } else {
+      // Fallback to creating a mock object (shouldn't happen with proper data)
+      console.warn('🔍 [GMAIL CARD] No convexData available, using fallback mock object');
+      
+      // Create a mock Convex document structure
+      const mockConvexData = {
+        _id: item.id as any,
+        _creationTime: Date.now(),
+        userId: '',
+        gmailAccountId: '',
+        threadId: content.data?.threadId || item.id,
+        subject: content.data?.subject || 'No Subject',
+        from: content.data?.from || 'Unknown',
+        snippet: content.data?.snippet || '',
+        message_count: metrics?.replies || 0,
+        messages: content.data?.messages || [],
+        data: content.data || {},
+        analysis: item.analysis || null,
+        createdAt: new Date(publishedAt).getTime(),
+        updatedAt: Date.now(),
+      };
+
+      setGmailContext(mockConvexData as any);
+    }
+    
+    // Navigate to chat
+    router.push('/dashboard/chat');
   };
 
   return (
@@ -88,7 +134,7 @@ export const GmailCard: React.FC<GmailCardProps> = ({ item, onDiscussContent, on
         <div className="flex gap-3">
           <button
             className="flex-1 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            onClick={() => onDiscussContent(item)}
+            onClick={handleDiscussContent}
           >
             <MessageSquare className="w-4 h-4 inline mr-2" />
             Discuss With Content

@@ -145,10 +145,10 @@ export function ContentHubScreen() {
     if (!userId) return []
     return [
       ...(youtubeAnalytics.items || []),
-      ...(gmailAnalytics.items || []),
+      ...(gmailAnalytics.gmailItems || []),
       ...(instagramAnalytics.items || []),
     ]
-  }, [userId, youtubeAnalytics.items, gmailAnalytics.items, instagramAnalytics.items])
+  }, [userId, youtubeAnalytics.items, gmailAnalytics.gmailItems, instagramAnalytics.items])
 
   // Sort items by date for "all" tab
   const allDisplayItems = useMemo(() => {
@@ -284,7 +284,7 @@ export function ContentHubScreen() {
   }
 
   // Check if any platforms are connected for "all platforms" view
-  const hasAnyPlatformConnected = youtubeAnalytics.isConnected || instagramAnalytics.isConnected || gmailAnalytics.isConnected;
+  const hasAnyPlatformConnected = youtubeAnalytics.isConnected || instagramAnalytics.isConnected || gmailAnalytics.hasConnectedAccounts;
 
   const renderAllPlatformsAnalytics = () => {
     // If no platforms are connected, show connection prompt
@@ -554,7 +554,7 @@ export function ContentHubScreen() {
                           selectedView === 'all' ? allDisplayItems.length :
                           selectedView === 'youtube' ? youtubeAnalytics.items.length :
                           selectedView === 'instagram' ? instagramAnalytics.items.length :
-                          gmailAnalytics.items.length
+                          gmailAnalytics.gmailItems.length
                         })
                       </TabsTrigger>
                       <TabsTrigger value="ai-insights" className="flex flex-1 items-center justify-center gap-2 sm:flex-initial">

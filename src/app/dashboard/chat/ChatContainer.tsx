@@ -40,6 +40,7 @@ import { MarkdownNotepad } from './components/notepad/MarkdownNotepad'
 import { useNotepadUI } from './hooks/useNotepadUI'
 import { NotepadToggle } from './components/notepad/NotepadToggle'
 import { useNotes } from '@/app/context/notes-context'
+import { useContentContext, useContentContextActions } from '@/store/content-context-store'
 
 
 const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery }) => {
@@ -72,11 +73,13 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     setMessages,
     error,
     isLoading,
-    contentContext: currentContext,
-    setContentContext,
     includeAnalysisInQuery,
     setIncludeAnalysisInQuery
   } = chatState
+
+  // Get content context from Zustand store
+  const { context: currentContext, hasContext } = useContentContext()
+  const { clearContentContext } = useContentContextActions()
 
   // Add input state management
   const [inputValue, setInputValue] = useState('')
@@ -100,13 +103,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Check if user has an existing persona
   const { hasPersona } = usePersonaData(userId, !!userId)
-
-  // Set content context when component mounts or when contentContext prop changes
-  useEffect(() => {
-    if (contentContext && contentContext !== currentContext) {
-      setContentContext(contentContext)
-    }
-  }, [contentContext, currentContext, setContentContext])
 
   // Initialize UI effects hook
   const {
@@ -232,7 +228,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     chatState.setIsFirstMessage(true);
     
     // Clear content context when starting new chat
-    setContentContext(null);
+    clearContentContext();
     
     // Clear the loaded conversation ref to allow loading new conversations
     loadedConversationRef.current = null;
@@ -250,7 +246,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Handle removing context
   const handleRemoveContext = () => {
-    setContentContext(null);
+    clearContentContext();
     // Update URL to remove context parameter
     const url = new URL(window.location.href);
     url.searchParams.delete('contentContext');
@@ -536,7 +532,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                   // Start a new chat with the context from the insight
                   handleNewChat();
                   setTimeout(() => {
-                    if (context) setContentContext(context);
+                    if (context) clearContentContext();
                     handleSendMessageWithUpdateCheck(msg);
                   }, 0);
                 }}

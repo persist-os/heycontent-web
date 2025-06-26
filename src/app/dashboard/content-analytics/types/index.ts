@@ -17,6 +17,19 @@ export interface InstagramContentDetails {
   thumbnailUrl?: string; // Optional specific thumbnail
   permalink: string; // Direct link to the post
   timestamp?: number; // Unix timestamp of the post
+  comments?: Array<{
+    id: string;
+    text: string;
+    timestamp: number;
+    username: string;
+    like_count?: number;
+    replies?: Array<{
+      id: string;
+      text: string;
+      timestamp: number;
+      username?: string;
+    }>;
+  }>; // Comments from the post
 }
 export interface InstagramMetrics {
   // From embedded insights
@@ -51,6 +64,7 @@ export interface InstagramContentItem extends BaseContentItem {
   analysis?: any; // Analysis data can be any type since it's stored as JSON
   analysisMarkdown?: string; // Markdown formatted analysis for display
   children?: InstagramChildMedia[]; // Array of child media items for carousel posts (typed properly)
+  convexData?: any; // Full Convex document for complete data access
 }
 
 // YouTube Video
@@ -76,6 +90,7 @@ export interface YouTubeContentItem extends BaseContentItem {
   metrics: YouTubeMetrics;
   analysis?: any; // Analysis data can be any type since it's stored as JSON
   aiAnalysis?: string; // For backward compatibility with existing code
+  convexData?: any; // Full Convex document for complete data access
 }
 
 // Gmail Email
@@ -119,6 +134,9 @@ export interface GmailContentItem extends BaseContentItem {
   platform: 'gmail';
   content: GmailContentDetails;
   metrics: GmailMetrics;
+  analysis?: any; // Analysis data can be any type since it's stored as JSON
+  analysisMarkdown?: string; // Markdown formatted analysis for display
+  convexData?: any; // Full Convex document for complete data access
 }
 
 // Union type for handling mixed content

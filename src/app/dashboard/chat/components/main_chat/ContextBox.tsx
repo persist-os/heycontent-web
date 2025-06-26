@@ -218,41 +218,58 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
         {/* Gmail-specific thread information */}
         {context.platform === 'gmail' && (
           <div className="mt-3 p-3 bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-900/10 dark:to-gray-900 rounded-lg border border-blue-200 dark:border-blue-700">
-            <div className="flex items-center gap-2 mb-2">
-              <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                Email Thread Details
+            {/* Subject as main title */}
+            <div className="mb-1">
+              <h4 className="text-base font-semibold text-blue-900 dark:text-blue-100 truncate">
+                {
+                  (() => {
+                    const messages = context.content?.messages || [];
+                    return (
+                      messages[0]?.subject ||
+                      context.content?.subject ||
+                      context.title ||
+                      'Gmail Thread'
+                    );
+                  })()
+                }
               </h4>
             </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-blue-700 dark:text-blue-300">Thread ID:</span>
-                <span className="text-blue-900 dark:text-blue-100 font-mono text-xs">
-                  {context.contentId ? `${context.contentId.substring(0, 8)}...` : 'Unknown'}
-                </span>
-              </div>
-              {/* Show message count if available from backend metadata */}
-              {(context as any).messageCount && (
-                <div className="flex justify-between">
-                  <span className="text-blue-700 dark:text-blue-300">Messages:</span>
-                  <span className="text-blue-900 dark:text-blue-100 font-semibold">
-                    {(context as any).messageCount}
-                  </span>
-                </div>
-              )}
-              {/* Show thread status if available */}
-              {(context as any).hasFullThread !== undefined && (
-                <div className="flex justify-between">
-                  <span className="text-blue-700 dark:text-blue-300">Thread Data:</span>
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    (context as any).hasFullThread 
-                      ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                      : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
-                  }`}>
-                    {(context as any).hasFullThread ? 'Complete Thread' : 'Basic Info Only'}
-                  </span>
-                </div>
-              )}
+            {/* From as subtitle */}
+            <div className="mb-1">
+              <span className="text-sm text-blue-700 dark:text-blue-300">From: </span>
+              <span className="text-sm text-blue-900 dark:text-blue-100">
+                {
+                  (() => {
+                    const messages = context.content?.messages || [];
+                    return (
+                      messages[0]?.from ||
+                      context.content?.from ||
+                      'Unknown Sender'
+                    );
+                  })()
+                }
+              </span>
+            </div>
+            {/* Received date (from first message or createdAt) */}
+            <div>
+              <span className="text-sm text-blue-700 dark:text-blue-300">Received: </span>
+              <span className="text-sm text-blue-900 dark:text-blue-100">
+                {
+                  (() => {
+                    const messages = context.content?.messages || [];
+                    if (messages.length > 0 && messages[0].date) {
+                      const date = new Date(messages[0].date);
+                      if (!isNaN(date.getTime())) return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+                      return messages[0].date;
+                    }
+                    if (context.convexData?.createdAt) {
+                      const date = new Date(context.convexData.createdAt);
+                      if (!isNaN(date.getTime())) return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+                    }
+                    return 'Unknown';
+                  })()
+                }
+              </span>
             </div>
           </div>
         )}
