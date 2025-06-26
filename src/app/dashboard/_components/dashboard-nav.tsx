@@ -14,7 +14,7 @@ import { getApiKey } from '@/app/lib/api-helpers'
 const navItems = [
   {
     id: 'chat',
-    label: 'Chat',
+    label: 'Chat with Content',
     icon: BarChart3,
     href: '/dashboard/chat',
   },
@@ -36,7 +36,25 @@ interface ChatHistory {
   id: string;
   topic: string;
   preview?: string;
+  createdAt?: number;
 }
+
+// Helper function to format relative time
+const formatRelativeTime = (timestamp: number): string => {
+  const now = Date.now();
+  const diffMs = now - timestamp;
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMinutes < 1) return 'Just now';
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  
+  // For older chats, show the actual date
+  return new Date(timestamp).toLocaleDateString();
+};
 
 export const DashboardNav = memo(function DashboardNav() {
   const pathname = usePathname()
@@ -66,7 +84,9 @@ export const DashboardNav = memo(function DashboardNav() {
       
       if (response.ok) {
         const data = await response.json();
+        console.log('Chat history API response:', data);
         if (data.conversations) {
+          console.log('Recent chats data:', data.conversations);
           setRecentChats(data.conversations);
         }
       }
@@ -232,7 +252,16 @@ export const DashboardNav = memo(function DashboardNav() {
                     title={chat.topic}
                   >
                     <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <span className="text-sm text-foreground truncate">{chat.topic}</span>
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="text-sm text-foreground truncate">{chat.topic}</span>
+                      {chat.createdAt ? (
+                        <span className="text-xs text-muted-foreground">
+                          {formatRelativeTime(chat.createdAt)}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-red-500">No timestamp</span>
+                      )}
+                    </div>
                   </Link>
                 ))
               ) : (

@@ -89,11 +89,19 @@ export async function GET(request: Request) {
         ? cleanMessageContent(firstMessage.content, firstMessage.role)
         : 'No preview available';
 
+      console.log(`[${requestId}] Processing conversation:`, {
+        id: conv._id,
+        title: conv.title,
+        _creationTime: conv._creationTime,
+        createdAt: conv.createdAt
+      });
+
       return {
         id: conv._id,
         topic: conv.title || 'Untitled Chat',
         preview: cleanedPreview,
         starred: conv.starred || false,
+        createdAt: conv._creationTime || conv.createdAt,
         messages: conv.messages?.map((msg, index) => ({
           id: index,
           content: cleanMessageContent(msg.content, msg.role),

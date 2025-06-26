@@ -48,24 +48,18 @@ export function NoteHeader({ note, onUpdate, onSave, onBack, isMobile, currentCo
         {/* Right side with back button and action buttons */}
         <div className="flex-1 flex justify-end">
           <div className="flex gap-2">
-            {/* Navigation back button (for note links) */}
-            {canGoBack && onNavigateBack && (
+            {/* Unified back button */}
+            {(isMobile || (canGoBack && onNavigateBack)) && (
               <button
-                onClick={onNavigateBack}
+                onClick={canGoBack && onNavigateBack ? onNavigateBack : onBack}
                 className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted/60 transition-all duration-200 group"
-                title={`Back to previous note (${navigationStack?.length || 0} in history)`}
+                title={canGoBack && onNavigateBack ? `Back to previous note (${navigationStack?.length || 0} in history)` : "Back to notes grid"}
               >
-                <ChevronLeft className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors duration-200" />
-              </button>
-            )}
-            {/* Main back button (to grid) */}
-            {isMobile && (
-              <button
-                onClick={onBack}
-                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted/60 transition-all duration-200 group"
-                title="Back to notes grid"
-              >
-                <ArrowLeft className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors duration-200" />
+                {canGoBack && onNavigateBack ? (
+                  <ChevronLeft className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors duration-200" />
+                ) : (
+                  <ArrowLeft className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors duration-200" />
+                )}
               </button>
             )}
             

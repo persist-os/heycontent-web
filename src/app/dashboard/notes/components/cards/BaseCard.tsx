@@ -12,6 +12,8 @@ interface BaseCardProps {
   onEdit?: (note: Note) => void;
   onDelete?: (noteId: string) => void;
   onToggleImportant?: (noteId: string) => void;
+  isDragging?: boolean;
+  isOverlay?: boolean;
 }
 
 export function BaseCard({
@@ -20,7 +22,9 @@ export function BaseCard({
   children,
   onEdit,
   onDelete,
-  onToggleImportant
+  onToggleImportant,
+  isDragging = false,
+  isOverlay = false
 }: BaseCardProps) {
   const [showImageGallery, setShowImageGallery] = useState(false);
   
@@ -46,43 +50,57 @@ export function BaseCard({
       <div
         className={cn(
           "group relative bg-background border border-border rounded-lg shadow-sm transition-all duration-200",
-          "hover:shadow-md hover:border-border/60 cursor-pointer",
+          "hover:shadow-md hover:border-border/60",
+          !isOverlay && !isDragging && "cursor-pointer",
+          // Drag states
+          isDragging && "opacity-50 scale-95 shadow-lg",
+          isOverlay && "shadow-2xl rotate-3 scale-105 border-primary/50",
           className
         )}
-        onClick={handleEdit}
+        onClick={!isDragging && !isOverlay ? handleEdit : undefined}
       >
         {/* Header with actions */}
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="flex items-center gap-1">
-            <button
-              onClick={handleToggleImportant}
-              title={note.important ? "Remove from favorites" : "Add to favorites"}
-              className={cn(
-                "p-1 rounded hover:bg-background/80 transition-colors",
-                note.important ? "text-yellow-500" : "text-muted-foreground"
-              )}
-            >
-              <Star className="w-3 h-3" fill={note.important ? "currentColor" : "none"} />
-            </button>
-            <button
-              onClick={handleDelete}
-              title="Delete note"
-              className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-            >
-              <Trash2 className="w-3 h-3" />
-            </button>
+        {!isOverlay && !isDragging && (
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleToggleImportant}
+                title={note.important ? "Remove from favorites" : "Add to favorites"}
+                className={cn(
+                  "p-1 rounded hover:bg-background/80 transition-colors",
+                  note.important ? "text-yellow-500" : "text-muted-foreground"
+                )}
+              >
+                <Star className="w-3 h-3" fill={note.important ? "currentColor" : "none"} />
+              </button>
+              <button
+                onClick={handleDelete}
+                title="Delete note"
+                className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Drag indicator for overlay */}
+        {isOverlay && (
+          <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground px-2 py-1 rounded-md text-xs font-medium">
+            Dragging...
+          </div>
+        )}
 
         {/* NEW: Image Mosaic Preview */}
         {hasImages && (
-          <div className="p-3 pb-0">
+          <div className="p-4 pb-0">
             <ImageMosaic
               images={note.images}
               onOpenGallery={(e) => {
                 e.stopPropagation(); // Prevent card click
                 setShowImageGallery(true);
               }}
+              className="rounded-md mb-3"
             />
           </div>
         )}
@@ -116,11 +134,11 @@ export function BaseCard({
       </div>
 
       {/* Image Gallery Modal */}
-      {showImageGallery && (
+      {showImageGallery && hasImages && (
         <ImageGalleryModal
           isOpen={showImageGallery}
           noteId={String(note._id)}
-          images={note.images || []}
+          images={note.images}
           onClose={() => setShowImageGallery(false)}
         />
       )}

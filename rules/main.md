@@ -2,6 +2,9 @@
 
 This document defines the required engineering standards for the HeyContent frontend, built with Next.js and deployed on Vercel.
 
+
+Keep all code clean, modular, under 400 lines. Never call Firebase Auth directly, use api-helpers/api-utils correctly to get the api key from cookies. 
+
 ## Tech Stack
 
 - Framework: Next.js (App Router)
