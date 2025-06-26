@@ -77,7 +77,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
   return {
     zoomLevel: 'year',
     scrollPosition: 0,
-    // Set initial date range to current year without automatic updates
+    // Force fresh current date calculation on every store creation
     visibleDateRange: (() => {
       const currentDate = new Date();
       return {
@@ -97,12 +97,6 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
     },
     setScrollPosition: (position) => set({ scrollPosition: position }),
     setVisibleDateRange: (start, end) => {
-      // Simplified date range setting - remove automatic blocking
-      console.log('📅 setVisibleDateRange called:', {
-        year: start.getFullYear(),
-        month: start.getMonth()
-      });
-      
       set({ visibleDateRange: { start, end } });
     },
     addEvents: (newEvents) => set((state) => ({

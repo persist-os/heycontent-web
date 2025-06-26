@@ -229,15 +229,38 @@ export const TimelineScroller: React.FC = () => {
     
     console.log('🚀 TimelineScroller: Initial setup only');
     
-    const initialPeriods = generatePeriodsForZoom(centerDate, zoomLevel, 7);
+    // Force centerDate to current date to ensure we start on current year
+    const currentYear = new Date().getFullYear();
+    const forcedCurrentDate = new Date(currentYear, 5, 15); // June 15th of current year
+    
+    const initialPeriods = generatePeriodsForZoom(forcedCurrentDate, zoomLevel, 7);
     setLoadedPeriods(initialPeriods);
     
-    // Set the visible date range to the center period
-    const centerPeriod = initialPeriods[Math.floor(initialPeriods.length / 2)];
-    if (centerPeriod) {
-      console.log('✅ TimelineScroller: Initial date range set');
-      setVisibleDateRange(centerPeriod.start, centerPeriod.end);
-    }
+    // Set the visible date range to the current year (not the center period)
+    const currentYearStart = new Date(currentYear, 0, 1);
+    const currentYearEnd = new Date(currentYear, 11, 31);
+    
+    setVisibleDateRange(currentYearStart, currentYearEnd);
+    
+    // Scroll to show the current year period in the center
+    setTimeout(() => {
+      if (scrollContainerRef.current && initialPeriods.length > 0) {
+        // Find the period that contains the current year
+        const currentYearPeriodIndex = initialPeriods.findIndex(period => 
+          period.start.getFullYear() === currentYear
+        );
+        
+        if (currentYearPeriodIndex !== -1) {
+          // Scroll to position the current year period in the center
+          const containerWidth = scrollContainerRef.current.clientWidth;
+          const scrollWidth = scrollContainerRef.current.scrollWidth;
+          const periodWidth = scrollWidth / initialPeriods.length;
+          const targetScrollLeft = (currentYearPeriodIndex * periodWidth) - (containerWidth / 2) + (periodWidth / 2);
+          
+          scrollContainerRef.current.scrollLeft = Math.max(0, targetScrollLeft);
+        }
+      }
+    }, 100);
     
     setHasInitialized(true);
   }, []); // Only run on mount
@@ -285,13 +308,13 @@ export const TimelineScroller: React.FC = () => {
     }
   }, [loadedPeriods, zoomLevel, isUserDriven]);
 
-  // DISABLE automatic visible date range updates - only update on user scroll
+  // ENABLE visible date range updates during user scroll to fix stuck year display
   const updateVisibleDateRange = useCallback((scrollLeft: number, containerWidth: number, scrollWidth: number) => {
-    // Only update if user is actively scrolling
+    // Only update if user is actively scrolling and we have loaded periods
     if (loadedPeriods.length === 0 || !isUserDriven) return;
     
     // Calculate which period is most visible based on scroll position
-    const scrollProgress = scrollLeft / (scrollWidth - containerWidth);
+    const scrollProgress = scrollLeft / Math.max(scrollWidth - containerWidth, 1);
     const periodIndex = Math.floor(scrollProgress * loadedPeriods.length);
     const safePeriodIndex = Math.max(0, Math.min(periodIndex, loadedPeriods.length - 1));
     
@@ -381,10 +404,10 @@ export const TimelineScroller: React.FC = () => {
         // Zoom in (year -> month -> week)
         const nextZoom = zoomSequence[currentZoomIndex + 1] as ZoomLevel;
         
-        // Update zoom level but keep current date range
+        // Update zoom level
         useTimelineStore.getState().setZoomLevel(nextZoom);
         
-        // Generate new periods around the CURRENT visible date range instead of jumping
+        // Generate new periods and update visible date range to match what's displayed
         const currentCenter = new Date(
           (visibleDateRange.start.getTime() + visibleDateRange.end.getTime()) / 2
         );
@@ -392,6 +415,12 @@ export const TimelineScroller: React.FC = () => {
         setTimeout(() => {
           const newPeriods = generatePeriodsForZoom(currentCenter, nextZoom, 7);
           setLoadedPeriods(newPeriods);
+          
+          // Update visible date range to match the center period of the new zoom level
+          const centerPeriod = newPeriods[Math.floor(newPeriods.length / 2)];
+          if (centerPeriod) {
+            setVisibleDateRange(centerPeriod.start, centerPeriod.end);
+          }
         }, 100);
         
       } else if (e.deltaY > 0 && currentZoomIndex > 0) {
@@ -401,7 +430,7 @@ export const TimelineScroller: React.FC = () => {
         // Update zoom level but keep current date range
         useTimelineStore.getState().setZoomLevel(nextZoom);
         
-        // Generate new periods around the CURRENT visible date range instead of jumping
+        // Generate new periods and update visible date range to match what's displayed
         const currentCenter = new Date(
           (visibleDateRange.start.getTime() + visibleDateRange.end.getTime()) / 2
         );
@@ -409,6 +438,12 @@ export const TimelineScroller: React.FC = () => {
         setTimeout(() => {
           const newPeriods = generatePeriodsForZoom(currentCenter, nextZoom, 7);
           setLoadedPeriods(newPeriods);
+          
+          // Update visible date range to match the center period of the new zoom level
+          const centerPeriod = newPeriods[Math.floor(newPeriods.length / 2)];
+          if (centerPeriod) {
+            setVisibleDateRange(centerPeriod.start, centerPeriod.end);
+          }
         }, 100);
       }
       
