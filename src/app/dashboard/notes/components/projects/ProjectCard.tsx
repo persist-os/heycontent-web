@@ -6,17 +6,26 @@ import { Project } from '../../types/project';
 import { Folder, Calendar, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useDroppable } from '@dnd-kit/core';
 
 interface ProjectCardProps {
   project: Project;
   onEdit: (project: Project) => void;
   onDelete: () => void;
+  dragOverProject?: string | null;
 }
 
-export function ProjectCard({ project, onEdit, onDelete }: ProjectCardProps) {
+export function ProjectCard({ project, onEdit, onDelete, dragOverProject }: ProjectCardProps) {
   const router = useRouter();
 
-
+  // Set up droppable functionality
+  const { isOver, setNodeRef } = useDroppable({
+    id: String(project._id),
+    data: {
+      type: 'project',
+      project,
+    },
+  });
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -35,21 +44,41 @@ export function ProjectCard({ project, onEdit, onDelete }: ProjectCardProps) {
     (project.instagramPostIds?.length || 0) + 
     (project.youtubeVideoIds?.length || 0);
 
+  // Determine if this project is being dragged over
+  const isDraggedOver = isOver || dragOverProject === String(project._id);
+
   return (
     <div
+      ref={setNodeRef}
       onClick={handleCardClick}
       className={cn(
         "group relative bg-background border border-border rounded-lg shadow-sm transition-all duration-200",
         "hover:shadow-md hover:border-border/60 cursor-pointer",
-        "hover:shadow-lg"
+        "hover:shadow-lg",
+        // Add visual feedback for drag over
+        isDraggedOver && "ring-2 ring-primary ring-offset-2 bg-primary/5 border-primary/50 scale-105"
       )}
     >
+      {/* Drop zone indicator */}
+      {isDraggedOver && (
+        <div className="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary rounded-lg flex items-center justify-center z-10 pointer-events-none">
+          <div className="bg-primary text-primary-foreground px-3 py-1 rounded-md text-sm font-medium">
+            Drop note here to add to project
+          </div>
+        </div>
+      )}
+
       <div className="p-4">
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Folder className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <div className={cn(
+              "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors",
+              isDraggedOver 
+                ? "bg-primary/20 text-primary" 
+                : "bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+            )}>
+              <Folder className="w-4 h-4" />
             </div>
             <h3 className="font-medium text-foreground truncate flex-1">
               {project.name}
@@ -95,7 +124,12 @@ export function ProjectCard({ project, onEdit, onDelete }: ProjectCardProps) {
           <div className="mt-3 pt-3 border-t border-border">
             <div className="flex flex-wrap gap-2 text-xs">
               {project.noteIds && project.noteIds.length > 0 && (
-                <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 rounded">
+                <span className={cn(
+                  "px-2 py-1 rounded transition-colors",
+                  isDraggedOver 
+                    ? "bg-primary/20 text-primary" 
+                    : "bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300"
+                )}>
                   {project.noteIds.length} note{project.noteIds.length !== 1 ? 's' : ''}
                 </span>
               )}

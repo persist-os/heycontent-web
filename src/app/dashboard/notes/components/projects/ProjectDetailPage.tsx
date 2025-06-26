@@ -28,7 +28,7 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
   const [showEditModal, setShowEditModal] = useState(false);
 
   const handleBack = () => {
-    router.back();
+    router.push('/dashboard/notes');
   };
 
   const handleEdit = () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,16 +12,25 @@ interface CreateProjectModalProps {
   onClose: () => void;
   onCreateProject: (name: string, description?: string) => Promise<any>;
   isCreating: boolean;
+  defaultName?: string;
 }
 
 export function CreateProjectModal({
   isOpen,
   onClose,
   onCreateProject,
-  isCreating
+  isCreating,
+  defaultName
 }: CreateProjectModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+
+  // Set default name when modal opens with a default name
+  useEffect(() => {
+    if (isOpen && defaultName) {
+      setName(defaultName);
+    }
+  }, [isOpen, defaultName]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +58,10 @@ export function CreateProjectModal({
         <DialogHeader>
           <DialogTitle>Create New Project</DialogTitle>
           <DialogDescription>
-            Create a new project to organize your notes, conversations, and content together.
+            {defaultName 
+              ? 'Create a new project with the selected note.'
+              : 'Create a new project to organize your notes, conversations, and content together.'
+            }
           </DialogDescription>
         </DialogHeader>
         
@@ -98,7 +110,7 @@ export function CreateProjectModal({
                   Creating...
                 </>
               ) : (
-                'Create Project'
+                defaultName ? 'Create Project & Add Note' : 'Create Project'
               )}
             </Button>
           </div>
