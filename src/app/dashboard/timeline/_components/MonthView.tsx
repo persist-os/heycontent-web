@@ -157,21 +157,6 @@ export const MonthView: React.FC<MonthViewProps> = ({
     isLoading,
   } = usePersonaTimelineData(userId);
 
-  // MonthView relies on store defaults and zoom level changes
-  useEffect(() => {
-    // Only set zoom level if we're not already in month view
-    if (hasInitializedDateRange.current) return;
-    
-    // Set zoom level to month AND update date range to current month
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    
-    setZoomLevel('month');
-    setVisibleDateRange(start, end);
-    hasInitializedDateRange.current = true;
-  }, []); // Run only once on mount
-
   // Group data by day/folder for all loaded periods
   const dayMapsByPeriod = useMemo(() => {
     const periodMaps = {};
