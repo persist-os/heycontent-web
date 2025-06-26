@@ -362,15 +362,11 @@ export const getContentByPrefixedId = query({
         case 'youtube':
           // Get YouTube video by videoId
           try {
-            console.log('Looking for YouTube video:', { contentId, userId });
-            
             const video = await ctx.db
               .query("youtubeVideos")
               .withIndex("by_videoId", (q) => q.eq("videoId", contentId))
               .filter((q) => q.eq(q.field("userId"), userId))
               .first();
-              
-            console.log('Found YouTube video:', video);
               
             if (video) {
               return {
@@ -398,14 +394,11 @@ export const getContentByPrefixedId = query({
             }
             
             // If not found, try without userId filter as fallback
-            console.log('Trying fallback query without userId filter');
             const fallbackVideo = await ctx.db
               .query("youtubeVideos")
               .withIndex("by_videoId", (q) => q.eq("videoId", contentId))
               .first();
               
-            console.log('Fallback video found:', fallbackVideo);
-            
             if (fallbackVideo) {
               return {
                 type: 'youtube',
