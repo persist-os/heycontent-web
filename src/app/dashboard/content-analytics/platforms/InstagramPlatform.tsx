@@ -73,9 +73,9 @@ export function InstagramPlatform({
             <Instagram className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
           </div>
         }
-        description="Connect your Instagram account to view detailed analytics, track content performance, and get insights on your content strategy."
-        buttonColor="bg-gradient-to-r from-purple-500 to-pink-500"
-        buttonHoverColor="hover:from-purple-600 hover:to-pink-600"
+       description="Connect your Instagram account to view detailed analytics, track content performance, and get insights on your content strategy."
+       buttonColor="bg-gradient-to-r from-purple-500 to-pink-500"
+       buttonHoverColor="hover:from-purple-600 hover:to-pink-600"
       />
     );
   }
@@ -343,7 +343,7 @@ export function InstagramPlatform({
             <div className="space-y-2">
               <p className="text-lg font-medium">No Instagram content found</p>
               <p className="text-sm">
-                Connect your Instagram account to see analytics and insights.
+                Connect your Instagram account to see tracker and insights.
               </p>
             </div>
           </div>

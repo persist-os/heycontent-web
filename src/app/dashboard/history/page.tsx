@@ -7,11 +7,30 @@ import {
   Search,
   MessageSquare,
   Trash2,
-  Star
+  Star,
+  Clock
 } from 'lucide-react'
 import { ChatHistory } from '@/app/types/chat'
 import { getApiKey } from '@/app/lib/api-helpers'
 import { Skeleton } from '@/components/ui/skeleton'
+
+// Helper function to format relative time
+const formatRelativeTime = (timestamp: string | number): string => {
+  const now = Date.now();
+  const time = typeof timestamp === 'string' ? new Date(timestamp).getTime() : timestamp;
+  const diffMs = now - time;
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMinutes < 1) return 'Just now';
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  
+  // For older chats, show the actual date
+  return new Date(time).toLocaleDateString();
+};
 
 export default function HistoryPage() {
   const router = useRouter()
@@ -148,10 +167,18 @@ export default function HistoryPage() {
                 >
                   <div className="flex items-start gap-3">
                     <MessageSquare className="w-5 h-5 text-muted-foreground/70 shrink-0 mt-0.5" />
-                    <div className="overflow-hidden">
-                      <h3 className="font-medium text-foreground/90 truncate">{chat.topic}</h3>
+                    <div className="overflow-hidden flex-1">
+                      <div className="flex items-center justify-between gap-3 mb-1">
+                        <h3 className="font-medium text-foreground/90 truncate">{chat.topic}</h3>
+                        {chat.createdAt && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground/60 shrink-0">
+                            <Clock className="w-3 h-3" />
+                            <span>{formatRelativeTime(chat.createdAt)}</span>
+                          </div>
+                        )}
+                      </div>
                       {chat.preview && (
-                        <p className="text-sm text-muted-foreground/80 mt-1 line-clamp-1">
+                        <p className="text-sm text-muted-foreground/80 line-clamp-1">
                           {chat.preview}
                         </p>
                       )}

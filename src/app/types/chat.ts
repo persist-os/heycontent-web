@@ -53,7 +53,7 @@ export interface Message {
 export interface ChatHistory {
   id: string;
   messages: Message[];
-  createdAt: string;
+  createdAt: string | number;
   updatedAt: string;
   title?: string;
   topic: string;
