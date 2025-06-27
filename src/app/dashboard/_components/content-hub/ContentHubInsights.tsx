@@ -1,15 +1,16 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CreateNoteButton } from '@/components/ui/CreateNoteButton'
-import { RefreshCw, Instagram, Mail, Sparkles, MessageSquare, Plus, ChevronDown, ChevronUp } from 'lucide-react'
+import { RefreshCw, Instagram, Mail, Sparkles, MessageSquare, Plus } from 'lucide-react'
 import { YouTubeBrandIcon } from '@/lib/YoutubeBrandIcon'
 import { useContentHubInsights } from './hooks/useContentHubInsights'
 import { useRouter } from 'next/navigation'
 import { ContentHubInsight } from '@/convex/contentHub'
+import { useContentContextActions } from '@/store/content-context-store'
 
 interface ContentHubInsightsProps {
   userId: string
@@ -17,8 +18,8 @@ interface ContentHubInsightsProps {
 }
 
 export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsProps) {
-  const [expanded, setExpanded] = useState(forceExpand ?? true)
   const router = useRouter()
+  const { setAIInsightsContext } = useContentContextActions()
   const {
     latestInsight,
     refreshing,
@@ -31,30 +32,29 @@ export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsPr
 
   const isLoading = dataBundle === undefined
 
-  // Expand if forceExpand is set
-  useEffect(() => {
-    if (forceExpand) setExpanded(true);
-  }, [forceExpand]);
-
   const handleGenerateInsights = async () => {
     await generateNewInsights()
   }
 
   const discussInsight = (content: string, title: string) => {
-    try {
-      const context = {
-        platform: 'content-hub',
-        contentId: `insight-${Date.now()}`,
-        title: title,
-        source: 'Content Hub Insights',
-        messageToSend: content
-      }
-      
-      const encodedContext = encodeURIComponent(JSON.stringify(context))
-      router.push(`/dashboard/chat?contentContext=${encodedContext}&autoSend=true`)
-    } catch (error) {
-      router.push('/dashboard/chat')
+    // Set the AI insights context in the store
+    const insightContext = {
+      title: title,
+      content: content,
+      insight: content, // Also set as insight for backwards compatibility
+      source: 'Content Hub Insights',
+      timestamp: Date.now(),
+      type: 'content-hub-insight'
     }
+    
+    console.log('🔍 [CONTENT HUB] Setting AI insights context:', insightContext);
+    setAIInsightsContext(insightContext)
+    
+    // Small delay to ensure context is set before navigation
+    setTimeout(() => {
+      console.log('🔍 [CONTENT HUB] Navigating to chat');
+      router.push('/dashboard/chat')
+    }, 100);
   }
 
   // Show skeleton while data is loading
@@ -200,9 +200,7 @@ export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsPr
                 <CreateNoteButton
                   content={insight.remix_insight}
                   className="text-xs"
-                >
-                  Save as Note
-                </CreateNoteButton>
+                />
                 <Button
                   onClick={() => discussInsight(insight.remix_insight, 'Content Remix Opportunity')}
                   size="sm"
@@ -224,9 +222,7 @@ export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsPr
                   <CreateNoteButton
                     content={insight.smartnote_summary}
                     className="text-xs"
-                  >
-                    Save as Note
-                  </CreateNoteButton>
+                  />
                   <Button
                     onClick={() => discussInsight(insight.smartnote_summary, 'Smart Note Summary')}
                     size="sm"
@@ -252,9 +248,7 @@ export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsPr
                   <CreateNoteButton
                     content={insight.conversation_starter}
                     className="text-xs"
-                  >
-                    Save as Note
-                  </CreateNoteButton>
+                  />
                   <Button
                     onClick={() => discussInsight(insight.conversation_starter, 'Conversation Starter')}
                     size="sm"
@@ -270,56 +264,46 @@ export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsPr
           </div>
         </div>
 
-        {/* Platform-Specific Sections - Collapsible */}
+        {/* Platform-Specific Sections - Always Expanded */}
         <div className="border-t border-border">
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="w-full px-6 py-3 flex items-center justify-between text-left hover:bg-secondary transition-colors"
-          >
+          <div className="px-6 py-3">
             <span className="text-sm font-medium text-foreground">Platform-Specific Hooks & Formats</span>
-            {expanded ? (
-              <ChevronUp className="w-4 h-4 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
-            )}
-          </button>
+          </div>
 
-          {expanded && (
-            <div className="px-6 pb-6 space-y-4">
-              {/* YouTube Section */}
-              <PlatformInsightCard
-                platform="YouTube"
-                icon={<YouTubeBrandIcon href="https://youtube.com/" className="w-4 h-4" />}
-                hook={insight.youtube_hook}
-                format={insight.youtube_format}
-                cta={insight.youtube_cta}
-                onDiscuss={discussInsight}
-                glowColor="hover:shadow-red-500/25 hover:border-red-500/30"
-              />
+          <div className="px-6 pb-6 space-y-4">
+            {/* YouTube Section */}
+            <PlatformInsightCard
+              platform="YouTube"
+              icon={<YouTubeBrandIcon href="https://youtube.com/" className="w-4 h-4" />}
+              hook={insight.youtube_hook}
+              format={insight.youtube_format}
+              cta={insight.youtube_cta}
+              onDiscuss={discussInsight}
+              glowColor="hover:shadow-red-500/25 hover:border-red-500/30"
+            />
 
-              {/* Instagram Section */}
-              <PlatformInsightCard
-                platform="Instagram"
-                icon={<Instagram className="w-4 h-4 text-gray-600" />}
-                hook={insight.instagram_hook}
-                format={insight.instagram_format}
-                cta={insight.instagram_cta}
-                onDiscuss={discussInsight}
-                glowColor="hover:shadow-pink-500/25 hover:border-pink-500/30"
-              />
+            {/* Instagram Section */}
+            <PlatformInsightCard
+              platform="Instagram"
+              icon={<Instagram className="w-4 h-4 text-gray-600" />}
+              hook={insight.instagram_hook}
+              format={insight.instagram_format}
+              cta={insight.instagram_cta}
+              onDiscuss={discussInsight}
+              glowColor="hover:shadow-pink-500/25 hover:border-pink-500/30"
+            />
 
-              {/* Gmail Section */}
-              <PlatformInsightCard
-                platform="Gmail"
-                icon={<Mail className="w-4 h-4 text-gray-600" />}
-                hook={insight.gmail_hook}
-                format={insight.gmail_format}
-                cta={insight.gmail_cta}
-                onDiscuss={discussInsight}
-                glowColor="hover:shadow-blue-500/25 hover:border-blue-500/30"
-              />
-            </div>
-          )}
+            {/* Gmail Section */}
+            <PlatformInsightCard
+              platform="Gmail"
+              icon={<Mail className="w-4 h-4 text-gray-600" />}
+              hook={insight.gmail_hook}
+              format={insight.gmail_format}
+              cta={insight.gmail_cta}
+              onDiscuss={discussInsight}
+              glowColor="hover:shadow-blue-500/25 hover:border-blue-500/30"
+            />
+          </div>
         </div>
       </Card>
     </div>
@@ -371,9 +355,7 @@ function PlatformInsightCard({ platform, icon, hook, format, cta, onDiscuss, glo
         <CreateNoteButton
           content={`${platform} Content:\n\nHook: ${hook}\n\nFormat: ${format}\n\nCTA: ${cta}`}
           className="text-xs"
-        >
-          Save as Note
-        </CreateNoteButton>
+        />
         <Button
           onClick={() => onDiscuss(`${platform} Content:\n\nHook: ${hook}\n\nFormat: ${format}\n\nCTA: ${cta}`, `${platform} Content Strategy`)}
           size="sm"

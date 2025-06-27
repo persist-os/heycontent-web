@@ -76,6 +76,7 @@ export interface ContentContext {
   publishedAt?: string;
   metrics?: any;
   content?: any;
+  convexData?: any; // Add this for the new Zustand store format with full Convex documents
   actionStep?: string;  // Add this for AI Insights action steps
   source?: string;      // Add this to track the source of the context
   originalPlatform?: 'youtube' | 'instagram' | 'gmail'; // Add this for AI insights

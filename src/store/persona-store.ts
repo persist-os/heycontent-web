@@ -143,11 +143,17 @@ export const usePersonaStore = create<PersonaStoreState>()(
           console.log('🔄 [PERSONA STORE] refreshPersonaData called for userId:', userId, 'at:', new Date().toISOString());
         }
         
-        set({ isLoading: true, error: null, lastFetchedUserId: userId });
+        // Force clear cache first for true refresh
+        set({ 
+          isLoading: true, 
+          error: null, 
+          lastFetchedUserId: userId,
+          cacheTimestamp: 0 // Invalidate cache immediately
+        });
 
         try {
           if (process.env.NODE_ENV === 'development') {
-            console.log('🔄 [PERSONA STORE] Starting optimized refresh query at:', new Date().toISOString());
+            console.log('🔄 [PERSONA STORE] Starting FORCED refresh query (cache invalidated) at:', new Date().toISOString());
           }
           const queryStartTime = performance.now();
           
@@ -155,7 +161,12 @@ export const usePersonaStore = create<PersonaStoreState>()(
           
           const queryEndTime = performance.now();
           if (process.env.NODE_ENV === 'development') {
-            console.log('🔄 [PERSONA STORE] Optimized refresh query completed in:', Math.round(queryEndTime - queryStartTime), 'ms');
+            console.log('🔄 [PERSONA STORE] FORCED refresh query completed in:', Math.round(queryEndTime - queryStartTime), 'ms');
+            console.log('🔄 [PERSONA STORE] Fresh persona data received:', {
+              allPersonasCount: personaData.allPersonas?.length || 0,
+              hasActivePersona: !!personaData.activePersona,
+              activePersonaName: personaData.activePersona?.current_name || 'none'
+            });
           }
 
           set({
@@ -164,13 +175,13 @@ export const usePersonaStore = create<PersonaStoreState>()(
             currentPersona: personaData.activePersona || null,
             isLoading: false,
             isInitialized: true,
-            cacheTimestamp: Date.now(), // Update cache timestamp
+            cacheTimestamp: Date.now(), // Set fresh cache timestamp
             error: null
           });
           
           const totalRefreshTime = performance.now() - refreshStartTime;
           if (process.env.NODE_ENV === 'development') {
-            console.log('🔄 [PERSONA STORE] ✅ refreshPersonaData COMPLETED in:', Math.round(totalRefreshTime), 'ms');
+            console.log('🔄 [PERSONA STORE] ✅ FORCED refreshPersonaData COMPLETED in:', Math.round(totalRefreshTime), 'ms');
           }
           
         } catch (error) {
@@ -187,6 +198,9 @@ export const usePersonaStore = create<PersonaStoreState>()(
 
       // Invalidate data (force next fetch)
       invalidatePersonaData: () => {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🗑️ [PERSONA STORE] invalidatePersonaData called - clearing all cached data');
+        }
         set({
           isInitialized: false,
           lastFetchedUserId: null,
@@ -194,7 +208,8 @@ export const usePersonaStore = create<PersonaStoreState>()(
           allPersonas: [],
           personaHistory: [],
           currentPersona: null,
-          error: null
+          error: null,
+          isLoading: false
         });
       },
 
@@ -337,50 +352,11 @@ export const useOptimizedPersonaManager = (userId: string | undefined) => {
     });
   }
 
-  const activatePersona = async (personaId: Id<"personas">): Promise<boolean> => {
-    if (!userId) return false;
-
-    try {
-      // Optimistically update store
-      if (currentPersona) {
-        updatePersonaInStore(currentPersona._id, { isActive: false });
-      }
-      updatePersonaInStore(personaId, { isActive: true });
-
-      // Update backend
-      await activatePersonaMutation({ personaId, userId });
-      return true;
-    } catch (error) {
-      // Revert on error by refreshing from server
-      if (userId) {
-        refreshPersonaData(userId, convex);
-      }
-      return false;
-    }
-  };
-
-  const deletePersona = async (personaId: Id<"personas">): Promise<boolean> => {
-    try {
-      // Optimistically remove from store
-      removePersonaFromStore(personaId);
-
-      // Update backend
-      await deletePersonaMutation({ personaId });
-      return true;
-    } catch (error) {
-      // Revert on error by refreshing from server
-      if (userId) {
-        refreshPersonaData(userId, convex);
-      }
-      return false;
-    }
-  };
-
   const updatePersona = async (updates: Partial<Doc<'personas'>>): Promise<boolean> => {
     if (!currentPersona || !userId) return false;
 
     try {
-      // Optimistically update store
+      // Optimistically update store first
       updatePersonaInStore(currentPersona._id, updates);
 
       // Update backend
@@ -388,6 +364,10 @@ export const useOptimizedPersonaManager = (userId: string | undefined) => {
         personaId: currentPersona._id, 
         ...updates 
       });
+      
+      // Force refresh to ensure we have the latest data
+      await refreshPersonaData(userId, convex);
+      
       return true;
     } catch (error) {
       // Revert on error by refreshing from server
@@ -427,12 +407,100 @@ export const useOptimizedPersonaManager = (userId: string | undefined) => {
       });
       
       if (result) {
-        // Refresh to get the new persona
-        refreshPersonaData(userId, convex);
+        // Force refresh to get the new persona immediately
+        await refreshPersonaData(userId, convex);
         return true;
       }
       return false;
     } catch (error) {
+      return false;
+    }
+  };
+
+  const activatePersona = async (personaId: Id<"personas">): Promise<boolean> => {
+    if (!userId) return false;
+
+    try {
+      // Optimistically update store
+      if (currentPersona) {
+        updatePersonaInStore(currentPersona._id, { isActive: false });
+      }
+      updatePersonaInStore(personaId, { isActive: true });
+
+      // Update backend
+      await activatePersonaMutation({ personaId, userId });
+      
+      // Force refresh to ensure we have the latest data
+      await refreshPersonaData(userId, convex);
+      
+      return true;
+    } catch (error) {
+      // Revert on error by refreshing from server
+      if (userId) {
+        refreshPersonaData(userId, convex);
+      }
+      return false;
+    }
+  };
+
+  const deletePersona = async (personaId: Id<"personas">): Promise<boolean> => {
+    try {
+      // Optimistically remove from store
+      removePersonaFromStore(personaId);
+
+      // Update backend
+      await deletePersonaMutation({ personaId });
+      
+      // Force refresh to ensure we have the latest data
+      if (userId) {
+        await refreshPersonaData(userId, convex);
+      }
+      
+      return true;
+    } catch (error) {
+      // Revert on error by refreshing from server
+      if (userId) {
+        refreshPersonaData(userId, convex);
+      }
+      return false;
+    }
+  };
+
+  const deleteCurrentPersonaAndSelectNext = async (): Promise<boolean> => {
+    if (!currentPersona || !userId) return false;
+
+    try {
+      const currentPersonaId = currentPersona._id;
+      
+      // Find the most recently created persona that's not the current one
+      const otherPersonas = allPersonas.filter(p => p._id !== currentPersonaId);
+      const mostRecentPersona = otherPersonas.length > 0 
+        ? otherPersonas.reduce((newest, current) => 
+            current._creationTime > newest._creationTime ? current : newest
+          )
+        : null;
+
+      // Delete the current persona
+      await deletePersonaMutation({ personaId: currentPersonaId });
+
+      // If we have another persona, activate it
+      if (mostRecentPersona) {
+        await activatePersonaMutation({ 
+          personaId: mostRecentPersona._id, 
+          userId 
+        });
+      }
+      
+      // Force refresh to ensure we have the latest data
+      await refreshPersonaData(userId, convex);
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to delete current persona and select next:', error);
+      // Revert on error by refreshing from server
+      if (userId) {
+        refreshPersonaData(userId, convex);
+      }
       return false;
     }
   };
@@ -449,6 +517,7 @@ export const useOptimizedPersonaManager = (userId: string | undefined) => {
     // Actions
     activatePersona,
     deletePersona,
+    deleteCurrentPersonaAndSelectNext,
     updatePersona,
     createPersona,
   };

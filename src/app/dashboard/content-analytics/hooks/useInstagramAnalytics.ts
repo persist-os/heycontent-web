@@ -219,6 +219,7 @@ export function useInstagramAnalytics(userId?: string) {
             thumbnailUrl: post.data.thumbnail_url,
             permalink: post.data.permalink,
             timestamp: post.data.timestamp,
+            comments: post.data.comments || [], // Include comments from the Convex schema
           },
           metrics,
           // Include properly typed children array for carousel posts
@@ -231,6 +232,8 @@ export function useInstagramAnalytics(userId?: string) {
           // Include analysis data if available
           analysis: post.analysis,
           analysisMarkdown: post.analysisMarkdown,
+          // Include the full Convex document for complete data access
+          convexData: post,
         };
       });
     }

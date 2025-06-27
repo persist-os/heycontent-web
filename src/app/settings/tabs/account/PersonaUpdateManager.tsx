@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useOptimizedPersonaManager } from '@/store/persona-store';
 import { PersonaData } from '../../../dashboard/chat/types';
-import { Edit2, Plus } from 'lucide-react';
+import { Edit2, Plus, Trash2 } from 'lucide-react';
 import { PersonaEditForm } from './PersonaEditForm';
 import { NewPersonaCard } from './NewPersonaCard';
 
@@ -17,9 +17,11 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
   
   const {
     currentPersona,
+    allPersonas,
     isLoading,
     hasPersona,
     updatePersona,
+    deleteCurrentPersonaAndSelectNext,
   } = useOptimizedPersonaManager(userId);
 
   const managerDataTime = performance.now();
@@ -34,6 +36,8 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedPersona, setEditedPersona] = useState<PersonaData | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleEdit = () => {
     if (currentPersona) {
@@ -67,6 +71,39 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
     await updatePersona(changes);
     setEditedPersona(null);
     setIsEditMode(false);
+  };
+
+  const handleDeleteClick = () => {
+    // Only allow deletion if there are multiple personas
+    if (allPersonas.length > 1) {
+      setShowDeleteConfirm(true);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!currentPersona) return;
+    
+    setIsDeleting(true);
+    try {
+      const success = await deleteCurrentPersonaAndSelectNext();
+      if (success) {
+        setShowDeleteConfirm(false);
+        // Reset edit mode if it was active
+        setIsEditMode(false);
+        setEditedPersona(null);
+      } else {
+        // Handle error - could show a toast or error message
+        console.error('Failed to delete persona');
+      }
+    } catch (error) {
+      console.error('Error deleting persona:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteConfirm(false);
   };
 
 
@@ -173,6 +210,17 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
                 Cancel
               </Button>
             )}
+            {!isEditMode && allPersonas.length > 1 && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleDeleteClick}
+                className="min-h-[44px] w-full sm:w-auto text-red-500 border-red-500 hover:bg-red-50 dark:text-red-400 dark:border-red-400 dark:hover:bg-red-400/10"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </Button>
+            )}
             {!isEditMode && renderNewPersonaButton && (
               <Button 
                 onClick={renderNewPersonaButton} 
@@ -193,7 +241,47 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
         )}
       </div>
 
-
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-background rounded-lg max-w-md w-full p-6 shadow-lg">
+            <h3 className="text-lg font-semibold mb-4 text-foreground">
+              Delete Current Persona?
+            </h3>
+            <p className="text-muted-foreground mb-6">
+              This will permanently delete "{currentPersona?.current_name}" and automatically switch to your most recently created persona. This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button 
+                variant="ghost" 
+                onClick={handleDeleteCancel}
+                disabled={isDeleting}
+                className="min-h-[44px]"
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleDeleteConfirm}
+                disabled={isDeleting}
+                className="min-h-[44px] bg-red-500 hover:bg-red-600"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Persona
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }; 

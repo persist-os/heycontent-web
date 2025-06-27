@@ -5,6 +5,7 @@ import { YouTubeBrandIcon } from '../../../../../lib/YoutubeBrandIcon';
 import { ContentContext } from '../../types';
 import { MarkdownRenderer } from '../../markdown-renderer';
 import AIInsightDisplayCard from './AIInsightDisplayCard';
+import { processContentIfNeeded } from '../../../content-analytics/utils/markdown-processor';
 
 interface ContextBoxProps {
   context: ContentContext;
@@ -218,41 +219,58 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
         {/* Gmail-specific thread information */}
         {context.platform === 'gmail' && (
           <div className="mt-3 p-3 bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-900/10 dark:to-gray-900 rounded-lg border border-blue-200 dark:border-blue-700">
-            <div className="flex items-center gap-2 mb-2">
-              <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                Email Thread Details
+            {/* Subject as main title */}
+            <div className="mb-1">
+              <h4 className="text-base font-semibold text-blue-900 dark:text-blue-100 truncate">
+                {
+                  (() => {
+                    const messages = context.content?.messages || [];
+                    return (
+                      messages[0]?.subject ||
+                      context.content?.subject ||
+                      context.title ||
+                      'Gmail Thread'
+                    );
+                  })()
+                }
               </h4>
             </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-blue-700 dark:text-blue-300">Thread ID:</span>
-                <span className="text-blue-900 dark:text-blue-100 font-mono text-xs">
-                  {context.contentId ? `${context.contentId.substring(0, 8)}...` : 'Unknown'}
-                </span>
-              </div>
-              {/* Show message count if available from backend metadata */}
-              {(context as any).messageCount && (
-                <div className="flex justify-between">
-                  <span className="text-blue-700 dark:text-blue-300">Messages:</span>
-                  <span className="text-blue-900 dark:text-blue-100 font-semibold">
-                    {(context as any).messageCount}
-                  </span>
-                </div>
-              )}
-              {/* Show thread status if available */}
-              {(context as any).hasFullThread !== undefined && (
-                <div className="flex justify-between">
-                  <span className="text-blue-700 dark:text-blue-300">Thread Data:</span>
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    (context as any).hasFullThread 
-                      ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                      : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
-                  }`}>
-                    {(context as any).hasFullThread ? 'Complete Thread' : 'Basic Info Only'}
-                  </span>
-                </div>
-              )}
+            {/* From as subtitle */}
+            <div className="mb-1">
+              <span className="text-sm text-blue-700 dark:text-blue-300">From: </span>
+              <span className="text-sm text-blue-900 dark:text-blue-100">
+                {
+                  (() => {
+                    const messages = context.content?.messages || [];
+                    return (
+                      messages[0]?.from ||
+                      context.content?.from ||
+                      'Unknown Sender'
+                    );
+                  })()
+                }
+              </span>
+            </div>
+            {/* Received date (from first message or createdAt) */}
+            <div>
+              <span className="text-sm text-blue-700 dark:text-blue-300">Received: </span>
+              <span className="text-sm text-blue-900 dark:text-blue-100">
+                {
+                  (() => {
+                    const messages = context.content?.messages || [];
+                    if (messages.length > 0 && messages[0].date) {
+                      const date = new Date(messages[0].date);
+                      if (!isNaN(date.getTime())) return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+                      return messages[0].date;
+                    }
+                    if (context.convexData?.createdAt) {
+                      const date = new Date(context.convexData.createdAt);
+                      if (!isNaN(date.getTime())) return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+                    }
+                    return 'Unknown';
+                  })()
+                }
+              </span>
             </div>
           </div>
         )}
@@ -294,8 +312,93 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
               )}
             </div>
             <div className="text-sm text-blue-800 dark:text-blue-200 max-h-32 overflow-y-auto">
-              <MarkdownRenderer content={context.analysis} />
+              <MarkdownRenderer content={processContentIfNeeded(context.analysis)} />
             </div>
+          </div>
+        ) : context.platform === 'youtube' && context.content ? (
+          // Show video details when no analysis is available for YouTube
+          <div className="mt-3 p-3 bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-900/10 dark:to-gray-900 rounded-lg border border-blue-200 dark:border-blue-700">
+            <div className="flex items-center gap-2 mb-3">
+              <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                Video Details
+              </h4>
+            </div>
+            
+            {/* Top row: Channel and Duration */}
+            <div className="flex flex-wrap gap-4 mb-2 text-sm">
+              {context.content.channelTitle && (
+                <div className="flex items-center gap-1">
+                  <span className="text-blue-700 dark:text-blue-300 font-medium">Channel:</span>
+                  <span className="text-blue-900 dark:text-blue-100">{context.content.channelTitle}</span>
+                </div>
+              )}
+              {context.content.duration && (
+                <div className="flex items-center gap-1">
+                  <span className="text-blue-700 dark:text-blue-300 font-medium">Duration:</span>
+                  <span className="text-blue-900 dark:text-blue-100">{context.content.duration}</span>
+                </div>
+              )}
+              {/* Transcript status */}
+              {context.content.hasCaptions !== undefined && (
+                <div className="flex items-center gap-1">
+                  <span className="text-blue-700 dark:text-blue-300 font-medium">Transcript:</span>
+                  <span className={`text-sm ${context.content.hasCaptions ? 'text-green-700 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                    {context.content.hasCaptions ? '✓ Available' : '✗ Not available'}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Description (if available) */}
+            {context.content.description && (
+              <div className="mb-2 text-sm">
+                <span className="text-blue-700 dark:text-blue-300 font-medium">Description: </span>
+                <span className="text-blue-900 dark:text-blue-100">
+                  {context.content.description.length > 100 
+                    ? `${context.content.description.substring(0, 100)}...` 
+                    : context.content.description}
+                </span>
+              </div>
+            )}
+
+            {/* Bottom row: Tags and Comments */}
+            <div className="flex flex-wrap gap-4 mb-2 text-sm">
+              {/* Tags */}
+              {context.content.tags && context.content.tags.length > 0 && (
+                <div className="flex items-center gap-1">
+                  <span className="text-blue-700 dark:text-blue-300 font-medium">Tags:</span>
+                  <span className="text-blue-900 dark:text-blue-100">
+                    {context.content.tags.slice(0, 3).join(', ')}
+                    {context.content.tags.length > 3 && ` (+${context.content.tags.length - 3} more)`}
+                  </span>
+                </div>
+              )}
+              {/* Comments */}
+              {context.content.hasComments && (
+                <div className="flex items-center gap-1">
+                  <span className="text-blue-700 dark:text-blue-300 font-medium">Comments:</span>
+                  <span className="text-blue-900 dark:text-blue-100">
+                    {context.content.totalComments || context.content.comments?.length || 0} available
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Metrics row */}
+            {context.metrics && (
+              <div className="flex gap-4 text-xs text-blue-600 dark:text-blue-400">
+                {context.metrics.views > 0 && (
+                  <span>{context.metrics.views.toLocaleString()} views</span>
+                )}
+                {context.metrics.likes > 0 && (
+                  <span>{context.metrics.likes.toLocaleString()} likes</span>
+                )}
+                {context.metrics.comments > 0 && (
+                  <span>{context.metrics.comments.toLocaleString()} comments</span>
+                )}
+              </div>
+            )}
           </div>
         ) : null}
 

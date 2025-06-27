@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Instagram, Users, RefreshCw, MessageSquare, Heart, Forward } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import { InstagramContentItem } from '../types';
 import { useInstagramRefresh } from '@/app/hooks/useInstagramRefresh';
+import { useContentContextActions } from '@/store/content-context-store';
 
 export interface InstagramCardProps {
   item: InstagramContentItem;
@@ -50,6 +52,8 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
   }, []);
 
   const { refresh, loading, error } = useInstagramRefresh(handleRefreshComplete);
+  const router = useRouter();
+  const { setInstagramContext } = useContentContextActions();
 
   const handleImgError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     if (e.currentTarget.src !== window.location.origin + fallbackImg) {
@@ -76,6 +80,60 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
       month: 'numeric',
       day: 'numeric'
     });
+  };
+
+  // Handle discuss content with Zustand store
+  const handleDiscussContent = () => {
+    // Use the full Convex document if available, otherwise create a fallback
+    if (item.convexData) {
+      // Use the complete Convex document with all fields
+      console.log('🔍 [INSTAGRAM CARD] Using full Convex document:', {
+        hasData: !!item.convexData.data,
+        dataKeys: item.convexData.data ? Object.keys(item.convexData.data) : 'none',
+        hasComments: !!item.convexData.data?.comments,
+        commentsLength: item.convexData.data?.comments?.length || 0,
+        hasInsights: !!item.convexData.data?.insights,
+        insightsKeys: item.convexData.data?.insights ? Object.keys(item.convexData.data.insights) : 'none',
+        fullConvexData: item.convexData
+      });
+      
+      setInstagramContext(item.convexData);
+    } else {
+      // Fallback to creating a mock object (shouldn't happen with proper data)
+      console.warn('🔍 [INSTAGRAM CARD] No convexData available, using fallback mock object');
+      
+      const convexInstagramPost = {
+        _id: item.id as any,
+        _creationTime: Date.now(),
+        userId: userId,
+        instagramAccountId: '',
+        postId: item.id,
+        mediaType: content.mediaType,
+        data: {
+          id: item.id,
+          caption: content.text || '',
+          media_url: content.mediaUrl || '',
+          permalink: content.permalink || '',
+          timestamp: new Date(publishedAt || Date.now()).getTime(),
+          username: '',
+          like_count: metrics?.likes || metrics?.like_count || 0,
+          comments_count: metrics?.comments || metrics?.comments_count || 0,
+          thumbnail_url: content.thumbnailUrl || null,
+          children: children || null,
+          comments: content.comments || [],
+          insights: metrics || null,
+        },
+        analysis: item.analysis || null,
+        analysisMarkdown: item.analysisMarkdown || null,
+        createdAt: new Date(publishedAt || Date.now()).getTime(),
+        updatedAt: Date.now(),
+      };
+
+      setInstagramContext(convexInstagramPost as any);
+    }
+    
+    // Navigate to chat
+    router.push('/dashboard/chat');
   };
 
   return (
@@ -227,7 +285,7 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
         <div className="flex gap-2 mt-4">
           <button
             className="flex-1 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-            onClick={() => onDiscussContent(item)}
+            onClick={handleDiscussContent}
           >
             <MessageSquare className="w-4 h-4 inline mr-2" />
             Discuss With Content
