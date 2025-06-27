@@ -385,21 +385,30 @@ export const YearView: React.FC<YearViewProps> = ({
                     if (personasArray.length === 0) return null;
                     return (
                       <div key={monthKey} className="persona-stack-wrapper">
-                        {/* Connection dot on timeline */}
-                        <div
-                          className="persona-connection-dot"
-                          style={{
-                            left: `${position}%`,
-                          }}
-                        />
                         {/* Connecting line from card to timeline */}
                         <div
                           className="absolute w-0.5 bg-muted-foreground/60 z-10"
                           style={{
                             left: `${position}%`,
-                            transform: 'translateX(-50%)',
+                            transform: 'translateX(-100px)',
                             top: isAbove ? `${130 + top}px` : `130px`,
                             height: isAbove ? `${Math.abs(top)}px` : `${top - 130}px`,
+                          }}
+                        />
+                        {/* Connection dot at the end of the line (near folder bars) */}
+                        <div
+                          style={{
+                            position: 'absolute',
+                            left: `${position}%`,
+                            transform: 'translateX(-105px)',
+                            top: `130px`,
+                            width: '0.75rem',
+                            height: '0.75rem',
+                            background: 'hsl(var(--foreground))',
+                            borderRadius: '50%',
+                            border: '2px solid hsl(var(--background))',
+                            zIndex: 20,
+                            boxShadow: '0 0 0 1px hsl(var(--border))',
                           }}
                         />
                         {/* Stacked persona cards */}
@@ -445,46 +454,6 @@ export const YearView: React.FC<YearViewProps> = ({
                               <span className="achievement-text">Achievements coming soon</span>
                             </div>
                             
-                            {/* Folder bars */}
-                            <div className="folder-bars">
-                              {(() => {
-                                const counts = {
-                                  blue: getFolderCount(currentPersona._id, 'blue') || 15,
-                                  purple: getFolderCount(currentPersona._id, 'purple') || 7,
-                                  orange: getFolderCount(currentPersona._id, 'orange') || 5,
-                                  yellow: getFolderCount(currentPersona._id, 'yellow') || 8
-                                };
-                                const maxCount = Math.max(...Object.values(counts));
-                                const getWidth = (count) => {
-                                  // Use a more noticeable scaling: 60% minimum width, better distribution
-                                  const percentage = (count / maxCount) * 100;
-                                  const scaledWidth = 60 + (percentage * 0.4); // 60% to 100% range
-                                  return Math.max(60, Math.min(100, scaledWidth));
-                                };
-                                
-                                return (
-                                  <>
-                                    <div className="folder-bar blue" style={{ width: `${getWidth(counts.blue)}%` }}>
-                                      <img src="/folders/folder_chat.svg" alt="Chat" className="folder-bar-icon" />
-                                      <span className="folder-bar-text">{counts.blue} Conversations</span>
-                                    </div>
-                                    <div className="folder-bar purple" style={{ width: `${getWidth(counts.purple)}%` }}>
-                                      <img src="/folders/folder_smartnotes.svg" alt="Notes" className="folder-bar-icon" />
-                                      <span className="folder-bar-text">{counts.purple} SmartNotes</span>
-                                    </div>
-                                    <div className="folder-bar orange" style={{ width: `${getWidth(counts.orange)}%` }}>
-                                      <img src="/folders/Folder_content.svg" alt="Content" className="folder-bar-icon" />
-                                      <span className="folder-bar-text">{counts.orange} Contents</span>
-                                    </div>
-                                    <div className="folder-bar yellow" style={{ width: `${getWidth(counts.yellow)}%` }}>
-                                      <img src="/folders/folder_analytics.svg" alt="Analytics" className="folder-bar-icon" />
-                                      <span className="folder-bar-text">{counts.yellow} Analysis</span>
-                                    </div>
-                                  </>
-                                );
-                              })()}
-                            </div>
-                            
                             {/* Stack indicator */}
                             {personasArray.length > 1 && (
                               <div 
@@ -497,6 +466,54 @@ export const YearView: React.FC<YearViewProps> = ({
                                 {activeIndex + 1}/{personasArray.length}
                               </div>
                             )}
+                          </div>
+                          
+                          {/* Folder bars - separate from persona card */}
+                          <div 
+                            className="folder-bars"
+                            style={{
+                              position: 'absolute',
+                              top: '160px',
+                              left: '0px',
+                              width: '200px',
+                            }}
+                          >
+                            {(() => {
+                              const counts = {
+                                blue: getFolderCount(currentPersona._id, 'blue') || 15,
+                                purple: getFolderCount(currentPersona._id, 'purple') || 7,
+                                orange: getFolderCount(currentPersona._id, 'orange') || 5,
+                                yellow: getFolderCount(currentPersona._id, 'yellow') || 8
+                              };
+                              const maxCount = Math.max(...Object.values(counts));
+                              const getWidth = (count) => {
+                                // Use a more noticeable scaling: 60% minimum width, better distribution
+                                const percentage = (count / maxCount) * 100;
+                                const scaledWidth = 60 + (percentage * 0.4); // 60% to 100% range
+                                return Math.max(60, Math.min(100, scaledWidth));
+                              };
+                              
+                              return (
+                                <>
+                                  <div className="folder-bar blue" style={{ width: `${getWidth(counts.blue)}%` }}>
+                                    <img src="/folders/folder_chat.svg" alt="Chat" className="folder-bar-icon" />
+                                    <span className="folder-bar-text">{counts.blue} Conversations</span>
+                                  </div>
+                                  <div className="folder-bar purple" style={{ width: `${getWidth(counts.purple)}%` }}>
+                                    <img src="/folders/folder_smartnotes.svg" alt="Notes" className="folder-bar-icon" />
+                                    <span className="folder-bar-text">{counts.purple} SmartNotes</span>
+                                  </div>
+                                  <div className="folder-bar orange" style={{ width: `${getWidth(counts.orange)}%` }}>
+                                    <img src="/folders/Folder_content.svg" alt="Content" className="folder-bar-icon" />
+                                    <span className="folder-bar-text">{counts.orange} Contents</span>
+                                  </div>
+                                  <div className="folder-bar yellow" style={{ width: `${getWidth(counts.yellow)}%` }}>
+                                    <img src="/folders/folder_analytics.svg" alt="Analytics" className="folder-bar-icon" />
+                                    <span className="folder-bar-text">{counts.yellow} Analysis</span>
+                                  </div>
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
