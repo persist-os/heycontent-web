@@ -207,10 +207,10 @@ export const MonthView: React.FC<MonthViewProps> = ({
 
   // Folder dot offsets for vertical line heights
   const folderDotOffsets = {
-    blue: 120,    // Highest level
-    purple: 90,   // Second level  
-    orange: 60,   // Third level
-    yellow: 30,   // Lowest level
+    blue: 130,    // Highest level (updated from 120)
+    purple: 100,  // Second level (updated from 90)  
+    orange: 70,   // Third level (updated from 60)
+    yellow: 40,   // Lowest level (updated from 30)
   };
 
   const getEventPosition = (eventDate: Date) => {
@@ -480,8 +480,8 @@ export const MonthView: React.FC<MonthViewProps> = ({
                           style={{
                             left: `${position}%`,
                             transform: 'translateX(-50%)',
-                            top: isAbove ? `${120 + top}px` : `120px`,
-                            height: isAbove ? `${Math.abs(top)}px` : `${top - 120}px`,
+                            top: isAbove ? `${130 + top}px` : `130px`,
+                            height: isAbove ? `${Math.abs(top)}px` : `${top - 130}px`,
                           }}
                         />
 

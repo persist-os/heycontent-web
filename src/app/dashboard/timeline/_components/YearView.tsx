@@ -81,6 +81,7 @@ export const YearView: React.FC<YearViewProps> = ({
   const [selectedPersona, setSelectedPersona] = useState<any>(null);
   const router = useRouter();
   const hasInitializedDateRange = useRef(false);
+  const [userId, setUserId] = useState<string | undefined>();
 
   // Get all personas (use passed prop instead of store)
   const allPersonas = personas;
@@ -93,6 +94,11 @@ export const YearView: React.FC<YearViewProps> = ({
     setZoomLevel('year');
     hasInitializedDateRange.current = true;
   }, []); // Run only once on mount
+
+  useEffect(() => {
+    const currentUserId = getCurrentUserId();
+    setUserId(currentUserId || undefined);
+  }, []);
 
   // Group data by month/folder for all loaded periods
   const monthMapsByPeriod = useMemo(() => {
@@ -153,10 +159,10 @@ export const YearView: React.FC<YearViewProps> = ({
 
   // Folder dot offsets for vertical line heights
   const folderDotOffsets = {
-    blue: 120,    // Highest level
-    purple: 90,   // Second level  
-    orange: 60,   // Third level
-    yellow: 30,   // Lowest level
+    blue: 130,    // Highest level (updated from 120)
+    purple: 100,  // Second level (updated from 90)  
+    orange: 70,   // Third level (updated from 60)
+    yellow: 40,   // Lowest level (updated from 30)
   };
 
   const getEventPosition = (eventDate: Date) => {
@@ -268,6 +274,8 @@ export const YearView: React.FC<YearViewProps> = ({
     setSelectedPersona(null);
     router.push('/dashboard/self-hub?tab=persona');
   };
+
+  const { getFolderCount } = usePersonaTimelineData(userId);
 
   return (
     <>
@@ -390,8 +398,8 @@ export const YearView: React.FC<YearViewProps> = ({
                           style={{
                             left: `${position}%`,
                             transform: 'translateX(-50%)',
-                            top: isAbove ? `${120 + top}px` : `120px`,
-                            height: isAbove ? `${Math.abs(top)}px` : `${top - 120}px`,
+                            top: isAbove ? `${130 + top}px` : `130px`,
+                            height: isAbove ? `${Math.abs(top)}px` : `${top - 130}px`,
                           }}
                         />
                         {/* Stacked persona cards */}
@@ -421,31 +429,72 @@ export const YearView: React.FC<YearViewProps> = ({
                           )}
                           {/* Active persona card */}
                           <div 
-                            className="persona-card"
+                            className="persona-card-figma-dark"
                             onClick={(e) => {
                               e.stopPropagation();
                               handlePersonaClick(currentPersona);
                             }}
                           >
-                            <div className="persona-creation-date">
-                              {new Date(currentPersona.createdAt).toLocaleDateString('en-US', { 
-                                month: 'short', 
-                                year: '2-digit' 
-                              })}
+                            {/* Persona name */}
+                            <div className="persona-name-figma">
+                              {currentPersona.current_name || 'The Experimental Sound Weaver'}
                             </div>
-                            <div className="persona-name">
-                              {currentPersona.current_name || 'Unnamed Persona'}
+                            
+                            {/* Achievement/Streak section */}
+                            <div className="achievement-badge">
+                              <span className="achievement-text">Achievements coming soon</span>
                             </div>
+                            
+                            {/* Folder bars */}
+                            <div className="folder-bars">
+                              {(() => {
+                                const counts = {
+                                  blue: getFolderCount(currentPersona._id, 'blue') || 15,
+                                  purple: getFolderCount(currentPersona._id, 'purple') || 7,
+                                  orange: getFolderCount(currentPersona._id, 'orange') || 5,
+                                  yellow: getFolderCount(currentPersona._id, 'yellow') || 8
+                                };
+                                const maxCount = Math.max(...Object.values(counts));
+                                const getWidth = (count) => {
+                                  // Use a more noticeable scaling: 60% minimum width, better distribution
+                                  const percentage = (count / maxCount) * 100;
+                                  const scaledWidth = 60 + (percentage * 0.4); // 60% to 100% range
+                                  return Math.max(60, Math.min(100, scaledWidth));
+                                };
+                                
+                                return (
+                                  <>
+                                    <div className="folder-bar blue" style={{ width: `${getWidth(counts.blue)}%` }}>
+                                      <img src="/folders/folder_chat.svg" alt="Chat" className="folder-bar-icon" />
+                                      <span className="folder-bar-text">{counts.blue} Conversations</span>
+                                    </div>
+                                    <div className="folder-bar purple" style={{ width: `${getWidth(counts.purple)}%` }}>
+                                      <img src="/folders/folder_smartnotes.svg" alt="Notes" className="folder-bar-icon" />
+                                      <span className="folder-bar-text">{counts.purple} SmartNotes</span>
+                                    </div>
+                                    <div className="folder-bar orange" style={{ width: `${getWidth(counts.orange)}%` }}>
+                                      <img src="/folders/Folder_content.svg" alt="Content" className="folder-bar-icon" />
+                                      <span className="folder-bar-text">{counts.orange} Contents</span>
+                                    </div>
+                                    <div className="folder-bar yellow" style={{ width: `${getWidth(counts.yellow)}%` }}>
+                                      <img src="/folders/folder_analytics.svg" alt="Analytics" className="folder-bar-icon" />
+                                      <span className="folder-bar-text">{counts.yellow} Analysis</span>
+                                    </div>
+                                  </>
+                                );
+                              })()}
+                            </div>
+                            
                             {/* Stack indicator */}
                             {personasArray.length > 1 && (
                               <div 
-                                className="persona-stack-indicator"
+                                className="stack-indicator-figma"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handlePersonaStackClick(monthKey, personasArray);
                                 }}
                               >
-                                {activeIndex + 1} / {personasArray.length}
+                                {activeIndex + 1}/{personasArray.length}
                               </div>
                             )}
                           </div>
