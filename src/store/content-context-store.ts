@@ -48,52 +48,6 @@ function getHeader(msg: any, name: string): string | undefined {
   return h ? h.value : undefined;
 }
 
-// Helper function to extract plain text from HTML or base64 content
-function extractPlainText(content: string): string {
-  if (!content) return "";
-  
-  // If it's base64 encoded, decode it first
-  let decodedContent = content;
-  try {
-    if (content.includes('PCFET0NUWVBFIGh0bWw') || content.includes('<!DOCTYPE html')) {
-      // This looks like base64 encoded HTML, try to decode
-      decodedContent = atob(content);
-    }
-  } catch (e) {
-    // If decoding fails, use the original content
-    decodedContent = content;
-  }
-  
-  // Remove HTML tags and clean up whitespace
-  return decodedContent
-    .replace(/<[^>]+>/g, " ") // Remove HTML tags
-    .replace(/&nbsp;/g, " ") // Replace &nbsp; with space
-    .replace(/&amp;/g, "&") // Replace &amp; with &
-    .replace(/&lt;/g, "<") // Replace &lt; with <
-    .replace(/&gt;/g, ">") // Replace &gt; with >
-    .replace(/&quot;/g, '"') // Replace &quot; with "
-    .replace(/&#39;/g, "'") // Replace &#39; with '
-    .replace(/\s+/g, " ") // Replace multiple spaces with single space
-    .trim();
-}
-
-// Function to clean Gmail thread data
-function cleanGmailThread(thread: Doc<'gmailThreads'>) {
-  return {
-    threadId: thread.threadId,
-    subject: thread.subject || thread.data?.subject,
-    messages: (thread.data?.messages || []).map((msg: any) => ({
-      subject: msg.subject || getHeader(msg, "Subject"),
-      from: msg.from || getHeader(msg, "From"),
-      to: msg.to || getHeader(msg, "To"),
-      date: msg.date || getHeader(msg, "Date"),
-      snippet: msg.snippet,
-      // Try to extract plain text from body, fallback to snippet
-      body: extractPlainText(msg.body || msg.snippet || ""),
-    })),
-  };
-}
-
 export const useContentContextStore = create<ContentContextState>()(
   persist(
     subscribeWithSelector((set, get) => ({
@@ -271,26 +225,6 @@ export const useContentContextStore = create<ContentContextState>()(
           convexData: youtubeVideo, // Include the complete Convex document
         };
 
-        // Debug logging to see what context is being set
-        console.log('🔍 [YOUTUBE CONTEXT] Setting YouTube context:', {
-          videoId: youtubeVideo.videoId,
-          title: title,
-          hasAnalysis: hasAnalysis,
-          hasDescription: !!description,
-          descriptionLength: description.length,
-          hasBasicInfo: !hasAnalysis && !!context.content.richContext,
-          channelTitle: channelTitle,
-          duration: duration,
-          hasCaptions: hasCaptions,
-          captionsStatus: captionsData?.status,
-          captionsLength: captionsText?.length || 0,
-          hasComments: hasComments,
-          commentsCount: comments.length,
-          tagsCount: tags.length,
-          tags: tags.slice(0, 5), // Show first 5 tags
-          fullContext: context
-        });
-
         set({
           currentContext: context,
           cacheTimestamp: Date.now(),
@@ -298,42 +232,33 @@ export const useContentContextStore = create<ContentContextState>()(
         });
       },
 
-      // Set Gmail context with cleaned thread data
+      // Set Gmail context with pre-cleaned thread data
       setGmailContext: (gmailThread: Doc<'gmailThreads'>) => {
-        // Clean the Gmail thread data before storing
-        const cleanedThread = cleanGmailThread(gmailThread);
+        // Data is now pre-cleaned in the backend, so we can use it directly
+        const threadData = gmailThread.data;
+        const messages = threadData?.messages || [];
         
         const context = {
           platform: 'gmail' as const,
           contentId: gmailThread.threadId,
-          title: cleanedThread.subject || 'Gmail Thread',
+          title: threadData?.subject || 'Gmail Thread',
           analysis: gmailThread.analysis || null,
           thumbnailUrl: undefined, // Gmail doesn't have thumbnails
           publishedAt: new Date(gmailThread.createdAt || Date.now()).toISOString(),
           metrics: {
-            replies: gmailThread.message_count || 1,
-            messageCount: gmailThread.message_count || 1,
+            replies: threadData?.messageCount || 1,
+            messageCount: threadData?.messageCount || 1,
           },
           content: {
-            subject: cleanedThread.subject,
-            snippet: gmailThread.snippet,
-            from: cleanedThread.messages[0]?.from || gmailThread.from,
-            messageCount: gmailThread.message_count || 1,
-            messages: cleanedThread.messages, // Use cleaned messages
+            subject: threadData?.subject,
+            snippet: threadData?.snippet,
+            from: messages[0]?.from || threadData?.from,
+            messageCount: threadData?.messageCount || 1,
+            messages: messages, // Use pre-cleaned messages
             email: gmailThread.email,
           },
-          convexData: cleanedThread, // Store the cleaned data instead of raw
+          convexData: gmailThread, // Store the complete Convex document
         };
-        
-        console.log('🔍 [CONTENT STORE] Setting Gmail context:', {
-          threadId: gmailThread.threadId,
-          hasData: !!gmailThread.data,
-          dataKeys: gmailThread.data ? Object.keys(gmailThread.data) : 'none',
-          messageCount: gmailThread.message_count,
-          messages: gmailThread.messages?.length || 0,
-          dataMessages: gmailThread.data?.messages?.length || 0,
-          fullContext: context
-        });
         
         set({
           currentContext: context,
@@ -354,17 +279,6 @@ export const useContentContextStore = create<ContentContextState>()(
           source: insight.source || undefined, // Pass through the source if provided
           convexData: insight // Store the complete insight data
         };
-
-        console.log('🔍 [CONTENT CONTEXT STORE] Setting AI Insights context:', {
-          platform: context.platform,
-          contentId: context.contentId,
-          title: context.title,
-          type: context.type,
-          source: context.source,
-          hasAnalysis: !!context.analysis,
-          hasContent: !!context.content,
-          fullContext: context
-        });
 
         set({
           currentContext: context,
@@ -465,7 +379,4 @@ export const useContentContextActions = () => {
     setGmailContext,
     setAIInsightsContext,
   };
-};
-
-// Export the cleaning function for use elsewhere if needed
-export { cleanGmailThread }; 
+}; 
