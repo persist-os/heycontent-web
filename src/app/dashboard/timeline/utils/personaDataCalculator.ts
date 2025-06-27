@@ -83,7 +83,7 @@ export function calculatePersonaFolderData(
     // Filter all notes in this timespan
     const timespanNotes = filterDataByTimespan(notes, timespan, 'createdAt')
     
-    // Filter content data using consistent date handling
+    // Filter content data - show all content created BEFORE this persona
     const timespanContent = contentData.filter(item => {
       let timestamp: number
       
@@ -104,10 +104,11 @@ export function calculatePersonaFolderData(
         return false
       }
       
-      return timestamp >= timespan.startDate.getTime() && timestamp < timespan.endDate.getTime()
+      // Show all content created BEFORE or AT the time this persona was created
+      return timestamp <= timespan.startDate.getTime()
     })
     
-    // Filter analytics data using consistent date handling
+    // Filter analytics data - show all analytics created BEFORE this persona
     const timespanAnalytics = analyticsData ? analyticsData.filter(item => {
       let timestamp: number
       
@@ -133,9 +134,8 @@ export function calculatePersonaFolderData(
         return false
       }
       
-      const isInTimespan = timestamp >= timespan.startDate.getTime() && timestamp < timespan.endDate.getTime()
-      
-      return isInTimespan
+      // Show all analytics created BEFORE or AT the time this persona was created
+      return timestamp <= timespan.startDate.getTime()
     }) : []
     
     result.set(persona._id, {
