@@ -275,7 +275,7 @@ export const YearView: React.FC<YearViewProps> = ({
     router.push('/dashboard/self-hub?tab=persona');
   };
 
-  const { getFolderCount } = usePersonaTimelineData(userId);
+  const { getFolderCount, getFolderItems } = usePersonaTimelineData(userId);
 
   return (
     <>
@@ -495,19 +495,47 @@ export const YearView: React.FC<YearViewProps> = ({
                               
                               return (
                                 <>
-                                  <div className="folder-bar blue" style={{ width: `${getWidth(counts.blue)}%` }}>
+                                  <div className="folder-bar blue" style={{ width: `${getWidth(counts.blue)}%` }} onClick={(e) => {
+                                    e.stopPropagation();
+                                    openModal({
+                                      color: 'blue',
+                                      count: counts.blue,
+                                      items: getFolderItems(currentPersona._id, 'blue')
+                                    });
+                                  }}>
                                     <img src="/folders/folder_chat.svg" alt="Chat" className="folder-bar-icon" />
                                     <span className="folder-bar-text">{counts.blue} Conversations</span>
                                   </div>
-                                  <div className="folder-bar purple" style={{ width: `${getWidth(counts.purple)}%` }}>
+                                  <div className="folder-bar purple" style={{ width: `${getWidth(counts.purple)}%` }} onClick={(e) => {
+                                    e.stopPropagation();
+                                    openModal({
+                                      color: 'purple',
+                                      count: counts.purple,
+                                      items: getFolderItems(currentPersona._id, 'purple')
+                                    });
+                                  }}>
                                     <img src="/folders/folder_smartnotes.svg" alt="Notes" className="folder-bar-icon" />
                                     <span className="folder-bar-text">{counts.purple} SmartNotes</span>
                                   </div>
-                                  <div className="folder-bar orange" style={{ width: `${getWidth(counts.orange)}%` }}>
+                                  <div className="folder-bar orange" style={{ width: `${getWidth(counts.orange)}%` }} onClick={(e) => {
+                                    e.stopPropagation();
+                                    openModal({
+                                      color: 'orange',
+                                      count: counts.orange,
+                                      items: getFolderItems(currentPersona._id, 'orange')
+                                    });
+                                  }}>
                                     <img src="/folders/Folder_content.svg" alt="Content" className="folder-bar-icon" />
                                     <span className="folder-bar-text">{counts.orange} Contents</span>
                                   </div>
-                                  <div className="folder-bar yellow" style={{ width: `${getWidth(counts.yellow)}%` }}>
+                                  <div className="folder-bar yellow" style={{ width: `${getWidth(counts.yellow)}%` }} onClick={(e) => {
+                                    e.stopPropagation();
+                                    openModal({
+                                      color: 'yellow',
+                                      count: counts.yellow,
+                                      items: getFolderItems(currentPersona._id, 'yellow')
+                                    });
+                                  }}>
                                     <img src="/folders/folder_analytics.svg" alt="Analytics" className="folder-bar-icon" />
                                     <span className="folder-bar-text">{counts.yellow} Analysis</span>
                                   </div>
