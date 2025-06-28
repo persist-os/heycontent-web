@@ -59,15 +59,23 @@ export function usePersonaTimelineData(userId: string | undefined) {
   
   // Analytics data from bundled response
   const allAnalyticsData = useMemo(() => {
-    if (!analytics) return []
+    console.log('🔍 Analytics Debug - Raw analytics data:', analytics)
+    
+    if (!analytics) {
+      console.log('❌ No analytics data found')
+      return []
+    }
     
     const analyticsArray = []
     
     // Add YouTube batch insights if available
+    console.log('🔍 YouTube Analytics:', analytics.youtubeAnalytics)
     if (analytics.youtubeAnalytics?.insights?.insights && Array.isArray(analytics.youtubeAnalytics.insights.insights)) {
       const youtubeAnalysis = analytics.youtubeAnalytics;
       const insightsArray = youtubeAnalysis.insights.insights;
       const analysisDate = new Date(youtubeAnalysis.updatedAt || youtubeAnalysis.createdAt || youtubeAnalysis._creationTime || Date.now());
+      
+      console.log(`✅ Found ${insightsArray.length} YouTube insights, analysis date:`, analysisDate)
       
       insightsArray.forEach((insight, idx) => {
         analyticsArray.push({
@@ -84,45 +92,80 @@ export function usePersonaTimelineData(userId: string | undefined) {
           platform: 'YouTube'
         });
       });
+    } else {
+      console.log('❌ No YouTube insights found or invalid structure')
     }
     
     // Add Instagram analytics if available
-    if (analytics.instagramAnalytics?.insights?.overview) {
-      const insights = analytics.instagramAnalytics.insights
-      // Use the analysis creation date, not current date
-      const analysisDate = new Date(analytics.instagramAnalytics._creationTime || analytics.instagramAnalytics.updatedAt || Date.now())
+    console.log('🔍 Instagram Analytics:', analytics.instagramAnalytics)
+    if (analytics.instagramAnalytics?.insights) {
+      console.log('🔍 Instagram Insights Structure:', analytics.instagramAnalytics.insights)
       
-      analyticsArray.push({
-        id: 'instagram-engagement',
-        type: 'analytics',
-        title: 'Instagram Engagement Rate',
-        date: analysisDate, // Use actual analysis date
-        createdAt: analysisDate, // Add for consistency
-        metric: 'Engagement Rate',
-        value: insights.overview.averageEngagementRate || 0,
-        trend: 'stable',
-        period: 'Last 30 days',
-        preview: 'Instagram engagement metrics and performance analysis',
-        platform: 'Instagram'
-      })
-      
-      if (insights.overview.totalReach) {
+      if (analytics.instagramAnalytics.insights.overview) {
+        const insights = analytics.instagramAnalytics.insights
+        // Use the analysis creation date, not current date
+        const analysisDate = new Date(analytics.instagramAnalytics._creationTime || analytics.instagramAnalytics.updatedAt || Date.now())
+        
+        console.log('✅ Found Instagram insights, analysis date:', analysisDate)
+        
         analyticsArray.push({
-          id: 'instagram-reach',
+          id: 'instagram-engagement',
           type: 'analytics',
-          title: 'Instagram Audience Reach',
+          title: 'Instagram Engagement Rate',
           date: analysisDate, // Use actual analysis date
           createdAt: analysisDate, // Add for consistency
-          metric: 'Reach',
-          value: insights.overview.totalReach || 0,
-          trend: 'up',
-          period: 'This month',
-          preview: 'Geographic distribution and audience reach analysis',
+          metric: 'Engagement Rate',
+          value: insights.overview.averageEngagementRate || 0,
+          trend: 'stable',
+          period: 'Last 30 days',
+          preview: 'Instagram engagement metrics and performance analysis',
           platform: 'Instagram'
         })
+        
+        if (insights.overview.totalReach) {
+          analyticsArray.push({
+            id: 'instagram-reach',
+            type: 'analytics',
+            title: 'Instagram Audience Reach',
+            date: analysisDate, // Use actual analysis date
+            createdAt: analysisDate, // Add for consistency
+            metric: 'Reach',
+            value: insights.overview.totalReach || 0,
+            trend: 'up',
+            period: 'This month',
+            preview: 'Geographic distribution and audience reach analysis',
+            platform: 'Instagram'
+          })
+        }
+      } else if (analytics.instagramAnalytics.insights.insights && Array.isArray(analytics.instagramAnalytics.insights.insights)) {
+        const insightsArray = analytics.instagramAnalytics.insights.insights
+        const analysisDate = new Date(analytics.instagramAnalytics._creationTime || analytics.instagramAnalytics.updatedAt || Date.now())
+        
+        console.log(`✅ Found ${insightsArray.length} Instagram insights, analysis date:`, analysisDate)
+        
+        insightsArray.forEach((insight, idx) => {
+          analyticsArray.push({
+            id: `instagram-insight-${idx}`,
+            type: 'analytics',
+            title: insight.title || insight.type || `Instagram Insight ${idx + 1}`,
+            date: analysisDate,
+            createdAt: analysisDate,
+            metric: insight.category || insight.type || 'Insight',
+            value: insight.value || null,
+            trend: 'stable',
+            period: 'Analysis',
+            preview: insight.description || insight.summary || insight.content || 'Instagram analytics insight',
+            platform: 'Instagram'
+          })
+        })
+      } else {
+        console.log('❌ No insights.overview or insights.insights found. Available keys:', Object.keys(analytics.instagramAnalytics.insights))
       }
+    } else {
+      console.log('❌ No Instagram insights found or invalid structure')
     }
     
+    console.log(`📊 Final analytics array: ${analyticsArray.length} items`, analyticsArray)
     return analyticsArray
   }, [analytics])
 

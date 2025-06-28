@@ -81,6 +81,7 @@ export const YearView: React.FC<YearViewProps> = ({
   const [selectedPersona, setSelectedPersona] = useState<any>(null);
   const router = useRouter();
   const hasInitializedDateRange = useRef(false);
+  const [userId, setUserId] = useState<string | undefined>();
 
   // Get all personas (use passed prop instead of store)
   const allPersonas = personas;
@@ -93,6 +94,11 @@ export const YearView: React.FC<YearViewProps> = ({
     setZoomLevel('year');
     hasInitializedDateRange.current = true;
   }, []); // Run only once on mount
+
+  useEffect(() => {
+    const currentUserId = getCurrentUserId();
+    setUserId(currentUserId || undefined);
+  }, []);
 
   // Group data by month/folder for all loaded periods
   const monthMapsByPeriod = useMemo(() => {
@@ -153,10 +159,10 @@ export const YearView: React.FC<YearViewProps> = ({
 
   // Folder dot offsets for vertical line heights
   const folderDotOffsets = {
-    blue: 120,    // Highest level
-    purple: 90,   // Second level  
-    orange: 60,   // Third level
-    yellow: 30,   // Lowest level
+    blue: 130,    // Highest level (updated from 120)
+    purple: 100,  // Second level (updated from 90)  
+    orange: 70,   // Third level (updated from 60)
+    yellow: 40,   // Lowest level (updated from 30)
   };
 
   const getEventPosition = (eventDate: Date) => {
@@ -200,14 +206,38 @@ export const YearView: React.FC<YearViewProps> = ({
     return personasByMonth;
   }, [allPersonas, loadedPeriods]);
 
-  // Get horizontal position for a persona stack (by month)
-  const getPersonaPositionForMonth = (monthKey: string) => {
-    const [year, month] = monthKey.split('-');
-    const monthIndex = allMonthsInPeriods.findIndex(m =>
-      m.getFullYear() === parseInt(year) && m.getMonth() === parseInt(month) - 1
+  // Get horizontal position for a persona stack (by exact creation date)
+  const getPersonaPositionForMonth = (monthKey: string, personas: any[]) => {
+    // Use the first persona's creation date for positioning
+    const firstPersona = personas[0];
+    if (!firstPersona) return 50;
+    
+    const createdDate = new Date(firstPersona.createdAt);
+    
+    // Find the exact day in the allDaysInPeriods array
+    const dayInArray = allDaysInPeriods.find(d => 
+      d.getFullYear() === createdDate.getFullYear() && 
+      d.getMonth() === createdDate.getMonth() && 
+      d.getDate() === createdDate.getDate()
     );
-    if (monthIndex === -1) return 50;
-    const position = allMonthsInPeriods.length > 1 ? (monthIndex / (allMonthsInPeriods.length - 1)) * 80 + 10 : 50;
+    const arrayIndex = allDaysInPeriods.indexOf(dayInArray);
+    
+    if (arrayIndex === -1) {
+      // Fallback: find first day of the creation month
+      const monthStart = allDaysInPeriods.find(d => 
+        d.getFullYear() === createdDate.getFullYear() && 
+        d.getMonth() === createdDate.getMonth() && 
+        d.getDate() === 1
+      );
+      const fallbackIndex = allDaysInPeriods.indexOf(monthStart);
+      if (fallbackIndex === -1) return 50;
+      
+      const position = allDaysInPeriods.length > 1 ? (fallbackIndex / (allDaysInPeriods.length - 1)) * 100 : 50;
+      return Math.max(5, Math.min(95, position));
+    }
+    
+    // Use the exact same positioning logic as the daily ticks
+    const position = allDaysInPeriods.length > 1 ? (arrayIndex / (allDaysInPeriods.length - 1)) * 100 : 50;
     return Math.max(5, Math.min(95, position));
   };
 
@@ -215,11 +245,13 @@ export const YearView: React.FC<YearViewProps> = ({
   const getVerticalPosition = (monthKey: string) => {
     const sortedMonths = Object.keys(personasInAllPeriods).sort();
     const monthIndex = sortedMonths.indexOf(monthKey);
-    const horizontalPosition = getPersonaPositionForMonth(monthKey);
+    const personasArray = personasInAllPeriods[monthKey] as any[];
+    const horizontalPosition = getPersonaPositionForMonth(monthKey, personasArray);
     const proximityThreshold = 8;
     const conflictingMonths = sortedMonths.filter((otherMonthKey, otherIndex) => {
       if (otherMonthKey === monthKey || otherIndex >= monthIndex) return false;
-      const otherPosition = getPersonaPositionForMonth(otherMonthKey);
+      const otherPersonasArray = personasInAllPeriods[otherMonthKey] as any[];
+      const otherPosition = getPersonaPositionForMonth(otherMonthKey, otherPersonasArray);
       return Math.abs(horizontalPosition - otherPosition) < proximityThreshold;
     });
     let isAbove: boolean;
@@ -268,6 +300,8 @@ export const YearView: React.FC<YearViewProps> = ({
     setSelectedPersona(null);
     router.push('/dashboard/self-hub?tab=persona');
   };
+
+  const { getFolderCount, getFolderItems } = usePersonaTimelineData(userId);
 
   return (
     <>
@@ -369,29 +403,39 @@ export const YearView: React.FC<YearViewProps> = ({
               {Object.keys(personasInAllPeriods).length > 0 && (
                 <div className="persona-stacks-container">
                   {Object.entries(personasInAllPeriods).map(([monthKey, personas]) => {
-                    const position = getPersonaPositionForMonth(monthKey);
                     const personasArray = personas as any[];
+                    const position = getPersonaPositionForMonth(monthKey, personasArray);
                     const activeIndex = activePersonaIndex[monthKey] || 0;
                     const currentPersona = personasArray[activeIndex];
                     const { isAbove, top } = getVerticalPosition(monthKey);
                     if (personasArray.length === 0) return null;
                     return (
                       <div key={monthKey} className="persona-stack-wrapper">
-                        {/* Connection dot on timeline */}
-                        <div
-                          className="persona-connection-dot"
-                          style={{
-                            left: `${position}%`,
-                          }}
-                        />
                         {/* Connecting line from card to timeline */}
                         <div
                           className="absolute w-0.5 bg-muted-foreground/60 z-10"
                           style={{
                             left: `${position}%`,
                             transform: 'translateX(-50%)',
-                            top: isAbove ? `${120 + top}px` : `120px`,
-                            height: isAbove ? `${Math.abs(top)}px` : `${top - 120}px`,
+                            top: `${top}px`,
+                            height: `${130 - top}px`,
+                          }}
+                        />
+                        {/* Connection dot at the end of the line (near folder bars) */}
+                        <div
+                          className="persona-connection-dot"
+                          style={{
+                            position: 'absolute',
+                            left: `${position}%`,
+                            transform: 'translateX(-50%)',
+                            top: `130px`,
+                            width: '0.75rem',
+                            height: '0.75rem',
+                            background: 'hsl(var(--foreground))',
+                            borderRadius: '50%',
+                            border: '2px solid hsl(var(--background))',
+                            zIndex: 20,
+                            boxShadow: '0 0 0 1px hsl(var(--border))',
                           }}
                         />
                         {/* Stacked persona cards */}
@@ -399,7 +443,7 @@ export const YearView: React.FC<YearViewProps> = ({
                           className="persona-stack"
                           style={{
                             left: `${position}%`,
-                            transform: 'translateX(-50%)',
+                            transform: 'translateX(10px)',
                             top: `${top}px`,
                           }}
                         >
@@ -421,33 +465,103 @@ export const YearView: React.FC<YearViewProps> = ({
                           )}
                           {/* Active persona card */}
                           <div 
-                            className="persona-card"
+                            className="persona-card-figma-dark"
                             onClick={(e) => {
                               e.stopPropagation();
                               handlePersonaClick(currentPersona);
                             }}
                           >
-                            <div className="persona-creation-date">
-                              {new Date(currentPersona.createdAt).toLocaleDateString('en-US', { 
-                                month: 'short', 
-                                year: '2-digit' 
-                              })}
-                            </div>
-                            <div className="persona-name">
+                            {/* Persona name - allow natural wrapping */}
+                            <div className="persona-name-figma">
                               {currentPersona.current_name || 'Unnamed Persona'}
                             </div>
+                            
+                            {/* Achievement/Streak section */}
+                            <div className="achievement-badge">
+                              <span className="achievement-text">Achievements coming soon</span>
+                            </div>
+                            
                             {/* Stack indicator */}
                             {personasArray.length > 1 && (
                               <div 
-                                className="persona-stack-indicator"
+                                className="stack-indicator-figma"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handlePersonaStackClick(monthKey, personasArray);
                                 }}
                               >
-                                {activeIndex + 1} / {personasArray.length}
+                                {activeIndex + 1}/{personasArray.length}
                               </div>
                             )}
+                          </div>
+                          
+                          {/* Folder bars - positioned lower to accommodate text wrapping */}
+                          <div 
+                            className="folder-bars"
+                            style={{
+                              position: 'absolute',
+                              top: '180px', // Moved down from 160px to accommodate text wrapping
+                              left: '0px',
+                              width: '200px',
+                            }}
+                          >
+                            {(() => {
+                              const counts = {
+                                blue: getFolderCount(currentPersona._id, 'blue'),
+                                purple: getFolderCount(currentPersona._id, 'purple'),
+                                orange: getFolderCount(currentPersona._id, 'orange'),
+                                yellow: getFolderCount(currentPersona._id, 'yellow')
+                              };
+                              
+                              return (
+                                <>
+                                  <div className="folder-bar blue" style={{ width: '100%' }} onClick={(e) => {
+                                    e.stopPropagation();
+                                    openModal({
+                                      color: 'blue',
+                                      count: counts.blue,
+                                      items: getFolderItems(currentPersona._id, 'blue')
+                                    });
+                                  }}>
+                                    <img src="/folders/folder_chat.svg" alt="Chat" className="folder-bar-icon" />
+                                    <span className="folder-bar-text">{counts.blue} Conversations</span>
+                                  </div>
+                                  <div className="folder-bar purple" style={{ width: '100%' }} onClick={(e) => {
+                                    e.stopPropagation();
+                                    openModal({
+                                      color: 'purple',
+                                      count: counts.purple,
+                                      items: getFolderItems(currentPersona._id, 'purple')
+                                    });
+                                  }}>
+                                    <img src="/folders/folder_smartnotes.svg" alt="Notes" className="folder-bar-icon" />
+                                    <span className="folder-bar-text">{counts.purple} SmartNotes</span>
+                                  </div>
+                                  <div className="folder-bar orange" style={{ width: '100%' }} onClick={(e) => {
+                                    e.stopPropagation();
+                                    openModal({
+                                      color: 'orange',
+                                      count: counts.orange,
+                                      items: getFolderItems(currentPersona._id, 'orange')
+                                    });
+                                  }}>
+                                    <img src="/folders/Folder_content.svg" alt="Content" className="folder-bar-icon" />
+                                    <span className="folder-bar-text">{counts.orange} Contents</span>
+                                  </div>
+                                  <div className="folder-bar yellow" style={{ width: '100%' }} onClick={(e) => {
+                                    e.stopPropagation();
+                                    openModal({
+                                      color: 'yellow',
+                                      count: counts.yellow,
+                                      items: getFolderItems(currentPersona._id, 'yellow')
+                                    });
+                                  }}>
+                                    <img src="/folders/folder_analytics.svg" alt="Analytics" className="folder-bar-icon" />
+                                    <span className="folder-bar-text">{counts.yellow} Analysis</span>
+                                  </div>
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>

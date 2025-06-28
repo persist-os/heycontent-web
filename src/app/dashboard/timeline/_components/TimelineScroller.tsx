@@ -177,6 +177,9 @@ export const TimelineScroller: React.FC = () => {
   const isExtendingRef = useRef(false);
   const [centerDate, setCenterDate] = useState(new Date());
 
+  const zoomThrottleRef = useRef(0);
+  const ZOOM_THROTTLE_MS = 400; // adjust as needed
+
   // Get user ID from API key in cookies
   useEffect(() => {
     const currentUserId = getCurrentUserId();
@@ -323,10 +326,12 @@ export const TimelineScroller: React.FC = () => {
 
   const handleWheel = (e: React.WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
+      const now = Date.now();
+      if (now - zoomThrottleRef.current < ZOOM_THROTTLE_MS) return;
+      zoomThrottleRef.current = now;
       // Handle zoom with wheel - year -> month -> week sequence
       const zoomSequence = ['year', 'month', 'week'];
       const currentZoomIndex = zoomSequence.indexOf(zoomLevel);
-      
       if (e.deltaY < 0 && currentZoomIndex < zoomSequence.length - 1) {
         // Zoom in (year -> month -> week)
         const nextZoom = zoomSequence[currentZoomIndex + 1];

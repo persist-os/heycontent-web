@@ -83,7 +83,7 @@ export function calculatePersonaFolderData(
     // Filter all notes in this timespan
     const timespanNotes = filterDataByTimespan(notes, timespan, 'createdAt')
     
-    // Filter content data using consistent date handling
+    // Filter content data - special logic for first vs later personas
     const timespanContent = contentData.filter(item => {
       let timestamp: number
       
@@ -104,10 +104,16 @@ export function calculatePersonaFolderData(
         return false
       }
       
-      return timestamp >= timespan.startDate.getTime() && timestamp < timespan.endDate.getTime()
+      if (index === 0) {
+        // First persona: gets ALL content (both before and after creation)
+        return true
+      } else {
+        // Later personas: only get content created AFTER their creation date
+        return timestamp > timespan.startDate.getTime()
+      }
     })
     
-    // Filter analytics data using consistent date handling
+    // Filter analytics data - show analytics created DURING persona's active period
     const timespanAnalytics = analyticsData ? analyticsData.filter(item => {
       let timestamp: number
       
@@ -133,10 +139,22 @@ export function calculatePersonaFolderData(
         return false
       }
       
-      const isInTimespan = timestamp >= timespan.startDate.getTime() && timestamp < timespan.endDate.getTime()
-      
-      return isInTimespan
+      // Show analytics created DURING persona's active period (creation → next persona/now)
+      return timestamp >= timespan.startDate.getTime() && timestamp < timespan.endDate.getTime()
     }) : []
+    
+    console.log(`📊 Persona ${persona.current_name || persona._id}:`)
+    console.log(`  - Timespan: ${timespan.startDate.toISOString()} (${timespan.startDate.getTime()})`)
+    console.log(`  - Total analytics available: ${analyticsData?.length || 0}`)
+    console.log(`  - Analytics before persona: ${timespanAnalytics.length}`)
+    if (timespanAnalytics.length > 0) {
+      console.log(`  - Analytics items:`, timespanAnalytics.map(item => ({
+        id: item.id,
+        title: item.title,
+        date: item.date,
+        timestamp: item.date instanceof Date ? item.date.getTime() : item.createdAt
+      })))
+    }
     
     result.set(persona._id, {
       personaId: persona._id,

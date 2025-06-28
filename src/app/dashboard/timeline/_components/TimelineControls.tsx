@@ -5,6 +5,7 @@ import { useTimelineStore, ZoomLevel } from './useTimelineStore';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { usePersonaTimelineData } from '../hooks/usePersonaTimelineData';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
+import { TimelineScroller } from './TimelineScroller';
 
 export const TimelineControls: React.FC = () => {
   const { visibleDateRange, zoomLevel, setZoomLevel, setVisibleDateRange } = useTimelineStore();
@@ -122,12 +123,10 @@ export const TimelineControls: React.FC = () => {
         end = new Date(mostRecentDate.getFullYear(), 11, 31);
         break;
       case 'month':
-        // Use the month containing the most recent data
         start = new Date(mostRecentDate.getFullYear(), mostRecentDate.getMonth(), 1);
         end = new Date(mostRecentDate.getFullYear(), mostRecentDate.getMonth() + 1, 0);
         break;
       case 'week':
-        // Use the week containing the most recent data
         const startOfWeek = new Date(mostRecentDate);
         startOfWeek.setDate(mostRecentDate.getDate() - mostRecentDate.getDay());
         const endOfWeek = new Date(startOfWeek);
@@ -142,6 +141,10 @@ export const TimelineControls: React.FC = () => {
 
     setZoomLevel(newZoomLevel);
     setVisibleDateRange(start, end);
+    // Also set centerDate so TimelineScroller loads a wide, scrollable range
+    if (TimelineScroller.setCenterDate) {
+      TimelineScroller.setCenterDate(mostRecentDate);
+    }
   };
 
   // Function to set specific month

@@ -26,15 +26,6 @@ interface MonthViewProps {
   personas: any[];
 }
 
-// Interface for persona bucket data
-interface PersonaBucketData {
-  personas: any[];
-  startDay: number;
-  endDay: number;
-  month: number;
-  year: number;
-}
-
 // Utility to group items by day and folder type
 function groupDataByDay({ conversations, notes, allContentData, allAnalyticsData, visibleDateRange }) {
   const dayMap = {};
@@ -224,63 +215,27 @@ export const MonthView: React.FC<MonthViewProps> = ({
     return Math.max(0, Math.min(100, position));
   };
 
-  // Filter events for all loaded periods
-  const eventsInAllPeriods = events.filter(event => {
-    return loadedPeriods.some(period => {
-      return event.date >= period.start && event.date <= period.end;
-    });
-  });
-
-  // Group personas by 3-day buckets for all loaded periods
+  // Filter personas for all loaded periods (no grouping needed)
   const personasInAllPeriods = useMemo(() => {
-    if (!allPersonas) return {};
+    if (!allPersonas) return [];
     
     // Filter personas created in any loaded period
-    const personasInRange = allPersonas.filter(persona => {
+    return allPersonas.filter(persona => {
       const createdDate = new Date(persona.createdAt);
       return loadedPeriods.some(period => {
         return createdDate >= period.start && createdDate <= period.end;
       });
     });
-    
-    // Group by 3-day buckets for month view
-    const personasByBucket = {};
-    personasInRange.forEach(persona => {
-      const createdDate = new Date(persona.createdAt);
-      
-      // Find which 3-day bucket this persona belongs to
-      const dayOfMonth = createdDate.getDate();
-      const bucketNumber = Math.floor((dayOfMonth - 1) / 3); // 0-based bucket index
-      const bucketStartDay = bucketNumber * 3 + 1; // 1-based day
-      
-      // Create bucket key: YYYY-MM-bucket{N}
-      const bucketKey = `${createdDate.getFullYear()}-${String(createdDate.getMonth() + 1).padStart(2, '0')}-bucket${bucketNumber}`;
-      
-      if (!personasByBucket[bucketKey]) {
-        personasByBucket[bucketKey] = {
-          personas: [],
-          startDay: bucketStartDay,
-          endDay: Math.min(bucketStartDay + 2, new Date(createdDate.getFullYear(), createdDate.getMonth() + 1, 0).getDate()),
-          month: createdDate.getMonth(),
-          year: createdDate.getFullYear()
-        };
-      }
-      personasByBucket[bucketKey].personas.push(persona);
-    });
-    
-    return personasByBucket;
   }, [allPersonas, loadedPeriods]);
 
-  const getPersonaPositionForBucket = (bucketKey: string, bucketData: any) => {
-    // Calculate position based on the middle day of the 3-day bucket
-    const middleDay = Math.ceil((bucketData.startDay + bucketData.endDay) / 2);
-    const targetDate = new Date(bucketData.year, bucketData.month, middleDay);
+  const getPersonaPosition = (persona: any) => {
+    const createdDate = new Date(persona.createdAt);
     
     // Find the corresponding day in the allDaysInPeriods array
     const dayInArray = allDaysInPeriods.find(d => 
-      d.getFullYear() === targetDate.getFullYear() && 
-      d.getMonth() === targetDate.getMonth() && 
-      d.getDate() === targetDate.getDate()
+      d.getFullYear() === createdDate.getFullYear() && 
+      d.getMonth() === createdDate.getMonth() && 
+      d.getDate() === createdDate.getDate()
     );
     const arrayIndex = allDaysInPeriods.indexOf(dayInArray);
     
@@ -291,71 +246,23 @@ export const MonthView: React.FC<MonthViewProps> = ({
     return Math.max(5, Math.min(95, position));
   };
 
-  // Smart positioning to avoid overlaps for 3-day buckets
-  const getVerticalPosition = (bucketKey: string, bucketData: any) => {
-    const sortedBuckets = Object.keys(personasInAllPeriods).sort();
-    const bucketIndex = sortedBuckets.indexOf(bucketKey);
-    
-    // Get horizontal position for this bucket
-    const horizontalPosition = getPersonaPositionForBucket(bucketKey, bucketData);
-    
-    // Check for horizontal proximity conflicts with other cards
-    const proximityThreshold = 15; // Larger threshold since buckets are wider
-    const conflictingBuckets = sortedBuckets.filter((otherBucketKey, otherIndex) => {
-      if (otherBucketKey === bucketKey || otherIndex >= bucketIndex) return false;
-      const otherBucketData = personasInAllPeriods[otherBucketKey];
-      const otherPosition = getPersonaPositionForBucket(otherBucketKey, otherBucketData);
-      return Math.abs(horizontalPosition - otherPosition) < proximityThreshold;
-    });
-    
-    // Determine positioning based on conflicts and index
-    let isAbove: boolean;
-    let verticalOffset: number;
-    
-    if (conflictingBuckets.length === 0) {
-      // No conflicts, use simple alternating
-      isAbove = bucketIndex % 2 === 0;
-      verticalOffset = 0;
-    } else {
-      // Have conflicts, need smarter positioning
-      const conflictCount = conflictingBuckets.length;
-      
-      if (conflictCount < 3) {
-        isAbove = conflictCount % 2 === 0;
-        verticalOffset = Math.floor(conflictCount / 2) * 80;
-      } else {
-        // For many conflicts, use both sides
-        isAbove = bucketIndex % 2 === 0;
-        verticalOffset = Math.floor(conflictCount / 3) * 60;
-      }
-    }
-    
-    const baseOffset = isAbove ? -140 : 60;
-    const finalTop = baseOffset + (isAbove ? -verticalOffset : verticalOffset);
-    
+  // Simplified vertical positioning - all personas below timeline
+  const getVerticalPosition = (personaId: string, persona: any) => {
+    // Position all personas consistently below timeline
     return {
-      isAbove,
-      top: finalTop
+      isAbove: false,
+      top: -150 // Fixed position below timeline
     };
   };
 
-  // State for managing stacked persona cards
-  const [activePersonaIndex, setActivePersonaIndex] = useState<{ [bucketKey: string]: number }>({});
+  // Filter events for all loaded periods
+  const eventsInAllPeriods = events.filter(event => {
+    return loadedPeriods.some(period => {
+      return event.date >= period.start && event.date <= period.end;
+    });
+  });
 
-  // Handle clicking through stacked personas
-  const handlePersonaStackClick = (bucketKey: string, personasArray: any[]) => {
-    if (!personasArray || personasArray.length === 0) return;
-    
-    const currentIndex = activePersonaIndex[bucketKey] || 0;
-    const safeCurrentIndex = Math.max(0, Math.min(currentIndex, personasArray.length - 1));
-    const nextIndex = (safeCurrentIndex + 1) % personasArray.length;
-    
-    setActivePersonaIndex(prev => ({
-      ...prev,
-      [bucketKey]: nextIndex
-    }));
-  };
-
+  // Simplified state management - no longer needed for individual personas
   const handlePersonaClick = (persona: any) => {
     setSelectedPersona(persona);
   };
@@ -452,36 +359,39 @@ export const MonthView: React.FC<MonthViewProps> = ({
               </div>
 
               {/* Stacked Persona Cards */}
-              {Object.keys(personasInAllPeriods).length > 0 && (
+              {personasInAllPeriods.length > 0 && (
                 <div className="persona-stacks-container">
-                  {Object.entries(personasInAllPeriods).map(([bucketKey, bucketData]) => {
-                    const typedBucketData = bucketData as PersonaBucketData;
-                    const position = getPersonaPositionForBucket(bucketKey, typedBucketData);
-                    const personasArray = typedBucketData.personas;
-                    const activeIndex = activePersonaIndex[bucketKey] || 0;
-                    const currentPersona = personasArray[activeIndex];
-                    const { isAbove, top } = getVerticalPosition(bucketKey, typedBucketData);
-                    
-                    if (personasArray.length === 0) return null;
+                  {personasInAllPeriods.map((persona, index) => {
+                    const position = getPersonaPosition(persona);
+                    const { isAbove, top } = getVerticalPosition(persona._id, persona);
                     
                     return (
-                      <div key={bucketKey} className="persona-stack-wrapper">
-                        {/* Connection dot on timeline */}
-                        <div
-                          className="persona-connection-dot"
-                          style={{
-                            left: `${position}%`,
-                          }}
-                        />
-                        
+                      <div key={persona._id} className="persona-stack-wrapper">
                         {/* Connecting line from card to timeline */}
                         <div
                           className="absolute w-0.5 bg-muted-foreground/60 z-10"
                           style={{
                             left: `${position}%`,
-                            transform: 'translateX(-50%)',
-                            top: isAbove ? `${120 + top}px` : `120px`,
-                            height: isAbove ? `${Math.abs(top)}px` : `${top - 120}px`,
+                            transform: 'translateX(-50%)', // Match timeline tick positioning
+                            top: `${top}px`, // Start from persona card
+                            height: `${130 - top}px`, // Extend to timeline at 130px
+                          }}
+                        />
+                        {/* Connection dot at the timeline */}
+                        <div
+                          className="persona-connection-dot"
+                          style={{
+                            position: 'absolute',
+                            left: `${position}%`,
+                            transform: 'translateX(-50%)', // Match timeline tick positioning
+                            top: `130px`, // Position at timeline level
+                            width: '0.75rem',
+                            height: '0.75rem',
+                            background: 'hsl(var(--foreground))',
+                            borderRadius: '50%',
+                            border: '2px solid hsl(var(--background))',
+                            zIndex: 20,
+                            boxShadow: '0 0 0 1px hsl(var(--border))',
                           }}
                         />
 
@@ -490,57 +400,96 @@ export const MonthView: React.FC<MonthViewProps> = ({
                           className="persona-stack"
                           style={{
                             left: `${position}%`,
-                            transform: 'translateX(-50%)',
+                            transform: 'translateX(10px)', // Offset cards to the right of the line
                             top: `${top}px`,
                           }}
                         >
-                          {/* Background cards (for stack effect) */}
-                          {personasArray.length > 1 && (
-                            <>
-                              {Array.from({ length: Math.min(personasArray.length - 1, 4) }, (_, index) => (
-                                <div 
-                                  key={`stack-bg-${index}`}
-                                  className={`persona-stack-bg persona-stack-bg-${Math.min(index + 1, 3)}`}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handlePersonaStackClick(bucketKey, personasArray);
-                                  }}
-                                  title="Click to cycle through personas"
-                                />
-                              ))}
-                            </>
-                          )}
-                          
                           {/* Active persona card */}
                           <div 
-                            className="persona-card"
+                            className="persona-card-figma-dark"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handlePersonaClick(currentPersona);
+                              handlePersonaClick(persona);
                             }}
                           >
-                            <div className="persona-creation-date">
-                              {new Date(currentPersona.createdAt).toLocaleDateString('en-US', { 
-                                month: 'short', 
-                                day: 'numeric' 
-                              })}
-                            </div>
-                            <div className="persona-name">
-                              {currentPersona.current_name || 'Unnamed Persona'}
+                            {/* Persona name - allow natural wrapping */}
+                            <div className="persona-name-figma">
+                              {persona.current_name || 'Unnamed Persona'}
                             </div>
                             
-                            {/* Stack indicator */}
-                            {personasArray.length > 1 && (
-                              <div 
-                                className="persona-stack-indicator"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handlePersonaStackClick(bucketKey, personasArray);
-                                }}
-                              >
-                                {activeIndex + 1} / {personasArray.length}
-                              </div>
-                            )}
+                            {/* Achievement/Streak section */}
+                            <div className="achievement-badge">
+                              <span className="achievement-text">Achievements coming soon</span>
+                            </div>
+                          </div>
+                          
+                          {/* Folder bars - positioned lower to accommodate text wrapping */}
+                          <div 
+                            className="folder-bars"
+                            style={{
+                              position: 'absolute',
+                              top: '140px', // Moved down from 120px to accommodate text wrapping
+                              left: '0px',
+                              width: '200px',
+                            }}
+                          >
+                            {(() => {
+                              const counts = {
+                                blue: getFolderCount(persona._id, 'blue'),
+                                purple: getFolderCount(persona._id, 'purple'),
+                                orange: getFolderCount(persona._id, 'orange'),
+                                yellow: getFolderCount(persona._id, 'yellow')
+                              };
+                              
+                              return (
+                                <>
+                                  <div className="folder-bar blue" style={{ width: '100%' }} onClick={(e) => {
+                                    e.stopPropagation();
+                                    openModal({
+                                      color: 'blue',
+                                      count: counts.blue,
+                                      items: getFolderItems(persona._id, 'blue')
+                                    });
+                                  }}>
+                                    <img src="/folders/folder_chat.svg" alt="Chat" className="folder-bar-icon" />
+                                    <span className="folder-bar-text">{counts.blue} Conversations</span>
+                                  </div>
+                                  <div className="folder-bar purple" style={{ width: '100%' }} onClick={(e) => {
+                                    e.stopPropagation();
+                                    openModal({
+                                      color: 'purple',
+                                      count: counts.purple,
+                                      items: getFolderItems(persona._id, 'purple')
+                                    });
+                                  }}>
+                                    <img src="/folders/folder_smartnotes.svg" alt="Notes" className="folder-bar-icon" />
+                                    <span className="folder-bar-text">{counts.purple} SmartNotes</span>
+                                  </div>
+                                  <div className="folder-bar orange" style={{ width: '100%' }} onClick={(e) => {
+                                    e.stopPropagation();
+                                    openModal({
+                                      color: 'orange',
+                                      count: counts.orange,
+                                      items: getFolderItems(persona._id, 'orange')
+                                    });
+                                  }}>
+                                    <img src="/folders/Folder_content.svg" alt="Content" className="folder-bar-icon" />
+                                    <span className="folder-bar-text">{counts.orange} Contents</span>
+                                  </div>
+                                  <div className="folder-bar yellow" style={{ width: '100%' }} onClick={(e) => {
+                                    e.stopPropagation();
+                                    openModal({
+                                      color: 'yellow',
+                                      count: counts.yellow,
+                                      items: getFolderItems(persona._id, 'yellow')
+                                    });
+                                  }}>
+                                    <img src="/folders/folder_analytics.svg" alt="Analytics" className="folder-bar-icon" />
+                                    <span className="folder-bar-text">{counts.yellow} Analysis</span>
+                                  </div>
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -622,4 +571,4 @@ export const MonthView: React.FC<MonthViewProps> = ({
       )}
     </>
   );
-}; 
+};
