@@ -59,11 +59,11 @@ export function MessageBubble({
   const [highlightRects, setHighlightRects] = useState<DOMRect[]>([])
   const { theme } = useTheme()
   const isDark = theme === 'dark'
-  const accentColor = isDark ? 'accent' : 'purple-600'
-  const accentBg = isDark ? 'bg-accent' : 'bg-purple-600'
-  const accentBgHover = isDark ? 'hover:bg-accent/90' : 'hover:bg-purple-700'
-  const accentBgLight = isDark ? 'bg-accent/10' : 'bg-purple-600/10'
-  const accentBorder = isDark ? 'border-accent' : 'border-purple-600'
+  const accentColor = isDark ? 'primary' : 'primary'
+  const accentBg = isDark ? 'bg-primary' : 'bg-primary'
+  const accentBgHover = isDark ? 'hover:bg-primary/90' : 'hover:bg-primary/90'
+  const accentBgLight = isDark ? 'bg-primary/10' : 'bg-primary/10'
+  const accentBorder = isDark ? 'border-primary' : 'border-primary'
 
   // Stable selection handler with scroll support
   useEffect(() => {
@@ -236,7 +236,7 @@ export function MessageBubble({
       {showQuoteButton && highlightRects.map((rect, index) => (
         <div
           key={`${message.id}-highlight-${index}`}
-          className={`fixed pointer-events-none z-30 ${isDark ? 'bg-accent/20' : 'bg-purple-600/20'} transition-opacity duration-200`}
+          className={`fixed pointer-events-none z-30 ${isDark ? 'bg-primary/20' : 'bg-primary/20'} transition-opacity duration-200`}
           style={{
             left: rect.left,
             top: rect.top,
@@ -257,7 +257,7 @@ export function MessageBubble({
         >
           <button
             onClick={handleQuoteText}
-            className={`pointer-events-auto ${isDark ? 'bg-accent text-accent-foreground' : 'bg-purple-600 text-white'} p-2 rounded-lg shadow-lg hover:opacity-90 transition-all duration-200 transform hover:scale-105`}
+            className={`pointer-events-auto bg-primary text-primary-foreground p-2 rounded-lg shadow-lg hover:bg-primary/90 hover:text-primary-foreground transition-all duration-200 transform hover:scale-105`}
             title={`Quote "${selectedText.length > 20 ? selectedText.substring(0, 20) + '...' : selectedText}"`}
           >
             <Quote className="w-4 h-4" />
@@ -275,8 +275,7 @@ export function MessageBubble({
             className={`
               rounded-2xl
               px-3 sm:px-4 py-2 sm:py-3
-              ${isUser ? 'bg-accent' : 'bg-card border'}
-              ${isUser ? 'text-black [&_*]:!text-black' : ''}
+              ${isUser ? 'bg-primary text-primary-foreground dark:text-black [&_*]:!text-primary-foreground dark:[&_*]:!text-black' : 'bg-card border text-foreground'}
               relative
               group
               w-full

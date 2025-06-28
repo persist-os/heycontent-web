@@ -82,7 +82,8 @@ export function TodoCard({
   return (
     <BaseCard
       note={note}
-      className="bg-yellow-500/10 border-yellow-500/30 hover:border-yellow-500/50"
+      className="border-yellow-500/30 hover:border-yellow-500/50"
+      hoverBgClass="hover:bg-yellow-500/10"
       onEdit={onEdit}
       onDelete={onDelete}
       onToggleImportant={onToggleImportant}

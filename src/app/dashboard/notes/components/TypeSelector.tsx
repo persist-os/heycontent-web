@@ -159,67 +159,73 @@ export function TypeSelector({ noteId, userId, currentType, typeGenerated, onTyp
 
   const currentLabel = TYPE_LABELS[optimisticType]?.label || 'Unknown';
 
-  const dropdownContent = isOpen && (
-    <div 
-      ref={dropdownRef}
-      className="fixed w-64 bg-background border border-border rounded-lg shadow-lg z-[9999] backdrop-blur-sm"
-      style={{
-        top: `${dropdownPosition.top}px`,
-        right: `${dropdownPosition.right}px`,
-      }}
-    >
-      <div className="p-1">
-        {Object.entries(TYPE_LABELS).map(([type, { label, description }]) => (
-          <button
-            key={type}
-            onMouseDown={(e) => {
-              // Use mousedown instead of click for better timing
-              e.preventDefault();
-              e.stopPropagation();
-              console.log('[TypeSelector] Dropdown item clicked:', type);
-              handleTypeSelect(type as NoteType);
-            }}
-            className={`w-full text-left p-3 rounded-md transition-all duration-200 group ${
-              type === optimisticType 
-                ? 'bg-primary/10 text-primary border border-primary/20' 
-                : 'text-foreground hover:bg-muted/60 border border-transparent'
-            }`}
-          >
-            <div className="font-medium text-sm">{label}</div>
-            <div className="text-xs text-muted-foreground mt-0.5 group-hover:text-muted-foreground/80">{description}</div>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-
   return (
     <>
       <div className="relative">
         <button
           ref={buttonRef}
           onClick={handleToggle}
-          className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-background text-foreground shadow-sm border border-border hover:bg-muted/60 gap-1.5"
+          className={`inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 gap-1.5
+            ${optimisticType === 'task_checklist' ? 'bg-yellow-500 text-white dark:bg-yellow-500 dark:text-white border-none' : ''}
+            ${optimisticType !== 'task_checklist' ? 'bg-muted text-foreground border-none' : ''}
+          `}
+          style={{ boxShadow: 'none' }}
           title={`Type: ${currentLabel}${typeGenerated ? ' (AI-classified)' : ''}${isSyncing ? ' (Syncing...)' : ''}`}
         >
           <span className={typeGenerated ? 'opacity-75' : ''}>{currentLabel}</span>
           {typeGenerated && (
-            <span className="text-primary text-[10px] font-medium px-1 py-0.5 bg-primary/10 rounded">AI</span>
+            <span className="text-primary-foreground text-[10px] font-medium px-1 py-0.5 rounded">AI</span>
           )}
           {isSyncing && (
-            <span className="text-primary text-[10px] font-medium px-1 py-0.5 bg-primary/10 rounded animate-pulse">...</span>
+            <span className="text-primary-foreground text-[10px] font-medium px-1 py-0.5 rounded animate-pulse">...</span>
           )}
           <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
         </button>
       </div>
       
       {/* Portal the dropdown to body to avoid clipping */}
-      {typeof window !== 'undefined' && dropdownContent && createPortal(dropdownContent, document.body)}
+      {typeof window !== 'undefined' && isOpen && (
+        createPortal(
+          <div
+            ref={dropdownRef}
+            className="fixed w-64 border border-border rounded-lg shadow-lg z-[9999] backdrop-blur-sm bg-background"
+            style={{
+              top: `${dropdownPosition.top}px`,
+              right: `${dropdownPosition.right}px`,
+            }}
+          >
+            <div className="p-1">
+              {Object.entries(TYPE_LABELS).map(([type, { label, description }]) => (
+                <button
+                  key={type}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleTypeSelect(type as NoteType);
+                  }}
+                  className={`w-full text-left p-3 rounded-md transition-all duration-200 group border border-transparent
+                    ${type === optimisticType ?
+                      (type === 'task_checklist' ? 'text-white dark:text-white bg-yellow-500 dark:bg-yellow-500' :
+                       type === 'content_script' ? 'text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900' :
+                       'text-primary bg-primary/10')
+                    :
+                      'text-foreground hover:bg-primary/10 hover:text-primary'}
+                  `}
+                >
+                  <div className="font-medium text-sm">{label}</div>
+                  <div className="text-xs text-gray-600 dark:text-muted-foreground mt-0.5 group-hover:text-gray-800 dark:group-hover:text-muted-foreground/80">{description}</div>
+                </button>
+              ))}
+            </div>
+          </div>,
+          document.body
+        )
+      )}
     </>
   );
 }
 
-// Create a minimal type display component for showing beside the date
+// Update MinimalTypeDisplay to use correct text color for yellow in dark mode and purple in light mode
 export function MinimalTypeDisplay({ currentType }: { currentType: NoteType }) {
   const TYPE_COLORS: Record<NoteType, string> = {
     idea_bank: 'bg-red-500',
@@ -239,13 +245,21 @@ export function MinimalTypeDisplay({ currentType }: { currentType: NoteType }) {
     task_checklist: 'Task Checklist'
   };
 
+  // Set text color for yellow in dark mode and purple in light mode
+  let textClass = 'text-muted-foreground font-medium';
+  if (currentType === 'task_checklist') {
+    textClass = 'text-yellow-700 dark:text-white font-medium';
+  } else if (currentType === 'content_script') {
+    textClass = 'text-purple-700 dark:text-purple-300 font-medium';
+  }
+
   const colorClass = TYPE_COLORS[currentType] || 'bg-gray-500';
   const label = TYPE_LABELS[currentType] || 'Unknown';
 
   return (
     <div className="flex items-center gap-1.5">
       <div className={`w-2 h-2 rounded-full ${colorClass}`}></div>
-      <span className="text-xs text-muted-foreground font-medium">{label}</span>
+      <span className={`text-xs ${textClass}`}>{label}</span>
     </div>
   );
 } 

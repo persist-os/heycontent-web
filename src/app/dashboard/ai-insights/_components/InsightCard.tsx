@@ -330,7 +330,7 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
                 e.stopPropagation();
                 discussFullInsight();
               }}
-              className="flex-1 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black"
+              className="flex-1 bg-primary text-primary-foreground dark:text-black hover:bg-primary/90 hover:text-primary-foreground dark:hover:text-black"
             >
               <MessageSquare className="w-4 h-4 mr-2" />
               Discuss With Content

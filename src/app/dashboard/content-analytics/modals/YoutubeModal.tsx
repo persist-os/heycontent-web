@@ -358,7 +358,7 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
           <Button 
             onClick={navigateToChat} 
             disabled={!aiAnalysis}
-            className={`${!aiAnalysis ? 'opacity-50 cursor-not-allowed bg-gray-300 hover:bg-gray-300' : 'bg-heycontent-light-yellow hover:bg-heycontent-yellow/90'} text-black`}
+            className={`${!aiAnalysis ? 'opacity-50 cursor-not-allowed bg-gray-300 hover:bg-gray-300' : 'bg-primary text-primary-foreground dark:text-black hover:bg-primary/90 hover:text-primary-foreground dark:hover:text-black'}`}
           >
             <MessageSquare className="w-4 h-4 mr-2" />
             {!aiAnalysis ? 'Generate Analysis to Chat' : 'Discuss with Content'}

@@ -8,6 +8,7 @@ import { ImageGalleryModal } from '../ImageGalleryModal';
 interface BaseCardProps {
   note: Note;
   className?: string;
+  hoverBgClass?: string;
   children: React.ReactNode;
   onEdit?: (note: Note) => void;
   onDelete?: (noteId: string) => void;
@@ -19,6 +20,7 @@ interface BaseCardProps {
 export function BaseCard({
   note,
   className,
+  hoverBgClass,
   children,
   onEdit,
   onDelete,
@@ -49,8 +51,9 @@ export function BaseCard({
     <>
       <div
         className={cn(
-          "group relative bg-background border border-border rounded-lg shadow-sm transition-all duration-200",
+          "group relative border border-border rounded-lg shadow-sm transition-all duration-200",
           "hover:shadow-md hover:border-border/60",
+          hoverBgClass,
           !isOverlay && !isDragging && "cursor-pointer",
           // Drag states
           isDragging && "opacity-50 scale-95 shadow-lg",
