@@ -149,8 +149,9 @@ export const updateOverageControls = mutation({
     ubpEnabled: v.boolean(),
     monthlyLimit: v.number(),
   },
-  handler: async ({ db }, args) => {
-    const user = await db
+  returns: v.object({ success: v.boolean() }),
+  handler: async (ctx, args) => {
+    const user = await ctx.db
       .query("users")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .first();
@@ -163,7 +164,7 @@ export const updateOverageControls = mutation({
       ubpEnabled: args.ubpEnabled,
       monthlyLimit: args.monthlyLimit,
     };
-    await db.patch(user._id, {
+    await ctx.db.patch(user._id, {
       subscription: newSub,
       updatedAt: Date.now(),
     });

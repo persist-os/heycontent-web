@@ -18,7 +18,7 @@ import { useAuth } from "@/app/context/auth-context";
 import { getApiKey } from '@/app/lib/api-helpers';
 
 // Convex imports
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/../convex/_generated/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -52,6 +52,9 @@ export default function SubscriptionOverview() {
   const convexUsageSummary = useQuery(api.usageEvents.getUsageSummary, userId ? { userId } : "skip");
   const convexUsageEvents = useQuery(api.usageEvents.listUsageEvents, userId ? { userId, limit: 20 } : "skip");
   
+  // Add mutation for overage controls
+  const updateOverageControls = useMutation(api.userMutations.updateOverageControls);
+  
   // Update usage summary when convex data changes
   useEffect(() => {
     if (convexUsageSummary) {
@@ -65,9 +68,9 @@ export default function SubscriptionOverview() {
 
   // Overage controls state
   const [ubpEnabled, setUbpEnabled] = useState(currentSubscription?.ubpEnabled ?? true);
-  const [premiumEnabled, setPremiumEnabled] = useState(currentSubscription?.premiumEnabled ?? true);
   const [monthlyLimit, setMonthlyLimit] = useState(currentSubscription?.monthlyLimit ?? 100);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Fetch plans and subscription status from API
   useEffect(() => {
@@ -208,6 +211,14 @@ export default function SubscriptionOverview() {
     if (convexUsageEvents) setUsageEvents(convexUsageEvents);
   }, [convexUsageSummary, convexUsageEvents]);
 
+  // Update overage controls state when currentSubscription changes
+  useEffect(() => {
+    if (currentSubscription) {
+      setUbpEnabled(currentSubscription.ubpEnabled ?? true);
+      setMonthlyLimit(currentSubscription.monthlyLimit ?? 100);
+    }
+  }, [currentSubscription]);
+
   // Checkout state
   const [showCheckout, setShowCheckout] = useState<boolean>(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
@@ -269,10 +280,23 @@ export default function SubscriptionOverview() {
   };
   const handleCloseQuantityModal = () => setShowQuantityModal(false);
 
-  const handleSaveUbp = () => {
+  // Update handleSaveUbp to call Convex mutation
+  const handleSaveUbp = async () => {
     setSaving(true);
-    // Simulate save
-    setTimeout(() => setSaving(false), 1000);
+    setSaveError(null);
+    try {
+      if (!userId) throw new Error('No user ID');
+      const result = await updateOverageControls({
+        userId,
+        ubpEnabled,
+        monthlyLimit,
+      });
+      if (!result.success) throw new Error('Failed to update overage controls');
+    } catch (e: any) {
+      setSaveError(e.message || 'Failed to save overage controls');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
@@ -412,14 +436,15 @@ export default function SubscriptionOverview() {
             />
             <OverageControlsCard
               ubpEnabled={ubpEnabled}
-              premiumEnabled={premiumEnabled}
               monthlyLimit={monthlyLimit}
               saving={saving}
               setUbpEnabled={setUbpEnabled}
-              setPremiumEnabled={setPremiumEnabled}
               setMonthlyLimit={setMonthlyLimit}
               handleSaveUbp={handleSaveUbp}
             />
+            {saveError && (
+              <div className="text-red-600 text-sm mt-2">{saveError}</div>
+            )}
           </div>
         </div>
       </div>

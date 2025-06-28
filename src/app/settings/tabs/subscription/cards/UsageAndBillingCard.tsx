@@ -38,12 +38,12 @@ export const UsageAndBillingCard: React.FC<UsageAndBillingCardProps> = ({ usage 
           
           <div className={cn(
             "relative h-2 w-full overflow-hidden rounded-full bg-muted",
-            isOverLimit ? "bg-red-100" : isCloseToLimit ? "bg-yellow-100" : "bg-muted"
+            isOverLimit ? "bg-destructive/10" : isCloseToLimit ? "bg-primary/20" : "bg-muted"
           )}>
             <div 
               className={cn(
                 "h-full transition-all duration-300",
-                isOverLimit ? "bg-red-500" : isCloseToLimit ? "bg-yellow-500" : "bg-accent"
+                isOverLimit ? "bg-destructive" : isCloseToLimit ? "bg-primary" : "bg-primary"
               )}
               style={{ width: `${usagePercentage}%` }}
             />
@@ -52,11 +52,11 @@ export const UsageAndBillingCard: React.FC<UsageAndBillingCardProps> = ({ usage 
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>
               {isOverLimit ? (
-                <span className="text-red-600 font-medium">
+                <span className="text-destructive font-medium">
                   {overage.toLocaleString()} over limit (${(overage * 0.02).toFixed(2)})
                 </span>
               ) : isCloseToLimit ? (
-                <span className="text-yellow-600">
+                <span className="text-primary">
                   {included - total} requests remaining
                 </span>
               ) : (
@@ -69,7 +69,7 @@ export const UsageAndBillingCard: React.FC<UsageAndBillingCardProps> = ({ usage 
           </div>
           
           {isOverLimit && (
-            <div className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded">
+            <div className="mt-2 text-xs text-destructive bg-destructive/10 p-2 rounded">
               <p className="font-medium">You've exceeded your included requests.</p>
               <p>Additional requests are billed at $0.02 per request.</p>
             </div>

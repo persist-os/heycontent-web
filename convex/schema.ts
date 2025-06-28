@@ -56,6 +56,8 @@ export default defineSchema({
       items: v.optional(v.any()),
       quantity: v.optional(v.number()),
       start_date: v.optional(v.number()),
+      ubpEnabled: v.optional(v.boolean()),
+      monthlyLimit: v.optional(v.number()),
     })),
     paymentMethod: v.optional(v.object({
       brand: v.string(),
