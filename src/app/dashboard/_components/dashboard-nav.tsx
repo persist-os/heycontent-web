@@ -238,7 +238,7 @@ export const DashboardNav = memo(function DashboardNav() {
         {isExpanded && (
           <div className="px-6 my-4">
             <div className="flex justify-between items-center mb-2">
-              <h3 className="text-xs font-semibold text-primary-foreground uppercase tracking-wider">Recent Chats</h3>
+              <h3 className="text-xs font-semibold text-black dark:text-white uppercase tracking-wider">Recent Chats</h3>
               <Link href="/dashboard/history" onClick={() => setIsExpanded(false)} className="text-xs text-primary hover:underline">
                 View All
               </Link>
@@ -255,9 +255,9 @@ export const DashboardNav = memo(function DashboardNav() {
                   >
                     <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className="text-sm text-foreground truncate">{chat.topic}</span>
+                      <span className="text-sm text-black dark:text-white truncate">{chat.topic}</span>
                       {chat.createdAt ? (
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-black dark:text-white">
                           {formatRelativeTime(chat.createdAt)}
                         </span>
                       ) : (
