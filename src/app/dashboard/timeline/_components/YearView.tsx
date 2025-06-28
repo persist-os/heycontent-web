@@ -206,14 +206,38 @@ export const YearView: React.FC<YearViewProps> = ({
     return personasByMonth;
   }, [allPersonas, loadedPeriods]);
 
-  // Get horizontal position for a persona stack (by month)
-  const getPersonaPositionForMonth = (monthKey: string) => {
-    const [year, month] = monthKey.split('-');
-    const monthIndex = allMonthsInPeriods.findIndex(m =>
-      m.getFullYear() === parseInt(year) && m.getMonth() === parseInt(month) - 1
+  // Get horizontal position for a persona stack (by exact creation date)
+  const getPersonaPositionForMonth = (monthKey: string, personas: any[]) => {
+    // Use the first persona's creation date for positioning
+    const firstPersona = personas[0];
+    if (!firstPersona) return 50;
+    
+    const createdDate = new Date(firstPersona.createdAt);
+    
+    // Find the exact day in the allDaysInPeriods array
+    const dayInArray = allDaysInPeriods.find(d => 
+      d.getFullYear() === createdDate.getFullYear() && 
+      d.getMonth() === createdDate.getMonth() && 
+      d.getDate() === createdDate.getDate()
     );
-    if (monthIndex === -1) return 50;
-    const position = allMonthsInPeriods.length > 1 ? (monthIndex / (allMonthsInPeriods.length - 1)) * 80 + 10 : 50;
+    const arrayIndex = allDaysInPeriods.indexOf(dayInArray);
+    
+    if (arrayIndex === -1) {
+      // Fallback: find first day of the creation month
+      const monthStart = allDaysInPeriods.find(d => 
+        d.getFullYear() === createdDate.getFullYear() && 
+        d.getMonth() === createdDate.getMonth() && 
+        d.getDate() === 1
+      );
+      const fallbackIndex = allDaysInPeriods.indexOf(monthStart);
+      if (fallbackIndex === -1) return 50;
+      
+      const position = allDaysInPeriods.length > 1 ? (fallbackIndex / (allDaysInPeriods.length - 1)) * 100 : 50;
+      return Math.max(5, Math.min(95, position));
+    }
+    
+    // Use the exact same positioning logic as the daily ticks
+    const position = allDaysInPeriods.length > 1 ? (arrayIndex / (allDaysInPeriods.length - 1)) * 100 : 50;
     return Math.max(5, Math.min(95, position));
   };
 
@@ -221,11 +245,13 @@ export const YearView: React.FC<YearViewProps> = ({
   const getVerticalPosition = (monthKey: string) => {
     const sortedMonths = Object.keys(personasInAllPeriods).sort();
     const monthIndex = sortedMonths.indexOf(monthKey);
-    const horizontalPosition = getPersonaPositionForMonth(monthKey);
+    const personasArray = personasInAllPeriods[monthKey] as any[];
+    const horizontalPosition = getPersonaPositionForMonth(monthKey, personasArray);
     const proximityThreshold = 8;
     const conflictingMonths = sortedMonths.filter((otherMonthKey, otherIndex) => {
       if (otherMonthKey === monthKey || otherIndex >= monthIndex) return false;
-      const otherPosition = getPersonaPositionForMonth(otherMonthKey);
+      const otherPersonasArray = personasInAllPeriods[otherMonthKey] as any[];
+      const otherPosition = getPersonaPositionForMonth(otherMonthKey, otherPersonasArray);
       return Math.abs(horizontalPosition - otherPosition) < proximityThreshold;
     });
     let isAbove: boolean;
@@ -377,8 +403,8 @@ export const YearView: React.FC<YearViewProps> = ({
               {Object.keys(personasInAllPeriods).length > 0 && (
                 <div className="persona-stacks-container">
                   {Object.entries(personasInAllPeriods).map(([monthKey, personas]) => {
-                    const position = getPersonaPositionForMonth(monthKey);
                     const personasArray = personas as any[];
+                    const position = getPersonaPositionForMonth(monthKey, personasArray);
                     const activeIndex = activePersonaIndex[monthKey] || 0;
                     const currentPersona = personasArray[activeIndex];
                     const { isAbove, top } = getVerticalPosition(monthKey);
@@ -390,17 +416,18 @@ export const YearView: React.FC<YearViewProps> = ({
                           className="absolute w-0.5 bg-muted-foreground/60 z-10"
                           style={{
                             left: `${position}%`,
-                            transform: 'translateX(-100px)',
-                            top: isAbove ? `${130 + top}px` : `130px`,
-                            height: isAbove ? `${Math.abs(top)}px` : `${top - 130}px`,
+                            transform: 'translateX(-50%)',
+                            top: `${top}px`,
+                            height: `${130 - top}px`,
                           }}
                         />
                         {/* Connection dot at the end of the line (near folder bars) */}
                         <div
+                          className="persona-connection-dot"
                           style={{
                             position: 'absolute',
                             left: `${position}%`,
-                            transform: 'translateX(-105px)',
+                            transform: 'translateX(-50%)',
                             top: `130px`,
                             width: '0.75rem',
                             height: '0.75rem',
@@ -416,7 +443,7 @@ export const YearView: React.FC<YearViewProps> = ({
                           className="persona-stack"
                           style={{
                             left: `${position}%`,
-                            transform: 'translateX(-50%)',
+                            transform: 'translateX(10px)',
                             top: `${top}px`,
                           }}
                         >
@@ -444,9 +471,9 @@ export const YearView: React.FC<YearViewProps> = ({
                               handlePersonaClick(currentPersona);
                             }}
                           >
-                            {/* Persona name */}
+                            {/* Persona name - allow natural wrapping */}
                             <div className="persona-name-figma">
-                              {currentPersona.current_name || 'The Experimental Sound Weaver'}
+                              {currentPersona.current_name || 'Unnamed Persona'}
                             </div>
                             
                             {/* Achievement/Streak section */}
@@ -468,34 +495,27 @@ export const YearView: React.FC<YearViewProps> = ({
                             )}
                           </div>
                           
-                          {/* Folder bars - separate from persona card */}
+                          {/* Folder bars - positioned lower to accommodate text wrapping */}
                           <div 
                             className="folder-bars"
                             style={{
                               position: 'absolute',
-                              top: '160px',
+                              top: '180px', // Moved down from 160px to accommodate text wrapping
                               left: '0px',
                               width: '200px',
                             }}
                           >
                             {(() => {
                               const counts = {
-                                blue: getFolderCount(currentPersona._id, 'blue') || 15,
-                                purple: getFolderCount(currentPersona._id, 'purple') || 7,
-                                orange: getFolderCount(currentPersona._id, 'orange') || 5,
-                                yellow: getFolderCount(currentPersona._id, 'yellow') || 8
-                              };
-                              const maxCount = Math.max(...Object.values(counts));
-                              const getWidth = (count) => {
-                                // Use a more noticeable scaling: 60% minimum width, better distribution
-                                const percentage = (count / maxCount) * 100;
-                                const scaledWidth = 60 + (percentage * 0.4); // 60% to 100% range
-                                return Math.max(60, Math.min(100, scaledWidth));
+                                blue: getFolderCount(currentPersona._id, 'blue'),
+                                purple: getFolderCount(currentPersona._id, 'purple'),
+                                orange: getFolderCount(currentPersona._id, 'orange'),
+                                yellow: getFolderCount(currentPersona._id, 'yellow')
                               };
                               
                               return (
                                 <>
-                                  <div className="folder-bar blue" style={{ width: `${getWidth(counts.blue)}%` }} onClick={(e) => {
+                                  <div className="folder-bar blue" style={{ width: '100%' }} onClick={(e) => {
                                     e.stopPropagation();
                                     openModal({
                                       color: 'blue',
@@ -506,7 +526,7 @@ export const YearView: React.FC<YearViewProps> = ({
                                     <img src="/folders/folder_chat.svg" alt="Chat" className="folder-bar-icon" />
                                     <span className="folder-bar-text">{counts.blue} Conversations</span>
                                   </div>
-                                  <div className="folder-bar purple" style={{ width: `${getWidth(counts.purple)}%` }} onClick={(e) => {
+                                  <div className="folder-bar purple" style={{ width: '100%' }} onClick={(e) => {
                                     e.stopPropagation();
                                     openModal({
                                       color: 'purple',
@@ -517,7 +537,7 @@ export const YearView: React.FC<YearViewProps> = ({
                                     <img src="/folders/folder_smartnotes.svg" alt="Notes" className="folder-bar-icon" />
                                     <span className="folder-bar-text">{counts.purple} SmartNotes</span>
                                   </div>
-                                  <div className="folder-bar orange" style={{ width: `${getWidth(counts.orange)}%` }} onClick={(e) => {
+                                  <div className="folder-bar orange" style={{ width: '100%' }} onClick={(e) => {
                                     e.stopPropagation();
                                     openModal({
                                       color: 'orange',
@@ -528,7 +548,7 @@ export const YearView: React.FC<YearViewProps> = ({
                                     <img src="/folders/Folder_content.svg" alt="Content" className="folder-bar-icon" />
                                     <span className="folder-bar-text">{counts.orange} Contents</span>
                                   </div>
-                                  <div className="folder-bar yellow" style={{ width: `${getWidth(counts.yellow)}%` }} onClick={(e) => {
+                                  <div className="folder-bar yellow" style={{ width: '100%' }} onClick={(e) => {
                                     e.stopPropagation();
                                     openModal({
                                       color: 'yellow',
