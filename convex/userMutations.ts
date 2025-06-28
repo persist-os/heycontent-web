@@ -143,6 +143,34 @@ export const updateUserStripeData = mutation({
   },
 });
 
+export const updateOverageControls = mutation({
+  args: {
+    userId: v.string(),
+    ubpEnabled: v.boolean(),
+    monthlyLimit: v.number(),
+  },
+  handler: async ({ db }, args) => {
+    const user = await db
+      .query("users")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+    if (!user) throw new Error("User not found");
+    if (!user.subscription) {
+      throw new Error("User does not have a subscription object. Cannot update overage controls.");
+    }
+    const newSub = {
+      ...user.subscription,
+      ubpEnabled: args.ubpEnabled,
+      monthlyLimit: args.monthlyLimit,
+    };
+    await db.patch(user._id, {
+      subscription: newSub,
+      updatedAt: Date.now(),
+    });
+    return { success: true };
+  },
+});
+
 // Delete all user data
 export const deleteUserAndData = mutation({
   args: { userId: v.string() },
