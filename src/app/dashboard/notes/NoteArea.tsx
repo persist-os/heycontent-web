@@ -344,7 +344,7 @@ export function NoteArea({
         onClick={() => setShowImageGallery(true)}
         className={`fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center z-20 ${
           note.images && note.images.length > 0
-            ? 'bg-primary text-primary-foreground hover:bg-primary/90 ring-2 ring-primary/20' 
+            ? 'bg-heycontent-purple text-white hover:bg-heycontent-purple/90 ring-2 ring-heycontent-purple/20 dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90 dark:ring-primary/20' 
             : 'bg-muted/80 backdrop-blur-sm text-muted-foreground hover:bg-muted hover:text-foreground border border-border'
         }`}
         title={`Image Gallery${note.images && note.images.length > 0 ? ` (${note.images.length})` : ''}`}
@@ -352,7 +352,7 @@ export function NoteArea({
         <div className="relative">
           <Image size={20} />
           {note.images && note.images.length > 0 && (
-            <span className="absolute -top-5 -right-5 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center font-medium shadow-md">
+            <span className="absolute -top-5 -right-5 w-5 h-5 bg-heycontent-purple text-white text-xs rounded-full flex items-center justify-center font-medium shadow-md dark:bg-primary dark:text-primary-foreground">
               {note.images.length}
             </span>
           )}

@@ -52,9 +52,9 @@ export function ProjectCard({ project, onEdit, onDelete, dragOverProject }: Proj
       ref={setNodeRef}
       onClick={handleCardClick}
       className={cn(
-        "group relative bg-background border border-border rounded-lg shadow-sm transition-all duration-200",
+        "group relative border border-border rounded-lg shadow-sm transition-all duration-200",
         "hover:shadow-md hover:border-border/60 cursor-pointer",
-        "hover:shadow-lg",
+        "hover:shadow-lg hover:bg-blue-100 dark:hover:bg-blue-900/20",
         // Add visual feedback for drag over
         isDraggedOver && "ring-2 ring-primary ring-offset-2 bg-primary/5 border-primary/50 scale-105"
       )}
@@ -76,7 +76,7 @@ export function ProjectCard({ project, onEdit, onDelete, dragOverProject }: Proj
               "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors",
               isDraggedOver 
                 ? "bg-primary/20 text-primary" 
-                : "bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                : "text-blue-600 dark:text-blue-400"
             )}>
               <Folder className="w-4 h-4" />
             </div>

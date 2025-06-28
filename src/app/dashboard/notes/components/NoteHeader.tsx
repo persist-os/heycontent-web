@@ -42,7 +42,7 @@ export function NoteHeader({ note, onUpdate, onSave, onBack, isMobile, currentCo
         
         {/* Centered title */}
         <div className="text-center">
-          <h1 className="text-base font-medium text-primary">Smart Notes</h1>
+          <h1 className="text-base font-medium text-foreground inline-block">Smart Notes</h1>
         </div>
         
         {/* Right side with back button and action buttons */}
@@ -64,34 +64,49 @@ export function NoteHeader({ note, onUpdate, onSave, onBack, isMobile, currentCo
             )}
             
             <button
-              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 group ${
                 note.type === 'idea_bank' 
-                  ? 'bg-primary/15 text-primary border border-primary/30' 
-                  : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent'
+                  ? 'bg-primary border-2 border-primary ring-2 ring-primary/30' 
+                  : 'bg-muted/60 hover:bg-primary border border-transparent'
               }`}
               onClick={() => onUpdate(String(note._id), { type: note.type === 'idea_bank' ? 'content_script' : 'idea_bank' as NoteType })}
               title={note.type === 'idea_bank' ? 'Switch to content script' : 'Mark as idea bank'}
             >
-              <Lightbulb size={16} />
+              <Lightbulb 
+                size={16} 
+                className={
+                  note.type === 'idea_bank'
+                    ? '!text-white group-hover:!text-white dark:!text-black dark:group-hover:!text-black dark:group-hover:stroke-black'
+                    : 'text-black dark:text-white group-hover:!text-white dark:group-hover:!text-white dark:group-hover:stroke-black'
+                }
+              />
             </button>
             <button
-              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 group ${
                 note.important 
-                  ? 'bg-primary/15 text-primary border border-primary/30' 
-                  : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent'
+                  ? 'bg-primary border-2 border-primary ring-2 ring-primary/30' 
+                  : 'bg-muted/60 hover:bg-primary border border-transparent'
               }`}
               onClick={() => onUpdate(String(note._id), { important: !note.important })}
               title={note.important ? 'Remove importance' : 'Mark as important'}
             >
-              <Star size={16} fill={note.important ? "currentColor" : "none"} />
+              <Star 
+                size={16} 
+                fill={note.important ? "currentColor" : "none"}
+                className={
+                  note.important
+                    ? '!text-white group-hover:!text-white dark:!text-black dark:group-hover:!text-black dark:group-hover:stroke-black'
+                    : 'text-black dark:text-white group-hover:!text-white dark:group-hover:!text-white dark:group-hover:stroke-black'
+                }
+              />
             </button>
             
             <button
-              className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 shadow-sm"
+              className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary border border-white dark:border-primary hover:bg-primary/90 transition-all duration-200 shadow-sm group"
               onClick={handleSave}
               title="Save note"
             >
-              <Save size={16} />
+              <Save size={16} className="!text-white dark:!text-black" />
             </button>
           </div>
         </div>

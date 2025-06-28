@@ -130,7 +130,8 @@ export function ReflectionCard({
   return (
     <BaseCard
       note={note}
-      className="bg-blue-500/10 border-blue-500/30 hover:border-blue-500/50"
+      className="border-blue-500/30 hover:border-blue-500/50"
+      hoverBgClass="hover:bg-blue-500/10"
       onEdit={onEdit}
       onDelete={onDelete}
       onToggleImportant={onToggleImportant}

@@ -68,7 +68,8 @@ export function CollaborationCard({
   return (
     <BaseCard
       note={note}
-      className="bg-green-500/10 border-green-500/30 hover:border-green-500/50"
+      className="border-green-500/30 hover:border-green-500/50"
+      hoverBgClass="hover:bg-green-500/10"
       onEdit={onEdit}
       onDelete={onDelete}
       onToggleImportant={onToggleImportant}
