@@ -455,8 +455,8 @@
   border-radius: 0;
   background: transparent;
   border: none;
-  backdrop-filter: none;
   -webkit-backdrop-filter: none;
+  backdrop-filter: none;
   box-shadow: none;
   width: 200px;
   min-height: 80px; /* Fixed minimum height for consistent layout */
@@ -580,7 +580,6 @@
   border-radius: 0.25rem;
   border: 1px solid hsl(var(--border) / 0.3);
   cursor: pointer;
-  backdrop-filter: blur(4px);
   transition: all 0.2s ease;
 }
 

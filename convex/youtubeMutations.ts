@@ -1,50 +1,151 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
+import { api } from "./_generated/api";
 
+function calculateDiff(oldDoc, newDoc, excludeFields = []) {
+  const changedFields = [];
+  const previous = {};
+  const current = {};
+  for (const key of Object.keys(newDoc)) {
+    if (excludeFields.includes(key)) continue;
+    if (JSON.stringify(oldDoc?.[key]) !== JSON.stringify(newDoc[key])) {
+      changedFields.push(key);
+      previous[key] = oldDoc?.[key];
+      current[key] = newDoc[key];
+    }
+  }
+  return changedFields.length > 0
+    ? { changedFields, previous, current }
+    : null;
+}
 
-// Store video data
+// Store video data - update or insert, never update captions, track diffs
 export const storeVideoData = mutation({
   args: {
     userId: v.string(),
     videoId: v.string(),
     videoData: v.any(),
   },
+  returns: v.object({
+    status: v.string(),
+    videoId: v.id("youtubeVideos")
+  }),
   handler: async (ctx, args) => {
     const { userId, videoId, videoData } = args;
     const now = Date.now();
+    // Find existing video
+    const video = await ctx.db
+      .query("youtubeVideos")
+      .withIndex("by_videoId", q => q.eq("videoId", videoId))
+      .filter(q => q.eq(q.field("userId"), userId))
+      .first();
+    // Exclude captions from update/diff
+    const { captions, ...videoDataNoCaptions } = videoData;
 
-    try {
-      // Check if video already exists in youtubeVideos
-      const existingVideo = await ctx.db
-        .query("youtubeVideos")
-        .withIndex("by_videoId", (q) => q.eq("videoId", videoId))
-        .first();
+    // --- Always update statistics from backend refresh ---
+    function normalizeStatistics(stats: any): any {
+      if (!stats) return undefined;
+      // Always use the YouTube API fields if present
+      return {
+        views: Number(stats.viewCount ?? 0),
+        likes: Number(stats.likeCount ?? 0),
+        dislikes: Number(stats.dislikeCount ?? 0),
+        comments: Number(stats.commentCount ?? 0),
+      };
+    }
 
-      // Prepare video doc for flexible schema
+    // --- Always update statistics using the same logic as the diffs ---
+    let normalizedStats = undefined;
+    if (videoData.public_stats && videoData.public_stats.statistics) {
+      normalizedStats = normalizeStatistics(videoData.public_stats.statistics);
+      videoDataNoCaptions.public_stats = videoData.public_stats; // Optionally keep the raw
+    } else if (videoData.statistics) {
+      normalizedStats = normalizeStatistics(videoData.statistics);
+    }
+    videoDataNoCaptions.statistics = normalizedStats;
+
+    // --- Only write comments if fetch was successful ---
+    let patchData = { ...videoDataNoCaptions };
+    if (
+      patchData.comments &&
+      typeof patchData.comments === 'object' &&
+      patchData.comments.status === 'error'
+    ) {
+      // Remove comments field if fetch failed
+      delete patchData.comments;
+    }
+    // Do NOT overwrite statistics.comments with array length
+
+    // --- Clean diff logic: only changed field names and previous values ---
+    function cleanDiff(oldDoc, newDoc, excludeFields = []) {
+      const changedFields = [];
+      const previous = {};
+      const current = {};
+      for (const key of Object.keys(newDoc)) {
+        if (excludeFields.includes(key)) continue;
+        if (JSON.stringify(oldDoc?.[key]) !== JSON.stringify(newDoc[key])) {
+          changedFields.push(key);
+          // Special handling for comments: only show new/changed comments
+          if (key === 'comments' && oldDoc?.comments && newDoc.comments) {
+            // Find new/changed comments by id
+            const oldComments = Array.isArray(oldDoc.comments.comments) ? oldDoc.comments.comments : [];
+            const newComments = Array.isArray(newDoc.comments.comments) ? newDoc.comments.comments : [];
+            const oldIds = new Set(oldComments.map(c => c.id));
+            const added = newComments.filter(c => !oldIds.has(c.id));
+            // Optionally, you could also diff by content, likes, etc. for edits
+            previous[key] = { count: oldComments.length };
+            current[key] = { added, count: newComments.length };
+          } else {
+            previous[key] = oldDoc?.[key];
+            current[key] = newDoc[key];
+          }
+        }
+      }
+      return changedFields.length > 0
+        ? { changedFields, previous, current }
+        : null;
+    }
+
+    if (video) {
+      // Calculate clean diff (excluding captions)
+      const diff = cleanDiff(video, patchData, ["captions"]);
+      if (!diff) {
+        // Only captions would change, skip update
+        return { status: "skipped_captions", videoId: video._id };
+      }
+      // Update doc, append clean diff
+      const newDiff = {
+        changedAt: now,
+        changedFields: diff.changedFields,
+        previous: diff.previous,
+        current: diff.current,
+        changeType: "update"
+      };
+      const diffs = Array.isArray(video.diffs) ? [...video.diffs, newDiff] : [newDiff];
+      await ctx.db.patch(video._id, {
+        ...patchData,
+        updatedAt: now,
+        diffs
+      });
+      return { status: "updated", videoId: video._id };
+    } else {
+      // Insert new doc, initialize diffs as []
       const videoDoc = {
         userId,
         id: videoId,
         videoId,
-        ...videoData,
+        ...patchData,
         updatedAt: now,
-        createdAt: videoData.createdAt || now,
+        createdAt: now,
+        diffs: []
       };
-
-      if (existingVideo) {
-        await ctx.db.patch(existingVideo._id, videoDoc);
-        return { status: "updated", videoId: existingVideo._id };
-      } else {
-        const id = await ctx.db.insert("youtubeVideos", videoDoc);
-        return { status: "created", videoId: id };
-      }
-    } catch (error) {
-      console.error(`Error storing video data for ${videoId}:`, error);
-      throw new Error(`Failed to store video data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const id = await ctx.db.insert("youtubeVideos", videoDoc);
+      return { status: "created", videoId: id };
     }
   },
 });
 
-// Save YouTube channel data
+// Save YouTube channel data - update or insert, never update captions, track diffs
 export const saveChannelData = mutation({
   args: {
     userId: v.string(),
@@ -61,110 +162,117 @@ export const saveChannelData = mutation({
     }),
     updatedAt: v.number()
   },
+  returns: v.object({
+    status: v.string(),
+    channelId: v.id("youtubeChannels")
+  }),
   handler: async (ctx, args) => {
     const { userId, channelId, title, description, customUrl, thumbnails, statistics, updatedAt } = args;
-
-    try {
-      // Check if channel already exists in youtubeChannels
-      const existingChannel = await ctx.db
-        .query("youtubeChannels")
-        .withIndex("by_userId", (q) => q.eq("userId", userId))
-        .filter((q) => q.eq(q.field("id"), channelId))
-        .first();
-
-      // Prepare channel doc for flexible schema
-      const channelDoc = {
-        userId,
-        id: channelId,
-        snippet: {
-          title,
-          description,
-          customUrl,
-          thumbnails
-        },
-        statistics,
-        updatedAt,
-        createdAt: updatedAt,
-      };
-
-      if (existingChannel) {
-        await ctx.db.patch(existingChannel._id, channelDoc);
-        return { status: "updated", channelId: existingChannel._id };
-      } else {
-        const id = await ctx.db.insert("youtubeChannels", channelDoc);
-        return { status: "created", channelId: id };
-      }
-    } catch (error) {
-      console.error(`Error storing channel data for ${channelId}:`, error);
-      throw new Error(`Failed to store channel data: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  },
-});
-
-// Update YouTube token
-export const update_youtube_token = mutation({
-  args: {
-    userId: v.string(),
-    accessToken: v.string(),
-    refreshToken: v.string(),
-    expiresAt: v.number(),
-    tokenType: v.string(),
-    scope: v.array(v.string())
-  },
-  handler: async (ctx, args) => {
-    // Upsert logic: patch if exists, insert if not
+    // Find existing channel
     const existing = await ctx.db
-      .query("youtubeTokens")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .first();
-    if (existing) {
-      await ctx.db.patch(existing._id, {
-        accessToken: args.accessToken,
-        refreshToken: args.refreshToken,
-        expiryDate: args.expiresAt,
-        scope: args.scope.join(" "),
-        lastRefreshed: Date.now()
+      .query("youtubeChannels")
+      .withIndex("by_userId", q => q.eq("userId", userId))
+      .collect();
+    const channel = existing.find(c => c.id === channelId);
+    // Prepare new channel data (no captions field in channel)
+    const newChannelData = {
+      userId,
+      id: channelId,
+      snippet: {
+        title,
+        description,
+        customUrl,
+        thumbnails
+      },
+      statistics,
+      updatedAt,
+    };
+    if (channel) {
+      const diff = calculateDiff(channel, newChannelData);
+      if (!diff) {
+        return { status: "skipped_no_change", channelId: channel._id };
+      }
+      const newDiff = {
+        changedAt: updatedAt,
+        changedFields: diff.changedFields,
+        previous: diff.previous,
+        current: diff.current,
+        changeType: "update"
+      };
+      const diffs = Array.isArray(channel.diffs) ? [...channel.diffs, newDiff] : [newDiff];
+      await ctx.db.patch(channel._id, {
+        ...newChannelData,
+        diffs
       });
+      return { status: "updated", channelId: channel._id };
     } else {
-      await ctx.db.insert("youtubeTokens", {
-        userId: args.userId,
-        accessToken: args.accessToken,
-        refreshToken: args.refreshToken,
-        expiryDate: args.expiresAt,
-        scope: args.scope.join(" "),
-        lastRefreshed: Date.now()
-      });
+      const channelDoc = {
+        ...newChannelData,
+        createdAt: updatedAt,
+        diffs: []
+      };
+      const id = await ctx.db.insert("youtubeChannels", channelDoc);
+      return { status: "created", channelId: id };
     }
   },
 });
 
-// Store video analysis data directly in youtubeVideos table
+// Store video analysis data - update or insert, never update captions, track diffs
 export const storeVideoAnalysis = mutation({
   args: {
-    userId: v.string(), // Accept userId for compatibility/auditing
+    userId: v.string(),
     videoId: v.string(),
     analysisData: v.any(),
   },
+  returns: v.object({
+    success: v.boolean(),
+    status: v.string(),
+    videoId: v.id("youtubeVideos")
+  }),
   handler: async (ctx, args) => {
     const { userId, videoId, analysisData } = args;
     const now = Date.now();
-
-    // Always find the video by videoId only (do not filter by userId)
-    const video = await ctx.db
+    // Find existing video
+    const existing = await ctx.db
       .query("youtubeVideos")
-      .withIndex("by_videoId", (q) => q.eq("videoId", videoId))
-      .first();
-
-    if (!video) {
-      // Create a minimal video record if it doesn't exist
-      console.log(`Creating new video record for videoId: ${videoId}, userId: ${userId}`);
-      const videoId_internal = await ctx.db.insert("youtubeVideos", {
+      .withIndex("by_userId", q => q.eq("userId", userId))
+      .collect();
+    const video = existing.find(v => v.videoId === videoId);
+    // Only update analysis/analysisMarkdown, never captions
+    let updateFields = {};
+    if (analysisData && typeof analysisData === 'object' && analysisData.markdown) {
+      updateFields = { analysisMarkdown: analysisData.markdown };
+    } else {
+      updateFields = { analysis: analysisData };
+    }
+    if (video) {
+      // Calculate diff for analysis fields only
+      const diff = calculateDiff(video, updateFields);
+      if (!diff) {
+        return { success: true, status: "skipped_no_change", videoId: video._id };
+      }
+      const newDiff = {
+        changedAt: now,
+        changedFields: diff.changedFields,
+        previous: diff.previous,
+        current: diff.current,
+        changeType: "analysis"
+      };
+      const diffs = Array.isArray(video.diffs) ? [...video.diffs, newDiff] : [newDiff];
+      await ctx.db.patch(video._id, {
+        ...updateFields,
+        updatedAt: now,
+        diffs
+      });
+      return { success: true, status: "updated", videoId: video._id };
+    } else {
+      // Insert new doc, initialize diffs as []
+      const videoDoc: any = {
         userId,
         id: videoId,
         videoId,
         createdAt: now,
         updatedAt: now,
-        // Add minimal required fields
         snippet: {
           title: "YouTube Video",
           description: "",
@@ -175,57 +283,102 @@ export const storeVideoAnalysis = mutation({
           views: 0,
           likes: 0,
           comments: 0
-        }
-      });
-
-      // Now store the analysis on the newly created record
-      const updateData: any = { updatedAt: now };
-
-      if (analysisData && typeof analysisData === 'object' && analysisData.markdown) {
-        // New format: { markdown: "...", timestamp: ... }
-        updateData.analysisMarkdown = analysisData.markdown;
-        console.log(`Storing markdown analysis for new video ${videoId}`);
-      } else {
-        // Legacy format: Store as JSON analysis
-        updateData.analysis = analysisData;
-        console.log(`Storing JSON analysis for new video ${videoId}`);
-      }
-
-      await ctx.db.patch(videoId_internal, updateData);
-
+        },
+        ...updateFields,
+        diffs: []
+      };
+      const videoId_internal = await ctx.db.insert("youtubeVideos", videoDoc);
       return { success: true, status: "created", videoId: videoId_internal };
-    } else {
-      // Update existing video with analysis
-      const updateData: any = { updatedAt: now };
+    }
+  },
+});
 
-      if (analysisData && typeof analysisData === 'object' && analysisData.markdown) {
-        // New format: { markdown: "...", timestamp: ... }
-        updateData.analysisMarkdown = analysisData.markdown;
-        // Keep existing JSON analysis if present, don't overwrite it
-        console.log(`Storing markdown analysis for video ${videoId}`);
-      } else {
-        // Legacy format: Store as JSON analysis
-        updateData.analysis = analysisData;
-        console.log(`Storing JSON analysis for video ${videoId}`);
+// Store channel analysis data - update or insert, track diffs
+export const storeChannelAnalysis = mutation({
+  args: {
+    userId: v.string(),
+    channelId: v.string(),
+    analysisData: v.any(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    status: v.string(),
+    channelId: v.id("youtubeChannels"),
+    timestamp: v.number()
+  }),
+  handler: async (ctx, args) => {
+    const { userId, channelId, analysisData } = args;
+    const now = Date.now();
+    // Find existing channel
+    const existing = await ctx.db
+      .query("youtubeChannels")
+      .withIndex("by_userId", q => q.eq("userId", userId))
+      .collect();
+    const channel = existing.find(c => c.id === channelId);
+    const updateFields = { analysis: analysisData };
+    if (channel) {
+      const diff = calculateDiff(channel, updateFields);
+      if (!diff) {
+        return { success: true, status: "skipped_no_change", channelId: channel._id, timestamp: now };
       }
-
-      await ctx.db.patch(video._id, updateData);
-
-      // Optionally, you can log or audit userId here if needed
-      return { success: true, status: "updated", videoId: video._id };
+      const newDiff = {
+        changedAt: now,
+        changedFields: diff.changedFields,
+        previous: diff.previous,
+        current: diff.current,
+        changeType: "analysis"
+      };
+      const diffs = Array.isArray(channel.diffs) ? [...channel.diffs, newDiff] : [newDiff];
+      await ctx.db.patch(channel._id, {
+        ...updateFields,
+        updatedAt: now,
+        diffs
+      });
+      return { success: true, status: "updated", channelId: channel._id, timestamp: now };
+    } else {
+      const channelDoc = {
+        userId,
+        id: channelId,
+        snippet: {
+          title: "YouTube Channel",
+          description: "",
+          customUrl: "",
+          thumbnails: {}
+        },
+        statistics: {
+          viewCount: "0",
+          subscriberCount: "0",
+          hiddenSubscriberCount: false,
+          videoCount: "0"
+        },
+        analysis: analysisData,
+        createdAt: now,
+        updatedAt: now,
+        diffs: []
+      };
+      const id = await ctx.db.insert("youtubeChannels", channelDoc);
+      return { success: true, status: "created", channelId: id, timestamp: now };
     }
   },
 });
 
 // Store full YouTube profile data in appropriate tables
-import { api } from "./_generated/api";
-
 export const storeYoutubeFullProfile = mutation({
   args: {
     userId: v.string(),
     channel: v.any(),
     videos: v.array(v.any()),
   },
+  returns: v.object({
+    channelId: v.string(),
+    videoResults: v.object({
+      processed: v.number(),
+      inserted: v.number(),
+      updated: v.number(),
+      skipped: v.number(),
+    }),
+    status: v.string(),
+  }),
   handler: async (ctx, args) => {
     const { userId, channel, videos } = args;
     const timestamp = Date.now();
@@ -234,7 +387,7 @@ export const storeYoutubeFullProfile = mutation({
       if (!channel || !channel.id) {
         throw new Error("Invalid channel data: missing required channel ID");
       }
-      // Save channel using saveChannelData
+      // Save channel using saveChannelData (will update or insert)
       await ctx.runMutation(api.youtubeMutations.saveChannelData, {
         userId,
         channelId: channel.id,
@@ -246,7 +399,7 @@ export const storeYoutubeFullProfile = mutation({
         updatedAt: timestamp,
       });
 
-      // Save each video using storeVideoData
+      // Save each video using storeVideoData (will update or insert)
       const results = {
         processed: 0,
         inserted: 0,
@@ -269,6 +422,8 @@ export const storeYoutubeFullProfile = mutation({
           results.inserted++;
         } else if (resp.status === "updated") {
           results.updated++;
+        } else {
+          results.skipped++;
         }
       }
       return {
@@ -281,47 +436,110 @@ export const storeYoutubeFullProfile = mutation({
       throw new Error(`Failed to store YouTube profile: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
-
 });
 
-// Store channel analysis data
-export const storeChannelAnalysis = mutation({
+// Update YouTube token
+export const update_youtube_token = mutation({
+  args: {
+    userId: v.string(),
+    accessToken: v.string(),
+    refreshToken: v.string(),
+    expiresAt: v.number(),
+    tokenType: v.string(),
+    scope: v.array(v.string())
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+          // Always insert new token entry - never overwrite
+      await ctx.db.insert("youtubeTokens", {
+        userId: args.userId,
+        accessToken: args.accessToken,
+        refreshToken: args.refreshToken,
+        expiryDate: args.expiresAt,
+        scope: args.scope.join(" "),
+        lastRefreshed: Date.now(),
+      });
+    return null;
+  },
+});
+
+// Store YouTube batch analysis insights - always insert new entries
+export const storeYoutubeBatchAnalysis = mutation({
   args: {
     userId: v.string(),
     channelId: v.string(),
-    analysisData: v.any(),
+    insights: v.any(),
   },
+  returns: v.object({
+    status: v.string(),
+    analysisId: v.id("youtubeBatchAnalysis")
+  }),
   handler: async (ctx, args) => {
-    const { userId, channelId, analysisData } = args;
+    const { userId, channelId, insights } = args;
     const now = Date.now();
 
     try {
-      // Find the channel by channelId
-      const channel = await ctx.db
-        .query("youtubeChannels")
-        .withIndex("by_channelId", (q) => q.eq("id", channelId))
-        .filter((q) => q.eq(q.field("userId"), userId))
-        .first();
-
-      if (!channel) {
-        throw new Error(`No channel found with channelId: ${channelId}`);
-      }
-
-      // Update the channel with the new analysis
-      await ctx.db.patch(channel._id, {
-        analysis: analysisData,
-        updatedAt: now,
-      });
-
-      return { 
-        success: true, 
-        status: "updated", 
-        channelId: channel._id,
-        timestamp: now 
-      };
+              // Always insert new batch analysis entry
+        const id = await ctx.db.insert("youtubeBatchAnalysis", {
+          userId,
+          channelId,
+          insights,
+          analysisType: "batch",
+          createdAt: now,
+          updatedAt: now,
+        });
+      return { status: "created", analysisId: id };
     } catch (error) {
-      console.error(`Error storing channel analysis for ${channelId}:`, error);
-      throw new Error(`Failed to store channel analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error(`Error storing YouTube batch analysis for user ${userId}:`, error);
+      throw new Error(`Failed to store YouTube batch analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Update YouTube batch analysis status for the async task system - always insert new entries
+export const updateYoutubeBatchAnalysisStatus = mutation({
+  args: {
+    userId: v.string(),
+    channelId: v.string(),
+    statusUpdate: v.object({
+      status: v.string(),
+      task_id: v.string(),
+      started_at: v.optional(v.string()),
+      completed_at: v.optional(v.string()),
+      progress: v.optional(v.number()),
+      error: v.optional(v.string()),
+    }),
+    insights: v.optional(v.any()),
+  },
+  returns: v.object({
+    status: v.string(),
+    analysisId: v.id("youtubeBatchAnalysis")
+  }),
+  handler: async (ctx, args) => {
+    const { userId, channelId, statusUpdate, insights } = args;
+    const now = Date.now();
+
+    try {
+              // Always insert new batch analysis with status
+        const insertData: any = {
+          userId,
+          channelId,
+          status: statusUpdate,
+          analysisType: "batch",
+          createdAt: now,
+          updatedAt: now,
+        };
+      
+      // Add insights if provided
+      if (insights !== null && insights !== undefined) {
+        insertData.insights = insights;
+      }
+      
+      const id = await ctx.db.insert("youtubeBatchAnalysis", insertData);
+      return { status: "created", analysisId: id };
+    } catch (error) {
+      console.error(`Error updating YouTube batch analysis status for user ${userId}:`, error);
+      throw new Error(`Failed to update YouTube batch analysis status: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
 });
@@ -329,6 +547,13 @@ export const storeChannelAnalysis = mutation({
 // Clean up YouTube data when disconnecting
 export const disconnectYouTube = mutation({
   args: { userId: v.string() },
+  returns: v.object({
+    success: v.boolean(),
+    results: v.object({
+      dataDeleted: v.number(),
+      tokensDeleted: v.number()
+    })
+  }),
   handler: async (ctx, args) => {
     const { userId } = args;
     
@@ -382,122 +607,6 @@ export const disconnectYouTube = mutation({
     } catch (error) {
       console.error('Error disconnecting YouTube:', error);
       throw new Error(`Failed to disconnect YouTube: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  },
-});
-
-// Store YouTube batch analysis insights
-export const storeYoutubeBatchAnalysis = mutation({
-  args: {
-    userId: v.string(),
-    channelId: v.string(),
-    insights: v.any(),
-  },
-  handler: async (ctx, args) => {
-    const { userId, channelId, insights } = args;
-    const now = Date.now();
-
-    try {
-      // Check if batch analysis already exists
-      const existingAnalysis = await ctx.db
-        .query("youtubeBatchAnalysis")
-        .withIndex("by_user_channel", q => 
-          q.eq("userId", userId)
-           .eq("channelId", channelId)
-        )
-        .first();
-
-      if (existingAnalysis) {
-        // Update existing batch analysis
-        await ctx.db.patch(existingAnalysis._id, {
-          insights,
-          updatedAt: now,
-        });
-        return { status: "updated", analysisId: existingAnalysis._id };
-      } else {
-        // Insert new batch analysis
-        const id = await ctx.db.insert("youtubeBatchAnalysis", {
-          userId,
-          channelId,
-          insights,
-          analysisType: "batch",
-          createdAt: now,
-          updatedAt: now,
-        });
-        return { status: "created", analysisId: id };
-      }
-    } catch (error) {
-      console.error(`Error storing YouTube batch analysis for user ${userId}:`, error);
-      throw new Error(`Failed to store YouTube batch analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  },
-});
-
-// Update YouTube batch analysis status for the async task system
-export const updateYoutubeBatchAnalysisStatus = mutation({
-  args: {
-    userId: v.string(),
-    channelId: v.string(),
-    statusUpdate: v.object({
-      status: v.string(),
-      task_id: v.string(),
-      started_at: v.optional(v.string()),
-      completed_at: v.optional(v.string()),
-      progress: v.optional(v.number()),
-      error: v.optional(v.string()),
-    }),
-    insights: v.optional(v.any()),
-  },
-  handler: async (ctx, args) => {
-    const { userId, channelId, statusUpdate, insights } = args;
-    const now = Date.now();
-
-    try {
-      // Check if batch analysis already exists
-      const existingAnalysis = await ctx.db
-        .query("youtubeBatchAnalysis")
-        .withIndex("by_user_channel", q => 
-          q.eq("userId", userId)
-           .eq("channelId", channelId)
-        )
-        .first();
-
-      if (existingAnalysis) {
-        // Update existing batch analysis with status and insights
-        const updateData: any = {
-          status: statusUpdate,
-          updatedAt: now,
-        };
-        
-        // Add insights if provided
-        if (insights !== null && insights !== undefined) {
-          updateData.insights = insights;
-        }
-        
-        await ctx.db.patch(existingAnalysis._id, updateData);
-        return { status: "updated", analysisId: existingAnalysis._id };
-      } else {
-        // Insert new batch analysis with status
-        const insertData: any = {
-          userId,
-          channelId,
-          status: statusUpdate,
-          analysisType: "batch",
-          createdAt: now,
-          updatedAt: now,
-        };
-        
-        // Add insights if provided
-        if (insights !== null && insights !== undefined) {
-          insertData.insights = insights;
-        }
-        
-        const id = await ctx.db.insert("youtubeBatchAnalysis", insertData);
-        return { status: "created", analysisId: id };
-      }
-    } catch (error) {
-      console.error(`Error updating YouTube batch analysis status for user ${userId}:`, error);
-      throw new Error(`Failed to update YouTube batch analysis status: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
 }); 

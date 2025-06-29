@@ -40,11 +40,13 @@ export function useYouTubeAnalytics(userId?: string) {
         // Get video URL
         const videoUrl = video.url || `https://www.youtube.com/watch?v=${videoId}`;
         
-        // Extract metrics from the schema structure
-        const views = Number(video.statistics?.views || 0);
-        const likes = Number(video.statistics?.likes || 0);
-        const dislikes = Number(video.statistics?.dislikes || 0);
-        const comments = Number(video.statistics?.comments || 0);
+        // --- Always use canonical statistics field ---
+        const stats = video.statistics || {};
+        console.log('DEBUG: videoId', videoId, 'canonical statistics', stats, 'raw video:', video);
+        const views = Number(stats.views ?? 0);
+        const likes = Number(stats.likes ?? 0);
+        const dislikes = Number(stats.dislikes ?? 0);
+        const comments = Number(stats.comments ?? 0);
         
         // Get duration from content_details
         const duration = video.content_details?.duration || '';
@@ -59,7 +61,6 @@ export function useYouTubeAnalytics(userId?: string) {
             thumbnailUrl: thumbnailUrl,
             videoUrl: videoUrl,
             channelTitle: channelTitle,
-            channelId: channelId,
             duration: duration,
           },
           metrics: {
