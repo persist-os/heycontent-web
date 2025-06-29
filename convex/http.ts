@@ -2133,5 +2133,22 @@ app.post("/api/instagram/story/insights", async (c) => {
   }
 });
 
+// Debug endpoint to list all Instagram accounts (for troubleshooting)
+app.get("/api/debug/instagram/accounts", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    const accounts = await ctx.runQuery(api.instagramQueries.getAllInstagramAccounts, {});
+    return c.json({ 
+      success: true, 
+      accounts,
+      count: accounts.length
+    });
+  } catch (error) {
+    console.error("Debug endpoint error:", error);
+    return c.json({ success: false, error: "Debug endpoint error" }, 500);
+  }
+});
+
 const router = new HttpRouterWithHono(app);
 export default router;

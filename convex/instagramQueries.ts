@@ -955,3 +955,26 @@ export const getInstagramPostByMediaId = query({
     }
   },
 });
+
+// Get all Instagram accounts (for debugging)
+export const getAllInstagramAccounts = query({
+  args: {},
+  handler: async (ctx, args) => {
+    try {
+      const accounts = await ctx.db
+        .query("instagramAccounts")
+        .collect();
+      
+      return accounts.map(account => ({
+        userId: account.userId,
+        instagramAccountId: account.instagramAccountId,
+        username: account.username,
+        createdAt: account.createdAt,
+        updatedAt: account.updatedAt
+      }));
+    } catch (error) {
+      console.error('Error getting all Instagram accounts:', error);
+      throw new Error(`Failed to get Instagram accounts: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
