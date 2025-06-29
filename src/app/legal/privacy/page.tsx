@@ -4,6 +4,12 @@ import Link from 'next/link'
 export default function Privacy() {
   return (
     <div className="max-w-none">
+      {/* Google API Limited Use Disclosure */}
+      <div className="mb-8 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-md">
+        <p className="text-base text-yellow-800 font-semibold">
+          HeyContent's use and transfer of information received from Google APIs to any other app will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="underline text-yellow-900 hover:text-yellow-700">Google API Services User Data Policy</a>, including the Limited Use requirements.
+        </p>
+      </div>
       {/* Header Navigation */}
       <nav className="mb-12">
         <Link 
