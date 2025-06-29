@@ -45,16 +45,6 @@ export function ImageGalleryModal({ isOpen, noteId, images, onClose }: ImageGall
 
     try {
       const updatedImages = [...images, ...newImages];
-      
-      // DEBUG: Log the exact data structure being sent
-      console.log('🔍 [ImageGalleryModal] DEBUG - Adding images:');
-      console.log('Current images:', images);
-      console.log('New images:', newImages);
-      console.log('Updated images array:', updatedImages);
-      console.log('Sample image structure:', updatedImages[0]);
-      console.log('Note ID:', noteId);
-      console.log('Note ID type:', typeof noteId);
-      
       // Validate each image object structure
       updatedImages.forEach((img, index) => {
         console.log(`Image ${index} validation:`, {
