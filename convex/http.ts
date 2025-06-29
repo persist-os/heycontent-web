@@ -2011,5 +2011,127 @@ app.post("/api/instagram/unified_posts", async (c) => {
   }
 });
 
+// Get Instagram account by Instagram ID (for webhook processing)
+app.get("/api/instagram/account/:instagramAccountId", async (c) => {
+  const ctx = c.env;
+  const instagramAccountId = c.req.param("instagramAccountId");
+  
+  try {
+    const account = await ctx.runQuery(api.instagramQueries.getInstagramAccountByInstagramId, {
+      instagramAccountId
+    });
+    
+    if (!account) {
+      return c.json({ success: false, error: "Instagram account not found" }, 404);
+    }
+    
+    return c.json({ success: true, account });
+  } catch (error) {
+    console.error("Failed to get Instagram account by Instagram ID:", error);
+    return c.json({ success: false, error: "Failed to retrieve Instagram account" }, 500);
+  }
+});
+
+// Get Instagram post by media ID (for webhook processing)
+app.get("/api/instagram/post/media/:mediaId", async (c) => {
+  const ctx = c.env;
+  const mediaId = c.req.param("mediaId");
+  const userId = c.req.query("userId");
+  
+  if (!userId) {
+    return c.json({ success: false, error: "userId query parameter is required" }, 400);
+  }
+  
+  try {
+    const post = await ctx.runQuery(api.instagramQueries.getInstagramPostByMediaId, {
+      userId,
+      mediaId
+    });
+    
+    if (!post || !post.success) {
+      return c.json({ success: false, error: "Post not found" }, 404);
+    }
+    
+    return c.json({ success: true, post: post.post });
+  } catch (error) {
+    console.error("Failed to get Instagram post by media ID:", error);
+    return c.json({ success: false, error: "Failed to retrieve Instagram post" }, 500);
+  }
+});
+
+// Update Instagram post comments (for webhook processing)
+app.post("/api/instagram/post/comments/update", async (c) => {
+  const ctx = c.env;
+  const { userId, mediaId, newComment } = await c.req.json();
+  
+  if (!userId || !mediaId || !newComment) {
+    return c.json({ success: false, error: "Missing required fields: userId, mediaId, newComment" }, 400);
+  }
+  
+  try {
+    const result = await ctx.runMutation(api.instagramMutations.updateInstagramPostComments, {
+      userId,
+      mediaId,
+      newComment
+    });
+    
+    return c.json({ success: true, result });
+  } catch (error) {
+    console.error("Failed to update Instagram post comments:", error);
+    return c.json({ success: false, error: "Failed to update Instagram post comments" }, 500);
+  }
+});
+
+// Store Instagram webhook event
+app.post("/api/instagram/webhook/event", async (c) => {
+  const ctx = c.env;
+  const { userId, instagramAccountId, eventType, eventData, timestamp } = await c.req.json();
+  
+  if (!userId || !instagramAccountId || !eventType || !eventData || !timestamp) {
+    return c.json({ success: false, error: "Missing required fields" }, 400);
+  }
+  
+  try {
+    const result = await ctx.runMutation(api.instagramMutations.storeInstagramWebhookEvent, {
+      userId,
+      instagramAccountId,
+      eventType,
+      eventData,
+      timestamp
+    });
+    
+    return c.json({ success: true, result });
+  } catch (error) {
+    console.error("Failed to store Instagram webhook event:", error);
+    return c.json({ success: false, error: "Failed to store webhook event" }, 500);
+  }
+});
+
+// Store Instagram story insights
+app.post("/api/instagram/story/insights", async (c) => {
+  const ctx = c.env;
+  const { userId, instagramAccountId, mediaId, insights, webhookTimestamp, storyData } = await c.req.json();
+  
+  if (!userId || !instagramAccountId || !mediaId || !insights) {
+    return c.json({ success: false, error: "Missing required fields" }, 400);
+  }
+  
+  try {
+    const result = await ctx.runMutation(api.instagramMutations.storeInstagramStoryInsights, {
+      userId,
+      instagramAccountId,
+      mediaId,
+      insights,
+      webhookTimestamp: webhookTimestamp || Date.now(),
+      ...(storyData && { storyData })
+    });
+    
+    return c.json({ success: true, result });
+  } catch (error) {
+    console.error("Failed to store Instagram story insights:", error);
+    return c.json({ success: false, error: "Failed to store story insights" }, 500);
+  }
+});
+
 const router = new HttpRouterWithHono(app);
 export default router;
