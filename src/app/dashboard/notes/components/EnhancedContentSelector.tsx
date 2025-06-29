@@ -206,7 +206,7 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
   if (hasConvexError) {
     return (
       <div 
-        className="fixed z-[9999] w-96 bg-background border border-border rounded-lg shadow-lg backdrop-blur-sm"
+        className="fixed z-[9999] w-80 sm:w-96 md:w-[32rem] lg:w-[40rem] xl:w-[48rem] bg-background border border-border rounded-lg shadow-lg backdrop-blur-sm"
         style={{
           top: `${position.top}px`,
           left: `${position.left}px`,
@@ -306,7 +306,7 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
 
   return (
     <div 
-      className="fixed z-[9999] w-96 bg-background border border-border rounded-lg shadow-lg backdrop-blur-sm"
+      className="fixed z-[9999] w-80 sm:w-96 md:w-[32rem] lg:w-[40rem] xl:w-[48rem] bg-background border border-border rounded-lg shadow-lg backdrop-blur-sm"
       style={{
         top: `${position.top}px`,
         left: `${position.left}px`,
@@ -340,7 +340,7 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
 
       {/* Platform Filter */}
       <div className="p-3 border-b border-border">
-        <div className="flex gap-1">
+        <div className="grid grid-cols-4 gap-1">
           {[
             { key: 'all', label: 'All', icon: <FileText className="w-3 h-3" /> },
             { key: 'smart-notes', label: 'Notes', icon: <FileText className="w-3 h-3" /> },
@@ -351,7 +351,7 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
               key={key}
               onClick={() => setSelectedPlatform(key as any)}
               className={cn(
-                "flex items-center gap-1 px-2 py-1 text-xs rounded-md transition-colors",
+                "flex items-center justify-center gap-1 px-2 py-1 text-xs rounded-md transition-colors",
                 selectedPlatform === key
                   ? "bg-primary text-primary-foreground"
                   : "hover:bg-muted"

@@ -146,19 +146,12 @@ export default function YouTubeAnalysisPage() {
               <div className="flex items-center gap-3">
                 <Youtube className="w-8 h-8 text-red-500" />
                 <div>
-                  <h1 className="text-2xl font-bold">YouTube Video Analysis</h1>
-                  <p className="text-muted-foreground">{videoData.snippet?.title || 'YouTube Video'}</p>
+                  <h1 className="text-2xl font-bold">{videoData.snippet?.title || 'YouTube Video'}</h1>
+                  <p className="text-muted-foreground">YouTube Video Analysis</p>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                onClick={() => window.open(videoData.url || `https://www.youtube.com/watch?v=${videoId}`, '_blank')}
-                className="bg-red-600 hover:bg-red-700"
-              >
-                <Play className="w-4 h-4 mr-2" />
-                Watch on YouTube
-              </Button>
               <Button variant="outline">
                 <ExternalLink className="w-4 h-4 mr-2" />
                 Share
@@ -207,7 +200,6 @@ export default function YouTubeAnalysisPage() {
                 </div>
                 
                 <div className="p-4 space-y-2">
-                  <h3 className="font-semibold text-lg">{videoData.snippet?.title || 'YouTube Video'}</h3>
                   <p className="text-sm text-muted-foreground line-clamp-3">{videoData.snippet?.description || ''}</p>
 
                   {videoData.snippet?.tags && videoData.snippet.tags.length > 0 && (
