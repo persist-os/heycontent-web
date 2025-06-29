@@ -34,6 +34,17 @@ export default function Privacy() {
         <p className="mt-4 text-base text-gray-700">
           This Privacy Policy describes how Divertissement AI, Inc. ("we", "us", or "our") collects, uses, and discloses your information when you use HeyContent. It also explains your privacy rights and how the law protects you. By using HeyContent, you agree to the collection and use of information in accordance with this Privacy Policy.
         </p>
+        {/* Explicit clarity for Chrome Web Store compliance */}
+        <section className="mt-8 space-y-4">
+          <h2 className="text-2xl font-semibold text-gray-900">No Sale or Unrelated Transfer of Data</h2>
+          <p className="text-base text-gray-700">
+            We do <strong>not</strong> sell, rent, or transfer your personal data to third parties for advertising, marketing, or any unrelated purposes. All data is used solely to provide HeyContent's features and services to you, and to match you with brand deals or collaborations only with your explicit consent and request.
+          </p>
+          <h2 className="text-2xl font-semibold text-gray-900">No Ads or Ad Targeting</h2>
+          <p className="text-base text-gray-700">
+            We do <strong>not</strong> serve ads on our platform, nor do we use your data for ad targeting or monetization. Your data is never used for advertising purposes.
+          </p>
+        </section>
       </header>
 
       <article className="space-y-12 text-gray-800 leading-relaxed">
