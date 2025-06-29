@@ -73,5 +73,39 @@ export function useYouTubeRefresh() {
     }
   }, []);
 
-  return { refresh, loading, error, success };
+  // New: refreshAll for all videos
+  const refreshAll = useCallback(async (userId: string) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
+    try {
+      const apiKey = await getApiKey();
+      if (!apiKey) {
+        setError('You are not authenticated. Please log in again.');
+        setLoading(false);
+        return;
+      }
+      const res = await fetch('/api/social/youtube/refresh', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ refreshAll: true, userId }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.error || 'Failed to refresh all YouTube videos.');
+      } else {
+        setSuccess(true);
+        setTimeout(() => setSuccess(false), 3000);
+      }
+    } catch (e: any) {
+      setError(e.message || 'Network error occurred');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { refresh, refreshAll, loading, error, success };
 } 
