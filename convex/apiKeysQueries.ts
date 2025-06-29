@@ -82,7 +82,7 @@ export const getUserKeys = query({
       scopes: key.scopes || [],
       rate_tier: key.rate_tier || "default",
       status: key.status || "active",
-      clientType: key.clientType,
+      clientType: key.clientType || 'web',
     }));
 
     return formattedKeys;
