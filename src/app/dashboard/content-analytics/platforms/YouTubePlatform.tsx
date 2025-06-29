@@ -41,8 +41,10 @@ export function YouTubePlatform({
     userId ? { userId } : 'skip'
   );
 
-  // Log the query result and userId for debugging
-  console.log('[YouTubePlatform] userId:', userId, 'videoData:', videoData);
+  // Log the query result and userId for debugging in non-production environments
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[YouTubePlatform] userId:', userId, 'videoData:', videoData);
+  }
 
   // Sort items by date
   const displayItems = videoData ? sortContent(videoData, 'date') : [];
