@@ -234,7 +234,7 @@ app.post("/api/users/:id/save_insights", async (c) => {
 // Insert API key
 app.post("/api/api-keys", async (c) => {
   const ctx = c.env;
-  const { user_id, key_hash, scopes, rate_tier } = await c.req.json();
+  const { user_id, key_hash, scopes, rate_tier, clientType } = await c.req.json();
   if (!user_id || !key_hash) {
     return c.json({ error: "Missing user_id or key_hash" }, 400);
   }
@@ -244,6 +244,7 @@ app.post("/api/api-keys", async (c) => {
       key_hash,
       scopes,
       rate_tier,
+      clientType: clientType || "web", // Default to "web" if not specified
     });
     return c.json({ success: true }, 201); // 201 Created status
   } catch (error) {
@@ -448,6 +449,23 @@ app.delete("/api/notes/:noteId", async (c) => {
         return c.json({ success: false, error: "Failed to delete note", details: error.data }, 500);
     }
     return c.json({ success: false, error: "Failed to delete note", message: error.message || "Internal Server Error" }, 500);
+  }
+});
+
+app.post("/api/notes", async (c) => {
+  const ctx = c.env;
+  const { userId, ...noteData } = await c.req.json();
+  if (!userId) {
+    return c.json({ error: "Missing userId" }, 400);
+  }
+  try {
+    const newNote = await ctx.runMutation(api.notes.updateNote, {
+      userId,
+      updates: noteData,
+    });
+    return c.json({ success: true, note: newNote });
+  } catch (error) {
+    return c.json({ success: false, error: "Failed to create note" }, 500);
   }
 });
 

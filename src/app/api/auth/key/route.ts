@@ -5,8 +5,8 @@ import { proxyApiKeyRequest } from '../utils/apiKeyProxy';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { idToken, userId } = body;
-    const result = await proxyApiKeyRequest({ idToken, userId });
+    const { idToken, userId, clientType } = body;
+    const result = await proxyApiKeyRequest({ idToken, userId, clientType });
     if (result && result.status && result.status !== 200) {
       return NextResponse.json(result, { status: result.status });
     }
