@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { YouTubeBrandIcon } from '@/lib/YoutubeBrandIcon'
+import { useYouTubeRefresh } from '@/app/hooks/useYouTubeRefresh'
 import { toast } from 'react-hot-toast'
 
 // Analytics components and hooks
@@ -79,7 +80,7 @@ export function ContentHubScreen() {
   const [currentQuote, setCurrentQuote] = useState<string>('')
   const [expandedInsight, setExpandedInsight] = useState<string | null>(null);
   const [expandHubInsight, setExpandHubInsight] = useState(false);
-  const [refreshingYouTube, setRefreshingYouTube] = useState(false);
+  const { refreshAll: refreshAllYouTube, loading: refreshingYouTube, error: refreshYouTubeError, success: refreshYouTubeSuccess } = useYouTubeRefresh();
   
   const { firebaseUser, authLoading } = useAuth()
   const userId = firebaseUser?.uid
@@ -468,25 +469,21 @@ export function ContentHubScreen() {
   // Handler for Refresh All YouTube
   const handleRefreshAllYouTube = async () => {
     if (!userId) return;
-    setRefreshingYouTube(true);
-    try {
-      const response = await fetch('/api/social/youtube/refresh', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshAll: true, userId }),
-      });
-      const data = await response.json();
-      if (response.ok && data.success) {
-        toast.success('YouTube refresh started!');
-      } else {
-        toast.error(data.error || 'Failed to start YouTube refresh');
-      }
-    } catch (error) {
-      toast.error('Error refreshing YouTube');
-    } finally {
-      setRefreshingYouTube(false);
-    }
+    await refreshAllYouTube(userId);
   };
+
+  // Show toast for refresh success/error
+  useEffect(() => {
+    if (refreshYouTubeSuccess) {
+      toast.success('YouTube refresh started! Navigate freely while we process your data');
+    }
+  }, [refreshYouTubeSuccess]);
+
+  useEffect(() => {
+    if (refreshYouTubeError) {
+      toast.error(refreshYouTubeError);
+    }
+  }, [refreshYouTubeError]);
 
   return (
     <div className="relative bg-background">
