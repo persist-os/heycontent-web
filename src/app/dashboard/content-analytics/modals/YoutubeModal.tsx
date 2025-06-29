@@ -305,7 +305,24 @@ export const YoutubeModal: React.FC<YoutubeModalProps> = ({
           <div>
             <h3 className="text-base font-medium mb-4 text-black dark:text-white">Performance Metrics</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {getMetricsDisplay(selectedContent)}
+              <div>
+                <p className="text-sm text-text-gray dark:text-gray-400">Views</p>
+                <p className="font-medium dark:text-white">
+                  {(selectedContent.metrics.views ?? 0).toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-text-gray dark:text-gray-400">Likes</p>
+                <p className="font-medium dark:text-white">
+                  {(selectedContent.metrics.likes ?? 0).toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-text-gray dark:text-gray-400">Comments</p>
+                <p className="font-medium dark:text-white">
+                  {(selectedContent.metrics.comments ?? 0).toLocaleString()}
+                </p>
+              </div>
             </div>
           </div>
 

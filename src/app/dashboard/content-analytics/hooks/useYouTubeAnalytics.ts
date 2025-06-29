@@ -68,8 +68,6 @@ export function useYouTubeAnalytics(userId?: string) {
             likes: likes,
             dislikes: dislikes,
             comments: comments,
-            watchTimeMinutes: 0, // Not available in standard YouTube API data
-            averageViewDurationSeconds: 0, // Not available in standard YouTube API data
           },
           analysis: video.analysis || null,
           analysisMarkdown: video.analysisMarkdown || null,
