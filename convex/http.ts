@@ -2150,5 +2150,27 @@ app.get("/api/debug/instagram/accounts", async (c) => {
   }
 });
 
+// Append comment to Instagram post (for webhook processing)
+app.post("/api/instagram/post/comments/append", async (c) => {
+  const ctx = c.env;
+  const { mediaId, newComment } = await c.req.json();
+  
+  if (!mediaId || !newComment) {
+    return c.json({ success: false, error: "Missing required fields: mediaId, newComment" }, 400);
+  }
+  
+  try {
+    const result = await ctx.runMutation(api.instagramMutations.appendCommentToInstagramPost, {
+      mediaId,
+      newComment
+    });
+    
+    return c.json({ success: true, ...result });
+  } catch (error) {
+    console.error("Failed to append comment to Instagram post:", error);
+    return c.json({ success: false, error: "Failed to append comment to Instagram post" }, 500);
+  }
+});
+
 const router = new HttpRouterWithHono(app);
 export default router;

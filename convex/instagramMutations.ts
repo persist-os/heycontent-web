@@ -838,3 +838,86 @@ export const updateInstagramPostComments = mutation({
     }
   },
 });
+
+// Append comment to Instagram post using only media ID (for webhook processing)
+export const appendCommentToInstagramPost = mutation({
+  args: {
+    mediaId: v.string(),
+    newComment: v.object({
+      id: v.string(),
+      text: v.string(),
+      timestamp: v.number(),
+      username: v.string(),
+      from_user_id: v.optional(v.string()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const { mediaId, newComment } = args;
+    const now = Date.now();
+
+    try {
+      console.log(`[appendCommentToInstagramPost] Looking for post with media_id: ${mediaId}`);
+      
+      // Find the post by media ID (data.id field)
+      const post = await ctx.db
+        .query("instagramPosts")
+        .filter(q => q.eq(q.field("data.id"), mediaId))
+        .first();
+
+      if (!post) {
+        console.log(`[appendCommentToInstagramPost] Post not found for media_id: ${mediaId}`);
+        return { success: false, error: "Post not found" };
+      }
+
+      console.log(`[appendCommentToInstagramPost] Found post: ${post.postId} for user: ${post.userId}`);
+
+      // Get current comments or initialize empty array
+      const currentComments = post.data?.comments || [];
+      
+      // Check if comment already exists (avoid duplicates)
+      const commentExists = currentComments.some((comment: any) => comment.id === newComment.id);
+      if (commentExists) {
+        console.log(`[appendCommentToInstagramPost] Comment ${newComment.id} already exists for post ${mediaId}`);
+        return { 
+          success: true, 
+          status: "duplicate", 
+          postId: post._id,
+          commentId: newComment.id 
+        };
+      }
+
+      // Add the new comment
+      const updatedComments = [...currentComments, {
+        id: newComment.id,
+        text: newComment.text,
+        timestamp: newComment.timestamp,
+        username: newComment.username,
+        like_count: 0, // Will be updated when we fetch full comment data
+        replies: [] // Will be populated if there are replies
+      }];
+
+      // Update the post data
+      const updatedData = {
+        ...post.data,
+        comments: updatedComments,
+        comments_count: (post.data?.comments_count || 0) + 1
+      };
+
+      await ctx.db.patch(post._id, {
+        data: updatedData,
+        updatedAt: now,
+      });
+
+      console.log(`[appendCommentToInstagramPost] Added new comment to post ${mediaId} from @${newComment.username}`);
+      return { 
+        success: true, 
+        status: "updated", 
+        postId: post._id, 
+        commentId: newComment.id 
+      };
+    } catch (error) {
+      console.error(`[appendCommentToInstagramPost] Error updating post comments: ${error}`);
+      throw new Error(`Failed to update post comments: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
