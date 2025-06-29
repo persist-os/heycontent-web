@@ -6,7 +6,7 @@ import { BatchAnalysisHookReturn, InsightCard } from '@/types/batch-analysis';
 
 export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
   const [error, setError] = useState<string | null>(null);
-  const [postLimit, setPostLimit] = useState<number | 'all'>(50);
+  const [postLimit, setPostLimit] = useState<number | 'all'>(5);
   const [customPostLimit, setCustomPostLimit] = useState<string>('');
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -156,7 +156,7 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
         body: JSON.stringify({
           user_id: userId,
           instagram_account_id: instagramAccount.instagramAccountId,
-          max_posts: postLimit === 'all' ? 1000 : postLimit,
+          max_posts: typeof postLimit === 'number' ? Math.min(postLimit, 20) : 5, // Enforce hard limit of 20
           include_stories: true,
           include_comments: true,
           force_refresh: false // Don't force refresh to avoid unnecessary API calls
@@ -218,7 +218,8 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
 
   const handleCustomSubmit = useCallback(() => {
     const limit = parseInt(customPostLimit, 10);
-    if (!isNaN(limit) && limit > 0) {
+    // Enforce hard limit of 20 posts
+    if (!isNaN(limit) && limit > 0 && limit <= 20) {
       setPostLimit(limit);
       setShowCustomInput(false);
     }

@@ -615,3 +615,252 @@ export const updateInstagramBatchAnalysisStatus = mutation({
     }
   },
 });
+
+// Store Instagram webhook events
+export const storeInstagramWebhookEvent = mutation({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+    eventType: v.string(),
+    eventData: v.any(),
+    timestamp: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const { userId, instagramAccountId, eventType, eventData, timestamp } = args;
+    const now = Date.now();
+
+    try {
+      const id = await ctx.db.insert("instagramWebhookEvents", {
+        userId,
+        instagramAccountId,
+        eventType,
+        eventData,
+        timestamp,
+        processed: false,
+        createdAt: now,
+        updatedAt: now,
+      });
+      
+      console.log(`Stored Instagram webhook event: ${eventType} for user ${userId}`);
+      return { success: true, eventId: id };
+    } catch (error) {
+      console.error(`Error storing Instagram webhook event: ${error}`);
+      throw new Error(`Failed to store webhook event: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Mark webhook event as processed
+export const markWebhookEventProcessed = mutation({
+  args: {
+    eventId: v.id("instagramWebhookEvents"),
+  },
+  handler: async (ctx, args) => {
+    try {
+      await ctx.db.patch(args.eventId, {
+        processed: true,
+        processedAt: Date.now(),
+      });
+      return { success: true };
+    } catch (error) {
+      console.error(`Error marking webhook event as processed: ${error}`);
+      throw new Error(`Failed to mark event as processed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Store webhook subscription status
+export const storeWebhookSubscription = mutation({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+    subscribedFields: v.array(v.string()),
+    subscriptionStatus: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { userId, instagramAccountId, subscribedFields, subscriptionStatus } = args;
+    const now = Date.now();
+
+    try {
+      // Check if subscription record already exists
+      const existingSubscription = await ctx.db
+        .query("instagramWebhookSubscriptions")
+        .withIndex("by_user_account", q => 
+          q.eq("userId", userId)
+           .eq("instagramAccountId", instagramAccountId)
+        )
+        .first();
+
+      if (existingSubscription) {
+        await ctx.db.patch(existingSubscription._id, {
+          subscribedFields,
+          subscriptionStatus,
+          updatedAt: now,
+        });
+        return { success: true, subscriptionId: existingSubscription._id, status: "updated" };
+      } else {
+        const id = await ctx.db.insert("instagramWebhookSubscriptions", {
+          userId,
+          instagramAccountId,
+          subscribedFields,
+          subscriptionStatus,
+          createdAt: now,
+          updatedAt: now,
+        });
+        return { success: true, subscriptionId: id, status: "created" };
+      }
+    } catch (error) {
+      console.error(`Error storing webhook subscription: ${error}`);
+      throw new Error(`Failed to store webhook subscription: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Store Instagram story insights
+export const storeInstagramStoryInsights = mutation({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+    mediaId: v.string(),
+    insights: v.any(),
+    webhookTimestamp: v.number(),
+    storyData: v.optional(v.any()),
+  },
+  handler: async (ctx, args) => {
+    const { userId, instagramAccountId, mediaId, insights, webhookTimestamp, storyData } = args;
+    const now = Date.now();
+
+    try {
+      // Check if insights already exist for this story
+      const existingInsights = await ctx.db
+        .query("instagramStoryInsights")
+        .withIndex("by_mediaId", q => q.eq("mediaId", mediaId))
+        .filter(q => q.eq(q.field("userId"), userId))
+        .first();
+
+      if (existingInsights) {
+        // Update existing insights
+        await ctx.db.patch(existingInsights._id, {
+          insights,
+          webhookTimestamp,
+          ...(storyData && { storyData }),
+          updatedAt: now,
+        });
+        return { success: true, insightsId: existingInsights._id, status: "updated" };
+      } else {
+        // Create new insights record
+        const id = await ctx.db.insert("instagramStoryInsights", {
+          userId,
+          instagramAccountId,
+          mediaId,
+          insights,
+          webhookTimestamp,
+          ...(storyData && { storyData }),
+          createdAt: now,
+          updatedAt: now,
+        });
+        return { success: true, insightsId: id, status: "created" };
+      }
+    } catch (error) {
+      console.error(`Error storing story insights: ${error}`);
+      throw new Error(`Failed to store story insights: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Update Instagram post with new comment from webhook
+export const updateInstagramPostComments = mutation({
+  args: {
+    userId: v.string(),
+    mediaId: v.string(),
+    newComment: v.object({
+      id: v.string(),
+      text: v.string(),
+      timestamp: v.number(),
+      username: v.string(),
+      from_user_id: v.optional(v.string()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const { userId, mediaId, newComment } = args;
+    const now = Date.now();
+
+    try {
+      // Find the post by media ID
+      const post = await ctx.db
+        .query("instagramPosts")
+        .withIndex("by_userId", q => q.eq("userId", userId))
+        .filter(q => q.eq(q.field("data.id"), mediaId))
+        .first();
+
+      if (!post) {
+        console.log(`Post not found for media_id ${mediaId}, user ${userId}`);
+        return { success: false, error: "Post not found" };
+      }
+
+      // Get current comments or initialize empty array
+      const currentComments = post.data?.comments || [];
+      
+      // Check if comment already exists (avoid duplicates)
+      const commentExists = currentComments.some((comment: any) => comment.id === newComment.id);
+      if (commentExists) {
+        console.log(`Comment ${newComment.id} already exists for post ${mediaId}`);
+        return { success: true, status: "duplicate", postId: post._id };
+      }
+
+      // Add the new comment
+      const updatedComments = [...currentComments, {
+        id: newComment.id,
+        text: newComment.text,
+        timestamp: newComment.timestamp,
+        username: newComment.username,
+        like_count: 0, // Will be updated when we fetch full comment data
+        replies: [] // Will be populated if there are replies
+      }];
+
+      // Update the post data
+      const updatedData = {
+        ...post.data,
+        comments: updatedComments,
+        comments_count: (post.data?.comments_count || 0) + 1
+      };
+
+      await ctx.db.patch(post._id, {
+        data: updatedData,
+        updatedAt: now,
+      });
+
+      console.log(`Added new comment to post ${mediaId} from @${newComment.username}`);
+      return { success: true, status: "updated", postId: post._id, commentId: newComment.id };
+    } catch (error) {
+      console.error(`Error updating post comments: ${error}`);
+      throw new Error(`Failed to update post comments: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Get Instagram post by media ID
+export const getInstagramPostByMediaId = mutation({
+  args: {
+    userId: v.string(),
+    mediaId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const post = await ctx.db
+        .query("instagramPosts")
+        .withIndex("by_userId", q => q.eq("userId", args.userId))
+        .filter(q => q.eq(q.field("data.id"), args.mediaId))
+        .first();
+
+      if (post) {
+        return { success: true, post };
+      } else {
+        return { success: false, error: "Post not found" };
+      }
+    } catch (error) {
+      console.error(`Error getting post by media ID: ${error}`);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  },
+});

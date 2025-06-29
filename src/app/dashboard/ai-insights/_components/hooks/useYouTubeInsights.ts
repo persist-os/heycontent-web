@@ -6,7 +6,7 @@ import { BatchAnalysisHookReturn, BatchAnalysisData, InsightCard } from '@/types
 
 export function useYouTubeInsights(userId?: string): BatchAnalysisHookReturn {
   const [error, setError] = useState<string | null>(null);
-  const [postLimit, setPostLimit] = useState<number | 'all'>(10);
+  const [postLimit, setPostLimit] = useState<number | 'all'>(5);
   const [customPostLimit, setCustomPostLimit] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -156,7 +156,7 @@ export function useYouTubeInsights(userId?: string): BatchAnalysisHookReturn {
         body: JSON.stringify({
           user_id: userId,
           channel_id: youtubeChannel.id,
-          max_videos: postLimit === 'all' ? 1000 : postLimit,
+          max_videos: typeof postLimit === 'number' ? Math.min(postLimit, 20) : 5, // Enforce hard limit of 20
           include_captions: true,
           include_comments: true,
           force_refresh: false // Changed to false to match other platforms and avoid unnecessary API calls
@@ -195,7 +195,8 @@ export function useYouTubeInsights(userId?: string): BatchAnalysisHookReturn {
 
   const handleCustomSubmit = useCallback(() => {
     const limit = parseInt(customPostLimit, 10);
-    if (!isNaN(limit) && limit > 0) {
+    // Enforce hard limit of 20 posts
+    if (!isNaN(limit) && limit > 0 && limit <= 20) {
       setPostLimit(limit);
       setShowCustomInput(false);
     }

@@ -714,4 +714,66 @@ export default defineSchema({
     dimensions: 768, // text-embedding-004 dimension
     filterFields: ["userId", "contentType"],
   }),
+
+  // Instagram Webhook Events
+  instagramWebhookEvents: defineTable({
+    userId: v.string(),
+    instagramAccountId: v.string(),
+    eventType: v.string(),
+    eventData: v.any(),
+    timestamp: v.number(),
+    processed: v.boolean(),
+    processedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_userId", ["userId"])
+  .index("by_processed", ["processed"])
+  .index("by_eventType", ["eventType"])
+  .index("by_user_account", ["userId", "instagramAccountId"]),
+
+  // Instagram Webhook Subscriptions
+  instagramWebhookSubscriptions: defineTable({
+    userId: v.string(),
+    instagramAccountId: v.string(),
+    subscribedFields: v.array(v.string()),
+    subscriptionStatus: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_userId", ["userId"])
+  .index("by_user_account", ["userId", "instagramAccountId"]),
+
+  // Instagram Story Insights
+  instagramStoryInsights: defineTable({
+    userId: v.string(),
+    instagramAccountId: v.string(),
+    mediaId: v.string(),
+    insights: v.object({
+      impressions: v.optional(v.number()),
+      reach: v.optional(v.number()),
+      replies: v.optional(v.number()),
+      taps_forward: v.optional(v.number()),
+      taps_back: v.optional(v.number()),
+      exits: v.optional(v.number()),
+      profile_visits: v.optional(v.number()),
+      website_clicks: v.optional(v.number()),
+      follows: v.optional(v.number()),
+      shares: v.optional(v.number()),
+      saves: v.optional(v.number()),
+    }),
+    storyData: v.optional(v.object({
+      story_url: v.optional(v.string()),
+      story_type: v.optional(v.string()),
+      timestamp: v.optional(v.number()),
+      expires_at: v.optional(v.number()),
+    })),
+    webhookTimestamp: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_userId", ["userId"])
+  .index("by_mediaId", ["mediaId"])
+  .index("by_user_account", ["userId", "instagramAccountId"])
+  .index("by_timestamp", ["webhookTimestamp"]),
 });

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { RefreshCw, AlertCircle, Settings, Zap, ChevronDown } from 'lucide-react';
 
 type PresetOption = {
-  value: number | 'all';
+  value: number;
   label: string;
 };
 
@@ -39,11 +39,10 @@ export function AnalysisDepthPicker({
 }: AnalysisDepthPickerProps) {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const presetOptions: PresetOption[] = [
+    { value: 5, label: '5' },
     { value: 10, label: '10' },
+    { value: 15, label: '15' },
     { value: 20, label: '20' },
-    { value: 50, label: '50' },
-    { value: 100, label: '100' },
-    { value: 'all', label: 'All' },
   ];
 
   return (
@@ -59,7 +58,7 @@ export function AnalysisDepthPicker({
             </button>
           </div>
           <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isCollapsed ? 'max-h-0' : 'max-h-96'}`}>
-            <div className="grid grid-cols-5 gap-1.5 mb-3">
+            <div className="grid grid-cols-4 gap-1.5 mb-3">
               {presetOptions.map((option) => (
                 <button
                   key={option.value}
@@ -111,7 +110,7 @@ export function AnalysisDepthPicker({
               <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 dark:bg-gray-800 rounded text-xs">
                 <Zap className="w-3 h-3 text-heycontent-yellow" />
                 <span className="font-medium text-gray-900 dark:text-white">
-                  {postLimit === 'all' ? 'All items' : `${postLimit} items`}
+                  {typeof postLimit === 'number' ? `${postLimit} items` : 'All items'}
                 </span>
               </div>
             </div>
@@ -123,11 +122,11 @@ export function AnalysisDepthPicker({
                     id="custom-limit"
                     type="number"
                     min="1"
-                    max="1000"
+                    max="20"
                     value={customPostLimit}
                     onChange={(e) => setCustomPostLimit(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleCustomSubmit()}
-                    placeholder="e.g., 75"
+                    placeholder="e.g., 8"
                     disabled={isRefreshing}
                     className="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-1 focus:ring-heycontent-yellow focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                   />
@@ -137,13 +136,16 @@ export function AnalysisDepthPicker({
                       !customPostLimit ||
                       isRefreshing ||
                       parseInt(customPostLimit) < 1 ||
-                      parseInt(customPostLimit) > 1000
+                      parseInt(customPostLimit) > 20
                     }
                     className="px-3 py-1 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black text-sm font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Apply
                   </button>
                 </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Maximum 20 posts allowed
+                </p>
               </div>
             )}
           </div>

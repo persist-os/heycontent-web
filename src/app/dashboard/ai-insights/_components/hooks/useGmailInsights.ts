@@ -6,7 +6,7 @@ import { BatchAnalysisHookReturn, InsightCard } from '@/types/batch-analysis';
 
 export function useGmailInsights(userId?: string): BatchAnalysisHookReturn {
   const [error, setError] = useState<string | null>(null);
-  const [threadLimit, setThreadLimit] = useState<number | 'all'>(50);
+  const [threadLimit, setThreadLimit] = useState<number | 'all'>(5);
   const [customGmailLimit, setCustomGmailLimit] = useState<string>('');
   const [showGmailCustomInput, setShowGmailCustomInput] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -156,7 +156,7 @@ export function useGmailInsights(userId?: string): BatchAnalysisHookReturn {
         body: JSON.stringify({
           user_id: userId,
           gmail_account_id: gmailAccount[0].email,
-          max_threads: threadLimit === 'all' ? 1000 : threadLimit,
+          max_threads: typeof threadLimit === 'number' ? Math.min(threadLimit, 20) : 5, // Enforce hard limit of 20
           max_messages: 100,
           include_spam_analysis: true,
           force_refresh: false, // Don't force refresh to avoid unnecessary API calls
@@ -196,7 +196,8 @@ export function useGmailInsights(userId?: string): BatchAnalysisHookReturn {
 
   const handleCustomSubmit = useCallback(() => {
     const limit = parseInt(customGmailLimit, 10);
-    if (!isNaN(limit) && limit > 0) {
+    // Enforce hard limit of 20 threads
+    if (!isNaN(limit) && limit > 0 && limit <= 20) {
       setThreadLimit(limit);
       setShowGmailCustomInput(false);
     }
