@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { FolderModalProps, AnalyticsItem } from './types';
 import { BarChart3, TrendingUp, TrendingDown, Minus, Clock, Instagram, Youtube } from 'lucide-react';
 
@@ -72,6 +73,18 @@ export const AnalyticsFolderModal: React.FC<FolderModalProps & { onAnalyticsClic
     }));
   }, [folderData.items]);
 
+  // Prevent scroll propagation to timeline - following TimelineScroller.tsx pattern
+  const handleWheel = (e: React.WheelEvent) => {
+    // Only prevent propagation for non-zoom scroll events
+    if (!e.ctrlKey && !e.metaKey) {
+      e.stopPropagation();
+    }
+  };
+
+  const handleScroll = (e: React.UIEvent) => {
+    e.stopPropagation();
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
@@ -85,8 +98,13 @@ export const AnalyticsFolderModal: React.FC<FolderModalProps & { onAnalyticsClic
           </DialogTitle>
         </DialogHeader>
         
-        <div className="overflow-y-auto max-h-[60vh]">
-          <div className="space-y-4">
+        <ScrollArea className="max-h-[60vh] custom-scrollbar">
+          <div 
+            className="space-y-4 pr-4"
+            onWheel={handleWheel}
+            onScroll={handleScroll}
+            style={{ overscrollBehavior: 'contain' }}
+          >
             {analyticsItems.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -162,7 +180,7 @@ export const AnalyticsFolderModal: React.FC<FolderModalProps & { onAnalyticsClic
               })
             )}
           </div>
-        </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { FolderModalProps, ContentItem } from './types';
 import { Video, FileText, Image, Calendar, Clock } from 'lucide-react';
 
@@ -81,6 +82,18 @@ export const ContentFolderModal: React.FC<FolderModalProps & { onContentClick?: 
     }));
   }, [folderData.items]);
 
+  // Prevent scroll propagation to timeline - following TimelineScroller.tsx pattern
+  const handleWheel = (e: React.WheelEvent) => {
+    // Only prevent propagation for non-zoom scroll events
+    if (!e.ctrlKey && !e.metaKey) {
+      e.stopPropagation();
+    }
+  };
+
+  const handleScroll = (e: React.UIEvent) => {
+    e.stopPropagation();
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
@@ -94,8 +107,13 @@ export const ContentFolderModal: React.FC<FolderModalProps & { onContentClick?: 
           </DialogTitle>
         </DialogHeader>
         
-        <div className="overflow-y-auto max-h-[60vh]">
-          <div className="space-y-4">
+        <ScrollArea className="max-h-[60vh] custom-scrollbar">
+          <div 
+            className="space-y-4 pr-4"
+            onWheel={handleWheel}
+            onScroll={handleScroll}
+            style={{ overscrollBehavior: 'contain' }}
+          >
             {contentItems.map((item) => {
               const ContentIcon = getContentIcon(item.contentType);
               
@@ -166,7 +184,7 @@ export const ContentFolderModal: React.FC<FolderModalProps & { onContentClick?: 
               );
             })}
           </div>
-        </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
