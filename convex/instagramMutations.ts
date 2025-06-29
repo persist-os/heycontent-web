@@ -838,29 +838,3 @@ export const updateInstagramPostComments = mutation({
     }
   },
 });
-
-// Get Instagram post by media ID
-export const getInstagramPostByMediaId = mutation({
-  args: {
-    userId: v.string(),
-    mediaId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    try {
-      const post = await ctx.db
-        .query("instagramPosts")
-        .withIndex("by_userId", q => q.eq("userId", args.userId))
-        .filter(q => q.eq(q.field("data.id"), args.mediaId))
-        .first();
-
-      if (post) {
-        return { success: true, post };
-      } else {
-        return { success: false, error: "Post not found" };
-      }
-    } catch (error) {
-      console.error(`Error getting post by media ID: ${error}`);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
-    }
-  },
-});
