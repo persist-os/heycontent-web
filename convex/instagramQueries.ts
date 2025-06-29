@@ -618,3 +618,314 @@ export const getInstagramProfileInsights = query({
     }
   },
 });
+
+// Get Instagram webhook events for a user
+export const getInstagramWebhookEvents = query({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.optional(v.string()),
+    eventType: v.optional(v.string()),
+    processed: v.optional(v.boolean()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    try {
+      let query = ctx.db
+        .query("instagramWebhookEvents")
+        .withIndex("by_userId", q => q.eq("userId", args.userId));
+
+      if (args.instagramAccountId) {
+        query = query.filter(q => q.eq(q.field("instagramAccountId"), args.instagramAccountId));
+      }
+
+      if (args.eventType) {
+        query = query.filter(q => q.eq(q.field("eventType"), args.eventType));
+      }
+
+      if (args.processed !== undefined) {
+        query = query.filter(q => q.eq(q.field("processed"), args.processed));
+      }
+
+      const events = await query
+        .order("desc")
+        .take(args.limit || 50);
+
+      return events;
+    } catch (error) {
+      console.error('Error getting Instagram webhook events:', error);
+      throw new Error(`Failed to get webhook events: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Get unprocessed webhook events
+export const getUnprocessedWebhookEvents = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const events = await ctx.db
+        .query("instagramWebhookEvents")
+        .withIndex("by_processed", q => q.eq("processed", false))
+        .order("asc") // Process oldest first
+        .take(args.limit || 100);
+
+      return events;
+    } catch (error) {
+      console.error('Error getting unprocessed webhook events:', error);
+      throw new Error(`Failed to get unprocessed events: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Get webhook subscription status
+export const getWebhookSubscription = query({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const subscription = await ctx.db
+        .query("instagramWebhookSubscriptions")
+        .withIndex("by_user_account", q => 
+          q.eq("userId", args.userId)
+           .eq("instagramAccountId", args.instagramAccountId)
+        )
+        .first();
+
+      return subscription;
+    } catch (error) {
+      console.error('Error getting webhook subscription:', error);
+      throw new Error(`Failed to get webhook subscription: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Get Instagram account by Instagram ID (for webhook processing)
+export const getInstagramAccountByInstagramId = query({
+  args: {
+    instagramAccountId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const account = await ctx.db
+        .query("instagramAccounts")
+        .withIndex("by_instagramAccountId", q => q.eq("instagramAccountId", args.instagramAccountId))
+        .first();
+
+      return account;
+    } catch (error) {
+      console.error('Error getting Instagram account by Instagram ID:', error);
+      return null;
+    }
+  },
+});
+
+// Get Instagram story insights for a user
+export const getInstagramStoryInsights = query({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.optional(v.string()),
+    mediaId: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    try {
+      let query = ctx.db
+        .query("instagramStoryInsights")
+        .withIndex("by_userId", q => q.eq("userId", args.userId));
+
+      if (args.instagramAccountId) {
+        query = query.filter(q => q.eq(q.field("instagramAccountId"), args.instagramAccountId));
+      }
+
+      if (args.mediaId) {
+        query = query.filter(q => q.eq(q.field("mediaId"), args.mediaId));
+      }
+
+      const insights = await query
+        .order("desc")
+        .take(args.limit || 50);
+
+      return insights;
+    } catch (error) {
+      console.error('Error getting Instagram story insights:', error);
+      throw new Error(`Failed to get story insights: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Get story insights by media ID
+export const getStoryInsightsByMediaId = query({
+  args: {
+    userId: v.string(),
+    mediaId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const insights = await ctx.db
+        .query("instagramStoryInsights")
+        .withIndex("by_mediaId", q => q.eq("mediaId", args.mediaId))
+        .filter(q => q.eq(q.field("userId"), args.userId))
+        .first();
+
+      return insights;
+    } catch (error) {
+      console.error('Error getting story insights by media ID:', error);
+      throw new Error(`Failed to get story insights: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Get recent story insights (last 7 days)
+export const getRecentStoryInsights = query({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+    days: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const daysBack = args.days || 7;
+      const cutoffTime = Date.now() - (daysBack * 24 * 60 * 60 * 1000);
+
+      const insights = await ctx.db
+        .query("instagramStoryInsights")
+        .withIndex("by_user_account", q => 
+          q.eq("userId", args.userId)
+           .eq("instagramAccountId", args.instagramAccountId)
+        )
+        .filter(q => q.gte(q.field("webhookTimestamp"), cutoffTime))
+        .order("desc")
+        .collect();
+
+      return insights;
+    } catch (error) {
+      console.error('Error getting recent story insights:', error);
+      throw new Error(`Failed to get recent story insights: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Get Instagram posts with recent comments (from webhooks)
+export const getPostsWithRecentComments = query({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    try {
+      let query = ctx.db
+        .query("instagramPosts")
+        .withIndex("by_userId", q => q.eq("userId", args.userId));
+
+      if (args.instagramAccountId) {
+        query = query.filter(q => q.eq(q.field("instagramAccountId"), args.instagramAccountId));
+      }
+
+      // Get posts that have comments
+      const posts = await query
+        .filter(q => q.neq(q.field("data.comments"), undefined))
+        .filter(q => q.gt(q.field("data.comments_count"), 0))
+        .order("desc")
+        .take(args.limit || 20);
+
+      // Sort by most recent comment activity
+      const postsWithRecentActivity = posts
+        .map(post => {
+          const comments = post.data?.comments || [];
+          const mostRecentComment = comments.length > 0 
+            ? Math.max(...comments.map((c: any) => c.timestamp || 0))
+            : 0;
+          
+          return {
+            ...post,
+            mostRecentCommentTime: mostRecentComment
+          };
+        })
+        .sort((a, b) => b.mostRecentCommentTime - a.mostRecentCommentTime);
+
+      return postsWithRecentActivity;
+    } catch (error) {
+      console.error('Error getting posts with recent comments:', error);
+      throw new Error(`Failed to get posts with recent comments: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Get engagement summary from webhook data
+export const getWebhookEngagementSummary = query({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+    days: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const daysBack = args.days || 7;
+      const cutoffTime = Date.now() - (daysBack * 24 * 60 * 60 * 1000);
+
+      // Get recent webhook events
+      const webhookEvents = await ctx.db
+        .query("instagramWebhookEvents")
+        .withIndex("by_user_account", q => 
+          q.eq("userId", args.userId)
+           .eq("instagramAccountId", args.instagramAccountId)
+        )
+        .filter(q => q.gte(q.field("timestamp"), cutoffTime))
+        .collect();
+
+      // Get recent story insights
+      const storyInsights = await ctx.db
+        .query("instagramStoryInsights")
+        .withIndex("by_user_account", q => 
+          q.eq("userId", args.userId)
+           .eq("instagramAccountId", args.instagramAccountId)
+        )
+        .filter(q => q.gte(q.field("webhookTimestamp"), cutoffTime))
+        .collect();
+
+      // Calculate summary metrics
+      const commentEvents = webhookEvents.filter(e => e.eventType === "comments");
+      const messageEvents = webhookEvents.filter(e => e.eventType === "messages");
+      
+      const totalStoryImpressions = storyInsights.reduce((sum, insight) => 
+        sum + (insight.insights?.impressions || 0), 0
+      );
+      
+      const totalStoryReach = storyInsights.reduce((sum, insight) => 
+        sum + (insight.insights?.reach || 0), 0
+      );
+
+      return {
+        period: `${daysBack} days`,
+        totalComments: commentEvents.length,
+        totalMessages: messageEvents.length,
+        totalStories: storyInsights.length,
+        totalStoryImpressions,
+        totalStoryReach,
+        avgStoryReach: storyInsights.length > 0 ? Math.round(totalStoryReach / storyInsights.length) : 0,
+        recentActivity: {
+          comments: commentEvents.slice(-5).map(e => ({
+            timestamp: e.timestamp,
+            mediaId: e.eventData?.media_id,
+            text: e.eventData?.text?.substring(0, 100) + "...",
+            username: e.eventData?.from?.username
+          })),
+          stories: storyInsights.slice(-5).map(s => ({
+            mediaId: s.mediaId,
+            impressions: s.insights?.impressions,
+            reach: s.insights?.reach,
+            timestamp: s.webhookTimestamp
+          }))
+        }
+      };
+    } catch (error) {
+      console.error('Error getting webhook engagement summary:', error);
+      throw new Error(`Failed to get engagement summary: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
