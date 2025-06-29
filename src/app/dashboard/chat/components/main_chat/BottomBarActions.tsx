@@ -70,7 +70,7 @@ export const BottomBarActions: React.FC<BottomBarActionsProps> = ({ onActionClic
                   <button
                     key={action.id}
                     onClick={() => handleActionClick(action.action)}
-                    className="flex-shrink-0 px-3 py-1.5 text-sm font-medium text-primary-foreground 
+                    className="flex-shrink-0 px-3 py-1.5 text-sm font-medium text-primary-foreground dark:text-black 
                       bg-primary hover:bg-primary/90 dark:bg-accent dark:hover:bg-accent/90
                       rounded-full transition-all duration-200 hover:shadow-sm
                       whitespace-nowrap select-none chat-font"

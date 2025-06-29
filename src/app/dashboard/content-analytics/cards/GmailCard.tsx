@@ -133,7 +133,7 @@ export const GmailCard: React.FC<GmailCardProps> = ({ item, onDiscussContent, on
         {/* Actions */}
         <div className="flex gap-3">
           <button
-            className="flex-1 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-black px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            className="flex-1 bg-primary text-primary-foreground dark:text-black hover:bg-primary/90 hover:text-primary-foreground dark:hover:text-black px-4 py-2 rounded-lg text-sm font-medium transition-colors"
             onClick={handleDiscussContent}
           >
             <MessageSquare className="w-4 h-4 inline mr-2" />

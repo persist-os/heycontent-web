@@ -40,7 +40,8 @@ export function AnalyticsCard({
   return (
     <BaseCard
       note={note}
-      className="bg-pink-500/10 border-pink-500/30 hover:border-pink-500/50"
+      className="border-pink-500/30 hover:border-pink-500/50"
+      hoverBgClass="hover:bg-pink-500/10"
       onEdit={onEdit}
       onDelete={onDelete}
       onToggleImportant={onToggleImportant}

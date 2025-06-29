@@ -225,7 +225,7 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
               <h3 className="font-medium text-sm text-card-foreground mb-1">{insight.title}</h3>
               <p className="text-sm text-muted-foreground">{insight.description}</p>
               {insight.action && (
-                <p className="mt-2 text-sm text-blue-600 dark:text-blue-400 font-medium">
+                <p className="mt-2 text-sm text-primary font-medium">
                   {insight.action}
                 </p>
               )}

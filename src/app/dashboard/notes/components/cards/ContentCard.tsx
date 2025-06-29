@@ -29,18 +29,35 @@ export function ContentCard({
   // Get card color based on note type or content
   const getCardColor = () => {
     if (note.type === 'content_script') {
-      return 'bg-purple-500/10 border-purple-500/30 hover:border-purple-500/50';
+      return 'border-purple-500/30 hover:border-purple-500/50';
     }
     if (note.type === 'idea_bank') {
-      return 'bg-red-500/10 border-red-500/30 hover:border-red-500/50';
+      return 'border-red-500/30 hover:border-red-500/50';
     }
     if (note.title?.toLowerCase().includes('vlog')) {
-      return 'bg-red-500/10 border-red-500/30 hover:border-red-500/50';
+      return 'border-red-500/30 hover:border-red-500/50';
     }
     if (note.title?.toLowerCase().includes('inspiration') || note.title?.toLowerCase().includes('ootd')) {
-      return 'bg-red-500/10 border-red-500/30 hover:border-red-500/50';
+      return 'border-red-500/30 hover:border-red-500/50';
     }
-    return 'bg-purple-500/10 border-purple-500/30 hover:border-purple-500/50';
+    return 'border-purple-500/30 hover:border-purple-500/50';
+  };
+
+  // Get hover background class based on note type or content
+  const getHoverBgClass = () => {
+    if (note.type === 'content_script') {
+      return 'hover:bg-purple-500/10';
+    }
+    if (note.type === 'idea_bank') {
+      return 'hover:bg-red-500/10';
+    }
+    if (note.title?.toLowerCase().includes('vlog')) {
+      return 'hover:bg-red-500/10';
+    }
+    if (note.title?.toLowerCase().includes('inspiration') || note.title?.toLowerCase().includes('ootd')) {
+      return 'hover:bg-red-500/10';
+    }
+    return 'hover:bg-purple-500/10';
   };
 
   // Get icon color based on type
@@ -68,6 +85,7 @@ export function ContentCard({
     <BaseCard
       note={note}
       className={getCardColor()}
+      hoverBgClass={getHoverBgClass()}
       onEdit={onEdit}
       onDelete={onDelete}
       onToggleImportant={onToggleImportant}

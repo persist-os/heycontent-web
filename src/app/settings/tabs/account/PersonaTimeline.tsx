@@ -36,14 +36,14 @@ export const PersonaTimeline: React.FC<PersonaTimelineProps> = ({ history, onRes
         {history.map((persona, index) => (
           <div key={persona._id} className="group relative flex pb-8 last:pb-0 md:flex-col md:flex-1 md:pb-0 md:items-center">
             {/* Connectors: Vertical for mobile, horizontal for web */}
-            <div className="absolute top-3 left-3 -ml-px h-full w-px bg-border group-last:hidden md:hidden" />
+            <div className="absolute top-3 left-3 -ml-px h-full w-px bg-purple-500 dark:bg-yellow-400 group-last:hidden md:hidden" />
             {index < history.length - 1 && (
-              <div className="hidden md:block absolute top-3 left-1/2 w-full h-px bg-border -translate-x-1/2" />
+              <div className="hidden md:block absolute top-3 left-1/2 w-full h-px bg-purple-500 dark:bg-yellow-400 -translate-x-1/2" />
             )}
             
             {/* Dot */}
             <div className="relative h-6 w-6 flex-none flex items-center justify-center bg-background z-10">
-              <div className="h-2 w-2 rounded-full bg-muted-foreground group-hover:bg-purple-500 dark:group-hover:bg-accent transition-colors" />
+              <div className="h-2 w-2 rounded-full bg-muted-foreground group-hover:bg-purple-500 dark:group-hover:bg-yellow-400 transition-colors" />
             </div>
 
             {/* Content */}
@@ -51,7 +51,7 @@ export const PersonaTimeline: React.FC<PersonaTimelineProps> = ({ history, onRes
               <div className="p-4 rounded-lg transition-colors border border-transparent group-hover:bg-muted/50 group-hover:border-border">
 
                 <div className="flex items-center justify-between md:flex-col md:items-center md:text-center">
-                  <p className="font-semibold text-foreground text-base leading-tight group-hover:text-purple-500 dark:group-hover:text-accent transition-colors">
+                  <p className="font-semibold text-foreground text-base leading-tight group-hover:text-purple-500 dark:group-hover:text-yellow-400 transition-colors">
                     {persona.current_name}
                   </p>
                   <Badge variant="outline" className="font-mono text-xs md:mt-2">
@@ -75,7 +75,7 @@ export const PersonaTimeline: React.FC<PersonaTimelineProps> = ({ history, onRes
                     variant="ghost"
                     size="icon"
                     onClick={() => onRestore(persona._id)}
-                    className="w-8 h-8 text-muted-foreground hover:bg-purple-50 hover:text-purple-500 dark:hover:bg-accent/10 dark:hover:text-accent"
+                    className="w-8 h-8 text-muted-foreground hover:bg-purple-50 hover:text-purple-500 dark:hover:bg-yellow-900/20 dark:hover:text-yellow-400"
                     aria-label="Restore version"
                   >
                     <RotateCcw className="w-4 h-4" />

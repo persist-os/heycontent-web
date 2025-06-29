@@ -128,8 +128,8 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onTagsChange, onEditin
           autoFocus
         />
       ) : (
-        <h1 
-          className="text-xl font-semibold px-1 -ml-1 hover:bg-muted/40 rounded-lg cursor-pointer transition-all duration-200 text-foreground truncate"
+        <h1
+          className="font-semibold text-foreground line-clamp-2 pr-8 cursor-pointer transition-all duration-200"
           onClick={handleStartEditing}
           title={displayTitle}
         >

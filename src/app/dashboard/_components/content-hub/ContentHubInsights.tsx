@@ -205,7 +205,7 @@ export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsPr
                   onClick={() => discussInsight(insight.remix_insight, 'Content Remix Opportunity')}
                   size="sm"
                   variant="ghost"
-                  className="text-xs"
+                  className="text-xs hover:bg-heycontent-purple hover:text-white dark:hover:bg-gray-800 dark:hover:text-gray-100"
                 >
                   <MessageSquare className="w-3 h-3" />
                   Discuss
@@ -227,7 +227,7 @@ export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsPr
                     onClick={() => discussInsight(insight.smartnote_summary, 'Smart Note Summary')}
                     size="sm"
                     variant="ghost"
-                    className="text-xs"
+                    className="text-xs hover:bg-heycontent-purple hover:text-white dark:hover:bg-gray-800 dark:hover:text-gray-100"
                   >
                     <MessageSquare className="w-3 h-3" />
                     Discuss
@@ -253,7 +253,7 @@ export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsPr
                     onClick={() => discussInsight(insight.conversation_starter, 'Conversation Starter')}
                     size="sm"
                     variant="ghost"
-                    className="text-xs"
+                    className="text-xs hover:bg-heycontent-purple hover:text-white dark:hover:bg-gray-800 dark:hover:text-gray-100"
                   >
                     <MessageSquare className="w-3 h-3" />
                     Discuss
@@ -360,7 +360,7 @@ function PlatformInsightCard({ platform, icon, hook, format, cta, onDiscuss, glo
           onClick={() => onDiscuss(`${platform} Content:\n\nHook: ${hook}\n\nFormat: ${format}\n\nCTA: ${cta}`, `${platform} Content Strategy`)}
           size="sm"
           variant="ghost"
-          className="text-xs"
+          className="text-xs hover:bg-heycontent-purple hover:text-white dark:hover:bg-gray-800 dark:hover:text-gray-100"
         >
           <MessageSquare className="w-3 h-3" />
           Discuss

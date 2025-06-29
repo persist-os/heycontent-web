@@ -166,12 +166,12 @@ export const DashboardNav = memo(function DashboardNav() {
     >
       <Users className={`w-6 h-6 ${
         pathname.startsWith('/dashboard/self-hub')
-          ? 'text-black'
+          ? 'text-white dark:text-black'
           : 'text-foreground'
       }`} />
       {isExpanded && <span className={`ml-3 text-sm font-medium ${
         pathname.startsWith('/dashboard/self-hub')
-          ? 'text-black'
+          ? 'text-white dark:text-black'
           : 'text-foreground'
       }`}>Self</span>}
     </Link>
@@ -222,12 +222,14 @@ export const DashboardNav = memo(function DashboardNav() {
                 ) : (
                   <item.icon className={`w-6 h-6 ${
                     isItemActive(item)
-                      ? 'text-black'
+                      ? 'text-white dark:text-black'
                       : 'text-foreground'
                   }`} />
                 )}
               </div>
-              {isExpanded && <span className="ml-4 text-sm font-medium">{isExpanded ? item.label : ''}</span>}
+              {isExpanded && (
+                <span className={`ml-4 text-sm font-medium ${isItemActive(item) ? 'dark:text-black' : ''}`}>{isExpanded ? item.label : ''}</span>
+              )}
             </Link>
           ))}
         </div>
@@ -236,7 +238,7 @@ export const DashboardNav = memo(function DashboardNav() {
         {isExpanded && (
           <div className="px-6 my-4">
             <div className="flex justify-between items-center mb-2">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent Chats</h3>
+              <h3 className="text-xs font-semibold text-black dark:text-white uppercase tracking-wider">Recent Chats</h3>
               <Link href="/dashboard/history" onClick={() => setIsExpanded(false)} className="text-xs text-primary hover:underline">
                 View All
               </Link>
@@ -253,9 +255,9 @@ export const DashboardNav = memo(function DashboardNav() {
                   >
                     <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className="text-sm text-foreground truncate">{chat.topic}</span>
+                      <span className="text-sm text-black dark:text-white truncate">{chat.topic}</span>
                       {chat.createdAt ? (
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-black dark:text-white">
                           {formatRelativeTime(chat.createdAt)}
                         </span>
                       ) : (

@@ -157,7 +157,7 @@ export const GmailModal: React.FC<GmailModalProps> = ({
 
         {/* Footer */}
         <div className="px-6 py-4 border-t dark:border-gray-800 flex items-center justify-end gap-3 flex-shrink-0">
-          <Button onClick={handleDiscussContent} className="bg-heycontent-light-yellow hover:bg-heycontent-yellow/90 text-black">
+          <Button onClick={handleDiscussContent} className="bg-primary text-primary-foreground dark:text-black hover:bg-primary/90 hover:text-primary-foreground dark:hover:text-black">
             <MessageSquare className="w-4 h-4 mr-2" />
             Discuss with Content
           </Button>
