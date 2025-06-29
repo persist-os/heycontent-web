@@ -4,18 +4,16 @@ import { api } from "./_generated/api";
 
 function calculateDiff(oldDoc, newDoc, excludeFields = []) {
   const changedFields = [];
-  const previous = {};
   const current = {};
   for (const key of Object.keys(newDoc)) {
     if (excludeFields.includes(key)) continue;
     if (JSON.stringify(oldDoc?.[key]) !== JSON.stringify(newDoc[key])) {
       changedFields.push(key);
-      previous[key] = oldDoc?.[key];
       current[key] = newDoc[key];
     }
   }
   return changedFields.length > 0
-    ? { changedFields, previous, current }
+    ? { changedFields, current }
     : null;
 }
 
@@ -62,10 +60,9 @@ export const storeVideoData = mutation({
     }
     // Do NOT overwrite statistics.comments with array length
 
-    // --- Clean diff logic: only changed field names and previous values ---
+    // --- Clean diff logic: only changed field names and current values ---
     function cleanDiff(oldDoc, newDoc, excludeFields = []) {
       const changedFields = [];
-      const previous = {};
       const current = {};
       for (const key of Object.keys(newDoc)) {
         if (excludeFields.includes(key)) continue;
@@ -78,17 +75,14 @@ export const storeVideoData = mutation({
             const newComments = Array.isArray(newDoc.comments.comments) ? newDoc.comments.comments : [];
             const oldIds = new Set(oldComments.map(c => c.id));
             const added = newComments.filter(c => !oldIds.has(c.id));
-            // Optionally, you could also diff by content, likes, etc. for edits
-            previous[key] = { count: oldComments.length };
             current[key] = { added, count: newComments.length };
           } else {
-            previous[key] = oldDoc?.[key];
             current[key] = newDoc[key];
           }
         }
       }
       return changedFields.length > 0
-        ? { changedFields, previous, current }
+        ? { changedFields, current }
         : null;
     }
 
@@ -103,7 +97,6 @@ export const storeVideoData = mutation({
       const newDiff = {
         changedAt: now,
         changedFields: diff.changedFields,
-        previous: diff.previous,
         current: diff.current,
         changeType: "update"
       };
@@ -181,7 +174,6 @@ export const saveChannelData = mutation({
       const newDiff = {
         changedAt: updatedAt,
         changedFields: diff.changedFields,
-        previous: diff.previous,
         current: diff.current,
         changeType: "update"
       };
@@ -244,7 +236,6 @@ export const storeVideoAnalysis = mutation({
       const newDiff = {
         changedAt: now,
         changedFields: [changedField],
-        previous: { [changedField]: "changed" },
         current: { [changedField]: "changed" },
         changeType: "analysis"
       };
@@ -315,7 +306,6 @@ export const storeChannelAnalysis = mutation({
       const newDiff = {
         changedAt: now,
         changedFields: ["analysis"],
-        previous: { analysis: "changed" },
         current: { analysis: "changed" },
         changeType: "analysis"
       };

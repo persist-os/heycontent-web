@@ -397,7 +397,6 @@ export default defineSchema({
     diffs: v.optional(v.array(v.object({
       changedAt: v.number(),
       changedFields: v.array(v.string()),
-      previous: v.any(),
       current: v.any(),
       changeType: v.optional(v.string()),
     })))
@@ -494,7 +493,6 @@ export default defineSchema({
     diffs: v.optional(v.array(v.object({
       changedAt: v.number(),
       changedFields: v.array(v.string()),
-      previous: v.any(),
       current: v.any(),
       changeType: v.optional(v.string()),
     })))
