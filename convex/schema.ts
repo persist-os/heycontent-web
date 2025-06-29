@@ -209,6 +209,10 @@ export default defineSchema({
     user_id: v.string(),
     hashed_key: v.string(),
     created_at: v.number(),
+    clientType: v.union(
+      v.literal("web"),
+      v.literal("extension")
+    ),
     rate_tier: v.optional(v.string()),
     scopes: v.optional(v.array(v.string())),
     status: v.optional(v.string()),

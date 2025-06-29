@@ -11,8 +11,8 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
  * Handles error parsing and response formatting.
  * Returns the backend's JSON response or a formatted error.
  */
-export async function proxyApiKeyRequest({ idToken, userId }: { idToken: string; userId: string }) {
-  console.log('[proxyApiKeyRequest] called with:', { userId, hasIdToken: !!idToken });
+export async function proxyApiKeyRequest({ idToken, userId, clientType = 'web' }: { idToken: string; userId: string; clientType?: string }) {
+  console.log('[proxyApiKeyRequest] called with:', { userId, hasIdToken: !!idToken, clientType });
   if (idToken) {
     const preview = `${idToken.substring(0, 10)}...${idToken.substring(idToken.length - 5)}`;
     console.log('[proxyApiKeyRequest] idToken preview:', preview, 'length:', idToken.length);
@@ -28,6 +28,7 @@ export async function proxyApiKeyRequest({ idToken, userId }: { idToken: string;
   console.log('[proxyApiKeyRequest] Sending request to backend', {
     url: `${BACKEND_URL}/api/v1/api-keys/`,
     userId,
+    clientType,
   });
   const backendRes = await fetch(`${BACKEND_URL}/api/v1/api-keys/`, {
     method: 'POST',
@@ -35,7 +36,7 @@ export async function proxyApiKeyRequest({ idToken, userId }: { idToken: string;
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${idToken}`,
     },
-    body: JSON.stringify({ userId }),
+    body: JSON.stringify({ userId, clientType }),
   });
 
   if (!backendRes.ok) {
