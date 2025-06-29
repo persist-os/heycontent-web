@@ -174,26 +174,6 @@ export function YouTubePlatform({
 
   return (
     <>
-      {/* Refresh All Button above smart context memory box */}
-      <div className="flex items-center justify-end mb-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRefreshAll}
-          disabled={refreshing}
-          className="flex items-center gap-2"
-          title="Refresh all YouTube videos (captions will not be refreshed)"
-        >
-          <RefreshCw className={refreshing ? 'animate-spin' : ''} size={16} />
-          {refreshing ? 'Refreshing...' : 'Refresh All'}
-        </Button>
-        {refreshSuccess && (
-          <span className="text-green-600 text-xs ml-2">Refreshed!</span>
-        )}
-        {refreshError && (
-          <span className="text-red-600 text-xs ml-2">{refreshError}</span>
-        )}
-      </div>
       {/* Platform Embedding Status (smart context memory box) */}
       <div className="w-full mb-4">
         <PlatformEmbeddingStatus 
