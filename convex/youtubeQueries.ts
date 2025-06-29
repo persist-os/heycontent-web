@@ -48,14 +48,16 @@ interface TokenDocument {
   lastRefreshed?: number;
 }
 
-// Get YouTube channel data for a user
+// Get YouTube channel data for a user - most recent only
 export const getYouTubeChannelData = query({
   args: { userId: v.string() },
+  returns: v.union(v.null(), v.any()),
   handler: async (ctx, args) => {
     try {
       const channelData = await ctx.db
         .query("youtubeChannels")
         .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .order("desc") // Get most recent first
         .first();
 
       if (!channelData) {
@@ -69,24 +71,33 @@ export const getYouTubeChannelData = query({
   },
 });
 
-// Get YouTube videos for a user
+// Get YouTube videos for a user - most recent version of each video
 export const getYouTubeVideos = query({
   args: { userId: v.string(), limit: v.optional(v.number()) },
+  returns: v.array(v.any()),
   handler: async (ctx, args) => {
     try {
-      const query = ctx.db
+      const allVideos = await ctx.db
         .query("youtubeVideos")
-        .withIndex("by_userId", (q) => q.eq("userId", args.userId));
-      
-      // Apply sorting by published date (newest first)
-      const sortedQuery = query.order("desc");
-      
-      // Apply limit if provided
-      const videos = await (args.limit 
-        ? sortedQuery.take(args.limit) 
-        : sortedQuery.collect());
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .order("desc") // Most recent first
+        .collect();
 
-      return videos;
+      // Group by videoId and take the most recent version of each
+      const videoMap = new Map();
+      for (const video of allVideos) {
+        const videoId = video.videoId || video.id;
+        if (!videoMap.has(videoId)) {
+          videoMap.set(videoId, video);
+        }
+      }
+
+      // Convert back to array and apply limit
+      const uniqueVideos = Array.from(videoMap.values());
+      
+      return args.limit 
+        ? uniqueVideos.slice(0, args.limit) 
+        : uniqueVideos;
     } catch (error) {
       console.error('Error getting YouTube videos:', error);
       throw new Error(`Failed to get YouTube videos: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -94,20 +105,32 @@ export const getYouTubeVideos = query({
   },
 });
 
-// List YouTube videos for content analytics page - compatible with UI components
+// List YouTube videos for content analytics page - most recent versions only
 export const listUserYouTubeVideos = query({
   args: { userId: v.string() },
+  returns: v.array(v.any()),
   handler: async (ctx, args) => {
     try {
-      // Fetch videos from the youtubeVideos table
-      const videos = await ctx.db
+      // Fetch all videos and group by videoId to get most recent versions
+      const allVideos = await ctx.db
         .query("youtubeVideos")
         .withIndex("by_userId", (q) => q.eq("userId", args.userId))
         .order("desc")
         .collect();
       
+      // Group by videoId and take the most recent version of each
+      const videoMap = new Map();
+      for (const video of allVideos) {
+        const videoId = video.videoId || video.id;
+        if (!videoMap.has(videoId)) {
+          videoMap.set(videoId, video);
+        }
+      }
+
+      const uniqueVideos = Array.from(videoMap.values());
+      
       // Transform videos to match the YouTubeContentItem format for UI
-      return videos.map(video => ({
+      return uniqueVideos.map(video => ({
         id: video.videoId || video.id || '',
         platform: 'youtube' as const, // Use const assertion to ensure this is a literal type
         publishedAt: video.snippet?.published_at || (video.createdAt ? new Date(video.createdAt).toISOString() : new Date().toISOString()),
@@ -135,16 +158,20 @@ export const listUserYouTubeVideos = query({
   },
 });
 
-// Get all YouTube tokens for a user
+// Get all YouTube tokens for a user - most recent only
 export const getYouTubeTokens = query({
   args: { userId: v.string() },
+  returns: v.array(v.any()),
   handler: async (ctx, args) => {
     try {
-      const tokens = await ctx.db
+      // Get most recent token for the user
+      const token = await ctx.db
         .query("youtubeTokens")
         .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-        .collect();
-      return tokens;
+        .order("desc") // Most recent first
+        .first();
+      
+      return token ? [token] : [];
     } catch (error) {
       console.error('Error getting YouTube tokens:', error);
       throw new Error(`Failed to get YouTube tokens: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -152,16 +179,17 @@ export const getYouTubeTokens = query({
   },
 });
 
-
-// Get specific video data by videoId
+// Get specific video data by videoId - most recent version
 export const getVideoById = query({
   args: { userId: v.string(), videoId: v.string() },
+  returns: v.union(v.null(), v.any()),
   handler: async (ctx, args) => {
     try {
       const video = await ctx.db
         .query("youtubeVideos")
         .withIndex("by_videoId", (q) => q.eq("videoId", args.videoId))
         .filter((q) => q.eq(q.field("userId"), args.userId))
+        .order("desc") // Most recent first
         .first();
 
       return video;
@@ -172,25 +200,34 @@ export const getVideoById = query({
   },
 });
 
-// Get videos for a specific channel
+// Get videos for a specific channel - most recent versions only
 export const getVideosByChannel = query({
   args: { userId: v.string(), channelId: v.string(), limit: v.optional(v.number()) },
+  returns: v.array(v.any()),
   handler: async (ctx, args) => {
     try {
-      const query = ctx.db
+      const allVideos = await ctx.db
         .query("youtubeVideos")
         .withIndex("by_channelId", (q) => q.eq("snippet.channel.id", args.channelId))
-        .filter((q) => q.eq(q.field("userId"), args.userId));
-      
-      // Sort by published date
-      const sortedQuery = query.order("desc");
+        .filter((q) => q.eq(q.field("userId"), args.userId))
+        .order("desc") // Most recent first
+        .collect();
+
+      // Group by videoId and take the most recent version of each
+      const videoMap = new Map();
+      for (const video of allVideos) {
+        const videoId = video.videoId || video.id;
+        if (!videoMap.has(videoId)) {
+          videoMap.set(videoId, video);
+        }
+      }
+
+      const uniqueVideos = Array.from(videoMap.values());
       
       // Apply limit if provided
-      const videos = await (args.limit 
-        ? sortedQuery.take(args.limit) 
-        : sortedQuery.collect());
-
-      return videos;
+      return args.limit 
+        ? uniqueVideos.slice(0, args.limit) 
+        : uniqueVideos;
     } catch (error) {
       console.error('Error getting channel videos:', error);
       throw new Error(`Failed to get channel videos: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -198,21 +235,23 @@ export const getVideosByChannel = query({
   },
 });
 
-// Get analysis for a specific YouTube video
+// Get analysis for a specific YouTube video - most recent analysis
 export const getVideoAnalysis = query({
   args: { 
     userId: v.string(),
     videoId: v.string() 
   },
+  returns: v.union(v.null(), v.any()),
   handler: async (ctx, args) => {
     const { userId, videoId } = args;
     try {
       console.log('[getVideoAnalysis] Querying for videoId:', videoId, 'userId:', userId);
-      // Find the video with the given videoId and userId
+      // Find the most recent video analysis with the given videoId and userId
       const video = await ctx.db
         .query("youtubeVideos")
         .withIndex("by_videoId", (q) => q.eq("videoId", videoId))
         .filter((q) => q.eq(q.field("userId"), userId))
+        .order("desc") // Most recent first
         .first();
 
       if (!video) {
@@ -260,15 +299,28 @@ export const getVideoAnalysis = query({
   },
 });
 
-// Get videos statistics summary for a user
+// Get videos statistics summary for a user - most recent versions only
 export const getVideoStatsSummary = query({
   args: { userId: v.string() },
+  returns: v.any(),
   handler: async (ctx, args) => {
     try {
-      const videos = await ctx.db
+      const allVideos = await ctx.db
         .query("youtubeVideos")
         .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .order("desc")
         .collect();
+
+      // Group by videoId and take the most recent version of each
+      const videoMap = new Map();
+      for (const video of allVideos) {
+        const videoId = video.videoId || video.id;
+        if (!videoMap.has(videoId)) {
+          videoMap.set(videoId, video);
+        }
+      }
+
+      const videos = Array.from(videoMap.values());
 
       // Calculate aggregated stats
       const totalViews = videos.reduce((sum, video) => sum + (video.statistics?.views || 0), 0);
@@ -293,18 +345,20 @@ export const getVideoStatsSummary = query({
   },
 });
 
-// Get analysis for a specific YouTube channel
+// Get analysis for a specific YouTube channel - most recent analysis
 export const getChannelAnalysis = query({
   args: {
     userId: v.string(),
     channelId: v.string(),
   },
+  returns: v.union(v.null(), v.any()),
   handler: async (ctx, args) => {
     try {
       const channel = await ctx.db
         .query("youtubeChannels")
         .withIndex("by_channelId", (q) => q.eq("id", args.channelId))
         .filter((q) => q.eq(q.field("userId"), args.userId))
+        .order("desc") // Most recent first
         .first();
 
       if (!channel) {
@@ -325,17 +379,29 @@ export const getChannelAnalysis = query({
   },
 });
 
-// Get all video analyses for a user
+// Get all video analyses for a user - most recent versions only
 export const getVideoAnalyses = query({
   args: { userId: v.string() },
+  returns: v.array(v.any()),
   handler: async (ctx, args) => {
     try {
-      const videos = await ctx.db
+      const allVideos = await ctx.db
         .query("youtubeVideos")
         .withIndex("by_userId", (q) => q.eq("userId", args.userId))
         .filter((q) => q.neq(q.field("analysis"), null))
         .order("desc")
         .collect();
+
+      // Group by videoId and take the most recent version of each
+      const videoMap = new Map();
+      for (const video of allVideos) {
+        const videoId = video.videoId || video.id;
+        if (!videoMap.has(videoId)) {
+          videoMap.set(videoId, video);
+        }
+      }
+
+      const videos = Array.from(videoMap.values());
 
       // Transform videos to include only necessary analysis data
       return videos.map(video => ({
@@ -352,15 +418,17 @@ export const getVideoAnalyses = query({
   },
 });
 
-// Query: Get full video details by userId and videoId, including analysis
+// Query: Get full video details by userId and videoId, including analysis - most recent version
 export const getFullVideoDetails = query({
   args: { userId: v.string(), videoId: v.string() },
+  returns: v.union(v.null(), v.any()),
   handler: async (ctx, args) => {
     try {
       const video = await ctx.db
         .query("youtubeVideos")
         .withIndex("by_videoId", (q) => q.eq("videoId", args.videoId))
         .filter((q) => q.eq(q.field("userId"), args.userId))
+        .order("desc") // Most recent first
         .first();
 
       if (!video) return null;
@@ -373,9 +441,10 @@ export const getFullVideoDetails = query({
   },
 });
 
-// Get YouTube channel by channel ID (for collision detection)
+// Get YouTube channel by channel ID (for collision detection) - most recent version
 export const getYouTubeChannelById = query({
   args: { channelId: v.string() },
+  returns: v.union(v.null(), v.any()),
   handler: async (ctx, args) => {
     try {
       console.log('Checking collision for YouTube channel ID:', args.channelId);
@@ -383,6 +452,7 @@ export const getYouTubeChannelById = query({
       const channel = await ctx.db
         .query("youtubeChannels")
         .withIndex("by_channelId", q => q.eq("id", args.channelId))
+        .order("desc") // Most recent first
         .first();
       
       console.log('Collision check result:', channel ? {
@@ -400,20 +470,33 @@ export const getYouTubeChannelById = query({
   },
 });
 
-// Get 3 most recent YouTube videos with analysis for content hub
+// Get 3 most recent YouTube videos with analysis for content hub - most recent versions only
 export const getRecentVideosWithAnalysis = query({
   args: { userId: v.string() },
+  returns: v.array(v.any()),
   handler: async (ctx, args) => {
     try {
-      // Get 3 most recent videos
-      const videos = await ctx.db
+      // Get all videos and group by videoId to get most recent versions
+      const allVideos = await ctx.db
         .query("youtubeVideos")
         .withIndex("by_userId", (q) => q.eq("userId", args.userId))
         .order("desc")
-        .take(3);
+        .collect();
+
+      // Group by videoId and take the most recent version of each
+      const videoMap = new Map();
+      for (const video of allVideos) {
+        const videoId = video.videoId || video.id;
+        if (!videoMap.has(videoId)) {
+          videoMap.set(videoId, video);
+        }
+      }
+
+      const uniqueVideos = Array.from(videoMap.values())
+        .slice(0, 3); // Take only 3 most recent
 
       // Return videos with their analysis data
-      const videosWithAnalysis = videos.map(video => ({
+      const videosWithAnalysis = uniqueVideos.map(video => ({
         id: video.videoId,
         title: video.snippet?.title || 'Untitled Video',
         description: video.snippet?.description || '',
@@ -424,7 +507,7 @@ export const getRecentVideosWithAnalysis = query({
         analysisMarkdown: video.analysisMarkdown || null
       }));
 
-      console.log(`[getRecentVideosWithAnalysis] Found ${videos.length} videos for user ${args.userId}`);
+      console.log(`[getRecentVideosWithAnalysis] Found ${uniqueVideos.length} unique videos for user ${args.userId}`);
       return videosWithAnalysis;
     } catch (error) {
       console.error('Error getting recent videos with analysis:', error);
@@ -433,12 +516,13 @@ export const getRecentVideosWithAnalysis = query({
   },
 });
 
-// Get YouTube batch analysis insights
+// Get YouTube batch analysis insights - most recent analysis
 export const getYoutubeBatchAnalysis = query({
   args: {
     userId: v.string(),
     channelId: v.string(),
   },
+  returns: v.union(v.null(), v.any()),
   handler: async (ctx, args) => {
     try {
       // Validate inputs
@@ -463,6 +547,7 @@ export const getYoutubeBatchAnalysis = query({
           q.eq("userId", args.userId)
            .eq("channelId", args.channelId)
         )
+        .order("desc") // Most recent first
         .first();
 
       console.log('[getYoutubeBatchAnalysis] Found analysis:', analysis ? {

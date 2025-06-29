@@ -56,6 +56,8 @@ export default defineSchema({
       items: v.optional(v.any()),
       quantity: v.optional(v.number()),
       start_date: v.optional(v.number()),
+      monthlyLimit: v.optional(v.number()),
+      ubpEnabled: v.optional(v.boolean()),
     })),
     paymentMethod: v.optional(v.object({
       brand: v.string(),
@@ -391,7 +393,14 @@ export default defineSchema({
         videoCount: v.optional(v.string()),
         viewCount: v.optional(v.string()),
       })
-    )
+    ),
+    diffs: v.optional(v.array(v.object({
+      changedAt: v.number(),
+      changedFields: v.array(v.string()),
+      previous: v.any(),
+      current: v.any(),
+      changeType: v.optional(v.string()),
+    })))
   })
   .index("by_userId", ["userId"])
   .index("by_channelId", ["id"])
@@ -482,6 +491,13 @@ export default defineSchema({
     })),
     createdAt: v.optional(v.float64()),
     updatedAt: v.optional(v.float64()),
+    diffs: v.optional(v.array(v.object({
+      changedAt: v.number(),
+      changedFields: v.array(v.string()),
+      previous: v.any(),
+      current: v.any(),
+      changeType: v.optional(v.string()),
+    })))
   })
   .index("by_userId", ["userId"])
   .index("by_videoId", ["videoId"])

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Settings } from 'lucide-react';
+import { Settings, RefreshCw } from 'lucide-react';
 import { YouTubeCard } from '../cards/YouTubeCard';
 import { YoutubeModal } from '../modals/YoutubeModal';
 import { PlatformEmbeddingStatus } from '../components/PlatformEmbeddingStatus';
@@ -14,27 +14,63 @@ import { sortContent } from '../utils';
 import { YouTubeBrandIcon } from '../../../../lib/YoutubeBrandIcon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlatformConnectionPrompt } from '../../_components/content-hub/PlatformConnectionPrompt';
+import { fetchWithApiKey } from '@/app/lib/api-helpers';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 
 interface YouTubePlatformProps {
   userId: string;
-  items: YouTubeContentItem[];
-  loading: boolean;
   isConnected: boolean;
   error: string | null;
 }
 
 export function YouTubePlatform({
   userId,
-  items,
-  loading,
   isConnected,
   error,
 }: YouTubePlatformProps) {
   const router = useRouter();
   const [selectedContent, setSelectedContent] = useState<YouTubeContentItem | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [refreshSuccess, setRefreshSuccess] = useState(false);
+
+  // Fetch video data directly from Convex
+  const videoData = useQuery(
+    api.youtubeQueries.listUserYouTubeVideos,
+    userId ? { userId } : 'skip'
+  );
+
+  // Log the query result and userId for debugging in non-production environments
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[YouTubePlatform] userId:', userId, 'videoData:', videoData);
+  }
 
   // Sort items by date
-  const displayItems = sortContent(items, 'date');
+  const displayItems = videoData ? sortContent(videoData, 'date') : [];
+
+  const handleRefreshAll = async () => {
+    setRefreshing(true);
+    setRefreshError(null);
+    setRefreshSuccess(false);
+    try {
+      const res = await fetchWithApiKey('/api/social/youtube/refresh', {
+        method: 'POST',
+        body: JSON.stringify({ refreshAll: true, userId }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.status !== 'success') {
+        setRefreshError(data.error || 'Failed to refresh YouTube videos.');
+      } else {
+        setRefreshSuccess(true);
+        setTimeout(() => setRefreshSuccess(false), 3000);
+      }
+    } catch (e: any) {
+      setRefreshError(e.message || 'Not authenticated');
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const discussContent = async (item: AnyContentItem) => {
     try {
@@ -88,7 +124,7 @@ export function YouTubePlatform({
     );
   }
 
-  if (loading) {
+  if (videoData === undefined) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
         {Array.from({ length: 3 }).map((_, index) => (
@@ -138,12 +174,34 @@ export function YouTubePlatform({
 
   return (
     <>
-      {/* Platform Embedding Status */}
-      <PlatformEmbeddingStatus 
-        platform="youtube" 
-        contentCount={displayItems.length} 
-        userId={userId} 
-      />
+      {/* Refresh All Button above smart context memory box */}
+      <div className="flex items-center justify-end mb-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefreshAll}
+          disabled={refreshing}
+          className="flex items-center gap-2"
+          title="Refresh all YouTube videos (captions will not be refreshed)"
+        >
+          <RefreshCw className={refreshing ? 'animate-spin' : ''} size={16} />
+          {refreshing ? 'Refreshing...' : 'Refresh All'}
+        </Button>
+        {refreshSuccess && (
+          <span className="text-green-600 text-xs ml-2">Refreshed!</span>
+        )}
+        {refreshError && (
+          <span className="text-red-600 text-xs ml-2">{refreshError}</span>
+        )}
+      </div>
+      {/* Platform Embedding Status (smart context memory box) */}
+      <div className="w-full mb-4">
+        <PlatformEmbeddingStatus 
+          platform="youtube" 
+          contentCount={displayItems.length} 
+          userId={userId} 
+        />
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
         {displayItems.map((item, index) => {

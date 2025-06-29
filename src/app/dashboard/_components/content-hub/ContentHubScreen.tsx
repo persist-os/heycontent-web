@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { YouTubeBrandIcon } from '@/lib/YoutubeBrandIcon'
+import { toast } from 'react-hot-toast'
 
 // Analytics components and hooks
 import { YouTubePlatform as YouTubeAnalyticsPlatform } from '../../content-analytics/platforms/YouTubePlatform'
@@ -78,6 +79,7 @@ export function ContentHubScreen() {
   const [currentQuote, setCurrentQuote] = useState<string>('')
   const [expandedInsight, setExpandedInsight] = useState<string | null>(null);
   const [expandHubInsight, setExpandHubInsight] = useState(false);
+  const [refreshingYouTube, setRefreshingYouTube] = useState(false);
   
   const { firebaseUser, authLoading } = useAuth()
   const userId = firebaseUser?.uid
@@ -463,6 +465,29 @@ export function ContentHubScreen() {
     )
   }
 
+  // Handler for Refresh All YouTube
+  const handleRefreshAllYouTube = async () => {
+    if (!userId) return;
+    setRefreshingYouTube(true);
+    try {
+      const response = await fetch('/api/social/youtube/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshAll: true, userId }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        toast.success('YouTube refresh started!');
+      } else {
+        toast.error(data.error || 'Failed to start YouTube refresh');
+      }
+    } catch (error) {
+      toast.error('Error refreshing YouTube');
+    } finally {
+      setRefreshingYouTube(false);
+    }
+  };
+
   return (
     <div className="relative bg-background">
       {/* Fixed Header */}
@@ -571,11 +596,19 @@ export function ContentHubScreen() {
                     {/* Posts Screen */}
                     <TabsContent value="posts" className="space-y-6">
                       {selectedView === 'all' && renderAllPlatformsAnalytics()}
-                      {selectedView === 'youtube' && (
-                        <YouTubeAnalyticsPlatform 
-                          userId={userId} 
-                          {...youtubeAnalytics} 
-                        />
+                      {selectedView === 'youtube' && selectedDataType === 'posts' && (
+                        <>
+                          <div className="mb-4 flex items-center gap-4">
+                            <Button
+                              onClick={handleRefreshAllYouTube}
+                              disabled={refreshingYouTube}
+                              className="bg-gradient-to-r from-red-500 to-yellow-500 text-white font-semibold px-4 py-2 rounded-lg shadow hover:from-red-600 hover:to-yellow-600 transition"
+                            >
+                              {refreshingYouTube ? 'Refreshing...' : 'Refresh All YouTube'}
+                            </Button>
+                          </div>
+                          <YouTubeAnalyticsPlatform userId={userId} isConnected={youtubeAnalytics.isConnected} error={youtubeAnalytics.error} />
+                        </>
                       )}
                       {selectedView === 'instagram' && (
                         <InstagramAnalyticsPlatform 
