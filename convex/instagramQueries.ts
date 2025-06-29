@@ -933,24 +933,26 @@ export const getWebhookEngagementSummary = query({
 // Get Instagram post by media ID (for webhook processing)
 export const getInstagramPostByMediaId = query({
   args: {
-    userId: v.string(),
     mediaId: v.string(),
   },
   handler: async (ctx, args) => {
     try {
+      console.log(`[getInstagramPostByMediaId] Looking for post with media_id: ${args.mediaId}`);
+      
       const post = await ctx.db
         .query("instagramPosts")
-        .withIndex("by_userId", q => q.eq("userId", args.userId))
         .filter(q => q.eq(q.field("data.id"), args.mediaId))
         .first();
 
       if (post) {
+        console.log(`[getInstagramPostByMediaId] Found post: ${post.postId} for user: ${post.userId}`);
         return { success: true, post };
       } else {
+        console.log(`[getInstagramPostByMediaId] Post not found for media_id: ${args.mediaId}`);
         return { success: false, error: "Post not found" };
       }
     } catch (error) {
-      console.error(`Error getting post by media ID: ${error}`);
+      console.error(`[getInstagramPostByMediaId] Error getting post by media ID: ${error}`);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   },
