@@ -190,14 +190,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
             <Eye className="w-4 h-4" />
             <span>{(metrics?.views ?? 0).toLocaleString()} Views</span>
           </div>
-          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-300">
-            <Clock className="w-4 h-4" />
-            <span>{(metrics?.watchTimeMinutes ?? 0).toLocaleString()} min Watch Time</span>
-          </div>
-          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-300">
-            <BarChart3 className="w-4 h-4" />
-            <span>{metrics?.averageViewDurationSeconds ?? 0} sec Avg. Duration</span>
-          </div>
+         
           <div className="flex items-center gap-1 text-gray-600 dark:text-gray-300">
             <ThumbsUp className="w-4 h-4" />
             <span>{(metrics?.likes ?? 0).toLocaleString()} Likes</span>

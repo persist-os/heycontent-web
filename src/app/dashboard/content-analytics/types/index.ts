@@ -82,7 +82,6 @@ export interface YouTubeMetrics {
   dislikes?: number;
   comments: number;
   shares?: number;
-  watchTimeMinutes?: number;
   averageViewDurationSeconds?: number;
 }
 export interface YouTubeContentItem extends BaseContentItem {

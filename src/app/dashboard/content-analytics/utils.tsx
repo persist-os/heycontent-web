@@ -99,8 +99,6 @@ export const getMetricsDisplay = (item: AnyContentItem) => {
   if (item.platform === 'youtube') {
     primaryMetricLabel = 'Views';
     primaryMetricValue = item.metrics.views ?? 0;
-    secondaryMetricLabel = 'Watch Time (min)';
-    secondaryMetricValue = item.metrics.watchTimeMinutes ?? 0;
   } else if (item.platform === 'instagram') {
     primaryMetricLabel = 'Reach'; // Prioritize Reach for Insta
     primaryMetricValue = item.metrics.reach ?? item.metrics.impressions ?? 0; // Fallback to Impressions if Reach is null/undefined
@@ -184,13 +182,7 @@ export function sortContent(items: AnyContentItem[], sortOption: SortOption): An
         if (b.platform === 'youtube') valB = b.metrics.views ?? 0;
         return valB - valA;
       }
-      case 'watchTimeMinutes': { // YouTube only
-        let valA = -1;
-        let valB = -1;
-        if (a.platform === 'youtube') valA = a.metrics.watchTimeMinutes ?? 0;
-        if (b.platform === 'youtube') valB = b.metrics.watchTimeMinutes ?? 0;
-        return valB - valA;
-      }
+    
       case 'openRate': { // Gmail only
         let valA = -1;
         let valB = -1;
@@ -362,7 +354,6 @@ export const getMockYouTubeItem = (idSuffix: string): YouTubeContentItem => {
   const dislikes = Math.floor(likes * (Math.random() * 0.05 + 0.005)); // Dislikes relative to likes
   const shares = Math.floor(likes * (Math.random() * 0.08 + 0.02)); // Shares relative to likes
   const averageViewDurationSeconds = Math.floor(Math.random() * 300) + 60; // 1-6 minutes
-  const watchTimeMinutes = Math.floor((views * averageViewDurationSeconds) / 60);
 
   const titleTemplates = [
     `Ultimate Guide to Topic ${idSuffix}: Everything You Need!`, 
@@ -401,7 +392,6 @@ export const getMockYouTubeItem = (idSuffix: string): YouTubeContentItem => {
       comments,
       dislikes,
       shares,
-      watchTimeMinutes,
       averageViewDurationSeconds,
     },
   };

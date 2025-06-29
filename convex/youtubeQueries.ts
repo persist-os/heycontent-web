@@ -147,8 +147,6 @@ export const listUserYouTubeVideos = query({
           likes: Number(video.statistics?.likes || 0),
           dislikes: Number(video.statistics?.dislikes || 0),
           comments: Number(video.statistics?.comments || 0),
-          watchTimeMinutes: 0, // Not available in standard YouTube API data
-          averageViewDurationSeconds: 0, // Not available in standard YouTube API data
         }
       }));
     } catch (error) {

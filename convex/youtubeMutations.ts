@@ -43,26 +43,12 @@ export const storeVideoData = mutation({
     const { captions, ...videoDataNoCaptions } = videoData;
 
     // --- Always update statistics from backend refresh ---
-    function normalizeStatistics(stats: any): any {
-      if (!stats) return undefined;
-      // Always use the YouTube API fields if present
-      return {
-        views: Number(stats.viewCount ?? 0),
-        likes: Number(stats.likeCount ?? 0),
-        dislikes: Number(stats.dislikeCount ?? 0),
-        comments: Number(stats.commentCount ?? 0),
-      };
-    }
-
-    // --- Always update statistics using the same logic as the diffs ---
-    let normalizedStats = undefined;
+    // Always assign statistics under 'statistics', not under 'public_stats'
     if (videoData.public_stats && videoData.public_stats.statistics) {
-      normalizedStats = normalizeStatistics(videoData.public_stats.statistics);
-      videoDataNoCaptions.public_stats = videoData.public_stats; // Optionally keep the raw
+      videoDataNoCaptions.statistics = videoData.public_stats.statistics;
     } else if (videoData.statistics) {
-      normalizedStats = normalizeStatistics(videoData.statistics);
+      videoDataNoCaptions.statistics = videoData.statistics;
     }
-    videoDataNoCaptions.statistics = normalizedStats;
 
     // --- Only write comments if fetch was successful ---
     let patchData = { ...videoDataNoCaptions };
@@ -240,22 +226,26 @@ export const storeVideoAnalysis = mutation({
     const video = existing.find(v => v.videoId === videoId);
     // Only update analysis/analysisMarkdown, never captions
     let updateFields = {};
+    let changedField = null;
     if (analysisData && typeof analysisData === 'object' && analysisData.markdown) {
       updateFields = { analysisMarkdown: analysisData.markdown };
+      changedField = "analysisMarkdown";
     } else {
       updateFields = { analysis: analysisData };
+      changedField = "analysis";
     }
     if (video) {
-      // Calculate diff for analysis fields only
+      // Calculate diff for analysis fields only, but do not store full content
       const diff = calculateDiff(video, updateFields);
       if (!diff) {
         return { success: true, status: "skipped_no_change", videoId: video._id };
       }
+      // Only log that the analysis field changed, not the full content
       const newDiff = {
         changedAt: now,
-        changedFields: diff.changedFields,
-        previous: diff.previous,
-        current: diff.current,
+        changedFields: [changedField],
+        previous: { [changedField]: "changed" },
+        current: { [changedField]: "changed" },
         changeType: "analysis"
       };
       const diffs = Array.isArray(video.diffs) ? [...video.diffs, newDiff] : [newDiff];
@@ -321,11 +311,12 @@ export const storeChannelAnalysis = mutation({
       if (!diff) {
         return { success: true, status: "skipped_no_change", channelId: channel._id, timestamp: now };
       }
+      // Only log that the analysis field changed, not the full content
       const newDiff = {
         changedAt: now,
-        changedFields: diff.changedFields,
-        previous: diff.previous,
-        current: diff.current,
+        changedFields: ["analysis"],
+        previous: { analysis: "changed" },
+        current: { analysis: "changed" },
         changeType: "analysis"
       };
       const diffs = Array.isArray(channel.diffs) ? [...channel.diffs, newDiff] : [newDiff];

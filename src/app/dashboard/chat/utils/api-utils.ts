@@ -956,6 +956,27 @@ export async function sendChatMessage(
           total: contentContext.convexData.comments.total_comments || 0,
         } : 'none'
       });
+      // NEW: Log full context and large fields
+      try {
+        const fullContextStr = JSON.stringify(contentContext, (key, value) => {
+          if (typeof value === 'string' && value.length > 500) return value.slice(0, 500) + '...';
+          if (Array.isArray(value) && value.length > 10) return `[Array(${value.length})]`;
+          return value;
+        }, 2);
+        console.log('🎥 [YOUTUBE CONTEXT DEBUG] FULL CONTEXT (truncated):', fullContextStr.length > 2000 ? fullContextStr.slice(0, 2000) + '... [truncated]' : fullContextStr);
+      } catch (err) {
+        console.warn('Could not stringify contentContext:', err);
+      }
+      // Log suspiciously large fields
+      if (contentContext.content?.captions && contentContext.content.captions.length > 1000) {
+        console.log('🎥 [YOUTUBE CONTEXT DEBUG] Captions field is very large:', contentContext.content.captions.length, 'characters');
+      }
+      if (contentContext.content?.comments && contentContext.content.comments.length > 10) {
+        console.log('🎥 [YOUTUBE CONTEXT DEBUG] Comments array is very large:', contentContext.content.comments.length, 'comments');
+      }
+      if (contentContext.content?.richContext?.transcript && contentContext.content.richContext.transcript.length > 1000) {
+        console.log('🎥 [YOUTUBE CONTEXT DEBUG] Transcript is very large:', contentContext.content.richContext.transcript.length, 'characters');
+      }
     }
 
     // Handle both old ContentContext format and new Zustand store format
