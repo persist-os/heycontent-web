@@ -325,27 +325,9 @@ export const TimelineScroller: React.FC = () => {
   };
 
   const handleWheel = (e: React.WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      const now = Date.now();
-      if (now - zoomThrottleRef.current < ZOOM_THROTTLE_MS) return;
-      zoomThrottleRef.current = now;
-      // Handle zoom with wheel - year -> month -> week sequence
-      const zoomSequence = ['year', 'month', 'week'];
-      const currentZoomIndex = zoomSequence.indexOf(zoomLevel);
-      if (e.deltaY < 0 && currentZoomIndex < zoomSequence.length - 1) {
-        // Zoom in (year -> month -> week)
-        const nextZoom = zoomSequence[currentZoomIndex + 1];
-        useTimelineStore.getState().setZoomLevel(nextZoom as any);
-      } else if (e.deltaY > 0 && currentZoomIndex > 0) {
-        // Zoom out (week -> month -> year)
-        const nextZoom = zoomSequence[currentZoomIndex - 1];
-        useTimelineStore.getState().setZoomLevel(nextZoom as any);
-      }
-    } else {
-      // Horizontal scroll - reduced sensitivity
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.scrollLeft += e.deltaY * 0.2;
-      }
+    // Only handle horizontal scroll - zoom functionality disabled
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollLeft += e.deltaY * 0.2;
     }
   };
 
