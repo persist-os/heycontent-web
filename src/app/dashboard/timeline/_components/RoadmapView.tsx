@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useTimelineStore } from './useTimelineStore';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { useRouter } from 'next/navigation';
@@ -95,10 +95,23 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
   // Sort personas by creation date and group by day
   const allSortedPersonas = allPersonas ? [...allPersonas].sort((a, b) => a.createdAt - b.createdAt) : [];
   
+  // Filter personas for all loaded periods (like MonthView/YearView)
+  const personasInLoadedPeriods = useMemo(() => {
+    if (!allPersonas) return [];
+    
+    // Filter personas created in any loaded period
+    return allPersonas.filter(persona => {
+      const createdDate = new Date(persona.createdAt);
+      return loadedPeriods.some(period => {
+        return createdDate >= period.start && createdDate <= period.end;
+      });
+    });
+  }, [allPersonas, loadedPeriods]);
+
   // Group personas by creation date (day)
   const personasByDate = useMemo(() => {
     const grouped = {};
-    allSortedPersonas.forEach(persona => {
+    personasInLoadedPeriods.forEach(persona => {
       const creationDate = new Date(persona.createdAt);
       const dateKey = creationDate.toISOString().slice(0, 10); // YYYY-MM-DD format
       if (!grouped[dateKey]) {
@@ -107,48 +120,34 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
       grouped[dateKey].push(persona);
     });
     return grouped;
-  }, [allSortedPersonas]);
+  }, [personasInLoadedPeriods]);
 
   // Always show all personas, don't filter by date range to prevent data disappearing
   const sortedPersonas = allSortedPersonas;
 
-  // Generate all days in the visible date range for timeline
+  // Generate all days in loaded periods for timeline (like MonthView/YearView)
   const allDaysInRange = useMemo(() => {
-    if (!visibleDateRange.start || !visibleDateRange.end) return [];
+    const daySet = new Set();
+    const allDays = [];
     
-    const days = [];
-    const start = new Date(visibleDateRange.start);
-    const end = new Date(visibleDateRange.end);
+    loadedPeriods.forEach(period => {
+      const start = new Date(period.start);
+      const end = new Date(period.end);
+      
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dayString = d.toISOString().split('T')[0]; // YYYY-MM-DD format
+        if (!daySet.has(dayString)) {
+          daySet.add(dayString);
+          allDays.push(new Date(d));
+        }
+      }
+    });
     
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      days.push(new Date(d));
-    }
-    
-    return days;
-  }, [visibleDateRange]);
+    return allDays.sort((a, b) => a.getTime() - b.getTime());
+  }, [loadedPeriods]);
 
   // If no personas available at all
-  const hasPersonasInRange = sortedPersonas.length > 0;
-
-  // Auto-snap to available data: if we have personas, adjust visible date range to include them
-  useEffect(() => {
-    if (sortedPersonas.length > 0) {
-      const personaDates = sortedPersonas.map(p => new Date(p.createdAt));
-      const minDate = new Date(Math.min(...personaDates.map(d => d.getTime())));
-      const maxDate = new Date(Math.max(...personaDates.map(d => d.getTime())));
-      
-      // Expand the range slightly to provide padding
-      const padding = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
-      const expandedMinDate = new Date(minDate.getTime() - padding);
-      const expandedMaxDate = new Date(maxDate.getTime() + padding);
-      
-      // Only update if the current range doesn't contain all personas
-      if (visibleDateRange.start > expandedMinDate || visibleDateRange.end < expandedMaxDate) {
-        setVisibleDateRange(expandedMinDate, expandedMaxDate);
-      }
-    }
-  }, [sortedPersonas, visibleDateRange, setVisibleDateRange]);
-
+  const hasPersonasInRange = personasInLoadedPeriods.length > 0;
 
   // No user state
   if (!userId) {
@@ -163,10 +162,8 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
     );
   }
 
-
-
   // No personas at all state
-  if (!allPersonas || allPersonas.length === 0) {
+  if (!personasInLoadedPeriods || personasInLoadedPeriods.length === 0) {
     return (
       <div className="min-h-screen bg-background pb-32">
         <div className="flex items-center justify-center min-h-[400px]">
