@@ -2054,15 +2054,9 @@ app.get("/api/instagram/account/:instagramAccountId", async (c) => {
 app.get("/api/instagram/post/media/:mediaId", async (c) => {
   const ctx = c.env;
   const mediaId = c.req.param("mediaId");
-  const userId = c.req.query("userId");
-  
-  if (!userId) {
-    return c.json({ success: false, error: "userId query parameter is required" }, 400);
-  }
   
   try {
     const post = await ctx.runQuery(api.instagramQueries.getInstagramPostByMediaId, {
-      userId,
       mediaId
     });
     
