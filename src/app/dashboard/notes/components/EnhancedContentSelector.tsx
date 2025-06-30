@@ -135,6 +135,15 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
             return false;
           }
           
+          // Filter out malformed insight IDs
+          if (content.type === 'insight') {
+            // Should match insight:someid:index
+            if (!/^insight:[^:]+:[0-9]+$/.test(content.id)) {
+              console.warn('Filtering out malformed insight ID:', content.id);
+              return false;
+            }
+          }
+          
           // Filter by search term
           if (searchTerm) {
             const searchLower = searchTerm.toLowerCase();

@@ -168,12 +168,37 @@ export default function SmartNotes() {
   const handleLinkContent = (prefixedId: string) => {
     console.log('handleLinkContent called:', {
       prefixedId,
+      prefixedIdLength: prefixedId.length,
+      prefixedIdIncludesColon: prefixedId.includes(':'),
+      prefixedIdSplit: prefixedId.split(':'),
       currentActiveNoteId: activeNoteId,
       currentStack: navigationStack
     });
     
-    // Parse the prefixed ID to determine the content type
+    // Special handling for insight links which have format insight:analysisId:index
+    if (prefixedId.startsWith('insight:')) {
+      const insightParts = prefixedId.split(':');
+      console.log('Insight parts:', insightParts);
+      if (insightParts.length >= 3) {
+        const analysisId = insightParts[1];
+        const insightIndexStr = insightParts[2];
+        const insightIndex = parseInt(insightIndexStr, 10);
+        console.log('Insight parsed:', { analysisId, insightIndexStr, insightIndex });
+        if (!isNaN(insightIndex)) {
+          setSelectedInsight({ analysisId, insightIndex });
+        } else {
+          console.error('handleLinkContent: Invalid insight index:', insightIndexStr);
+        }
+      } else {
+        console.error('handleLinkContent: Malformed insight prefixedId:', prefixedId);
+      }
+      return;
+    }
+    
+    // Parse the prefixed ID to determine the content type for other content types
     const [contentType, contentId] = prefixedId.split(':', 2);
+    
+    console.log('Parsed content:', { contentType, contentId });
     
     switch (contentType) {
       case 'note':
@@ -183,14 +208,6 @@ export default function SmartNotes() {
       case 'youtube':
         // Show YouTube video card
         setSelectedVideoId(contentId);
-        break;
-      case 'insight':
-        // Show insight card
-        const [analysisId, insightIndexStr] = contentId.split(':', 2);
-        const insightIndex = parseInt(insightIndexStr, 10);
-        if (!isNaN(insightIndex)) {
-          setSelectedInsight({ analysisId, insightIndex });
-        }
         break;
       case 'instagram':
         // For now, just log - could open Instagram post in new tab or modal
@@ -227,7 +244,8 @@ export default function SmartNotes() {
   // Handle insight analysis navigation
   const handleOpenInsightAnalysis = (analysisId: string, insightIndex: number) => {
     setSelectedInsight(null); // Close the card
-    router.push(`/dashboard/notes/insight-analysis/${analysisId}/${insightIndex}`);
+    const insightId = `insight:${analysisId}:${insightIndex}`;
+    router.push(`/dashboard/notes/insight-analysis/${encodeURIComponent(insightId)}`);
   };
 
   // If viewing a specific note, show the editor with smooth transition

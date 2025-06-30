@@ -154,11 +154,11 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
   // Function to render content with embedded note link components
   const renderContentWithNoteLinks = useCallback((rawContent: string) => {
     if (!rawContent) return []
-
+    
     const parts: React.ReactNode[] = []
     let remainingContent = rawContent
     let partIndex = 0
-
+    
     while (remainingContent.length > 0) {
       // Find the next potential link start @[
       const linkStartIndex = remainingContent.indexOf('@[')
@@ -175,7 +175,7 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
         }
         break
       }
-
+      
       // Add text before the @[ as markdown
       if (linkStartIndex > 0) {
         const beforeLink = remainingContent.substring(0, linkStartIndex)
@@ -186,7 +186,7 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
           />
         )
       }
-
+      
       // Look for the closing ]@
       const afterLinkStart = remainingContent.substring(linkStartIndex + 2) // Skip @[
       const linkEndIndex = afterLinkStart.indexOf(']@')
@@ -243,11 +243,25 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
           const insight = allLinkableContent?.find(n => n.id === fullInsightId);
           const insightTitle = insight?.title || '[Insight: Unknown]';
           
+          console.log('Rendering insight link:', {
+            fullInsightId,
+            insightFound: !!insight,
+            insightTitle,
+            allLinkableContentCount: allLinkableContent?.length || 0
+          });
+          
           parts.push(
             <button
               key={`insight-link-${partIndex}-${linkStartIndex}`}
               onClick={(e) => {
                 e.preventDefault();
+                // Always pass the full insight ID, not just the analysis ID
+                console.log('Insight link clicked:', {
+                  fullInsightId,
+                  contentId,
+                  contentType,
+                  id
+                });
                 if (onLinkContent) onLinkContent(fullInsightId);
               }}
               className="inline-flex items-center px-4 py-2 mx-1 my-1 rounded-lg border border-yellow-200 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 text-lg font-semibold cursor-pointer align-middle min-h-[2.8em] hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors"
@@ -347,6 +361,12 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
         } else if (contentType === 'insight') {
           // Handle insight display format
           const insight = allLinkableContent?.find(n => n.id === noteId);
+          console.log('getDisplayContent insight:', {
+            noteId,
+            insightFound: !!insight,
+            insightTitle: insight?.title,
+            allLinkableContentCount: allLinkableContent?.length || 0
+          });
           if (insight) {
             displayContent = displayContent.replace(match[0], `@[Insight: ${insight.title}]@`)
           } else {
@@ -392,7 +412,7 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
       // If it's already a prefixed ID format, keep it as is
       if (titleOrId.includes(':')) {
         const [contentType, id] = titleOrId.split(':', 2)
-        if (contentType === 'note' || contentType === 'youtube' || contentType === 'instagram') {
+        if (contentType === 'note' || contentType === 'youtube' || contentType === 'instagram' || contentType === 'insight') {
           // Already in storage format, don't change
           continue
         }

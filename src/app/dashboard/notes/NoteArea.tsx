@@ -15,7 +15,6 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { useNotes } from '@/app/context/notes-context';
 import { useAuth } from '@/app/context/auth-context';
 import { NoteContentRenderer } from './components/NoteContentRenderer';
-import { Edit, Eye } from 'lucide-react';
 
 interface NoteAreaProps {
   note: Note;
@@ -69,7 +68,6 @@ export function NoteArea({
   const [tags, setTags] = useState<string[]>(note.tags || []);
   const [lastSavedTags, setLastSavedTags] = useState<string[]>(note.tags || []);
   const [showImageGallery, setShowImageGallery] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
 
   // Initialize the inline AI hook
   const { askAI, requestAnalysis, requestIdeas } = useInlineAI({
@@ -294,6 +292,13 @@ export function NoteArea({
     userId: firebaseUser?.uid || '' 
   });
 
+  // Debug logging for allLinkableContent
+  console.log('NoteArea allLinkableContent:', {
+    count: allLinkableContent?.length || 0,
+    insights: allLinkableContent?.filter(c => c.type === 'insight').length || 0,
+    sample: allLinkableContent?.slice(0, 3).map(c => ({ id: c.id, title: c.title, type: c.type }))
+  });
+
   return (
     <div className="flex flex-col h-full w-full bg-background relative">
       {/* Header */}
@@ -331,49 +336,21 @@ export function NoteArea({
       
       {/* Main editor area */}
       <div className="flex-1 overflow-hidden">
-        <div className="space-y-6">
-          {/* Note Content */}
-          <div className="bg-card rounded-lg border border-border p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Note Content</h2>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowPreview(!showPreview)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-muted hover:bg-muted/80 rounded-md transition-colors"
-                >
-                  {showPreview ? <Edit className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  {showPreview ? 'Edit' : 'Preview'}
-                </button>
-              </div>
-            </div>
-
-            {showPreview ? (
-              <NoteContentRenderer
-                content={content}
-                availableNotes={availableNotes}
-                availableContent={allLinkableContent || []}
-                onLinkNote={handleLinkNote}
-                onLinkContent={onLinkContent}
-              />
-            ) : (
-              <RichTextEditor
-                content={content}
-                onContentChange={handleContentChange}
-                placeholder="Start writing your note..."
-                noteId={String(note._id)}
-                noteTitle={note.title}
-                platform={note.platform}
-                tags={note.tags}
-                userId={String(note.userId)}
-                noteType={note.type}
-                availableNotes={availableNotes}
-                allLinkableContent={allLinkableContent || []}
-                onLinkNote={handleLinkNote}
-                onLinkContent={onLinkContent}
-              />
-            )}
-          </div>
-        </div>
+        <RichTextEditor
+          content={content}
+          onContentChange={handleContentChange}
+          placeholder="Start writing your note..."
+          noteId={String(note._id)}
+          noteTitle={note.title}
+          platform={note.platform}
+          tags={note.tags}
+          userId={String(note.userId)}
+          noteType={note.type}
+          availableNotes={availableNotes}
+          allLinkableContent={allLinkableContent || []}
+          onLinkNote={handleLinkNote}
+          onLinkContent={onLinkContent}
+        />
       </div>
 
       {/* Floating Image Gallery Button */}
