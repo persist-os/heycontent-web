@@ -146,23 +146,10 @@ export default function YouTubeAnalysisPage() {
               <div className="flex items-center gap-3">
                 <Youtube className="w-8 h-8 text-red-500" />
                 <div>
-                  <h1 className="text-2xl font-bold">YouTube Video Analysis</h1>
-                  <p className="text-muted-foreground">{videoData.snippet?.title || 'YouTube Video'}</p>
+                  <h1 className="text-2xl font-bold">{videoData.snippet?.title || 'YouTube Video'}</h1>
+                  <p className="text-muted-foreground">YouTube Video Analysis</p>
                 </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => window.open(videoData.url || `https://www.youtube.com/watch?v=${videoId}`, '_blank')}
-                className="bg-red-600 hover:bg-red-700"
-              >
-                <Play className="w-4 h-4 mr-2" />
-                Watch on YouTube
-              </Button>
-              <Button variant="outline">
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Share
-              </Button>
             </div>
           </div>
         </div>
@@ -172,59 +159,37 @@ export default function YouTubeAnalysisPage() {
         {/* Video and Stats Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Video */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardContent className="p-0">
-                <div className="relative aspect-video bg-muted rounded-lg overflow-hidden cursor-pointer group">
-                  {videoData.snippet?.thumbnails?.high || videoData.snippet?.thumbnails?.medium ? (
-                    <>
-                      <img
-                        src={videoData.snippet.thumbnails.high || videoData.snippet.thumbnails.medium}
-                        alt={videoData.snippet?.title || 'YouTube Video'}
-                        className="w-full h-full object-cover"
-                      />
-                      {/* Play overlay */}
-                      <div 
-                        className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => window.open(videoData.url || `https://www.youtube.com/watch?v=${videoId}`, '_blank')}
-                      >
-                        <div className="bg-red-600 rounded-full p-4">
-                          <Play className="w-8 h-8 text-white fill-white" />
-                        </div>
-                      </div>
-                      {/* Duration badge */}
-                      {videoData.content_details?.duration && (
-                        <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
-                          {formatDuration(videoData.content_details.duration)}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Play className="w-16 h-16 text-muted-foreground" />
+          <div className="lg:col-span-2 flex flex-col">
+            <div className="relative aspect-video bg-muted rounded-lg overflow-hidden cursor-pointer group">
+              {videoData.snippet?.thumbnails?.high || videoData.snippet?.thumbnails?.medium ? (
+                <>
+                  <img
+                    src={videoData.snippet.thumbnails.high || videoData.snippet.thumbnails.medium}
+                    alt={videoData.snippet?.title || 'YouTube Video'}
+                    className="w-full h-full object-cover"
+                  />
+                  {/* Play overlay */}
+                  <div 
+                    className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => window.open(videoData.url || `https://www.youtube.com/watch?v=${videoId}`, '_blank')}
+                  >
+                    <div className="bg-red-600 rounded-full p-4">
+                      <Play className="w-8 h-8 text-white fill-white" />
+                    </div>
+                  </div>
+                  {/* Duration badge */}
+                  {videoData.content_details?.duration && (
+                    <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
+                      {formatDuration(videoData.content_details.duration)}
                     </div>
                   )}
+                </>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Play className="w-16 h-16 text-muted-foreground" />
                 </div>
-                
-                <div className="p-4 space-y-2">
-                  <h3 className="font-semibold text-lg">{videoData.snippet?.title || 'YouTube Video'}</h3>
-                  <p className="text-sm text-muted-foreground line-clamp-3">{videoData.snippet?.description || ''}</p>
-
-                  {videoData.snippet?.tags && videoData.snippet.tags.length > 0 && (
-                    <div>
-                      <h4 className="text-sm font-medium mb-2">Tags</h4>
-                      <div className="flex flex-wrap gap-1">
-                        {videoData.snippet.tags.map((tag, idx) => (
-                          <Badge key={idx} variant="outline" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+              )}
+            </div>
           </div>
 
           {/* Stats */}
