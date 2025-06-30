@@ -5,6 +5,7 @@ import { LinkedContentRenderer } from './LinkedContentRenderer';
 interface NoteContentRendererProps {
   content: string;
   availableNotes?: Array<{ _id: string; title: string; type: string }>;
+  availableContent?: Array<{ id: string; title: string; type: string }>;
   onLinkNote?: (noteId: string) => void;
   onLinkContent?: (prefixedId: string) => void;
 }
@@ -12,6 +13,7 @@ interface NoteContentRendererProps {
 export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
   content,
   availableNotes = [],
+  availableContent = [],
   onLinkNote,
   onLinkContent
 }) => {
@@ -53,9 +55,7 @@ export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
       // Extract the content ID
       const contentId = afterLinkStart.substring(0, linkEndIndex).trim();
       
-      console.log('NoteContentRenderer: Looking for content with ID:', contentId);
-      
-      // Check if it's a prefixed ID (youtube:, instagram:, note:, etc.)
+      // Check if it's a prefixed ID (youtube, instagram, note, insight, etc.)
       if (contentId.includes(':')) {
         const [contentType, id] = contentId.split(':', 2);
         
@@ -65,8 +65,6 @@ export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
             String(note._id) === String(id) || note._id === id
           );
           
-          console.log('Found linked note:', linkedNote);
-          
           if (linkedNote) {
             // Render as clickable note link
             if (onLinkNote) {
@@ -75,7 +73,6 @@ export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
                   key={`link-${partIndex}-${linkStartIndex}`}
                   onClick={(e) => {
                     e.preventDefault();
-                    console.log('🔗 Note link clicked:', { noteId: linkedNote._id, title: linkedNote.title });
                     onLinkNote(linkedNote._id);
                   }}
                   className="text-blue-600 hover:text-blue-800 underline bg-transparent border-none p-0 m-0 cursor-pointer font-inherit text-inherit font-medium"
@@ -106,6 +103,26 @@ export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
               </span>
             );
           }
+        } else if (contentType === 'insight') {
+          // Handle insight linking - ID format is insight:analysisId:index
+          const fullInsightId = contentId; // Keep the full ID including the index
+          
+          const insight = availableContent.find(n => n.id === fullInsightId);
+          const insightTitle = insight?.title || '[Insight: Unknown]';
+          
+          parts.push(
+            <button
+              key={`insight-link-${partIndex}-${linkStartIndex}`}
+              onClick={(e) => {
+                e.preventDefault();
+                if (onLinkContent) onLinkContent(fullInsightId);
+              }}
+              className="text-yellow-700 hover:text-yellow-900 underline bg-transparent border-none p-0 m-0 cursor-pointer font-inherit text-inherit font-medium"
+              type="button"
+            >
+              {`Insight: ${insightTitle}`}
+            </button>
+          );
         } else {
           // Handle other content types (youtube, instagram, etc.)
           parts.push(
@@ -122,8 +139,6 @@ export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
           const noteTitle = contentId.replace('Smart Note: ', '');
           const linkedNote = availableNotes.find(note => note.title === noteTitle);
           
-          console.log('Found linked note (display format):', linkedNote);
-          
           if (linkedNote) {
             // Render as clickable note link
             if (onLinkNote) {
@@ -132,7 +147,6 @@ export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
                   key={`link-${partIndex}-${linkStartIndex}`}
                   onClick={(e) => {
                     e.preventDefault();
-                    console.log('🔗 Note link clicked:', { noteId: linkedNote._id, title: linkedNote.title });
                     onLinkNote(linkedNote._id);
                   }}
                   className="text-blue-600 hover:text-blue-800 underline bg-transparent border-none p-0 m-0 cursor-pointer font-inherit text-inherit font-medium"
@@ -180,8 +194,6 @@ export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
             String(note._id) === String(contentId) || note._id === contentId
           );
           
-          console.log('Found linked note (raw ID):', linkedNote);
-          
           if (linkedNote) {
             // Render as clickable note link
             if (onLinkNote) {
@@ -190,7 +202,6 @@ export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
                   key={`link-${partIndex}-${linkStartIndex}`}
                   onClick={(e) => {
                     e.preventDefault();
-                    console.log('🔗 Note link clicked:', { noteId: linkedNote._id, title: linkedNote.title });
                     onLinkNote(linkedNote._id);
                   }}
                   className="text-blue-600 hover:text-blue-800 underline bg-transparent border-none p-0 m-0 cursor-pointer font-inherit text-inherit font-medium"
@@ -230,7 +241,7 @@ export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
     }
 
     return parts;
-  }, [content, availableNotes, onLinkNote, onLinkContent]);
+  }, [content, availableNotes, availableContent, onLinkNote, onLinkContent]);
 
   return (
     <>

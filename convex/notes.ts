@@ -701,13 +701,10 @@ export const getAllLinkableContent = query({
     const { userId } = args;
     
     if (!userId || userId.trim() === '') {
-      console.warn('getAllLinkableContent: Empty userId provided');
       return [];
     }
 
     try {
-      console.log('getAllLinkableContent: Starting queries for userId:', userId);
-      
       // Fetch all data in parallel
       const [notes, videos, batchAnalyses] = await Promise.all([
         ctx.db.query("notes").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
@@ -715,16 +712,12 @@ export const getAllLinkableContent = query({
         ctx.db.query("youtubeBatchAnalysis").withIndex("by_userId", (q) => q.eq("userId", userId)).collect()
       ]);
       
-      console.log('All database queries completed');
-      console.log('Transforming data...');
-      
       // Transform into unified format
       const linkableContent = [
         // Transform notes
         ...notes.map((note, index) => {
-          console.log(`Processing note ${index}:`, note._id);
           return {
-            id: String(note._id), // Use raw ID, not prefixed
+            id: String(note._id),
             title: note.title || 'Untitled Note',
             type: 'note' as const,
             contentType: note.type || 'idea_bank',
@@ -735,10 +728,8 @@ export const getAllLinkableContent = query({
             analysis: note.analysis
           };
         }),
-        
         // Transform YouTube videos
         ...videos.map((video, index) => {
-          console.log(`Processing video ${index}:`, video.videoId);
           return {
             id: `youtube:${video.videoId}`,
             title: video.snippet?.title || 'Untitled Video',
@@ -758,12 +749,10 @@ export const getAllLinkableContent = query({
             }
           };
         }),
-
         // Transform insights
         ...batchAnalyses.flatMap((analysis, analysisIndex) => {
           if (analysis.insights && analysis.insights.insights && Array.isArray(analysis.insights.insights)) {
             return analysis.insights.insights.map((insight: any, insightIndex: number) => {
-              console.log(`Processing insight ${analysisIndex}-${insightIndex}:`, insight.title);
               return {
                 id: `insight:${analysis._id}:${insightIndex}`,
                 title: insight.title || 'Untitled Insight',
@@ -782,7 +771,6 @@ export const getAllLinkableContent = query({
         })
       ];
       
-      console.log('getAllLinkableContent: Returning', linkableContent.length, 'items');
       return linkableContent;
       
     } catch (error) {

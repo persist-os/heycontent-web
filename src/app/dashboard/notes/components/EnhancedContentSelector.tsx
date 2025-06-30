@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils';
 interface LinkableContent {
   id: string;
   title: string;
-  type: 'note' | 'youtube' | 'instagram';
+  type: 'note' | 'youtube' | 'instagram' | 'insight';
   contentType: string;
   platform: string;
   createdAt: number;
@@ -68,21 +68,12 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
   const [hasConvexError, setHasConvexError] = useState(false);
 
   // Fetch content based on selected platform
-  console.log('EnhancedContentSelector: Starting queries with userId:', userId);
   
   const allContentData = useQuery(api.notes.getAllLinkableContent, { userId: userId || '' });
   const smartNotesContent = useQuery(api.notes.getContentByPlatform, { userId: userId || '', platform: 'smart-notes' as any });
   const youtubeContent = useQuery(api.notes.getContentByPlatform, { userId: userId || '', platform: 'youtube' as any });
   const instagramContent = useQuery(api.notes.getContentByPlatform, { userId: userId || '', platform: 'instagram' as any });
   const insightsContent = useQuery(api.notes.getContentByPlatform, { userId: userId || '', platform: 'insights' as any });
-
-  console.log('EnhancedContentSelector: Query results:', {
-    allContentData: allContentData === undefined ? 'loading' : allContentData === null ? 'error' : 'success',
-    smartNotesContent: smartNotesContent === undefined ? 'loading' : smartNotesContent === null ? 'error' : 'success',
-    youtubeContent: youtubeContent === undefined ? 'loading' : youtubeContent === null ? 'error' : 'success',
-    instagramContent: instagramContent === undefined ? 'loading' : instagramContent === null ? 'error' : 'success',
-    insightsContent: insightsContent === undefined ? 'loading' : insightsContent === null ? 'error' : 'success',
-  });
 
   // Check if any query is still loading or has errors
   const isLoading = !userId || 
@@ -99,29 +90,19 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
     instagramContent === null ||
     insightsContent === null;
 
-  console.log('EnhancedContentSelector: Status:', { isLoading, hasErrors, hasConvexError });
-
   // If there are Convex errors, set the error state
   React.useEffect(() => {
     if (hasErrors && !hasConvexError) {
       console.error('EnhancedContentSelector: Convex queries failed');
-      console.error('Error details:', {
-        allContentData: allContentData,
-        smartNotesContent: smartNotesContent,
-        youtubeContent: youtubeContent,
-        instagramContent: instagramContent,
-        insightsContent: insightsContent,
-      });
       setHasConvexError(true);
     }
-  }, [hasErrors, hasConvexError, allContentData, smartNotesContent, youtubeContent, instagramContent, insightsContent]);
+  }, [hasErrors, hasConvexError]);
 
   // Select the appropriate content based on platform filter
   const allContent = React.useMemo(() => {
     try {
       // If there are errors, return empty array
       if (hasErrors) {
-        console.warn('EnhancedContentSelector: Some queries have errors, returning empty content');
         return [];
       }
 
@@ -138,7 +119,6 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
           return allContentData || [];
       }
     } catch (error) {
-      console.error('Error selecting content:', error);
       return [];
     }
   }, [selectedPlatform, allContentData, smartNotesContent, youtubeContent, instagramContent, insightsContent, hasErrors]);
@@ -170,10 +150,9 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
         .slice(0, 20) // Limit results for performance
         .map(content => ({
           ...content,
-          type: content.type as 'note' | 'youtube' | 'instagram'
+          type: content.type as 'note' | 'youtube' | 'instagram' | 'insight'
         }));
     } catch (error) {
-      console.error('Error filtering content:', error);
       return [];
     }
   }, [allContent, searchTerm, excludeContentId]);
@@ -280,7 +259,6 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
       if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
       return date.toLocaleDateString();
     } catch (error) {
-      console.error('Error formatting date:', error);
       return 'Unknown date';
     }
   };
@@ -311,7 +289,6 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
       
       return null;
     } catch (error) {
-      console.error('Error in getStatsDisplay:', error);
       return null;
     }
   };
@@ -457,7 +434,6 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
                   </button>
                 );
               } catch (error) {
-                console.error('Error rendering content item:', error, content);
                 return (
                   <div key={content.id} className="p-3 text-sm text-muted-foreground">
                     Error loading content

@@ -50,6 +50,8 @@ interface RichTextEditorProps {
   availableNotes?: Array<{ _id: string; title: string; type: string }>
   onLinkNote?: (noteId: string) => void
   onLinkContent?: (prefixedId: string) => void // New handler for prefixed content IDs
+  // --- NEW: All linkable content for title mapping ---
+  allLinkableContent?: Array<{ id: string; title: string; type: string }>
   // --- NEW: Optional container ref for palette positioning ---
   containerRef?: React.RefObject<HTMLElement>
 }
@@ -74,6 +76,7 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
   availableNotes = [],
   onLinkNote,
   onLinkContent,
+  allLinkableContent,
   containerRef,
   ...rest
 }, ref) => {
@@ -234,6 +237,25 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
               </span>
             )
           }
+        } else if (contentType === 'insight') {
+          // Handle insight linking - ID format is insight:analysisId:index
+          const fullInsightId = contentId; // Keep the full ID including the index
+          const insight = allLinkableContent?.find(n => n.id === fullInsightId);
+          const insightTitle = insight?.title || '[Insight: Unknown]';
+          
+          parts.push(
+            <button
+              key={`insight-link-${partIndex}-${linkStartIndex}`}
+              onClick={(e) => {
+                e.preventDefault();
+                if (onLinkContent) onLinkContent(fullInsightId);
+              }}
+              className="inline-flex items-center px-4 py-2 mx-1 my-1 rounded-lg border border-yellow-200 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 text-lg font-semibold cursor-pointer align-middle min-h-[2.8em] hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors"
+              style={{ whiteSpace: 'normal', lineHeight: '1.4' }}
+            >
+              {`Insight: ${insightTitle}`}
+            </button>
+          )
         } else {
           // Handle other content types (youtube, instagram, etc.)
           parts.push(
@@ -281,7 +303,7 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
     }
 
     return parts
-  }, [availableNotes, onLinkNote, onLinkContent])
+  }, [availableNotes, onLinkNote, onLinkContent, allLinkableContent])
 
   // Function to convert storage content to display format (IDs to titles)
   const getDisplayContent = useCallback((rawContent: string) => {
@@ -292,67 +314,69 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
     let match
     
     while ((match = linkRegex.exec(rawContent)) !== null) {
-      const contentId = match[1].trim()
+      const noteId = match[1].trim()
       
-      // Check if it's a prefixed ID format
-      if (contentId.includes(':')) {
-        const [contentType, id] = contentId.split(':', 2)
-        
-        if (contentType === 'youtube') {
-          // Handle YouTube videos - convert to display format
-          const title = fetchedContentTitles[contentId]
-          if (title) {
-            displayContent = displayContent.replace(match[0], `@[YouTube: ${title}]@`)
-          }
-          continue
-        }
-        
-        if (contentType === 'instagram') {
-          // Handle Instagram posts - convert to display format
-          const title = fetchedContentTitles[contentId]
-          if (title) {
-            displayContent = displayContent.replace(match[0], `@[Instagram: ${title}]@`)
-          }
-          continue
-        }
-        
-        if (contentType === 'insight') {
-          // Handle insights - convert to display format
-          const title = fetchedContentTitles[contentId]
-          if (title) {
-            displayContent = displayContent.replace(match[0], `@[Insight: ${title}]@`)
-          }
-          continue
-        }
-        
+      // Handle both prefixed and raw note IDs
+      let linkedNote = null
+      if (noteId.includes(':')) {
+        const [contentType, id] = noteId.split(':', 2)
         if (contentType === 'note') {
-          // Handle notes - convert to display format
-          const linkedNote = availableNotes.find(note => String(note._id) === String(id))
-          if (linkedNote) {
-            displayContent = displayContent.replace(match[0], `@[Smart Note: ${linkedNote.title}]@`)
+          linkedNote = availableNotes.find(note => String(note._id) === String(id))
+        } else if (contentType === 'youtube') {
+          // Use fetched title or show loading state
+          const title = fetchedContentTitles[noteId]
+          if (title && title !== 'Error loading title') {
+            displayContent = displayContent.replace(match[0], `@[YouTube: ${title}]@`)
           } else {
-            // Show [Missing Note] for unknown IDs
-            displayContent = displayContent.replace(match[0], `@[Missing Note]@`)
+            // Keep the original prefixed ID if title not fetched yet
+            // This prevents conversion to "Missing Note"
+            continue
+          }
+          continue
+        } else if (contentType === 'instagram') {
+          // Use fetched title or show loading state
+          const title = fetchedContentTitles[noteId]
+          if (title && title !== 'Error loading title') {
+            displayContent = displayContent.replace(match[0], `@[Instagram: ${title}]@`)
+          } else {
+            // Keep the original prefixed ID if title not fetched yet
+            // This prevents conversion to "Missing Note"
+            continue
+          }
+          continue
+        } else if (contentType === 'insight') {
+          // Handle insight display format
+          const insight = allLinkableContent?.find(n => n.id === noteId);
+          if (insight) {
+            displayContent = displayContent.replace(match[0], `@[Insight: ${insight.title}]@`)
+          } else {
+            // Keep the original prefixed ID if insight not found
+            continue
           }
           continue
         }
       } else {
         // Raw note ID (legacy format) - convert to prefixed format
-        const linkedNote = availableNotes.find(note => String(note._id) === String(contentId))
+        linkedNote = availableNotes.find(note => String(note._id) === String(noteId))
         if (linkedNote) {
           // Convert legacy format to new prefixed format
           displayContent = displayContent.replace(match[0], `@[note:${linkedNote._id}]@`)
           // Then convert to display format
           displayContent = displayContent.replace(`@[note:${linkedNote._id}]@`, `@[Smart Note: ${linkedNote.title}]@`)
-        } else {
-          // Show [Missing Note] for unknown IDs
-          displayContent = displayContent.replace(match[0], `@[Missing Note]@`)
         }
+      }
+      
+      if (linkedNote) {
+        // Replace @[note:id]@ with @[Smart Note: Title]@ for display
+        displayContent = displayContent.replace(match[0], `@[Smart Note: ${linkedNote.title}]@`)
+      } else {
+        // Show [Missing Note] for unknown IDs
+        displayContent = displayContent.replace(match[0], `@[Missing Note]@`)
       }
     }
     
     return displayContent
-  }, [availableNotes, fetchedContentTitles])
+  }, [availableNotes, fetchedContentTitles, allLinkableContent])
 
   // Function to convert display content back to storage format (titles back to IDs)
   const getStorageContent = useCallback((displayContent: string) => {
@@ -368,7 +392,7 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
       // If it's already a prefixed ID format, keep it as is
       if (titleOrId.includes(':')) {
         const [contentType, id] = titleOrId.split(':', 2)
-        if (contentType === 'note' || contentType === 'youtube' || contentType === 'instagram' || contentType === 'insight') {
+        if (contentType === 'note' || contentType === 'youtube' || contentType === 'instagram') {
           // Already in storage format, don't change
           continue
         }
@@ -412,6 +436,7 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
           storageContent = storageContent.replace(match[0], `@[${prefixedId}]@`)
         } else {
           // If we can't find the prefixed ID, keep the display format
+          // This prevents conversion to "Missing Note"
           continue
         }
         continue
@@ -420,28 +445,25 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
       // Handle Insight display format - find the original prefixed ID
       if (titleOrId.startsWith('Insight: ')) {
         const insightTitle = titleOrId.replace('Insight: ', '')
-        // Find the prefixed ID that matches this title
-        const prefixedId = Object.keys(fetchedContentTitles).find(
-          id => id.startsWith('insight:') && fetchedContentTitles[id] === insightTitle
-        )
-        if (prefixedId) {
-          storageContent = storageContent.replace(match[0], `@[${prefixedId}]@`)
+        // Find the insight that matches this title
+        const insight = allLinkableContent?.find(n => n.type === 'insight' && n.title === insightTitle)
+        if (insight) {
+          storageContent = storageContent.replace(match[0], `@[${insight.id}]@`)
         } else {
-          // If we can't find the prefixed ID, keep the display format
+          // If we can't find the insight, keep the display format
           continue
         }
         continue
       }
       
-      // Handle raw note ID format (legacy format) - convert to prefixed format
-      const linkedNote = availableNotes.find(note => String(note._id) === String(titleOrId))
+      // Find note by title (fallback for old format)
+      const linkedNote = availableNotes.find(note => note.title === titleOrId)
       if (linkedNote) {
         storageContent = storageContent.replace(match[0], `@[note:${linkedNote._id}]@`)
       }
     }
-    
     return storageContent
-  }, [availableNotes, fetchedContentTitles])
+  }, [availableNotes, fetchedContentTitles, allLinkableContent])
 
   // Create AI handlers
   const aiHandlers: AIHandlers = {
