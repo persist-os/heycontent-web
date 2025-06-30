@@ -779,3 +779,52 @@ export const getAllLinkableContent = query({
     }
   },
 });
+
+export const getInsightById = query({
+  args: { insightId: v.string() },
+  returns: v.union(
+    v.object({
+      id: v.string(),
+      title: v.string(),
+      type: v.union(v.literal("note"), v.literal("youtube"), v.literal("instagram"), v.literal("insight")),
+      contentType: v.string(),
+      platform: v.string(),
+      createdAt: v.number(),
+      important: v.boolean(),
+      tags: v.array(v.string()),
+      analysis: v.optional(v.any()),
+      thumbnailUrl: v.optional(v.string()),
+      statistics: v.optional(v.any()),
+      mediaUrl: v.optional(v.string()),
+      insights: v.optional(v.any())
+    }),
+    v.null()
+  ),
+  handler: async (ctx, { insightId }) => {
+    // Find the insight in batch analyses
+    const batchAnalyses = await ctx.db.query("youtubeBatchAnalysis").collect();
+    for (const analysis of batchAnalyses) {
+      if (analysis.insights && analysis.insights.insights && Array.isArray(analysis.insights.insights)) {
+        for (let insightIndex = 0; insightIndex < analysis.insights.insights.length; insightIndex++) {
+          const insight = analysis.insights.insights[insightIndex];
+          const id = `insight:${analysis._id}:${insightIndex}`;
+          if (id === insightId) {
+            return {
+              id,
+              title: insight.title || 'Untitled Insight',
+              type: 'insight' as const,
+              contentType: 'insight',
+              platform: 'insights',
+              createdAt: analysis.createdAt || Date.now(),
+              important: false,
+              tags: [],
+              analysis: insight,
+              insights: insight
+            };
+          }
+        }
+      }
+    }
+    return null;
+  }
+});

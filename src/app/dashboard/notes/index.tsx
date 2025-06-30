@@ -13,7 +13,7 @@ import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { deleteNote, updateNote } from '@/convex/notes';
 import { YouTubeVideoCard } from './components/YouTubeVideoCard';
-import { InsightCard } from './components/InsightCard';
+import { InsightCard } from '../ai-insights/_components/InsightCard';
 
 export default function SmartNotes() {
   const { firebaseUser } = useAuth();
@@ -36,7 +36,7 @@ export default function SmartNotes() {
     canGoBack,
     navigateToNote,
     navigateBack,
-    clearNavigationStack,
+    clearNavigationStack
   } = useNotes();
   
   // YouTube video card state
@@ -177,21 +177,7 @@ export default function SmartNotes() {
     
     // Special handling for insight links which have format insight:analysisId:index
     if (prefixedId.startsWith('insight:')) {
-      const insightParts = prefixedId.split(':');
-      console.log('Insight parts:', insightParts);
-      if (insightParts.length >= 3) {
-        const analysisId = insightParts[1];
-        const insightIndexStr = insightParts[2];
-        const insightIndex = parseInt(insightIndexStr, 10);
-        console.log('Insight parsed:', { analysisId, insightIndexStr, insightIndex });
-        if (!isNaN(insightIndex)) {
-          setSelectedInsight({ analysisId, insightIndex });
-        } else {
-          console.error('handleLinkContent: Invalid insight index:', insightIndexStr);
-        }
-      } else {
-        console.error('handleLinkContent: Malformed insight prefixedId:', prefixedId);
-      }
+      router.push(`/dashboard/notes/insight-analysis/${encodeURIComponent(prefixedId)}`);
       return;
     }
     
@@ -296,14 +282,12 @@ export default function SmartNotes() {
         )}
 
         {/* Insight Card */}
-        {selectedInsight && (
-          <InsightCard
-            analysisId={selectedInsight.analysisId}
-            insightIndex={selectedInsight.insightIndex}
-            onClose={() => setSelectedInsight(null)}
-            onOpenAnalysis={handleOpenInsightAnalysis}
-          />
-        )}
+        {selectedInsight && (() => {
+          const insightId = `insight:${selectedInsight.analysisId}:${selectedInsight.insightIndex}`;
+          setSelectedInsight(null);
+          router.push(`/dashboard/notes/insight-analysis/${encodeURIComponent(insightId)}`);
+          return null;
+        })()}
       </div>
     );
   }
