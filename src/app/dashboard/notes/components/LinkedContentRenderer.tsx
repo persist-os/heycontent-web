@@ -16,7 +16,9 @@ import {
   Heart,
   MessageCircle,
   Calendar,
-  User
+  User,
+  Lightbulb,
+  Target
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -39,7 +41,7 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
   });
 
   if (!contentData) {
-    // Extract video ID from prefixed ID for fallback
+    // Extract content ID from prefixed ID for fallback
     const [contentType, contentId] = prefixedId.split(':', 2);
     
     if (contentType === 'youtube') {
@@ -56,6 +58,15 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
         <div className="inline-flex items-center gap-2 px-3 py-2 mx-1 my-1 rounded-lg border border-border bg-muted/50 text-sm">
           <Instagram className="w-4 h-4 text-pink-500" />
           <span className="text-muted-foreground">Instagram Post</span>
+        </div>
+      );
+    }
+    
+    if (contentType === 'insight') {
+      return (
+        <div className="inline-flex items-center gap-2 px-3 py-2 mx-1 my-1 rounded-lg border border-border bg-muted/50 text-sm">
+          <Lightbulb className="w-4 h-4 text-yellow-500" />
+          <span className="text-muted-foreground">Insight</span>
         </div>
       );
     }
@@ -83,6 +94,8 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
         return <Youtube className="w-4 h-4 text-red-500" />;
       case 'instagram':
         return <Instagram className="w-4 h-4 text-pink-500" />;
+      case 'insights':
+        return <Lightbulb className="w-4 h-4 text-yellow-500" />;
       case 'smart-notes':
         return <ImageIcon className="w-4 h-4" />;
       default:
@@ -100,6 +113,8 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
         return <Users className="w-3 h-3" />;
       case 'reels':
         return <Play className="w-3 h-3" />;
+      case 'insight':
+        return <Lightbulb className="w-3 h-3" />;
       default:
         return <ImageIcon className="w-3 h-3" />;
     }
@@ -129,6 +144,15 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
           <span>{contentData.insights.impressions?.toLocaleString() || 0}</span>
           <Heart className="w-3 h-3" />
           <span>{contentData.insights.likes?.toLocaleString() || 0}</span>
+        </div>
+      );
+    }
+    
+    if (contentData.type === 'insight' && contentData.analysis) {
+      return (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Target className="w-3 h-3" />
+          <span>{contentData.analysis.impact || 'Medium Impact'}</span>
         </div>
       );
     }
@@ -179,6 +203,7 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
             {contentData.title || 
               (contentData.type === 'youtube' ? 'YouTube Video' : 
                contentData.type === 'instagram' ? 'Instagram Post' : 
+               contentData.type === 'insight' ? 'Insight' :
                contentData.type === 'note' ? 'Note' :
                'Content')}
           </h4>

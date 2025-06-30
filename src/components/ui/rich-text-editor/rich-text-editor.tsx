@@ -292,54 +292,62 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
     let match
     
     while ((match = linkRegex.exec(rawContent)) !== null) {
-      const noteId = match[1].trim()
+      const contentId = match[1].trim()
       
-      // Handle both prefixed and raw note IDs
-      let linkedNote = null
-      if (noteId.includes(':')) {
-        const [contentType, id] = noteId.split(':', 2)
-        if (contentType === 'note') {
-          linkedNote = availableNotes.find(note => String(note._id) === String(id))
-        } else if (contentType === 'youtube') {
-          // Use fetched title or show loading state
-          const title = fetchedContentTitles[noteId]
-          if (title && title !== 'Error loading title') {
+      // Check if it's a prefixed ID format
+      if (contentId.includes(':')) {
+        const [contentType, id] = contentId.split(':', 2)
+        
+        if (contentType === 'youtube') {
+          // Handle YouTube videos - convert to display format
+          const title = fetchedContentTitles[contentId]
+          if (title) {
             displayContent = displayContent.replace(match[0], `@[YouTube: ${title}]@`)
-          } else {
-            // Keep the original prefixed ID if title not fetched yet
-            // This prevents conversion to "Missing Note"
-            continue
           }
           continue
-        } else if (contentType === 'instagram') {
-          // Use fetched title or show loading state
-          const title = fetchedContentTitles[noteId]
-          if (title && title !== 'Error loading title') {
+        }
+        
+        if (contentType === 'instagram') {
+          // Handle Instagram posts - convert to display format
+          const title = fetchedContentTitles[contentId]
+          if (title) {
             displayContent = displayContent.replace(match[0], `@[Instagram: ${title}]@`)
+          }
+          continue
+        }
+        
+        if (contentType === 'insight') {
+          // Handle insights - convert to display format
+          const title = fetchedContentTitles[contentId]
+          if (title) {
+            displayContent = displayContent.replace(match[0], `@[Insight: ${title}]@`)
+          }
+          continue
+        }
+        
+        if (contentType === 'note') {
+          // Handle notes - convert to display format
+          const linkedNote = availableNotes.find(note => String(note._id) === String(id))
+          if (linkedNote) {
+            displayContent = displayContent.replace(match[0], `@[Smart Note: ${linkedNote.title}]@`)
           } else {
-            // Keep the original prefixed ID if title not fetched yet
-            // This prevents conversion to "Missing Note"
-            continue
+            // Show [Missing Note] for unknown IDs
+            displayContent = displayContent.replace(match[0], `@[Missing Note]@`)
           }
           continue
         }
       } else {
         // Raw note ID (legacy format) - convert to prefixed format
-        linkedNote = availableNotes.find(note => String(note._id) === String(noteId))
+        const linkedNote = availableNotes.find(note => String(note._id) === String(contentId))
         if (linkedNote) {
           // Convert legacy format to new prefixed format
           displayContent = displayContent.replace(match[0], `@[note:${linkedNote._id}]@`)
           // Then convert to display format
           displayContent = displayContent.replace(`@[note:${linkedNote._id}]@`, `@[Smart Note: ${linkedNote.title}]@`)
+        } else {
+          // Show [Missing Note] for unknown IDs
+          displayContent = displayContent.replace(match[0], `@[Missing Note]@`)
         }
-      }
-      
-      if (linkedNote) {
-        // Replace @[note:id]@ with @[Smart Note: Title]@ for display
-        displayContent = displayContent.replace(match[0], `@[Smart Note: ${linkedNote.title}]@`)
-      } else {
-        // Show [Missing Note] for unknown IDs
-        displayContent = displayContent.replace(match[0], `@[Missing Note]@`)
       }
     }
     
@@ -360,7 +368,7 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
       // If it's already a prefixed ID format, keep it as is
       if (titleOrId.includes(':')) {
         const [contentType, id] = titleOrId.split(':', 2)
-        if (contentType === 'note' || contentType === 'youtube' || contentType === 'instagram') {
+        if (contentType === 'note' || contentType === 'youtube' || contentType === 'instagram' || contentType === 'insight') {
           // Already in storage format, don't change
           continue
         }
@@ -404,18 +412,34 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
           storageContent = storageContent.replace(match[0], `@[${prefixedId}]@`)
         } else {
           // If we can't find the prefixed ID, keep the display format
-          // This prevents conversion to "Missing Note"
           continue
         }
         continue
       }
       
-      // Find note by title (fallback for old format)
-      const linkedNote = availableNotes.find(note => note.title === titleOrId)
+      // Handle Insight display format - find the original prefixed ID
+      if (titleOrId.startsWith('Insight: ')) {
+        const insightTitle = titleOrId.replace('Insight: ', '')
+        // Find the prefixed ID that matches this title
+        const prefixedId = Object.keys(fetchedContentTitles).find(
+          id => id.startsWith('insight:') && fetchedContentTitles[id] === insightTitle
+        )
+        if (prefixedId) {
+          storageContent = storageContent.replace(match[0], `@[${prefixedId}]@`)
+        } else {
+          // If we can't find the prefixed ID, keep the display format
+          continue
+        }
+        continue
+      }
+      
+      // Handle raw note ID format (legacy format) - convert to prefixed format
+      const linkedNote = availableNotes.find(note => String(note._id) === String(titleOrId))
       if (linkedNote) {
         storageContent = storageContent.replace(match[0], `@[note:${linkedNote._id}]@`)
       }
     }
+    
     return storageContent
   }, [availableNotes, fetchedContentTitles])
 

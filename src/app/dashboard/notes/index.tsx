@@ -13,6 +13,7 @@ import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { deleteNote, updateNote } from '@/convex/notes';
 import { YouTubeVideoCard } from './components/YouTubeVideoCard';
+import { InsightCard } from './components/InsightCard';
 
 export default function SmartNotes() {
   const { firebaseUser } = useAuth();
@@ -41,6 +42,9 @@ export default function SmartNotes() {
   // YouTube video card state
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   
+  // Insight card state
+  const [selectedInsight, setSelectedInsight] = useState<{ analysisId: string; insightIndex: number } | null>(null);
+
   useEffect(() => {
     if (activeNoteId) {
       const note = notes.find(n => n._id === activeNoteId);
@@ -160,7 +164,7 @@ export default function SmartNotes() {
     navigateToNote(noteId, true); // From a link, so add to navigation stack
   };
 
-  // Handle content linking (YouTube, Instagram, etc.)
+  // Handle content linking (YouTube, Instagram, Insights, etc.)
   const handleLinkContent = (prefixedId: string) => {
     console.log('handleLinkContent called:', {
       prefixedId,
@@ -179,6 +183,14 @@ export default function SmartNotes() {
       case 'youtube':
         // Show YouTube video card
         setSelectedVideoId(contentId);
+        break;
+      case 'insight':
+        // Show insight card
+        const [analysisId, insightIndexStr] = contentId.split(':', 2);
+        const insightIndex = parseInt(insightIndexStr, 10);
+        if (!isNaN(insightIndex)) {
+          setSelectedInsight({ analysisId, insightIndex });
+        }
         break;
       case 'instagram':
         // For now, just log - could open Instagram post in new tab or modal
@@ -210,6 +222,12 @@ export default function SmartNotes() {
   const handleOpenAnalysis = (videoId: string) => {
     setSelectedVideoId(null); // Close the card
     router.push(`/dashboard/notes/youtube-analysis/${videoId}`);
+  };
+
+  // Handle insight analysis navigation
+  const handleOpenInsightAnalysis = (analysisId: string, insightIndex: number) => {
+    setSelectedInsight(null); // Close the card
+    router.push(`/dashboard/notes/insight-analysis/${analysisId}/${insightIndex}`);
   };
 
   // If viewing a specific note, show the editor with smooth transition
@@ -256,6 +274,16 @@ export default function SmartNotes() {
             videoId={selectedVideoId}
             onClose={() => setSelectedVideoId(null)}
             onOpenAnalysis={handleOpenAnalysis}
+          />
+        )}
+
+        {/* Insight Card */}
+        {selectedInsight && (
+          <InsightCard
+            analysisId={selectedInsight.analysisId}
+            insightIndex={selectedInsight.insightIndex}
+            onClose={() => setSelectedInsight(null)}
+            onOpenAnalysis={handleOpenInsightAnalysis}
           />
         )}
       </div>

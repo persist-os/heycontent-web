@@ -17,7 +17,8 @@ import {
   Users,
   Eye,
   Heart,
-  MessageCircle
+  MessageCircle,
+  Lightbulb
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -60,7 +61,7 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
 }) => {
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid;
-  const [selectedPlatform, setSelectedPlatform] = useState<'all' | 'smart-notes' | 'youtube' | 'instagram'>('all');
+  const [selectedPlatform, setSelectedPlatform] = useState<'all' | 'smart-notes' | 'youtube' | 'instagram' | 'insights'>('all');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Add error boundary for Convex queries
@@ -73,12 +74,14 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
   const smartNotesContent = useQuery(api.notes.getContentByPlatform, { userId: userId || '', platform: 'smart-notes' as any });
   const youtubeContent = useQuery(api.notes.getContentByPlatform, { userId: userId || '', platform: 'youtube' as any });
   const instagramContent = useQuery(api.notes.getContentByPlatform, { userId: userId || '', platform: 'instagram' as any });
+  const insightsContent = useQuery(api.notes.getContentByPlatform, { userId: userId || '', platform: 'insights' as any });
 
   console.log('EnhancedContentSelector: Query results:', {
     allContentData: allContentData === undefined ? 'loading' : allContentData === null ? 'error' : 'success',
     smartNotesContent: smartNotesContent === undefined ? 'loading' : smartNotesContent === null ? 'error' : 'success',
     youtubeContent: youtubeContent === undefined ? 'loading' : youtubeContent === null ? 'error' : 'success',
     instagramContent: instagramContent === undefined ? 'loading' : instagramContent === null ? 'error' : 'success',
+    insightsContent: insightsContent === undefined ? 'loading' : insightsContent === null ? 'error' : 'success',
   });
 
   // Check if any query is still loading or has errors
@@ -86,13 +89,15 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
     allContentData === undefined || 
     smartNotesContent === undefined || 
     youtubeContent === undefined || 
-    instagramContent === undefined;
+    instagramContent === undefined ||
+    insightsContent === undefined;
 
   // Check if any query has errors
   const hasErrors = allContentData === null || 
     smartNotesContent === null || 
     youtubeContent === null || 
-    instagramContent === null;
+    instagramContent === null ||
+    insightsContent === null;
 
   console.log('EnhancedContentSelector: Status:', { isLoading, hasErrors, hasConvexError });
 
@@ -105,10 +110,11 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
         smartNotesContent: smartNotesContent,
         youtubeContent: youtubeContent,
         instagramContent: instagramContent,
+        insightsContent: insightsContent,
       });
       setHasConvexError(true);
     }
-  }, [hasErrors, hasConvexError, allContentData, smartNotesContent, youtubeContent, instagramContent]);
+  }, [hasErrors, hasConvexError, allContentData, smartNotesContent, youtubeContent, instagramContent, insightsContent]);
 
   // Select the appropriate content based on platform filter
   const allContent = React.useMemo(() => {
@@ -126,6 +132,8 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
           return youtubeContent || [];
         case 'instagram':
           return instagramContent || [];
+        case 'insights':
+          return insightsContent || [];
         default:
           return allContentData || [];
       }
@@ -133,7 +141,7 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
       console.error('Error selecting content:', error);
       return [];
     }
-  }, [selectedPlatform, allContentData, smartNotesContent, youtubeContent, instagramContent, hasErrors]);
+  }, [selectedPlatform, allContentData, smartNotesContent, youtubeContent, instagramContent, insightsContent, hasErrors]);
 
   // Filter content based on search term and excluded content
   const filteredContent = React.useMemo(() => {
@@ -206,7 +214,7 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
   if (hasConvexError) {
     return (
       <div 
-        className="fixed z-[9999] w-96 bg-background border border-border rounded-lg shadow-lg backdrop-blur-sm"
+        className="fixed z-[9999] w-80 sm:w-96 md:w-[32rem] lg:w-[40rem] xl:w-[48rem] bg-background border border-border rounded-lg shadow-lg backdrop-blur-sm"
         style={{
           top: `${position.top}px`,
           left: `${position.left}px`,
@@ -236,6 +244,8 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
         return <Youtube className="w-4 h-4 text-red-500" />;
       case 'instagram':
         return <Instagram className="w-4 h-4 text-pink-500" />;
+      case 'insights':
+        return <Lightbulb className="w-4 h-4 text-yellow-500" />;
       default:
         return <FileText className="w-4 h-4" />;
     }
@@ -251,6 +261,8 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
         return <Users className="w-3 h-3" />;
       case 'reels':
         return <Play className="w-3 h-3" />;
+      case 'insight':
+        return <Lightbulb className="w-3 h-3" />;
       default:
         return <FileText className="w-3 h-3" />;
     }
@@ -306,7 +318,7 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
 
   return (
     <div 
-      className="fixed z-[9999] w-96 bg-background border border-border rounded-lg shadow-lg backdrop-blur-sm"
+      className="fixed z-[9999] w-80 sm:w-96 md:w-[32rem] lg:w-[40rem] xl:w-[48rem] bg-background border border-border rounded-lg shadow-lg backdrop-blur-sm"
       style={{
         top: `${position.top}px`,
         left: `${position.left}px`,
@@ -340,18 +352,19 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
 
       {/* Platform Filter */}
       <div className="p-3 border-b border-border">
-        <div className="flex gap-1">
+        <div className="grid grid-cols-5 gap-1">
           {[
             { key: 'all', label: 'All', icon: <FileText className="w-3 h-3" /> },
             { key: 'smart-notes', label: 'Notes', icon: <FileText className="w-3 h-3" /> },
             { key: 'youtube', label: 'YouTube', icon: <Youtube className="w-3 h-3" /> },
-            { key: 'instagram', label: 'Instagram', icon: <Instagram className="w-3 h-3" /> }
+            { key: 'instagram', label: 'Instagram', icon: <Instagram className="w-3 h-3" /> },
+            { key: 'insights', label: 'Insights', icon: <Lightbulb className="w-3 h-3" /> }
           ].map(({ key, label, icon }) => (
             <button
               key={key}
               onClick={() => setSelectedPlatform(key as any)}
               className={cn(
-                "flex items-center gap-1 px-2 py-1 text-xs rounded-md transition-colors",
+                "flex items-center justify-center gap-1 px-2 py-1 text-xs rounded-md transition-colors",
                 selectedPlatform === key
                   ? "bg-primary text-primary-foreground"
                   : "hover:bg-muted"
