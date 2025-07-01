@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useInlineAI } from './hooks/useInlineAI';
@@ -13,6 +13,8 @@ import { ImageGalleryModal } from './components/ImageGalleryModal';
 import { Image } from 'lucide-react';
 import type { Id } from "@/convex/_generated/dataModel";
 import { useNotes } from '@/app/context/notes-context';
+import { useAuth } from '@/app/context/auth-context';
+import { NoteContentRenderer } from './components/NoteContentRenderer';
 
 interface NoteAreaProps {
   note: Note;
@@ -23,6 +25,7 @@ interface NoteAreaProps {
   isMobile: boolean;
   availableNotes?: Array<{ _id: string; title: string; type: string }>;
   onLinkNote?: (noteId: string) => void;
+  onLinkContent?: (prefixedId: string) => void;
   // Navigation stack props
   canGoBack?: boolean;
   onNavigateBack?: () => void;
@@ -38,6 +41,7 @@ export function NoteArea({
   isMobile,
   availableNotes = [],
   onLinkNote,
+  onLinkContent,
   // Navigation stack props
   canGoBack,
   onNavigateBack,
@@ -282,6 +286,19 @@ export function NoteArea({
     }
   };
 
+  const { firebaseUser } = useAuth();
+  const userId = firebaseUser?.uid;
+  const allLinkableContent = useQuery(api.notes.getAllLinkableContent, { 
+    userId: firebaseUser?.uid || '' 
+  });
+
+  // Debug logging for allLinkableContent
+  console.log('NoteArea allLinkableContent:', {
+    count: allLinkableContent?.length || 0,
+    insights: allLinkableContent?.filter(c => c.type === 'insight').length || 0,
+    sample: allLinkableContent?.slice(0, 3).map(c => ({ id: c.id, title: c.title, type: c.type }))
+  });
+
   return (
     <div className="flex flex-col h-full w-full bg-background relative">
       {/* Header */}
@@ -323,10 +340,6 @@ export function NoteArea({
           content={content}
           onContentChange={handleContentChange}
           placeholder="Start writing your note..."
-          disabled={false}
-          onAskAI={handleAskAI}
-          onRequestAnalysis={handleRequestAnalysis}
-          onRequestIdeas={handleRequestIdeas}
           noteId={String(note._id)}
           noteTitle={note.title}
           platform={note.platform}
@@ -334,8 +347,9 @@ export function NoteArea({
           userId={String(note.userId)}
           noteType={note.type}
           availableNotes={availableNotes}
+          allLinkableContent={allLinkableContent || []}
           onLinkNote={handleLinkNote}
-          className="h-full border-0"
+          onLinkContent={onLinkContent}
         />
       </div>
 

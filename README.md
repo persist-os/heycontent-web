@@ -152,3 +152,56 @@ Located in navigation areas, supports:
 - Dark mode (moon icon)  
 - System preference (monitor icon)
 - Automatic hydration handling to prevent flash
+
+## Features
+
+### Smart Notes with Enhanced Content Linking
+
+Smart Notes now support linking to content across multiple platforms using a unified prefixed ID system:
+
+#### Content Linking Format
+
+- **Smart Notes**: `@[note:convexId]@`
+- **YouTube Videos**: `@[youtube:videoId]@`
+- **Instagram Posts**: `@[instagram:postId]@`
+
+#### How to Use Content Linking
+
+1. **In the Smart Notes Editor**:
+   - Type `@` to open the content selector
+   - Search for any content (notes, YouTube videos, Instagram posts)
+   - Select content to insert a link
+
+2. **Content Types Supported**:
+   - **Smart Notes**: Your existing notes with titles, tags, and analysis
+   - **YouTube Videos**: Videos with titles, descriptions, statistics, and thumbnails
+   - **Instagram Posts**: Posts with captions, media, insights, and engagement metrics
+
+3. **Visual Indicators**:
+   - Each content type has platform-specific icons and styling
+   - YouTube content shows red accents and video statistics
+   - Instagram content shows pink accents and engagement metrics
+   - Smart notes show standard styling with tags and analysis
+
+#### Technical Implementation
+
+The system uses:
+- **Prefixed IDs**: `type:id` format for content identification
+- **Convex Queries**: Efficient data fetching with platform-specific queries
+- **Unified Selector**: Single interface for all content types
+- **Rich Rendering**: Platform-specific display components
+
+#### Database Schema
+
+No changes to the existing Convex schema were required. The system leverages:
+- Existing `notes` table for smart notes
+- Existing `youtubeVideos` table for YouTube content  
+- Existing `instagramPosts` table for Instagram content
+- New queries in `notes.ts` for content aggregation
+
+#### Benefits
+
+- **Cross-Platform References**: Link any content type in your notes
+- **Rich Context**: See statistics, insights, and metadata for linked content
+- **Seamless Integration**: Works with existing note-taking workflow
+- **Future-Proof**: Easy to extend for additional platforms

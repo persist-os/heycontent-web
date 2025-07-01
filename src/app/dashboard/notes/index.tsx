@@ -1,6 +1,6 @@
 'use client';
 
-import * as React from 'react';
+import React from 'react';
 import { useState, useEffect } from 'react';
 import { NotesGrid } from './components/NotesGrid';
 import { NoteArea } from './NoteArea';
@@ -9,6 +9,11 @@ import type { Id } from '@/convex/_generated/dataModel';
 import { useNotes } from '@/app/context/notes-context';
 import { Note, NoteType } from './types';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { deleteNote, updateNote } from '@/convex/notes';
+import { YouTubeVideoCard } from './components/YouTubeVideoCard';
+import { InsightCard } from '../ai-insights/_components/InsightCard';
 
 export default function SmartNotes() {
   const { firebaseUser } = useAuth();
@@ -20,7 +25,7 @@ export default function SmartNotes() {
   
   const { 
     notes, 
-    isLoading, 
+    isLoading: notesIsLoading, 
     updateNote, 
     deleteNote, 
     saveNoteContent, 
@@ -31,9 +36,15 @@ export default function SmartNotes() {
     canGoBack,
     navigateToNote,
     navigateBack,
-    clearNavigationStack,
+    clearNavigationStack
   } = useNotes();
   
+  // YouTube video card state
+  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
+  
+  // Insight card state
+  const [selectedInsight, setSelectedInsight] = useState<{ analysisId: string; insightIndex: number } | null>(null);
+
   useEffect(() => {
     if (activeNoteId) {
       const note = notes.find(n => n._id === activeNoteId);
@@ -153,6 +164,47 @@ export default function SmartNotes() {
     navigateToNote(noteId, true); // From a link, so add to navigation stack
   };
 
+  // Handle content linking (YouTube, Instagram, Insights, etc.)
+  const handleLinkContent = (prefixedId: string) => {
+    console.log('handleLinkContent called:', {
+      prefixedId,
+      prefixedIdLength: prefixedId.length,
+      prefixedIdIncludesColon: prefixedId.includes(':'),
+      prefixedIdSplit: prefixedId.split(':'),
+      currentActiveNoteId: activeNoteId,
+      currentStack: navigationStack
+    });
+    
+    // Special handling for insight links which have format insight:analysisId:index
+    if (prefixedId.startsWith('insight:')) {
+      router.push(`/dashboard/notes/insight-analysis/${encodeURIComponent(prefixedId)}`);
+      return;
+    }
+    
+    // Parse the prefixed ID to determine the content type for other content types
+    const [contentType, contentId] = prefixedId.split(':', 2);
+    
+    console.log('Parsed content:', { contentType, contentId });
+    
+    switch (contentType) {
+      case 'note':
+        // Handle note linking (existing functionality)
+        handleLinkNote(contentId);
+        break;
+      case 'youtube':
+        // Show YouTube video card
+        setSelectedVideoId(contentId);
+        break;
+      case 'instagram':
+        // For now, just log - could open Instagram post in new tab or modal
+        console.log('Instagram post linked:', contentId);
+        // TODO: Implement Instagram post viewing
+        break;
+      default:
+        console.warn('Unknown content type:', contentType);
+    }
+  };
+
   // Prepare available notes for linking (exclude current note)
   const availableNotes = notes
     .filter(note => String(note._id) !== activeNoteId)
@@ -168,6 +220,19 @@ export default function SmartNotes() {
     activeNoteId,
     availableNotes: availableNotes.map(n => ({ id: n._id, title: n.title, type: n.type }))
   });
+
+  // Handle YouTube video analysis navigation
+  const handleOpenAnalysis = (videoId: string) => {
+    setSelectedVideoId(null); // Close the card
+    router.push(`/dashboard/notes/youtube-analysis/${videoId}`);
+  };
+
+  // Handle insight analysis navigation
+  const handleOpenInsightAnalysis = (analysisId: string, insightIndex: number) => {
+    setSelectedInsight(null); // Close the card
+    const insightId = `insight:${analysisId}:${insightIndex}`;
+    router.push(`/dashboard/notes/insight-analysis/${encodeURIComponent(insightId)}`);
+  };
 
   // If viewing a specific note, show the editor with smooth transition
   if (activeNote) {
@@ -201,10 +266,28 @@ export default function SmartNotes() {
           isMobile={true} // Always show back button in this context
           availableNotes={availableNotes}
           onLinkNote={handleLinkNote}
+          onLinkContent={handleLinkContent}
           canGoBack={canGoBack}
           onNavigateBack={navigateBack}
           navigationStack={navigationStack}
         />
+        
+        {/* YouTube Video Card */}
+        {selectedVideoId && (
+          <YouTubeVideoCard
+            videoId={selectedVideoId}
+            onClose={() => setSelectedVideoId(null)}
+            onOpenAnalysis={handleOpenAnalysis}
+          />
+        )}
+
+        {/* Insight Card */}
+        {selectedInsight && (() => {
+          const insightId = `insight:${selectedInsight.analysisId}:${selectedInsight.insightIndex}`;
+          setSelectedInsight(null);
+          router.push(`/dashboard/notes/insight-analysis/${encodeURIComponent(insightId)}`);
+          return null;
+        })()}
       </div>
     );
   }
@@ -218,7 +301,7 @@ export default function SmartNotes() {
         onDeleteNote={handleDeleteNote}
         onToggleImportant={handleToggleImportant}
         onUpdateNote={handleUpdateNote}
-        isLoading={isLoading}
+        isLoading={notesIsLoading}
       />
     </div>
   );
