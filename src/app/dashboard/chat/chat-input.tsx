@@ -1,9 +1,13 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Send, Loader2, MessageSquare, Search, FileText, Brain } from 'lucide-react'
 import { Message } from '@/app/types'
 import { useTheme } from 'next-themes'
+import { EnhancedContentSelector } from '@/app/dashboard/notes/components/EnhancedContentSelector'
+import { useQuery } from 'convex/react'
+import { api } from '@/convex/_generated/api'
+import { useAuth } from '@/app/context/auth-context'
 
 interface ChatInputProps {
   onSend: (message: string) => void
@@ -73,6 +77,20 @@ export function ChatInput({
   const textareaRef = inputRef || internalInputRef
   const { theme } = useTheme()
   
+  // @ functionality state
+  const [showEnhancedContentSelector, setShowEnhancedContentSelector] = useState(false)
+  const [contentSelectorPosition, setContentSelectorPosition] = useState({ top: 100, left: 100 })
+  const [contentSearchTerm, setContentSearchTerm] = useState('')
+  
+  // Auth context for content fetching
+  const { firebaseUser } = useAuth()
+  const userId = firebaseUser?.uid
+  
+  // Fetch all linkable content
+  const allLinkableContent = useQuery(api.notes.getAllLinkableContent, { 
+    userId: userId || '' 
+  })
+  
   // Theme-aware accent colors
   const isDark = theme === 'dark'
   const accentColor = isDark ? 'text-accent' : 'text-purple-600'
@@ -91,6 +109,228 @@ export function ChatInput({
       setInput(value)
     }
   }
+
+  // Shadow state for the actual message content (with @[1]@, @[2]@ format)
+  const [shadowInput, setShadowInput] = useState('')
+  
+  // State to track links in order: [{index: 1, contentId: "note:123"}, {index: 2, contentId: "youtube:456"}]
+  const [linkRegistry, setLinkRegistry] = useState<Array<{index: number, contentId: string}>>([])
+
+  // Process display text to show titles using link registry
+  const getDisplayText = useCallback((rawText: string) => {
+    if (!allLinkableContent || linkRegistry.length === 0) return rawText
+    
+    return rawText.replace(/@\[(\d+)\]@/g, (match, indexStr) => {
+      const index = parseInt(indexStr)
+      const linkEntry = linkRegistry.find(link => link.index === index)
+      
+      if (!linkEntry) return match
+      
+      // Parse the content ID to find the content
+      const contentId = linkEntry.contentId
+      let actualContentId = contentId
+      let contentType = 'note'
+      
+      // Check if it's a prefixed ID (note:, youtube:, etc.)
+      if (contentId.includes(':')) {
+        const [prefix, id] = contentId.split(':', 2)
+        contentType = prefix
+        actualContentId = id
+      }
+      
+      // Find the linked content
+      let linkedContent
+      if (contentType === 'note') {
+        linkedContent = allLinkableContent.find(item => item.id === actualContentId)
+        if (!linkedContent) {
+          linkedContent = allLinkableContent.find(item => item.id === contentId)
+        }
+      } else {
+        linkedContent = allLinkableContent.find(item => item.id === contentId)
+      }
+      
+      // Return the title if found, otherwise keep the original format
+      return linkedContent ? `@${linkedContent.title}\u200B` : match
+    })
+  }, [allLinkableContent, linkRegistry])
+
+
+
+  // Handle textarea changes with atomic link handling
+  const handleTextareaChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value
+    const oldValue = currentInput
+    
+    // Check if this is a deletion that affects a link
+    if (newValue.length < oldValue.length && linkRegistry.length > 0) {
+      // Find the first difference to determine what was deleted
+      let deletedIndex = -1
+      for (let i = 0; i < Math.min(oldValue.length, newValue.length); i++) {
+        if (oldValue[i] !== newValue[i]) {
+          deletedIndex = i
+          break
+        }
+      }
+      
+      if (deletedIndex === -1) {
+        deletedIndex = newValue.length
+      }
+      
+      // Find which link (if any) contains the deleted character
+      const displayLinkPattern = /@([^@\n]+?)\u200B/g
+      let displayMatch
+      let linkIndex = 0
+      
+      while ((displayMatch = displayLinkPattern.exec(oldValue)) !== null && linkIndex < linkRegistry.length) {
+        const displayStart = displayMatch.index
+        const displayEnd = displayStart + displayMatch[0].length
+        
+        // Check if deletion affects this link
+        if (deletedIndex >= displayStart && deletedIndex <= displayEnd) {
+          console.log('🔗 [LINK DELETION] Deleting link:', {
+            displayStart,
+            displayEnd,
+            deletedIndex,
+            linkIndex: linkRegistry[linkIndex].index,
+            displayText: displayMatch[0]
+          })
+          
+          // Delete the entire link (including the invisible character)
+          const beforeLink = newValue.substring(0, displayStart)
+          const afterLink = newValue.substring(displayEnd)
+          const newDisplayValue = beforeLink + afterLink
+          
+          // Update shadow text by removing the corresponding link
+          const shadowLink = linkRegistry[linkIndex]
+          const shadowLinkPattern = new RegExp(`@\\[${shadowLink.index}\\]@`)
+          const newShadowValue = shadowInput.replace(shadowLinkPattern, '')
+          
+          console.log('🔗 [LINK DELETION] Shadow text update:', {
+            before: shadowInput,
+            after: newShadowValue,
+            removed: `@[${shadowLink.index}]@`
+          })
+          
+          // Remove the link from registry and reindex remaining links
+          const deletedLinkIndex = shadowLink.index
+          const newLinkRegistry = linkRegistry.filter(link => link.index !== deletedLinkIndex)
+            .map((link, newIndex) => ({
+              ...link,
+              index: newIndex + 1
+            }))
+          
+          setLinkRegistry(newLinkRegistry)
+          
+          // Update shadow text to reflect new indices
+          let updatedShadowValue = newShadowValue
+          newLinkRegistry.forEach((link, index) => {
+            const oldIndex = link.index
+            const newIndex = index + 1
+            if (oldIndex !== newIndex) {
+              // Replace old index with new index in shadow text
+              updatedShadowValue = updatedShadowValue.replace(
+                new RegExp(`@\\[${oldIndex}\\]@`, 'g'),
+                `@[${newIndex}]@`
+              )
+            }
+          })
+          
+          // Update both values
+          setCurrentInput(newDisplayValue)
+          setShadowInput(updatedShadowValue)
+          
+          // Set cursor position after the deleted link
+          setTimeout(() => {
+            if (textareaRef.current) {
+              textareaRef.current.selectionStart = displayStart
+              textareaRef.current.selectionEnd = displayStart
+            }
+          }, 0)
+          return
+        }
+        
+        linkIndex++
+      }
+    }
+    
+    // For all other text changes, update both display and shadow text directly
+    setCurrentInput(newValue)
+    
+    // Update shadow text by replacing display titles with their corresponding indices
+    let newShadowValue = newValue
+    
+    // Replace each link in the display text with its shadow index
+    linkRegistry.forEach((link) => {
+      // Parse the content ID to find the content (same logic as getDisplayText)
+      const contentId = link.contentId
+      let actualContentId = contentId
+      let contentType = 'note'
+      
+      // Check if it's a prefixed ID (note:, youtube:, etc.)
+      if (contentId.includes(':')) {
+        const [prefix, id] = contentId.split(':', 2)
+        contentType = prefix
+        actualContentId = id
+      }
+      
+      // Find the linked content
+      let linkedContent
+      if (contentType === 'note') {
+        linkedContent = allLinkableContent?.find(item => item.id === actualContentId)
+        if (!linkedContent) {
+          linkedContent = allLinkableContent?.find(item => item.id === contentId)
+        }
+      } else {
+        linkedContent = allLinkableContent?.find(item => item.id === contentId)
+      }
+      
+      if (linkedContent) {
+        const title = linkedContent.title || 'Untitled'
+        const displayTitle = `@${title}\u200B` // Include the invisible character
+        const shadowIndex = `@[${link.index}]@`
+        
+        // Replace the display title with the shadow index
+        newShadowValue = newShadowValue.replace(displayTitle, shadowIndex)
+      }
+    })
+    
+    setShadowInput(newShadowValue)
+    
+    console.log('🔄 [TEXT CHANGE] Display text changed:', newValue)
+    console.log('🔄 [TEXT CHANGE] Shadow text updated:', newShadowValue)
+  }, [currentInput, shadowInput, setCurrentInput, textareaRef, linkRegistry, allLinkableContent])
+
+  // Handle textarea selection to prevent cursor inside links
+  const handleTextareaSelect = useCallback((e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+    const textarea = e.currentTarget
+    const cursorPos = textarea.selectionStart
+    
+    // If there's no shadow text with links, allow normal cursor positioning
+    if (!shadowInput || !shadowInput.includes('@[')) {
+      return
+    }
+    
+    // Find all @Title patterns in the display text
+    const displayText = currentInput
+    // Updated regex to handle spaces in titles - match @Title with spaces until the invisible character
+    const displayLinkPattern = /@([^@\n]+?)\u200B/g
+    let displayMatch
+    
+    while ((displayMatch = displayLinkPattern.exec(displayText)) !== null) {
+      const displayStart = displayMatch.index
+      const displayEnd = displayStart + displayMatch[0].length
+      
+      // Check if cursor is inside this link
+      if (cursorPos > displayStart && cursorPos < displayEnd) {
+        // Move cursor to the end of the link
+        setTimeout(() => {
+          textarea.selectionStart = displayEnd
+          textarea.selectionEnd = displayEnd
+        }, 0)
+        return
+      }
+    }
+  }, [shadowInput, currentInput])
 
   // Use context-aware placeholders when analysis is available
   const activePlaceholders = hasAnalysis ? contextPlaceholders : placeholders
@@ -112,7 +352,16 @@ export function ChatInput({
     setPlaceholder(activePlaceholders[0])
   }, [hasAnalysis, activePlaceholders])
 
-  // Auto-resize textarea
+  // Initialize shadow input when currentInput changes externally
+  useEffect(() => {
+    if (currentInput !== undefined && !shadowInput) {
+      // Only initialize shadow input if it's empty
+      // Don't convert display text to shadow text automatically
+      setShadowInput('')
+    }
+  }, [currentInput, shadowInput])
+
+  // Auto-resize textarea and sync display div
   useEffect(() => {
     const textarea = textareaRef.current
     if (textarea) {
@@ -129,11 +378,62 @@ export function ChatInput({
     }
   }, [autoFocus, isLoading, referencedMessage, textareaRef])
 
+  // Get cursor coordinates for content selector positioning
+  const getCursorCoordinates = useCallback((textarea: HTMLTextAreaElement) => {
+    const rect = textarea.getBoundingClientRect()
+    const style = window.getComputedStyle(textarea)
+    const lineHeight = parseInt(style.lineHeight) || 20
+    const paddingTop = parseInt(style.paddingTop) || 0
+    const paddingLeft = parseInt(style.paddingLeft) || 0
+    
+    const text = textarea.value.substring(0, textarea.selectionStart)
+    const lines = text.split('\n')
+    const currentLine = lines[lines.length - 1]
+    const lineNumber = lines.length
+    
+    const canvas = document.createElement('canvas')
+    const context = canvas.getContext('2d')
+    if (!context) return { top: 0, left: 0 }
+    
+    context.font = style.font
+    const textWidth = context.measureText(currentLine).width
+    
+    const cursorTop = rect.top + paddingTop + (lineNumber * lineHeight)
+    const cursorLeft = rect.left + paddingLeft + textWidth
+    
+    // Check if there's enough space below the cursor
+    const selectorHeight = 400 // Approximate height of the content selector
+    const margin = 20
+    const spaceBelow = window.innerHeight - cursorTop - margin
+    const spaceAbove = cursorTop - margin
+    
+    // Position above cursor if there's not enough space below
+    const finalTop = spaceBelow < selectorHeight && spaceAbove > selectorHeight 
+      ? cursorTop - selectorHeight - 10 // Position above with 10px gap
+      : cursorTop + 10 // Position below with 10px gap
+    
+    return {
+      top: Math.max(margin, finalTop),
+      left: Math.max(margin, Math.min(cursorLeft, window.innerWidth - 600 - margin)) // Ensure it doesn't go off-screen horizontally
+    }
+  }, [])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (currentInput.trim() && !isLoading && currentInput.length <= maxLength) {
-      onSend(currentInput.trim())
+    const messageToSend = shadowInput || currentInput
+    if (messageToSend.trim() && !isLoading && currentInput.length <= maxLength) {
+      console.log('📤 [CHAT INPUT] Sending message:')
+      console.log('  Display text:', currentInput)
+      console.log('  Shadow text (hidden layer):', shadowInput)
+      console.log('  Link registry:', linkRegistry)
+      console.log('  Message being sent:', messageToSend.trim())
+      
+      // For now, send the shadow text with numeric indices
+      // In a full implementation, we'd also send the link registry metadata
+      onSend(messageToSend.trim())
       setCurrentInput('')
+      setShadowInput('')
+      setLinkRegistry([]) // Reset link registry after sending
     }
   }
 
@@ -148,6 +448,80 @@ export function ChatInput({
     }
   }
 
+  // Handle linking content from the selector
+  const handleLinkContent = useCallback((contentId: string) => {
+    console.log('🔗 handleLinkContent called with:', contentId)
+    console.log('🔗 textareaRef.current:', textareaRef.current)
+    
+    if (!textareaRef.current) {
+      console.log('❌ textareaRef.current is null')
+      return
+    }
+
+    const textarea = textareaRef.current
+    const cursorPos = textarea.selectionStart
+    console.log('🔗 cursorPos:', cursorPos)
+    
+    // Find the @ symbol position
+    const textBeforeCursor = textarea.value.substring(0, cursorPos)
+    const atSymbolIndex = textBeforeCursor.lastIndexOf('@')
+    console.log('🔗 atSymbolIndex:', atSymbolIndex)
+    console.log('🔗 textBeforeCursor:', textBeforeCursor)
+    
+    if (atSymbolIndex === -1) {
+      console.log('❌ No @ symbol found')
+      return
+    }
+    
+    // Get content information from the query
+    const linkedContent = allLinkableContent?.find(item => item.id === contentId)
+    console.log('🔗 linkedContent:', linkedContent)
+    if (!linkedContent) {
+      console.log('❌ linkedContent not found')
+      return
+    }
+    
+    // Create the proper content ID format for storage
+    let formattedContentId = contentId
+    if (linkedContent.type === 'note' && !contentId.startsWith('note:')) {
+      // For smart notes, ensure we have the note: prefix
+      formattedContentId = `note:${contentId}`
+    }
+    console.log('🔗 formattedContentId:', formattedContentId)
+    
+    // Get the title for display
+    const title = linkedContent.title || 'Untitled'
+    
+    // Add to link registry
+    const newLinkIndex = linkRegistry.length + 1
+    setLinkRegistry(prev => [...prev, { index: newLinkIndex, contentId: formattedContentId }])
+    
+    // Replace the @ and any text after it with the title format for display
+    // Add an invisible character (zero-width space) after the link to mark its end
+    const textAfterCursor = textarea.value.substring(cursorPos)
+    const newDisplayText = textarea.value.substring(0, atSymbolIndex) + `@${title}\u200B` + textAfterCursor
+    console.log('🔗 newDisplayText:', newDisplayText)
+    
+    // Update the display text - the handleTextareaChange will handle shadow text
+    setCurrentInput(newDisplayText)
+    
+    console.log('🔗 [LINK CONTENT] Link added:', {
+      display: newDisplayText,
+      linkIndex: newLinkIndex,
+      contentId: formattedContentId
+    })
+    
+    // Set cursor position after the inserted content (after the invisible character)
+    const newCursorPos = atSymbolIndex + `@${title}\u200B`.length
+    textarea.setSelectionRange(newCursorPos, newCursorPos)
+    
+    // Hide the content selector
+    setShowEnhancedContentSelector(false)
+    setContentSearchTerm('')
+    
+    console.log('✅ Content linking completed')
+  }, [textareaRef, allLinkableContent, linkRegistry])
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter') {
       if (e.shiftKey) {
@@ -160,6 +534,28 @@ export function ChatInput({
         onSend(currentInput.trim())
         setCurrentInput('')
       }
+    }
+
+    // '@' to open content linking selector
+    if (e.key === '@') {
+      // Let the @ be typed first, then open selector
+      setTimeout(() => {
+        if (textareaRef.current) {
+          const coords = getCursorCoordinates(textareaRef.current)
+          setContentSelectorPosition(coords)
+          setShowEnhancedContentSelector(true)
+          setContentSearchTerm('')
+        }
+      }, 10) // Slightly longer delay to ensure @ is typed and cursor updated
+      return
+    }
+
+    // Handle ESC to close content selector
+    if (e.key === 'Escape' && showEnhancedContentSelector) {
+      e.preventDefault()
+      e.stopPropagation()
+      setShowEnhancedContentSelector(false)
+      return
     }
   }
 
@@ -182,7 +578,7 @@ export function ChatInput({
   }
 
   return (
-    <div className="shrink-0 bg-background">
+    <div className="shrink-0 bg-background relative">
       <form onSubmit={handleSubmit} className="p-2 sm:p-3">
         {/* Context indicator */}
         {hasContext && (
@@ -275,7 +671,7 @@ export function ChatInput({
               <textarea
                 ref={textareaRef}
                 value={currentInput}
-                onChange={(e) => setCurrentInput(e.target.value)}
+                onChange={handleTextareaChange}
                 placeholder={contextPlaceholder}
                 className="text-base leading-relaxed flex-1 bg-transparent border-0 outline-0 resize-none placeholder:text-muted-foreground chat-font 
                 [&::-webkit-scrollbar]:w-2 
@@ -291,6 +687,7 @@ export function ChatInput({
                 [scrollbar-color:hsl(var(--border))_transparent]"
                 disabled={isLoading || disabled}
                 onKeyDown={handleKeyDown}
+                onSelect={handleTextareaSelect}
                 maxLength={maxLength}
               />
             </div>
@@ -386,9 +783,45 @@ export function ChatInput({
           </div>
         </div>
         <div className="mt-1.5 text-xs text-muted-foreground text-center">
-          Press Enter to send, Shift+Enter for new line
+          Press Enter to send, Shift+Enter for new line, @ to link content
         </div>
+        
+        {/* Temporary shadow text display */}
+        {shadowInput && (
+          <div className="absolute top-2 left-2 z-50 p-2 bg-yellow-100 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded text-xs max-w-xs">
+            <div className="font-medium text-yellow-800 dark:text-yellow-200 mb-1">
+              🔍 Shadow Text:
+            </div>
+            <div className="font-mono text-yellow-700 dark:text-yellow-300 break-all text-xs">
+              {shadowInput}
+            </div>
+            {linkRegistry.length > 0 && (
+              <>
+                <div className="font-medium text-yellow-800 dark:text-yellow-200 mb-1 mt-2">
+                  🔗 Link Registry:
+                </div>
+                <div className="font-mono text-yellow-700 dark:text-yellow-300 break-all text-xs">
+                  {linkRegistry.map(link => (
+                    <div key={link.index}>
+                      {link.index}: {link.contentId}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </form>
+
+      {/* Enhanced Content Selector */}
+      <EnhancedContentSelector
+        isOpen={showEnhancedContentSelector}
+        onClose={() => setShowEnhancedContentSelector(false)}
+        onSelect={handleLinkContent}
+        position={contentSelectorPosition}
+        searchTerm={contentSearchTerm}
+        onSearchChange={setContentSearchTerm}
+      />
     </div>
   )
 }

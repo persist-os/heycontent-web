@@ -4,9 +4,18 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
 import rehypeRaw from 'rehype-raw'
-import { ExternalLink, Play, Image } from 'lucide-react'
+import { ExternalLink, Play, Image, FileText, Youtube, Instagram, Lightbulb } from 'lucide-react'
+import { useQuery } from 'convex/react'
+import { api } from '@/convex/_generated/api'
+import { useAuth } from '@/app/context/auth-context'
+import { useCallback, useMemo } from 'react'
 
 interface MarkdownRendererProps {
+  content: string
+  className?: string
+}
+
+interface ChatContentRendererProps {
   content: string
   className?: string
 }
@@ -91,6 +100,123 @@ function LinkEmbed({ href, children }: { href: string; children: React.ReactNode
         {!isYoutube && !isImage && <ExternalLink className="w-3 h-3 inline ml-1" />}
       </a>
     </span>
+  )
+}
+
+// Component to render linked content in chat messages
+function ChatContentRenderer({ content, className = '' }: ChatContentRendererProps) {
+  const { firebaseUser } = useAuth()
+  const userId = firebaseUser?.uid
+  
+  // Fetch all linkable content
+  const allLinkableContent = useQuery(api.notes.getAllLinkableContent, { 
+    userId: userId || '' 
+  })
+
+  // Process content to render linked content
+  const processedContent = useMemo(() => {
+    if (!content || !allLinkableContent) return content
+
+    // First, handle numeric index format @[1]@, @[2]@
+    let processedContent = content.replace(/@\[(\d+)\]@/g, (match, indexStr) => {
+      const index = parseInt(indexStr)
+      
+      // For now, we'll show a placeholder since we don't have access to the link registry
+      // In a real implementation, the link registry would be passed as a prop or stored in the message
+      return `<span class="text-muted-foreground italic">[Link ${index}]</span>`
+    })
+
+    // Then handle legacy content ID format @[note:ID]@ for backward compatibility
+    processedContent = processedContent.replace(/@\[([^\]]+)\]@/g, (match, contentId) => {
+      // Handle different content ID formats
+      let actualContentId = contentId
+      let contentType = 'note'
+      
+      // Check if it's a prefixed ID (note:, youtube:, etc.)
+      if (contentId.includes(':')) {
+        const [prefix, id] = contentId.split(':', 2)
+        contentType = prefix
+        actualContentId = id
+      }
+      
+      // For smart notes, we need to handle both prefixed and non-prefixed IDs
+      let linkedContent
+      if (contentType === 'note') {
+        // Try to find by the actual ID (without prefix)
+        linkedContent = allLinkableContent.find(item => item.id === actualContentId)
+        // If not found, try with the full contentId (in case it's already prefixed)
+        if (!linkedContent) {
+          linkedContent = allLinkableContent.find(item => item.id === contentId)
+        }
+      } else {
+        // For other content types, use the full contentId
+        linkedContent = allLinkableContent.find(item => item.id === contentId)
+      }
+      
+      if (!linkedContent) {
+        // Content not found, show as plain text
+        return `<span class="text-muted-foreground italic">[Content not found: ${contentId}]</span>`
+      }
+
+      const title = linkedContent.title || 'Untitled'
+      
+      // Create the proper content ID for navigation
+      let navigationId = contentId
+      if (linkedContent.type === 'note' && !contentId.startsWith('note:')) {
+        // For smart notes, ensure we have the note: prefix
+        navigationId = `note:${contentId}`
+      }
+      
+      // Create a clickable link that opens in a new tab or navigates appropriately
+      return `<a href="#" class="inline-flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline font-medium" data-content-id="${navigationId}" data-content-type="${linkedContent.type}">${title}</a>`
+    })
+
+    return processedContent
+  }, [content, allLinkableContent])
+
+  // Handle clicks on linked content
+  const handleContentClick = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement
+    if (target.tagName === 'A' && target.hasAttribute('data-content-id')) {
+      e.preventDefault()
+      const contentId = target.getAttribute('data-content-id')
+      const contentType = target.getAttribute('data-content-type')
+      
+      if (contentId && contentType) {
+        // Handle different content types
+        switch (contentType) {
+          case 'note':
+            // Extract the note ID (remove note: prefix if present)
+            const noteId = contentId.startsWith('note:') ? contentId.replace('note:', '') : contentId
+            // Navigate to the note
+            window.open(`/dashboard/notes?noteId=${noteId}`, '_blank')
+            break
+          case 'youtube':
+            // Extract video ID and open YouTube
+            const videoId = contentId.replace('youtube:', '')
+            window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank')
+            break
+          case 'instagram':
+            // For Instagram, we could open the post if we have the URL
+            console.log('Instagram post clicked:', contentId)
+            break
+          case 'insight':
+            // Navigate to insight analysis
+            window.open(`/dashboard/notes/insight-analysis/${encodeURIComponent(contentId)}`, '_blank')
+            break
+          default:
+            console.log('Unknown content type:', contentType, contentId)
+        }
+      }
+    }
+  }, [])
+
+  return (
+    <div 
+      className={`chat-content-renderer ${className}`}
+      onClick={handleContentClick}
+      dangerouslySetInnerHTML={{ __html: processedContent }}
+    />
   )
 }
 
@@ -258,4 +384,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
       </ReactMarkdown>
     </div>
   )
-} 
+}
+
+// Export the ChatContentRenderer for use in chat messages
+export { ChatContentRenderer } 

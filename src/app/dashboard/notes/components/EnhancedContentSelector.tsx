@@ -198,14 +198,42 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
 
   if (!isOpen) return null;
 
+  // Calculate final position to ensure the selector stays within viewport
+  const selectorWidth = 600; // Approximate width
+  const selectorHeight = 400; // Approximate height
+  const margin = 20;
+  
+  let finalTop = position.top;
+  let finalLeft = position.left;
+  
+  // Ensure it doesn't go off the bottom of the screen
+  if (finalTop + selectorHeight > window.innerHeight - margin) {
+    finalTop = Math.max(margin, window.innerHeight - selectorHeight - margin);
+  }
+  
+  // Ensure it doesn't go off the top of the screen
+  if (finalTop < margin) {
+    finalTop = margin;
+  }
+  
+  // Ensure it doesn't go off the right side of the screen
+  if (finalLeft + selectorWidth > window.innerWidth - margin) {
+    finalLeft = Math.max(margin, window.innerWidth - selectorWidth - margin);
+  }
+  
+  // Ensure it doesn't go off the left side of the screen
+  if (finalLeft < margin) {
+    finalLeft = margin;
+  }
+
   // If there are Convex errors, show a simple fallback
   if (hasConvexError) {
     return (
       <div 
         className="fixed z-[9999] w-80 sm:w-96 md:w-[32rem] lg:w-[40rem] xl:w-[48rem] bg-background border border-border rounded-lg shadow-lg backdrop-blur-sm"
         style={{
-          top: `${position.top}px`,
-          left: `${position.left}px`,
+          top: `${finalTop}px`,
+          left: `${finalLeft}px`,
         }}
       >
         <div className="p-4 text-center">
@@ -306,8 +334,8 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
     <div 
       className="fixed z-[9999] w-80 sm:w-96 md:w-[32rem] lg:w-[40rem] xl:w-[48rem] bg-background border border-border rounded-lg shadow-lg backdrop-blur-sm"
       style={{
-        top: `${position.top}px`,
-        left: `${position.left}px`,
+        top: `${finalTop}px`,
+        left: `${finalLeft}px`,
       }}
     >
       {/* Header */}
@@ -385,7 +413,10 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
                 return (
                   <button
                     key={content.id}
-                    onClick={() => onSelect(content.id)}
+                    onClick={() => {
+                      console.log('🎯 EnhancedContentSelector: Item clicked:', content.id)
+                      onSelect(content.id)
+                    }}
                     className="w-full text-left p-3 rounded-md hover:bg-muted transition-colors group"
                   >
                     <div className="flex items-start gap-3">

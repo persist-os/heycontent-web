@@ -5,7 +5,7 @@ import type { InteractiveOption } from './interactive-response'
 import { MessageSquare, Quote, Search, CheckCircle, Database } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { ExpandableInsights } from './expandable-insights'
-import { MarkdownRenderer } from './markdown-renderer'
+import { MarkdownRenderer, ChatContentRenderer } from './markdown-renderer'
 import { PersonaCardRenderer } from './components/PersonaCardRenderer'
 import { ThinkingIndicator } from './components/main_chat/ThinkingIndicator'
 import { CopyButton } from '@/components/ui/copy-button'
@@ -64,6 +64,9 @@ export function MessageBubble({
   const accentBgHover = isDark ? 'hover:bg-primary/90' : 'hover:bg-primary/90'
   const accentBgLight = isDark ? 'bg-primary/10' : 'bg-primary/10'
   const accentBorder = isDark ? 'border-primary' : 'border-primary'
+
+  // Check if the message contains linked content
+  const hasLinkedContent = message.content && message.content.includes('@[')
 
   // Stable selection handler with scroll support
   useEffect(() => {
@@ -305,7 +308,11 @@ export function MessageBubble({
                 <ThinkingIndicator />
               ) : mightHavePersona && userId ? (
                 <PersonaCardRenderer message={message} userId={userId} />
+              ) : isUser && hasLinkedContent ? (
+                // Use ChatContentRenderer for user messages with linked content
+                <ChatContentRenderer content={message.content} />
               ) : (
+                // Use MarkdownRenderer for assistant messages and user messages without linked content
                 <MarkdownRenderer content={message.chat_response || message.content} />
               )}
             </div>
