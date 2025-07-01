@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Lightbulb, ArrowLeft } from 'lucide-react';
 import { InsightCard } from '../../../ai-insights/_components/InsightCard';
@@ -11,8 +11,10 @@ import { api } from '@/convex/_generated/api';
 export default function InsightAnalysisPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { insightId } = params;
   const decodedInsightId = decodeURIComponent(insightId as string);
+  const fromChat = searchParams.get('fromChat') === 'true';
   const insightData = useQuery(api.notes.getInsightById, { insightId: decodedInsightId });
 
   let cardContent = null;
@@ -45,9 +47,9 @@ export default function InsightAnalysisPage() {
       <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-4xl mx-auto p-6">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => router.push('/dashboard/notes')}>
+            <Button variant="ghost" onClick={() => fromChat ? router.push('/dashboard/chat') : router.push('/dashboard/notes')}>
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Smart Notes
+              {fromChat ? 'Back to Chat' : 'Back to Smart Notes'}
             </Button>
             <div className="flex items-center gap-3">
               <Lightbulb className="w-8 h-8 text-yellow-500" />

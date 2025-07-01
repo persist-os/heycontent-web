@@ -30,6 +30,8 @@ interface NoteAreaProps {
   canGoBack?: boolean;
   onNavigateBack?: () => void;
   navigationStack?: string[];
+  // Chat navigation prop
+  fromChat?: boolean;
 }
 
 export function NoteArea({
@@ -45,7 +47,9 @@ export function NoteArea({
   // Navigation stack props
   canGoBack,
   onNavigateBack,
-  navigationStack
+  navigationStack,
+  // Chat navigation prop
+  fromChat = false
 }: NoteAreaProps) {
   // Get all notes from context for tag suggestions
   const { notes } = useNotes();
@@ -312,6 +316,7 @@ export function NoteArea({
         canGoBack={canGoBack}
         onNavigateBack={handleNavigateBack}
         navigationStack={navigationStack}
+        fromChat={fromChat}
       />
       
       {/* Note metadata and type selector */}

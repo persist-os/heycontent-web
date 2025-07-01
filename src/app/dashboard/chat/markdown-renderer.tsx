@@ -252,26 +252,26 @@ function ChatContentRenderer({ content, className = '', linkRegistry }: ChatCont
         const contentType = target.getAttribute('data-content-type')
         
         if (contentId && contentType) {
-          // Handle different content types
+          // Handle different content types with back navigation to chat
           switch (contentType) {
             case 'note':
               // Extract the note ID (remove note: prefix if present)
               const noteId = contentId.startsWith('note:') ? contentId.replace('note:', '') : contentId
-              // Navigate to the note
-              window.open(`/dashboard/notes?noteId=${noteId}`, '_blank')
+              // Navigate to the note with back navigation to chat
+              window.open(`/dashboard/notes?noteId=${noteId}&fromChat=true`, '_blank')
               break
             case 'youtube':
-              // Extract video ID and open YouTube
+              // Extract video ID and navigate to YouTube analysis with back navigation
               const videoId = contentId.replace('youtube:', '')
-              window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank')
+              window.open(`/dashboard/notes/youtube-analysis/${videoId}?fromChat=true`, '_blank')
               break
             case 'instagram':
-              // For Instagram, we could open the post if we have the URL
-              console.log('Instagram post clicked:', contentId)
+              // For Instagram, navigate to content analytics with back navigation
+              window.open(`/dashboard/content-analytics?analyticsId=${contentId}&platform=instagram&tab=posts&fromChat=true`, '_blank')
               break
             case 'insight':
-              // Navigate to insight analysis
-              window.open(`/dashboard/notes/insight-analysis/${encodeURIComponent(contentId)}`, '_blank')
+              // Navigate to insight analysis with back navigation
+              window.open(`/dashboard/notes/insight-analysis/${encodeURIComponent(contentId)}?fromChat=true`, '_blank')
               break
             default:
               console.log('Unknown content type:', contentType, contentId)

@@ -21,6 +21,7 @@ export default function SmartNotes() {
   const [activeNote, setActiveNote] = useState<Note | null>(null);
   const searchParams = useSearchParams();
   const noteIdParam = searchParams.get('noteId');
+  const fromChat = searchParams.get('fromChat') === 'true';
   const router = useRouter();
   
   const { 
@@ -150,6 +151,11 @@ export default function SmartNotes() {
     }
     clearNavigationStack();
     clearNoteIdFromUrl();
+    
+    // If we came from chat, navigate back to chat
+    if (fromChat) {
+      router.push('/dashboard/chat');
+    }
   };
 
   // Handle note linking with navigation stack
@@ -270,6 +276,7 @@ export default function SmartNotes() {
           canGoBack={canGoBack}
           onNavigateBack={navigateBack}
           navigationStack={navigationStack}
+          fromChat={fromChat}
         />
         
         {/* YouTube Video Card */}
