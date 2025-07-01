@@ -315,6 +315,7 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-medium text-sm">Link Content</h3>
           <button
+            title="Close"
             onClick={onClose}
             className="p-1 hover:bg-muted rounded"
           >

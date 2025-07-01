@@ -209,7 +209,7 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
       console.log("updateFields being sent to Convex:", updateFields);
       
       // CLEAN IMAGE OBJECTS - Remove any extra fields not in schema
-      let cleanedUpdateFields = { ...updateFields };
+      const cleanedUpdateFields = { ...updateFields };
       if (cleanedUpdateFields.images) {
         cleanedUpdateFields.images = cleanedUpdateFields.images.map(img => ({
           url: img.url,

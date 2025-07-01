@@ -176,12 +176,14 @@ export const YouTubeVideoCard: React.FC<YouTubeVideoCardProps> = ({
               </button>
             )}
             <button
+              title="Toggle Analysis"
               onClick={() => setIsExpanded(!isExpanded)}
               className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
             >
               <TrendingUp className="w-4 h-4" />
             </button>
             <button
+              title="Close"
               onClick={onClose}
               className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
             >
