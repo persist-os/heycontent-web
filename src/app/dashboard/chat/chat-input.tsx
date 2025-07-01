@@ -10,7 +10,7 @@ import { api } from '@/convex/_generated/api'
 import { useAuth } from '@/app/context/auth-context'
 
 interface ChatInputProps {
-  onSend: (message: string) => void
+  onSend: (message: string, linkRegistry?: Array<{index: number, contentId: string}>) => void
   isLoading?: boolean
   inputRef?: React.RefObject<HTMLTextAreaElement>
   maxLength?: number
@@ -426,11 +426,11 @@ export function ChatInput({
       console.log('  Display text:', currentInput)
       console.log('  Shadow text (hidden layer):', shadowInput)
       console.log('  Link registry:', linkRegistry)
+      console.log('  Link registry length:', linkRegistry.length)
       console.log('  Message being sent:', messageToSend.trim())
       
-      // For now, send the shadow text with numeric indices
-      // In a full implementation, we'd also send the link registry metadata
-      onSend(messageToSend.trim())
+      // Send the shadow text with numeric indices and the link registry
+      onSend(messageToSend.trim(), linkRegistry.length > 0 ? linkRegistry : undefined)
       setCurrentInput('')
       setShadowInput('')
       setLinkRegistry([]) // Reset link registry after sending
@@ -502,11 +502,19 @@ export function ChatInput({
     const newDisplayText = textarea.value.substring(0, atSymbolIndex) + `@${title}\u200B` + textAfterCursor
     console.log('🔗 newDisplayText:', newDisplayText)
     
-    // Update the display text - the handleTextareaChange will handle shadow text
+    // Update the display text
     setCurrentInput(newDisplayText)
+    
+    // Update the shadow text with the numeric index format
+    const currentShadowText = shadowInput || textarea.value
+    const shadowTextBeforeCursor = currentShadowText.substring(0, atSymbolIndex)
+    const shadowTextAfterCursor = currentShadowText.substring(cursorPos)
+    const newShadowText = shadowTextBeforeCursor + `@[${newLinkIndex}]@` + shadowTextAfterCursor
+    setShadowInput(newShadowText)
     
     console.log('🔗 [LINK CONTENT] Link added:', {
       display: newDisplayText,
+      shadow: newShadowText,
       linkIndex: newLinkIndex,
       contentId: formattedContentId
     })
@@ -530,9 +538,12 @@ export function ChatInput({
       } else {
         // Send message with Enter
         e.preventDefault()
-        if (!currentInput.trim() || isLoading || characterCount >= maxLength) return
-        onSend(currentInput.trim())
+        const messageToSend = shadowInput || currentInput
+        if (!messageToSend.trim() || isLoading || characterCount >= maxLength) return
+        onSend(messageToSend.trim(), linkRegistry.length > 0 ? linkRegistry : undefined)
         setCurrentInput('')
+        setShadowInput('')
+        setLinkRegistry([]) // Reset link registry after sending
       }
     }
 
@@ -786,8 +797,8 @@ export function ChatInput({
           Press Enter to send, Shift+Enter for new line, @ to link content
         </div>
         
-        {/* Temporary shadow text display */}
-        {shadowInput && (
+        {/* Temporary shadow text display - only in development */}
+        {process.env.NODE_ENV === 'development' && shadowInput && (
           <div className="absolute top-2 left-2 z-50 p-2 bg-yellow-100 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded text-xs max-w-xs">
             <div className="font-medium text-yellow-800 dark:text-yellow-200 mb-1">
               🔍 Shadow Text:

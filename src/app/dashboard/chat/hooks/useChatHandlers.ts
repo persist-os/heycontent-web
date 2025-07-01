@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 
-export function useChatHandlers(handleSendMessage: (msg: string) => void, handleClearReference: () => void, messages: any[]) {
+export function useChatHandlers(handleSendMessage: (msg: string, linkRegistry?: Array<{index: number, contentId: string}>) => void, handleClearReference: () => void, messages: any[]) {
   const [quotedForNotepad, setQuotedForNotepad] = useState<string>('')
 
   const handleClearQuoted = useCallback(() => {

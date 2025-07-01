@@ -18,6 +18,7 @@ interface MarkdownRendererProps {
 interface ChatContentRendererProps {
   content: string
   className?: string
+  linkRegistry?: Array<{index: number, contentId: string}>
 }
 
 // Link embed component for rich previews
@@ -104,9 +105,17 @@ function LinkEmbed({ href, children }: { href: string; children: React.ReactNode
 }
 
 // Component to render linked content in chat messages
-function ChatContentRenderer({ content, className = '' }: ChatContentRendererProps) {
+function ChatContentRenderer({ content, className = '', linkRegistry }: ChatContentRendererProps) {
   const { firebaseUser } = useAuth()
   const userId = firebaseUser?.uid
+  
+  // Debug logging
+  console.log('🔗 ChatContentRenderer:', {
+    content: content.substring(0, 100) + '...',
+    hasLinkRegistry: !!linkRegistry,
+    linkRegistryLength: linkRegistry?.length || 0,
+    linkRegistry: linkRegistry
+  })
   
   // Fetch all linkable content
   const allLinkableContent = useQuery(api.notes.getAllLinkableContent, { 
@@ -121,9 +130,57 @@ function ChatContentRenderer({ content, className = '' }: ChatContentRendererPro
     let processedContent = content.replace(/@\[(\d+)\]@/g, (match, indexStr) => {
       const index = parseInt(indexStr)
       
-      // For now, we'll show a placeholder since we don't have access to the link registry
-      // In a real implementation, the link registry would be passed as a prop or stored in the message
-      return `<span class="text-muted-foreground italic">[Link ${index}]</span>`
+      console.log('🔗 Processing numeric link:', {
+        index,
+        hasLinkRegistry: !!linkRegistry,
+        linkRegistryLength: linkRegistry?.length || 0,
+        allLinkableContentLength: allLinkableContent?.length || 0
+      })
+      
+      if (linkRegistry) {
+        // Find the link in the registry
+        const linkEntry = linkRegistry.find(link => link.index === index)
+        
+        console.log('🔗 Found link entry:', linkEntry)
+        
+        if (linkEntry) {
+          // Parse the content ID to find the content
+          const contentId = linkEntry.contentId
+          let actualContentId = contentId
+          let contentType = 'note'
+          
+          // Check if it's a prefixed ID (note:, youtube:, etc.)
+          if (contentId.includes(':')) {
+            const [prefix, id] = contentId.split(':', 2)
+            contentType = prefix
+            actualContentId = id
+          }
+          
+          console.log('🔗 Parsed content ID:', { contentId, actualContentId, contentType })
+          
+          // Find the linked content
+          let linkedContent
+          if (contentType === 'note') {
+            linkedContent = allLinkableContent.find(item => item.id === actualContentId)
+            if (!linkedContent) {
+              linkedContent = allLinkableContent.find(item => item.id === contentId)
+            }
+          } else {
+            linkedContent = allLinkableContent.find(item => item.id === contentId)
+          }
+          
+          console.log('🔗 Found linked content:', linkedContent)
+          
+          if (linkedContent) {
+            const title = linkedContent.title || 'Untitled'
+            return `<a href="#" class="inline-flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline font-medium" data-content-id="${contentId}" data-content-type="${linkedContent.type}">${title}</a>`
+          }
+        }
+      }
+      
+      // Fallback if no link registry or content not found
+      console.log('🔗 Using fallback for link:', index)
+      return `<a href="#" class="inline-flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline font-medium" data-link-index="${index}">[Link ${index}]</a>`
     })
 
     // Then handle legacy content ID format @[note:ID]@ for backward compatibility
@@ -172,40 +229,53 @@ function ChatContentRenderer({ content, className = '' }: ChatContentRendererPro
     })
 
     return processedContent
-  }, [content, allLinkableContent])
+  }, [content, allLinkableContent, linkRegistry])
 
   // Handle clicks on linked content
   const handleContentClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement
-    if (target.tagName === 'A' && target.hasAttribute('data-content-id')) {
+    if (target.tagName === 'A') {
       e.preventDefault()
-      const contentId = target.getAttribute('data-content-id')
-      const contentType = target.getAttribute('data-content-type')
       
-      if (contentId && contentType) {
-        // Handle different content types
-        switch (contentType) {
-          case 'note':
-            // Extract the note ID (remove note: prefix if present)
-            const noteId = contentId.startsWith('note:') ? contentId.replace('note:', '') : contentId
-            // Navigate to the note
-            window.open(`/dashboard/notes?noteId=${noteId}`, '_blank')
-            break
-          case 'youtube':
-            // Extract video ID and open YouTube
-            const videoId = contentId.replace('youtube:', '')
-            window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank')
-            break
-          case 'instagram':
-            // For Instagram, we could open the post if we have the URL
-            console.log('Instagram post clicked:', contentId)
-            break
-          case 'insight':
-            // Navigate to insight analysis
-            window.open(`/dashboard/notes/insight-analysis/${encodeURIComponent(contentId)}`, '_blank')
-            break
-          default:
-            console.log('Unknown content type:', contentType, contentId)
+      // Handle numeric index links (new format) - these should now be converted to content ID links
+      if (target.hasAttribute('data-link-index')) {
+        const linkIndex = target.getAttribute('data-link-index')
+        console.log('Numeric link clicked (fallback):', linkIndex)
+        // This should only happen if the link registry is missing or content not found
+        alert(`Link ${linkIndex} clicked! Content not found or link registry missing.`)
+        return
+      }
+      
+      // Handle content ID links (legacy format)
+      if (target.hasAttribute('data-content-id')) {
+        const contentId = target.getAttribute('data-content-id')
+        const contentType = target.getAttribute('data-content-type')
+        
+        if (contentId && contentType) {
+          // Handle different content types
+          switch (contentType) {
+            case 'note':
+              // Extract the note ID (remove note: prefix if present)
+              const noteId = contentId.startsWith('note:') ? contentId.replace('note:', '') : contentId
+              // Navigate to the note
+              window.open(`/dashboard/notes?noteId=${noteId}`, '_blank')
+              break
+            case 'youtube':
+              // Extract video ID and open YouTube
+              const videoId = contentId.replace('youtube:', '')
+              window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank')
+              break
+            case 'instagram':
+              // For Instagram, we could open the post if we have the URL
+              console.log('Instagram post clicked:', contentId)
+              break
+            case 'insight':
+              // Navigate to insight analysis
+              window.open(`/dashboard/notes/insight-analysis/${encodeURIComponent(contentId)}`, '_blank')
+              break
+            default:
+              console.log('Unknown content type:', contentType, contentId)
+          }
         }
       }
     }

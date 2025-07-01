@@ -67,6 +67,20 @@ export function MessageBubble({
 
   // Check if the message contains linked content
   const hasLinkedContent = message.content && message.content.includes('@[')
+  
+  // Debug logging for linked content
+  if (hasLinkedContent) {
+    console.log('🔗 MessageBubble linked content detected:', {
+      messageId: message.id,
+      content: message.content.substring(0, 100) + '...',
+      hasMetadata: !!message.metadata,
+      metadata: message.metadata,
+      linkRegistry: message.metadata?.linkRegistry,
+      debug_linkRegistry: message.metadata?.debug_linkRegistry,
+      debug_content: message.metadata?.debug_content,
+      metadataKeys: message.metadata ? Object.keys(message.metadata) : []
+    })
+  }
 
   // Stable selection handler with scroll support
   useEffect(() => {
@@ -309,8 +323,19 @@ export function MessageBubble({
               ) : mightHavePersona && userId ? (
                 <PersonaCardRenderer message={message} userId={userId} />
               ) : isUser && hasLinkedContent ? (
-                // Use ChatContentRenderer for user messages with linked content
-                <ChatContentRenderer content={message.content} />
+                <>
+                  {/* Use ChatContentRenderer for user messages with linked content */}
+                  <ChatContentRenderer 
+                    content={message.content} 
+                    linkRegistry={message.metadata?.linkRegistry}
+                  />
+                  {/* Debug info */}
+                  {process.env.NODE_ENV === 'development' && message.metadata?.debug_linkRegistry && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Debug: {message.metadata.debug_linkRegistry}
+                    </div>
+                  )}
+                </>
               ) : (
                 // Use MarkdownRenderer for assistant messages and user messages without linked content
                 <MarkdownRenderer content={message.chat_response || message.content} />

@@ -41,7 +41,14 @@ export const useChat = (
   const createConversationMutation = useMutation(api.chatMutations.createConversation);
   const addMessageToConversationMutation = useMutation(api.chatMutations.addMessageToConversation);
 
-  const handleSendMessage = useCallback(async (content: string) => {
+  const handleSendMessage = useCallback(async (content: string, linkRegistry?: Array<{index: number, contentId: string}>) => {
+    console.log('🔗 useChat handleSendMessage called with:', {
+      content: content.substring(0, 100) + '...',
+      hasLinkRegistry: !!linkRegistry,
+      linkRegistryLength: linkRegistry?.length || 0,
+      linkRegistry: linkRegistry
+    })
+    
     if (!content || typeof content !== 'string' || !content.trim()) return;
 
     // Prevent duplicate messages within a short time window (1 second)
@@ -96,6 +103,13 @@ export const useChat = (
       enhancedQuery = `Context for user question:\n\n${contentContext.analysis}\n\n Make sure to address user question in your response\n\n---\n\nUser question: ${content}`;
     }
 
+    console.log('🔗 useChat: Creating message with:', {
+      content: content.substring(0, 100) + '...',
+      hasLinkRegistry: !!linkRegistry,
+      linkRegistryLength: linkRegistry?.length || 0,
+      linkRegistry: linkRegistry
+    })
+    
     const newMessage: Message = {
       id: uuidv4() as string,
       content, // Store the original user message for display
@@ -106,7 +120,12 @@ export const useChat = (
         content: referencedMessage.content
       } : undefined,
       chat_response: content,
-      sessionId: sessionId // Include current sessionId
+      sessionId: sessionId, // Include current sessionId
+      metadata: {
+        ...(linkRegistry && { linkRegistry }), // Include link registry in metadata
+        ...(linkRegistry && { debug_linkRegistry: JSON.stringify(linkRegistry) }), // Debug: also store as string
+        ...(linkRegistry && { debug_content: content }) // Debug: store the content being sent
+      }
     }
 
     try {
@@ -125,11 +144,16 @@ export const useChat = (
         searchStatus: ''
       };
 
-      setMessages(prev => [
-        ...prev,
-        newMessage,
-        typingMessage
-      ]);
+      setMessages(prev => {
+        const newMessages = [...prev, newMessage, typingMessage];
+        console.log('🔗 useChat: Messages after adding user message:', {
+          totalMessages: newMessages.length,
+          userMessage: newMessage,
+          userMessageMetadata: newMessage.metadata,
+          userMessageLinkRegistry: newMessage.metadata?.linkRegistry
+        });
+        return newMessages;
+      });
 
       // Status update callback to show search progress
       const handleStatusUpdate = (status: string) => {
@@ -197,6 +221,12 @@ export const useChat = (
 
       // Send the enhanced query to the backend (with analysis injected if enabled)
       // Now includes vector search with status updates
+      console.log('🔗 useChat: Sending to backend:', {
+        enhancedQuery: enhancedQuery.substring(0, 100) + '...',
+        hasLinkRegistry: !!linkRegistry,
+        linkRegistry: linkRegistry
+      })
+      
       const data = await sendChatMessage(
         enhancedQuery, 
         isFirstMessage, 
@@ -272,7 +302,21 @@ export const useChat = (
           suggestions: data.suggestions || []
         };
         
-        return [...withoutTyping, newMessage];
+        const updatedMessages = [...withoutTyping, newMessage];
+        console.log('🔗 useChat: Messages after assistant response:', {
+          totalMessages: updatedMessages.length,
+          userMessages: updatedMessages.filter(msg => msg.role === 'user'),
+          userMessageWithLinks: updatedMessages.filter(msg => msg.role === 'user' && msg.content.includes('@[')),
+          userMessageMetadata: updatedMessages.filter(msg => msg.role === 'user').map(msg => ({
+            id: msg.id,
+            content: msg.content.substring(0, 50) + '...',
+            hasMetadata: !!msg.metadata,
+            metadataKeys: msg.metadata ? Object.keys(msg.metadata) : [],
+            linkRegistry: msg.metadata?.linkRegistry
+          }))
+        });
+        
+        return updatedMessages;
       });
 
       // Clear search status after completion

@@ -8,7 +8,7 @@ interface ChatInputAreaProps {
   showAmbient: boolean;
   currentContext: any;
   handleActionClick: (action: string) => void;
-  handleSendMessage: (message: string) => void;
+  handleSendMessage: (message: string, linkRegistry?: Array<{index: number, contentId: string}>) => void;
   inputRef: React.RefObject<HTMLTextAreaElement>;
   isLoading: boolean;
   referencedMessage: Message | null;
@@ -65,6 +65,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
             {/* Ambient Insights component - handles its own data fetching */}
             <div className="flex-1 overflow-y-auto px-3 sm:px-4 pb-4">
               <AmbientInsights
+                userId={undefined}
                 onInsightClick={(action, insight) => handleSendMessage(action)}
               />
             </div>
@@ -82,7 +83,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
         <div className="px-2 sm:px-3 pt-1 pb-2">
           <ChatInput
             inputRef={inputRef}
-            onSend={handleSendMessage}
+            onSend={(message, linkRegistry) => handleSendMessage(message, linkRegistry)}
             isLoading={isLoading || !isAuthenticated}
             disabled={!isAuthenticated}
             referencedMessage={referencedMessage}
