@@ -36,6 +36,11 @@ import { usePersonaStore } from '@/store/persona-store'
 import { useConvex } from 'convex/react'
 import { useContentContext, useContentContextActions, useContentContextStore } from '@/store/content-context-store'
 
+// Help system imports
+import { HelpModal } from '@/components/ui/help-modal'
+import { HelpIconButton } from '@/components/ui/help-icon-button'
+import { chatHelp } from '@/helpContent'
+
 const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery }) => {
   const router = useRouter()
   const searchParams = useSearchParams();
@@ -97,6 +102,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Context search state - enable by default when no context, keep enabled for YouTube videos without analysis
   const [useContextSearch, setUseContextSearch] = useState(!hasContext)
+  
+  // Help modal state
+  const [helpOpen, setHelpOpen] = useState(false)
 
   // Auto-disable context search when content context is available, unless it's YouTube without analysis
   useEffect(() => {
@@ -525,6 +533,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           isRefreshing={isRefreshing} 
           onNewChat={handleNewChat}
           isAuthenticated={authData.isAuthenticated}
+          rightContent={<HelpIconButton onClick={() => setHelpOpen(true)} />}
         />
 
         {/* Main Content */}
@@ -654,6 +663,14 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         onWidthChange={updateWidth}
         style={getNotepadStyle()}
         availableNotes={availableNotes}
+      />
+      
+      {/* Help Modal */}
+      <HelpModal 
+        open={helpOpen} 
+        onClose={() => setHelpOpen(false)} 
+        pages={chatHelp}
+        title="Chat Guide"
       />
     </>
   );

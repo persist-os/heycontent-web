@@ -15,6 +15,11 @@ import { deleteNote, updateNote } from '@/convex/notes';
 import { YouTubeVideoCard } from './components/YouTubeVideoCard';
 import { InsightCard } from '../ai-insights/_components/InsightCard';
 
+// Help system imports
+import { HelpModal } from '@/components/ui/help-modal';
+import { HelpIconButton } from '@/components/ui/help-icon-button';
+import { notesHelp } from '@/helpContent';
+
 export default function SmartNotes() {
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid;
@@ -44,6 +49,9 @@ export default function SmartNotes() {
   
   // Insight card state
   const [selectedInsight, setSelectedInsight] = useState<{ analysisId: string; insightIndex: number } | null>(null);
+  
+  // Help modal state
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     if (activeNoteId) {
@@ -302,6 +310,15 @@ export default function SmartNotes() {
         onToggleImportant={handleToggleImportant}
         onUpdateNote={handleUpdateNote}
         isLoading={notesIsLoading}
+        helpButton={<HelpIconButton onClick={() => setHelpOpen(true)} />}
+      />
+      
+      {/* Help Modal */}
+      <HelpModal 
+        open={helpOpen} 
+        onClose={() => setHelpOpen(false)} 
+        pages={notesHelp}
+        title="Smart Notes Guide"
       />
     </div>
   );

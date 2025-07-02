@@ -14,6 +14,11 @@ import { YouTubeBrandIcon } from '@/lib/YoutubeBrandIcon'
 import { useYouTubeRefresh } from '@/app/hooks/useYouTubeRefresh'
 import { toast } from 'react-hot-toast'
 
+// Help system imports
+import { HelpModal } from '@/components/ui/help-modal'
+import { HelpIconButton } from '@/components/ui/help-icon-button'
+import { contentHubHelp } from '@/helpContent'
+
 // Analytics components and hooks
 import { YouTubePlatform as YouTubeAnalyticsPlatform } from '../../content-analytics/platforms/YouTubePlatform'
 import { InstagramPlatform as InstagramAnalyticsPlatform } from '../../content-analytics/platforms/InstagramPlatform'
@@ -80,6 +85,7 @@ export function ContentHubScreen() {
   const [currentQuote, setCurrentQuote] = useState<string>('')
   const [expandedInsight, setExpandedInsight] = useState<string | null>(null);
   const [expandHubInsight, setExpandHubInsight] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const { refreshAll: refreshAllYouTube, loading: refreshingYouTube, error: refreshYouTubeError, success: refreshYouTubeSuccess } = useYouTubeRefresh();
   
   const { firebaseUser, authLoading } = useAuth()
@@ -499,7 +505,9 @@ export function ContentHubScreen() {
               </p>
             </div>
           </div>
-          <div className="w-[100px] sm:w-auto"></div>
+          <div className="w-[100px] sm:w-auto flex justify-end">
+            <HelpIconButton onClick={() => setHelpOpen(true)} />
+          </div>
         </div>
       </div>
 
@@ -727,6 +735,14 @@ export function ContentHubScreen() {
           )}
         </>
       )}
+
+      {/* Help Modal */}
+      <HelpModal 
+        open={helpOpen} 
+        onClose={() => setHelpOpen(false)} 
+        pages={contentHubHelp}
+        title="Content Hub Guide"
+      />
     </div>
   )
 } 
