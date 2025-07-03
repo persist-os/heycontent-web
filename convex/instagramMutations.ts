@@ -786,16 +786,21 @@ export const updateInstagramPostComments = mutation({
     const now = Date.now();
 
     try {
-      // Find the post by media ID
+      // Find the post by postId (mediaId) using the indexed field for better performance
       const post = await ctx.db
         .query("instagramPosts")
-        .withIndex("by_userId", q => q.eq("userId", userId))
-        .filter(q => q.eq(q.field("data.id"), mediaId))
+        .withIndex("by_postId", q => q.eq("postId", mediaId))
         .first();
 
       if (!post) {
-        console.log(`Post not found for media_id ${mediaId}, user ${userId}`);
+        console.log(`Post not found for postId ${mediaId}, user ${userId}`);
         return { success: false, error: "Post not found" };
+      }
+
+      // Verify this post belongs to the user for security
+      if (post.userId !== userId) {
+        console.log(`Post ${mediaId} does not belong to user ${userId}`);
+        return { success: false, error: "Unauthorized access to post" };
       }
 
       // Get current comments or initialize empty array
@@ -856,16 +861,16 @@ export const appendCommentToInstagramPost = mutation({
     const now = Date.now();
 
     try {
-      console.log(`[appendCommentToInstagramPost] Looking for post with media_id: ${mediaId}`);
+      console.log(`[appendCommentToInstagramPost] Looking for post with postId: ${mediaId}`);
       
-      // Find the post by media ID (data.id field)
+      // Find the post by postId (which matches the mediaId from webhook) using the indexed field
       const post = await ctx.db
         .query("instagramPosts")
-        .filter(q => q.eq(q.field("data.id"), mediaId))
+        .withIndex("by_postId", q => q.eq("postId", mediaId))
         .first();
 
       if (!post) {
-        console.log(`[appendCommentToInstagramPost] Post not found for media_id: ${mediaId}`);
+        console.log(`[appendCommentToInstagramPost] Post not found for postId: ${mediaId}`);
         return { success: false, error: "Post not found" };
       }
 

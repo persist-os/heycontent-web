@@ -25,12 +25,22 @@ export const WaitlistQueue = ({ position, queueId, onQueueCompleteAction, onStag
   const addToWaitlist = useMutation(api.waitlist.add);
   
   useEffect(() => {
-    if (stage === 'queue') {
-      const interval = setInterval(() => {
-        setCurrentPosition(prev => (prev > 0 ? prev - 1 : prev));
-      }, 3000);
-      return () => clearInterval(interval);
+    let timeout: NodeJS.Timeout;
+    function tick() {
+      setCurrentPosition(prev => {
+        if (prev <= 0) return prev;
+        // 80% chance to decrement by 1, 20% by 2 (but never below 0)
+        const decrement = Math.random() < 0.2 ? 2 : 1;
+        return Math.max(0, prev - decrement);
+      });
+      // Random delay between 1s and 3.5s for next tick
+      const nextDelay = 1000 + Math.random() * 2500;
+      timeout = setTimeout(tick, nextDelay);
     }
+    if (stage === 'queue') {
+      timeout = setTimeout(tick, 1200 + Math.random() * 1200); // first tick a bit random
+    }
+    return () => clearTimeout(timeout);
   }, [stage]);
 
   useEffect(() => {

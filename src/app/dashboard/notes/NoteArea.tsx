@@ -355,6 +355,9 @@ export function NoteArea({
           allLinkableContent={allLinkableContent || []}
           onLinkNote={handleLinkNote}
           onLinkContent={onLinkContent}
+          onAskAI={handleAskAI}
+          onRequestAnalysis={handleRequestAnalysis}
+          onRequestIdeas={handleRequestIdeas}
         />
       </div>
 

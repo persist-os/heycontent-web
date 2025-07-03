@@ -937,18 +937,19 @@ export const getInstagramPostByMediaId = query({
   },
   handler: async (ctx, args) => {
     try {
-      console.log(`[getInstagramPostByMediaId] Looking for post with media_id: ${args.mediaId}`);
+      console.log(`[getInstagramPostByMediaId] Looking for post with postId: ${args.mediaId}`);
       
+      // Use the indexed postId field for efficient lookup (mediaId matches postId)
       const post = await ctx.db
         .query("instagramPosts")
-        .filter(q => q.eq(q.field("data.id"), args.mediaId))
+        .withIndex("by_postId", q => q.eq("postId", args.mediaId))
         .first();
 
       if (post) {
         console.log(`[getInstagramPostByMediaId] Found post: ${post.postId} for user: ${post.userId}`);
         return { success: true, post };
       } else {
-        console.log(`[getInstagramPostByMediaId] Post not found for media_id: ${args.mediaId}`);
+        console.log(`[getInstagramPostByMediaId] Post not found for postId: ${args.mediaId}`);
         return { success: false, error: "Post not found" };
       }
     } catch (error) {
