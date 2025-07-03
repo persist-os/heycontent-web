@@ -29,6 +29,7 @@ interface NotesGridProps {
   onToggleImportant: (noteId: string) => void;
   onUpdateNote: (noteId: string, updates: any) => void;
   isLoading?: boolean;
+  helpButton?: React.ReactNode;
 }
 
 // Add CreateProjectDropZone component
@@ -69,6 +70,7 @@ export function NotesGrid({
   onToggleImportant,
   onUpdateNote,
   isLoading,
+  helpButton,
 }: NotesGridProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<'all' | 'projects' | NoteType>('all');
@@ -302,11 +304,16 @@ export function NotesGrid({
     >
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="text-center mb-6">
+        <div className="text-center mb-6 relative">
           <h1 className="text-base font-medium text-purple-600 dark:text-accent">Smart Notes</h1>
           <p className="text-muted-foreground text-sm">
             Your intelligent note-taking workspace
           </p>
+          {helpButton && (
+            <div className="absolute top-0 right-0">
+              {helpButton}
+            </div>
+          )}
         </div>
 
         {/* Prominent Search Bar */}
