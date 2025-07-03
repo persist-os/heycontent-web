@@ -48,6 +48,7 @@ import { InsightCardSkeleton } from '../../ai-insights/_components/InsightCardSk
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ContentHubInsights } from './ContentHubInsights'
+import { RefreshAllYouTubeButton } from '@/components/ui/refresh-all-youtube-button'
 
 type PlatformType = 'all' | 'youtube' | 'instagram' | 'gmail'
 type ViewType = 'hub-insights' | 'all' | 'youtube' | 'instagram' | 'gmail'
@@ -613,13 +614,11 @@ export function ContentHubScreen() {
                       {selectedView === 'youtube' && selectedDataType === 'posts' && (
                         <>
                           <div className="mb-4 flex items-center gap-4">
-                            <Button
-                              onClick={handleRefreshAllYouTube}
-                              disabled={refreshingYouTube}
-                              className="bg-gradient-to-r from-red-500 to-yellow-500 text-white font-semibold px-4 py-2 rounded-lg shadow hover:from-red-600 hover:to-yellow-600 transition"
-                            >
-                              {refreshingYouTube ? 'Refreshing...' : 'Refresh All YouTube'}
-                            </Button>
+                            <RefreshAllYouTubeButton
+                              userId={userId}
+                              refreshing={refreshingYouTube}
+                              onRefresh={handleRefreshAllYouTube}
+                            />
                           </div>
                           <YouTubeAnalyticsPlatform userId={userId} isConnected={youtubeAnalytics.isConnected} error={youtubeAnalytics.error} />
                         </>
