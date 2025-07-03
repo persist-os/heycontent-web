@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { extractAuthInfo } from '@/app/lib/api-helpers-server';
+import { getAllLinkableContent } from '@/convex/notes';
+import { resolveLinkContent, parseContentId } from '@/app/dashboard/chat/utils/link-content-resolver';
 
 import dotenv from 'dotenv';
 
@@ -29,7 +31,18 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { query, is_first_message, session_id, content_context, vector_search_metadata } = body;
+    const { query, is_first_message, session_id, content_context, vector_search_metadata, link_content } = body;
+    
+    console.log(`[${requestId}] Received request body:`, {
+      query_length: query?.length || 0,
+      has_session_id: !!session_id,
+      has_content_context: !!content_context,
+      has_vector_search_metadata: !!vector_search_metadata,
+      has_link_content: !!link_content,
+      link_content_count: link_content?.length || 0,
+      link_content_types: link_content?.map((item: any) => item.type) || [],
+      body_keys: Object.keys(body)
+    });
 
     if (!query) {
       console.warn(`[${requestId}] Invalid request: Missing query`);
@@ -55,7 +68,9 @@ export async function POST(request: Request) {
       user_id: user_id,
       has_content_context: !!content_context,
       content_context_platform: content_context?.platform,
-      has_vector_search: !!vector_search_metadata
+      has_vector_search: !!vector_search_metadata,
+      has_link_content: !!(link_content && Array.isArray(link_content) && link_content.length > 0),
+      link_content_count: link_content?.length || 0
     });
 
     // Prepare the request body for the backend
@@ -76,6 +91,101 @@ export async function POST(request: Request) {
         backendRequestBody.vector_search_metadata = vector_search_metadata;
     }
 
+    // Process and inject link content into the query context
+    if (link_content && Array.isArray(link_content) && link_content.length > 0) {
+      console.log(`[${requestId}] Processing link content:`, {
+        count: link_content.length,
+        types: link_content.map((item: any) => item.type)
+      });
+
+      // Create a context message with all linked content
+      const linkContextMessages = link_content.map((item: any) => {
+        const contentType = item.type === 'smart_note' ? 'Smart Note' : 
+                           item.type === 'youtube' ? 'YouTube Video Analysis' : 
+                           item.type === 'insight' ? 'AI Insight' : 'Content';
+        
+        // Debug: log the content to see what we're working with
+        console.log(`[${requestId}] Processing ${contentType} content:`, {
+          type: item.type,
+          title: item.title,
+          contentType: typeof item.content,
+          contentLength: item.content?.length || 0,
+          contentPreview: typeof item.content === 'string' ? item.content.substring(0, 100) : JSON.stringify(item.content).substring(0, 100)
+        });
+        
+        // Ensure content is a string
+        const contentString = typeof item.content === 'string' ? item.content : JSON.stringify(item.content);
+        
+        return `[${contentType}: ${item.title}]\n${contentString}`;
+      });
+
+      const linkContextText = linkContextMessages.join('\n\n');
+      
+      // Replace link tokens in the user message with titles using the already resolved link content
+      let userMessageWithTitles = query;
+      
+      // Create a mapping of content IDs to titles from the resolved link content
+      const contentIdToTitle = new Map();
+      
+      // Extract all content IDs from the original message
+      const contentIdPattern = /@\[([^\]]+)\]@/g;
+      const contentIds: string[] = [];
+      let match;
+      while ((match = contentIdPattern.exec(query)) !== null) {
+        contentIds.push(match[1]);
+      }
+      
+      // Create a proper mapping by resolving each content ID to get its title
+      for (const contentId of contentIds) {
+        // Find the corresponding resolved content by matching the content ID
+        const resolvedItem = link_content.find((item: any) => {
+          // For insights, we need to match the analysis ID and index
+          if (contentId.startsWith('insight:')) {
+            const parts = contentId.split(':');
+            if (parts.length >= 3) {
+              const analysisId = parts[1];
+              const index = parseInt(parts[2], 10);
+              return item.type === 'insight' && item.contentId === analysisId && item.index === index;
+            }
+          }
+          // For other types, match by content ID
+          return item.contentId === contentId;
+        });
+        
+        if (resolvedItem) {
+          contentIdToTitle.set(contentId, resolvedItem.title);
+        }
+      }
+      
+      // Replace each link token with its title
+      userMessageWithTitles = userMessageWithTitles.replace(/@\[([^\]]+)\]@/g, (match, contentId) => {
+        const title = contentIdToTitle.get(contentId);
+        return title ? `[${title}]` : match;
+      });
+      
+      console.log(`[${requestId}] Title replacement:`, {
+        original: query,
+        replaced: userMessageWithTitles,
+        contentIdToTitle: Object.fromEntries(contentIdToTitle)
+      });
+      
+      // Inject the link content context into the query
+      const enhancedQuery = `[Context from linked content]\n\n${linkContextText}\n\n---\n\nUser message: ${userMessageWithTitles}`;
+      
+      console.log(`[${requestId}] Enhanced query with link content:`, {
+        originalLength: query.length,
+        enhancedLength: enhancedQuery.length,
+        linkContentCount: link_content.length,
+        userMessageWithTitles
+      });
+
+      // Update the query with the enhanced version
+      backendRequestBody.query = enhancedQuery;
+    } else {
+      // If no link content, use the original query
+      backendRequestBody.query = query;
+    }
+
     // Log the full request body
     console.debug(`[${requestId}] Sending request to backend`, {
       url: `${BACKEND_URL}/api/v1/chat`,
@@ -84,7 +194,11 @@ export async function POST(request: Request) {
         'Accept': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
-      body: backendRequestBody
+      body: {
+        ...backendRequestBody,
+        link_content_count: link_content?.length || 0,
+        link_content_types: link_content?.map((item: any) => item.type) || []
+      }
     });
 
     // Retry logic with exponential backoff for 500/429 errors

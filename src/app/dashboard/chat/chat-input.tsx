@@ -441,8 +441,9 @@ export function ChatInput({
       console.log('  Shadow text (hidden layer):', shadowInput)
       console.log('  Processed message:', processedMessage)
       
-      // Send the processed message with content IDs (no link registry needed)
+      // Send the message with content IDs - backend will resolve them
       onSend(processedMessage)
+      
       setCurrentInput('')
       setShadowInput('')
       setLinkRegistry([]) // Reset link registry after sending
@@ -555,7 +556,10 @@ export function ChatInput({
         
         // Convert numeric indices to content IDs before sending
         const processedMessage = convertNumericIndicesToContentIds(messageToSend.trim())
+        
+        // Send the message with content IDs - backend will resolve them
         onSend(processedMessage)
+        
         setCurrentInput('')
         setShadowInput('')
         setLinkRegistry([]) // Reset link registry after sending
