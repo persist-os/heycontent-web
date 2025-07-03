@@ -6,6 +6,8 @@ import { getHelpMessage } from '../data/help-message'
 import { useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useContentContext } from '@/store/content-context-store'
+import { useRouter } from 'next/navigation'
+import { AuthenticationError } from '@/app/lib/errors'
 
 import { v4 as uuidv4 } from 'uuid';
 
@@ -40,6 +42,8 @@ export const useChat = (
   // Add mutation hooks for chat mutations
   const createConversationMutation = useMutation(api.chatMutations.createConversation);
   const addMessageToConversationMutation = useMutation(api.chatMutations.addMessageToConversation);
+
+  const router = useRouter();
 
   const handleSendMessage = useCallback(async (content: string) => {
     console.log('🔗 useChat handleSendMessage called with:', {
@@ -311,6 +315,11 @@ export const useChat = (
       }
 
     } catch (error) {
+      if (error instanceof AuthenticationError) {
+        // Optionally clear auth state here if needed
+        router.push('/auth/login?reason=session_expired');
+        return;
+      }
       console.error('Chat error:', error);
       setError(error instanceof Error ? error.message : 'An error occurred');
       
@@ -335,7 +344,8 @@ export const useChat = (
     createConversationMutation,
     addMessageToConversationMutation,
     useContextSearch,
-    contentContext
+    contentContext,
+    router
   ]);
 
   const handleMessageReference = useCallback((message: Message) => {

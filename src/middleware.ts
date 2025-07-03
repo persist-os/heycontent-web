@@ -66,7 +66,13 @@ export function middleware(request: NextRequest) {
 
   // If no token and not a public route, redirect to login
   if (!token) {
-    return NextResponse.redirect(new URL('/auth/login', request.url));
+    // Preserve query parameters when redirecting to login (e.g., reason=logged_in_elsewhere)
+    const loginUrl = new URL('/auth/login', request.url);
+    // Copy any existing query parameters from the current request
+    request.nextUrl.searchParams.forEach((value, key) => {
+      loginUrl.searchParams.set(key, value);
+    });
+    return NextResponse.redirect(loginUrl);
   }
 
   // If we have a token, allow access

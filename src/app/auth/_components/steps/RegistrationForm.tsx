@@ -186,6 +186,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
             checkReferralCode={checkReferralCode}
             referredById={referredById}
             onNext={handleNextStep}
+            onSkip={() => setCurrentStep('basic')}
           />
         )}
         

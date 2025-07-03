@@ -232,6 +232,15 @@ export async function POST(request: Request) {
     console.debug(`[${requestId}] Backend response status`, response.status, response.statusText);
     console.debug(`[${requestId}] Backend response headers`, Object.fromEntries(response.headers.entries()));
 
+    // After fetching the backend response:
+    if (response.status === 401 || response.status === 403) {
+      // Propagate auth errors to the frontend
+      return NextResponse.json({
+        error: 'Unauthorized',
+        message: 'Your session has expired or you are not authorized. Please log in again.'
+      }, { status: response.status });
+    }
+
     // Enhanced response handling with content-type detection
     let data: any;
     let chat_response: string | undefined;
