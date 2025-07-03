@@ -2,43 +2,25 @@ import { HelpPage } from '@/components/ui/help-modal';
 
 export const selfHubHelp: HelpPage[] = [
   {
-    title: "Self Hub",
-    description: "Your personal HQ. See your vibe, your stats, your journey."
+    title: "Meet Your Self Hub",
+    description: "This is your personal hype page. Track your vibe, flex your stats, and see your creative journey."
   },
   {
-    title: "Persona Tab",
-    description: "Show off your creator style. Update your goals and audience anytime."
+    title: "Persona Tab: Your Brand, Your Rules",
+    description: "Set your creator vibe. Change it up whenever. This is your digital alter ego—make it iconic."
   },
   {
-    title: "Timeline Tab",
-    description: "Scroll your content life story. See what you did and when."
+    title: "Timeline Tab: Your Story, Unfiltered",
+    description: "See everything you’ve done, all in one scroll. Relive your best moments, spot your streaks, and catch your glow-ups."
   },
   {
-    title: "Activity Tab",
-    description: "Spot your hot streaks and slow days. Find your best creative times."
+    title: "Activity Tab: Your Hot Zones",
+    description: "Where do you shine? See your creative heatmap. Find your power hours and brag about your grind."
   },
   {
-    title: "Persona Power",
-    description: "A strong persona = more fans. Keep it fresh, keep it you."
-  },
-  {
-    title: "Activity Insights",
-    description: "See what's working. Double down on your best moves."
+    title: "Why Bother?",
+    description: "Because knowing yourself = growing yourself. The more you track, the more you win."
   }
 ];
 
-// Instructions for updating this help content:
-/*
-TO UPDATE SELF HUB HELP:
-1. Edit the selfHubHelp array above
-2. Add new HelpPage objects for new tabs or features
-3. Update descriptions when tabs change functionality
-4. Add specific feature explanations as they're developed
-
-Example of adding help for a new tab:
-{
-  title: "New Tab Name",
-  description: "Explanation of what this tab does...",
-  image: "/images/help/self-hub-new-tab.png" // optional
-}
-*/ 
+// To update: Edit the text above. Make it punchy, personal, and fun! 

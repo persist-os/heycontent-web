@@ -2,58 +2,29 @@ import { HelpPage } from '@/components/ui/help-modal';
 
 export const chatHelp: HelpPage[] = [
   {
-    title: "Chat",
-    description: "Ask anything, get instant answers. It's like texting a genius."
+    title: "Chat: Your AI BFF",
+    description: "Ask anything. Get ideas, answers, or just a vibe check. Your AI is here to hype you up and help you out."
   },
   {
-    title: "Create Your Persona",
-    description: "Type 'hey content persona' to make your AI get you. More you = better replies."
+    title: "Make It Personal",
+    description: "Type \"hey content persona\" to teach your AI your style. The more it knows you, the better it gets. Update anytime with \"hey content update persona\"."
   },
   {
-    title: "Context Magic",
-    description: "Chat knows what you're talking about—posts, videos, emails. No need to explain."
+    title: "Start Fast, Go Deep",
+    description: "Type a question, hit a quick action, or just say what’s on your mind. AI gets it. Want to go deeper? Ask follow-ups or let it suggest what’s next."
   },
   {
-    title: "Start Fast",
-    description: "Type, tap, or pick a quick action. No wrong way to start."
+    title: "Do More Than Chat",
+    description: "Save cool stuff to your notepad, copy answers, or get instant ideas. Your chat remembers your vibe and keeps things moving."
   },
   {
-    title: "Message Tricks",
-    description: "Reply, copy, or save anything. Use suggestions for instant follow-ups."
+    title: "Pro Moves",
+    description: "• \"hey content persona\": Set your style\n• \"hey content update persona\": Refresh your vibe\n• Use context for smarter answers\n• Start new chats for new topics\n• Let AI do the heavy lifting—just ask!"
   },
   {
-    title: "Smart Commands",
-    description: "Try 'hey content update persona' or let AI search your stuff. It's all about shortcuts."
-  },
-  {
-    title: "Pro Tips",
-    description: "Make a persona, use context, and keep chats short. Get more, scroll less."
+    title: "Why Chat?",
+    description: "Because you deserve answers that sound like you. Get help, get inspired, and keep your creative energy high—without ever feeling lost."
   }
 ];
 
-// Instructions for updating this help content:
-/*
-TO UPDATE CHAT HELP:
-1. Edit the chatHelp array above
-2. Add new HelpPage objects for new features
-3. Update existing descriptions when chat functionality changes
-4. Keep persona and context information prominent as these are key differentiators
-
-Key Chat Commands to Remember:
-- "hey content persona" - Start persona creation
-- "hey content write my persona" - Alternative persona creation command
-- "hey content update persona" - Update existing persona
-
-Content Context Sources:
-- Instagram posts (from Content Hub or Analytics)
-- YouTube videos (from Content Hub or Analytics) 
-- Gmail threads (from Content Hub or Analytics)
-- AI Insights (from AI Insights page)
-
-Example of adding a new help page:
-{
-  title: "New Chat Feature",
-  description: "Description of the new chat feature...",
-  image: "/images/help/chat-feature.png" // optional
-}
-*/ 
+// To update: Edit the text above. Make it fun, punchy, and easy to skim! 

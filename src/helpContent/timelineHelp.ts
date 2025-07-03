@@ -2,43 +2,29 @@ import { HelpPage } from '@/components/ui/help-modal';
 
 export const timelineHelp: HelpPage[] = [
   {
-    title: "Timeline",
-    description: "Your content, all in order. See your growth at a glance."
+    title: "Your Timeline = Your Highlight Reel",
+    description: "Scroll your whole creative life. See your wins, your streaks, and your glow-ups—all in one place."
   },
   {
-    title: "See Everything",
-    description: "Every post, video, and email—right here. No digging required."
+    title: "See Everything, Fast",
+    description: "Every post, every upload, every move you made. No digging, no FOMO."
   },
   {
-    title: "Filter Fast",
-    description: "Find what you want by platform, type, or date. Zero scrolling."
+    title: "Filter Like a Pro",
+    description: "Want just YouTube? Only your best emails? Tap, filter, done. Find what matters in seconds."
   },
   {
-    title: "Interact",
-    description: "Click stuff to dive deeper, share, or chat with AI. It's all one tap away."
+    title: "Tap Into Your Story",
+    description: "Click any moment to relive it, share it, or get AI to break it down. Your content, your way."
   },
   {
-    title: "Productivity Boost",
-    description: "Spot your creative bursts and dry spells. Stay on your game."
+    title: "Spot Your Hot Streaks",
+    description: "See when you’re on fire. Find your best days, your creative slumps, and your comeback moments."
   },
   {
-    title: "Features",
-    description: "Timeline updates live. Works on any device. Export if you want."
+    title: "Why Timeline?",
+    description: "Because your story is worth seeing. Track your journey, flex your progress, and get inspired to keep going."
   }
 ];
 
-// Instructions for updating this help content:
-/*
-TO UPDATE TIMELINE HELP:
-1. Edit the timelineHelp array above
-2. Add new HelpPage objects for new timeline features
-3. Update filtering options when new filters are added
-4. Add explanations for new timeline interactions
-
-Example of adding a new help page:
-{
-  title: "New Timeline Feature",
-  description: "Description of the new timeline feature...",
-  image: "/images/help/timeline-feature.png" // optional
-}
-*/ 
+// To update: Edit the text above. Make it quick, bold, and fun! 

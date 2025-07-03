@@ -2,47 +2,33 @@ import { HelpPage } from '@/components/ui/help-modal';
 
 export const settingsHelp: HelpPage[] = [
   {
-    title: "Settings",
-    description: "Tweak your app, your way. Make it feel like home."
+    title: "Settings = Your Control Room",
+    description: "Tweak, tune, and make HeyContent yours. This is where you flip the switches and unlock new powers."
   },
   {
-    title: "Account",
-    description: "Update your info or password. Stay secure, stay you."
+    title: "Account Stuff",
+    description: "Change your name, email, or password. Keep your info fresh and your account safe."
   },
   {
-    title: "Platforms",
-    description: "Connect or disconnect your socials. More links, more power."
+    title: "Connect Your World",
+    description: "Link up your platforms. More connections = more magic. Disconnect anytime, no drama."
   },
   {
-    title: "Privacy",
-    description: "Control your data. Share what you want, keep the rest private."
+    title: "Privacy & Data",
+    description: "You’re in charge. Download your data, delete what you want, and control who sees what."
   },
   {
     title: "Notifications",
-    description: "Pick what pings you. No more notification overload."
+    description: "Get pinged for the stuff you care about. No spam, just the good stuff."
   },
   {
-    title: "Preferences",
-    description: "Change the look, set your defaults. Make it yours."
+    title: "Make It Yours",
+    description: "Pick your theme, set your defaults, and customize your vibe. This is your space."
   },
   {
-    title: "Integrations",
-    description: "Plug in other tools. Unlock bonus features."
+    title: "API & Integrations",
+    description: "Want to get nerdy? Generate API keys and connect other apps. Or just ignore this tab."
   }
 ];
 
-// Instructions for updating this help content:
-/*
-TO UPDATE SETTINGS HELP:
-1. Edit the settingsHelp array above
-2. Add new HelpPage objects for new settings sections
-3. Update when new preferences or options are added
-4. Include specific instructions for complex settings
-
-Example of adding a new help page:
-{
-  title: "New Settings Section",
-  description: "Description of the new settings area...",
-  image: "/images/help/settings-feature.png" // optional
-}
-*/ 
+// To update: Edit the text above. Keep it light, quick, and user-first! 

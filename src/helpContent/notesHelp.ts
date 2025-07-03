@@ -2,43 +2,29 @@ import { HelpPage } from '@/components/ui/help-modal';
 
 export const notesHelp: HelpPage[] = [
   {
-    title: "Smart Notes",
-    description: "Jot down ideas and let AI help you make them better. Notes that think with you."
+    title: "Smart Notes = Brain Upgrade",
+    description: "Jot, plan, or brain-dump. This is your digital notepad that never loses your genius ideas."
   },
   {
-    title: "Create Instantly",
-    description: "Click and type—no setup, no fuss. Your thoughts, saved automatically."
+    title: "Just Start Typing",
+    description: "No setup, no stress. Click and go. Your notes save themselves. You’re free to forget."
   },
   {
-    title: "AI Magic",
-    description: "Get suggestions, summaries, and smart edits. It's like notes on steroids."
+    title: "AI Has Your Back",
+    description: "Stuck? AI will finish your thought, summarize your mess, or spark a new idea. It’s like having a creative sidekick."
   },
   {
-    title: "Shortcuts",
-    description: "Speed up with keyboard hacks. Less clicking, more doing."
+    title: "Shortcuts = Superpowers",
+    description: "Cmd/Ctrl + / for all the hacks. Fast fingers win."
   },
   {
-    title: "Stay Organized",
-    description: "Group notes, tag stuff, and find anything fast. No more lost ideas."
+    title: "Stay Organized (or Don’t)",
+    description: "Group notes into projects, tag stuff, or just let chaos reign. Search is always there to rescue you."
   },
   {
     title: "Analyze Anything",
-    description: "Run quick checks or deep dives on your notes. Get insights in a tap."
+    description: "Turn your notes into insights, scripts, or collabs. One click, instant upgrade."
   }
 ];
 
-// Instructions for updating this help content:
-/*
-TO UPDATE NOTES HELP:
-1. Edit the notesHelp array above
-2. Add new HelpPage objects for new features
-3. Update keyboard shortcuts if they change
-4. Add images for complex features if needed
-
-Example of adding a new help page:
-{
-  title: "New Notes Feature",
-  description: "Description of the new feature...",
-  image: "/images/help/notes-feature.png" // optional
-}
-*/ 
+// To update: Edit the text above. Keep it light, quick, and fun! 

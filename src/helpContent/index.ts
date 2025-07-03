@@ -6,6 +6,8 @@ export { timelineHelp } from './timelineHelp';
 export { settingsHelp } from './settingsHelp';
 export { chatHelp } from './chatHelp';
 
+// All help content is now casual, impactful, and TikTok-brain friendly!
+
 // Re-export types for convenience
 export type { HelpPage } from '@/components/ui/help-modal';
 
