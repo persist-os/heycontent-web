@@ -10,6 +10,7 @@ import { getApiKey } from '@/app/lib/api-helpers';
 export const useApiKeyMonitor = () => {
   const router = useRouter();
   const hasCheckedOnMount = useRef(false);
+  let lastCheck = 0; // or use localStorage/sessionStorage for cross-tab
 
   useEffect(() => {
     // Only run in browser environment
@@ -36,10 +37,8 @@ export const useApiKeyMonitor = () => {
 
         // If we get 401, the API key was invalidated (user logged in elsewhere)
         if (response.status === 401) {
-          console.log('API key invalid - logging out with reason: logged_in_elsewhere');
           await handleSignOut(router, 'logged_in_elsewhere');
         } else if (!response.ok) {
-          console.warn(`⚠️ API key validation failed with status: ${response.status} (${source})`);
         }
         // Success case - no logging needed for normal operation
       } catch (error) {
@@ -64,15 +63,18 @@ export const useApiKeyMonitor = () => {
     // Check when user becomes active on the tab
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && hasCheckedOnMount.current) {
-        console.log('👁️ Tab became active - checking session validity');
-        checkApiKeyValidity('tab-visible');
+        const now = Date.now();
+        const lastCheck = Number(localStorage.getItem('lastSessionCheck') || 0);
+        if (now - lastCheck > 3 * 60 * 1000) {
+          localStorage.setItem('lastSessionCheck', String(now));
+          checkApiKeyValidity('tab-visible');
+        }
       }
     };
 
     // Check when user focuses on the window/tab
     const handleFocus = () => {
       if (hasCheckedOnMount.current) {
-        console.log('🎯 Window focused - checking session validity');
         checkApiKeyValidity('window-focus');
       }
     };
