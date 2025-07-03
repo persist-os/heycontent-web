@@ -11,6 +11,7 @@ import { resolveAllLinkContent } from './link-content-resolver';
 // Add Convex client import for direct function calls
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
+import { AuthenticationError } from '@/app/lib/errors';
 import { getAllLinkableContent } from "@/convex/notes";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
@@ -1131,6 +1132,9 @@ export async function sendChatMessage(
     body: JSON.stringify(requestBody)
   });
 
+  if (response.status === 401 || response.status === 403) {
+    throw new AuthenticationError('Token expired or invalid');
+  }
   if (!response.ok) {
     throw new Error('Failed to send message');
   }

@@ -6,7 +6,8 @@ import { toast } from 'react-hot-toast'
 import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime'
 import Cookies from 'js-cookie'
 
-export const handleSignOut = async (router: AppRouterInstance) => {
+export const handleSignOut = async (router: AppRouterInstance, reason?: string) => {
+  console.log('🚪 handleSignOut called with reason:', reason);
   try {
     Cookies.remove('apiKey')
     localStorage.removeItem('firebaseToken')
@@ -32,8 +33,8 @@ export const handleSignOut = async (router: AppRouterInstance) => {
       console.warn('Firebase signOut error:', firebaseError)
     }
 
-    router.push('/auth/login')
-    window.location.reload()
+    sessionStorage.setItem('logoutReason', reason || '');
+    router.push(`/auth/login${reason ? `?reason=${reason}` : ''}`);
   } catch (error) {
     console.error('Sign out error:', error)
     toast.error('Failed to sign out. Please try again.')
