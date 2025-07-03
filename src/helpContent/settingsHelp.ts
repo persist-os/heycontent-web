@@ -24,10 +24,6 @@ export const settingsHelp: HelpPage[] = [
   {
     title: "Make It Yours",
     description: "Pick your theme, set your defaults, and customize your vibe. This is your space."
-  },
-  {
-    title: "API & Integrations",
-    description: "Want to get nerdy? Generate API keys and connect other apps. Or just ignore this tab."
   }
 ];
 

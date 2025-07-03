@@ -2,7 +2,6 @@
 export { contentHubHelp } from './contentHubHelp';
 export { notesHelp } from './notesHelp';
 export { selfHubHelp } from './selfHubHelp';
-export { timelineHelp } from './timelineHelp';
 export { settingsHelp } from './settingsHelp';
 export { chatHelp } from './chatHelp';
 

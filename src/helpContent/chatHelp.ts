@@ -19,7 +19,7 @@ export const chatHelp: HelpPage[] = [
   },
   {
     title: "Pro Moves",
-    description: "• \"hey content persona\": Set your style\n• \"hey content update persona\": Refresh your vibe\n• Use context for smarter answers\n• Start new chats for new topics\n• Let AI do the heavy lifting—just ask!"
+    description: "\n• \"hey content write my persona\": Save your persona\n• Type '@' for context for smarter answers \n• Let AI do the heavy lifting—just ask!"
   },
   {
     title: "Why Chat?",

@@ -3,11 +3,11 @@ import { HelpPage } from '@/components/ui/help-modal';
 export const contentHubHelp: HelpPage[] = [
   {
     title: "Welcome to Your Content Hub",
-    description: "This is your creative HQ. See all your stuff from everywhere, all in one spot. No more tab chaos."
+    description: "This is your creative HQ. See all your stuff from everywhere, all in one spot."
   },
   {
     title: "Why Connect Platforms?",
-    description: "Plug in your Instagram, YouTube and Gmail. The more you connect, the smarter your insights. Unlock the good stuff."
+    description: "Plug in your Instagram, YouTube and Gmail. The more you connect, the smarter your insights."
   },
   {
     title: "Get Instant Vibes",
