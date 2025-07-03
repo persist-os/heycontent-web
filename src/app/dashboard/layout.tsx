@@ -6,6 +6,7 @@ import { useAuth } from '@/app/context/auth-context';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSidebar } from '@/app/context/sidebar-context';
 import { useSubscriptionCheck } from '@/app/hooks/useSubscriptionCheck';
+import { useApiKeyMonitor } from '@/app/hooks/useApiKeyMonitor';
 import { RefreshState } from '@/components/ui/refresh-state';
 import { Menu } from 'lucide-react';
 
@@ -43,9 +44,15 @@ export default function DashboardLayout({
     error: subscriptionError 
   } = useSubscriptionCheck(isPublicPath ? 'free' : 'basic');
 
+  // Monitor API key validity (only when authenticated)
+  useApiKeyMonitor(); // 🔒 ENABLED: Provides immediate logout when logged in elsewhere
+
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !firebaseUser) {
+      // Only redirect if NOT already on any /auth/login page (with or without query params)
+      if (window.location.pathname.startsWith('/auth/login')) return;
+      if (window.location.pathname.startsWith('/auth/')) return; // Don't interfere with auth pages that might have reason parameters
       window.location.href = '/auth/login';
     }
   }, [firebaseUser, authLoading]);

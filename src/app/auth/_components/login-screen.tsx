@@ -11,9 +11,10 @@ import Cookies from 'js-cookie';
 
 interface LoginScreenProps {
   onSuccess?: (apiKey: string) => void;
+  reason?: string | null;
 }
 
-const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
+const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -129,6 +130,16 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
           <p className="text-gray-600 mt-2">Sign in to your account</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-6 bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-8">
+          {reason === 'session_expired' && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-800 text-sm">
+              Your session has expired. Please sign in again.
+            </div>
+          )}
+          {reason === 'logged_in_elsewhere' && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 text-sm">
+              You've been logged out because you signed in from another device. Please sign in again.
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
             <div className="relative">

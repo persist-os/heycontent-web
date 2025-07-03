@@ -14,7 +14,7 @@ export const insert_api_key = mutation({
     const existingKeys = await ctx.db
       .query("api_keys")
       .filter(q => q.eq(q.field("user_id"), args.user_id))
-      .filter(q => q.eq(q.field("clientType"), args.clientType))
+      // .filter(q => q.eq(q.field("clientType"), args.clientType)) // 👈 COMMENTED OUT: Testing single session (no account sharing)
       .collect();
     
     // Delete only existing keys for this user and clientType

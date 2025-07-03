@@ -291,7 +291,7 @@ export const useChat = (
     } catch (error) {
       if (error instanceof AuthenticationError) {
         // Optionally clear auth state here if needed
-        router.push('/auth/login');
+        router.push('/auth/login?reason=session_expired');
         return;
       }
       console.error('Chat error:', error);
