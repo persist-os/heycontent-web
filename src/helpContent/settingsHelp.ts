@@ -2,28 +2,32 @@ import { HelpPage } from '@/components/ui/help-modal';
 
 export const settingsHelp: HelpPage[] = [
   {
-    title: "Welcome to Settings",
-    description: "Settings is your control center for customizing your HeyContent experience. Manage your account, configure preferences, and control your data and privacy settings."
+    title: "Settings",
+    description: "Tweak your app, your way. Make it feel like home."
   },
   {
-    title: "Account Settings",
-    description: "Manage your account information:\n\n• Update your profile information\n• Change your email and password\n• Manage your subscription plan\n• View billing history and invoices\n• Account security and two-factor authentication"
+    title: "Account",
+    description: "Update your info or password. Stay secure, stay you."
   },
   {
-    title: "Platform Connections",
-    description: "Manage your connected platforms:\n\n• Connect or disconnect YouTube, Instagram, Gmail\n• Refresh platform authentication tokens\n• Configure platform-specific settings\n• Review permission levels and data access\n• Troubleshoot connection issues"
+    title: "Platforms",
+    description: "Connect or disconnect your socials. More links, more power."
   },
   {
-    title: "Privacy & Data",
-    description: "Control your data and privacy:\n\n• Data retention settings\n• Content analysis preferences\n• Export your data\n• Delete specific content or insights\n• Privacy controls and data sharing options"
+    title: "Privacy",
+    description: "Control your data. Share what you want, keep the rest private."
   },
   {
     title: "Notifications",
-    description: "Customize your notification preferences:\n\n• Email notification settings\n• In-app notification controls\n• Insight generation alerts\n• Platform sync notifications\n• Weekly/monthly summary emails"
+    description: "Pick what pings you. No more notification overload."
   },
   {
     title: "Preferences",
-    description: "Customize your app experience:\n\n• Theme and appearance settings\n• Default analysis preferences\n• Content display options\n• AI interaction settings\n• Keyboard shortcuts customization"
+    description: "Change the look, set your defaults. Make it yours."
+  },
+  {
+    title: "Integrations",
+    description: "Plug in other tools. Unlock bonus features."
   }
 ];
 

@@ -2,28 +2,28 @@ import { HelpPage } from '@/components/ui/help-modal';
 
 export const timelineHelp: HelpPage[] = [
   {
-    title: "Welcome to Timeline",
-    description: "Timeline provides a chronological view of all your content creation activities across connected platforms. Track your productivity, review your content journey, and identify patterns in your creative workflow."
+    title: "Timeline",
+    description: "Your content, all in order. See your growth at a glance."
   },
   {
-    title: "Content Timeline View",
-    description: "See your entire content history:\n\n• Chronological feed of all your content\n• Posts, uploads, and activities from all platforms\n• Visual timeline with dates and timestamps\n• Content thumbnails and previews\n• Platform-specific icons and indicators"
+    title: "See Everything",
+    description: "Every post, video, and email—right here. No digging required."
   },
   {
-    title: "Filtering & Navigation",
-    description: "Find specific content quickly:\n\n• Filter by platform (YouTube, Instagram, Gmail)\n• Filter by content type (videos, posts, emails)\n• Date range selection\n• Search within timeline content\n• Jump to specific time periods"
+    title: "Filter Fast",
+    description: "Find what you want by platform, type, or date. Zero scrolling."
   },
   {
-    title: "Content Interaction",
-    description: "Engage with your timeline content:\n\n• Click to view full content details\n• Quick actions for each content piece\n• Share or discuss content with AI\n• Add notes or tags to timeline items\n• Export timeline data"
+    title: "Interact",
+    description: "Click stuff to dive deeper, share, or chat with AI. It's all one tap away."
   },
   {
-    title: "Productivity Insights",
-    description: "Understand your creative patterns:\n\n• Identify your most productive periods\n• Track content frequency and consistency\n• Analyze posting patterns across platforms\n• Monitor content performance trends\n• Spot gaps in your content schedule"
+    title: "Productivity Boost",
+    description: "Spot your creative bursts and dry spells. Stay on your game."
   },
   {
-    title: "Timeline Features",
-    description: "Make the most of your timeline:\n\n• Infinite scroll through your content history\n• Responsive design for mobile and desktop\n• Real-time updates as you create new content\n• Export timeline for external analysis\n• Integration with notes and insights"
+    title: "Features",
+    description: "Timeline updates live. Works on any device. Export if you want."
   }
 ];
 

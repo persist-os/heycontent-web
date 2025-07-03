@@ -2,28 +2,28 @@ import { HelpPage } from '@/components/ui/help-modal';
 
 export const notesHelp: HelpPage[] = [
   {
-    title: "Welcome to Smart Notes",
-    description: "Smart Notes is your intelligent note-taking workspace powered by AI. Create, organize, and enhance your notes with AI assistance for maximum productivity."
+    title: "Smart Notes",
+    description: "Jot down ideas and let AI help you make them better. Notes that think with you."
   },
   {
-    title: "Creating Notes",
-    description: "Start creating notes instantly:\n\n• Click anywhere in the editor to start typing\n• Use keyboard shortcuts for faster formatting\n• AI will help enhance your content as you write\n• Notes are automatically saved as you type"
+    title: "Create Instantly",
+    description: "Click and type—no setup, no fuss. Your thoughts, saved automatically."
   },
   {
-    title: "AI-Powered Features",
-    description: "Enhance your notes with AI capabilities:\n\n• Auto-completion and suggestions\n• Content analysis and insights\n• Smart formatting and structure\n• Related content recommendations\n• Summary generation"
+    title: "AI Magic",
+    description: "Get suggestions, summaries, and smart edits. It's like notes on steroids."
   },
   {
-    title: "Keyboard Shortcuts",
-    description: "Speed up your workflow with keyboard shortcuts:\n• Cmd/Ctrl + /: Toggle shortcuts help\n• Cmd/Ctrl + Z: Undo\n• Cmd/Ctrl + Y: Redo\n\nPress Cmd/Ctrl + / in the editor to see all available shortcuts."
+    title: "Shortcuts",
+    description: "Speed up with keyboard hacks. Less clicking, more doing."
   },
   {
-    title: "Organization & Projects",
-    description: "Keep your notes organized:\n\n• Create projects to group related notes\n• Use tags and categories for easy filtering\n• Search through all your notes instantly\n• Access recent notes quickly\n• Archive completed projects"
+    title: "Stay Organized",
+    description: "Group notes, tag stuff, and find anything fast. No more lost ideas."
   },
   {
-    title: "Analysis Types",
-    description: "Different analysis modes for your content:\n\n• YouTube Analysis: Analyze video scripts and content\n• Insight Analysis: Generate insights from your notes\n• Custom Analysis: Create your own analysis frameworks\n• Collaborative Notes: Share and work together"
+    title: "Analyze Anything",
+    description: "Run quick checks or deep dives on your notes. Get insights in a tap."
   }
 ];
 
