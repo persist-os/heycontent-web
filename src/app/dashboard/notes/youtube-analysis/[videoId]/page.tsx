@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useAuth } from '@/app/context/auth-context';
@@ -30,10 +30,13 @@ import { MarkdownRenderer } from '@/app/dashboard/chat/markdown-renderer';
 export default function YouTubeAnalysisPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid;
   
   const videoId = params.videoId as string;
+  const fromChat = searchParams.get('fromChat') === 'true';
+  const chatId = searchParams.get('chatId');
 
   // Fetch video data using the direct YouTube query
   const videoData = useQuery(api.youtubeQueries.getFullVideoDetails, {
@@ -56,9 +59,9 @@ export default function YouTubeAnalysisPage() {
       <div className="min-h-screen bg-background p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-4 mb-8">
-            <Button variant="ghost" onClick={() => router.back()}>
+            <Button variant="ghost" onClick={() => fromChat ? router.push(chatId ? `/dashboard/chat?id=${chatId}` : '/dashboard/chat') : router.back()}>
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
+              {fromChat ? 'Back to Chat' : 'Back'}
             </Button>
             <div className="h-8 w-64 bg-muted rounded animate-pulse" />
           </div>
@@ -139,9 +142,9 @@ export default function YouTubeAnalysisPage() {
         <div className="max-w-7xl mx-auto p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" onClick={() => router.back()}>
+              <Button variant="ghost" onClick={() => fromChat ? router.push(chatId ? `/dashboard/chat?id=${chatId}` : '/dashboard/chat') : router.back()}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
+                {fromChat ? 'Back to Chat' : 'Back'}
               </Button>
               <div className="flex items-center gap-3">
                 <Youtube className="w-8 h-8 text-red-500" />

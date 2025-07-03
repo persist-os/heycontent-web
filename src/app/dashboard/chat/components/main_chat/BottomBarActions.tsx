@@ -64,16 +64,16 @@ export const BottomBarActions: React.FC<BottomBarActionsProps> = ({ onActionClic
         <div className="max-w-3xl sm:max-w-4xl mx-auto px-3 sm:px-4 py-2">
           {/* Horizontal scrollable container with fade effects */}
           <div className="relative fade-edges">
-            <div className="overflow-x-auto overflow-y-hidden hide-scrollbar">
-              <div className="flex gap-2 px-5 pb-1" style={{ minWidth: 'max-content' }}>
+            <div className="overflow-x-auto overflow-y-visible hide-scrollbar py-2">
+              <div className="flex gap-2 px-5 pb-1 items-center" style={{ minWidth: 'max-content' }}>
                 {bottomBarActions.map((action) => (
                   <button
                     key={action.id}
                     onClick={() => handleActionClick(action.action)}
                     className="flex-shrink-0 px-3 py-1.5 text-sm font-medium text-primary-foreground dark:text-black 
-                      bg-primary hover:bg-primary/90 dark:bg-accent dark:hover:bg-accent/90
-                      rounded-full transition-all duration-200 hover:shadow-sm
-                      whitespace-nowrap select-none chat-font"
+                      bg-primary rounded-full transition-all duration-200 whitespace-nowrap select-none chat-font
+                      hover:bg-primary/60 focus:bg-primary/60 active:bg-primary/70
+                      dark:hover:bg-primary/80 dark:hover:text-black dark:focus:bg-primary/80 dark:focus:text-black dark:active:bg-primary/90 dark:active:text-black"
                   >
                     {action.text}
                   </button>

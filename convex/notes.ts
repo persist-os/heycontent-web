@@ -579,6 +579,7 @@ export const getContentByPlatform = query({
     important: v.boolean(),
     tags: v.array(v.string()),
     analysis: v.optional(v.any()),
+    content: v.optional(v.string()),
     thumbnailUrl: v.optional(v.string()),
     statistics: v.optional(v.any()),
     mediaUrl: v.optional(v.string()),
@@ -610,7 +611,8 @@ export const getContentByPlatform = query({
             createdAt: note.createdAt || Date.now(),
             important: note.important || false,
             tags: note.tags || [],
-            analysis: note.analysis
+            analysis: note.analysis,
+            content: note.content || ''
           }));
           
         case 'youtube':
@@ -692,6 +694,7 @@ export const getAllLinkableContent = query({
     important: v.boolean(),
     tags: v.array(v.string()),
     analysis: v.optional(v.any()),
+    content: v.optional(v.string()),
     thumbnailUrl: v.optional(v.string()),
     statistics: v.optional(v.any()),
     mediaUrl: v.optional(v.string()),
@@ -725,7 +728,8 @@ export const getAllLinkableContent = query({
             createdAt: note.createdAt || Date.now(),
             important: note.important || false,
             tags: note.tags || [],
-            analysis: note.analysis
+            analysis: note.analysis,
+            content: note.content || ''
           };
         }),
         // Transform YouTube videos

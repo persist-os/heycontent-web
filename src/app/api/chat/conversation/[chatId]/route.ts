@@ -5,8 +5,21 @@ import { api } from '@/convex/_generated/api';
 import { getUserIdFromToken } from '@/app/lib/getUserIdFromToken';
 import { validateApiKey } from '@/app/lib/validateApiKey';
 
-// Function to clean message content by removing backend context
-function cleanMessageContent(content: string, role: string): string {
+// Function to extract content IDs from message content
+function extractContentIds(content: string): string[] {
+  const contentIdPattern = /@\[([^\]]+)\]@/g;
+  const contentIds: string[] = [];
+  let match;
+  
+  while ((match = contentIdPattern.exec(content)) !== null) {
+    contentIds.push(match[1]);
+  }
+  
+  return contentIds;
+}
+
+// Function to clean message content by removing backend context and converting content IDs to titles
+async function cleanMessageContent(content: string, role: string, userId: string): Promise<string> {
   // Only clean user messages that might have context prepended
   if (role !== 'user') {
     return content;
@@ -14,7 +27,27 @@ function cleanMessageContent(content: string, role: string): string {
 
   // Check if the message starts with [Context] and remove everything up to the actual user message
   const contextPattern = /^\[Context\][\s\S]*?\n\n/;
-  const cleanedContent = content.replace(contextPattern, '');
+  let cleanedContent = content.replace(contextPattern, '');
+  
+  // Extract content IDs and convert them to titles
+  const contentIds = extractContentIds(cleanedContent);
+  if (contentIds.length > 0) {
+    try {
+      const titles = await fetchQuery(api.notes.getContentTitlesByPrefixedIds, {
+        prefixedIds: contentIds,
+        userId
+      });
+      
+      // Replace content IDs with titles
+      cleanedContent = cleanedContent.replace(/@\[([^\]]+)\]@/g, (match, contentId) => {
+        const title = titles[contentId];
+        return title ? `@${title}` : match;
+      });
+    } catch (error) {
+      console.error('Error fetching content titles:', error);
+      // If there's an error, keep the original content IDs
+    }
+  }
   
   return cleanedContent.trim();
 }
@@ -87,11 +120,13 @@ export async function GET(
     }
 
     // Format the conversation for the frontend
+    const cleanedTitle = conversation.title ? await cleanMessageContent(conversation.title, 'user', userId) : 'Untitled Chat';
+    
     const formattedConversation = {
       id: conversation._id,
-      title: conversation.title || 'Untitled Chat',
-      messages: conversation.messages.map((msg: any, index: any) => {
-        const cleanedContent = cleanMessageContent(msg.content, msg.role);
+      title: cleanedTitle,
+      messages: await Promise.all(conversation.messages.map(async (msg: any, index: any) => {
+        const cleanedContent = await cleanMessageContent(msg.content, msg.role, userId);
         return {
           id: index,
           content: cleanedContent,
@@ -99,7 +134,7 @@ export async function GET(
           role: msg.role,
           timestamp: new Date(msg.timestamp).toISOString()
         };
-      }),
+      })),
       createdAt: new Date(conversation.createdAt).toISOString(),
       updatedAt: new Date(conversation.updatedAt).toISOString(),
       starred: conversation.starred || false
