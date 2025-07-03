@@ -135,26 +135,25 @@ export async function POST(request: Request) {
         contentIds.push(match[1]);
       }
       
-      // Create a proper mapping by resolving each content ID to get its title
-      for (const contentId of contentIds) {
-        // Find the corresponding resolved content by matching the content ID
-        const resolvedItem = link_content.find((item: any) => {
-          // For insights, we need to match the analysis ID and index
-          if (contentId.startsWith('insight:')) {
-            const parts = contentId.split(':');
-            if (parts.length >= 3) {
-              const analysisId = parts[1];
-              const index = parseInt(parts[2], 10);
-              return item.type === 'insight' && item.contentId === analysisId && item.index === index;
-            }
+      console.log(`[${requestId}] Extracted content IDs:`, contentIds);
+      
+      // Create a mapping by matching content IDs to resolved content by index
+      // Since the resolved content should be in the same order as the content IDs in the message
+      for (let i = 0; i < Math.min(contentIds.length, link_content.length); i++) {
+        const contentId = contentIds[i];
+        const resolvedItem = link_content[i];
+        
+        console.log(`[${requestId}] Mapping by index:`, { 
+          index: i, 
+          contentId, 
+          resolvedItem: {
+            type: resolvedItem.type,
+            title: resolvedItem.title,
+            contentId: resolvedItem.contentId
           }
-          // For other types, match by content ID
-          return item.contentId === contentId;
         });
         
-        if (resolvedItem) {
-          contentIdToTitle.set(contentId, resolvedItem.title);
-        }
+        contentIdToTitle.set(contentId, resolvedItem.title);
       }
       
       // Replace each link token with its title
