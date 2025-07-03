@@ -65,6 +65,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
             {/* Ambient Insights component - handles its own data fetching */}
             <div className="flex-1 overflow-y-auto px-3 sm:px-4 pb-4">
               <AmbientInsights
+                userId={undefined}
                 onInsightClick={(action, insight) => handleSendMessage(action)}
               />
             </div>

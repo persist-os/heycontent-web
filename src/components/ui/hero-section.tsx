@@ -7,8 +7,6 @@ import { useRouter } from 'next/navigation'
 import { Logo } from './logo'
 import { WaitlistButton } from '@/app/waitlist/_components/WaitlistButton'
 
-console.log('[HeroSection] Module loaded');
-
 const searchSuggestions = [
   "What's my brand deal potential?",
   "Analyze my latest YouTube video",
