@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useRef, useCallback } from 'react';
 import { useState, useEffect } from 'react';
 import { NotesGrid } from './components/NotesGrid';
 import { NoteArea } from './NoteArea';
@@ -26,6 +26,8 @@ export default function SmartNotes() {
   const [activeNote, setActiveNote] = useState<Note | null>(null);
   const searchParams = useSearchParams();
   const noteIdParam = searchParams.get('noteId');
+  const fromChat = searchParams.get('fromChat') === 'true';
+  const chatId = searchParams.get('chatId');
   const router = useRouter();
   
   const { 
@@ -52,6 +54,8 @@ export default function SmartNotes() {
   
   // Help modal state
   const [helpOpen, setHelpOpen] = useState(false);
+
+  const noteAreaFlushRef = useRef<() => Promise<void>>();
 
   useEffect(() => {
     if (activeNoteId) {
@@ -114,10 +118,34 @@ export default function SmartNotes() {
     }
   };
 
-  // Handle note updates
-  const handleUpdateNote = async (noteId: string, updates: any) => {
-    await updateNote(noteId, updates);
-  };
+  // Stable, safe onUpdate handler for NoteArea
+  const handleNoteUpdate = useCallback(async (noteId, updates) => {
+    // For temporary notes, update local state only
+    if (activeNote?.isTemporary) {
+      const updatedNote = { ...activeNote, ...updates };
+      setActiveNote(updatedNote);
+      return updatedNote;
+    }
+    // Find the current note
+    const currentNote = notes.find(note => String(note._id) === String(noteId));
+    // Only update if something actually changed
+    const isChanged = currentNote && (
+      (updates.content !== undefined && updates.content !== currentNote.content) ||
+      (updates.title !== undefined && updates.title !== currentNote.title) ||
+      (updates.tags !== undefined && JSON.stringify(updates.tags) !== JSON.stringify(currentNote.tags))
+    );
+    if (isChanged) {
+      setNotes(currentNotes =>
+        currentNotes.map(note =>
+          String(note._id) === String(noteId)
+            ? { ...note, ...updates }
+            : note
+        )
+      );
+    }
+    // Always call backend update to ensure consistency
+    return await updateNote(String(noteId), updates);
+  }, [activeNote, notes, setActiveNote, setNotes, updateNote]);
 
   // Handle note saving from editor
   const handleSave = async (latestContent: string, latestTitle?: string) => {
@@ -158,6 +186,12 @@ export default function SmartNotes() {
     }
     clearNavigationStack();
     clearNoteIdFromUrl();
+    
+    // If we came from chat, navigate back to chat
+    if (fromChat) {
+      const chatUrl = chatId ? `/dashboard/chat?id=${chatId}` : '/dashboard/chat';
+      router.push(chatUrl);
+    }
   };
 
   // Handle note linking with navigation stack
@@ -172,8 +206,31 @@ export default function SmartNotes() {
     navigateToNote(noteId, true); // From a link, so add to navigation stack
   };
 
+  // Helper to flush autosave before navigation
+  const flushAutosave = async () => {
+    if (noteAreaFlushRef.current) {
+      await noteAreaFlushRef.current();
+    }
+  };
+
+  // Handle YouTube video analysis navigation
+  const handleOpenAnalysis = async (videoId: string) => {
+    await flushAutosave();
+    setSelectedVideoId(null); // Close the card
+    router.push(`/dashboard/notes/youtube-analysis/${videoId}`);
+  };
+
+  // Handle insight analysis navigation
+  const handleOpenInsightAnalysis = async (analysisId: string, insightIndex: number) => {
+    await flushAutosave();
+    setSelectedInsight(null); // Close the card
+    const insightId = `insight:${analysisId}:${insightIndex}`;
+    router.push(`/dashboard/notes/insight-analysis/${encodeURIComponent(insightId)}`);
+  };
+
   // Handle content linking (YouTube, Instagram, Insights, etc.)
-  const handleLinkContent = (prefixedId: string) => {
+  const handleLinkContent = async (prefixedId: string) => {
+    await flushAutosave();
     console.log('handleLinkContent called:', {
       prefixedId,
       prefixedIdLength: prefixedId.length,
@@ -229,19 +286,6 @@ export default function SmartNotes() {
     availableNotes: availableNotes.map(n => ({ id: n._id, title: n.title, type: n.type }))
   });
 
-  // Handle YouTube video analysis navigation
-  const handleOpenAnalysis = (videoId: string) => {
-    setSelectedVideoId(null); // Close the card
-    router.push(`/dashboard/notes/youtube-analysis/${videoId}`);
-  };
-
-  // Handle insight analysis navigation
-  const handleOpenInsightAnalysis = (analysisId: string, insightIndex: number) => {
-    setSelectedInsight(null); // Close the card
-    const insightId = `insight:${analysisId}:${insightIndex}`;
-    router.push(`/dashboard/notes/insight-analysis/${encodeURIComponent(insightId)}`);
-  };
-
   // If viewing a specific note, show the editor with smooth transition
   if (activeNote) {
     return (
@@ -249,25 +293,7 @@ export default function SmartNotes() {
         <NoteArea
           key={String(activeNote._id)}
           note={activeNote}
-          onUpdate={async (noteId, updates) => {
-            // For temporary notes, update local state only
-            if (activeNote.isTemporary) {
-              const updatedNote = { ...activeNote, ...updates };
-              setActiveNote(updatedNote);
-              return updatedNote;
-            }
-            
-            // Optimistically update the note in local state
-            setNotes(currentNotes =>
-              currentNotes.map(note =>
-                String(note._id) === String(noteId)
-                  ? { ...note, ...updates }
-                  : note
-              )
-            );
-            // Then call the backend update
-            return await updateNote(String(noteId), updates);
-          }}
+          onUpdate={handleNoteUpdate}
           onSave={handleSave}
           onToggleShortcuts={() => {}} // Not used in grid view
           onBack={handleBackToGrid}
@@ -278,19 +304,25 @@ export default function SmartNotes() {
           canGoBack={canGoBack}
           onNavigateBack={navigateBack}
           navigationStack={navigationStack}
+          fromChat={fromChat}
+          flushRef={noteAreaFlushRef} // Pass flush ref to NoteArea
         />
         
         {/* YouTube Video Card */}
         {selectedVideoId && (
           <YouTubeVideoCard
             videoId={selectedVideoId}
-            onClose={() => setSelectedVideoId(null)}
+            onClose={async () => {
+              await flushAutosave();
+              setSelectedVideoId(null);
+            }}
             onOpenAnalysis={handleOpenAnalysis}
           />
         )}
 
         {/* Insight Card */}
-        {selectedInsight && (() => {
+        {selectedInsight && (async () => {
+          await flushAutosave();
           const insightId = `insight:${selectedInsight.analysisId}:${selectedInsight.insightIndex}`;
           setSelectedInsight(null);
           router.push(`/dashboard/notes/insight-analysis/${encodeURIComponent(insightId)}`);
@@ -308,7 +340,7 @@ export default function SmartNotes() {
         onEditNote={handleEditNote}
         onDeleteNote={handleDeleteNote}
         onToggleImportant={handleToggleImportant}
-        onUpdateNote={handleUpdateNote}
+        onUpdateNote={handleNoteUpdate}
         isLoading={notesIsLoading}
         helpButton={<HelpIconButton onClick={() => setHelpOpen(true)} />}
       />

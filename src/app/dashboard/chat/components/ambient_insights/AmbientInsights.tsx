@@ -209,13 +209,13 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
   }
 
   return (
-    <div className="space-y-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
+    <div className="space-y-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0 pt-2">
       {insights.map((insight) => (
         <div
           key={insight.id}
           onClick={() => onInsightClick?.(insight.action, insight)}
           className="bg-card border border-border shadow-sm p-3 sm:p-4 rounded-xl cursor-pointer \
-            hover:shadow-md transition-all duration-200 hover:scale-[1.02] hover:border-primary/20"
+            hover:shadow-lg transition-all duration-200 hover:scale-[1.02] hover:border-primary"
           tabIndex={0}
           role="button"
           aria-label={`${insight.title}: ${insight.description}`}

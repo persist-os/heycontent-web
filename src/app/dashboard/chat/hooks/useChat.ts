@@ -42,6 +42,11 @@ export const useChat = (
   const addMessageToConversationMutation = useMutation(api.chatMutations.addMessageToConversation);
 
   const handleSendMessage = useCallback(async (content: string) => {
+    console.log('🔗 useChat handleSendMessage called with:', {
+      content: content.substring(0, 100) + '...',
+      hasContentLinks: content.includes('@[')
+    })
+    
     if (!content || typeof content !== 'string' || !content.trim()) return;
 
     // Prevent duplicate messages within a short time window (1 second)
@@ -96,6 +101,11 @@ export const useChat = (
       enhancedQuery = `Context for user question:\n\n${contentContext.analysis}\n\n Make sure to address user question in your response\n\n---\n\nUser question: ${content}`;
     }
 
+    console.log('🔗 useChat: Creating message with:', {
+      content: content.substring(0, 100) + '...',
+      hasContentLinks: content.includes('@[')
+    })
+    
     const newMessage: Message = {
       id: uuidv4() as string,
       content, // Store the original user message for display
@@ -125,11 +135,15 @@ export const useChat = (
         searchStatus: ''
       };
 
-      setMessages(prev => [
-        ...prev,
-        newMessage,
-        typingMessage
-      ]);
+      setMessages(prev => {
+        const newMessages = [...prev, newMessage, typingMessage];
+        console.log('🔗 useChat: Messages after adding user message:', {
+          totalMessages: newMessages.length,
+          userMessage: newMessage,
+          hasContentLinks: newMessage.content.includes('@[')
+        });
+        return newMessages;
+      });
 
       // Status update callback to show search progress
       const handleStatusUpdate = (status: string) => {
@@ -197,6 +211,11 @@ export const useChat = (
 
       // Send the enhanced query to the backend (with analysis injected if enabled)
       // Now includes vector search with status updates
+      console.log('🔗 useChat: Sending to backend:', {
+        enhancedQuery: enhancedQuery.substring(0, 100) + '...',
+        hasContentLinks: enhancedQuery.includes('@[')
+      })
+      
       const data = await sendChatMessage(
         enhancedQuery, 
         isFirstMessage, 
@@ -272,7 +291,14 @@ export const useChat = (
           suggestions: data.suggestions || []
         };
         
-        return [...withoutTyping, newMessage];
+        const updatedMessages = [...withoutTyping, newMessage];
+        console.log('🔗 useChat: Messages after assistant response:', {
+          totalMessages: updatedMessages.length,
+          userMessages: updatedMessages.filter(msg => msg.role === 'user'),
+          userMessageWithLinks: updatedMessages.filter(msg => msg.role === 'user' && msg.content.includes('@['))
+        });
+        
+        return updatedMessages;
       });
 
       // Clear search status after completion

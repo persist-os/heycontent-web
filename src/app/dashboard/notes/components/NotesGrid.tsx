@@ -491,7 +491,7 @@ export function NotesGrid({
           {isCreatingNote ? (
             <div className="w-6 h-6 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
           ) : (
-            <Plus className="w-6 h-6" />
+            <Plus className="w-6 h-6 text-white dark:text-black" />
           )}
         </button>
 

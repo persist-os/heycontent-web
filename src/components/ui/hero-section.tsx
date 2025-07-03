@@ -7,8 +7,6 @@ import { useRouter } from 'next/navigation'
 import { Logo } from './logo'
 import { WaitlistButton } from '@/app/waitlist/_components/WaitlistButton'
 
-console.log('[HeroSection] Module loaded');
-
 const searchSuggestions = [
   "What's my brand deal potential?",
   "Analyze my latest YouTube video",
@@ -109,7 +107,7 @@ export function HeroSection() {
                 Capabilities
               </button>
               <button 
-                onClick={() => router.push('/auth/register')}
+                onClick={() => router.push('/waitlist')}
                 className="bg-black text-white px-4 py-2 rounded-xl hover:bg-gray-800 transition-colors"
               >
                 Get Started
@@ -141,7 +139,7 @@ export function HeroSection() {
                 </button>
                 <button 
                   onClick={() => {
-                    router.push('/auth/register')
+                    router.push('/waitlist')
                     setIsMobileMenuOpen(false)
                   }}
                   className="bg-black text-white px-4 py-2 rounded-xl hover:bg-gray-800 transition-colors text-left"

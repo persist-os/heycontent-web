@@ -190,8 +190,17 @@ export function AttachmentPanel({ projectId, project, isOpen, onClose }: Attachm
                 variant={selectedType === type.key ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedType(type.key as any)}
+                className={
+                  selectedType === type.key && type.key === 'note'
+                    ? 'dark:!text-black'
+                    : undefined
+                }
               >
-                {type.label}
+                {selectedType === type.key && type.key === 'note' ? (
+                  <span className="dark:!text-black">{type.label}</span>
+                ) : (
+                  type.label
+                )}
               </Button>
             ))}
           </div>

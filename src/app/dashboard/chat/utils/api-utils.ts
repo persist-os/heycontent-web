@@ -6,10 +6,12 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { getApiKey } from '@/app/lib/api-helpers';
+import { resolveAllLinkContent } from './link-content-resolver';
 
 // Add Convex client import for direct function calls
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
+import { getAllLinkableContent } from "@/convex/notes";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
@@ -66,7 +68,7 @@ export async function generateEmbeddingsForPlatform(
           try {
             const caption = post.data.caption || '';
             const username = post.data.username || 'Unknown User';
-            const mediaType = post.data.media_type || 'Unknown';
+            const mediaType = (post.data as any).media_type || 'Unknown';
             const likeCount = post.data.like_count || 0;
             const commentsCount = post.data.comments_count || 0;
             const timestamp = post.data.timestamp ? new Date(post.data.timestamp).toLocaleDateString() : 'Unknown date';
@@ -490,7 +492,7 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
         try {
           const caption = post.data.caption || '';
           const username = post.data.username || 'Unknown User';
-          const mediaType = post.data.media_type || 'Unknown';
+          const mediaType = (post.data as any).media_type || 'Unknown';
           const likeCount = post.data.like_count || 0;
           const commentsCount = post.data.comments_count || 0;
           const timestamp = post.data.timestamp ? new Date(post.data.timestamp).toLocaleDateString() : 'Unknown date';
@@ -878,12 +880,78 @@ export async function sendChatMessage(
 
   // Add vector search metadata if available
   if (vectorSearchResults && vectorSearchResults.context) {
+    // Clean the search query by replacing content IDs with titles
+    let cleanSearchQuery = content;
+    if (content.includes('@[') && userId) {
+      try {
+        // Get all linkable content for the user
+        const allLinkableContent = await convex.query(api.notes.getAllLinkableContent, { userId });
+        
+        // Create a mapping of content IDs to titles
+        const contentIdToTitle = new Map();
+        allLinkableContent.forEach((item: any) => {
+          const contentIdMatch = content.match(/@\[([^\]]+)\]@/);
+          if (contentIdMatch) {
+            const contentId = contentIdMatch[1];
+            contentIdToTitle.set(contentId, item.title);
+          }
+        });
+        
+        // Replace content IDs with titles
+        cleanSearchQuery = content.replace(/@\[([^\]]+)\]@/g, (match, contentId) => {
+          const title = contentIdToTitle.get(contentId);
+          return title ? `[${title}]` : match;
+        });
+      } catch (error) {
+        console.error('Error cleaning search query:', error);
+        // Keep original content if cleaning fails
+      }
+    }
+    
     requestBody.vector_search_metadata = {
       foundRelevantContent: true,
       relevantItemsCount: vectorSearchResults.relevantContent.length,
-      searchQuery: content, // Store original query
+      searchQuery: cleanSearchQuery, // Store cleaned query
       context: vectorSearchResults.context // Pass the context separately
     };
+  }
+
+  // Resolve link content if the message contains content IDs
+  if (content.includes('@[') && userId) {
+    console.log('🔗 [LINK RESOLUTION] Message contains content links, resolving...');
+    
+    try {
+      // Get all linkable content for the user
+      const allLinkableContent = await convex.query(api.notes.getAllLinkableContent, { userId });
+      
+      console.log('🔗 [LINK RESOLUTION] All linkable content from Convex:', {
+        totalCount: allLinkableContent?.length || 0,
+        types: allLinkableContent?.map(item => item.type) || [],
+        insightCount: allLinkableContent?.filter(item => item.type === 'insight').length || 0,
+        insights: allLinkableContent?.filter(item => item.type === 'insight').map(item => ({
+          id: item.id,
+          title: item.title
+        })) || []
+      });
+      
+      // Resolve all link content
+      const resolvedLinkContent = await resolveAllLinkContent(content, userId, allLinkableContent);
+      
+      if (resolvedLinkContent.length > 0) {
+        console.log('🔗 [LINK RESOLUTION] Resolved link content:', {
+          count: resolvedLinkContent.length,
+          types: resolvedLinkContent.map(item => item.type)
+        });
+        
+        // Add resolved link content to request body
+        requestBody.link_content = resolvedLinkContent;
+      } else {
+        console.log('🔗 [LINK RESOLUTION] No link content resolved');
+      }
+    } catch (error) {
+      console.error('🔗 [LINK RESOLUTION] Error resolving link content:', error);
+      // Continue without link content if resolution fails
+    }
   }
 
   // Handle session ID based on whether this is a first message or continuing conversation
@@ -900,6 +968,8 @@ export async function sendChatMessage(
     console.warn('Non-first message without session ID - this may cause issues');
     requestBody.session_id = null;
   }
+
+
 
   // Include content context if available
   if (contentContext) {
@@ -1025,6 +1095,8 @@ export async function sendChatMessage(
     }
   }
 
+
+
   // Do NOT include user_id in the request body; backend extracts it from API key
 
   // Add this right before the fetch call
@@ -1038,6 +1110,10 @@ export async function sendChatMessage(
     has_content_context: !!contentContext,
     has_vector_search_context: !!vectorSearchResults,
     vector_search_items: vectorSearchResults?.relevantContent?.length || 0,
+    has_link_content: !!requestBody.link_content,
+    link_content_count: requestBody.link_content?.length || 0,
+    link_content_types: requestBody.link_content?.map((item: any) => item.type) || [],
+
     content_context: contentContext ? {
       platform: contentContext.platform,
       contentId: contentContext.contentId,
