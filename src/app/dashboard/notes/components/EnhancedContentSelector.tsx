@@ -381,7 +381,7 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
               className={cn(
                 "flex items-center justify-center gap-1 px-2 py-1 text-xs rounded-md transition-colors",
                 selectedPlatform === key
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-primary text-primary-foreground dark:text-black"
                   : "hover:bg-muted"
               )}
             >
@@ -415,7 +415,6 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
                   <button
                     key={content.id}
                     onClick={() => {
-                      console.log('🎯 EnhancedContentSelector: Item clicked:', content.id)
                       onSelect(content.id)
                     }}
                     className="w-full text-left p-3 rounded-md hover:bg-muted transition-colors group"

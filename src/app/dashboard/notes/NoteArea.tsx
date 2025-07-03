@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useInlineAI } from './hooks/useInlineAI';
@@ -32,6 +32,122 @@ interface NoteAreaProps {
   navigationStack?: string[];
   // Chat navigation prop
   fromChat?: boolean;
+  // Optional ref to expose flush method
+  flushRef?: React.MutableRefObject<() => Promise<void> | undefined>;
+}
+
+// --- Robust Autosave Hook ---
+function useRobustAutosave({
+  note,
+  onUpdate,
+  getContent,
+  getTags,
+  content,
+  tags,
+}: {
+  note: Note;
+  onUpdate: (noteId: string | Id<"notes">, updates: NoteUpdate) => Promise<Note | null>;
+  getContent: () => string;
+  getTags: () => string[];
+  content: string;
+  tags: string[];
+}) {
+  const [lastSavedContent, setLastSavedContent] = useState(note.content || '');
+  const [lastSavedTags, setLastSavedTags] = useState<string[]>(note.tags || []);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingSaveRef = useRef(false);
+
+  // Save function
+  const save = useCallback(async () => {
+    const content = getContent();
+    const tags = getTags();
+    const isTemporary = 'isTemporary' in note ? note.isTemporary : false;
+    const contentChanged = content !== lastSavedContent;
+    const tagsChanged = JSON.stringify(tags) !== JSON.stringify(lastSavedTags);
+    if ((contentChanged || tagsChanged) && !isTemporary && content.length > 0) {
+      try {
+        await onUpdate(note._id, { content, title: note.title || '', tags });
+        setLastSavedContent(content);
+        setLastSavedTags([...tags]);
+        pendingSaveRef.current = false;
+      } catch (error) {
+        // Optionally: show error to user
+        pendingSaveRef.current = true;
+      }
+    }
+  }, [getContent, getTags, lastSavedContent, lastSavedTags, note, onUpdate]);
+
+  // Debounced autosave on content/tags change
+  React.useEffect(() => {
+    const isTemporary = 'isTemporary' in note ? note.isTemporary : false;
+    const contentChanged = content !== lastSavedContent;
+    const tagsChanged = JSON.stringify(tags) !== JSON.stringify(lastSavedTags);
+    if ((contentChanged || tagsChanged) && !isTemporary && content.length > 0) {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        save();
+      }, 1200);
+      pendingSaveRef.current = true;
+    }
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [content, tags, note._id, note.title]);
+
+  // Save on visibility/tab change
+  React.useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        save();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [save]);
+
+  // Save on beforeunload
+  React.useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (pendingSaveRef.current) {
+        save();
+        event.preventDefault();
+        event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return 'You have unsaved changes. Are you sure you want to leave?';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [save]);
+
+  // Save on unmount (route change, modal, etc.)
+  React.useEffect(() => {
+    return () => {
+      if (pendingSaveRef.current) {
+        save();
+      }
+    };
+  }, [save]);
+
+  // Periodic safety net
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      if (pendingSaveRef.current) {
+        save();
+      }
+    }, 60000); // 1 minute
+    return () => clearInterval(interval);
+  }, [save]);
+
+  // Expose flush method
+  const flush = useCallback(async () => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    await save();
+  }, [save]);
+
+  return { flush };
 }
 
 export function NoteArea({
@@ -49,7 +165,8 @@ export function NoteArea({
   onNavigateBack,
   navigationStack,
   // Chat navigation prop
-  fromChat = false
+  fromChat = false,
+  flushRef
 }: NoteAreaProps) {
   // Get all notes from context for tag suggestions
   const { notes } = useNotes();
@@ -68,9 +185,7 @@ export function NoteArea({
   
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [content, setContent] = useState(note.content || '');
-  const [lastSavedContent, setLastSavedContent] = useState(note.content || '');
   const [tags, setTags] = useState<string[]>(note.tags || []);
-  const [lastSavedTags, setLastSavedTags] = useState<string[]>(note.tags || []);
   const [showImageGallery, setShowImageGallery] = useState(false);
 
   // Initialize the inline AI hook
@@ -93,127 +208,27 @@ export function NoteArea({
       }))
   , [notes, note._id]);
 
-  // Keep content and tags in sync with note prop
+  const contentRef = useRef(content);
+  const tagsRef = useRef(tags);
+  React.useEffect(() => { contentRef.current = content; }, [content]);
+  React.useEffect(() => { tagsRef.current = tags; }, [tags]);
+
+  // --- Use robust autosave ---
+  const { flush } = useRobustAutosave({
+    note,
+    onUpdate,
+    getContent: () => contentRef.current,
+    getTags: () => tagsRef.current,
+    content,
+    tags,
+  });
+
+  // Expose flush to parent if ref provided
   React.useEffect(() => {
-    if (note.content !== content) {
-      setContent(note.content || '');
-      setLastSavedContent(note.content || '');
+    if (flushRef) {
+      flushRef.current = flush;
     }
-    if (JSON.stringify(note.tags || []) !== JSON.stringify(tags)) {
-      setTags(note.tags || []);
-      setLastSavedTags(note.tags || []);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [note._id, note.content, note.tags]);
-
-  // Autosave function that uses existing updateNote logic
-  const autosave = React.useCallback(async () => {
-    // Only autosave if content or tags have changed and note is not temporary
-    const isTemporary = 'isTemporary' in note ? note.isTemporary : false;
-    const contentChanged = content !== lastSavedContent;
-    const tagsChanged = JSON.stringify(tags) !== JSON.stringify(lastSavedTags);
-    
-    if ((contentChanged || tagsChanged) && !isTemporary && content.length > 0) {
-      console.log('🔄 [NoteArea] Autosaving note:', {
-        noteId: note._id,
-        contentChanged,
-        tagsChanged,
-        contentLength: content.length,
-        tags
-      });
-      
-      try {
-        // Use onUpdate which already includes metadata generation logic
-        await onUpdate(note._id, { 
-          content, 
-          title: note.title || '',
-          tags: tags // Tags are already cleaned in handleTagsChange
-        });
-        
-        setLastSavedContent(content);
-        setLastSavedTags([...tags]);
-        console.log('✅ [NoteArea] Autosave successful');
-      } catch (error) {
-        console.error('❌ [NoteArea] Autosave failed:', error);
-      }
-    }
-  }, [content, lastSavedContent, tags, lastSavedTags, note._id, note.title, note, onUpdate]);
-
-  // Debounced autosave that waits for a pause in typing or tag changes
-  React.useEffect(() => {
-    const isTemporary = 'isTemporary' in note ? note.isTemporary : false;
-    const contentChanged = content !== lastSavedContent;
-    const tagsChanged = JSON.stringify(tags) !== JSON.stringify(lastSavedTags);
-    
-    // Only set up debounced autosave if content or tags have changed and note is not temporary
-    if ((contentChanged || tagsChanged) && !isTemporary && content.length > 0) {
-      console.log('⌨️ [NoteArea] Content or tags changed, setting up debounced autosave');
-      
-      // Wait 3 seconds after last change before autosaving
-      const debounceTimer = setTimeout(() => {
-        console.log('🔄 [NoteArea] Debounced autosave triggered');
-        autosave();
-      }, 3000);
-
-      return () => {
-        clearTimeout(debounceTimer);
-      };
-    }
-  }, [content, lastSavedContent, tags, lastSavedTags, note, autosave]);
-
-  // Handle page visibility change (when switching tabs or minimizing)
-  React.useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        console.log('🔍 [NoteArea] Page hidden, triggering autosave');
-        autosave();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [autosave]);
-
-  // Handle beforeunload (when closing tab or navigating away)
-  React.useEffect(() => {
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      const isTemporary = 'isTemporary' in note ? note.isTemporary : false;
-      const contentChanged = content !== lastSavedContent;
-      const tagsChanged = JSON.stringify(tags) !== JSON.stringify(lastSavedTags);
-      
-      // Only show warning and autosave if there are unsaved changes
-      if ((contentChanged || tagsChanged) && !isTemporary && content.length > 0) {
-        console.log('⚠️ [NoteArea] Before unload, triggering autosave');
-        
-        // Try to save synchronously (limited time)
-        autosave();
-        
-        // Show warning to user
-        event.preventDefault();
-        event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
-        return 'You have unsaved changes. Are you sure you want to leave?';
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [content, lastSavedContent, tags, lastSavedTags, note, autosave]);
-
-  // Periodic autosave (every 2 minutes as a safety net, but debounced autosave should handle most cases)
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      const isTemporary = 'isTemporary' in note ? note.isTemporary : false;
-      const contentChanged = content !== lastSavedContent;
-      const tagsChanged = JSON.stringify(tags) !== JSON.stringify(lastSavedTags);
-      
-      if ((contentChanged || tagsChanged) && !isTemporary && content.length > 0) {
-        console.log('⏰ [NoteArea] Periodic safety autosave triggered');
-        autosave();
-      }
-    }, 120000); // 2 minutes
-
-    return () => clearInterval(interval);
-  }, [content, lastSavedContent, tags, lastSavedTags, note, autosave]);
+  }, [flush, flushRef]);
 
   // Handle content changes with debounced save
   const handleContentChange = (newContent: string) => {
@@ -229,10 +244,9 @@ export function NoteArea({
     await onUpdate(note._id, { type: newType, typeGenerated: false });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    await flush();
     onSave(content, note.title);
-    // Also trigger autosave to ensure tags are saved
-    autosave();
   };
 
   // AI handlers that return values for RichTextEditor
@@ -268,8 +282,7 @@ export function NoteArea({
 
   // Handle note linking with save
   const handleLinkNote = async (noteId: string) => {
-    // Always save current note before navigating to linked note
-    await autosave();
+    await flush();
     if (onLinkNote) {
       onLinkNote(noteId);
     }
@@ -277,14 +290,12 @@ export function NoteArea({
 
   // Unified back handler that saves first, then navigates
   const handleBack = async () => {
-    // Always save before navigating back
-    await autosave();
+    await flush();
     onBack(content);
   };
 
   const handleNavigateBack = async () => {
-    // Always save before navigating to previous note
-    await autosave();
+    await flush();
     if (onNavigateBack) {
       onNavigateBack();
     }
@@ -294,13 +305,6 @@ export function NoteArea({
   const userId = firebaseUser?.uid;
   const allLinkableContent = useQuery(api.notes.getAllLinkableContent, { 
     userId: firebaseUser?.uid || '' 
-  });
-
-  // Debug logging for allLinkableContent
-  console.log('NoteArea allLinkableContent:', {
-    count: allLinkableContent?.length || 0,
-    insights: allLinkableContent?.filter(c => c.type === 'insight').length || 0,
-    sample: allLinkableContent?.slice(0, 3).map(c => ({ id: c.id, title: c.title, type: c.type }))
   });
 
   return (
