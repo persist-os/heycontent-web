@@ -15,6 +15,7 @@ export default function InsightAnalysisPage() {
   const { insightId } = params;
   const decodedInsightId = decodeURIComponent(insightId as string);
   const fromChat = searchParams.get('fromChat') === 'true';
+  const chatId = searchParams.get('chatId');
   const insightData = useQuery(api.notes.getInsightById, { insightId: decodedInsightId });
 
   let cardContent = null;
@@ -47,7 +48,7 @@ export default function InsightAnalysisPage() {
       <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-4xl mx-auto p-6">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => fromChat ? router.push('/dashboard/chat') : router.push('/dashboard/notes')}>
+            <Button variant="ghost" onClick={() => fromChat ? router.push(chatId ? `/dashboard/chat?id=${chatId}` : '/dashboard/chat') : router.push('/dashboard/notes')}>
               <ArrowLeft className="w-4 h-4 mr-2" />
               {fromChat ? 'Back to Chat' : 'Back to Smart Notes'}
             </Button>

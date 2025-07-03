@@ -22,6 +22,7 @@ export default function SmartNotes() {
   const searchParams = useSearchParams();
   const noteIdParam = searchParams.get('noteId');
   const fromChat = searchParams.get('fromChat') === 'true';
+  const chatId = searchParams.get('chatId');
   const router = useRouter();
   
   const { 
@@ -154,7 +155,8 @@ export default function SmartNotes() {
     
     // If we came from chat, navigate back to chat
     if (fromChat) {
-      router.push('/dashboard/chat');
+      const chatUrl = chatId ? `/dashboard/chat?id=${chatId}` : '/dashboard/chat';
+      router.push(chatUrl);
     }
   };
 

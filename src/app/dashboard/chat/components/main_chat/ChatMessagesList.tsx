@@ -10,8 +10,8 @@ interface ChatMessagesListProps {
   handleOptionClick: (option: any) => void;
   handleFollowUpClick: (choice: string) => void;
   userId: string | undefined;
-  handleSuggestionClick: (suggestion: any, onSendMessage: (msg: string, linkRegistry?: Array<{index: number, contentId: string}>) => void) => void;
-  handleSendMessage: (msg: string, linkRegistry?: Array<{index: number, contentId: string}>) => void;
+  handleSuggestionClick: (suggestion: any, onSendMessage: (msg: string) => void) => void;
+  handleSendMessage: (msg: string) => void;
   onInputPopulate?: (text: string) => void;
   notepadOpen?: boolean;
   onQuoteToNotepad?: (text: string) => void;

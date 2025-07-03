@@ -18,7 +18,6 @@ interface MarkdownRendererProps {
 interface ChatContentRendererProps {
   content: string
   className?: string
-  linkRegistry?: Array<{index: number, contentId: string}>
 }
 
 // Link embed component for rich previews
@@ -105,16 +104,17 @@ function LinkEmbed({ href, children }: { href: string; children: React.ReactNode
 }
 
 // Component to render linked content in chat messages
-function ChatContentRenderer({ content, className = '', linkRegistry }: ChatContentRendererProps) {
+function ChatContentRenderer({ content, className = '' }: ChatContentRendererProps) {
   const { firebaseUser } = useAuth()
   const userId = firebaseUser?.uid
+  
+  // Get current chat ID from URL
+  const currentChatId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('id') : null
   
   // Debug logging
   console.log('🔗 ChatContentRenderer:', {
     content: content.substring(0, 100) + '...',
-    hasLinkRegistry: !!linkRegistry,
-    linkRegistryLength: linkRegistry?.length || 0,
-    linkRegistry: linkRegistry
+    hasContentLinks: content.includes('@[')
   })
   
   // Fetch all linkable content
@@ -126,61 +126,47 @@ function ChatContentRenderer({ content, className = '', linkRegistry }: ChatCont
   const processedContent = useMemo(() => {
     if (!content || !allLinkableContent) return content
 
-    // First, handle numeric index format @[1]@, @[2]@
-    let processedContent = content.replace(/@\[(\d+)\]@/g, (match, indexStr) => {
-      const index = parseInt(indexStr)
+    // Handle content ID format @[contentId]@ (e.g., @[note:123]@, @[youtube:456]@)
+    let processedContent = content.replace(/@\[([^\]]+)\]@/g, (match, contentId) => {
+      console.log('🔗 Processing content link:', { contentId })
       
-      console.log('🔗 Processing numeric link:', {
-        index,
-        hasLinkRegistry: !!linkRegistry,
-        linkRegistryLength: linkRegistry?.length || 0,
-        allLinkableContentLength: allLinkableContent?.length || 0
-      })
+      // Handle different content ID formats
+      let actualContentId = contentId
+      let contentType = 'note'
       
-      if (linkRegistry) {
-        // Find the link in the registry
-        const linkEntry = linkRegistry.find(link => link.index === index)
-        
-        console.log('🔗 Found link entry:', linkEntry)
-        
-        if (linkEntry) {
-          // Parse the content ID to find the content
-          const contentId = linkEntry.contentId
-          let actualContentId = contentId
-          let contentType = 'note'
-          
-          // Check if it's a prefixed ID (note:, youtube:, etc.)
-          if (contentId.includes(':')) {
-            const [prefix, id] = contentId.split(':', 2)
-            contentType = prefix
-            actualContentId = id
-          }
-          
-          console.log('🔗 Parsed content ID:', { contentId, actualContentId, contentType })
-          
-          // Find the linked content
-          let linkedContent
-          if (contentType === 'note') {
-            linkedContent = allLinkableContent.find(item => item.id === actualContentId)
-            if (!linkedContent) {
-              linkedContent = allLinkableContent.find(item => item.id === contentId)
-            }
-          } else {
-            linkedContent = allLinkableContent.find(item => item.id === contentId)
-          }
-          
-          console.log('🔗 Found linked content:', linkedContent)
-          
-          if (linkedContent) {
-            const title = linkedContent.title || 'Untitled'
-            return `<a href="#" class="inline-flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline font-medium" data-content-id="${contentId}" data-content-type="${linkedContent.type}">${title}</a>`
-          }
-        }
+      // Check if it's a prefixed ID (note:, youtube:, etc.)
+      if (contentId.includes(':')) {
+        const [prefix, id] = contentId.split(':', 2)
+        contentType = prefix
+        actualContentId = id
       }
       
-      // Fallback if no link registry or content not found
-      console.log('🔗 Using fallback for link:', index)
-      return `<a href="#" class="inline-flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline font-medium" data-link-index="${index}">[Link ${index}]</a>`
+      console.log('🔗 Parsed content ID:', { contentId, actualContentId, contentType })
+      
+      // Find the linked content
+      let linkedContent
+      if (contentType === 'note') {
+        // Try to find by the actual ID (without prefix)
+        linkedContent = allLinkableContent.find(item => item.id === actualContentId)
+        // If not found, try with the full contentId (in case it's already prefixed)
+        if (!linkedContent) {
+          linkedContent = allLinkableContent.find(item => item.id === contentId)
+        }
+      } else {
+        // For other content types, use the full contentId
+        linkedContent = allLinkableContent.find(item => item.id === contentId)
+      }
+      
+      console.log('🔗 Found linked content:', linkedContent)
+      
+      if (linkedContent) {
+        const title = linkedContent.title || 'Untitled'
+        return `<a href="#" class="inline-flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline font-medium" data-content-id="${contentId}" data-content-type="${linkedContent.type}">${title}</a>`
+      }
+      
+      // Fallback if content not found
+      console.log('🔗 Content not found for ID:', contentId)
+      return `<a href="#" class="inline-flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline font-medium" data-content-id="${contentId}">[${contentId}]</a>`
     })
 
     // Then handle legacy content ID format @[note:ID]@ for backward compatibility
@@ -229,7 +215,7 @@ function ChatContentRenderer({ content, className = '', linkRegistry }: ChatCont
     })
 
     return processedContent
-  }, [content, allLinkableContent, linkRegistry])
+  }, [content, allLinkableContent])
 
   // Handle clicks on linked content
   const handleContentClick = useCallback((e: React.MouseEvent) => {
@@ -253,25 +239,27 @@ function ChatContentRenderer({ content, className = '', linkRegistry }: ChatCont
         
         if (contentId && contentType) {
           // Handle different content types with back navigation to chat
+          const chatIdParam = currentChatId ? `&chatId=${currentChatId}` : ''
+          
           switch (contentType) {
             case 'note':
               // Extract the note ID (remove note: prefix if present)
               const noteId = contentId.startsWith('note:') ? contentId.replace('note:', '') : contentId
               // Navigate to the note with back navigation to chat
-              window.open(`/dashboard/notes?noteId=${noteId}&fromChat=true`, '_blank')
+              window.open(`/dashboard/notes?noteId=${noteId}&fromChat=true${chatIdParam}`, '_blank')
               break
             case 'youtube':
               // Extract video ID and navigate to YouTube analysis with back navigation
               const videoId = contentId.replace('youtube:', '')
-              window.open(`/dashboard/notes/youtube-analysis/${videoId}?fromChat=true`, '_blank')
+              window.open(`/dashboard/notes/youtube-analysis/${videoId}?fromChat=true${chatIdParam}`, '_blank')
               break
             case 'instagram':
               // For Instagram, navigate to content analytics with back navigation
-              window.open(`/dashboard/content-analytics?analyticsId=${contentId}&platform=instagram&tab=posts&fromChat=true`, '_blank')
+              window.open(`/dashboard/content-analytics?analyticsId=${contentId}&platform=instagram&tab=posts&fromChat=true${chatIdParam}`, '_blank')
               break
             case 'insight':
               // Navigate to insight analysis with back navigation
-              window.open(`/dashboard/notes/insight-analysis/${encodeURIComponent(contentId)}?fromChat=true`, '_blank')
+              window.open(`/dashboard/notes/insight-analysis/${encodeURIComponent(contentId)}?fromChat=true${chatIdParam}`, '_blank')
               break
             default:
               console.log('Unknown content type:', contentType, contentId)

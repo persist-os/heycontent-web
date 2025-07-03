@@ -41,12 +41,10 @@ export const useChat = (
   const createConversationMutation = useMutation(api.chatMutations.createConversation);
   const addMessageToConversationMutation = useMutation(api.chatMutations.addMessageToConversation);
 
-  const handleSendMessage = useCallback(async (content: string, linkRegistry?: Array<{index: number, contentId: string}>) => {
+  const handleSendMessage = useCallback(async (content: string) => {
     console.log('🔗 useChat handleSendMessage called with:', {
       content: content.substring(0, 100) + '...',
-      hasLinkRegistry: !!linkRegistry,
-      linkRegistryLength: linkRegistry?.length || 0,
-      linkRegistry: linkRegistry
+      hasContentLinks: content.includes('@[')
     })
     
     if (!content || typeof content !== 'string' || !content.trim()) return;
@@ -105,9 +103,7 @@ export const useChat = (
 
     console.log('🔗 useChat: Creating message with:', {
       content: content.substring(0, 100) + '...',
-      hasLinkRegistry: !!linkRegistry,
-      linkRegistryLength: linkRegistry?.length || 0,
-      linkRegistry: linkRegistry
+      hasContentLinks: content.includes('@[')
     })
     
     const newMessage: Message = {
@@ -120,12 +116,7 @@ export const useChat = (
         content: referencedMessage.content
       } : undefined,
       chat_response: content,
-      sessionId: sessionId, // Include current sessionId
-      metadata: {
-        ...(linkRegistry && { linkRegistry }), // Include link registry in metadata
-        ...(linkRegistry && { debug_linkRegistry: JSON.stringify(linkRegistry) }), // Debug: also store as string
-        ...(linkRegistry && { debug_content: content }) // Debug: store the content being sent
-      }
+      sessionId: sessionId // Include current sessionId
     }
 
     try {
@@ -149,8 +140,7 @@ export const useChat = (
         console.log('🔗 useChat: Messages after adding user message:', {
           totalMessages: newMessages.length,
           userMessage: newMessage,
-          userMessageMetadata: newMessage.metadata,
-          userMessageLinkRegistry: newMessage.metadata?.linkRegistry
+          hasContentLinks: newMessage.content.includes('@[')
         });
         return newMessages;
       });
@@ -223,8 +213,7 @@ export const useChat = (
       // Now includes vector search with status updates
       console.log('🔗 useChat: Sending to backend:', {
         enhancedQuery: enhancedQuery.substring(0, 100) + '...',
-        hasLinkRegistry: !!linkRegistry,
-        linkRegistry: linkRegistry
+        hasContentLinks: enhancedQuery.includes('@[')
       })
       
       const data = await sendChatMessage(
@@ -306,14 +295,7 @@ export const useChat = (
         console.log('🔗 useChat: Messages after assistant response:', {
           totalMessages: updatedMessages.length,
           userMessages: updatedMessages.filter(msg => msg.role === 'user'),
-          userMessageWithLinks: updatedMessages.filter(msg => msg.role === 'user' && msg.content.includes('@[')),
-          userMessageMetadata: updatedMessages.filter(msg => msg.role === 'user').map(msg => ({
-            id: msg.id,
-            content: msg.content.substring(0, 50) + '...',
-            hasMetadata: !!msg.metadata,
-            metadataKeys: msg.metadata ? Object.keys(msg.metadata) : [],
-            linkRegistry: msg.metadata?.linkRegistry
-          }))
+          userMessageWithLinks: updatedMessages.filter(msg => msg.role === 'user' && msg.content.includes('@['))
         });
         
         return updatedMessages;

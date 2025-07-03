@@ -36,6 +36,7 @@ export default function YouTubeAnalysisPage() {
   
   const videoId = params.videoId as string;
   const fromChat = searchParams.get('fromChat') === 'true';
+  const chatId = searchParams.get('chatId');
 
   // Fetch video data using the direct YouTube query
   const videoData = useQuery(api.youtubeQueries.getFullVideoDetails, {
@@ -58,7 +59,7 @@ export default function YouTubeAnalysisPage() {
       <div className="min-h-screen bg-background p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-4 mb-8">
-            <Button variant="ghost" onClick={() => fromChat ? router.push('/dashboard/chat') : router.back()}>
+            <Button variant="ghost" onClick={() => fromChat ? router.push(chatId ? `/dashboard/chat?id=${chatId}` : '/dashboard/chat') : router.back()}>
               <ArrowLeft className="w-4 h-4 mr-2" />
               {fromChat ? 'Back to Chat' : 'Back'}
             </Button>
@@ -141,7 +142,7 @@ export default function YouTubeAnalysisPage() {
         <div className="max-w-7xl mx-auto p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" onClick={() => fromChat ? router.push('/dashboard/chat') : router.back()}>
+              <Button variant="ghost" onClick={() => fromChat ? router.push(chatId ? `/dashboard/chat?id=${chatId}` : '/dashboard/chat') : router.back()}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 {fromChat ? 'Back to Chat' : 'Back'}
               </Button>

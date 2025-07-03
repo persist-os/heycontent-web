@@ -193,7 +193,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   } = useChatHandlers(handleSendMessage, handleClearReference, messages)
 
   // Memoized handlers to prevent unnecessary re-renders
-  const handleSendMessageWithUpdateCheck = useCallback((message: string, linkRegistry?: Array<{index: number, contentId: string}>) => {
+  const handleSendMessageWithUpdateCheck = useCallback((message: string) => {
     const lowerMessage = message.toLowerCase().trim();
     
     if (lowerMessage === 'hey content update persona') {
@@ -204,7 +204,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       refreshPersonaData(authData.userId, convex);
     }
     
-    handleSendMessage(message, linkRegistry);
+    handleSendMessage(message);
   }, [handleSendMessage, authData.userId, convex, refreshPersonaData]);
 
   const handleNewChat = useCallback(() => {

@@ -327,14 +327,7 @@ export function MessageBubble({
                   {/* Use ChatContentRenderer for user messages with linked content */}
                   <ChatContentRenderer 
                     content={message.content} 
-                    linkRegistry={message.metadata?.linkRegistry}
                   />
-                  {/* Debug info */}
-                  {process.env.NODE_ENV === 'development' && message.metadata?.debug_linkRegistry && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Debug: {message.metadata.debug_linkRegistry}
-                    </div>
-                  )}
                 </>
               ) : (
                 // Use MarkdownRenderer for assistant messages and user messages without linked content

@@ -10,7 +10,7 @@ import { api } from '@/convex/_generated/api'
 import { useAuth } from '@/app/context/auth-context'
 
 interface ChatInputProps {
-  onSend: (message: string, linkRegistry?: Array<{index: number, contentId: string}>) => void
+  onSend: (message: string) => void
   isLoading?: boolean
   inputRef?: React.RefObject<HTMLTextAreaElement>
   maxLength?: number
@@ -418,19 +418,31 @@ export function ChatInput({
     }
   }, [])
 
+  // Function to convert numeric indices to content IDs
+  const convertNumericIndicesToContentIds = (text: string): string => {
+    if (!linkRegistry.length) return text
+    
+    return text.replace(/@\[(\d+)\]@/g, (match, indexStr) => {
+      const index = parseInt(indexStr)
+      const linkEntry = linkRegistry.find(link => link.index === index)
+      return linkEntry ? `@[${linkEntry.contentId}]@` : match
+    })
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const messageToSend = shadowInput || currentInput
     if (messageToSend.trim() && !isLoading && currentInput.length <= maxLength) {
+      // Convert numeric indices to content IDs before sending
+      const processedMessage = convertNumericIndicesToContentIds(messageToSend.trim())
+      
       console.log('📤 [CHAT INPUT] Sending message:')
       console.log('  Display text:', currentInput)
       console.log('  Shadow text (hidden layer):', shadowInput)
-      console.log('  Link registry:', linkRegistry)
-      console.log('  Link registry length:', linkRegistry.length)
-      console.log('  Message being sent:', messageToSend.trim())
+      console.log('  Processed message:', processedMessage)
       
-      // Send the shadow text with numeric indices and the link registry
-      onSend(messageToSend.trim(), linkRegistry.length > 0 ? linkRegistry : undefined)
+      // Send the processed message with content IDs (no link registry needed)
+      onSend(processedMessage)
       setCurrentInput('')
       setShadowInput('')
       setLinkRegistry([]) // Reset link registry after sending
@@ -540,7 +552,10 @@ export function ChatInput({
         e.preventDefault()
         const messageToSend = shadowInput || currentInput
         if (!messageToSend.trim() || isLoading || characterCount >= maxLength) return
-        onSend(messageToSend.trim(), linkRegistry.length > 0 ? linkRegistry : undefined)
+        
+        // Convert numeric indices to content IDs before sending
+        const processedMessage = convertNumericIndicesToContentIds(messageToSend.trim())
+        onSend(processedMessage)
         setCurrentInput('')
         setShadowInput('')
         setLinkRegistry([]) // Reset link registry after sending

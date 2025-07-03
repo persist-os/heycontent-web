@@ -8,7 +8,7 @@ interface ChatInputAreaProps {
   showAmbient: boolean;
   currentContext: any;
   handleActionClick: (action: string) => void;
-  handleSendMessage: (message: string, linkRegistry?: Array<{index: number, contentId: string}>) => void;
+  handleSendMessage: (message: string) => void;
   inputRef: React.RefObject<HTMLTextAreaElement>;
   isLoading: boolean;
   referencedMessage: Message | null;
@@ -83,7 +83,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
         <div className="px-2 sm:px-3 pt-1 pb-2">
           <ChatInput
             inputRef={inputRef}
-            onSend={(message, linkRegistry) => handleSendMessage(message, linkRegistry)}
+            onSend={handleSendMessage}
             isLoading={isLoading || !isAuthenticated}
             disabled={!isAuthenticated}
             referencedMessage={referencedMessage}

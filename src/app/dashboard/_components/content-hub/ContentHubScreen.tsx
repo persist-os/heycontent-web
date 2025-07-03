@@ -64,6 +64,7 @@ export function ContentHubScreen() {
   const platformParam = searchParams.get('platform')
   const insightParam = searchParams.get('insight') // e.g., ?insight=open
   const fromChat = searchParams.get('fromChat') === 'true'
+  const chatId = searchParams.get('chatId')
   
   const [selectedView, setSelectedView] = useState<ViewType>(
     analyticsIdParam && platformParam ? (platformParam as ViewType) :
@@ -493,7 +494,7 @@ export function ContentHubScreen() {
         <div className="flex justify-between items-center">
           <div className="w-[100px] sm:w-[24px] flex items-center">
             {fromChat && (
-              <Button variant="ghost" onClick={() => router.push('/dashboard/chat')} className="p-2">
+              <Button variant="ghost" onClick={() => router.push(chatId ? `/dashboard/chat?id=${chatId}` : '/dashboard/chat')} className="p-2">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Chat
               </Button>
