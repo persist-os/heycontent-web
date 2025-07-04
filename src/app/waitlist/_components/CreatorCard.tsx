@@ -163,7 +163,8 @@ export const CreatorCard = ({
     <div className="max-w-md mx-auto perspective-1000">
       <div className="relative">
         <div className="absolute -right-12 top-4 flex flex-col gap-2">
-        <button
+          <button
+            title="Randomize"
           onClick={handleColorChange}
             className="p-2 rounded-full bg-white shadow-lg hover:shadow-xl transition-all duration-300 group"
           style={{ color: currentScheme.primary }}
@@ -171,6 +172,7 @@ export const CreatorCard = ({
           <Dice6 className="w-6 h-6 transform group-hover:rotate-180 transition-transform duration-500" />
         </button>
           <button
+            title="Share"
             ref={shareButtonRef}
             onClick={() => setShowShareOptions(!showShareOptions)}
             className="p-2 rounded-full bg-white shadow-lg hover:shadow-xl transition-all duration-300 group"
