@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Settings, Mail } from 'lucide-react';
+import { Settings, Mail, RefreshCw } from 'lucide-react';
 import { GmailCard } from '../cards/GmailCard';
 import { GmailModal } from '../modals/GmailModal';
 import { PlatformEmbeddingStatus } from '../components/PlatformEmbeddingStatus';
@@ -13,6 +13,7 @@ import { GmailContentItem, AnyContentItem } from '../types';
 import { sortContent } from '../utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlatformConnectionPrompt } from '../../_components/content-hub/PlatformConnectionPrompt';
+import { useGmailBatchRefresh } from '@/app/hooks/useGmailBatchRefresh';
 
 interface GmailPlatformProps {
   userId: string;
@@ -31,9 +32,16 @@ export function GmailPlatform({
 }: GmailPlatformProps) {
   const router = useRouter();
   const [selectedContent, setSelectedContent] = useState<GmailContentItem | null>(null);
+  const [refreshCount, setRefreshCount] = useState(0);
+
+  // Use the batch Gmail refresh hook
+  const { refresh, loading: refreshing, error: refreshError } = useGmailBatchRefresh();
+
+  // Pass refreshCount to useGmailAnalytics to trigger refetch
+  const { gmailItems: displayItems, loading: gmailLoading, hasConnectedAccounts: gmailConnected } = useGmailAnalytics(userId, refreshCount);
 
   // Sort items by date
-  const displayItems = sortContent(gmailItems, 'date');
+  const displayItemsSorted = sortContent(gmailItems, 'date');
 
   const discussContent = async (item: AnyContentItem) => {
     try {
@@ -88,6 +96,12 @@ export function GmailPlatform({
     }
   };
 
+  const handleRefresh = async () => {
+    // For batch refresh, call refresh with no arguments
+    await refresh();
+    setRefreshCount((c) => c + 1); // Trigger refetch
+  };
+
   // Show Gmail connect card if no Gmail account found
   if (!hasConnectedAccounts) {
     return (
@@ -116,6 +130,21 @@ export function GmailPlatform({
 
   return (
     <>
+      {/* Refresh Button (top right, consistent with other platforms) */}
+      <div className="flex justify-end mb-4">
+        <Button 
+          size="sm" 
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm"
+        >
+          <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing...' : 'Refresh Gmail'}
+        </Button>
+      </div>
+      {refreshError && (
+        <div className="text-red-500 text-sm mb-2 text-center">{refreshError}</div>
+      )}
       {/* Platform Embedding Status */}
       <PlatformEmbeddingStatus 
         platform="gmail" 
@@ -123,7 +152,7 @@ export function GmailPlatform({
         userId={userId} 
       />
 
-      {loading ? (
+      {gmailLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
           {Array.from({ length: 3 }).map((_, index) => (
             <div key={index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 flex flex-col space-y-4">
