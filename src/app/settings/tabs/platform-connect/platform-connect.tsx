@@ -17,11 +17,6 @@ export function PlatformConnect() {
   const { firebaseUser } = useAuth();
   const [refetchKey, setRefetchKey] = useState(0);
 
-  // Add logging for firebaseUser
-  useEffect(() => {
-    console.log('Current firebaseUser:', firebaseUser);
-  }, [firebaseUser]);
-
   // Refetch on successful connection and clean up the URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
