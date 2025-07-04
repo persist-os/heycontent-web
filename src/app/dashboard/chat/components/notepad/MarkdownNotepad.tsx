@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react'
 import { X, Send, Copy } from 'lucide-react'
 import { CreateNoteButton } from '@/components/ui/CreateNoteButton'
 import { useTheme } from 'next-themes'
@@ -22,7 +22,7 @@ interface MarkdownNotepadProps {
   onLinkNote?: (noteId: string) => void
 }
 
-export function MarkdownNotepad({ 
+export const MarkdownNotepad = forwardRef(function MarkdownNotepad({ 
   isOpen, 
   onClose, 
   onSendToChat, 
@@ -33,7 +33,7 @@ export function MarkdownNotepad({
   style,
   availableNotes = [],
   onLinkNote
-}: MarkdownNotepadProps) {
+}: MarkdownNotepadProps, ref) {
   const [content, setContent] = useState('')
   const [isResizing, setIsResizing] = useState(false)
   const resizeStartX = useRef<number>(0)
@@ -162,6 +162,13 @@ export function MarkdownNotepad({
     }
   }
 
+  // Expose hasUnsavedContent to parent
+  useImperativeHandle(ref, () => ({
+    hasUnsavedContent: () => !!content.trim(),
+    clearContent: () => setContent(''),
+    getContent: () => content || '',
+  }), [content]);
+
   if (!isOpen) return null
 
   return (
@@ -254,4 +261,4 @@ export function MarkdownNotepad({
       </div>
     </div>
   )
-} 
+}) 
