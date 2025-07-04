@@ -543,6 +543,12 @@ export default defineSchema({
   })),
   createdAt: v.number(),
   updatedAt: v.number(),
+  diffs: v.optional(v.array(v.object({
+    changedAt: v.number(),
+    changedFields: v.array(v.string()),
+    current: v.any(),
+    changeType: v.optional(v.string()),
+  })))
 })
 .index("by_userId", ["userId"])
 .index("by_username", ["username"])
@@ -620,6 +626,12 @@ export default defineSchema({
     
     createdAt: v.number(),
     updatedAt: v.number(),
+    diffs: v.optional(v.array(v.object({
+      changedAt: v.number(),
+      changedFields: v.array(v.string()),
+      current: v.any(),
+      changeType: v.optional(v.string()),
+    })))
   })
   .index("by_userId", ["userId"])
   .index("by_instagramAccountId", ["instagramAccountId"])
@@ -635,6 +647,12 @@ export default defineSchema({
     analysis: v.any(),
     createdAt: v.number(),
     updatedAt: v.number(),
+    diffs: v.optional(v.array(v.object({
+      changedAt: v.number(),
+      changedFields: v.array(v.string()),
+      current: v.any(),
+      changeType: v.optional(v.string()),
+    })))
   })
   .index("by_userId", ["userId"])
   .index("by_account", ["instagramAccountId"]),

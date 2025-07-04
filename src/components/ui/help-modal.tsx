@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -15,7 +15,7 @@ interface HelpModalProps {
   open: boolean;
   onClose: () => void;
   pages: HelpPage[];
-  title?: string; // Optional overall title for the modal
+  // title?: string; // Remove this prop
 }
 
 // Component to properly render markdown-style text with formatting
@@ -110,7 +110,7 @@ function formatInlineText(text: string): React.ReactNode {
   });
 }
 
-export function HelpModal({ open, onClose, pages, title = "Help Guide" }: HelpModalProps) {
+export function HelpModal({ open, onClose, pages }: HelpModalProps) {
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
 
   const currentPage = pages[currentPageIndex];
@@ -145,13 +145,8 @@ export function HelpModal({ open, onClose, pages, title = "Help Guide" }: HelpMo
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden bg-card border">
-        <DialogHeader className="border-b border-border pb-4">
-          <DialogTitle className="text-center text-xl font-semibold text-foreground">
-            {title}
-          </DialogTitle>
-        </DialogHeader>
-
+      <DialogContent className="max-w-md max-h-[85vh] overflow-hidden bg-card border">
+        {/* Removed DialogHeader/DialogTitle */}
         <div className="flex flex-col space-y-6 overflow-hidden">
           {/* Page content */}
           <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -185,72 +180,55 @@ export function HelpModal({ open, onClose, pages, title = "Help Guide" }: HelpMo
             </div>
           </div>
 
-          {/* Page indicators */}
+          {/* Navigation controls and page indicators */}
           {totalPages > 1 && (
-            <div className="flex justify-center space-x-2 py-3">
-              {pages.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => goToPage(index)}
-                  className={cn(
-                    "w-2.5 h-2.5 rounded-full transition-all duration-200",
-                    index === currentPageIndex
-                      ? "bg-primary scale-110"
-                      : "bg-muted hover:bg-muted-foreground/50 hover:scale-105"
-                  )}
-                  aria-label={`Go to page ${index + 1}`}
-                />
-              ))}
+            <div className="flex items-center justify-between pt-4 border-t border-border">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={goToPreviousPage}
+                disabled={isFirstPage}
+                className={cn(
+                  "flex items-center space-x-1",
+                  isFirstPage && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <span>Previous</span>
+              </Button>
+
+              {/* Page indicators */}
+              <div className="flex space-x-2">
+                {pages.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => goToPage(index)}
+                    className={cn(
+                      "w-2.5 h-2.5 rounded-full transition-all duration-200",
+                      index === currentPageIndex
+                        ? "bg-primary scale-110"
+                        : "bg-muted hover:bg-muted-foreground/50 hover:scale-105"
+                    )}
+                    aria-label={`Go to page ${index + 1}`}
+                  />
+                ))}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={goToNextPage}
+                disabled={isLastPage}
+                className={cn(
+                  "flex items-center space-x-1",
+                  isLastPage && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                <span>Next</span>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           )}
-
-          {/* Navigation controls */}
-          <div className="flex justify-between items-center pt-4 border-t border-border">
-            {totalPages > 1 ? (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={goToPreviousPage}
-                  disabled={isFirstPage}
-                  className={cn(
-                    "flex items-center space-x-1",
-                    isFirstPage && "opacity-50 cursor-not-allowed"
-                  )}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  <span>Previous</span>
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={goToNextPage}
-                  disabled={isLastPage}
-                  className={cn(
-                    "flex items-center space-x-1",
-                    isLastPage && "opacity-50 cursor-not-allowed"
-                  )}
-                >
-                  <span>Next</span>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </>
-            ) : (
-              <div></div> // Spacer for single page
-            )}
-          </div>
-
-          {/* Close button at the bottom */}
-          <div className="flex justify-center pt-2">
-            <Button 
-              onClick={onClose} 
-              variant="default"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 px-8"
-            >
-              Got it!
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>
