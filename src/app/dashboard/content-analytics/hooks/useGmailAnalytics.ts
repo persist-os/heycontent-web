@@ -3,7 +3,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { GmailContentItem } from '../types';
 
-export function useGmailAnalytics(userId?: string) {
+export function useGmailAnalytics(userId?: string, refreshCount?: number) {
   const [error, setError] = useState<string | null>(null);
 
   // Get Gmail accounts to determine connection status
