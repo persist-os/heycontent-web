@@ -40,6 +40,9 @@ import { useContentContext, useContentContextActions, useContentContextStore } f
 import { HelpModal } from '@/components/ui/help-modal'
 import { HelpIconButton } from '@/components/ui/help-icon-button'
 import { chatHelp } from '@/helpContent'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { CreateNoteButton } from '@/components/ui/CreateNoteButton';
 
 const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery }) => {
   const router = useRouter()
@@ -192,6 +195,13 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     getNotepadStyle
   } = useNotepadUI()
 
+  // Add ref for MarkdownNotepad
+  const notepadRef = useRef<{ hasUnsavedContent: () => boolean, clearContent: () => void, getContent: () => string }>(null);
+
+  // Modal state for notepad warning
+  const [showNotepadWarning, setShowNotepadWarning] = useState(false);
+  const [pendingNewChat, setPendingNewChat] = useState(false);
+
   const { 
     quotedForNotepad, 
     handleClearQuoted, 
@@ -216,6 +226,12 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   }, [handleSendMessage, authData.userId, convex, refreshPersonaData]);
 
   const handleNewChat = useCallback(() => {
+    // If notepad is open and has unsaved content, show warning modal
+    if (notepadOpen && notepadRef.current?.hasUnsavedContent()) {
+      setShowNotepadWarning(true);
+      setPendingNewChat(true);
+      return;
+    }
     // UI resets
     resetChat();
     setMessages([]);
@@ -248,7 +264,38 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     askQueryProcessedRef.current = null;
     setInputValue('');
   }, [resetChat, setMessages, handleClearReference, chatState, clearContentContext, 
-      authData.userId, convex, refreshPersonaData, router]);
+      authData.userId, convex, refreshPersonaData, router, notepadOpen]);
+
+  // Handler for confirming discard in modal
+  const handleConfirmDiscardNotepad = () => {
+    setShowNotepadWarning(false);
+    setPendingNewChat(false);
+    // Clear notepad content
+    notepadRef.current?.clearContent();
+    // Proceed with new chat
+    resetChat();
+    setMessages([]);
+    handleClearReference?.();
+    setUpdatePersonaRequested(false);
+    setContextConsumption({ hasConsumed: false, isDisplayed: false });
+    window.localStorage.removeItem('chatSessionId');
+    chatState.setSessionId(null);
+    chatState.setIsFirstMessage(true);
+    clearContentContext();
+    loadedConversationRef.current = null;
+    if (authData.userId && convex) {
+      refreshPersonaData(authData.userId, convex);
+    }
+    router.push('/dashboard/chat');
+    askQueryProcessedRef.current = null;
+    setInputValue('');
+  };
+
+  // Handler for canceling discard in modal
+  const handleCancelDiscardNotepad = () => {
+    setShowNotepadWarning(false);
+    setPendingNewChat(false);
+  };
 
   const handleRemoveContext = useCallback(() => {
     clearContentContext();
@@ -652,8 +699,35 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         </div>
       </div>
 
+      {/* Notepad warning modal */}
+      <Dialog open={showNotepadWarning} onOpenChange={setShowNotepadWarning}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Unsaved Notepad Content</DialogTitle>
+          </DialogHeader>
+          <div className="py-2 text-foreground text-sm">
+            Unsaved notes will be lost. <b>Save as a Smart Note before starting a new chat.</b> Continue?
+          </div>
+          {/* All three buttons in a row */}
+          <div className="flex flex-row gap-3 justify-center mt-4">
+            <CreateNoteButton
+              content={notepadRef.current?.getContent ? notepadRef.current.getContent() : ''}
+              onNoteCreate={() => {
+                notepadRef.current?.clearContent();
+                setShowNotepadWarning(false);
+                setPendingNewChat(false);
+              }}
+              title={"Smart Note"}
+            />
+            <Button variant="secondary" onClick={handleCancelDiscardNotepad}>Cancel</Button>
+            <Button variant="destructive" onClick={handleConfirmDiscardNotepad}>Discard and Start New Chat</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
       {/* Markdown Notepad */}
       <MarkdownNotepad
+        ref={notepadRef}
         isOpen={notepadOpen}
         onClose={toggleNotepad}
         onSendToChat={handleNotepadSendToChat}
