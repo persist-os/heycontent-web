@@ -27,27 +27,52 @@ export async function proxyApiKeyRequest({ idToken, userId, clientType = 'web' }
     };
   }
 
+  const backendUrl = `${BACKEND_URL}/api/v1/api-keys/`;
+  const payload = { userId, clientType };
   console.log('[proxyApiKeyRequest] Sending request to backend', {
-    url: `${BACKEND_URL}/api/v1/api-keys/`,
+    url: backendUrl,
     userId,
     clientType,
+    payload,
   });
-  const backendRes = await fetch(`${BACKEND_URL}/api/v1/api-keys/`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${idToken}`,
-    },
-    body: JSON.stringify({ userId, clientType }),
-  });
+  let backendRes;
+  try {
+    backendRes = await fetch(backendUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`,
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (fetchErr) {
+    console.error('[proxyApiKeyRequest] Fetch to backend failed:', fetchErr);
+    return {
+      error: 'Failed to reach backend',
+      details: fetchErr instanceof Error ? fetchErr.message : fetchErr,
+      status: 502,
+    };
+  }
+
+  // Log status and headers
+  console.log('[proxyApiKeyRequest] Backend response status:', backendRes.status);
+  console.log('[proxyApiKeyRequest] Backend response headers:', Object.fromEntries(backendRes.headers.entries()));
+
+  let responseBodyText;
+  try {
+    responseBodyText = await backendRes.text();
+    console.log('[proxyApiKeyRequest] Backend response body:', responseBodyText);
+  } catch (bodyErr) {
+    console.error('[proxyApiKeyRequest] Failed to read backend response body:', bodyErr);
+    responseBodyText = '[unreadable]';
+  }
 
   if (!backendRes.ok) {
-    const errorText = await backendRes.text();
     let errorData;
     try {
-      errorData = JSON.parse(errorText);
+      errorData = JSON.parse(responseBodyText);
     } catch {
-      errorData = { message: errorText || 'Unknown error' };
+      errorData = { message: responseBodyText || 'Unknown error' };
     }
     console.error('[proxyApiKeyRequest] Backend responded with error', {
       status: backendRes.status,
@@ -60,7 +85,17 @@ export async function proxyApiKeyRequest({ idToken, userId, clientType = 'web' }
     };
   }
 
-  const data = await backendRes.json();
+  let data;
+  try {
+    data = JSON.parse(responseBodyText);
+  } catch (jsonErr) {
+    console.error('[proxyApiKeyRequest] Failed to parse backend response as JSON:', jsonErr);
+    return {
+      error: 'Backend returned invalid JSON',
+      details: responseBodyText,
+      status: backendRes.status,
+    };
+  }
   console.log('[proxyApiKeyRequest] Success, backend returned:', data);
   return data;
 }
