@@ -488,6 +488,11 @@ export function ContentHubScreen() {
   }, [refreshYouTubeSuccess]);
 
   useEffect(() => {
+    console.log('🐛 DEBUG - Toast Error Effect:', {
+      refreshYouTubeError,
+      refreshYouTubeSuccess,
+      shouldShowToast: !!refreshYouTubeError
+    });
     if (refreshYouTubeError) {
       toast.error(refreshYouTubeError);
     }
@@ -612,6 +617,20 @@ export function ContentHubScreen() {
                       {selectedView === 'all' && renderAllPlatformsAnalytics()}
                       {selectedView === 'youtube' && selectedDataType === 'posts' && (
                         <>
+                          {/* Debug logging before error display */}
+                          {(() => {
+                            console.log('🐛 DEBUG - YouTube Error Display:', {
+                              refreshYouTubeError,
+                              refreshYouTubeSuccess,
+                              youtubeAnalyticsError: youtubeAnalytics.error,
+                              shouldShowError: !!(refreshYouTubeError && !refreshYouTubeSuccess)
+                            });
+                            return null;
+                          })()}
+                          {/* Only show error if there is an error and the last refresh was not successful */}
+                          {refreshYouTubeError && !refreshYouTubeSuccess && (
+                            <div className="text-red-500 text-sm mb-2 text-center">{refreshYouTubeError}</div>
+                          )}
                           <YouTubeAnalyticsPlatform userId={userId} isConnected={youtubeAnalytics.isConnected} error={youtubeAnalytics.error} />
                         </>
                       )}

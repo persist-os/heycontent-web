@@ -97,6 +97,7 @@ export function useYouTubeRefresh() {
       if (!res.ok || !data.success) {
         setError(data.error || 'Failed to refresh all YouTube videos.');
       } else {
+        setError(null);
         setSuccess(true);
         setTimeout(() => setSuccess(false), 3000);
       }

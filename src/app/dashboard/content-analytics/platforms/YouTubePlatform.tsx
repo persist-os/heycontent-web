@@ -14,7 +14,7 @@ import { sortContent } from '../utils';
 import { YouTubeBrandIcon } from '../../../../lib/YoutubeBrandIcon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlatformConnectionPrompt } from '../../_components/content-hub/PlatformConnectionPrompt';
-import { fetchWithApiKey } from '@/app/lib/api-helpers';
+import { useYouTubeRefresh } from '@/app/hooks/useYouTubeRefresh';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 
@@ -31,9 +31,14 @@ export function YouTubePlatform({
 }: YouTubePlatformProps) {
   const router = useRouter();
   const [selectedContent, setSelectedContent] = useState<YouTubeContentItem | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const [refreshError, setRefreshError] = useState<string | null>(null);
-  const [refreshSuccess, setRefreshSuccess] = useState(false);
+  
+  // Use the same refresh hook as other platforms
+  const { 
+    loading: refreshing, 
+    error: refreshError, 
+    success: refreshSuccess, 
+    refreshAll 
+  } = useYouTubeRefresh();
 
   // Fetch video data directly from Convex
   const videoData = useQuery(
@@ -50,26 +55,7 @@ export function YouTubePlatform({
   const displayItems = videoData ? sortContent(videoData, 'date') : [];
 
   const handleRefreshAll = async () => {
-    setRefreshing(true);
-    setRefreshError(null);
-    setRefreshSuccess(false);
-    try {
-      const res = await fetchWithApiKey('/api/social/youtube/refresh', {
-        method: 'POST',
-        body: JSON.stringify({ refreshAll: true, userId }),
-      });
-      const data = await res.json();
-      if (!res.ok || data.status !== 'success') {
-        setRefreshError(data.error || 'Failed to refresh YouTube videos.');
-      } else {
-        setRefreshSuccess(true);
-        setTimeout(() => setRefreshSuccess(false), 3000);
-      }
-    } catch (e: any) {
-      setRefreshError(e.message || 'Not authenticated');
-    } finally {
-      setRefreshing(false);
-    }
+    await refreshAll(userId);
   };
 
   const discussContent = async (item: AnyContentItem) => {
@@ -168,7 +154,7 @@ export function YouTubePlatform({
             {refreshing ? 'Refreshing...' : 'Refresh YouTube'}
           </Button>
         </div>
-        {refreshError && (
+        {refreshError && !refreshSuccess && (
           <div className="text-red-500 text-sm mb-2 text-center">{refreshError}</div>
         )}
         {refreshSuccess && (
@@ -206,7 +192,7 @@ export function YouTubePlatform({
           {refreshing ? 'Refreshing...' : 'Refresh YouTube'}
         </Button>
       </div>
-      {refreshError && (
+      {refreshError && !refreshSuccess && (
         <div className="text-red-500 text-sm mb-2 text-center">{refreshError}</div>
       )}
       {refreshSuccess && (
