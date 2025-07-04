@@ -3,6 +3,22 @@ import { mutation, action } from "./_generated/server";
 import { MutationCtx, ActionCtx } from "./_generated/server";
 import { api } from "./_generated/api";
 
+// Utility: cleanDiff (adapted from YouTube logic)
+function cleanDiff(oldDoc, newDoc, excludeFields = []) {
+  const changedFields = [];
+  const current = {};
+  for (const key of Object.keys(newDoc)) {
+    if (excludeFields.includes(key)) continue;
+    if (JSON.stringify(oldDoc?.[key]) !== JSON.stringify(newDoc[key])) {
+      changedFields.push(key);
+      current[key] = newDoc[key];
+    }
+  }
+  return changedFields.length > 0
+    ? { changedFields, current }
+    : null;
+}
+
 // Store unified Instagram post data (all media types with insights and comments)
 export const storeUnifiedPostData = mutation({
   args: {
@@ -91,11 +107,27 @@ export const storeUnifiedPostData = mutation({
         };
 
         if (existingPost) {
-          // Update existing post
+          // Calculate diff (exclude createdAt, updatedAt, diffs)
+          const diff = cleanDiff(existingPost, {
+            mediaType: post.media_type,
+            data: processedData,
+          }, ["createdAt", "updatedAt", "diffs", "userId", "instagramAccountId", "postId"]);
+          if (!diff) {
+            results.push({ status: "skipped_no_change", postId: post.id, internalId: existingPost._id });
+            continue;
+          }
+          const newDiff = {
+            changedAt: now,
+            changedFields: diff.changedFields,
+            current: diff.current,
+            changeType: "update"
+          };
+          const diffs = Array.isArray(existingPost.diffs) ? [...existingPost.diffs, newDiff] : [newDiff];
           await ctx.db.patch(existingPost._id, {
             mediaType: post.media_type,
             data: processedData,
             updatedAt: now,
+            diffs
           });
           results.push({ status: "updated", postId: post.id, internalId: existingPost._id });
         } else {
@@ -108,6 +140,7 @@ export const storeUnifiedPostData = mutation({
             data: processedData,
             createdAt: now,
             updatedAt: now,
+            diffs: []
           });
           results.push({ status: "created", postId: post.id, internalId });
         }
@@ -167,11 +200,25 @@ export const storePostData = mutation({
         .first();
 
       if (existingPost) {
-        // Update existing post
+        const diff = cleanDiff(existingPost, {
+          mediaType: mediaType,
+          data: processedData,
+        }, ["createdAt", "updatedAt", "diffs", "userId", "instagramAccountId", "postId"]);
+        if (!diff) {
+          return { status: "skipped_no_change", postId: existingPost._id };
+        }
+        const newDiff = {
+          changedAt: now,
+          changedFields: diff.changedFields,
+          current: diff.current,
+          changeType: "update"
+        };
+        const diffs = Array.isArray(existingPost.diffs) ? [...existingPost.diffs, newDiff] : [newDiff];
         await ctx.db.patch(existingPost._id, {
           mediaType: mediaType,
           data: processedData,
           updatedAt: now,
+          diffs
         });
         return { status: "updated", postId: existingPost._id };
       } else {
@@ -184,6 +231,7 @@ export const storePostData = mutation({
           data: processedData,
           createdAt: now,
           updatedAt: now,
+          diffs: []
         });
         return { status: "created", postId: internalId };
       }
@@ -248,13 +296,28 @@ export const storeProfileData = mutation({
       };
 
       if (existingAccount) {
-        await ctx.db.patch(existingAccount._id, accountData);
+        const diff = cleanDiff(existingAccount, accountData, ["createdAt", "updatedAt", "diffs", "userId"]);
+        if (!diff) {
+          return { status: "skipped_no_change", instagramAccountId: String(instagramAccountId) };
+        }
+        const newDiff = {
+          changedAt: updatedAt,
+          changedFields: diff.changedFields,
+          current: diff.current,
+          changeType: "update"
+        };
+        const diffs = Array.isArray(existingAccount.diffs) ? [...existingAccount.diffs, newDiff] : [newDiff];
+        await ctx.db.patch(existingAccount._id, {
+          ...accountData,
+          diffs
+        });
         return { status: "updated", instagramAccountId: String(instagramAccountId) };
       } else {
         const id = await ctx.db.insert("instagramAccounts", {
           userId,
           ...accountData,
           createdAt,
+          diffs: []
         });
         return { status: "created", instagramAccountId: String(instagramAccountId) };
       }
@@ -477,9 +540,21 @@ export const storeInstagramTrackerAnalysis = mutation({
         .first();
 
       if (existingAnalysis) {
+        const diff = cleanDiff(existingAnalysis, { analysis }, ["createdAt", "updatedAt", "diffs", "userId", "instagramAccountId"]);
+        if (!diff) {
+          return { status: "skipped_no_change", analysisId: existingAnalysis._id };
+        }
+        const newDiff = {
+          changedAt: now,
+          changedFields: diff.changedFields,
+          current: { analysis: "changed" },
+          changeType: "analysis"
+        };
+        const diffs = Array.isArray(existingAnalysis.diffs) ? [...existingAnalysis.diffs, newDiff] : [newDiff];
         await ctx.db.patch(existingAnalysis._id, {
           analysis,
           updatedAt: now,
+          diffs
         });
         return { status: "updated", analysisId: existingAnalysis._id };
       } else {
@@ -489,6 +564,7 @@ export const storeInstagramTrackerAnalysis = mutation({
           analysis,
           createdAt: now,
           updatedAt: now,
+          diffs: []
         });
         return { status: "created", analysisId: id };
       }
