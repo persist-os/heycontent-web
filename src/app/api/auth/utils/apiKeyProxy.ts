@@ -6,6 +6,8 @@ dotenv.config();
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
+console.log('[apiKeyProxy] NEXT_PUBLIC_BACKEND_URL:', BACKEND_URL);
+
 /**
  * Proxy an API key request to the backend, given a Firebase idToken and userId.
  * Handles error parsing and response formatting.
