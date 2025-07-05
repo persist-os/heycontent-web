@@ -350,7 +350,6 @@ export default function SmartNotes() {
         open={helpOpen} 
         onClose={() => setHelpOpen(false)} 
         pages={notesHelp}
-        title="Smart Notes Guide"
       />
     </div>
   );

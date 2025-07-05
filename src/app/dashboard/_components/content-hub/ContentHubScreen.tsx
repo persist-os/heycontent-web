@@ -749,7 +749,6 @@ export function ContentHubScreen() {
         open={helpOpen} 
         onClose={() => setHelpOpen(false)} 
         pages={contentHubHelp}
-        title="Content Hub Guide"
       />
     </div>
   )

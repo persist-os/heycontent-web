@@ -744,7 +744,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         open={helpOpen} 
         onClose={() => setHelpOpen(false)} 
         pages={chatHelp}
-        title="Chat Guide"
       />
     </>
   );
