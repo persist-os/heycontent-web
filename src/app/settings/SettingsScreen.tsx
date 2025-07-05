@@ -181,7 +181,6 @@ const SettingsScreen = () => {
         open={helpOpen} 
         onClose={() => setHelpOpen(false)} 
         pages={settingsHelp}
-        title="Settings Guide"
       />
     </div>
   )

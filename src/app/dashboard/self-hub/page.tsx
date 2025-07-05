@@ -67,7 +67,6 @@ export default function SelfHubPage() {
         open={helpOpen} 
         onClose={() => setHelpOpen(false)} 
         pages={selfHubHelp}
-        title="Self Hub Guide"
       />
     </div>
   );
