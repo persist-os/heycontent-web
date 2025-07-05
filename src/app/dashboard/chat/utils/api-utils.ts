@@ -1070,7 +1070,7 @@ export async function sendChatMessage(
       
       requestBody.content_context = {
         platform: contentContext.platform,
-        content_id: contentContext.contentId,
+        contentId: contentContext.contentId,  // ← Fixed: Use contentId instead of content_id
         title: contentContext.title,
         analysis: contentContext.analysis,
         thumbnail_url: contentContext.thumbnailUrl,
@@ -1085,7 +1085,7 @@ export async function sendChatMessage(
       console.log('🔍 [LEGACY CONTEXT DEBUG] Using legacy format');
       requestBody.content_context = {
         platform: contentContext.platform,
-        content_id: contentContext.contentId,
+        contentId: contentContext.contentId,  // ← Fixed: Use contentId instead of content_id
         title: contentContext.title,
         analysis: contentContext.analysis,
         thumbnail_url: contentContext.thumbnailUrl,
@@ -1119,7 +1119,8 @@ export async function sendChatMessage(
       platform: contentContext.platform,
       contentId: contentContext.contentId,
       title: contentContext.title,
-      hasAnalysis: !!contentContext.analysis
+      hasAnalysis: !!contentContext.analysis,
+      isGmail: contentContext.platform === 'gmail'  // ← Added: Debug flag for Gmail
     } : null
   });
 

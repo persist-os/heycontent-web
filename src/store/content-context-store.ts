@@ -238,6 +238,27 @@ export const useContentContextStore = create<ContentContextState>()(
         const threadData = gmailThread.data;
         const messages = threadData?.messages || [];
         
+        // Debug log the Gmail context being set
+        console.log('🔍 [GMAIL CONTEXT STORE] Setting Gmail context with:', {
+          threadId: gmailThread.threadId,
+          hasThreadData: !!threadData,
+          threadDataKeys: threadData ? Object.keys(threadData) : 'none',
+          threadDataSubject: threadData?.subject || 'missing from threadData',
+          threadDataFrom: threadData?.from || 'missing from threadData',
+          threadDataSnippet: threadData?.snippet || 'missing from threadData',
+          messagesLength: messages.length,
+          topLevelSubject: gmailThread.subject || 'missing from top level',
+          topLevelFrom: gmailThread.from || 'missing from top level',
+          topLevelSnippet: gmailThread.snippet || 'missing from top level',
+          messageCount: threadData?.messageCount || 'missing',
+          emailField: gmailThread.email || 'missing',
+          hasAnalysis: !!gmailThread.analysis,
+          allTopLevelKeys: Object.keys(gmailThread)
+        });
+        
+        // Show complete structure for debugging
+        console.log('🔍 [GMAIL CONTEXT STORE] Complete Gmail thread structure:', JSON.stringify(gmailThread, null, 2));
+        
         const context = {
           platform: 'gmail' as const,
           contentId: gmailThread.threadId,
