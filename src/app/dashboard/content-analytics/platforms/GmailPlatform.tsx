@@ -35,7 +35,7 @@ export function GmailPlatform({
   const [refreshCount, setRefreshCount] = useState(0);
 
   // Use the batch Gmail refresh hook
-  const { refresh, loading: refreshing, error: refreshError } = useGmailBatchRefresh();
+  const { refresh, loading: refreshing, error: refreshError, success: refreshSuccess } = useGmailBatchRefresh();
 
   // Pass refreshCount to useGmailAnalytics to trigger refetch
   const { gmailItems: displayItems, loading: gmailLoading, hasConnectedAccounts: gmailConnected } = useGmailAnalytics(userId, refreshCount);
@@ -142,8 +142,11 @@ export function GmailPlatform({
           {refreshing ? 'Refreshing...' : 'Refresh Gmail'}
         </Button>
       </div>
-      {refreshError && (
+      {refreshError && !refreshSuccess && (
         <div className="text-red-500 text-sm mb-2 text-center">{refreshError}</div>
+      )}
+      {refreshSuccess && (
+        <div className="text-green-500 text-sm mb-2 text-center">Gmail emails refreshed!</div>
       )}
       {/* Platform Embedding Status */}
       <PlatformEmbeddingStatus 

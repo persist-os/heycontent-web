@@ -4,10 +4,12 @@ import { getApiKey } from '@/app/lib/api-helpers';
 export function useGmailBatchRefresh() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setSuccess(false);
     try {
       const apiKey = await getApiKey();
       if (!apiKey) {
@@ -27,6 +29,10 @@ export function useGmailBatchRefresh() {
       const data = await res.json();
       if (!res.ok || data.status !== 'success') {
         setError(data.error || 'Failed to refresh Gmail');
+      } else {
+        setError(null);
+        setSuccess(true);
+        setTimeout(() => setSuccess(false), 3000);
       }
     } catch (e: any) {
       setError(e.message || 'Unknown error');
@@ -35,5 +41,5 @@ export function useGmailBatchRefresh() {
     }
   }, []);
 
-  return { refresh, loading, error };
+  return { refresh, loading, error, success };
 }

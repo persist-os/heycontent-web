@@ -101,6 +101,7 @@ export function useInstagramAnalytics(userId?: string) {
   const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<InstagramAnalysis | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [refreshSuccess, setRefreshSuccess] = useState(false);
   const [lastFetchTime, setLastFetchTime] = useState<number | null>(null);
   const [refreshTimestamp, setRefreshTimestamp] = useState<number>(Date.now());
   
@@ -330,6 +331,7 @@ export function useInstagramAnalytics(userId?: string) {
 
     setRefreshing(true);
     setError(null);
+    setRefreshSuccess(false);
 
     try {
       console.log('🔄 Instagram: Manual refresh - calling expensive backend API');
@@ -379,6 +381,8 @@ export function useInstagramAnalytics(userId?: string) {
         setLastFetchTime(Date.now());
         saveCachedData(userId, instagramAccountId, analysisToSet);
         setError(null);
+        setRefreshSuccess(true);
+        setTimeout(() => setRefreshSuccess(false), 3000);
         console.log('✅ Instagram: Successfully cached fresh data from backend API');
         
         // Force refetch of posts by updating the refresh timestamp
@@ -428,6 +432,7 @@ export function useInstagramAnalytics(userId?: string) {
     refreshing,
     instagramAccount,
     lastFetchTime: lastFetchTime ? new Date(lastFetchTime) : null,
-    isCached: !!lastFetchTime && (Date.now() - lastFetchTime < CACHE_DURATION)
+    isCached: !!lastFetchTime && (Date.now() - lastFetchTime < CACHE_DURATION),
+    refreshSuccess
   };
 } 
