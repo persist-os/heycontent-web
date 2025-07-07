@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useSidebar } from '@/app/context/sidebar-context'
 import { useTheme } from 'next-themes'
 
@@ -44,10 +44,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { CreateNoteButton } from '@/components/ui/CreateNoteButton';
 
-const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery }) => {
+const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery, welcome }) => {
   const router = useRouter()
-  const searchParams = useSearchParams();
-  const welcome = searchParams.get('welcome') === 'true';
   
   // Authentication and user data (derived from firebaseUser)
   const { firebaseUser, getToken } = useAuth();
@@ -177,7 +175,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     setWelcomeStep,
     handleSuggestionClick: handleWelcomeSuggestionClick
   } = useWelcomeMessage(
-    welcome,
+    true,
     messages,
     isLoading,
     authData.user,
@@ -414,15 +412,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     }
   }, [messages, authData.userId, convex, refreshPersonaData, invalidatePersonaData]);
 
-  // Clear welcome parameter from URL
-  useEffect(() => {
-    if (welcome && messages.length === 0 && !isLoading && authData.user) {
-      const url = new URL(window.location.href)
-      url.searchParams.delete('welcome')
-      window.history.replaceState({}, '', url.toString())
-    }
-  }, [welcome, messages.length, isLoading, authData.user]);
-
   // Handle content context display and consumption
   useEffect(() => {
     if (currentContext && !contextConsumption.hasConsumed) {
@@ -459,7 +448,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     if (askQuery && 
         askQuery !== askQueryProcessedRef.current && 
         !isLoading && 
-        !welcome &&
         messages.length === 0 &&
         authData.user) {
       
@@ -474,7 +462,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         }
       }, 100);
     }
-  }, [askQuery, isLoading, welcome, handleSendMessageWithUpdateCheck, messages.length, authData.user, currentContext]);
+  }, [askQuery, isLoading, handleSendMessageWithUpdateCheck, messages.length, authData.user, currentContext]);
 
   // Check for existing embeddings when user changes
   useEffect(() => {
@@ -493,20 +481,19 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Clear conversation state and stale context when component mounts
   useEffect(() => {
-    setMessages([]);
-    chatState.setSessionId(null);
-    chatState.setIsFirstMessage(true);
-    setContextConsumption({ hasConsumed: false, isDisplayed: false });
-    
-    const { isCacheValid } = useContentContextStore.getState();
-    
-    if (currentContext && !isCacheValid()) {
-      clearContentContext();
+    if (!welcome) {
+      setMessages([]);
+      chatState.setSessionId(null);
+      chatState.setIsFirstMessage(true);
+      setContextConsumption({ hasConsumed: false, isDisplayed: false });
+      const { isCacheValid } = useContentContextStore.getState();
+      if (currentContext && !isCacheValid()) {
+        clearContentContext();
+      }
+      askQueryProcessedRef.current = null;
+      loadedConversationRef.current = null;
     }
-    
-    askQueryProcessedRef.current = null;
-    loadedConversationRef.current = null;
-  }, []); // Only run on mount
+  }, [welcome]); // Only run on mount and when welcome changes
 
   // Autoscroll functionality
   useEffect(() => {

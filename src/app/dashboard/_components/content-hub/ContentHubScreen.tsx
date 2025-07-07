@@ -56,9 +56,9 @@ type DataType = 'posts' | 'ai-insights'
 const platformOptions = [
   { value: 'hub-insights', label: 'Content Hub Insights', icon: <Sparkles className="w-4 h-4" /> },
   { value: 'all', label: 'All Platforms', icon: <BarChart3 className="w-4 h-4" /> },
-  { value: 'youtube', label: 'YouTube', icon: <YouTubeBrandIcon href="https://youtube.com/" className="w-4 h-4" /> },
-  { value: 'instagram', label: 'Instagram', icon: <Instagram className="w-4 h-4" /> },
-  { value: 'gmail', label: 'Gmail', icon: <Mail className="w-4 h-4" /> },
+  { value: 'youtube', label: 'YouTube' },
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'gmail', label: 'Gmail' },
 ];
 
 export function ContentHubScreen() {
@@ -554,7 +554,9 @@ export function ContentHubScreen() {
                   <SelectTrigger className="w-full">
                     <SelectValue>
                       <div className="flex items-center gap-2">
-                        {platformOptions.find(p => p.value === selectedView)?.icon}
+                        {/* Only show icon for hub-insights and all, otherwise just label */}
+                        {platformOptions.find(p => p.value === selectedView)?.icon &&
+                          platformOptions.find(p => p.value === selectedView)?.icon}
                         <span>{platformOptions.find(p => p.value === selectedView)?.label}</span>
                       </div>
                     </SelectValue>
@@ -563,7 +565,8 @@ export function ContentHubScreen() {
                     {platformOptions.map(option => (
                       <SelectItem key={option.value} value={option.value}>
                         <div className="flex items-center gap-2">
-                          {option.icon}
+                          {/* Only show icon for hub-insights and all, otherwise just label */}
+                          {option.icon && option.icon}
                           <span>{option.label}</span>
                         </div>
                       </SelectItem>
@@ -576,7 +579,8 @@ export function ContentHubScreen() {
               <TabsList className="hidden sm:grid w-full grid-cols-5 mb-0">
                 {platformOptions.map(option => (
                   <TabsTrigger key={option.value} value={option.value} className="flex items-center gap-2">
-                    {option.icon}
+                    {/* Only show icon for hub-insights and all, otherwise just label */}
+                    {option.icon && option.icon}
                     {option.label}
                   </TabsTrigger>
                 ))}

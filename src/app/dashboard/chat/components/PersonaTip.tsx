@@ -1,6 +1,24 @@
 import React, { useState } from 'react';
 import { MessageCircle, Info, X } from 'lucide-react';
 
+// Add a simple sparkle SVG component
+const Sparkle = () => (
+  <svg className="absolute -top-2 -right-2 w-5 h-5 animate-sparkle" viewBox="0 0 20 20" fill="none">
+    <g filter="url(#glow)">
+      <path d="M10 2 L12 8 L18 10 L12 12 L10 18 L8 12 L2 10 L8 8 Z" fill="#facc15"/>
+    </g>
+    <defs>
+      <filter id="glow" x="-5" y="-5" width="30" height="30" filterUnits="userSpaceOnUse">
+        <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+        <feMerge>
+          <feMergeNode in="coloredBlur"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+  </svg>
+);
+
 interface PersonaTipProps {
   onTipClick: (message: string) => void;
   userId?: string;
@@ -22,7 +40,9 @@ export const PersonaTip: React.FC<PersonaTipProps> = ({ onTipClick }) => {
   return (
     <div className="fixed right-4 bottom-24 z-10">
       {isExpanded ? (
-        <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-xs w-64 animate-in fade-in-20 slide-in-from-bottom-4 duration-300">
+        <div className="relative bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-xs w-64 animate-in fade-in-20 slide-in-from-bottom-4 duration-300">
+          {/* Sparkle in the corner */}
+          <Sparkle />
           <div className="flex justify-between items-start mb-2">
             <h4 className="text-sm font-semibold text-gray-800">
               Create Your Persona
@@ -52,12 +72,30 @@ export const PersonaTip: React.FC<PersonaTipProps> = ({ onTipClick }) => {
       ) : (
         <button
           onClick={toggleExpand}
-          className="w-10 h-10 bg-white border border-gray-200 rounded-full shadow-md flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-all"
+          className="w-10 h-10 bg-white border border-gray-200 rounded-full shadow-md flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-all relative animate-glow"
           aria-label="Show persona tip"
         >
           <Info className="w-5 h-5" />
         </button>
       )}
+      {/* Animations */}
+      <style jsx global>{`
+        @keyframes glow {
+          0% { box-shadow: 0 0 0px 0 #facc15, 0 0 0px 0 #facc15; }
+          50% { box-shadow: 0 0 12px 4px #facc15aa, 0 0 24px 8px #fde68a55; }
+          100% { box-shadow: 0 0 0px 0 #facc15, 0 0 0px 0 #facc15; }
+        }
+        .animate-glow {
+          animation: glow 1.8s infinite;
+        }
+        @keyframes sparkle {
+          0%, 100% { opacity: 0.7; transform: scale(1) rotate(0deg); }
+          50% { opacity: 1; transform: scale(1.2) rotate(15deg); }
+        }
+        .animate-sparkle {
+          animation: sparkle 1.2s infinite;
+        }
+      `}</style>
     </div>
   );
 }; 

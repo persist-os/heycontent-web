@@ -198,7 +198,7 @@ export const PersonaTab = React.memo(() => {
 
   return (
     <div className="w-full">
-      <Suspense fallback={<QuickLoadingIndicator />}>
+      <Suspense fallback={<PersonaTabSkeleton />}>
         <PersonaUpdateManager userId={firebaseUser?.uid} renderNewPersonaButton={handleNewPersona} />
       </Suspense>
     </div>

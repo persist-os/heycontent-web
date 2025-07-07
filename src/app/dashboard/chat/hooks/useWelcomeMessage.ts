@@ -13,11 +13,11 @@ export function useWelcomeMessage(
 
   // Handle welcome message for new users (multi-step)
   useEffect(() => {
-    if (welcome && messages.length === 0 && !isLoading && user) {
+    if (welcome && messages.length === 0 && !isLoading) {
       setWelcomeStep(0);
       setMessages([getWelcomeStepMessage(0)]);
     }
-  }, [welcome, messages.length, isLoading, user, setMessages]);
+  }, [welcome, messages.length, isLoading, setMessages]);
 
   // Modified handleSuggestionClick to send messages automatically
   const handleSuggestionClick = (suggestion: any, onSendMessage: (msg: string) => void) => {
