@@ -103,7 +103,8 @@ export function InlineCommandPalette({
   const [linkText, setLinkText] = useState('');
   const [tableRows, setTableRows] = useState(3);
   const [tableCols, setTableCols] = useState(3);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+  const mainInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Debug logging
@@ -493,6 +494,12 @@ export function InlineCommandPalette({
       setTableRows(3);
       setTableCols(3);
       setLoadingCommand(null);
+      // Focus the main input if not in a special input mode
+      setTimeout(() => {
+        if (!showAIPrompt && !showNoteLinks && !showLinkInput && !showLinkEmbedInput && !showTableInput) {
+          mainInputRef.current?.focus();
+        }
+      }, 50);
     }
   }, [isOpen]);
 
@@ -639,6 +646,7 @@ export function InlineCommandPalette({
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-muted-foreground" />
             <input
+              ref={mainInputRef}
               type="text"
               placeholder={showNoteLinks ? "Search notes to link..." : "Ask Content anything..."}
               className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"

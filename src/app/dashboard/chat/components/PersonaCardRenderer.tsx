@@ -5,6 +5,7 @@ import { usePersonaData, usePersonaStore } from '@/store/persona-store';
 import { Message } from '@/app/types/chat';
 import { useRouter } from 'next/navigation';
 import { useConvex } from 'convex/react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface PersonaCardRendererProps {
   message: Message;
@@ -116,12 +117,12 @@ export const PersonaCardRenderer: React.FC<PersonaCardRendererProps> = ({ messag
   // Loading state
   if (shouldFetchPersona && isLoading) {
     return (
-      <div className="w-full p-6 text-center">
-        <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto mb-2"></div>
-          <div className="h-3 bg-gray-200 rounded w-1/2 mx-auto"></div>
+      <div className="w-full p-6">
+        <div className="space-y-3">
+          <Skeleton className="h-6 w-3/4 mx-auto" />
+          <Skeleton className="h-4 w-1/2 mx-auto" />
+          <Skeleton className="h-32 w-full rounded-xl mt-4" />
         </div>
-        <p className="text-sm text-gray-500 mt-2">Loading your persona...</p>
       </div>
     );
   }
