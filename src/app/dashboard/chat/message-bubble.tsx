@@ -198,19 +198,37 @@ export function MessageBubble({
 
   // Handle quote button click
   const handleQuoteText = () => {
-    if (selectedText) {
-      if (notepadOpen && onQuoteToNotepad) {
-        onQuoteToNotepad(`"${selectedText}"`)
-      } else if (onInputPopulate) {
-        onInputPopulate(`"${selectedText}"`)
-      }
-      // Clear the selection after using it
-      setSelectedText('')
-      setSelectionRect(null)
-      setHighlightRects([])
-      setShowQuoteButton(false)
+    if (!selectedText) return;
+
+    // Get the rendered message text (as plain text, for comparison)
+    const messageElement = document.getElementById(`message-${message.id}`);
+    let renderedText = '';
+    if (messageElement) {
+      renderedText = messageElement.innerText.trim();
     }
-  }
+    const selected = selectedText.trim();
+    // If the selection matches the entire message, use the markdown source
+    let quoteToInsert: string;
+    if (renderedText && selected === renderedText) {
+      quoteToInsert = message.content;
+    } else {
+      // Otherwise, insert as markdown blockquote (preserve line breaks)
+      quoteToInsert = selected
+        .split('\n')
+        .map(line => line ? `> ${line}` : '>')
+        .join('\n');
+    }
+    if (notepadOpen && onQuoteToNotepad) {
+      onQuoteToNotepad(quoteToInsert);
+    } else if (onInputPopulate) {
+      onInputPopulate(quoteToInsert);
+    }
+    // Clear the selection after using it
+    setSelectedText('');
+    setSelectionRect(null);
+    setHighlightRects([]);
+    setShowQuoteButton(false);
+  };
 
   // Determine if this message might contain a completed persona
   // Check for explicit completion flags OR content that indicates persona creation
@@ -344,6 +362,22 @@ export function MessageBubble({
                   title="Reply"
                 >
                   <MessageSquare className="w-3 h-3" />
+                </button>
+              )}
+              {/* New: Quote All (markdown) button */}
+              {(onInputPopulate || (notepadOpen && onQuoteToNotepad)) && (
+                <button
+                  onClick={() => {
+                    if (notepadOpen && onQuoteToNotepad) {
+                      onQuoteToNotepad(message.content);
+                    } else if (onInputPopulate) {
+                      onInputPopulate(message.content);
+                    }
+                  }}
+                  className="p-1 rounded-full bg-background/70 backdrop-blur-sm border text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all"
+                  title="Quote entire message (markdown)"
+                >
+                  <Quote className="w-3 h-3" />
                 </button>
               )}
               <CopyButton text={getTextToCopy()} />
