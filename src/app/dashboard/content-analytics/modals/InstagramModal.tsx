@@ -457,7 +457,7 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
             className={`${!aiAnalysis ? 'opacity-50 cursor-not-allowed bg-gray-300 hover:bg-gray-300' : 'bg-heycontent-light-yellow hover:bg-heycontent-yellow/90'} text-black`}
           >
             <MessageSquare className="w-4 h-4 mr-2" />
-            {!aiAnalysis ? 'Generate Analysis First' : 'Discuss with AI'}
+            {!aiAnalysis ? 'Generate Analysis First' : 'Discuss with Content'}
           </Button>
           {selectedContent.content.permalink && (
             <a href={selectedContent.content.permalink} target="_blank" rel="noopener noreferrer">
