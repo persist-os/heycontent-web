@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { getApiKey } from '@/app/lib/api-helpers';
@@ -17,29 +17,27 @@ export function useYouTubeInsights(userId?: string): BatchAnalysisHookReturn {
     userId ? { userId } : "skip"
   );
 
+  // Memoize the channelId to avoid unnecessary re-renders
+  const channelId = useMemo(
+    () => youtubeChannel?.id,
+    [youtubeChannel]
+  );
+
   // Fetch YouTube batch analysis insights (will be migrated to universal format)
   const youtubeInsights = useQuery(
     api.youtubeQueries.getYoutubeBatchAnalysis,
-    userId && youtubeChannel?.id ? { 
+    userId && channelId ? { 
       userId, 
-      channelId: youtubeChannel.id 
+      channelId
     } : "skip"
   );
 
   // Store YouTube batch analysis mutation
   const storeYoutubeBatchAnalysis = useMutation(api.youtubeMutations.storeYoutubeBatchAnalysis);
 
-  // Extract data - handle both old and new formats during transition
-  console.log('[useYouTubeInsights] Raw Convex data:', youtubeInsights);
-  console.log('[useYouTubeInsights] youtubeInsights?.insights:', youtubeInsights?.insights);
-  console.log('[useYouTubeInsights] Type of youtubeInsights?.insights:', typeof youtubeInsights?.insights);
-  console.log('[useYouTubeInsights] Is array?', Array.isArray(youtubeInsights?.insights));
-  
   // Check if insights is the universal format object (with insights, metadata, status)
   const rawInsights = youtubeInsights?.insights;
   const isUniversalFormat = rawInsights && typeof rawInsights === 'object' && 'insights' in rawInsights;
-  
-  console.log('[useYouTubeInsights] Is universal format?', isUniversalFormat);
   
   const insightsList: InsightCard[] = isUniversalFormat 
     ? (rawInsights as any).insights || []
@@ -51,10 +49,6 @@ export function useYouTubeInsights(userId?: string): BatchAnalysisHookReturn {
     ? (rawInsights as any).status || null
     : youtubeInsights?.status || null;
     
-  console.log('[useYouTubeInsights] Extracted insightsList:', insightsList);
-  console.log('[useYouTubeInsights] Extracted metadata:', metadata);
-  console.log('[useYouTubeInsights] Extracted status:', status);
-
   // Only show as running if we're actively refreshing AND status is processing/enqueued
   // Don't auto-show loading for old stuck statuses
   // Check both root-level status (updated by mutations) and nested status (from insights)
@@ -72,21 +66,6 @@ export function useYouTubeInsights(userId?: string): BatchAnalysisHookReturn {
   // When user clicks refresh, show refreshing state immediately, even if database hasn't updated yet
   // Once database status updates to processing/enqueued, continue showing refreshing state
   const isActuallyRunning = isRefreshing || databaseStatus === 'processing' || databaseStatus === 'enqueued' || databaseStatus === 'running';
-  
-  console.log('[useYouTubeInsights] Refresh state debug:', {
-    localIsRefreshing: isRefreshing,
-    rootStatus,
-    nestedStatus,
-    databaseStatus,
-    isActuallyRunning,
-    status: status,
-    rootStatusObject: youtubeInsights?.status,
-    currentProgress,
-    rootProgress: youtubeInsights?.status?.progress,
-    nestedProgress: status?.progress,
-    hasChannel: !!youtubeChannel?.id,
-    hasInsights: !!insightsList?.length
-  });
 
   // Check if there's an error in the batch analysis
   const batchError = status?.error;
@@ -103,11 +82,9 @@ export function useYouTubeInsights(userId?: string): BatchAnalysisHookReturn {
     if (isRefreshing && databaseStatus) {
       if (databaseStatus === 'completed' || databaseStatus === 'failed') {
         // Task definitively finished - clear local state
-        console.log('[useYouTubeInsights] Task completed/failed, clearing local refresh state');
         setIsRefreshing(false);
       } else if (databaseStatus === 'processing' || databaseStatus === 'enqueued' || databaseStatus === 'running') {
         // Database caught up with our refresh request - database now drives the state
-        console.log('[useYouTubeInsights] Database status updated to active, local state can continue');
       }
     }
   }, [isRefreshing, databaseStatus]);
@@ -120,22 +97,9 @@ export function useYouTubeInsights(userId?: string): BatchAnalysisHookReturn {
 
     // Prevent multiple concurrent refresh attempts
     if (isRefreshing || databaseStatus === 'processing' || databaseStatus === 'enqueued' || databaseStatus === 'running') {
-      console.log('[useYouTubeInsights] Refresh already in progress, ignoring click', {
-        isRefreshing,
-        databaseStatus,
-        currentTime: new Date().toISOString()
-      });
       return;
     }
 
-    console.log('[useYouTubeInsights] Starting refresh...', {
-      userId,
-      hasChannel: !!youtubeChannel?.id,
-      postLimit,
-      currentTime: new Date().toISOString()
-    });
-
-    // Set local refreshing state
     setIsRefreshing(true);
     setError(null);
     
@@ -172,9 +136,6 @@ export function useYouTubeInsights(userId?: string): BatchAnalysisHookReturn {
       if (data.status === 'enqueued') {
         // YouTube analysis is now async - the status is tracked in the database
         // The results will be automatically available in the query once completed
-        console.log(`✅ YouTube analysis enqueued with task ID: ${data.task_id}`);
-        console.log('[useYouTubeInsights] Task enqueued, keeping local refresh state until database updates');
-        // Keep refreshing state until task completes - database will update via real-time subscription
       } else if (data.status === 'success') {
         // Handle legacy synchronous response (if any)
         await storeYoutubeBatchAnalysis({
