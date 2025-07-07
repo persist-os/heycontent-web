@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { getApiKey } from '@/app/lib/api-helpers';
@@ -17,12 +17,18 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
     userId ? { userId } : "skip"
   );
 
+  // Memoize the accountId to avoid unnecessary re-renders
+  const instagramAccountId = useMemo(
+    () => instagramAccount?.instagramAccountId,
+    [instagramAccount]
+  );
+
   // Fetch Instagram batch analysis insights
   const instagramInsights = useQuery(
     api.instagramQueries.getInstagramBatchAnalysis,
-    userId && instagramAccount?.instagramAccountId ? { 
+    userId && instagramAccountId ? { 
       userId, 
-      instagramAccountId: instagramAccount.instagramAccountId 
+      instagramAccountId
     } : "skip"
   );
 
@@ -30,16 +36,9 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
   const storeInstagramAnalysis = useMutation(api.instagramMutations.storeInstagramBatchAnalysis);
 
   // Extract data - handle both old and new formats during transition
-  console.log('[useInstagramInsights] Raw Convex data:', instagramInsights);
-  console.log('[useInstagramInsights] instagramInsights?.insights:', instagramInsights?.insights);
-  console.log('[useInstagramInsights] Type of instagramInsights?.insights:', typeof instagramInsights?.insights);
-  console.log('[useInstagramInsights] Is array?', Array.isArray(instagramInsights?.insights));
-  
   // Check if insights is the universal format object (with insights, metadata, status)
   const rawInsights = instagramInsights?.insights;
   const isUniversalFormat = rawInsights && typeof rawInsights === 'object' && 'insights' in rawInsights;
-  
-  console.log('[useInstagramInsights] Is universal format?', isUniversalFormat);
   
   const insightsList: InsightCard[] = isUniversalFormat 
     ? (rawInsights as any).insights || []
@@ -51,10 +50,6 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
     ? (rawInsights as any).status || null
     : instagramInsights?.status || null;
     
-  console.log('[useInstagramInsights] Extracted insightsList:', insightsList);
-  console.log('[useInstagramInsights] Extracted metadata:', metadata);
-  console.log('[useInstagramInsights] Extracted status:', status);
-
   // Only show as running if we're actively refreshing AND status is processing/enqueued
   // Don't auto-show loading for old stuck statuses
   // Check both root-level status (updated by mutations) and nested status (from insights)
@@ -73,21 +68,6 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
   // Once database status updates to processing/enqueued, continue showing refreshing state
   const isActuallyRunning = isRefreshing || databaseStatus === 'processing' || databaseStatus === 'enqueued' || databaseStatus === 'running';
   
-  console.log('[useInstagramInsights] Refresh state debug:', {
-    localIsRefreshing: isRefreshing,
-    rootStatus,
-    nestedStatus,
-    databaseStatus,
-    isActuallyRunning,
-    status: status,
-    rootStatusObject: instagramInsights?.status,
-    currentProgress,
-    rootProgress: instagramInsights?.status?.progress,
-    nestedProgress: status?.progress,
-    hasAccount: !!instagramAccount?.instagramAccountId,
-    hasInsights: !!insightsList?.length
-  });
-
   // Check if there's an error in the batch analysis
   const batchError = status?.error;
 
@@ -103,11 +83,9 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
     if (isRefreshing && databaseStatus) {
       if (databaseStatus === 'completed' || databaseStatus === 'failed') {
         // Task definitively finished - clear local state
-        console.log('[useInstagramInsights] Task completed/failed, clearing local refresh state');
         setIsRefreshing(false);
       } else if (databaseStatus === 'processing' || databaseStatus === 'enqueued' || databaseStatus === 'running') {
         // Database caught up with our refresh request - database now drives the state
-        console.log('[useInstagramInsights] Database status updated to active, local state can continue');
       }
     }
   }, [isRefreshing, databaseStatus]);
@@ -120,22 +98,9 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
 
     // Prevent multiple concurrent refresh attempts
     if (isRefreshing || databaseStatus === 'processing' || databaseStatus === 'enqueued' || databaseStatus === 'running') {
-      console.log('[useInstagramInsights] Refresh already in progress, ignoring click', {
-        isRefreshing,
-        databaseStatus,
-        currentTime: new Date().toISOString()
-      });
       return;
     }
 
-    console.log('[useInstagramInsights] Starting refresh...', {
-      userId,
-      hasAccount: !!instagramAccount?.instagramAccountId,
-      postLimit,
-      currentTime: new Date().toISOString()
-    });
-
-    // Set local refreshing state
     setIsRefreshing(true);
     setError(null);
     
@@ -172,32 +137,10 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
       if (data.status === 'enqueued') {
         // Instagram analysis is now async - the status is tracked in the database
         // The results will be automatically available in the query once completed
-        console.log(`✅ Instagram analysis enqueued with task ID: ${data.task_id}`);
-        console.log('[useInstagramInsights] Task enqueued, keeping local refresh state until database updates');
-        // Keep refreshing state until task completes - database will update via real-time subscription
       } else if (data.status === 'success') {
         // Log optimization information
         if (data.analysis_summary) {
           const summary = data.analysis_summary;
-          console.log('📊 Instagram Insights Analysis Summary:', {
-            requestedPosts: summary.requested_posts,
-            actualPostsAnalyzed: summary.actual_posts_analyzed || summary.total_posts,
-            cachedPostsAvailable: summary.cached_posts_available,
-            optimizedApiUsage: summary.optimized_api_usage,
-            rateLimited: summary.rate_limited,
-            fallbackToCache: summary.fallback_to_cache
-          });
-          
-          // Show user-friendly message about optimization
-          if (summary.optimized_api_usage) {
-            console.log(`✅ API optimization: Used cached data instead of making unnecessary Instagram API calls`);
-          } else if (summary.rate_limited) {
-            console.log(`⚠️ Rate limited: Used cached data (${summary.cached_posts_available} posts available)`);
-          }
-        }
-        
-        if (data.note || data.warning) {
-          console.log(`💡 Backend note: ${data.note || data.warning}`);
         }
         
         await storeInstagramAnalysis({

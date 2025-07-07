@@ -49,7 +49,6 @@ const loadCachedData = (userId: string, instagramAccountId: string): CachedData 
   // Check memory cache first
   const memoryData = memoryCache.get(cacheKey);
   if (memoryData && Date.now() - memoryData.timestamp < CACHE_DURATION) {
-    console.log('📱 Instagram: Using memory cache (hour 0-59)');
     return memoryData;
   }
   
@@ -59,16 +58,12 @@ const loadCachedData = (userId: string, instagramAccountId: string): CachedData 
     if (cached) {
       const parsedCache: CachedData = JSON.parse(cached);
       if (Date.now() - parsedCache.timestamp < CACHE_DURATION) {
-        console.log('📱 Instagram: Using localStorage cache (hour 0-59)');
         // Restore to memory cache
         memoryCache.set(cacheKey, parsedCache);
         return parsedCache;
-      } else {
-        console.log('📱 Instagram: Cache expired (hour 61+) - will fetch fresh data');
       }
     }
   } catch (error) {
-    console.warn('Failed to load cached Instagram data:', error);
   }
   
   return null;
@@ -90,9 +85,7 @@ const saveCachedData = (userId: string, instagramAccountId: string, data: any) =
   // Save to localStorage
   try {
     localStorage.setItem(cacheKey, JSON.stringify(cachedData));
-    console.log('📱 Instagram: Cached fresh data for next 60 minutes');
   } catch (error) {
-    console.warn('Failed to save Instagram data to localStorage:', error);
   }
 };
 
@@ -139,19 +132,16 @@ export function useInstagramAnalytics(userId?: string) {
     
     // If no cache exists, ALWAYS fetch (first visit)
     if (!cached) {
-      console.log('📱 Instagram: No cache found - WILL FETCH from Convex');
       return true;
     }
     
     // If cache exists but is expired, fetch
     const isCacheExpired = (Date.now() - cached.timestamp) >= CACHE_DURATION;
     if (isCacheExpired) {
-      console.log('📱 Instagram: Cache expired - WILL FETCH from Convex');
       return true;
     }
     
     // Cache is valid, don't fetch
-    console.log('📱 Instagram: Valid cache found - SKIP Convex fetch');
     return false;
   }, [userId, instagramAccountId]);
 
@@ -166,19 +156,6 @@ export function useInstagramAnalytics(userId?: string) {
 
   // Map Instagram items with caching - UPDATED for new schema
   const mappedInstagramItems = useMemo(() => {
-    console.log('🔄 Instagram: Mapping posts data:', {
-      hasPosts: !!instagramPosts,
-      postsType: typeof instagramPosts,
-      postsLength: Array.isArray(instagramPosts) ? instagramPosts.length : 'not array',
-      samplePost: Array.isArray(instagramPosts) && instagramPosts.length > 0 ? {
-        id: instagramPosts[0].postId,
-        hasInsights: !!instagramPosts[0].data?.insights,
-        insightsKeys: instagramPosts[0].data?.insights ? Object.keys(instagramPosts[0].data.insights) : null,
-        hasComments: !!instagramPosts[0].data?.comments,
-        commentsLength: instagramPosts[0].data?.comments?.length || 0
-      } : null
-    });
-    
     if (Array.isArray(instagramPosts)) {
       return instagramPosts.map((post: any): InstagramContentItem => {
         let mediaUrl = post.data.media_url;
@@ -255,16 +232,6 @@ export function useInstagramAnalytics(userId?: string) {
     if (userId && instagramAccountId) {
       const cached = loadCachedData(userId, instagramAccountId);
       if (cached) {
-        console.log('📱 Instagram: Loading cached data on mount');
-        console.log('🔍 Instagram: Cached data content:', cached.data);
-        console.log('🔍 Instagram: Cached data structure:', {
-          hasData: !!cached.data,
-          dataType: typeof cached.data,
-          dataKeys: cached.data ? Object.keys(cached.data) : [],
-          hasLastPost: cached.data?.last_post,
-          hasPostingFreq: cached.data?.posting_frequency,
-          hasMediaDist: cached.data?.media_distribution
-        });
         setAnalysis(cached.data);
         setLastFetchTime(cached.timestamp);
         
@@ -273,7 +240,6 @@ export function useInstagramAnalytics(userId?: string) {
         if (dataAge < CACHE_DURATION) {
           // Hour 0-59: Instant display with cached data, NO loading
           setLoading(false);
-          console.log(`📱 Instagram: Cache valid for ${Math.round((CACHE_DURATION - dataAge) / 60000)} more minutes`);
         } else {
           // Hour 61+: Cache expired, keep loading true and will fetch fresh data
           console.log('📱 Instagram: Cache expired, will fetch fresh data');
@@ -290,14 +256,11 @@ export function useInstagramAnalytics(userId?: string) {
   // FIXED: Process Convex tracker analysis when it arrives
   useEffect(() => {
     if (trackerAnalysis !== undefined && userId && instagramAccountId) {
-      console.log('📊 Instagram: Processing Convex tracker analysis:', trackerAnalysis);
-      
       if (trackerAnalysis && Object.keys(trackerAnalysis).length > 0) {
         // Extract the content from the tracker analysis if it's nested
         let analysisToSet = trackerAnalysis;
         if (trackerAnalysis.content && !trackerAnalysis.last_post) {
           analysisToSet = trackerAnalysis.content;
-          console.log('🔧 Instagram: Extracted content from nested structure:', analysisToSet);
         }
         
         // Check if we have valid analysis data
@@ -308,16 +271,11 @@ export function useInstagramAnalytics(userId?: string) {
         );
 
         if (hasValidData) {
-          console.log('✅ Instagram: Using fresh Convex tracker analysis data');
           setAnalysis(analysisToSet);
           setLastFetchTime(Date.now());
           saveCachedData(userId, instagramAccountId, analysisToSet);
           setError(null);
-        } else {
-          console.log('⚠️ Instagram: Tracker analysis exists but has no valid data');
         }
-      } else {
-        console.log('⚠️ Instagram: No tracker analysis found in Convex');
       }
       
       // Always set loading to false when trackerAnalysis query completes
@@ -353,7 +311,6 @@ export function useInstagramAnalytics(userId?: string) {
       }
 
       const data = await response.json();
-      console.log('🔍 Instagram: Backend API Response:', data);
       
       // Process response data
       let analysisToSet = null;
@@ -361,18 +318,14 @@ export function useInstagramAnalytics(userId?: string) {
       if (data?.status === 'success' && data?.data) {
         if (data.data.content && !data.data.last_post) {
           analysisToSet = data.data.content;
-          console.log('✅ Instagram: Using nested content from API response:', analysisToSet);
         } else {
           analysisToSet = data.data;
-          console.log('✅ Instagram: Using data from API response:', analysisToSet);
         }
       } else if (data?.analysis) {
         if (data.analysis.content) {
           analysisToSet = data.analysis.content;
-          console.log('✅ Instagram: Using analysis.content:', analysisToSet);
         } else {
           analysisToSet = data.analysis;
-          console.log('✅ Instagram: Using direct analysis:', analysisToSet);
         }
       }
       
@@ -383,7 +336,6 @@ export function useInstagramAnalytics(userId?: string) {
         setError(null);
         setRefreshSuccess(true);
         setTimeout(() => setRefreshSuccess(false), 3000);
-        console.log('✅ Instagram: Successfully cached fresh data from backend API');
         
         // Force refetch of posts by updating the refresh timestamp
         // This will trigger getAllInstagramPosts to refetch with new insights and comments
@@ -409,10 +361,6 @@ export function useInstagramAnalytics(userId?: string) {
   useEffect(() => {
     // Only reset if userId actually changed (not just on mount or re-renders)
     if (prevUserIdRef.current !== userId && prevUserIdRef.current !== undefined) {
-      console.log('🔄 Instagram: Resetting analysis due to userId change:', { 
-        prevUserId: prevUserIdRef.current, 
-        newUserId: userId 
-      });
       setAnalysis(null);
       setError(null);
       setLastFetchTime(null);
