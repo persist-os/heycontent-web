@@ -178,7 +178,7 @@ export function InstagramPlatform({
             className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Refreshing Analytics & Posts...' : 'Refresh Instagram'}
+            {refreshing ? 'Refreshing Instagram...' : 'Refresh Instagram'}
           </Button>
         </div>
 
