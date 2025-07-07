@@ -248,10 +248,12 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
                   >
                     <div className="flex items-start justify-between">
                       <span className="flex-1 mr-2">
-                        • {thread.subject.startsWith('Re: ') ? thread.subject : `Re: ${thread.subject}`}
+                        • {thread.subject
+                            ? (thread.subject.startsWith('Re: ') ? thread.subject : `Re: ${thread.subject}`)
+                            : 'No Subject'}
                       </span>
                       <span className="text-xs text-gray-500 dark:text-gray-500 whitespace-nowrap">
-                        ({thread.date})
+                        ({thread.date || 'Unknown Date'})
                       </span>
                     </div>
                   </div>
