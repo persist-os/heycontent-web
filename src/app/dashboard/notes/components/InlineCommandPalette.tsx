@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Bot, Brain, Lightbulb, Loader2, X, Sparkles, ArrowRight, FileText, Users, BarChart3, BookOpen, CheckSquare, List, Heading1, Heading2, Heading3, Link, ExternalLink, Table } from 'lucide-react';
+import { useNotes } from '@/app/context/notes-context';
 
 interface InlineCommandPaletteProps {
   isOpen: boolean;
@@ -106,6 +107,7 @@ export function InlineCommandPalette({
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const mainInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { setActiveNoteId } = useNotes();
 
   // Debug logging
   console.log('InlineCommandPalette props:', {
@@ -167,8 +169,10 @@ export function InlineCommandPalette({
   const handleNoteLinkSelect = (noteId: string) => {
     if (onLinkNote) {
       onLinkNote(noteId);
-      onClose();
+    } else {
+      setActiveNoteId(noteId);
     }
+    onClose();
   };
 
   const handleInsertLink = () => {
@@ -825,9 +829,4 @@ export function InlineCommandPalette({
       </div>
     </div>
   );
-}
-
-// Export a function to show note links
-export const showNoteLinks = (setShowNoteLinks: (show: boolean) => void) => {
-  setShowNoteLinks(true);
-}; 
+} 

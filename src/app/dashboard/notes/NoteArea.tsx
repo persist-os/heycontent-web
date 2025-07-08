@@ -26,14 +26,41 @@ interface NoteAreaProps {
   availableNotes?: Array<{ _id: string; title: string; type: string }>;
   onLinkNote?: (noteId: string) => void;
   onLinkContent?: (prefixedId: string) => void;
-  // Navigation stack props
-  canGoBack?: boolean;
-  onNavigateBack?: () => void;
-  navigationStack?: string[];
-  // Chat navigation prop
-  fromChat?: boolean;
   // Optional ref to expose flush method
   flushRef?: React.MutableRefObject<() => Promise<void> | undefined>;
+  // fromChat prop retained for back button logic
+  fromChat?: boolean;
+}
+
+// Utility: Build safe NoteUpdate object
+function buildNoteUpdate(changes: Partial<Note>, currentNote: Note): NoteUpdate {
+  const update: NoteUpdate = {};
+  if (changes.content !== undefined && changes.content !== currentNote.content) {
+    update.content = changes.content;
+  }
+  if (changes.title !== undefined && changes.title !== currentNote.title) {
+    update.title = changes.title;
+  }
+  if (changes.tags !== undefined && JSON.stringify(changes.tags) !== JSON.stringify(currentNote.tags)) {
+    update.tags = changes.tags;
+  }
+  if (changes.type !== undefined && changes.type !== currentNote.type) {
+    update.type = changes.type;
+  }
+  if (changes.typeGenerated !== undefined && changes.typeGenerated !== currentNote.typeGenerated) {
+    update.typeGenerated = changes.typeGenerated;
+  }
+  // Add other fields as needed
+  return update;
+}
+
+// Validation layer for NoteUpdate
+function validateNoteUpdate(update: NoteUpdate, context: string): NoteUpdate {
+  if (update.tags !== undefined && update.tags.length === 0) {
+    console.warn(`⚠️ Empty tags being sent from: ${context}`);
+    // Optionally: throw or block here if not explicitly clearing tags
+  }
+  return update;
 }
 
 // --- Robust Autosave Hook ---
@@ -66,7 +93,10 @@ function useRobustAutosave({
     const tagsChanged = JSON.stringify(tags) !== JSON.stringify(lastSavedTags);
     if ((contentChanged || tagsChanged) && !isTemporary && content.length > 0) {
       try {
-        await onUpdate(note._id, { content, title: note.title || '', tags });
+        // Only send changed fields
+        const update = buildNoteUpdate({ content, title: note.title || '', tags }, note);
+        const validatedUpdate = validateNoteUpdate(update, 'autosave');
+        await onUpdate(note._id, validatedUpdate);
         setLastSavedContent(content);
         setLastSavedTags([...tags]);
         pendingSaveRef.current = false;
@@ -150,6 +180,8 @@ function useRobustAutosave({
   return { flush };
 }
 
+export { buildNoteUpdate, validateNoteUpdate };
+
 export function NoteArea({
   note: initialNote,
   onUpdate,
@@ -160,16 +192,11 @@ export function NoteArea({
   availableNotes = [],
   onLinkNote,
   onLinkContent,
-  // Navigation stack props
-  canGoBack,
-  onNavigateBack,
-  navigationStack,
-  // Chat navigation prop
+  flushRef,
   fromChat = false,
-  flushRef
 }: NoteAreaProps) {
   // Get all notes from context for tag suggestions
-  const { notes } = useNotes();
+  const { notes, canNavigateBack, navigationStack } = useNotes();
   // Use the live query conditionally with "skip" parameter to avoid conditional hook call
   const liveNoteData = useQuery(
     api.notes.getNote, 
@@ -182,10 +209,8 @@ export function NoteArea({
   );
 
   const note = liveNoteData || initialNote;
-  
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [content, setContent] = useState(note.content || '');
-  const [tags, setTags] = useState<string[]>(note.tags || []);
   const [showImageGallery, setShowImageGallery] = useState(false);
 
   // Initialize the inline AI hook
@@ -209,9 +234,9 @@ export function NoteArea({
   , [notes, note._id]);
 
   const contentRef = useRef(content);
-  const tagsRef = useRef(tags);
+  const tagsRef = useRef(note.tags || []);
   React.useEffect(() => { contentRef.current = content; }, [content]);
-  React.useEffect(() => { tagsRef.current = tags; }, [tags]);
+  React.useEffect(() => { tagsRef.current = note.tags || []; }, [note.tags]);
 
   // --- Use robust autosave ---
   const { flush } = useRobustAutosave({
@@ -220,7 +245,7 @@ export function NoteArea({
     getContent: () => contentRef.current,
     getTags: () => tagsRef.current,
     content,
-    tags,
+    tags: note.tags || [],
   });
 
   // Expose flush to parent if ref provided
@@ -237,11 +262,20 @@ export function NoteArea({
 
   // Handle tag changes from NoteMeta
   const handleTagsChange = (newTags: string[]) => {
-    setTags(newTags);
+    // Only send tags if changed
+    const update = buildNoteUpdate({ tags: newTags }, note);
+    const validatedUpdate = validateNoteUpdate(update, 'handleTagsChange');
+    if (Object.keys(validatedUpdate).length > 0) {
+      onUpdate(note._id, validatedUpdate);
+    }
   };
 
   const handleTypeChange = async (newType: NoteType) => {
-    await onUpdate(note._id, { type: newType, typeGenerated: false });
+    const update = buildNoteUpdate({ type: newType, typeGenerated: false }, note);
+    const validatedUpdate = validateNoteUpdate(update, 'handleTypeChange');
+    if (Object.keys(validatedUpdate).length > 0) {
+      await onUpdate(note._id, validatedUpdate);
+    }
   };
 
   const handleSave = async () => {
@@ -294,18 +328,29 @@ export function NoteArea({
     onBack(content);
   };
 
-  const handleNavigateBack = async () => {
-    await flush();
-    if (onNavigateBack) {
-      onNavigateBack();
-    }
-  };
-
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid;
   const allLinkableContent = useQuery(api.notes.getAllLinkableContent, { 
     userId: firebaseUser?.uid || '' 
   });
+
+  // Determine back button context for header
+  const getBackButtonContext = () => {
+    if (fromChat) {
+      return "Back to chat";
+    } else if (canNavigateBack) {
+      const lastEntry = navigationStack[navigationStack.length - 1];
+      if (lastEntry) {
+        const previousNote = notes.find(n => String(n._id) === lastEntry.noteId);
+        if (previousNote) {
+          return `Back to "${previousNote.title || 'Untitled'}"`;
+        }
+      }
+      return "Back to previous note";
+    } else {
+      return "Back to notes grid";
+    }
+  };
 
   return (
     <div className="flex flex-col h-full w-full bg-background relative">
@@ -317,16 +362,17 @@ export function NoteArea({
         onBack={handleBack} 
         isMobile={isMobile}
         currentContent={content}
-        canGoBack={canGoBack}
-        onNavigateBack={handleNavigateBack}
-        navigationStack={navigationStack}
         fromChat={fromChat}
+        canNavigateBack={canNavigateBack}
+        backButtonContext={getBackButtonContext()}
+        navigationStack={navigationStack}
+        notes={notes}
       />
       
       {/* Note metadata and type selector */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/95">
         <NoteMeta
-          note={{...note, tags}} // Pass current tags state to NoteMeta
+          note={note} // Use note directly from Convex
           onUpdate={onUpdate}
           onTitleChange={() => {}} // Title changes are handled by NoteMeta internally
           onTagsChange={handleTagsChange} // Pass cleaned tags change handler
