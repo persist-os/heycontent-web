@@ -10,7 +10,7 @@ import { Note } from './types';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { YouTubeVideoCard } from './components/YouTubeVideoCard';
 import { InsightCard } from '../ai-insights/_components/InsightCard';
-import { InsightCardOverlay } from './components/InsightCardOverlay';
+import { InsightOverlay } from '@/components/content/overlays/InsightOverlay';
 
 // Help system imports
 import { HelpModal } from '@/components/ui/help-modal';
@@ -268,13 +268,13 @@ export default function SmartNotes() {
         )}
         {/* Insight Card */}
         {selectedInsightId && (
-          <InsightCardOverlay
+          <InsightOverlay
             insightId={selectedInsightId}
             onClose={async () => {
               await flushAutosave();
               setSelectedInsightId(null);
             }}
-            onOpenAnalysis={handleOpenInsightAnalysis}
+            showAnalysis={true}
           />
         )}
       </div>

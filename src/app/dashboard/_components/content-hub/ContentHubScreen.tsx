@@ -27,7 +27,7 @@ import { useInstagramAnalytics } from '../../content-analytics/hooks/useInstagra
 import { YouTubeCard } from '../../content-analytics/cards/YouTubeCard'
 import { InstagramCard } from '../../content-analytics/cards/InstagramCard'
 import { InstagramModal } from '../../content-analytics/modals/InstagramModal'
-import { YoutubeModal } from '../../content-analytics/modals/YoutubeModal'
+import { YouTubeOverlay } from '@/components/content/overlays/YouTubeOverlay'
 import { AnyContentItem, YouTubeContentItem, InstagramContentItem } from '../../content-analytics/types'
 import { sortContent } from '../../content-analytics/utils'
 
@@ -594,12 +594,13 @@ export function ContentHubScreen() {
             />
           )}
           {selectedContent.platform === 'youtube' && (
-            <YoutubeModal
-              selectedContent={selectedContent as YouTubeContentItem}
+            <YouTubeOverlay
+              videoId={selectedContent.id}
               onClose={() => {
                 setSelectedContent(null);
                 clearContentIdFromUrl();
               }}
+              showAnalysis={true}
             />
           )}
         </>
