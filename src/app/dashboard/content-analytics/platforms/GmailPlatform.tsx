@@ -14,6 +14,8 @@ import { sortContent } from '../utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlatformConnectionPrompt } from '../../_components/content-hub/PlatformConnectionPrompt';
 import { useGmailBatchRefresh } from '@/app/hooks/useGmailBatchRefresh';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 
 interface GmailPlatformProps {
   userId: string;
@@ -42,6 +44,18 @@ export function GmailPlatform({
 
   // Sort items by date
   const displayItemsSorted = sortContent(gmailItems, 'date');
+
+  // Convex hooks for batch analysis status and mutation
+  const gmailAccounts = useQuery(api.gmailQueries.getGmailAccounts, userId ? { userId } : 'skip');
+  const gmailAccountId = gmailAccounts && gmailAccounts.length > 0 ? gmailAccounts[0].email : undefined;
+  const batchAnalysis = useQuery(
+    api.gmailQueries.getGmailBatchAnalysis,
+    userId && gmailAccountId ? { userId, gmailAccountId } : 'skip'
+  );
+  const updateBatchStatus = useMutation(api.gmailMutations.updateGmailBatchAnalysisStatus);
+  const [cancelling, setCancelling] = useState(false);
+  const batchStatus = batchAnalysis?.status?.status || batchAnalysis?.status?.status?.status || null;
+  const batchTaskId = batchAnalysis?.status?.task_id || batchAnalysis?.status?.status?.task_id || 'gmail-batch-' + userId;
 
   const discussContent = async (item: AnyContentItem) => {
     try {
@@ -102,6 +116,28 @@ export function GmailPlatform({
     setRefreshCount((c) => c + 1); // Trigger refetch
   };
 
+  // Cancel handler
+  const handleCancel = async () => {
+    if (!userId || !gmailAccountId || !batchTaskId) return;
+    setCancelling(true);
+    try {
+      await updateBatchStatus({
+        userId,
+        gmailAccountId,
+        statusUpdate: {
+          status: 'cancelled',
+          task_id: batchTaskId,
+          completed_at: new Date().toISOString(),
+          progress: 0,
+        },
+      });
+    } catch (e) {
+      // Optionally show error
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   // Show Gmail connect card if no Gmail account found
   if (!hasConnectedAccounts) {
     return (
@@ -130,8 +166,8 @@ export function GmailPlatform({
 
   return (
     <>
-      {/* Refresh Button (top right, consistent with other platforms) */}
-      <div className="flex justify-end mb-4">
+      {/* Refresh & Cancel Buttons */}
+      <div className="flex justify-end mb-4 gap-2">
         <Button 
           size="sm" 
           onClick={handleRefresh}
@@ -141,6 +177,18 @@ export function GmailPlatform({
           <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
           {refreshing ? 'Refreshing...' : 'Refresh Gmail'}
         </Button>
+        {/* Show Cancel if batch analysis is in progress */}
+        {batchStatus && (batchStatus === 'processing' || batchStatus === 'enqueued') && (
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={handleCancel}
+            disabled={cancelling}
+            className="bg-red-500 hover:bg-red-600 text-white border border-red-500"
+          >
+            {cancelling ? 'Cancelling...' : 'Cancel Analysis'}
+          </Button>
+        )}
       </div>
       {refreshError && !refreshSuccess && (
         <div className="text-red-500 text-sm mb-2 text-center">{refreshError}</div>
