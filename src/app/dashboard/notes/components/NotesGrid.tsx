@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Note, NoteType } from '../types';
 import { NoteCard } from './cards/NoteCard';
 import { ProjectCard } from './projects/ProjectCard';
@@ -409,7 +409,7 @@ export function NotesGrid({
             <button
               onClick={handleCreateNote}
               disabled={isCreatingNote}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground dark:text-black rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isCreatingNote ? (
                 <>

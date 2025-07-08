@@ -51,7 +51,19 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onTagsChange, onEditin
 
   const handleTitleBlur = async () => {
     if (editedTitle !== null && editedTitle !== note.title) {
-      await onUpdate(String(note._id), { title: editedTitle });
+      // If tags have changed, update both title and tags together
+      const updates: { title?: string; tags?: string[] } = { title: editedTitle };
+      if (JSON.stringify(note.tags) !== JSON.stringify(currentTags)) {
+        updates.tags = currentTags;
+      }
+      const updated = await onUpdate(String(note._id), updates);
+      if (updated) {
+        if (updated.title !== undefined) setEditedTitle(null); // reset edit mode
+        if (updated.tags !== undefined) {
+          // If tags changed, update local state (if you keep a local copy)
+          // (No local tags state here, but if you add one, update it here)
+        }
+      }
     }
     setEditedTitle(null);
     if (onEditingTitleChange) onEditingTitleChange(false);
@@ -79,16 +91,25 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onTagsChange, onEditin
   };
 
   const handleRemoveTag = (indexToRemove: number) => {
-    onTagsChange?.(currentTags.filter((_, index) => index !== indexToRemove));
+    const newTags = currentTags.filter((_, index) => index !== indexToRemove);
+    if (onTagsChange) {
+      onTagsChange(newTags);
+    }
   };
 
   const handleEditTag = (index: number, newValue: string) => {
-    onTagsChange?.(currentTags.map((tag, i) => i === index ? newValue : tag));
+    const newTags = currentTags.map((tag, i) => i === index ? newValue : tag);
+    if (onTagsChange) {
+      onTagsChange(newTags);
+    }
   };
 
   const handleAddNewTag = () => {
     if (newTag && !currentTags.includes(newTag)) {
-      onTagsChange?.([...currentTags, newTag]);
+      const newTags = [...currentTags, newTag];
+      if (onTagsChange) {
+        onTagsChange(newTags);
+      }
       setNewTag('');
       // Keep focus for continuous tag adding
       newTagInputRef.current?.focus();
@@ -97,7 +118,10 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onTagsChange, onEditin
 
   const handleAddSuggestedTag = (tag: string) => {
     if (!currentTags.includes(tag)) {
-      onTagsChange?.([...currentTags, tag]);
+      const newTags = [...currentTags, tag];
+      if (onTagsChange) {
+        onTagsChange(newTags);
+      }
     }
   };
 
