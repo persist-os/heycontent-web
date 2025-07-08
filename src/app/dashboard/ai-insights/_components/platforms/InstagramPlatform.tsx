@@ -1,12 +1,13 @@
 'use client'
 
-import React, { useState } from 'react'
-import { Instagram } from 'lucide-react'
-import { InsightCard } from '../InsightCard'
+import React, { useState, useEffect } from 'react'
+import { InsightCard } from '@/components/content/InsightCard'
 import { useInstagramInsights } from '../hooks/useInstagramInsights'
 import { RefreshState } from '@/components/ui/refresh-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AnalysisDepthPicker } from '../AnalysisDepthPicker'
+import { Instagram } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { PlatformConnectionPrompt } from '../../../_components/content-hub/PlatformConnectionPrompt'
 
 interface InstagramPlatformProps {
@@ -24,7 +25,6 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
     error, 
     isConnected, 
     refresh,
-    // Post limit controls
     postLimit,
     setPostLimit,
     customPostLimit,
@@ -34,19 +34,27 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
     handleCustomSubmit
   } = useInstagramInsights(userId)
 
+  const handleRefreshOrConnect = () => {
+    if (!isConnected) {
+      window.location.href = '/settings?tab=integrations';
+    } else {
+      refresh();
+    }
+  };
+
   // Handle Instagram not connected state
   if (!isConnected) {
     return (
       <PlatformConnectionPrompt
         platformName="Instagram"
         platformIcon={
-          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
-            <Instagram className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+          <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center">
+            <Instagram className="w-full h-full text-pink-500" />
           </div>
         }
-        description="Connect your Instagram account to view detailed analytics, track content performance, and get insights on your content strategy."
-        buttonColor="bg-gradient-to-r from-purple-500 to-pink-500"
-        buttonHoverColor="hover:from-purple-600 hover:to-pink-600"
+        description="Connect your Instagram account to view detailed analytics, track post performance, and get insights on your content strategy."
+        buttonColor="bg-pink-600"
+        buttonHoverColor="hover:bg-pink-700"
       />
     )
   }
@@ -58,8 +66,8 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
           platform="Instagram"
           isRefreshing={refreshing}
           error={error}
-          onRefresh={refresh}
-          disabled={!userId || !isConnected}
+          onRefresh={handleRefreshOrConnect}
+          disabled={!userId}
           postLimit={postLimit}
           setPostLimit={setPostLimit}
           customPostLimit={customPostLimit}
@@ -71,7 +79,25 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
       )}
       
       {!refreshing && (
-        loading ? (
+        !isConnected ? (
+          <div className="text-center py-12 px-4">
+            <Instagram className="w-16 h-16 mx-auto mb-4 text-pink-500" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              Connect Your Instagram Account
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-4">
+              Connect your Instagram account to view detailed analytics, track post performance, 
+              and get insights on your content strategy.
+            </p>
+            <Button 
+              onClick={() => window.location.href = '/settings?tab=integrations'}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-lg font-medium transition-colors"
+            >
+              <Instagram className="w-4 h-4" />
+              Connect Instagram
+            </Button>
+          </div>
+        ) : loading ? (
           <div className="grid gap-6">
             {Array.from({ length: 3 }).map((_, index) => (
               <div key={index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 flex flex-col space-y-4">
@@ -93,9 +119,39 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
             {(insights || []).map((insight, idx) => (
               <InsightCard
                 key={idx}
-                {...insight}
+                title={insight.title}
+                platform="instagram"
+                impact={insight.impact}
+                whyNow={insight.whyNow}
+                actionSteps={insight.actionSteps}
+                expectedOutcome={insight.expectedOutcome}
+                sourceDetails={insight.sourceDetails}
+                relatedItems={insight.relatedItems}
                 expanded={expandedInsight === idx}
                 onExpand={() => setExpandedInsight(expandedInsight === idx ? null : idx)}
+                onDiscuss={(content: string, title: string) => {
+                  // Navigate to chat with insight context
+                  const context = {
+                    platform: 'ai-insights',
+                    contentId: `instagram-insight-${idx}`,
+                    title: title,
+                    source: 'AI Insights Dashboard',
+                    originalPlatform: 'instagram',
+                    fullInsight: {
+                      title: insight.title,
+                      impact: insight.impact,
+                      whyNow: insight.whyNow,
+                      actionSteps: insight.actionSteps,
+                      expectedOutcome: insight.expectedOutcome,
+                      sourceDetails: insight.sourceDetails,
+                      relatedItems: insight.relatedItems
+                    },
+                    analysis: content
+                  };
+                  
+                  const encodedContext = encodeURIComponent(JSON.stringify(context));
+                  window.location.href = `/dashboard/chat?contentContext=${encodedContext}`;
+                }}
               />
             ))}
           </div>

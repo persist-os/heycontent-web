@@ -3,17 +3,20 @@
 import React from 'react';
 import { YouTubeOverlay } from '@/components/content/overlays/YouTubeOverlay';
 import { InsightOverlay } from '@/components/content/overlays/InsightOverlay';
+import { InsightCard } from '@/components/content/InsightCard';
 
 interface ChatOverlayProps {
   contentType: 'youtube' | 'insight' | 'note';
   contentId: string;
   onClose: () => void;
+  insightData?: any; // For direct insight data
 }
 
 export const ChatOverlay: React.FC<ChatOverlayProps> = ({
   contentType,
   contentId,
-  onClose
+  onClose,
+  insightData
 }) => {
   // Render YouTube content using shared component
   if (contentType === 'youtube') {
@@ -28,6 +31,54 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
 
   // Render insight content using shared component
   if (contentType === 'insight') {
+    // If we have direct insight data, render it directly
+    if (insightData) {
+      return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-background rounded-lg shadow-xl max-w-7xl w-full max-h-[95vh] flex flex-col overflow-hidden">
+            <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+              <div className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-yellow-500 rounded flex items-center justify-center">
+                        <span className="text-white text-sm font-bold">I</span>
+                      </div>
+                      <div>
+                        <h1 className="text-2xl font-bold">AI Insight</h1>
+                        <p className="text-muted-foreground">AI-Generated Insight</p>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    title="Close"
+                    onClick={onClose}
+                    className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="max-w-7xl mx-auto p-6 overflow-y-auto flex-1">
+              <InsightCard
+                {...insightData}
+                expanded={true}
+                showAnalysis={true}
+                onDiscuss={(content: string, title: string) => {
+                  // Handle discuss action - could navigate to chat or show a modal
+                  console.log('Discuss insight:', { content, title });
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Otherwise use the InsightOverlay
     return (
       <InsightOverlay
         insightId={contentId}

@@ -36,7 +36,8 @@ import { YouTubePlatform as YouTubeInsightsPlatform } from '../../ai-insights/_c
 import { InstagramPlatform as InstagramInsightsPlatform } from '../../ai-insights/_components/platforms/InstagramPlatform'
 import { useYouTubeInsights } from '../../ai-insights/_components/hooks/useYouTubeInsights'
 import { useInstagramInsights } from '../../ai-insights/_components/hooks/useInstagramInsights'
-import { InsightCard } from '../../ai-insights/_components/InsightCard'
+import { useGmailInsights } from '../../ai-insights/_components/hooks/useGmailInsights'
+import { InsightCard } from '@/components/content/InsightCard'
 import { ContentCardSkeleton } from './ContentCardSkeleton'
 import { InsightCardSkeleton } from '../../ai-insights/_components/InsightCardSkeleton'
 

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { InsightCard } from '../InsightCard'
+import { InsightCard } from '@/components/content/InsightCard'
 import { useYouTubeInsights } from '../hooks/useYouTubeInsights'
 import { RefreshState } from '@/components/ui/refresh-state'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -41,9 +41,6 @@ export function YouTubePlatform({ userId, currentQuote, loading }: YouTubePlatfo
       refresh();
     }
   };
-
-  // Tab-specific refresh controls component
-  
 
   // Handle YouTube not connected state
   if (!isConnected) {
@@ -120,9 +117,39 @@ export function YouTubePlatform({ userId, currentQuote, loading }: YouTubePlatfo
             {(insights || []).map((insight, idx) => (
               <InsightCard
                 key={idx}
-                {...insight}
+                title={insight.title}
+                platform="youtube"
+                impact={insight.impact}
+                whyNow={insight.whyNow}
+                actionSteps={insight.actionSteps}
+                expectedOutcome={insight.expectedOutcome}
+                sourceDetails={insight.sourceDetails}
+                relatedItems={insight.relatedItems}
                 expanded={expandedInsight === idx}
                 onExpand={() => setExpandedInsight(expandedInsight === idx ? null : idx)}
+                onDiscuss={(content: string, title: string) => {
+                  // Navigate to chat with insight context
+                  const context = {
+                    platform: 'ai-insights',
+                    contentId: `youtube-insight-${idx}`,
+                    title: title,
+                    source: 'AI Insights Dashboard',
+                    originalPlatform: 'youtube',
+                    fullInsight: {
+                      title: insight.title,
+                      impact: insight.impact,
+                      whyNow: insight.whyNow,
+                      actionSteps: insight.actionSteps,
+                      expectedOutcome: insight.expectedOutcome,
+                      sourceDetails: insight.sourceDetails,
+                      relatedItems: insight.relatedItems
+                    },
+                    analysis: content
+                  };
+                  
+                  const encodedContext = encodeURIComponent(JSON.stringify(context));
+                  window.location.href = `/dashboard/chat?contentContext=${encodedContext}`;
+                }}
               />
             ))}
           </div>
