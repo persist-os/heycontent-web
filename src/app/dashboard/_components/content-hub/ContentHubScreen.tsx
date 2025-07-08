@@ -310,11 +310,11 @@ export function ContentHubScreen() {
             </div>
             
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
-              Connect Your Platforms
+              Let's Get Started! 🚀
             </h3>
             
             <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
-              Connect your YouTube, Instagram, and Gmail accounts to view detailed analytics, track content performance, and get insights on your content strategy.
+              Unlock powerful insights by connecting your favorite platforms! We'll help you track performance, understand your audience, and grow your creative presence. It only takes a minute to connect and the insights are worth it!
             </p>
             
             <Button 
@@ -326,7 +326,7 @@ export function ContentHubScreen() {
             </Button>
             
             <div className="mt-3 sm:mt-4 text-xs text-gray-500">
-              You can connect platforms in Settings → Integrations
+              Pro tip: Connect all your platforms for a complete picture of your creative journey!
             </div>
           </Card>
         </div>
@@ -378,11 +378,11 @@ export function ContentHubScreen() {
           </div>
           
           <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
-            No Content Found
+            Your Creative Journey Starts Here! ✨
           </h3>
           
           <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
-            We couldn't find any content in your connected platforms. Create new content to see your analytics here.
+            Your content dashboard is ready and waiting! Once you create and publish content on your connected platforms, you'll see your analytics light up right here. Keep creating - we can't wait to help you track your success!
           </p>
         </Card>
       </div>
@@ -402,11 +402,11 @@ export function ContentHubScreen() {
             </div>
             
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
-              Connect Your Platforms
+              Unlock Your Creative Potential!
             </h3>
             
             <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
-              Connect your YouTube, Instagram, and Gmail accounts to receive AI-powered insights, strategic recommendations, and content performance analysis.
+              Connect your favorite platforms to discover powerful insights about your content! We'll help you understand what's working, spot trends, and find new opportunities to grow your creative impact. It's like having a personal content coach! 🚀
             </p>
             
             <Button 
@@ -418,7 +418,7 @@ export function ContentHubScreen() {
             </Button>
             
             <div className="mt-3 sm:mt-4 text-xs text-gray-500">
-              You can connect platforms in Settings → Integrations
+              Pro tip: Connect all your platforms for a complete picture of your creative journey!
             </div>
           </Card>
         </div>
@@ -463,11 +463,11 @@ export function ContentHubScreen() {
           </div>
           
           <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
-            No Insights Available
+            Your Insights Are Brewing! ☕
           </h3>
           
           <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
-            We couldn't find any insights from your connected platforms. Create new content to receive AI-powered insights and recommendations.
+            We're still getting to know your content! As you create and share more, we'll uncover powerful insights to help you grow. Keep creating amazing content - we'll be here with fresh ideas and recommendations soon!
           </p>
         </Card>
       </div>
@@ -483,7 +483,7 @@ export function ContentHubScreen() {
   // Show toast for refresh success/error
   useEffect(() => {
     if (refreshYouTubeSuccess) {
-      toast.success('YouTube refresh started! Navigate freely while we process your data');
+      toast.success('🎬 YouTube refresh in progress! Your latest content is on its way. Feel free to keep exploring - we will update your dashboard soon!');
     }
   }, [refreshYouTubeSuccess]);
 
@@ -494,7 +494,13 @@ export function ContentHubScreen() {
       shouldShowToast: !!refreshYouTubeError
     });
     if (refreshYouTubeError) {
-      toast.error(refreshYouTubeError);
+      const friendlyError = refreshYouTubeError.includes('rate limit') 
+        ? "We're getting lots of love from creators right now! Please take a quick break and try again in a moment. Your creative flow is worth the wait! 🎨✨"
+        : refreshYouTubeError.includes('authentication')
+        ? "We need to refresh your YouTube connection. Please check your account settings and try again!"
+        : `Oops! We hit a snag: ${refreshYouTubeError}. Your content is safe - please try again in a moment!`;
+      
+      toast.error(friendlyError);
     }
   }, [refreshYouTubeError]);
 

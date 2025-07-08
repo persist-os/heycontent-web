@@ -321,7 +321,14 @@ export const useChat = (
         return;
       }
       console.error('Chat error:', error);
-      setError(error instanceof Error ? error.message : 'An error occurred');
+      const friendlyError = error instanceof Error 
+        ? error.message.includes('rate limit') 
+          ? 'We\'re getting lots of love from creators right now! Please take a quick break and try again in a moment. Your creative flow is worth the wait! 🎨✨'
+          : error.message.includes('timeout')
+            ? 'Your creative genius is working hard! Let\'s give it a moment and try that again.'
+            : `We hit a creative block: ${error.message}. Your work is safe - please try again!`
+        : 'Our creative engine is warming up! Please try again in a moment.';
+      setError(friendlyError);
       
       // Remove typing indicator on error
       setMessages(prev => prev.filter(msg => msg.status !== 'typing'));

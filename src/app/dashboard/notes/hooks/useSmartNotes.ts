@@ -5,6 +5,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { Note, NoteUpdate, NoteType } from "../types";
 import { getApiKey } from "@/app/lib/api-helpers";
 import { formatAnalysisToMarkdown } from '../utils/format-utils';
+import { toast } from 'sonner';
 
 // Define the return type for the hook to ensure TypeScript knows about all returned functions
 interface SmartNotesHook {
@@ -43,8 +44,8 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
     try {
       const apiKey = await getApiKey();
       if (!apiKey) {
-        console.error("❌ [generateMetadata] API key not found.");
-        return { success: false, error: "API key not found" };
+        console.error("🔑 [generateMetadata] API key not found.");
+        return { success: false, error: "We need to verify your account to continue. Please sign in again!" };
       }
 
       const response = await fetch('/api/smart-notes/generate-metadata', {
@@ -58,16 +59,23 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error("❌ [generateMetadata] API call failed:", { status: response.status, errorData });
-        throw new Error(errorData.message || 'Failed to generate metadata');
+        console.error("⚠️ [generateMetadata] API call failed:", { status: response.status, errorData });
+        const friendlyError = errorData.message?.includes('rate limit') 
+          ? "We're getting lots of love from creators right now! Please take a quick break and try again in a moment. Your creative flow is worth the wait! 🎨✨"
+          : errorData.message || "We hit a creative block while generating insights. Your work is safe - please try again in a moment!";
+        throw new Error(friendlyError);
       }
 
       const data = await response.json();
       console.log("✅ [generateMetadata] Metadata generated successfully:", data);
       return { success: true, data };
     } catch (error) {
-      console.error("💥 [generateMetadata] Error during metadata generation:", error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      console.error("🔄 [generateMetadata] Error during metadata generation:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const friendlyError = errorMessage.includes('rate limit')
+        ? "We're getting lots of love from creators right now! Please take a quick break and try again in a moment. Your creative flow is worth the wait! 🎨✨"
+        : `We hit a creative block: ${errorMessage}. Your work is safe - please try again!`;
+      return { success: false, error: friendlyError };
     }
   }, []);
 
@@ -93,11 +101,18 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
         setNotes(prev => [newNote as Note, ...prev]);
         return newNote as Note;
       } else {
-        console.warn('❌ [createNote] createNote returned null or invalid note.');
+        console.warn('⚠️ [createNote] Note creation returned an unexpected response.');
+        toast.error("Hmm, we couldn't save your note. Your creative work is safe - please try again!");
         return null;
       }
     } catch (error) {
-      console.error('💥 [createNote] Error creating note:', error);
+      console.error('🔄 [createNote] Error creating note:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      toast.error(
+        errorMessage.includes('rate limit')
+          ? "We're getting lots of love from creators right now! Please take a quick break and try again in a moment. Your creative flow is worth the wait! 🎨✨"
+          : "We hit a creative block while saving your note. Your work is safe - please try again!"
+      );
       return null;
     } finally {
       setIsSaving(false);
@@ -184,16 +199,16 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
         
         // Check for NaN values specifically
         if (typeof img.uploadedAt === 'number' && isNaN(img.uploadedAt)) {
-          console.error(`❌ Image ${index} uploadedAt is NaN!`);
+          console.warn(`🖼️ Image ${index} has an invalid upload timestamp`);
         }
         if (img.size !== undefined && typeof img.size === 'number' && isNaN(img.size)) {
-          console.error(`❌ Image ${index} size is NaN!`);
+          console.warn(`🖼️ Image ${index} has an invalid size`);
         }
         if (img.width !== undefined && typeof img.width === 'number' && isNaN(img.width)) {
-          console.error(`❌ Image ${index} width is NaN!`);
+          console.warn(`🖼️ Image ${index} has an invalid width`);
         }
         if (img.height !== undefined && typeof img.height === 'number' && isNaN(img.height)) {
-          console.error(`❌ Image ${index} height is NaN!`);
+          console.warn(`🖼️ Image ${index} has an invalid height`);
         }
       });
     }
@@ -267,6 +282,7 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
               "⚠️ [updateNote] Metadata generation failed, but note was saved:",
               metadataError
             );
+            toast.warning("We saved your note, but couldn't generate insights. Don't worry, your work is safe!");
           }
         } else if (force) {
           console.log(
@@ -276,15 +292,22 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
         
         return updatedNote;
       } else {
-        console.warn('updateNoteConvex returned null or invalid note!', {
+        console.warn('⚠️ Note update returned an unexpected response', {
           noteId,
           userId,
-          updateFields
+          updateFields: Object.keys(updateFields)
         });
+        toast.error("We couldn't save your changes. Your work is safe - please try again!");
         return null;
       }
     } catch (error) {
-      console.error('Error updating note:', error);
+      console.error('🔄 Error updating note:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      toast.error(
+        errorMessage.includes('rate limit')
+          ? "We're getting lots of love from creators right now! Please take a quick break and try again in a moment. Your creative flow is worth the wait! 🎨✨"
+          : "We hit a creative block while saving your changes. Your work is safe - please try again!"
+      );
       return null;
     } finally {
       setIsSaving(false);

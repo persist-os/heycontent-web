@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
     if (!apiKey) {
       console.warn(`[${requestId}] Authentication failed: No Authorization header or invalid format`);
-      return NextResponse.json({ error: 'Unauthorized - Missing or invalid Authorization header' }, { status: 401 });
+      return NextResponse.json({ error: 'We need to verify your account to continue. Please sign in to unlock your creative potential!' }, { status: 401 });
     }
 
     // Parse request body
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     if (!userId || !planId || !email || !name) {
       console.error(`[${requestId}] Invalid subscription request: missing required fields`);
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'A few details are missing to get you started. Please check your information and try again!' },
         { status: 400 }
       );
     }
@@ -66,7 +66,9 @@ export async function POST(request: Request) {
       });
       
       return NextResponse.json(
-        { error: apiError instanceof Error ? apiError.message : 'Failed to create checkout session' },
+        { error: apiError instanceof Error ? 
+          apiError.message : 
+          'We hit a snag while setting up your subscription. Our team is on it! Try again in a moment.' },
         { status: 400 }
       );
     }
@@ -76,7 +78,7 @@ export async function POST(request: Request) {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
     return NextResponse.json(
-      { error: 'Failed to create subscription' },
+      { error: 'We\'re having trouble processing your subscription right now. Don\'t worry, your creative work is safe! Please try again in a few minutes.' },
       { status: 500 }
     );
   } finally {
