@@ -27,6 +27,7 @@ interface MessageBubbleProps {
   onInputPopulate?: (text: string) => void
   notepadOpen?: boolean
   onQuoteToNotepad?: (text: string) => void
+  onContentClick?: (contentType: string, contentId: string) => void
 }
 
 export function MessageBubble({
@@ -43,7 +44,8 @@ export function MessageBubble({
   userId,
   onInputPopulate,
   notepadOpen,
-  onQuoteToNotepad
+  onQuoteToNotepad,
+  onContentClick
 }: MessageBubbleProps) {
   const isUser = message.role === 'user'
   const [selectedText, setSelectedText] = useState('')
@@ -336,6 +338,7 @@ export function MessageBubble({
                   {/* Use ChatContentRenderer for user messages with linked content */}
                   <ChatContentRenderer 
                     content={message.content} 
+                    onContentClick={onContentClick}
                   />
                 </>
               ) : (

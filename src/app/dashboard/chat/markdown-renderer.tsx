@@ -104,7 +104,7 @@ function LinkEmbed({ href, children }: { href: string; children: React.ReactNode
 }
 
 // Component to render linked content in chat messages
-function ChatContentRenderer({ content, className = '' }: ChatContentRendererProps) {
+function ChatContentRenderer({ content, className = '', onContentClick }: ChatContentRendererProps & { onContentClick?: (contentType: string, contentId: string) => void }) {
   const { firebaseUser } = useAuth()
   const userId = firebaseUser?.uid
   
@@ -238,36 +238,48 @@ function ChatContentRenderer({ content, className = '' }: ChatContentRendererPro
         const contentType = target.getAttribute('data-content-type')
         
         if (contentId && contentType) {
-          // Handle different content types with back navigation to chat
-          const chatIdParam = currentChatId ? `&chatId=${currentChatId}` : ''
-          
-          switch (contentType) {
-            case 'note':
-              // Extract the note ID (remove note: prefix if present)
-              const noteId = contentId.startsWith('note:') ? contentId.replace('note:', '') : contentId
-              // Navigate to the note with back navigation to chat
-              window.open(`/dashboard/notes?noteId=${noteId}&fromChat=true${chatIdParam}`, '_blank')
-              break
-            case 'youtube':
-              // Extract video ID and navigate to YouTube analysis with back navigation
-              const videoId = contentId.replace('youtube:', '')
-              window.open(`/dashboard/notes/youtube-analysis/${videoId}?fromChat=true${chatIdParam}`, '_blank')
-              break
-            case 'instagram':
-              // For Instagram, navigate to content analytics with back navigation
-              window.open(`/dashboard/content-analytics?analyticsId=${contentId}&platform=instagram&tab=posts&fromChat=true${chatIdParam}`, '_blank')
-              break
-            case 'insight':
-              // Navigate to insight analysis with back navigation
-              window.open(`/dashboard/notes/insight-analysis/${encodeURIComponent(contentId)}?fromChat=true${chatIdParam}`, '_blank')
-              break
-            default:
-              console.log('Unknown content type:', contentType, contentId)
+          // If onContentClick is provided, use overlay mode
+          if (onContentClick) {
+            // Extract the actual content ID without prefix
+            let actualContentId = contentId
+            if (contentType === 'note' && contentId.startsWith('note:')) {
+              actualContentId = contentId.replace('note:', '')
+            } else if (contentType === 'youtube' && contentId.startsWith('youtube:')) {
+              actualContentId = contentId.replace('youtube:', '')
+            }
+            onContentClick(contentType, actualContentId)
+          } else {
+            // Fallback to navigation mode
+            const chatIdParam = currentChatId ? `&chatId=${currentChatId}` : ''
+            
+            switch (contentType) {
+              case 'note':
+                // Extract the note ID (remove note: prefix if present)
+                const noteId = contentId.startsWith('note:') ? contentId.replace('note:', '') : contentId
+                // Navigate to the note with back navigation to chat
+                window.open(`/dashboard/notes?noteId=${noteId}&fromChat=true${chatIdParam}`, '_blank')
+                break
+              case 'youtube':
+                // Extract video ID and navigate to YouTube analysis with back navigation
+                const videoId = contentId.replace('youtube:', '')
+                window.open(`/dashboard/notes/youtube-analysis/${videoId}?fromChat=true${chatIdParam}`, '_blank')
+                break
+              case 'instagram':
+                // For Instagram, navigate to content analytics with back navigation
+                window.open(`/dashboard/content-analytics?analyticsId=${contentId}&platform=instagram&tab=posts&fromChat=true${chatIdParam}`, '_blank')
+                break
+              case 'insight':
+                // Navigate to insight analysis with back navigation
+                window.open(`/dashboard/notes/insight-analysis/${encodeURIComponent(contentId)}?fromChat=true${chatIdParam}`, '_blank')
+                break
+              default:
+                console.log('Unknown content type:', contentType, contentId)
+            }
           }
         }
       }
     }
-  }, [])
+  }, [onContentClick, currentChatId])
 
   return (
     <div 

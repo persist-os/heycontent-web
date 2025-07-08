@@ -44,6 +44,7 @@ import { chatHelp } from '@/helpContent'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { CreateNoteButton } from '@/components/ui/CreateNoteButton';
+import { ChatOverlay } from './components/ChatOverlay';
 
 const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery }) => {
   const router = useRouter()
@@ -192,6 +193,25 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Modal state for notepad warning
   const [showNotepadWarning, setShowNotepadWarning] = useState(false);
+  
+  // Overlay state for content links
+  const [overlayContent, setOverlayContent] = useState<{
+    contentType: 'youtube' | 'insight' | 'note';
+    contentId: string;
+  } | null>(null);
+
+  // Handle content click to show overlay
+  const handleContentClick = useCallback((contentType: string, contentId: string) => {
+    setOverlayContent({
+      contentType: contentType as 'youtube' | 'insight' | 'note',
+      contentId
+    });
+  }, []);
+
+  // Handle overlay close
+  const handleOverlayClose = useCallback(() => {
+    setOverlayContent(null);
+  }, []);
   const [pendingNewChat, setPendingNewChat] = useState(false);
 
   const { 
@@ -624,6 +644,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                     onInputPopulate={handleInputAppend}
                     notepadOpen={notepadOpen}
                     onQuoteToNotepad={handleQuoteToNotepad}
+                    onContentClick={handleContentClick}
                   />
 
                   {/* Persona tip */}
@@ -755,6 +776,15 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         onClose={() => setHelpOpen(false)} 
         pages={chatHelp}
       />
+
+      {/* Chat Overlay */}
+      {overlayContent && (
+        <ChatOverlay
+          contentType={overlayContent.contentType}
+          contentId={overlayContent.contentId}
+          onClose={handleOverlayClose}
+        />
+      )}
     </>
   );
 }
