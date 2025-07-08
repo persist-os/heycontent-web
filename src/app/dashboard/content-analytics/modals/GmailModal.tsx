@@ -116,12 +116,22 @@ export const GmailModal: React.FC<GmailModalProps> = ({
               <h3 className="text-base font-medium mb-4 text-black dark:text-white">All Messages in Thread</h3>
               <div className="space-y-4">
                 {selectedContent.content.data.messages.map((msg, idx) => (
-                  <Card key={msg.id || idx} className="p-3 bg-white dark:bg-gray-900 border">
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                      <span>From: {msg.from}</span>
-                      {msg.subject && <span> | Subject: {msg.subject}</span>}
+                  <Card
+                    key={msg.id || idx}
+                    className="p-4 bg-white dark:bg-gray-900 border shadow-sm rounded-lg overflow-hidden"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-1">
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        <span className="font-semibold">From:</span> {msg.from}
+                        {msg.subject && <span className="ml-2"><span className="font-semibold">Subject:</span> {msg.subject}</span>}
+                      </div>
                     </div>
-                    <div className="text-sm text-black dark:text-white mb-1">{msg.snippet}</div>
+                    <div
+                      className="text-sm text-black dark:text-white whitespace-pre-line break-words max-h-60 overflow-auto border-t border-gray-100 dark:border-gray-800 pt-2"
+                      style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+                    >
+                      {msg.body || msg.snippet}
+                    </div>
                   </Card>
                 ))}
               </div>

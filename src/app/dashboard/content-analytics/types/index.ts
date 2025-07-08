@@ -118,6 +118,7 @@ export interface GmailContentData {
     label_ids: string[];
     snippet: string;
     subject: string;
+    body?: string;
   }>;
 }
 export interface GmailContentDetails {
