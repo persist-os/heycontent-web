@@ -161,8 +161,8 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
   };
 
   const handleClick = () => {
-    // For YouTube videos, show preview card instead of opening in new tab
-    if (contentData.type === 'youtube') {
+    // For YouTube videos and insights, show preview card instead of opening in new tab
+    if (contentData.type === 'youtube' || contentData.type === 'insight') {
       // Call onLinkContent to trigger preview card
       if (onLinkContent) {
         onLinkContent(prefixedId);

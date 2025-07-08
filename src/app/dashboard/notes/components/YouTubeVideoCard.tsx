@@ -15,8 +15,15 @@ import {
   FileText,
   Lightbulb,
   Target,
-  Users
+  Users,
+  Activity,
+  Eye,
+  Heart,
+  MessageCircle,
+  Clock
 } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { MarkdownRenderer } from '@/app/dashboard/chat/markdown-renderer';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 
@@ -35,25 +42,15 @@ export const YouTubeVideoCard: React.FC<YouTubeVideoCardProps> = ({
   const userId = firebaseUser?.uid;
   const router = useRouter();
 
-  // Fetch video data
-  const videoData = useQuery(api.notes.getContentByPrefixedId, {
-    prefixedId: `youtube:${videoId}`,
+  // Fetch video data using the same query as the original page
+  const videoData = useQuery(api.youtubeQueries.getFullVideoDetails, {
+    videoId: videoId,
     userId: userId || ''
   });
 
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Directly navigate to the analysis page
-  React.useEffect(() => {
-    if (onOpenAnalysis) {
-      onOpenAnalysis(videoId);
-    } else {
-      // Fallback: navigate directly to the analysis page
-      router.push(`/dashboard/notes/youtube-analysis/${videoId}`);
-    }
-    // Close the modal after navigation
-    onClose();
-  }, [videoId, onOpenAnalysis, router, onClose]);
+  // Remove the automatic navigation - let the user choose when to navigate
 
   if (!videoData) {
     return (
@@ -68,229 +65,221 @@ export const YouTubeVideoCard: React.FC<YouTubeVideoCardProps> = ({
     );
   }
 
+  const formatNumber = (num: number) => {
+    if (num >= 1000000) {
+      return (num / 1000000).toFixed(1) + 'M';
+    } else if (num >= 1000) {
+      return (num / 1000).toFixed(1) + 'K';
+    }
+    return num.toString();
+  };
+
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
     return date.toLocaleDateString('en-US', { 
       year: 'numeric', 
-      month: 'short', 
+      month: 'long', 
       day: 'numeric' 
     });
   };
 
-  // Helper function to render analysis content
-  const renderAnalysisContent = (analysis: any) => {
-    if (!analysis) return null;
+  const formatDuration = (duration: string) => {
+    // Convert YouTube duration format (PT4M13S) to readable format
+    const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    if (!match) return duration;
     
-    // Handle different analysis formats
-    if (typeof analysis === 'string') {
-      return (
-        <div className="bg-background rounded-lg p-3">
-          <h5 className="text-sm font-medium mb-2 flex items-center gap-2">
+    const hours = match[1] ? parseInt(match[1]) : 0;
+    const minutes = match[2] ? parseInt(match[2]) : 0;
+    const seconds = match[3] ? parseInt(match[3]) : 0;
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    } else {
+      return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+  };
+
+  // Helper function to render analysis content
+  const renderAnalysisContent = (analysisMarkdown: string) => {
+    if (!analysisMarkdown) return null;
+    
+    return (
+      <div className="space-y-4">
+        <div className="bg-muted/50 rounded-lg p-4">
+          <h4 className="font-semibold mb-2 flex items-center gap-2">
             <FileText className="w-4 h-4" />
             Content Analysis
-          </h5>
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-            {analysis}
-          </p>
+          </h4>
+          <div className="text-sm text-muted-foreground">
+            <MarkdownRenderer content={analysisMarkdown} />
+          </div>
         </div>
-      );
-    }
-    
-    if (typeof analysis === 'object') {
-      return (
-        <div className="space-y-3">
-          {analysis.keyInsights && (
-            <div className="bg-background rounded-lg p-3">
-              <h5 className="text-sm font-medium mb-2 flex items-center gap-2">
-                <Lightbulb className="w-4 h-4" />
-                Key Insights
-              </h5>
-              <p className="text-sm text-muted-foreground">
-                {analysis.keyInsights}
-              </p>
-            </div>
-          )}
-          
-          {analysis.contentSummary && (
-            <div className="bg-background rounded-lg p-3">
-              <h5 className="text-sm font-medium mb-2 flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                Content Summary
-              </h5>
-              <p className="text-sm text-muted-foreground">
-                {analysis.contentSummary}
-              </p>
-            </div>
-          )}
-          
-          {analysis.targetAudience && (
-            <div className="bg-background rounded-lg p-3">
-              <h5 className="text-sm font-medium mb-2 flex items-center gap-2">
-                <Target className="w-4 h-4" />
-                Target Audience
-              </h5>
-              <p className="text-sm text-muted-foreground">
-                {analysis.targetAudience}
-              </p>
-            </div>
-          )}
-          
-          {analysis.recommendations && (
-            <div className="bg-background rounded-lg p-3">
-              <h5 className="text-sm font-medium mb-2 flex items-center gap-2">
-                <TrendingUp className="w-4 h-4" />
-                Recommendations
-              </h5>
-              <p className="text-sm text-muted-foreground">
-                {analysis.recommendations}
-              </p>
-            </div>
-          )}
-        </div>
-      );
-    }
-    
-    return null;
+      </div>
+    );
+  };
+
+  // Helper function to get grid classes based on item count
+  const getGridClasses = (itemCount: number) => {
+    if (itemCount === 0) return "grid grid-cols-1 gap-4";
+    if (itemCount === 1) return "grid grid-cols-1 gap-4";
+    if (itemCount === 2) return "grid grid-cols-2 gap-4";
+    if (itemCount === 3) return "grid grid-cols-2 gap-4";
+    if (itemCount === 4) return "grid grid-cols-2 gap-4";
+    if (itemCount === 5) return "grid grid-cols-2 gap-4";
+    return "grid grid-cols-2 gap-4"; // Default for 6+ items
+  };
+
+  // Helper function to get item classes based on position and total count
+  const getItemClasses = (index: number, totalCount: number) => {
+    if (totalCount === 1) return "col-span-1";
+    if (totalCount === 2) return "col-span-1";
+    if (totalCount === 3 && index === 2) return "col-span-2"; // Last item spans full width
+    if (totalCount === 4) return "col-span-1";
+    if (totalCount === 5 && index === 4) return "col-span-2"; // Last item spans full width
+    return "col-span-1"; // Default
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className={cn(
-        "bg-background rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden",
-        isExpanded ? "w-full max-w-6xl" : ""
-      )}>
+      <div className="bg-background rounded-lg shadow-xl max-w-7xl w-full max-h-[95vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <div className="flex items-center gap-3">
-            <Youtube className="w-6 h-6 text-red-500" />
-            <h3 className="text-lg font-semibold">YouTube Video Preview</h3>
-          </div>
-          <div className="flex items-center gap-2">
-            {onOpenAnalysis && (
+        <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
+                  <Youtube className="w-8 h-8 text-red-500" />
+                  <div>
+                    <h1 className="text-2xl font-bold">{videoData.snippet?.title || 'YouTube Video'}</h1>
+                    <p className="text-muted-foreground">YouTube Video Analysis</p>
+                  </div>
+                </div>
+              </div>
               <button
-                onClick={() => onOpenAnalysis(videoId)}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                title="Close"
+                onClick={onClose}
+                className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
               >
-                <BarChart3 className="w-4 h-4" />
-                Analysis
+                <X className="w-6 h-6" />
               </button>
-            )}
-            <button
-              title="Toggle Analysis"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
-            >
-              <TrendingUp className="w-4 h-4" />
-            </button>
-            <button
-              title="Close"
-              onClick={onClose}
-              className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row h-full">
-          {/* Video Section */}
-          <div className="flex-1 p-4">
-            <div className="aspect-video bg-muted rounded-lg overflow-hidden mb-4">
-              {videoData.thumbnailUrl ? (
-                <img
-                  src={videoData.thumbnailUrl}
-                  alt={videoData.title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Play className="w-16 h-16 text-muted-foreground" />
-                </div>
-              )}
-            </div>
-            
-            <h2 className="text-xl font-semibold mb-2 line-clamp-2">
-              {videoData.title}
-            </h2>
-            
-            <p className="text-muted-foreground text-sm mb-4 line-clamp-3">
-              {videoData.content}
-            </p>
-
-            {/* Video Details */}
-            <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                <span>Published {formatDate(videoData.createdAt)}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                <span>Video ID: {videoId}</span>
+        <div className="max-w-7xl mx-auto p-6 overflow-y-auto flex-1">
+          {/* Video and Stats Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            {/* Video */}
+            <div className="lg:col-span-2 flex flex-col">
+              <div className="relative aspect-video bg-muted rounded-lg overflow-hidden cursor-pointer group">
+                {videoData.snippet?.thumbnails?.high || videoData.snippet?.thumbnails?.medium ? (
+                  <>
+                    <img
+                      src={videoData.snippet.thumbnails.high || videoData.snippet.thumbnails.medium}
+                      alt={videoData.snippet?.title || 'YouTube Video'}
+                      className="w-full h-full object-cover"
+                      onClick={() => window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank')}
+                    />
+                    {/* Play overlay */}
+                    <div 
+                      className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank')}
+                    >
+                      <div className="bg-red-600 rounded-full p-4">
+                        <Play className="w-8 h-8 text-white fill-white" />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Play className="w-16 h-16 text-muted-foreground" />
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-3">
-              <button
-                onClick={() => window.open(videoData.url || `https://www.youtube.com/watch?v=${videoId}`, '_blank')}
-                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-              >
-                <Play className="w-4 h-4" />
-                Watch on YouTube
-              </button>
-              <button
-                onClick={() => window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank')}
-                className="flex items-center gap-2 px-4 py-2 border border-border rounded-md hover:bg-muted transition-colors"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Open in New Tab
-              </button>
+            {/* Stats */}
+            <div className="lg:col-span-1">
+              <Card className="h-full">
+                <CardHeader>
+                  <CardTitle>Video Statistics</CardTitle>
+                </CardHeader>
+                                <CardContent className="space-y-4">
+                  {(() => {
+                    // Build array of available stat items
+                    const statItems = [];
+                    
+                    if (videoData.statistics?.views !== undefined) {
+                      statItems.push({
+                        icon: <Eye className="w-6 h-6 text-blue-500 mx-auto mb-2" />,
+                        value: formatNumber(videoData.statistics.views),
+                        label: "Views"
+                      });
+                    }
+                    
+                    if (videoData.statistics?.likes !== undefined) {
+                      statItems.push({
+                        icon: <Heart className="w-6 h-6 text-red-500 mx-auto mb-2" />,
+                        value: formatNumber(videoData.statistics.likes),
+                        label: "Likes"
+                      });
+                    }
+                    
+                    if (videoData.statistics?.comments !== undefined) {
+                      statItems.push({
+                        icon: <MessageCircle className="w-6 h-6 text-green-500 mx-auto mb-2" />,
+                        value: formatNumber(videoData.statistics.comments),
+                        label: "Comments"
+                      });
+                    }
+                    
+                    if (videoData.content_details?.duration) {
+                      statItems.push({
+                        icon: <Clock className="w-6 h-6 text-purple-500 mx-auto mb-2" />,
+                        value: formatDuration(videoData.content_details.duration),
+                        label: "Duration"
+                      });
+                    }
+                    
+                    if (videoData.snippet?.published_at) {
+                      statItems.push({
+                        icon: <Calendar className="w-6 h-6 text-orange-500 mx-auto mb-2" />,
+                        value: formatDate(new Date(videoData.snippet.published_at).getTime()),
+                        label: "Published"
+                      });
+                    }
+                    
+                    return (
+                      <div className={getGridClasses(statItems.length)}>
+                        {statItems.map((item, index) => (
+                          <div 
+                            key={index}
+                            className={`text-center p-3 bg-muted/50 rounded-lg ${getItemClasses(index, statItems.length)}`}
+                          >
+                            {item.icon}
+                            <div className="text-2xl font-bold">{item.value}</div>
+                            <div className="text-xs text-muted-foreground">{item.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
             </div>
           </div>
 
           {/* Analysis Section */}
-          {isExpanded && (
-            <div className="w-full lg:w-80 border-l bg-muted/30 p-4 overflow-y-auto">
-              <h4 className="font-semibold mb-4 flex items-center gap-2">
-                <BarChart3 className="w-4 h-4" />
-                Content Analysis
-              </h4>
-              
-              <div className="space-y-4">
-                {/* Textual Analysis */}
-                {videoData.analysis ? (
-                  renderAnalysisContent(videoData.analysis)
-                ) : (
-                  <div className="bg-background rounded-lg p-3">
-                    <p className="text-sm text-muted-foreground">
-                      No analysis available for this video.
-                    </p>
-                  </div>
-                )}
-
-                {/* Tags */}
-                {videoData.tags && videoData.tags.length > 0 && (
-                  <div className="bg-background rounded-lg p-3">
-                    <h5 className="text-sm font-medium mb-2">Tags</h5>
-                    <div className="flex flex-wrap gap-1">
-                      {videoData.tags.slice(0, 8).map((tag, idx) => (
-                        <span
-                          key={idx}
-                          className="inline-block bg-accent/20 text-accent-foreground px-2 py-1 rounded text-xs"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                      {videoData.tags.length > 8 && (
-                        <span className="text-xs text-muted-foreground">
-                          +{videoData.tags.length - 8} more
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+          {videoData.analysisMarkdown && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Content Analysis</CardTitle>
+                <CardDescription>AI-powered insights about your video content</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {renderAnalysisContent(videoData.analysisMarkdown)}
+              </CardContent>
+            </Card>
           )}
         </div>
       </div>
