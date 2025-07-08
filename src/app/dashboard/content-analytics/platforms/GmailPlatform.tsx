@@ -245,12 +245,12 @@ export function GmailPlatform({
             </div>
             
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
-              No Emails Found
+              No Business Opportunities Detected
             </h3>
             
             <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
-              We couldn't find any emails in your connected Gmail account. 
-              Try sending or receiving emails to see your analytics here.
+              We didn't spot any business opportunities in your Gmail just yet. <br />
+              Keep creating, connecting, and collaborating—your next big opportunity could be just one email away! 
             </p>
           </Card>
         </div>
