@@ -105,23 +105,13 @@ export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
           }
         } else if (contentType === 'insight') {
           // Handle insight linking - ID format is insight:analysisId:index
-          const fullInsightId = contentId; // Keep the full ID including the index
-          
-          const insight = availableContent.find(n => n.id === fullInsightId);
-          const insightTitle = insight?.title || '[Insight: Unknown]';
-          
+          // Use LinkedContentRenderer for consistent preview style
           parts.push(
-            <button
+            <LinkedContentRenderer
               key={`insight-link-${partIndex}-${linkStartIndex}`}
-              onClick={(e) => {
-                e.preventDefault();
-                if (onLinkContent) onLinkContent(fullInsightId);
-              }}
-              className="text-yellow-700 hover:text-yellow-900 underline bg-transparent border-none p-0 m-0 cursor-pointer font-inherit text-inherit font-medium"
-              type="button"
-            >
-              {`Insight: ${insightTitle}`}
-            </button>
+              prefixedId={contentId}
+              onLinkContent={onLinkContent}
+            />
           );
         } else {
           // Handle other content types (youtube, instagram, etc.)
