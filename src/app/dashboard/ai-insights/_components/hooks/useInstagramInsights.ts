@@ -92,7 +92,7 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
 
   const refresh = useCallback(async () => {
     if (!userId || !instagramAccount?.instagramAccountId) {
-      setError('Instagram account not connected');
+      setError('Your Instagram account isn\'t connected yet. No worries—let\'s get you set up so you can unlock those amazing insights! 🚀');
       return;
     }
 
@@ -107,7 +107,7 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
     try {
       const apiKey = await getApiKey();
       if (!apiKey) {
-        throw new Error('You are not authenticated. Please log in again.');
+        throw new Error('Oops! Looks like you need to log in again. No biggie—just refresh and we\'ll get you back to creating amazing content! ✨');
       }
 
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
@@ -131,7 +131,8 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.error || `HTTP error! status: ${response.status}`);
+        const errorMessage = data.error || 'Our Instagram insights are taking a quick coffee break ☕. Thanks for your patience—your amazing insights will be back soon!';
+        throw new Error(errorMessage);
       }
       
       if (data.status === 'enqueued') {
@@ -150,11 +151,11 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
         });
         setIsRefreshing(false);
       } else {
-        throw new Error(data.error || 'Failed to refresh Instagram insights');
+        throw new Error(data.error || 'Your Instagram insights are brewing! ☕ Sometimes our AI needs a moment to work its magic. Thanks for your patience—great insights take time!');
       }
     } catch (error: any) {
       console.error('❌ Error refreshing Instagram insights:', error);
-      setError(error.message || 'Failed to refresh Instagram insights');
+      setError(error.message || 'Oops! Even the best creators hit a snag sometimes. Thanks for being awesome and sticking with us. Your insights will be worth the wait! ✨');
       setIsRefreshing(false);
     }
   }, [userId, instagramAccount?.instagramAccountId, storeInstagramAnalysis, postLimit]);
