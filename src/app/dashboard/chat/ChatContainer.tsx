@@ -169,19 +169,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     initSession
   } = useConversation(chatState, authData.user)
 
-  // Initialize welcome message hook
-  const {
-    welcomeStep,
-    setWelcomeStep,
-    handleSuggestionClick: handleWelcomeSuggestionClick
-  } = useWelcomeMessage(
-    true,
-    messages,
-    isLoading,
-    authData.user,
-    setMessages,
-    hasPersona
-  )
+  // Remove welcome message hook for new chat; only show ambient insights when chat is empty
 
   // Notepad functionality
   const {
@@ -306,9 +294,11 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     handleSendMessage(action);
   }, [handleSendMessage]);
 
+  // Directly send suggestion, no welcome flow
   const handleSuggestionClick = useCallback((suggestion: any, onSendMessage: (msg: string) => void) => {
-    handleWelcomeSuggestionClick(suggestion, handleSendMessage);
-  }, [handleWelcomeSuggestionClick, handleSendMessage]);
+    const message = typeof suggestion === 'string' ? suggestion : suggestion.description;
+    onSendMessage(message);
+  }, [handleSendMessage]);
 
   const handleInsightClick = useCallback((action: string, insight: any) => {
     handleSendMessageWithUpdateCheck(action);
