@@ -360,12 +360,12 @@ export function useInstagramAnalytics(userId?: string) {
 
       } else if (isMountedRef.current) {
         console.warn('⚠️ Instagram: No valid analysis data found in API response');
-        setError('No analysis data available');
+        setError('Your Instagram analysis is taking a moment to process. Thanks for your patience—great insights are worth waiting for! Keep creating while we work on this.');
       }
     } catch (err) {
       console.error('❌ Instagram: Manual refresh failed:', err);
       if (isMountedRef.current) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch Instagram analysis');
+        setError('Your Instagram analysis is taking a moment to load. Thanks for your patience—great insights are worth waiting for! Keep creating while we work on this.');
       }
     } finally {
       if (isMountedRef.current) {
@@ -386,7 +386,7 @@ export function useInstagramAnalytics(userId?: string) {
 
       const apiKey = await getApiKey();
       if (!apiKey) {
-        throw new Error('Authentication required. Please log in again.');
+        throw new Error('We need to know it\'s you to keep your content safe! Please log in again and let\'s get back to creating amazing things together.');
       }
 
       const response = await fetch(`${window.location.origin}/api/social/instagram/load-more`, {
@@ -415,12 +415,12 @@ export function useInstagramAnalytics(userId?: string) {
         // The posts will automatically update via the Convex query
         // No need to manually update state - Convex will handle it
       } else {
-        throw new Error(data.error || 'Failed to load more posts');
+        throw new Error('Your Instagram posts are taking a moment to load. Thanks for your patience—great content is worth waiting for!');
       }
     } catch (err) {
       console.error('❌ Instagram: Load more failed:', err);
       if (isMountedRef.current) {
-        setLoadMoreError(err instanceof Error ? err.message : 'Failed to load more posts');
+        setLoadMoreError('Your Instagram posts are taking a moment to load. Thanks for your patience—great content is worth waiting for!');
       }
     } finally {
       if (isMountedRef.current) {

@@ -145,12 +145,12 @@ export const storeUnifiedPostData = mutation({
           results.push({ status: "created", postId: post.id, internalId });
         }
       } catch (error) {
-        console.error(`Error storing Instagram post ${post.id}:`, error);
-        results.push({ 
-          status: "error", 
-          postId: post.id, 
-          error: error instanceof Error ? error.message : 'Unknown error' 
-        });
+              console.error(`Error storing Instagram post ${post.id}:`, error);
+      results.push({ 
+        status: "error", 
+        postId: post.id, 
+        error: 'Your Instagram post is taking a moment to save. Thanks for your patience—great content is worth waiting for!' 
+      });
       }
     }
 
@@ -237,7 +237,7 @@ export const storePostData = mutation({
       }
     } catch (error) {
       console.error(`Error storing Instagram post ${postId}:`, error);
-      throw new Error(`Failed to store Instagram post: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram post is taking a moment to save. Thanks for your patience—great content is worth waiting for!');
     }
   },
 });
@@ -323,7 +323,7 @@ export const storeProfileData = mutation({
       }
     } catch (error) {
       console.error(`Error storing Instagram account for user ${userId}:`, error);
-      throw new Error(`Failed to store Instagram account: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram account is taking a moment to save. Thanks for your patience—great things take time!');
     }
   },
 });
@@ -441,7 +441,7 @@ export const disconnectInstagram = mutation({
       return { success: true };
     } catch (error) {
       console.error('Error disconnecting Instagram:', error);
-      throw new Error(`Failed to disconnect Instagram: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram disconnection is taking a moment to process. Thanks for your patience—we\'ll have you sorted out soon!');
     }
   },
 });
@@ -570,7 +570,7 @@ export const storeInstagramTrackerAnalysis = mutation({
       }
     } catch (error) {
       console.error(`Error storing Instagram tracker analysis for user ${userId}:`, error);
-      throw new Error(`Failed to store Instagram tracker analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram analysis is taking a moment to save. Thanks for your patience—great insights are worth waiting for!');
     }
   },
 });
@@ -614,7 +614,7 @@ export const storeInstagramBatchAnalysis = mutation({
       }
     } catch (error) {
       console.error(`Error storing Instagram batch analysis for user ${userId}:`, error);
-      throw new Error(`Failed to store Instagram batch analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram batch analysis is taking a moment to save. Thanks for your patience—great insights are worth waiting for!');
     }
   },
 });
@@ -687,7 +687,7 @@ export const updateInstagramBatchAnalysisStatus = mutation({
       }
     } catch (error) {
       console.error(`Error updating Instagram batch analysis status for user ${userId}:`, error);
-      throw new Error(`Failed to update Instagram batch analysis status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram analysis status is taking a moment to update. Thanks for your patience—great insights are worth waiting for!');
     }
   },
 });
@@ -721,7 +721,7 @@ export const storeInstagramWebhookEvent = mutation({
       return { success: true, eventId: id };
     } catch (error) {
       console.error(`Error storing Instagram webhook event: ${error}`);
-      throw new Error(`Failed to store webhook event: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram webhook event is taking a moment to save. Thanks for your patience—great things take time!');
     }
   },
 });
@@ -740,7 +740,7 @@ export const markWebhookEventProcessed = mutation({
       return { success: true };
     } catch (error) {
       console.error(`Error marking webhook event as processed: ${error}`);
-      throw new Error(`Failed to mark event as processed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram webhook event is taking a moment to process. Thanks for your patience—great things take time!');
     }
   },
 });
@@ -787,7 +787,7 @@ export const storeWebhookSubscription = mutation({
       }
     } catch (error) {
       console.error(`Error storing webhook subscription: ${error}`);
-      throw new Error(`Failed to store webhook subscription: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram webhook subscription is taking a moment to save. Thanks for your patience—great things take time!');
     }
   },
 });
@@ -839,7 +839,7 @@ export const storeInstagramStoryInsights = mutation({
       }
     } catch (error) {
       console.error(`Error storing story insights: ${error}`);
-      throw new Error(`Failed to store story insights: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram story insights are taking a moment to save. Thanks for your patience—great insights are worth waiting for!');
     }
   },
 });
@@ -870,13 +870,13 @@ export const updateInstagramPostComments = mutation({
 
       if (!post) {
         console.log(`Post not found for postId ${mediaId}, user ${userId}`);
-        return { success: false, error: "Post not found" };
+        return { success: false, error: "Your Instagram post is taking a moment to load. Thanks for your patience—great content is worth waiting for!" };
       }
 
       // Verify this post belongs to the user for security
       if (post.userId !== userId) {
         console.log(`Post ${mediaId} does not belong to user ${userId}`);
-        return { success: false, error: "Unauthorized access to post" };
+        return { success: false, error: "We need to know it's you to keep your content safe! Please log in again and let's get back to creating amazing things together." };
       }
 
       // Get current comments or initialize empty array
@@ -915,7 +915,7 @@ export const updateInstagramPostComments = mutation({
       return { success: true, status: "updated", postId: post._id, commentId: newComment.id };
     } catch (error) {
       console.error(`Error updating post comments: ${error}`);
-      throw new Error(`Failed to update post comments: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram post comments are taking a moment to update. Thanks for your patience—great engagement is worth waiting for!');
     }
   },
 });
@@ -947,7 +947,7 @@ export const appendCommentToInstagramPost = mutation({
 
       if (!post) {
         console.log(`[appendCommentToInstagramPost] Post not found for postId: ${mediaId}`);
-        return { success: false, error: "Post not found" };
+        return { success: false, error: "Your Instagram post is taking a moment to load. Thanks for your patience—great content is worth waiting for!" };
       }
 
       console.log(`[appendCommentToInstagramPost] Found post: ${post.postId} for user: ${post.userId}`);
@@ -998,7 +998,7 @@ export const appendCommentToInstagramPost = mutation({
       };
     } catch (error) {
       console.error(`[appendCommentToInstagramPost] Error updating post comments: ${error}`);
-      throw new Error(`Failed to update post comments: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram post comments are taking a moment to update. Thanks for your patience—great engagement is worth waiting for!');
     }
   },
 });
@@ -1113,7 +1113,7 @@ export const updateAccountPagination = mutation({
     
     if (!account) {
       console.error(`[updateAccountPagination] Account not found for user ${args.userId}, account ${args.instagramAccountId}`);
-      throw new Error("Instagram account not found");
+      throw new Error("Your Instagram account is taking a moment to load. Thanks for your patience—great things take time!");
     }
     
     console.log(`[updateAccountPagination] Found account: ${account._id}`);

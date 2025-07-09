@@ -171,9 +171,16 @@ export function InstagramPlatform({
 
   if (error) {
     return (
-      <div className="text-center text-red-500 p-4 mb-8">
-        <p>Error: {error}</p>
-        <Button onClick={refresh} className="mt-2">Try Again</Button>
+      <div className="text-center p-4 mb-8">
+        <div className="max-w-md mx-auto">
+          <div className="text-amber-600 mb-4">
+            <p className="text-lg font-medium">Oops! Something unexpected happened</p>
+            <p className="text-sm text-gray-600 mt-2">{error}</p>
+          </div>
+          <Button onClick={refresh} className="mt-4 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-white">
+            Try Again
+          </Button>
+        </div>
       </div>
     );
   }

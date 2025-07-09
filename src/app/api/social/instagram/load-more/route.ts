@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
     if (!userId || !instagramAccountId) {
       return NextResponse.json({ 
         success: false, 
-        error: 'Missing userId or instagramAccountId' 
+        error: 'We need your user ID and Instagram account to load more posts. Thanks for being here—let\'s get you set up!' 
       }, { status: 400 });
     }
 
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ 
         success: false, 
-        error: 'Missing or invalid Authorization header' 
+        error: 'We need to know it\'s you to keep your content safe! Please log in again and let\'s get back to creating amazing things together.' 
       }, { status: 401 });
     }
     
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     if (!user_id) {
       return NextResponse.json({ 
         success: false, 
-        error: 'Invalid API key format' 
+        error: 'Your authentication needs a quick refresh! No worries—this happens to the best of us. Let\'s reconnect and get you back to creating.' 
       }, { status: 401 });
     }
 
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     return NextResponse.json({ 
       success: false, 
-      error: error instanceof Error ? error.message : String(error) 
+      error: 'Your Instagram posts are taking a moment to load. Thanks for your patience—great content is worth waiting for!' 
     }, { status: 500 });
   }
 } 
