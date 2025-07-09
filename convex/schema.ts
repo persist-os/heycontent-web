@@ -617,12 +617,13 @@ export default defineSchema({
         text: v.string(),
         timestamp: v.number(),
         username: v.string(),
-        like_count: v.optional(v.number()),
+        like_count: v.optional(v.union(v.number(), v.null())),
         replies: v.optional(v.array(v.object({
           id: v.string(),
           text: v.string(),
           timestamp: v.number(),
-          username: v.optional(v.string())
+          username: v.optional(v.string()),
+          like_count: v.optional(v.union(v.number(), v.null()))
         })))
       })))
     }),
@@ -877,12 +878,13 @@ export default defineSchema({
         text: v.string(),
         timestamp: v.number(),
         username: v.string(),
-        like_count: v.optional(v.number()),
+        like_count: v.optional(v.union(v.number(), v.null())),
         replies: v.optional(v.array(v.object({
           id: v.string(),
           text: v.string(),
           timestamp: v.number(),
-          username: v.optional(v.string())
+          username: v.optional(v.string()),
+          like_count: v.optional(v.union(v.number(), v.null()))
         })))
       })))
     }),

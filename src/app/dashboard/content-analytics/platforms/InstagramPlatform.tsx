@@ -170,24 +170,17 @@ export function InstagramPlatform({
     );
   }
 
-  if (error) {
-    return (
-      <div className="text-center p-4 mb-8">
-        <div className="max-w-md mx-auto">
-          <div className="text-amber-600 mb-4">
-            <p className="text-lg font-medium">Oops! Something unexpected happened</p>
-            <p className="text-sm text-gray-600 mt-2">{error}</p>
-          </div>
-          <Button onClick={refresh} className="mt-4 bg-heycontent-yellow hover:bg-heycontent-yellow/90 text-white">
-            Try Again
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // --- NEW: Error banner above dashboard ---
+  // Always render dashboard, show error as banner if present
 
   return (
     <>
+      {error && (
+        <div className="w-full bg-amber-100 border border-amber-300 text-amber-800 rounded-md px-4 py-3 mb-4 text-center">
+          <p className="font-medium">Analytics are taking a quick coffee break ☕</p>
+          <p className="text-sm mt-1">Thanks for your patience—your insights will be back soon! In the meantime, why not brainstorm your next big idea?</p>
+        </div>
+      )}
       {/* Instagram Analytics Section */}
       <div className="space-y-6 mb-8">
         {/* Header with Refresh Button */}
@@ -199,8 +192,8 @@ export function InstagramPlatform({
             disabled={refreshing}
             className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm"
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Refreshing Instagram...' : 'Refresh Instagram'}
+            <RefreshCw className="w-4 h-4 mr-2" />
+            {refreshing ? 'Refreshing...' : 'Refresh Instagram'}
           </Button>
         </div>
 
@@ -414,8 +407,6 @@ export function InstagramPlatform({
           </Button>
         </div>
       )}
-
-
 
       {selectedContent && (
         <InstagramModal
