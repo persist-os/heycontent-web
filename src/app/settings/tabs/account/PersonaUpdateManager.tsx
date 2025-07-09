@@ -221,16 +221,7 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
                 Delete
               </Button>
             )}
-            {!isEditMode && renderNewPersonaButton && (
-              <Button 
-                onClick={renderNewPersonaButton} 
-                variant="outline" 
-                className="text-purple-500 border-purple-500 hover:bg-purple-50 dark:text-accent dark:border-accent dark:hover:bg-accent/10 min-h-[44px] w-full sm:w-auto" 
-                size="sm"
-              >
-                New Persona
-              </Button>
-            )}
+            {!isEditMode && renderNewPersonaButton && renderNewPersonaButton()}
           </div>
         </div>
 
