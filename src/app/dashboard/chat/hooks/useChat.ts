@@ -33,6 +33,7 @@ export const useChat = (
 
   const [referencedMessage, setReferencedMessage] = useState<Message | null>(null)
   const [searchStatus, setSearchStatus] = useState<string>('')
+  const [statusHistory, setStatusHistory] = useState<string[]>([]) // Track all status updates
   
   // Add ref to track last sent message to prevent rapid duplicates
   const lastSentMessageRef = useRef<{ content: string; timestamp: number } | null>(null);
@@ -113,6 +114,7 @@ export const useChat = (
       setIsLoading(true)
       setError(null)
       setSearchStatus('') // Clear previous search status
+      setStatusHistory([]) // Reset status history for new message
 
       // Add user message and enhanced typing indicator with search status
       const typingMessage: Message = {
@@ -122,7 +124,8 @@ export const useChat = (
         timestamp: new Date().toISOString(),
         status: 'typing',
         chat_response: '',
-        searchStatus: ''
+        searchStatus: '',
+        statusHistory: [] // Initialize empty status history
       };
 
       setMessages(prev => [
@@ -131,38 +134,24 @@ export const useChat = (
         typingMessage
       ]);
 
-      // Status update callback to show search progress
+      // Status update handler for enhanced loading states
       const handleStatusUpdate = (status: string) => {
-        setSearchStatus(status);
         console.log('🔍 Vector Search Status:', status);
         
-        // Check if this is a vector search results update
-        if (status.startsWith('VECTOR_SEARCH_RESULTS:')) {
-          const vectorSearchData = JSON.parse(status.replace('VECTOR_SEARCH_RESULTS:', ''));
-          console.log('📊 Received vector search results immediately:', vectorSearchData);
-          
-          // Update the typing message with vector search results
-          setMessages(prev => 
-            prev.map(msg => 
-              msg.status === 'typing' && msg.role === 'assistant' 
-                ? { 
-                    ...msg, 
-                    searchStatus: `Found ${vectorSearchData.relevantItemsCount} relevant items`,
-                    vectorSearchMetadata: vectorSearchData
-                  }
-                : msg
-            )
-          );
-        } else {
-          // Update the typing message with search status
-          setMessages(prev => 
-            prev.map(msg => 
-              msg.status === 'typing' && msg.role === 'assistant' 
-                ? { ...msg, searchStatus: status }
-                : msg
-            )
-          );
-        }
+        // Add to status history to track all updates
+        setStatusHistory(prev => [...prev, status]);
+        
+        // Also update current status for display
+        setSearchStatus(status);
+        
+        // Update the typing message with the current status
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.status === 'typing' 
+              ? { ...msg, searchStatus: status, statusHistory: [...(msg.statusHistory || []), status] }
+              : msg
+          )
+        );
       };
 
       // Save persona conversations separately
@@ -206,6 +195,9 @@ export const useChat = (
         handleStatusUpdate, // Pass status update callback
         useContextSearch // Pass context search toggle
       );
+
+      // Add final completion status update
+      handleStatusUpdate('Analysis complete - response ready');
 
       // CRITICAL DEBUG: Check the raw backend response for persona flags
       console.log('🔍 useChat: RAW BACKEND RESPONSE:', JSON.stringify(data, null, 2));
@@ -259,7 +251,13 @@ export const useChat = (
 
       // Update messages with the response
       setMessages(prev => {
-        const withoutTyping = prev.filter(msg => msg.status !== 'typing');
+        // First, mark the typing message as completed by updating its search status
+        const updatedMessages = prev.map(msg => 
+          msg.status === 'typing' 
+            ? { ...msg, searchStatus: '✅ Analysis complete - response ready' }
+            : msg
+        );
+        
         const newMessage: Message = {
           id: uuidv4(),
           content: data.chat_response,
@@ -272,11 +270,16 @@ export const useChat = (
           suggestions: data.suggestions || []
         };
         
-        return [...withoutTyping, newMessage];
+        return [...updatedMessages, newMessage];
       });
 
-      // Clear search status after completion
-      setSearchStatus('');
+      // Remove typing indicator after a brief delay to allow users to see the completion
+      setTimeout(() => {
+        setMessages(prev => prev.filter(msg => msg.status !== 'typing'));
+        // Clear search status and status history AFTER the typing message is removed
+        setSearchStatus('');
+        setStatusHistory([]); // Clear status history after completion
+      }, 2000); // 2 second delay to show completion state
 
       // Update first message state after first successful response
       if (isFirstMessage) {
@@ -288,9 +291,12 @@ export const useChat = (
       console.error('Chat error:', error);
       setError(error instanceof Error ? error.message : 'An error occurred');
       
-      // Remove typing indicator on error
+      // Remove typing indicator on error and clear status after
       setMessages(prev => prev.filter(msg => msg.status !== 'typing'));
-      setSearchStatus(''); // Clear search status on error
+      setTimeout(() => {
+        setSearchStatus(''); // Clear search status after error
+        setStatusHistory([]); // Clear status history after error
+      }, 1000); // Brief delay to allow error to be visible
     } finally {
       setIsLoading(false);
     }

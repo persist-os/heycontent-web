@@ -52,7 +52,7 @@ const ChatMessagesList: React.FC<ChatMessagesListProps> = ({
           onQuoteToNotepad={onQuoteToNotepad}
         />
         {message.role === 'assistant' && message.suggestions && (
-          <div className="mt-3 flex flex-wrap gap-2 pl-4 sm:pl-12 pr-4 sm:pr-0">
+          <div className="mt-3 flex flex-wrap gap-2 pl-4 sm:pl-12 pr-4 max-w-full">
             {message.suggestions.map((suggestion: any, idx: number) => (
               <SuggestionChip
                 key={idx}

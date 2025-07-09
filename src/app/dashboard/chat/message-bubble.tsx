@@ -8,9 +8,11 @@ import { ExpandableInsights } from './expandable-insights'
 import { MarkdownRenderer } from './markdown-renderer'
 import { PersonaCardRenderer } from './components/PersonaCardRenderer'
 import { ThinkingIndicator } from './components/main_chat/ThinkingIndicator'
+import { ProgressiveThinkingIndicator } from './components/main_chat/ProgressiveThinkingIndicator'
 import { CopyButton } from '@/components/ui/copy-button'
 import React, { useState, useEffect } from 'react'
 import VectorSearchContext from './components/VectorSearchContext'
+import { AnimatePresence } from 'framer-motion'
 
 interface MessageBubbleProps {
   message: Message
@@ -302,7 +304,15 @@ export function MessageBubble({
             {/* Main message content */}
             <div className="prose prose-sm dark:prose-invert prose-p:my-2 prose-headings:my-3 max-w-none break-words">
               {message.status === 'typing' ? (
-                <ThinkingIndicator />
+                <ProgressiveThinkingIndicator 
+                  searchStatus={message.searchStatus || ''}
+                  statusHistory={message.statusHistory || []}
+                  isCompleted={message.searchStatus?.includes('Analysis complete - response ready') || false}
+                  onComplete={() => {
+                    // This will be called when thinking is complete
+                    // The parent component will handle the transition
+                  }}
+                />
               ) : mightHavePersona && userId ? (
                 <PersonaCardRenderer message={message} userId={userId} />
               ) : (
