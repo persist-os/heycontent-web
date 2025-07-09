@@ -1244,7 +1244,7 @@ async function gradeContextRelevance(
     throw new Error('Authentication required for context grading');
   }
 
-  onStatusUpdate?.(getRandomStatusMessage('context_grading'));
+  onStatusUpdate?.('Analyzing relevance across your content - time to sort the good stuff from the great stuff!');
 
   try {
     console.log('🔍 [CONTEXT GRADING] Starting relevance analysis', {
@@ -1290,7 +1290,7 @@ async function gradeContextRelevance(
     return validatedData;
   } catch (error) {
     console.error('Context grading failed:', error);
-    onStatusUpdate?.(getRandomStatusMessage('fallback'));
+    onStatusUpdate?.('Context grading failed - using all items');
     return null;
   }
 }

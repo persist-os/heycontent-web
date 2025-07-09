@@ -40,6 +40,183 @@ export const ProgressiveThinkingIndicator: React.FC<ProgressiveThinkingIndicator
   const [dots, setDots] = useState('')
   const [processedStatusCount, setProcessedStatusCount] = useState(0)
 
+  // Pools of fun, creator-friendly phrases for each stage
+  const messagePools = {
+    intentAnalysis: {
+      main: [
+        "Figuring out what you're looking for",
+        "Getting the vibe of your question",
+        "Understanding what you need",
+        "Piecing together your request",
+        "Reading between the lines",
+        "Decoding your creative needs"
+      ],
+      sub: [
+        "Checking if I need to peek at your stuff",
+        "Seeing if your content can help",
+        "Deciding whether to dig into your library",
+        "Figuring out if context would be useful",
+        "Checking if we need your content history",
+        "Seeing what kind of help you need"
+      ]
+    },
+    
+    contextNeeded: {
+      main: [
+        "You need some context",
+        "Your stuff will help with this",
+        "Time to check your content",
+        "Your library has the goods",
+        "Let's dig into your content"
+      ],
+      sub: [
+        "Your question would benefit from your content history",
+        "Your past work has some relevant gems",
+        "There's gold in your content library",
+        "Your creative history will help here",
+        "Your content has the perfect context"
+      ]
+    },
+    
+    quickCheck: {
+      main: [
+        "This one's easy",
+        "Quick and simple",
+        "Straightforward question",
+        "No digging needed",
+        "Got this covered"
+      ],
+      sub: [
+        "No need to check your content for this",
+        "This doesn't need your content history",
+        "Straight to the point on this one",
+        "Your question is self-contained",
+        "No context hunting required"
+      ]
+    },
+    
+    vectorSearch: {
+      main: [
+        "Digging through all your stuff",
+        "Browsing your content library",
+        "Scanning your creative universe",
+        "Exploring your content treasure",
+        "Diving into your digital collection",
+        "Surfing through your materials"
+      ],
+      sub: [
+        "Scanning notes, conversations, and posts for good matches",
+        "Looking for the perfect pieces to help with your question",
+        "Hunting for relevant gems in your content",
+        "Finding the best stuff to answer your question",
+        "Searching for golden nuggets in your library",
+        "Checking every corner for helpful content"
+      ]
+    },
+    
+    discovery: {
+      main: [
+        "Found {count} interesting pieces",
+        "Discovered {count} potential gems",
+        "Uncovered {count} useful items",
+        "Located {count} relevant pieces",
+        "Spotted {count} helpful bits",
+        "Found {count} pieces of the puzzle"
+      ],
+      sub: [
+        "Discovered some bits of content that might help",
+        "Found some good stuff in your library",
+        "Uncovered some relevant material",
+        "Located some helpful pieces",
+        "Spotted some useful content",
+        "Found some perfect matches"
+      ]
+    },
+    
+    grading: {
+      main: [
+        "Sorting the gems from the good stuff",
+        "Picking the cream of the crop",
+        "Finding the absolute best pieces",
+        "Curating your top content",
+        "Selecting the perfect matches",
+        "Choosing the golden pieces"
+      ],
+      sub: [
+        "Checking each piece to see what actually helps with your question",
+        "Using AI magic to find the most relevant bits",
+        "Making sure we get only the good stuff",
+        "Quality checking each piece for relevance",
+        "Filtering for the absolute best matches",
+        "Hand-picking the most useful content"
+      ]
+    },
+    
+    itemDecisions: {
+      kept: [
+        "Kept",
+        "Love this one",
+        "Perfect match",
+        "This is gold",
+        "Exactly what we need",
+        "Spot on"
+      ],
+      filtered: [
+        "Filtered",
+        "Not quite right",
+        "Doesn't fit",
+        "Not this time",
+        "Close but no cigar",
+        "Not the vibe"
+      ]
+    },
+    
+    completion: {
+      main: [
+        "All done checking!",
+        "Finished picking the good stuff",
+        "Content curation complete",
+        "Found the perfect mix",
+        "All sorted and ready",
+        "Mission accomplished"
+      ],
+      sub: [
+        "Ready to craft your response",
+        "Time to work some magic",
+        "Let's create something awesome",
+        "Ready to put it all together",
+        "Time for the fun part",
+        "Ready to make something great"
+      ]
+    },
+    
+    generation: {
+      main: [
+        "Crafting your answer",
+        "Creating something awesome",
+        "Working some magic",
+        "Putting it all together",
+        "Building your response",
+        "Cooking up something good"
+      ],
+      sub: [
+        "Putting together a great response",
+        "Mixing your content with AI magic",
+        "Creating something uniquely yours",
+        "Blending insights with creativity",
+        "Making something special happen",
+        "Turning ideas into gold"
+      ]
+    }
+  };
+
+  // Helper function to randomly select from message pools
+  const getRandomMessage = (pool: string[], count?: number): string => {
+    const randomIndex = Math.floor(Math.random() * pool.length);
+    const message = pool[randomIndex];
+    return count !== undefined ? message.replace('{count}', count.toString()) : message;
+  };
+
   // Animated dots for thinking effect
   useEffect(() => {
     if (isCompleted) return
@@ -142,43 +319,43 @@ export const ProgressiveThinkingIndicator: React.FC<ProgressiveThinkingIndicator
 
     // Intent analysis phase
     if (searchStatus.includes('Analyzing whether your query needs context')) {
-      updateOrCreateStep('analyzing', 'Figuring out what you\'re looking for', 'Checking if I need to peek at your stuff')
+      updateOrCreateStep('analyzing', getRandomMessage(messagePools.intentAnalysis.main), getRandomMessage(messagePools.intentAnalysis.sub))
     }
     // Context decision
     else if (searchStatus.includes('Query needs context - proceeding with vector search')) {
-      updateOrCreateStep('analyzing', 'You need some context', 'Your question would benefit from your content history', undefined, true)
+      updateOrCreateStep('analyzing', getRandomMessage(messagePools.contextNeeded.main), getRandomMessage(messagePools.contextNeeded.sub), undefined, true)
     }
     else if (searchStatus.includes('Query needs context (heuristic)')) {
-      updateOrCreateStep('analyzing', 'You need some context', 'Quick check - let me look through your stuff', undefined, true)
+      updateOrCreateStep('analyzing', getRandomMessage(messagePools.contextNeeded.main), 'Quick check - let me look through your stuff', undefined, true)
     }
     else if (searchStatus.includes('Query is self-contained')) {
-      updateOrCreateStep('analyzing', 'This one\'s easy', 'No need to check your content for this', undefined, true)
+      updateOrCreateStep('analyzing', getRandomMessage(messagePools.quickCheck.main), getRandomMessage(messagePools.quickCheck.sub), undefined, true)
       // Auto-transition to generation for self-contained queries
       setTimeout(() => {
-        updateOrCreateStep('generating', 'Crafting your answer', 'Putting together a great response')
+        updateOrCreateStep('generating', getRandomMessage(messagePools.generation.main), getRandomMessage(messagePools.generation.sub))
       }, 1000)
     }
     // Vector search phase
     else if (searchStatus.includes('Looking through all your content')) {
-      updateOrCreateStep('searching', 'Digging through all your stuff', 'Scanning notes, conversations, and posts for good matches')
+      updateOrCreateStep('searching', getRandomMessage(messagePools.vectorSearch.main), getRandomMessage(messagePools.vectorSearch.sub))
     }
     else if (searchStatus.includes('Searching your content')) {
-      updateOrCreateStep('searching', 'Browsing your content library', 'Looking for the perfect pieces to help with your question')
+      updateOrCreateStep('searching', getRandomMessage(messagePools.vectorSearch.main), getRandomMessage(messagePools.vectorSearch.sub))
     }
     else if (searchStatus.includes('Discovered') && searchStatus.includes('potentially relevant items')) {
       const match = searchStatus.match(/Discovered (\d+) potentially relevant items/)
       const itemCount = match ? parseInt(match[1]) : 0
       console.log('🔍 [ProgressiveThinking] Discovered items:', { itemCount, searchStatus });
-      updateOrCreateStep('searching', `Found ${itemCount} interesting pieces`, `Discovered ${itemCount} bits of content that might help`, undefined, true)
+      updateOrCreateStep('searching', getRandomMessage(messagePools.discovery.main, itemCount), getRandomMessage(messagePools.discovery.sub), undefined, true)
     }
     else if (searchStatus.includes('Finding your best relevant context')) {
       console.log('🔍 [ProgressiveThinking] Finding best relevant context:', searchStatus);
-      updateOrCreateStep('searching', 'Picking the best stuff', 'Finding the most useful info from your content')
+      updateOrCreateStep('searching', getRandomMessage(messagePools.vectorSearch.main), 'Finding the most useful info from your content')
     }
     // Grading phase
     else if (searchStatus.includes('Analyzing relevance across your content')) {
       console.log('🔍 [ProgressiveThinking] Creating grading step for relevance analysis');
-      updateOrCreateStep('grading', 'Checking what\'s actually useful', 'Using AI to find the most relevant pieces', {
+      updateOrCreateStep('grading', getRandomMessage(messagePools.grading.main), getRandomMessage(messagePools.grading.sub), {
         itemsKept: 0,
         itemsFiltered: 0,
         itemsProcessed: 0,
@@ -187,7 +364,7 @@ export const ProgressiveThinkingIndicator: React.FC<ProgressiveThinkingIndicator
     }
     else if (searchStatus.includes('Examining each item for relevance')) {
       console.log('🔍 [ProgressiveThinking] Creating grading step for item examination');
-      updateOrCreateStep('grading', 'Looking at each piece closely', 'Detailed check of what\'s actually helpful', {
+      updateOrCreateStep('grading', getRandomMessage(messagePools.grading.main), getRandomMessage(messagePools.grading.sub), {
         itemsKept: 0,
         itemsFiltered: 0,
         itemsProcessed: 0,
@@ -196,15 +373,15 @@ export const ProgressiveThinkingIndicator: React.FC<ProgressiveThinkingIndicator
     }
     else if (searchStatus.includes('Analyzing AI grading quality')) {
       console.log('🔍 [ProgressiveThinking] Updating grading step for AI quality check');
-      updateOrCreateStep('grading', 'Double-checking the AI\'s work', 'Making sure we got the good stuff')
+      updateOrCreateStep('grading', getRandomMessage(messagePools.grading.main), 'Making sure we got the good stuff')
     }
     else if (searchStatus.includes('Backend AI gave generic responses')) {
       console.log('🔍 [ProgressiveThinking] Updating grading step for strict filtering');
-      updateOrCreateStep('grading', 'Being extra picky', 'AI was being too generous - applying stricter standards')
+      updateOrCreateStep('grading', getRandomMessage(messagePools.grading.main), 'AI was being too generous - applying stricter standards')
     }
     else if (searchStatus.includes('Backend AI gave generic responses - applying strict criteria')) {
       console.log('🔍 [ProgressiveThinking] Backend AI generic responses - applying strict criteria');
-      updateOrCreateStep('grading', 'Getting more selective', 'AI was too loose - switching to tighter quality checks', {
+      updateOrCreateStep('grading', getRandomMessage(messagePools.grading.main), 'AI was too loose - switching to tighter quality checks', {
         itemsKept: 0,
         itemsFiltered: 0,
         itemsProcessed: 0,
@@ -257,8 +434,8 @@ export const ProgressiveThinkingIndicator: React.FC<ProgressiveThinkingIndicator
             const gradingStep: ThinkingStep = {
               id: `grading-${Date.now()}`,
               stage: 'grading',
-              message: 'Checking what\'s useful',
-              submessage: 'Looking at each piece to see what helps',
+              message: getRandomMessage(messagePools.grading.main),
+              submessage: getRandomMessage(messagePools.grading.sub),
               timestamp: new Date(),
               isCompleted: false,
               isActive: true,
@@ -308,7 +485,7 @@ export const ProgressiveThinkingIndicator: React.FC<ProgressiveThinkingIndicator
           updatedSteps[gradingStepIndex] = {
             ...currentStep,
             message: `Checking content (${newKept} kept, ${newFiltered} filtered)`,
-            submessage: `Latest: ${isKept ? 'Kept' : 'Filtered'} "${title}" - ${reason}`,
+            submessage: `Latest: ${getRandomMessage(messagePools.itemDecisions[isKept ? 'kept' : 'filtered'])} "${title}" - ${reason}`,
             details: {
               itemsKept: newKept,
               itemsFiltered: newFiltered,
@@ -354,8 +531,8 @@ export const ProgressiveThinkingIndicator: React.FC<ProgressiveThinkingIndicator
           
           // Extract final counts from current step
           const finalCounts = currentStep.details
-          let finalMessage = 'All done checking!'
-          let finalSubmessage = 'Ready to craft your response'
+          let finalMessage = getRandomMessage(messagePools.completion.main)
+          let finalSubmessage = getRandomMessage(messagePools.completion.sub)
           
           if (finalCounts?.itemsKept !== undefined && finalCounts?.itemsFiltered !== undefined) {
             finalMessage = `Finished picking the good stuff`
@@ -377,7 +554,7 @@ export const ProgressiveThinkingIndicator: React.FC<ProgressiveThinkingIndicator
       })
       
       // Start generation step
-      updateOrCreateStep('generating', 'Crafting your answer', 'Putting together a great response')
+      updateOrCreateStep('generating', getRandomMessage(messagePools.generation.main), getRandomMessage(messagePools.generation.sub))
     }
     // Catch-all for debugging unhandled messages
     else {
