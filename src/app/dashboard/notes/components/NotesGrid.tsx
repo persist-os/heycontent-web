@@ -219,6 +219,7 @@ export function NotesGrid({
     { key: 'idea_bank', label: 'Idea Bank', color: 'bg-red-500' },
     { key: 'content_script', label: 'Content/Script', color: 'bg-purple-500' },
     { key: 'analytics_insight', label: 'Analytics/Insights', color: 'bg-pink-500' },
+    { key: 'email_draft', label: 'Emails', color: 'bg-orange-500' },
   ] as const;
 
   // Determine what to show based on filter

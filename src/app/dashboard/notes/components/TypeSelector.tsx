@@ -22,7 +22,8 @@ const TYPE_LABELS: Record<NoteType, { label: string; description: string }> = {
   collaboration_note: { label: 'Collaboration', description: 'Brand deals and creator projects' },
   analytics_insight: { label: 'Analytics', description: 'Performance analysis and insights' },
   reflection_journal: { label: 'Reflection', description: 'Personal thoughts and creative process' },
-  task_checklist: { label: 'Task Checklist', description: 'Action items and to-do lists' }
+  task_checklist: { label: 'Task Checklist', description: 'Action items and to-do lists' },
+  email_draft: { label: 'Emails', description: 'Email compositions and drafts' }
 };
 
 export function TypeSelector({ noteId, userId, currentType, typeGenerated, onTypeChange }: TypeSelectorProps) {
@@ -233,7 +234,8 @@ export function MinimalTypeDisplay({ currentType }: { currentType: NoteType }) {
     collaboration_note: 'bg-green-500',
     analytics_insight: 'bg-pink-500',
     reflection_journal: 'bg-blue-500',
-    task_checklist: 'bg-yellow-500'
+    task_checklist: 'bg-yellow-500',
+    email_draft: 'bg-orange-500'
   };
 
   const TYPE_LABELS: Record<NoteType, string> = {
@@ -242,7 +244,8 @@ export function MinimalTypeDisplay({ currentType }: { currentType: NoteType }) {
     collaboration_note: 'Collaboration',
     analytics_insight: 'Analytics',
     reflection_journal: 'Reflection',
-    task_checklist: 'Task Checklist'
+    task_checklist: 'Task Checklist',
+    email_draft: 'Email'
   };
 
   // Set text color for yellow in dark mode and purple in light mode

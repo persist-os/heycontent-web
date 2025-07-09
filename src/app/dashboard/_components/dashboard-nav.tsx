@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Logo } from '@/components/ui/logo'
 import {
-  Users, Settings, FileText, LogOut, BarChart3, Menu, X, MessageSquare, Clock
+  Users, Settings, FileText, LogOut, BarChart3, Menu, X, MessageSquare, Clock, Handshake
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { useSidebar } from '@/app/context/sidebar-context'
@@ -29,6 +29,12 @@ const navItems = [
     label: 'Smart Notes',
     icon: FileText,
     href: '/dashboard/notes',
+  },
+  {
+    id: 'partnerships',
+    label: 'Partnership Hub',
+    icon: Handshake,
+    href: '/dashboard/partnerships',
   },
 ]
 
@@ -144,6 +150,9 @@ export const DashboardNav = memo(function DashboardNav() {
       case 'self-hub':
         // This tab is active for all its sub-routes
         return pathname.startsWith(item.href);
+      case 'partnerships':
+        // This tab is active for all its sub-routes
+        return pathname.startsWith('/dashboard/partnerships');
       case 'chat':
       case 'notes':
         // These tabs are only active on their exact pages, not sub-pages

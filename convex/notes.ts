@@ -10,7 +10,8 @@ const noteType = v.union(
   v.literal("collaboration_note"),
   v.literal("analytics_insight"),
   v.literal("reflection_journal"),
-  v.literal("task_checklist")
+  v.literal("task_checklist"),
+  v.literal("email_draft")
 );
 
 export const getNotesByUser = query({

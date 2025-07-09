@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Instagram, Mail, BarChart3, Brain, Settings, Sparkles, RefreshCw, ArrowLeft } from 'lucide-react'
+import { Instagram, BarChart3, Brain, Settings, Sparkles, RefreshCw, ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/app/context/auth-context'
 import { RefreshState } from '@/components/ui/refresh-state'
 import { ProgressInsightsState } from '@/components/ui/progress-insights-state'
@@ -22,26 +22,20 @@ import { contentHubHelp } from '@/helpContent'
 // Analytics components and hooks
 import { YouTubePlatform as YouTubeAnalyticsPlatform } from '../../content-analytics/platforms/YouTubePlatform'
 import { InstagramPlatform as InstagramAnalyticsPlatform } from '../../content-analytics/platforms/InstagramPlatform'
-import { GmailPlatform as GmailAnalyticsPlatform } from '../../content-analytics/platforms/GmailPlatform'
 import { useYouTubeAnalytics } from '../../content-analytics/hooks/useYouTubeAnalytics'
 import { useInstagramAnalytics } from '../../content-analytics/hooks/useInstagramAnalytics'
-import { useGmailAnalytics } from '../../content-analytics/hooks/useGmailAnalytics'
 import { YouTubeCard } from '../../content-analytics/cards/YouTubeCard'
 import { InstagramCard } from '../../content-analytics/cards/InstagramCard'
-import { GmailCard } from '../../content-analytics/cards/GmailCard'
-import { GmailModal } from '../../content-analytics/modals/GmailModal'
 import { InstagramModal } from '../../content-analytics/modals/InstagramModal'
 import { YoutubeModal } from '../../content-analytics/modals/YoutubeModal'
-import { AnyContentItem, YouTubeContentItem, InstagramContentItem, GmailContentItem } from '../../content-analytics/types'
+import { AnyContentItem, YouTubeContentItem, InstagramContentItem } from '../../content-analytics/types'
 import { sortContent } from '../../content-analytics/utils'
 
 // Insights components and hooks
 import { YouTubePlatform as YouTubeInsightsPlatform } from '../../ai-insights/_components/platforms/YouTubePlatform'
 import { InstagramPlatform as InstagramInsightsPlatform } from '../../ai-insights/_components/platforms/InstagramPlatform'
-import { GmailPlatform as GmailInsightsPlatform } from '../../ai-insights/_components/platforms/GmailPlatform'
 import { useYouTubeInsights } from '../../ai-insights/_components/hooks/useYouTubeInsights'
 import { useInstagramInsights } from '../../ai-insights/_components/hooks/useInstagramInsights'
-import { useGmailInsights } from '../../ai-insights/_components/hooks/useGmailInsights'
 import { InsightCard } from '../../ai-insights/_components/InsightCard'
 import { ContentCardSkeleton } from './ContentCardSkeleton'
 import { InsightCardSkeleton } from '../../ai-insights/_components/InsightCardSkeleton'
@@ -49,8 +43,8 @@ import { InsightCardSkeleton } from '../../ai-insights/_components/InsightCardSk
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ContentHubInsights } from './ContentHubInsights'
 
-type PlatformType = 'all' | 'youtube' | 'instagram' | 'gmail'
-type ViewType = 'hub-insights' | 'all' | 'youtube' | 'instagram' | 'gmail'
+type PlatformType = 'all' | 'youtube' | 'instagram'
+type ViewType = 'hub-insights' | 'all' | 'youtube' | 'instagram'
 type DataType = 'posts' | 'ai-insights'
 
 const platformOptions = [
@@ -58,7 +52,6 @@ const platformOptions = [
   { value: 'all', label: 'All Platforms', icon: <BarChart3 className="w-4 h-4" /> },
   { value: 'youtube', label: 'YouTube' },
   { value: 'instagram', label: 'Instagram' },
-  { value: 'gmail', label: 'Gmail' },
 ];
 
 export function ContentHubScreen() {
@@ -97,12 +90,10 @@ export function ContentHubScreen() {
   // Analytics hooks
   const youtubeAnalytics = useYouTubeAnalytics(userId)
   const instagramAnalytics = useInstagramAnalytics(userId)
-  const gmailAnalytics = useGmailAnalytics(userId)
 
   // Insights hooks
   const youtubeInsights = useYouTubeInsights(userId)
   const instagramInsights = useInstagramInsights(userId)
-  const gmailInsights = useGmailInsights(userId)
 
   // Motivational quotes for insights
   const motivationalQuotes = [
@@ -133,33 +124,28 @@ export function ContentHubScreen() {
 
   // Global refresh state management
   const isAnyPlatformRefreshing = useMemo(() => {
-    return youtubeInsights.refreshing || instagramInsights.refreshing || gmailInsights.refreshing;
-  }, [youtubeInsights.refreshing, instagramInsights.refreshing, gmailInsights.refreshing]);
+    return youtubeInsights.refreshing || instagramInsights.refreshing;
+  }, [youtubeInsights.refreshing, instagramInsights.refreshing]);
 
   // Get all platforms that are currently refreshing for better messaging
   const getRefreshingPlatforms = useCallback(() => {
     const refreshing = []
     if (youtubeInsights.refreshing) refreshing.push('YouTube')
     if (instagramInsights.refreshing) refreshing.push('Instagram')
-    if (gmailInsights.refreshing) refreshing.push('Gmail')
     
     if (refreshing.length === 0) return 'platforms'
     if (refreshing.length === 1) return refreshing[0]
-    if (refreshing.length === 2) return `${refreshing[0]} and ${refreshing[1]}`
-    return `${refreshing.slice(0, -1).join(', ')}, and ${refreshing[refreshing.length - 1]}`
-  }, [youtubeInsights.refreshing, instagramInsights.refreshing, gmailInsights.refreshing])
-
-
+    return `${refreshing[0]} and ${refreshing[1]}`
+  }, [youtubeInsights.refreshing, instagramInsights.refreshing])
 
   // Combined data for "all" tab analytics
   const allContentItems = useMemo(() => {
     if (!userId) return []
     return [
       ...(youtubeAnalytics.items || []),
-      ...(gmailAnalytics.gmailItems || []),
       ...(instagramAnalytics.items || []),
     ]
-  }, [userId, youtubeAnalytics.items, gmailAnalytics.gmailItems, instagramAnalytics.items])
+  }, [userId, youtubeAnalytics.items, instagramAnalytics.items])
 
   // Sort items by date for "all" tab
   const allDisplayItems = useMemo(() => {
@@ -171,19 +157,17 @@ export function ContentHubScreen() {
     // Hooks return insights as direct arrays
     const youtubeInsightsArray = Array.isArray(youtubeInsights.insights) ? youtubeInsights.insights : [];
     const instagramInsightsArray = Array.isArray(instagramInsights.insights) ? instagramInsights.insights : [];
-    const gmailInsightsArray = Array.isArray(gmailInsights.insights) ? gmailInsights.insights : [];
     
     const combined = [
       ...youtubeInsightsArray,
       ...instagramInsightsArray,
-      ...gmailInsightsArray,
     ];
     
     return combined;
-  }, [youtubeInsights.insights, instagramInsights.insights, gmailInsights.insights])
+  }, [youtubeInsights.insights, instagramInsights.insights])
 
-  const isAnalyticsLoading = youtubeAnalytics.loading || instagramAnalytics.loading || gmailAnalytics.loading
-  const isInsightsLoading = youtubeInsights.loading || instagramInsights.loading || gmailInsights.loading
+  const isAnalyticsLoading = youtubeAnalytics.loading || instagramAnalytics.loading
+  const isInsightsLoading = youtubeInsights.loading || instagramInsights.loading
 
   // Open content modal if contentId is present in query
   useEffect(() => {
@@ -198,45 +182,15 @@ export function ContentHubScreen() {
   }, [contentIdParam, allDisplayItems]);
 
   // Helper to clear contentId from URL
-  const clearContentIdFromUrl = useCallback(() => {
-    const params = new URLSearchParams(window.location.search);
-    params.delete('contentId');
-    const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
-    router.replace(newUrl);
-  }, [router]);
+  const clearContentIdFromUrl = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('contentId');
+    url.searchParams.delete('platform');
+    window.history.replaceState({}, '', url.toString());
+  };
 
-  // Helper to clear analytics parameters from URL
-  const clearAnalyticsFromUrl = useCallback(() => {
-    const params = new URLSearchParams(window.location.search);
-    params.delete('analyticsId');
-    params.delete('platform');
-    const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
-    router.replace(newUrl);
-  }, [router]);
-
-  // Handle analytics navigation - show notification or highlight when coming from timeline
-  useEffect(() => {
-    if (analyticsIdParam && platformParam) {
-      // Clear analytics params after a short delay to clean up URL
-      const timeout = setTimeout(() => {
-        clearAnalyticsFromUrl();
-      }, 2000);
-      
-      return () => clearTimeout(timeout);
-    }
-  }, [analyticsIdParam, platformParam, clearAnalyticsFromUrl]);
-
-  // Open Content Hub Insights tab and expand if ?tab=hub-insights or ?insight=open
-  useEffect(() => {
-    if (tabParam === 'hub-insights' || insightParam === 'open') {
-      setSelectedView('hub-insights');
-      setExpandHubInsight(true);
-    }
-  }, [tabParam, insightParam]);
-
-  // Always show the main layout, even if not authenticated or loading
-  // If not authenticated, pass empty userId and show empty data
-  const safeUserId = userId || '';
+  // Safe userId that defaults to empty string
+  const safeUserId = userId || ""
 
   const discussContent = async (item: AnyContentItem) => {
     try {
@@ -245,258 +199,183 @@ export function ContentHubScreen() {
         platform: item.platform,
         contentId: item.id,
         analysis: (item as any).aiAnalysis || null,
-        title: item.platform === 'youtube'
-          ? (item as YouTubeContentItem).content.title
-          : item.platform === 'instagram'
-            ? (item as InstagramContentItem).content?.text
-            : (item as GmailContentItem).content?.data?.subject || 'Email Thread',
-        thumbnailUrl: item.platform === 'youtube'
-          ? (item as YouTubeContentItem).content?.thumbnailUrl
-          : item.platform === 'instagram'
-            ? (item as InstagramContentItem).content?.mediaUrl
-            : undefined,
+        title: (item as YouTubeContentItem).content?.title || (item as InstagramContentItem).content?.text || 'Content',
+        thumbnailUrl: (item as YouTubeContentItem).content?.thumbnailUrl || (item as InstagramContentItem).content?.mediaUrl,
         publishedAt: item.publishedAt,
         metrics: item.metrics,
-        // For Gmail, create a compact content object with only essential fields
-        content: item.platform === 'gmail' ? {
-          data: {
-            subject: (item as GmailContentItem).content?.data?.subject || 'No Subject',
-            from: (item as GmailContentItem).content?.data?.from || 'Unknown Sender',
-            snippet: (item as GmailContentItem).content?.data?.snippet || 'No preview available',
-            threadId: (item as GmailContentItem).content?.data?.threadId || (item as GmailContentItem).id,
-            emailId: (item as GmailContentItem).content?.data?.emailId || (item as GmailContentItem).id,
-            // Don't include the full payload to avoid URL length issues
-          }
-        } : item.content
-      }
+        content: {
+          title: (item as YouTubeContentItem).content?.title,
+          description: (item as YouTubeContentItem).content?.description,
+          text: (item as InstagramContentItem).content?.text,
+          mediaUrl: (item as InstagramContentItem).content?.mediaUrl,
+          thumbnailUrl: (item as YouTubeContentItem).content?.thumbnailUrl || (item as InstagramContentItem).content?.thumbnailUrl,
+        }
+      };
       
-      const encodedContext = encodeURIComponent(JSON.stringify(context))
+      const encodedContext = encodeURIComponent(JSON.stringify(context));
       
       // Check if the URL would be too long (browsers typically limit to ~2000 chars)
-      const baseUrl = `/dashboard/chat?contentContext=`
-      const fullUrl = baseUrl + encodedContext
+      const baseUrl = `/dashboard/chat?contentContext=`;
+      const fullUrl = baseUrl + encodedContext;
       
       if (fullUrl.length > 1900) {
-        // If URL is too long, create a minimal context
+        // If URL is too long, use a more minimal context
         const minimalContext = {
           platform: item.platform,
           contentId: item.id,
-          title: context.title,
+          title: (item as YouTubeContentItem).content?.title || (item as InstagramContentItem).content?.text || 'Content',
           publishedAt: item.publishedAt,
-        }
-        const minimalEncoded = encodeURIComponent(JSON.stringify(minimalContext))
-        router.push(`/dashboard/chat?contentContext=${minimalEncoded}`)
+        };
+        const minimalEncoded = encodeURIComponent(JSON.stringify(minimalContext));
+        router.push(`/dashboard/chat?contentContext=${minimalEncoded}`);
       } else {
-        router.push(fullUrl)
+        router.push(fullUrl);
       }
     } catch (error) {
-      router.push('/dashboard/chat')
+      console.error('Error creating discussion context:', error);
+      // Fallback: navigate to chat without context
+      router.push('/dashboard/chat');
     }
-  }
-
-  // Check if any platforms are connected for "all platforms" view
-  const hasAnyPlatformConnected = youtubeAnalytics.isConnected || instagramAnalytics.isConnected || gmailAnalytics.hasConnectedAccounts;
+  };
 
   const renderAllPlatformsAnalytics = () => {
-    // If no platforms are connected, show connection prompt
-    if (!hasAnyPlatformConnected) {
+    if (isAnalyticsLoading) {
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <ContentCardSkeleton key={index} />
+          ))}
+        </div>
+      );
+    }
+
+    if (allDisplayItems.length === 0) {
       return (
         <div className="flex items-center justify-center min-h-[400px] px-4">
           <Card className="p-6 sm:p-8 max-w-md w-full bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl text-center">
             <div className="flex justify-center mb-4 sm:mb-6">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
                 <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
               </div>
             </div>
             
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
-              Let's Get Started! 🚀
+              Ready to Analyze Your Content?
             </h3>
             
             <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
-              Unlock powerful insights by connecting your favorite platforms! We'll help you track performance, understand your audience, and grow your creative presence. It only takes a minute to connect and the insights are worth it!
+              Connect your social media accounts to see detailed analytics and insights about your content performance across platforms.
             </p>
             
             <Button 
-              onClick={() => router.push('/settings?tab=integrations')}
-              className="w-full py-3 px-4 sm:px-6 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
+              onClick={() => router.push('/settings?tab=platform-connect')}
+              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-medium px-6 py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
             >
-              <Settings className="w-4 h-4" />
-              Go to Integrations
+              <Settings className="w-4 h-4 mr-2" />
+              Connect Platforms
             </Button>
-            
-            <div className="mt-3 sm:mt-4 text-xs text-gray-500">
-              Pro tip: Connect all your platforms for a complete picture of your creative journey!
-            </div>
           </Card>
         </div>
-      )
-    }
-
-    if (isAnalyticsLoading && allDisplayItems.length === 0) {
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <ContentCardSkeleton key={index} />
-          ))}
-        </div>
-      )
-    }
-
-    if (allDisplayItems.length > 0) {
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
-          {allDisplayItems.map((item, index) => {
-            const uniqueKey = `${item.platform}-${item.id}-${index}`
-            const commonProps = {
-              onDiscussContent: () => discussContent(item),
-              onViewDetailedAnalytics: () => setSelectedContent(item)
-            }
-            
-            if (item.platform === 'instagram') {
-              return <InstagramCard key={item.id} {...commonProps} item={item as InstagramContentItem} userId={firebaseUser.uid} />
-            }
-            if (item.platform === 'youtube') {
-              return <YouTubeCard key={uniqueKey} {...commonProps} item={item as YouTubeContentItem} />
-            }
-            if (item.platform === 'gmail') {
-              return <GmailCard key={uniqueKey} {...commonProps} item={item as GmailContentItem} />
-            }
-            return null
-          })}
-        </div>
-      )
+      );
     }
 
     return (
-      <div className="flex items-center justify-center min-h-[400px] px-4">
-        <Card className="p-6 sm:p-8 max-w-md w-full bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl text-center">
-          <div className="flex justify-center mb-4 sm:mb-6">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-              <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-            </div>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {allDisplayItems.map((item, index) => {
+          const uniqueKey = `${item.platform}-${item.id}-${index}`;
           
-          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
-            Your Creative Journey Starts Here! ✨
-          </h3>
+          if (item.platform === 'youtube') {
+            return (
+              <YouTubeCard
+                key={uniqueKey}
+                item={item as YouTubeContentItem}
+                onDiscussContent={() => discussContent(item)}
+                onViewDetailedAnalytics={() => setSelectedContent(item)}
+              />
+            );
+          } else if (item.platform === 'instagram') {
+            return (
+              <InstagramCard
+                key={uniqueKey}
+                item={item as InstagramContentItem}
+                onDiscussContent={() => discussContent(item)}
+                onViewDetailedAnalytics={() => setSelectedContent(item)}
+              />
+            );
+          }
           
-          <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
-            Your content dashboard is ready and waiting! Once you create and publish content on your connected platforms, you'll see your analytics light up right here. Keep creating - we can't wait to help you track your success!
-          </p>
-        </Card>
+          return null;
+        })}
       </div>
-    )
-  }
+    );
+  };
 
   const renderAllPlatformsInsights = () => {
-    // If no platforms are connected, show connection prompt
-    if (!hasAnyPlatformConnected) {
+    if (isInsightsLoading) {
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <InsightCardSkeleton key={index} />
+          ))}
+        </div>
+      );
+    }
+
+    if (allInsights.length === 0) {
       return (
         <div className="flex items-center justify-center min-h-[400px] px-4">
           <Card className="p-6 sm:p-8 max-w-md w-full bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl text-center">
             <div className="flex justify-center mb-4 sm:mb-6">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 flex items-center justify-center">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
                 <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
               </div>
             </div>
             
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
-              Unlock Your Creative Potential!
+              No AI Insights Yet
             </h3>
             
             <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
-              Connect your favorite platforms to discover powerful insights about your content! We'll help you understand what's working, spot trends, and find new opportunities to grow your creative impact. It's like having a personal content coach! 🚀
+              Connect your platforms and create some content first. Our AI will analyze your content and provide personalized insights to help you grow.
             </p>
             
             <Button 
-              onClick={() => router.push('/settings?tab=integrations')}
-              className="w-full py-3 px-4 sm:px-6 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
+              onClick={() => router.push('/settings?tab=platform-connect')}
+              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-medium px-6 py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
             >
-              <Settings className="w-4 h-4" />
-              Go to Integrations
+              <Settings className="w-4 h-4 mr-2" />
+              Get Started
             </Button>
-            
-            <div className="mt-3 sm:mt-4 text-xs text-gray-500">
-              Pro tip: Connect all your platforms for a complete picture of your creative journey!
-            </div>
           </Card>
         </div>
-      )
-    }
-
-    if (isInsightsLoading && allInsights.length === 0) {
-      return (
-        <div className="grid gap-6">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <InsightCardSkeleton key={index} />
-          ))}
-        </div>
-      )
-    }
-
-    if (allInsights.length > 0) {
-      return (
-        <div className="grid gap-6">
-          {allInsights.map((insight, idx) => {
-            const insightId = `${insight.platform}-${idx}`;
-            return (
-              <InsightCard
-                key={insightId}
-                {...insight}
-                expanded={expandedInsight === insightId}
-                onExpand={() => setExpandedInsight(expandedInsight === insightId ? null : insightId)}
-              />
-            );
-          })}
-        </div>
-      )
+      );
     }
 
     return (
-      <div className="flex items-center justify-center min-h-[400px] px-4">
-        <Card className="p-6 sm:p-8 max-w-md w-full bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm border-0 shadow-lg rounded-2xl text-center">
-          <div className="flex justify-center mb-4 sm:mb-6">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 flex items-center justify-center">
-              <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-            </div>
-          </div>
-          
-          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
-            Your Insights Are Brewing! ☕
-          </h3>
-          
-          <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
-            We're still getting to know your content! As you create and share more, we'll uncover powerful insights to help you grow. Keep creating amazing content - we'll be here with fresh ideas and recommendations soon!
-          </p>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {allInsights.map((insight) => (
+          <InsightCard
+            key={insight.id}
+            insight={insight}
+            isExpanded={expandedInsight === insight.id}
+            onToggleExpanded={() => {
+              setExpandedInsight(expandedInsight === insight.id ? null : insight.id);
+            }}
+          />
+        ))}
       </div>
-    )
-  }
-
-  // Handler for Refresh All YouTube
-  const handleRefreshAllYouTube = async () => {
-    if (!userId) return;
-    await refreshAllYouTube(userId);
+    );
   };
 
-  // Show toast for refresh success/error
-  useEffect(() => {
-    if (refreshYouTubeSuccess) {
-      toast.success('🎬 YouTube refresh in progress! Your latest content is on its way. Feel free to keep exploring - we will update your dashboard soon!');
-    }
-  }, [refreshYouTubeSuccess]);
+  const handleRefreshAllYouTube = async () => {
+    if (refreshingYouTube) return;
+    await refreshAllYouTube();
+  };
 
+  // Show error toast when refresh fails
   useEffect(() => {
-    console.log('🐛 DEBUG - Toast Error Effect:', {
-      refreshYouTubeError,
-      refreshYouTubeSuccess,
-      shouldShowToast: !!refreshYouTubeError
-    });
     if (refreshYouTubeError) {
-      const friendlyError = refreshYouTubeError.includes('rate limit') 
-        ? "We're getting lots of love from creators right now! Please take a quick break and try again in a moment. Your creative flow is worth the wait! 🎨✨"
-        : refreshYouTubeError.includes('authentication')
+      const friendlyError = refreshYouTubeError.includes("401") || refreshYouTubeError.includes("unauthorized")
         ? "We need to refresh your YouTube connection. Please check your account settings and try again!"
         : `Oops! We hit a snag: ${refreshYouTubeError}. Your content is safe - please try again in a moment!`;
       
@@ -582,7 +461,7 @@ export function ContentHubScreen() {
               </div>
 
               {/* Desktop Tabs */}
-              <TabsList className="hidden sm:grid w-full grid-cols-5 mb-0">
+              <TabsList className="hidden sm:grid w-full grid-cols-4 mb-0">
                 {platformOptions.map(option => (
                   <TabsTrigger key={option.value} value={option.value} className="flex items-center gap-2">
                     {/* Only show icon for hub-insights and all, otherwise just label */}
@@ -598,7 +477,7 @@ export function ContentHubScreen() {
               </TabsContent>
 
               {/* Platform-based content - Posts and AI Insights */}
-              {(selectedView === 'all' || selectedView === 'youtube' || selectedView === 'instagram' || selectedView === 'gmail') && (
+              {(selectedView === 'all' || selectedView === 'youtube' || selectedView === 'instagram') && (
                 <div className="space-y-0">
                   <Tabs value={selectedDataType} onValueChange={(value) => setSelectedDataType(value as DataType)} className="w-full">
                     <TabsList className="mb-6 flex w-full flex-row sm:grid sm:grid-cols-2">
@@ -607,8 +486,7 @@ export function ContentHubScreen() {
                         Posts ({
                           selectedView === 'all' ? allDisplayItems.length :
                           selectedView === 'youtube' ? youtubeAnalytics.items.length :
-                          selectedView === 'instagram' ? instagramAnalytics.items.length :
-                          gmailAnalytics.gmailItems.length
+                          instagramAnalytics.items.length
                         })
                       </TabsTrigger>
                       <TabsTrigger value="ai-insights" className="flex flex-1 items-center justify-center gap-2 sm:flex-initial">
@@ -616,8 +494,7 @@ export function ContentHubScreen() {
                         AI Insights ({
                           selectedView === 'all' ? allInsights.length :
                           selectedView === 'youtube' ? (youtubeInsights.insights || []).length :
-                          selectedView === 'instagram' ? (instagramInsights.insights || []).length :
-                          (gmailInsights.insights || []).length
+                          (instagramInsights.insights || []).length
                         })
                       </TabsTrigger>
                     </TabsList>
@@ -648,12 +525,6 @@ export function ContentHubScreen() {
                         <InstagramAnalyticsPlatform 
                           userId={userId} 
                           {...instagramAnalytics}
-                        />
-                      )}
-                      {selectedView === 'gmail' && (
-                        <GmailAnalyticsPlatform 
-                          userId={userId}
-                          {...gmailAnalytics}
                         />
                       )}
                     </TabsContent>
@@ -701,26 +572,6 @@ export function ContentHubScreen() {
                           />
                         </>
                       )}
-                      {selectedView === 'gmail' && (
-                        <>
-                          {gmailInsights.refreshing && (
-                            <div className="mb-4">
-                              <ProgressInsightsState
-                                title="Analyzing Gmail content..."
-                                quote={currentQuote}
-                                subtitle="Navigating freely while we process your data"
-                                progress={gmailInsights.status?.progress || 0}
-                                platform="gmail"
-                              />
-                            </div>
-                          )}
-                          <GmailInsightsPlatform 
-                            userId={userId} 
-                            currentQuote={currentQuote} 
-                            loading={gmailInsights.loading} 
-                          />
-                        </>
-                      )}
                     </TabsContent>
                   </Tabs>
                 </div>
@@ -733,15 +584,6 @@ export function ContentHubScreen() {
       {/* Modals for "all" tab posts */}
       {selectedContent && selectedView === 'all' && selectedDataType === 'posts' && (
         <>
-          {selectedContent.platform === 'gmail' && (
-            <GmailModal
-              selectedContent={selectedContent as GmailContentItem}
-              onClose={() => {
-                setSelectedContent(null);
-                clearContentIdFromUrl();
-              }}
-            />
-          )}
           {selectedContent.platform === 'instagram' && (
             <InstagramModal
               selectedContent={selectedContent as InstagramContentItem}
@@ -749,7 +591,6 @@ export function ContentHubScreen() {
                 setSelectedContent(null);
                 clearContentIdFromUrl();
               }}
-              onDiscussContent={() => discussContent(selectedContent)}
             />
           )}
           {selectedContent.platform === 'youtube' && (
@@ -759,7 +600,6 @@ export function ContentHubScreen() {
                 setSelectedContent(null);
                 clearContentIdFromUrl();
               }}
-              onDiscussContent={() => discussContent(selectedContent)}
             />
           )}
         </>
@@ -769,7 +609,7 @@ export function ContentHubScreen() {
       <HelpModal 
         open={helpOpen} 
         onClose={() => setHelpOpen(false)} 
-        pages={contentHubHelp}
+        pages={contentHubHelp} 
       />
     </div>
   )
