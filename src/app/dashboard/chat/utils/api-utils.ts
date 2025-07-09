@@ -811,7 +811,7 @@ export async function sendChatMessage(
   // Get API key - make sure we have one before proceeding
   const apiKey = await getApiKey();
   if (!apiKey) {
-    throw new Error('You are not authenticated. Please log in again.');
+    throw new AuthenticationError('We need to verify your account to continue your creative journey. Please sign in again!');
   }
 
   console.log('🐛 [DEBUG] Got API key, length:', apiKey.length);
@@ -1133,10 +1133,12 @@ export async function sendChatMessage(
   });
 
   if (response.status === 401 || response.status === 403) {
-    throw new AuthenticationError('Token expired or invalid');
+    throw new AuthenticationError('Your session has timed out. Please refresh the page to continue your creative work!');
   }
   if (!response.ok) {
-    throw new Error('Failed to send message');
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData?.message || 'We hit a creative block while sending your message. Your work is safe - please try again in a moment!';
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
@@ -1173,7 +1175,7 @@ export async function loadConversation(id: string) {
     // Get API key for authentication - same pattern as sendChatMessage
     const apiKey = await getApiKey();
     if (!apiKey) {
-      throw new Error('You are not authenticated. Please log in again.');
+      throw new AuthenticationError('We need to verify your account to continue your creative journey. Please sign in again!');
     }
 
     const response = await fetch(`/api/chat/conversation/${id}`, {
@@ -1183,7 +1185,8 @@ export async function loadConversation(id: string) {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to load conversation: ${response.status}`);
+      const errorMessage = `We couldn't load this conversation (${response.status}). Your creative work is safe - please try refreshing the page!`;
+    throw new Error(errorMessage);
     }
 
     return await response.json();
@@ -1218,7 +1221,11 @@ export async function checkPlatformEmbeddings(
     return result;
   } catch (error: any) {
     console.error(`Error checking ${platform} embeddings:`, error);
-    return { hasEmbeddings: false, count: 0 };
+    console.warn(`We're having trouble checking your ${platform} content. Don't worry, we're on it!`);
+    return { 
+      hasEmbeddings: false, 
+      count: 0
+    };
   }
 }
 
@@ -1231,6 +1238,7 @@ export async function checkUserEmbeddings(userId: string): Promise<{ hasEmbeddin
     return result;
   } catch (error: any) {
     console.error('Error checking user embeddings:', error);
+    // Don't show error to user for background checks
     return { hasEmbeddings: false, count: 0 };
   }
 }
@@ -1248,10 +1256,7 @@ export async function deleteAllUserEmbeddings(userId: string): Promise<{ success
     return { 
       success: false, 
       deletedCount: 0, 
-      message: `Failed to delete embeddings: ${error.message}` 
+      message: `We couldn't clear your content index. Don't worry, your data is safe! Please try again or contact support if this continues.`
     };
   }
 }
-
-// We no longer generate local session IDs
-// All session IDs should come from the backend

@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { Note, NoteUpdate, NoteType } from "../types";
+import { Note, NoteUpdate } from "../types";
 import { getApiKey } from "@/app/lib/api-helpers";
-import { formatAnalysisToMarkdown } from '../utils/format-utils';
+import { toast } from 'sonner';
 
 // Define the return type for the hook to ensure TypeScript knows about all returned functions
 interface SmartNotesHook {
@@ -13,201 +13,141 @@ interface SmartNotesHook {
   isSaving: boolean;
   createNote: (noteData: NoteUpdate) => Promise<Note | null>;
   updateNote: (noteId: string | Id<"notes">, updateFields: NoteUpdate, force?: boolean) => Promise<Note | null>;
-  setNotes: React.Dispatch<React.SetStateAction<Note[]>>;
+  activeNoteId: string | undefined;
+  setActiveNoteId: (id: string | undefined) => void;
+}
+
+// Validation layer for NoteUpdate
+function validateNoteUpdate(update: NoteUpdate, context: string): NoteUpdate {
+  if (update.tags !== undefined && update.tags.length === 0) {
+    console.warn(`⚠️ Empty tags being sent from: ${context}`);
+    // Optionally: throw or block here if not explicitly clearing tags
+  }
+  return update;
 }
 
 export function useSmartNotes(userId: string | undefined): SmartNotesHook {
   // Fetch notes using Convex useQuery
   const notesFromConvex = useQuery(api.notes.getNotesByUser, userId ? { userId } : "skip");
-  
-  // State variables
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [isSaving, setIsSaving] = useState<boolean>(false);
 
-  // Define isLoading based on query status
-  const isLoading = notesFromConvex === undefined && userId !== undefined;
+  // State variables
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [activeNoteId, setActiveNoteId] = useState<string | undefined>(undefined);
 
   // Convex mutations
   const updateNoteConvex = useMutation(api.notes.updateNote);
 
-  const generateMetadata = useCallback(async (
-    noteId: string,
-    noteContent: string
-  ): Promise<{ success: boolean; data?: any; error?: string }> => {
-    console.log("🚀 [generateMetadata] Starting metadata generation for note:", noteId);
-    if (!noteContent || noteContent.trim().length < 10) {
-      console.log("⏭️ [generateMetadata] Skipping: content is too short.");
-      return { success: false, error: "Content too short" };
-    }
+  // Debounce and cancellation for metadata generation
+  const metadataTimers = useRef<Record<string, NodeJS.Timeout>>({});
+  const abortControllers = useRef<Record<string, AbortController>>({});
+  const [metadataPending, setMetadataPending] = useState<Record<string, boolean>>({});
 
-    try {
-      const apiKey = await getApiKey();
-      if (!apiKey) {
-        console.error("❌ [generateMetadata] API key not found.");
-        return { success: false, error: "API key not found" };
+  // isLoading based on query status
+  const isLoading = notesFromConvex === undefined && userId !== undefined;
+
+  // notes: always derived from Convex query
+  const notes: Note[] = useMemo(() => {
+    if (!notesFromConvex) return [];
+    return notesFromConvex.map(note => ({
+      ...note,
+      content: note.content ?? "",
+      title: note.title ?? "",
+      createdAt: note.createdAt ?? note._creationTime,
+      updatedAt: note.updatedAt ?? note._creationTime,
+      important: note.important ?? false,
+      tags: note.tags ?? [],
+    }));
+  }, [notesFromConvex]);
+
+  // --- Metadata Generation (debounced, cancellable) ---
+  const generateMetadata = useCallback(
+    (noteId: string, noteContent: string) => {
+      if (!noteContent || noteContent.trim().length < 10) return;
+      // Cancel any in-flight request for this note
+      if (abortControllers.current[noteId]) {
+        abortControllers.current[noteId].abort();
+        delete abortControllers.current[noteId];
       }
-
-      const response = await fetch('/api/smart-notes/generate-metadata', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({ noteId, noteContent }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("❌ [generateMetadata] API call failed:", { status: response.status, errorData });
-        throw new Error(errorData.message || 'Failed to generate metadata');
+      // Debounce: clear any existing timer
+      if (metadataTimers.current[noteId]) {
+        clearTimeout(metadataTimers.current[noteId]);
       }
+      setMetadataPending(prev => ({ ...prev, [noteId]: true }));
+      metadataTimers.current[noteId] = setTimeout(async () => {
+        const controller = new AbortController();
+        abortControllers.current[noteId] = controller;
+        try {
+          const apiKey = await getApiKey();
+          if (!apiKey) {
+            toast.error("We need to verify your account to continue. Please sign in again!");
+            return;
+          }
+          const response = await fetch('/api/smart-notes/generate-metadata', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({ noteId, noteContent }),
+            signal: controller.signal,
+          });
+          if (!response.ok) {
+            const errorData = await response.json();
+            const friendlyError = errorData.message?.includes('rate limit')
+              ? "We're getting lots of love from creators right now! Please take a quick break and try again in a moment. Your creative flow is worth the wait! 🎨✨"
+              : errorData.message || "We hit a creative block while generating insights. Your work is safe - please try again in a moment!";
+            toast.error(friendlyError);
+            return;
+          }
+          // Optionally: show a positive affirmation here
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          const friendlyError = errorMessage.includes('rate limit')
+            ? "We're getting lots of love from creators right now! Please take a quick break and try again in a moment. Your creative flow is worth the wait! 🎨✨"
+            : `We hit a creative block: ${errorMessage}. Your work is safe - please try again!`;
+          toast.error(friendlyError);
+        } finally {
+          setMetadataPending(prev => {
+            const updated = { ...prev };
+            delete updated[noteId];
+            return updated;
+          });
+          delete abortControllers.current[noteId];
+        }
+      }, 500); // 500ms debounce
+    },
+    []
+  );
 
-      const data = await response.json();
-      console.log("✅ [generateMetadata] Metadata generated successfully:", data);
-      return { success: true, data };
-    } catch (error) {
-      console.error("💥 [generateMetadata] Error during metadata generation:", error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
-    }
-  }, []);
-
+  // --- Create Note ---
   const createNote = useCallback(async (
     noteData: NoteUpdate
   ): Promise<Note | null> => {
     if (!userId) return null;
-
-    console.log("📝 [createNote] Starting note creation:", {
-      userId,
-      noteData: Object.keys(noteData),
-    });
-
     setIsSaving(true);
     try {
       const newNote = await updateNoteConvex({
         userId,
         updates: noteData,
       });
-
-      if (newNote) {
-        console.log('✅ [createNote] Note created successfully:', newNote);
-        setNotes(prev => [newNote as Note, ...prev]);
-        return newNote as Note;
-      } else {
-        console.warn('❌ [createNote] createNote returned null or invalid note.');
-        return null;
-      }
+      // No manual setNotes! Convex will update notes array reactively
+      return newNote as Note;
     } catch (error) {
-      console.error('💥 [createNote] Error creating note:', error);
       return null;
     } finally {
       setIsSaving(false);
     }
-  }, [userId, updateNoteConvex, setNotes]);
+  }, [userId, updateNoteConvex]);
 
-  // Update local notes state when Convex data changes
-  useEffect(() => {
-    if (notesFromConvex) {
-      // Transform the data to ensure it matches the Note interface
-      const transformedNotes: Note[] = notesFromConvex.map(note => ({
-        ...note,
-        // Ensure required properties have default values if they're missing
-        content: note.content ?? "",
-        title: note.title ?? "",
-        createdAt: note.createdAt ?? note._creationTime,
-        updatedAt: note.updatedAt ?? note._creationTime,
-        important: note.important ?? false,
-        tags: note.tags ?? [],
-      }));
-      setNotes(transformedNotes);
-    }
-  }, [notesFromConvex]);
-
-  /**
-   * Update a note with various fields
-   */
+  // --- Update Note ---
   const updateNote = useCallback(async (
     noteId: string | Id<"notes">,
     updateFields: NoteUpdate,
     force: boolean = false
   ): Promise<Note | null> => {
     if (!userId) return null;
-
-    console.log("🔄 [updateNote] Starting note update:", {
-      noteId: String(noteId),
-      updateFields: Object.keys(updateFields),
-      userId,
-      hasContent: 'content' in updateFields,
-      contentLength: updateFields.content?.length || 0
-    });
-    
-    // DEBUG: Add detailed logging for image updates
-    if (updateFields.images) {
-      console.log("🖼️ [updateNote] DEBUG - Image update detected:");
-      console.log("Raw noteId:", noteId);
-      console.log("Raw noteId type:", typeof noteId);
-      console.log("Images array length:", updateFields.images.length);
-      console.log("Images array:", updateFields.images);
-      console.log("UserId:", userId);
-      console.log("UserId type:", typeof userId);
-      
-      // DETAILED TYPE CHECKING
-      console.log("🔬 [updateNote] DETAILED IMAGE ANALYSIS:");
-      updateFields.images.forEach((img, index) => {
-        console.log(`Image ${index} FULL ANALYSIS:`, {
-          // Raw values
-          url: img.url,
-          filename: img.filename,
-          originalFilename: img.originalFilename,
-          uploadedAt: img.uploadedAt,
-          size: img.size,
-          mimeType: img.mimeType,
-          width: img.width,
-          height: img.height,
-          // Type checking
-          urlType: typeof img.url,
-          urlValid: typeof img.url === 'string' && img.url.length > 0,
-          filenameType: typeof img.filename,
-          filenameValid: typeof img.filename === 'string' && img.filename.length > 0,
-          originalFilenameType: typeof img.originalFilename,
-          originalFilenameValid: img.originalFilename === undefined || typeof img.originalFilename === 'string',
-          uploadedAtType: typeof img.uploadedAt,
-          uploadedAtValid: typeof img.uploadedAt === 'number' && !isNaN(img.uploadedAt),
-          sizeType: typeof img.size,
-          sizeValid: img.size === undefined || (typeof img.size === 'number' && !isNaN(img.size)),
-          mimeTypeType: typeof img.mimeType,
-          mimeTypeValid: img.mimeType === undefined || typeof img.mimeType === 'string',
-          widthType: typeof img.width,
-          widthValid: img.width === undefined || (typeof img.width === 'number' && !isNaN(img.width)),
-          heightType: typeof img.height,
-          heightValid: img.height === undefined || (typeof img.height === 'number' && !isNaN(img.height)),
-        });
-        
-        // Check for NaN values specifically
-        if (typeof img.uploadedAt === 'number' && isNaN(img.uploadedAt)) {
-          console.error(`❌ Image ${index} uploadedAt is NaN!`);
-        }
-        if (img.size !== undefined && typeof img.size === 'number' && isNaN(img.size)) {
-          console.error(`❌ Image ${index} size is NaN!`);
-        }
-        if (img.width !== undefined && typeof img.width === 'number' && isNaN(img.width)) {
-          console.error(`❌ Image ${index} width is NaN!`);
-        }
-        if (img.height !== undefined && typeof img.height === 'number' && isNaN(img.height)) {
-          console.error(`❌ Image ${index} height is NaN!`);
-        }
-      });
-    }
-    
     setIsSaving(true);
     try {
-      console.log('Updating note:', {
-        id: String(noteId),
-        fields: Object.keys(updateFields),
-        userId
-      });
-      
-      console.log("updateFields being sent to Convex:", updateFields);
-      
       // CLEAN IMAGE OBJECTS - Remove any extra fields not in schema
       const cleanedUpdateFields = { ...updateFields };
       if (cleanedUpdateFields.images) {
@@ -221,84 +161,50 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
           ...(img.width !== undefined && { width: img.width }),
           ...(img.height !== undefined && { height: img.height }),
         }));
-        console.log("🧹 [updateNote] CLEANED images for Convex:", cleanedUpdateFields.images);
       }
-      
-      // Construct the mutation arguments properly
+      // Validate update before sending
+      const validatedUpdate = validateNoteUpdate(cleanedUpdateFields, 'useSmartNotes.updateNote');
       const mutationArgs = {
         noteId: noteId as Id<"notes">,
         userId,
-        updates: cleanedUpdateFields,
+        updates: validatedUpdate,
       };
-      
-      console.log("Final mutation args:", mutationArgs);
-      
       const updatedNote = await updateNoteConvex(mutationArgs);
-      console.log('Raw response from updateNoteConvex:', updatedNote);
-      
-      if (updatedNote) {
-        console.log('Note updated successfully:', updatedNote);
-        setNotes(prev => {
-          const updated = prev.map(n => 
-            n._id === noteId ? { ...n, ...updatedNote } : n
-          );
-          console.log('[useSmartNotes] Notes after update:', updated);
-          return updated;
-        });
-
-        const shouldGenerateMetadata =
-          !force && // Skip metadata generation if force is true
-          updateFields.content &&
-          updateFields.content.trim().length >= 10 &&
-          (!updatedNote.titleGenerated || !updatedNote.typeGenerated);
-
-        if (shouldGenerateMetadata) {
-          console.log(
-            "🎯 [updateNote] Auto-generating metadata for updated note:",
-            noteId
-          );
-          try {
-            await generateMetadata(
-              String(noteId),
-              updateFields.content.trim()
-            );
-          } catch (metadataError) {
-            console.warn(
-              "⚠️ [updateNote] Metadata generation failed, but note was saved:",
-              metadataError
-            );
-          }
-        } else if (force) {
-          console.log(
-            "⏭️ [updateNote] Skipping metadata generation due to force=true"
-          );
-        }
-        
-        return updatedNote;
-      } else {
-        console.warn('updateNoteConvex returned null or invalid note!', {
-          noteId,
-          userId,
-          updateFields
-        });
-        return null;
+      // No manual setNotes! Convex will update notes array reactively
+      // Metadata generation (debounced, only if content changed and not forced)
+      if (
+        !force &&
+        updateFields.content &&
+        updateFields.content.trim().length >= 10 &&
+        (!updatedNote?.titleGenerated || !updatedNote?.typeGenerated)
+      ) {
+        generateMetadata(String(noteId), updateFields.content.trim());
       }
+      return updatedNote as Note;
     } catch (error) {
-      console.error('Error updating note:', error);
       return null;
     } finally {
       setIsSaving(false);
     }
-  }, [userId, updateNoteConvex, setNotes, generateMetadata]);
+  }, [userId, updateNoteConvex, generateMetadata]);
 
+  // --- Cleanup on unmount ---
+  useEffect(() => {
+    return () => {
+      // Clear all timers and abort controllers
+      Object.values(metadataTimers.current).forEach(clearTimeout);
+      Object.values(abortControllers.current).forEach(ctrl => ctrl.abort());
+    };
+  }, []);
 
-  // Return all functions and state from the hook
+  // --- Expose only the minimal API ---
   return {
     notes,
     isLoading,
     isSaving,
     createNote,
     updateNote,
-    setNotes,
+    activeNoteId,
+    setActiveNoteId,
   };
 }

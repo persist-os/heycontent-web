@@ -56,7 +56,12 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
   useEffect(() => {
     if (quotedContent && isOpen) {
       // Remove only leading/trailing quotes while preserving all markdown formatting (bold, italics, etc.) and newlines
-      const cleanedContent = quotedContent.replace(/^["']|["']$/g, '').trim()
+      let cleanedContent = quotedContent.replace(/^['"]|['"]$/g, '').trim()
+      // Remove leading '>' and whitespace from each line
+      cleanedContent = cleanedContent
+        .split('\n')
+        .map(line => line.replace(/^\s*>\s?/, ''))
+        .join('\n')
       const quotedText = `${cleanedContent}\n\n`
       setContent(prev => prev + quotedText)
       onClearQuoted?.()

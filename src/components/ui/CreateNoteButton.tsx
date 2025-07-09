@@ -48,7 +48,7 @@ export const CreateNoteButton = ({ content, onNoteCreate, title, className }: Cr
                 disabled={isCreating}
                 className={cn(
                   "group relative h-8 px-3 text-xs font-medium",
-                  "bg-muted/50 border border-border/50 hover:bg-primary hover:text-black focus:bg-primary focus:text-black active:bg-primary active:text-black dark:hover:bg-primary dark:hover:text-black dark:focus:bg-primary dark:focus:text-black dark:active:bg-primary dark:active:text-black hover:border-primary focus:border-primary active:border-primary dark:hover:border-primary dark:focus:border-primary dark:active:border-primary",
+                  "bg-muted/50 border border-border/50 hover:bg-primary hover:text-white focus:bg-primary focus:text-white active:bg-primary active:text-white dark:hover:bg-primary dark:hover:text-black dark:focus:bg-primary dark:focus:text-black dark:active:bg-primary dark:active:text-black hover:border-primary focus:border-primary active:border-primary dark:hover:border-primary dark:focus:border-primary dark:active:border-primary",
                   "transition-all duration-200 ease-out",
                   "focus-visible:ring-1 focus-visible:ring-ring",
                   className

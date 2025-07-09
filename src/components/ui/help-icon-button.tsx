@@ -22,10 +22,11 @@ export function HelpIconButton({
       size="icon"
       onClick={onClick}
       className={cn(
-        "group text-muted-foreground transition-colors",
+        "group text-muted-foreground transition-colors border border-border",
         size === 'sm' && "h-8 w-8",
         size === 'default' && "h-10 w-10",
         size === 'lg' && "h-12 w-12",
+        "group-hover:border-black",
         className
       )}
       aria-label="Open help guide"
@@ -33,7 +34,7 @@ export function HelpIconButton({
     >
       <HelpCircle 
         className={cn(
-          "text-white group-hover:text-black",
+          "text-foreground group-hover:text-black",
           size === 'sm' && "h-4 w-4",
           size === 'default' && "h-5 w-5",
           size === 'lg' && "h-6 w-6"

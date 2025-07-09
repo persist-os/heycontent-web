@@ -9,6 +9,7 @@ import { CollaborationCard } from './CollaborationCard';
 import { BaseCard } from './BaseCard';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
+import { useNotes } from '@/app/context/notes-context';
 
 interface NoteCardProps {
   note: Note;
@@ -50,6 +51,9 @@ export function NoteCard({
   const style = {
     transform: CSS.Translate.toString(transform),
   };
+
+  // Use setActiveNoteId from context for note selection if needed
+  const { setActiveNoteId } = useNotes();
 
   // Determine card type based on note properties and content
   // Priority: Convex note type first, then content-based detection
@@ -179,11 +183,19 @@ export function NoteCard({
 
   const cardType = getCardType();
 
+  const handleEdit = () => {
+    if (onEdit) {
+      onEdit(note);
+    } else {
+      setActiveNoteId(note._id);
+    }
+  };
+
   const renderCard = () => {
     const commonProps = {
       note,
       availableNotes,
-      onEdit,
+      onEdit: handleEdit,
       onDelete,
       onToggleImportant,
       onUpdate,
@@ -243,21 +255,16 @@ export function NoteCard({
     }
   };
 
-  // If draggable, wrap with draggable functionality
-  if (isDraggable && !isOverlay) {
-    return (
-      <div
-        ref={setNodeRef}
-        style={style}
-        {...listeners}
-        {...attributes}
-        className={isDragging ? 'opacity-50 cursor-grabbing' : 'cursor-grab'}
-      >
-        {renderCard()}
-      </div>
-    );
-  }
-
-  // For overlay or non-draggable cards, render directly
-  return renderCard();
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="note-card-wrapper"
+      onClick={handleEdit}
+    >
+      {renderCard()}
+    </div>
+  );
 }

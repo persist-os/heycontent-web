@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useCallback, useState } from 'react';
 import { useSmartNotes } from '@/app/dashboard/notes/hooks/useSmartNotes';
 import { Note, NoteUpdate } from '@/app/dashboard/notes/types';
 import type { Id } from '@/convex/_generated/dataModel';
@@ -8,22 +8,28 @@ import { useAuth } from './auth-context';
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 
+// Navigation stack entry
+interface NavigationEntry {
+  noteId: string;
+  timestamp: number;
+  fromLink: boolean; // true if navigated via a note link, false if direct navigation
+}
+
 interface NotesContextType {
   notes: Note[];
-  setNotes: React.Dispatch<React.SetStateAction<Note[]>>;
   isLoading: boolean;
   isSaving: boolean;
-  activeNoteId: string | null;
-  setActiveNoteId: (id: string | null) => void;
-  navigationStack: string[];
-  canGoBack: boolean;
+  createNote: (noteData: NoteUpdate) => Promise<Note | null>;
+  updateNote: (noteId: string | Id<'notes'>, updateFields: NoteUpdate, force?: boolean) => Promise<Note | null>;
+  activeNoteId: string | undefined;
+  setActiveNoteId: (id: string | undefined) => void;
+  deleteNote: (noteId: Id<'notes'> | string) => Promise<boolean>;
+  // Smart navigation functionality
   navigateToNote: (noteId: string, fromLink?: boolean) => void;
-  navigateBack: () => void;
+  navigateBack: () => string | null; // Returns the noteId we navigated back to, or null if back to grid
+  navigationStack: NavigationEntry[];
+  canNavigateBack: boolean;
   clearNavigationStack: () => void;
-  deleteNote: (noteId: Id<"notes"> | string) => Promise<boolean>;
-  updateNote: (noteId: string | Id<"notes">, updateFields: NoteUpdate, force?: boolean) => Promise<Note | null>;
-  saveNoteContent: (noteId: string | Id<"notes">, content: string, title: string) => Promise<Note | null>;
-  saveNote: (content: string, options?: any) => Promise<{ success: boolean; noteId?: Id<"notes">; error?: string }>;
 }
 
 const NotesContext = createContext<NotesContextType | undefined>(undefined);
@@ -31,101 +37,147 @@ const NotesContext = createContext<NotesContextType | undefined>(undefined);
 export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid;
-  const { 
-    notes: fetchedNotes, 
-    setNotes: setFetchedNotes,
-    isLoading, 
+  const {
+    notes,
+    isLoading,
     isSaving,
     createNote,
-    updateNote, 
+    updateNote,
+    activeNoteId,
+    setActiveNoteId,
   } = useSmartNotes(userId);
-  
+
+  // Navigation stack state
+  const [navigationStack, setNavigationStack] = useState<NavigationEntry[]>([]);
+
   const convexDeleteNote = useMutation(api.notes.deleteNote);
 
-  const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
-  const [navigationStack, setNavigationStack] = useState<string[]>([]);
-
-  const deleteNote = useCallback(async (noteId: Id<"notes"> | string): Promise<boolean> => {
+  // Delete note: just call Convex, let reactivity update notes
+  const deleteNote = useCallback(async (noteId: Id<'notes'> | string): Promise<boolean> => {
     if (!userId) {
       console.warn('Cannot delete note: user not authenticated');
       return false;
     }
     try {
-      await convexDeleteNote({ noteId: noteId as Id<"notes">, userId });
-      setFetchedNotes(prev => prev.filter(note => note._id !== noteId));
+      await convexDeleteNote({ noteId: noteId as Id<'notes'>, userId });
+      
+      // Clean up navigation stack if the deleted note is in it
+      setNavigationStack(prev => prev.filter(entry => entry.noteId !== String(noteId)));
+      
+      // If the active note was deleted, clear it
+      if (String(activeNoteId) === String(noteId)) {
+        setActiveNoteId(undefined);
+      }
+      
       return true;
     } catch (error) {
-      console.error("Error deleting note:", error);
+      console.error('Error deleting note:', error);
       return false;
     }
-  }, [userId, convexDeleteNote, setFetchedNotes]);
+  }, [userId, convexDeleteNote, activeNoteId, setActiveNoteId]);
 
-  const saveNoteContent = useCallback(async (noteId: string | Id<"notes">, content: string, title: string): Promise<Note | null> => {
-    return await updateNote(noteId, { content, title });
-  }, [updateNote]);
-
-
-  const saveNote = useCallback(async (content: string, options: any = {}) => {
-    const noteData = { content, ...options };
-    try {
-      const newNote = await createNote(noteData);
-      if (newNote) {
-        return { success: true, noteId: newNote._id as Id<"notes"> };
-      }
-      return { success: false, error: 'Failed to create note.' };
-    } catch(e) {
-      const error = e as Error;
-      return { success: false, error: error.message };
+  // Smart navigation to a note
+  const navigateToNote = useCallback((noteId: string, fromLink: boolean = false) => {
+    console.log('🧠 Smart navigation:', { noteId, fromLink, currentActive: activeNoteId });
+    
+    // Don't navigate to the same note
+    if (String(activeNoteId) === String(noteId)) {
+      return;
     }
-  }, [createNote]);
 
-  const navigateToNote = useCallback((noteId: string, fromLink?: boolean) => {
-    console.log('navigateToNote called:', { noteId, fromLink, currentActiveNoteId: activeNoteId, currentStack: navigationStack });
-    if (fromLink && activeNoteId) {
+    // Verify the note exists
+    const targetNote = notes.find(n => String(n._id) === String(noteId));
+    if (!targetNote) {
+      console.warn('Cannot navigate to note: note not found', noteId);
+      return;
+    }
+
+    // If we're currently viewing a note and this is a link navigation, add current note to stack
+    if (activeNoteId && fromLink) {
+      const currentEntry: NavigationEntry = {
+        noteId: String(activeNoteId),
+        timestamp: Date.now(),
+        fromLink: false // The current note wasn't reached via link (it's where we're leaving from)
+      };
+      
       setNavigationStack(prev => {
-        const newStack = [...prev, activeNoteId];
-        console.log('Updated navigation stack:', newStack);
+        // Avoid duplicates - if the last entry is the same note, don't add it again
+        if (prev.length > 0 && prev[prev.length - 1].noteId === currentEntry.noteId) {
+          return prev;
+        }
+        
+        // Limit stack size to prevent memory issues
+        const newStack = [...prev, currentEntry];
+        if (newStack.length > 20) {
+          return newStack.slice(-15); // Keep last 15 entries
+        }
         return newStack;
       });
     }
+
+    // Navigate to the new note
     setActiveNoteId(noteId);
-  }, [activeNoteId, navigationStack]);
+  }, [activeNoteId, setActiveNoteId, notes]);
 
-  const navigateBack = useCallback(() => {
-    console.log('navigateBack called:', { currentStack: navigationStack });
-    if (navigationStack.length > 0) {
-      const previousNoteId = navigationStack[navigationStack.length - 1];
-      setNavigationStack(prev => {
-        const newStack = prev.slice(0, -1);
-        console.log('Navigation stack after back:', newStack);
-        return newStack;
-      });
-      setActiveNoteId(previousNoteId);
-      console.log('Navigating back to:', previousNoteId);
+  // Smart back navigation
+  const navigateBack = useCallback((): string | null => {
+    console.log('🔙 Smart back navigation:', { stackLength: navigationStack.length });
+    
+    if (navigationStack.length === 0) {
+      // No stack, go back to grid
+      setActiveNoteId(undefined);
+      return null;
     }
-  }, [navigationStack]);
 
+    // Get the last entry from the stack
+    const lastEntry = navigationStack[navigationStack.length - 1];
+    
+    // Remove the last entry from the stack
+    setNavigationStack(prev => prev.slice(0, -1));
+    
+    // Verify the note still exists
+    const targetNote = notes.find(n => String(n._id) === lastEntry.noteId);
+    if (!targetNote) {
+      console.warn('Note in navigation stack no longer exists, trying next:', lastEntry.noteId);
+      // Recursively try the next entry in the stack
+      return navigateBack();
+    }
+
+    // Navigate to the previous note
+    setActiveNoteId(lastEntry.noteId);
+    return lastEntry.noteId;
+  }, [navigationStack, setActiveNoteId, notes]);
+
+  // Clear navigation stack
   const clearNavigationStack = useCallback(() => {
     setNavigationStack([]);
-    setActiveNoteId(null);
   }, []);
 
-  const value = {
-    notes: fetchedNotes,
-    setNotes: setFetchedNotes,
+  // Computed property for whether we can navigate back
+  const canNavigateBack = navigationStack.length > 0;
+
+  // Clear stack when activeNoteId is manually set to undefined (e.g., going to grid)
+  React.useEffect(() => {
+    if (!activeNoteId) {
+      setNavigationStack([]);
+    }
+  }, [activeNoteId]);
+
+  // Provide the enhanced API
+  const value: NotesContextType = {
+    notes,
     isLoading,
     isSaving,
+    createNote,
+    updateNote,
     activeNoteId,
     setActiveNoteId,
-    navigationStack,
-    canGoBack: navigationStack.length > 0,
+    deleteNote,
     navigateToNote,
     navigateBack,
+    navigationStack,
+    canNavigateBack,
     clearNavigationStack,
-    deleteNote,
-    updateNote,
-    saveNoteContent,
-    saveNote,
   };
 
   return (

@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     if (!apiKey || !userId) {
       console.warn(`[${requestId}] Authentication failed: No Authorization header or invalid format`);
       return NextResponse.json(
-        { error: 'Unauthorized - Missing or invalid Authorization header' }, 
+        { error: 'We need to confirm your account details to continue. Please sign in again to access your subscription.' }, 
         { status: 401 }
       );
     }
@@ -80,7 +80,7 @@ export async function GET(request: Request) {
       } catch (apiError) {
         // Check if this is a validation error
         const errorMessage = apiError instanceof Error ? apiError.message : 'Unknown API error';
-        console.error(`[${requestId}] Failed to get subscription status`, { error: errorMessage });
+        console.error(`[${requestId}] Could not fetch subscription details`, { error: errorMessage });
         
         // If it contains validation errors, try to get the raw response
         if (errorMessage.includes('validation') || errorMessage.includes('ResponseValidationError')) {
@@ -117,7 +117,7 @@ export async function GET(request: Request) {
             return NextResponse.json(mappedData);
           } catch (fetchError) {
             console.error(`[${requestId}] Failed to fetch raw subscription status`, {
-              error: fetchError instanceof Error ? fetchError.message : 'Unknown fetch error'
+              error: fetchError instanceof Error ? `We're having trouble connecting to our servers. Please try again in a moment.` : 'Our systems are taking longer than usual to respond. Your creative flow is important to us!'
             });
           }
         }
@@ -126,7 +126,7 @@ export async function GET(request: Request) {
         return NextResponse.json(
           { 
             success: false,
-            error: errorMessage,
+            error: 'We hit a small snag while checking your subscription. Your creative work is safe, and we\'re on it!',
             is_subscribed: false,
             status: 'canceled',
             plan_type: 'monthly_basic'
@@ -143,7 +143,7 @@ export async function GET(request: Request) {
       return NextResponse.json(
         { 
           success: false,
-          error: 'Failed to process subscription status',
+error: 'We\'re having a bit of trouble checking your subscription details. Your creative work is safe, and we\'re on it!',
           is_subscribed: false,
           status: 'canceled',
           plan_type: 'monthly_basic'
@@ -159,7 +159,7 @@ export async function GET(request: Request) {
     
     return NextResponse.json(
       { 
-        error: 'Failed to get subscription status',
+        error: 'We couldn\'t load your subscription details right now. Don\'t worry, your creative work is safe! Try refreshing the page or check back in a few minutes.',
         is_subscribed: false,
         plan_type: 'none'
       },

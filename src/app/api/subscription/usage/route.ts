@@ -60,7 +60,9 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { 
           success: false,
-          error: errorMessage,
+          error: isRateLimit 
+            ? 'Whoa there! You\'re creating at lightning speed! Take a quick break and try again in a moment.' 
+            : 'We hit a small snag while recording your usage. Your creative work is safe!',
           rate_limited: isRateLimit
         },
         { status: isRateLimit ? 429 : 400 }
@@ -75,7 +77,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { 
         success: false,
-        error: 'Failed to report usage'
+        error: 'We couldn\'t record your usage right now. Don\'t worry, your creative work is still being processed. Try again in a moment!'
       },
       { status: 500 }
     );

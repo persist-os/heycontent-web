@@ -98,7 +98,7 @@ export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsPr
             </p>
             <div className="flex justify-center gap-4 text-xs text-gray-500">
               <div className={`flex items-center gap-1 ${connectedPlatforms.includes('youtube') ? 'text-gray-900 dark:text-gray-100' : ''}`}>
-                <YouTubeBrandIcon href="https://youtube.com/" className="w-4 h-4" />
+                <YouTubeBrandIcon href="https://youtube.com/" className="w-5 h-5" />
                 YouTube {connectedPlatforms.includes('youtube') ? '✓' : ''}
               </div>
               <div className={`flex items-center gap-1 ${connectedPlatforms.includes('instagram') ? 'text-gray-900 dark:text-gray-100' : ''}`}>
@@ -274,7 +274,7 @@ export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsPr
             {/* YouTube Section */}
             <PlatformInsightCard
               platform="YouTube"
-              icon={<YouTubeBrandIcon href="https://youtube.com/" className="w-4 h-4" />}
+              icon={<YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8" />}
               hook={insight.youtube_hook}
               format={insight.youtube_format}
               cta={insight.youtube_cta}

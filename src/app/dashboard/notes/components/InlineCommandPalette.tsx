@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Bot, Brain, Lightbulb, Loader2, X, Sparkles, ArrowRight, FileText, Users, BarChart3, BookOpen, CheckSquare, List, Heading1, Heading2, Heading3, Link, ExternalLink, Table } from 'lucide-react';
+import { useNotes } from '@/app/context/notes-context';
 
 interface InlineCommandPaletteProps {
   isOpen: boolean;
@@ -103,8 +104,10 @@ export function InlineCommandPalette({
   const [linkText, setLinkText] = useState('');
   const [tableRows, setTableRows] = useState(3);
   const [tableCols, setTableCols] = useState(3);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+  const mainInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { setActiveNoteId } = useNotes();
 
   // Debug logging
   console.log('InlineCommandPalette props:', {
@@ -166,8 +169,10 @@ export function InlineCommandPalette({
   const handleNoteLinkSelect = (noteId: string) => {
     if (onLinkNote) {
       onLinkNote(noteId);
-      onClose();
+    } else {
+      setActiveNoteId(noteId);
     }
+    onClose();
   };
 
   const handleInsertLink = () => {
@@ -493,6 +498,12 @@ export function InlineCommandPalette({
       setTableRows(3);
       setTableCols(3);
       setLoadingCommand(null);
+      // Focus the main input if not in a special input mode
+      setTimeout(() => {
+        if (!showAIPrompt && !showNoteLinks && !showLinkInput && !showLinkEmbedInput && !showTableInput) {
+          mainInputRef.current?.focus();
+        }
+      }, 50);
     }
   }, [isOpen]);
 
@@ -639,6 +650,7 @@ export function InlineCommandPalette({
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-muted-foreground" />
             <input
+              ref={mainInputRef}
               type="text"
               placeholder={showNoteLinks ? "Search notes to link..." : "Ask Content anything..."}
               className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
@@ -817,9 +829,4 @@ export function InlineCommandPalette({
       </div>
     </div>
   );
-}
-
-// Export a function to show note links
-export const showNoteLinks = (setShowNoteLinks: (show: boolean) => void) => {
-  setShowNoteLinks(true);
-}; 
+} 
