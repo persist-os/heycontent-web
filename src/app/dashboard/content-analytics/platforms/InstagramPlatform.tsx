@@ -26,6 +26,13 @@ interface InstagramPlatformProps {
   refreshing: boolean;
   refreshSuccess?: boolean;
   instagramAccount: any; // Can be more specific
+  // Load more functionality
+  loadMore: () => void;
+  loadingMore: boolean;
+  loadMoreError: string | null;
+  hasMorePosts: boolean;
+  queueCount: number;
+  totalPostsFetched: number;
 }
 
 export function InstagramPlatform({ 
@@ -39,6 +46,13 @@ export function InstagramPlatform({
   refreshing,
   refreshSuccess,
   instagramAccount,
+  // Load more functionality
+  loadMore,
+  loadingMore,
+  loadMoreError,
+  hasMorePosts,
+  queueCount,
+  totalPostsFetched,
 }: InstagramPlatformProps) {
   const router = useRouter();
   const [selectedContent, setSelectedContent] = useState<InstagramContentItem | null>(null);
@@ -355,6 +369,54 @@ export function InstagramPlatform({
           </div>
         )}
       </div>
+
+      {/* Load More Button */}
+      {(hasMorePosts || queueCount > 0) && displayItems.length > 0 && (
+        <div className="flex justify-center mt-8">
+          <Button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300"
+          >
+            {loadingMore ? (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                Loading More Posts...
+              </>
+            ) : (
+              <>
+                Load More Posts
+                {queueCount > 0 && (
+                  <span className="ml-2 bg-white/20 px-2 py-1 rounded-full text-xs">
+                    {queueCount} queued
+                  </span>
+                )}
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+
+      {/* Load More Error */}
+      {loadMoreError && (
+        <div className="text-center mt-4">
+          <p className="text-red-500 text-sm">{loadMoreError}</p>
+          <Button
+            onClick={loadMore}
+            size="sm"
+            className="mt-2 bg-red-500 hover:bg-red-600 text-white"
+          >
+            Try Again
+          </Button>
+        </div>
+      )}
+
+      {/* Posts Count Info */}
+      {totalPostsFetched > 0 && (
+        <div className="text-center mt-4 text-sm text-gray-600">
+          Showing {displayItems.length} of {totalPostsFetched} posts
+        </div>
+      )}
 
       {selectedContent && (
         <InstagramModal

@@ -981,3 +981,43 @@ export const getAllInstagramAccounts = query({
     }
   },
 });
+
+// Get account pagination info for lazy loading
+export const getAccountPagination = query({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const account = await ctx.db
+      .query("instagramAccounts")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.eq(q.field("instagramAccountId"), args.instagramAccountId))
+      .first();
+    
+    if (!account) {
+      return null;
+    }
+    
+    return account.pagination || null;
+  },
+});
+
+// Get queue status for lazy loading
+export const getQueueStatus = query({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const queueCount = await ctx.db
+      .query("instagramPostsQueue")
+      .withIndex("by_user_account", (q) => 
+        q.eq("userId", args.userId).eq("instagramAccountId", args.instagramAccountId)
+      )
+      .collect()
+      .then(posts => posts.length);
+    
+    return { queueCount };
+  },
+});

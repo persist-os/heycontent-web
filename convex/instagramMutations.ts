@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, action } from "./_generated/server";
+import { mutation, action, query } from "./_generated/server";
 import { MutationCtx, ActionCtx } from "./_generated/server";
 import { api } from "./_generated/api";
 
@@ -1002,3 +1002,137 @@ export const appendCommentToInstagramPost = mutation({
     }
   },
 });
+
+// Queue operations for lazy loading
+export const addPostsToQueue = mutation({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+    posts: v.array(v.object({
+      postId: v.string(),
+      mediaType: v.union(v.literal("IMAGE"), v.literal("VIDEO"), v.literal("CAROUSEL_ALBUM"), v.literal("REELS")),
+      data: v.any(),
+      analysis: v.optional(v.any()),
+      analysisMarkdown: v.optional(v.string()),
+    }))
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    
+    // Add posts to queue
+    const queueIds = [];
+    for (const post of args.posts) {
+      const queueId = await ctx.db.insert("instagramPostsQueue", {
+        userId: args.userId,
+        instagramAccountId: args.instagramAccountId,
+        postId: post.postId,
+        mediaType: post.mediaType,
+        data: post.data,
+        analysis: post.analysis,
+        analysisMarkdown: post.analysisMarkdown,
+        createdAt: now,
+        updatedAt: now,
+      });
+      queueIds.push(queueId);
+    }
+    
+    return { success: true, queueIds };
+  },
+});
+
+export const moveQueuePostsToMain = mutation({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Get all queued posts for this user/account
+    const queuedPosts = await ctx.db
+      .query("instagramPostsQueue")
+      .withIndex("by_user_account", (q) => 
+        q.eq("userId", args.userId).eq("instagramAccountId", args.instagramAccountId)
+      )
+      .collect();
+    
+    if (queuedPosts.length === 0) {
+      return { success: true, movedCount: 0 };
+    }
+    
+    const now = Date.now();
+    const movedIds = [];
+    
+    // Move each queued post to main table
+    for (const queuedPost of queuedPosts) {
+      // Check if post already exists in main table
+      const existing = await ctx.db
+        .query("instagramPosts")
+        .withIndex("by_postId", (q) => q.eq("postId", queuedPost.postId))
+        .first();
+      
+      if (!existing) {
+        // Insert into main table
+        const mainId = await ctx.db.insert("instagramPosts", {
+          userId: queuedPost.userId,
+          instagramAccountId: queuedPost.instagramAccountId,
+          postId: queuedPost.postId,
+          mediaType: queuedPost.mediaType,
+          data: queuedPost.data,
+          analysis: queuedPost.analysis,
+          analysisMarkdown: queuedPost.analysisMarkdown,
+          createdAt: queuedPost.createdAt,
+          updatedAt: now,
+        });
+        movedIds.push(mainId);
+      }
+      
+      // Delete from queue
+      await ctx.db.delete(queuedPost._id);
+    }
+    
+    return { success: true, movedCount: movedIds.length };
+  },
+});
+
+export const updateAccountPagination = mutation({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+    nextUrl: v.optional(v.union(v.string(), v.null())),
+    hasMorePosts: v.boolean(),
+    totalPostsFetched: v.number(),
+  },
+  handler: async (ctx, args) => {
+    console.log(`[updateAccountPagination] Updating pagination for user ${args.userId}, account ${args.instagramAccountId}`);
+    
+    // Find the account using the by_instagramAccountId index for better performance
+    const account = await ctx.db
+      .query("instagramAccounts")
+      .withIndex("by_instagramAccountId", (q) => q.eq("instagramAccountId", args.instagramAccountId))
+      .filter((q) => q.eq(q.field("userId"), args.userId))
+      .first();
+    
+    if (!account) {
+      console.error(`[updateAccountPagination] Account not found for user ${args.userId}, account ${args.instagramAccountId}`);
+      throw new Error("Instagram account not found");
+    }
+    
+    console.log(`[updateAccountPagination] Found account: ${account._id}`);
+    
+    const now = Date.now();
+    
+    // Update pagination info
+    await ctx.db.patch(account._id, {
+      pagination: {
+        nextUrl: args.nextUrl,
+        hasMorePosts: args.hasMorePosts,
+        lastFetchedAt: now,
+        totalPostsFetched: args.totalPostsFetched,
+      },
+      updatedAt: now,
+    });
+    
+    console.log(`[updateAccountPagination] Successfully updated pagination for account ${account._id}`);
+    return { success: true };
+  },
+});
+

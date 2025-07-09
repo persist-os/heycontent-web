@@ -541,6 +541,13 @@ export default defineSchema({
     period: v.optional(v.string()),
     lastUpdated: v.optional(v.number()),
   })),
+  // Pagination state for lazy loading
+  pagination: v.optional(v.object({
+    nextUrl: v.optional(v.union(v.string(), v.null())), // <-- update this line
+    hasMorePosts: v.boolean(),
+    lastFetchedAt: v.number(),
+    totalPostsFetched: v.number(),
+  })),
   createdAt: v.number(),
   updatedAt: v.number(),
   diffs: v.optional(v.array(v.object({
@@ -812,4 +819,83 @@ export default defineSchema({
   .index("by_mediaId", ["mediaId"])
   .index("by_user_account", ["userId", "instagramAccountId"])
   .index("by_timestamp", ["webhookTimestamp"]),
+
+  // Instagram Posts Queue - Staging table for lazy loading
+  instagramPostsQueue: defineTable({
+    userId: v.string(),
+    instagramAccountId: v.string(),
+    postId: v.string(),
+    mediaType: v.union(
+      v.literal("IMAGE"),
+      v.literal("VIDEO"), 
+      v.literal("CAROUSEL_ALBUM"),
+      v.literal("REELS")
+    ),
+    data: v.object({
+      // Core fields (common to all types)
+      id: v.string(),
+      caption: v.string(),
+      media_url: v.string(),
+      permalink: v.string(),
+      timestamp: v.number(),
+      username: v.string(),
+      like_count: v.optional(v.number()),
+      comments_count: v.optional(v.number()),
+      
+      // Type-specific fields (made optional since different media types have different fields)
+      thumbnail_url: v.optional(v.union(v.string(), v.null())), // For videos/reels only
+      children: v.optional(v.union(v.array(v.object({
+        id: v.string(),
+        media_url: v.string(),
+        media_type: v.string(),
+        thumbnail_url: v.optional(v.union(v.string(), v.null()))
+      })), v.null())), // For carousels only
+      
+      // Embedded insights (flattened for easy access)
+      insights: v.optional(v.object({
+        impressions: v.optional(v.number()),
+        reach: v.optional(v.number()),
+        likes: v.optional(v.number()),
+        comments: v.optional(v.number()),
+        saved: v.optional(v.number()),
+        shares: v.optional(v.number()),
+        total_interactions: v.optional(v.number()),
+        profile_visits: v.optional(v.number()),
+        profile_activity: v.optional(v.number()),
+        views: v.optional(v.number()),
+        follows: v.optional(v.number()),
+        // Reels-specific insights
+        ig_reels_avg_watch_time: v.optional(v.number()),
+        ig_reels_video_view_total_time: v.optional(v.number()),
+        period: v.optional(v.string()),
+        timestamp: v.optional(v.number())
+      })),
+      
+      // Embedded comments (for recent/important ones)
+      comments: v.optional(v.array(v.object({
+        id: v.string(),
+        text: v.string(),
+        timestamp: v.number(),
+        username: v.string(),
+        like_count: v.optional(v.number()),
+        replies: v.optional(v.array(v.object({
+          id: v.string(),
+          text: v.string(),
+          timestamp: v.number(),
+          username: v.optional(v.string())
+        })))
+      })))
+    }),
+    
+    // Analysis fields
+    analysis: v.optional(v.any()),
+    analysisMarkdown: v.optional(v.string()),
+    
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_userId", ["userId"])
+  .index("by_instagramAccountId", ["instagramAccountId"])
+  .index("by_postId", ["postId"])
+  .index("by_user_account", ["userId", "instagramAccountId"]),
 });
