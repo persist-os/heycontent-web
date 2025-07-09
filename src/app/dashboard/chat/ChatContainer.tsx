@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useSidebar } from '@/app/context/sidebar-context'
 import { useTheme } from 'next-themes'
 
@@ -36,10 +36,16 @@ import { usePersonaStore } from '@/store/persona-store'
 import { useConvex } from 'convex/react'
 import { useContentContext, useContentContextActions, useContentContextStore } from '@/store/content-context-store'
 
-const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery }) => {
+// Help system imports
+import { HelpModal } from '@/components/ui/help-modal'
+import { HelpIconButton } from '@/components/ui/help-icon-button'
+import { chatHelp } from '@/helpContent'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { CreateNoteButton } from '@/components/ui/CreateNoteButton';
+
+const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery, welcome }) => {
   const router = useRouter()
-  const searchParams = useSearchParams();
-  const welcome = searchParams.get('welcome') === 'true';
   
   // Authentication and user data (derived from firebaseUser)
   const { firebaseUser, getToken } = useAuth();
@@ -97,6 +103,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Context search state - enable by default when no context, keep enabled for YouTube videos without analysis
   const [useContextSearch, setUseContextSearch] = useState(!hasContext)
+  
+  // Help modal state
+  const [helpOpen, setHelpOpen] = useState(false)
 
   // Auto-disable context search when content context is available, unless it's YouTube without analysis
   useEffect(() => {
@@ -160,19 +169,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     initSession
   } = useConversation(chatState, authData.user)
 
-  // Initialize welcome message hook
-  const {
-    welcomeStep,
-    setWelcomeStep,
-    handleSuggestionClick: handleWelcomeSuggestionClick
-  } = useWelcomeMessage(
-    welcome,
-    messages,
-    isLoading,
-    authData.user,
-    setMessages,
-    hasPersona
-  )
+  // Remove welcome message hook for new chat; only show ambient insights when chat is empty
 
   // Notepad functionality
   const {
@@ -183,6 +180,13 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     getMainContentStyle,
     getNotepadStyle
   } = useNotepadUI()
+
+  // Add ref for MarkdownNotepad
+  const notepadRef = useRef<{ hasUnsavedContent: () => boolean, clearContent: () => void, getContent: () => string }>(null);
+
+  // Modal state for notepad warning
+  const [showNotepadWarning, setShowNotepadWarning] = useState(false);
+  const [pendingNewChat, setPendingNewChat] = useState(false);
 
   const { 
     quotedForNotepad, 
@@ -208,6 +212,12 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   }, [handleSendMessage, authData.userId, convex, refreshPersonaData]);
 
   const handleNewChat = useCallback(() => {
+    // If notepad is open and has unsaved content, show warning modal
+    if (notepadOpen && notepadRef.current?.hasUnsavedContent()) {
+      setShowNotepadWarning(true);
+      setPendingNewChat(true);
+      return;
+    }
     // UI resets
     resetChat();
     setMessages([]);
@@ -240,7 +250,38 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     askQueryProcessedRef.current = null;
     setInputValue('');
   }, [resetChat, setMessages, handleClearReference, chatState, clearContentContext, 
-      authData.userId, convex, refreshPersonaData, router]);
+      authData.userId, convex, refreshPersonaData, router, notepadOpen]);
+
+  // Handler for confirming discard in modal
+  const handleConfirmDiscardNotepad = () => {
+    setShowNotepadWarning(false);
+    setPendingNewChat(false);
+    // Clear notepad content
+    notepadRef.current?.clearContent();
+    // Proceed with new chat
+    resetChat();
+    setMessages([]);
+    handleClearReference?.();
+    setUpdatePersonaRequested(false);
+    setContextConsumption({ hasConsumed: false, isDisplayed: false });
+    window.localStorage.removeItem('chatSessionId');
+    chatState.setSessionId(null);
+    chatState.setIsFirstMessage(true);
+    clearContentContext();
+    loadedConversationRef.current = null;
+    if (authData.userId && convex) {
+      refreshPersonaData(authData.userId, convex);
+    }
+    router.push('/dashboard/chat');
+    askQueryProcessedRef.current = null;
+    setInputValue('');
+  };
+
+  // Handler for canceling discard in modal
+  const handleCancelDiscardNotepad = () => {
+    setShowNotepadWarning(false);
+    setPendingNewChat(false);
+  };
 
   const handleRemoveContext = useCallback(() => {
     clearContentContext();
@@ -253,9 +294,11 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     handleSendMessage(action);
   }, [handleSendMessage]);
 
+  // Directly send suggestion, no welcome flow
   const handleSuggestionClick = useCallback((suggestion: any, onSendMessage: (msg: string) => void) => {
-    handleWelcomeSuggestionClick(suggestion, handleSendMessage);
-  }, [handleWelcomeSuggestionClick, handleSendMessage]);
+    const message = typeof suggestion === 'string' ? suggestion : suggestion.description;
+    onSendMessage(message);
+  }, [handleSendMessage]);
 
   const handleInsightClick = useCallback((action: string, insight: any) => {
     handleSendMessageWithUpdateCheck(action);
@@ -359,15 +402,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     }
   }, [messages, authData.userId, convex, refreshPersonaData, invalidatePersonaData]);
 
-  // Clear welcome parameter from URL
-  useEffect(() => {
-    if (welcome && messages.length === 0 && !isLoading && authData.user) {
-      const url = new URL(window.location.href)
-      url.searchParams.delete('welcome')
-      window.history.replaceState({}, '', url.toString())
-    }
-  }, [welcome, messages.length, isLoading, authData.user]);
-
   // Handle content context display and consumption
   useEffect(() => {
     if (currentContext && !contextConsumption.hasConsumed) {
@@ -404,7 +438,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     if (askQuery && 
         askQuery !== askQueryProcessedRef.current && 
         !isLoading && 
-        !welcome &&
         messages.length === 0 &&
         authData.user) {
       
@@ -419,7 +452,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         }
       }, 100);
     }
-  }, [askQuery, isLoading, welcome, handleSendMessageWithUpdateCheck, messages.length, authData.user, currentContext]);
+  }, [askQuery, isLoading, handleSendMessageWithUpdateCheck, messages.length, authData.user, currentContext]);
 
   // Check for existing embeddings when user changes
   useEffect(() => {
@@ -438,20 +471,19 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Clear conversation state and stale context when component mounts
   useEffect(() => {
-    setMessages([]);
-    chatState.setSessionId(null);
-    chatState.setIsFirstMessage(true);
-    setContextConsumption({ hasConsumed: false, isDisplayed: false });
-    
-    const { isCacheValid } = useContentContextStore.getState();
-    
-    if (currentContext && !isCacheValid()) {
-      clearContentContext();
+    if (!welcome) {
+      setMessages([]);
+      chatState.setSessionId(null);
+      chatState.setIsFirstMessage(true);
+      setContextConsumption({ hasConsumed: false, isDisplayed: false });
+      const { isCacheValid } = useContentContextStore.getState();
+      if (currentContext && !isCacheValid()) {
+        clearContentContext();
+      }
+      askQueryProcessedRef.current = null;
+      loadedConversationRef.current = null;
     }
-    
-    askQueryProcessedRef.current = null;
-    loadedConversationRef.current = null;
-  }, []); // Only run on mount
+  }, [welcome]); // Only run on mount and when welcome changes
 
   // Autoscroll functionality
   useEffect(() => {
@@ -525,6 +557,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           isRefreshing={isRefreshing} 
           onNewChat={handleNewChat}
           isAuthenticated={authData.isAuthenticated}
+          rightContent={<HelpIconButton onClick={() => setHelpOpen(true)} />}
         />
 
         {/* Main Content */}
@@ -643,8 +676,35 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         </div>
       </div>
 
+      {/* Notepad warning modal */}
+      <Dialog open={showNotepadWarning} onOpenChange={setShowNotepadWarning}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Unsaved Notepad Content</DialogTitle>
+          </DialogHeader>
+          <div className="py-2 text-foreground text-sm">
+            Unsaved notes will be lost. <b>Save as a Smart Note before starting a new chat.</b> Continue?
+          </div>
+          {/* All three buttons in a row */}
+          <div className="flex flex-row gap-3 justify-center mt-4">
+            <CreateNoteButton
+              content={notepadRef.current?.getContent ? notepadRef.current.getContent() : ''}
+              onNoteCreate={() => {
+                notepadRef.current?.clearContent();
+                setShowNotepadWarning(false);
+                setPendingNewChat(false);
+              }}
+              title={"Smart Note"}
+            />
+            <Button variant="secondary" onClick={handleCancelDiscardNotepad}>Cancel</Button>
+            <Button variant="destructive" onClick={handleConfirmDiscardNotepad}>Discard and Start New Chat</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
       {/* Markdown Notepad */}
       <MarkdownNotepad
+        ref={notepadRef}
         isOpen={notepadOpen}
         onClose={toggleNotepad}
         onSendToChat={handleNotepadSendToChat}
@@ -654,6 +714,13 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         onWidthChange={updateWidth}
         style={getNotepadStyle()}
         availableNotes={availableNotes}
+      />
+      
+      {/* Help Modal */}
+      <HelpModal 
+        open={helpOpen} 
+        onClose={() => setHelpOpen(false)} 
+        pages={chatHelp}
       />
     </>
   );

@@ -78,18 +78,30 @@ export const GmailCard: React.FC<GmailCardProps> = ({ item, onDiscussContent, on
     router.push('/dashboard/chat');
   };
 
+  // Make the card clickable for full view
+  const handleCardClick = () => {
+    onViewDetailedAnalytics(item);
+  };
+
   return (
-    <Card className="overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-blue-500/25 border-2 border-transparent hover:border-blue-500/30 bg-white dark:bg-gray-800">
+    <Card
+      className="overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-blue-500/25 border-2 border-transparent hover:border-blue-500/30 bg-background dark:bg-background"
+      onClick={handleCardClick}
+      tabIndex={0}
+      role="button"
+      aria-label="Open full email view"
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') handleCardClick(); }}
+    >
       <div className="p-4">
         {/* Header with icon and date */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700">
-              <Mail className="w-8 h-8 text-blue-500" />
+            <div className="p-2 rounded-lg bg-muted dark:bg-muted">
+              <Mail className="w-8 h-8 text-primary" />
             </div>
             <div>
-              <h3 className="font-medium text-text-dark dark:text-white">Email Thread</h3>
-              <p className="text-sm text-text-gray dark:text-gray-400">{new Date(publishedAt).toLocaleDateString()}</p>
+              <h3 className="font-medium text-foreground">Email Thread</h3>
+              <p className="text-sm text-muted-foreground">{new Date(publishedAt).toLocaleDateString()}</p>
             </div>
           </div>
         </div>
@@ -98,34 +110,34 @@ export const GmailCard: React.FC<GmailCardProps> = ({ item, onDiscussContent, on
         <div className="space-y-4 mb-6">
           {/* Subject */}
           <div className="flex justify-between items-start">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Subject</span>
-            <span className="font-medium text-gray-900 dark:text-white text-right max-w-[200px] truncate" title={subject}>
+            <span className="text-sm text-muted-foreground">Subject</span>
+            <span className="font-medium text-foreground text-right max-w-[200px] truncate" title={subject}>
               {subject}
             </span>
           </div>
 
           {/* From */}
           <div className="flex justify-between items-start">
-            <span className="text-sm text-gray-600 dark:text-gray-400">From</span>
-            <span className="font-medium text-gray-900 dark:text-white text-right max-w-[200px] truncate" title={from}>
+            <span className="text-sm text-muted-foreground">From</span>
+            <span className="font-medium text-foreground text-right max-w-[200px] truncate" title={from}>
               {from}
             </span>
           </div>
 
           {/* Snippet */}
           <div className="flex justify-between items-start">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Preview</span>
-            <span className="text-sm text-gray-700 dark:text-gray-300 text-right max-w-[200px] line-clamp-2" title={snippet}>
+            <span className="text-sm text-muted-foreground">Preview</span>
+            <span className="text-sm text-muted-foreground text-right max-w-[200px] line-clamp-2" title={snippet}>
               {snippet}
             </span>
           </div>
 
           {/* Replies */}
           <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Replies</span>
+            <span className="text-sm text-muted-foreground">Replies</span>
             <div className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-blue-500" />
-              <span className="font-semibold text-gray-900 dark:text-white">{replyCount.toLocaleString()}</span>
+              <MessageSquare className="w-4 h-4 text-primary" />
+              <span className="font-semibold text-foreground">{replyCount.toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -134,20 +146,23 @@ export const GmailCard: React.FC<GmailCardProps> = ({ item, onDiscussContent, on
         <div className="flex gap-3">
           <button
             className="flex-1 bg-primary text-primary-foreground dark:text-black hover:bg-primary/90 hover:text-primary-foreground dark:hover:text-black px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            onClick={handleDiscussContent}
+            onClick={e => { e.stopPropagation(); onDiscussContent(item); }}
+            tabIndex={0}
+            aria-label="Discuss with Content"
           >
             <MessageSquare className="w-4 h-4 inline mr-2" />
             Discuss With Content
           </button>
           <button
-            className={`relative px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors disabled:opacity-50 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-text-dark dark:text-white`}
-            onClick={handleRefresh}
+            className="relative px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors disabled:opacity-50 bg-muted hover:bg-muted text-foreground"
+            onClick={e => { e.stopPropagation(); handleRefresh(); }}
             disabled={loading}
             title={error ? `Refresh needed: ${error}` : "Refresh data"}
+            tabIndex={0}
+            aria-label="Refresh Gmail"
           >
-            {/* Subtle error indicator dot */}
             {error && (
-              <div className="absolute -top-1 -right-1 w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+              <div className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full animate-pulse" />
             )}
             {loading ? (
               <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -155,7 +170,7 @@ export const GmailCard: React.FC<GmailCardProps> = ({ item, onDiscussContent, on
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
               </svg>
             ) : (
-              <RefreshCw className={`w-4 h-4 ${error ? 'text-amber-600 dark:text-amber-400' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${error ? 'text-destructive' : ''}`} />
             )}
           </button>
         </div>

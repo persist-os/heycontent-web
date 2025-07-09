@@ -7,8 +7,14 @@ import { UsageHeatmap } from './UsageHeatmap';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
+// Help system imports
+import { HelpModal } from '@/components/ui/help-modal'
+import { HelpIconButton } from '@/components/ui/help-icon-button'
+import { selfHubHelp } from '@/helpContent'
+
 export default function SelfHubPage() {
   const [userId, setUserId] = useState<string | undefined>();
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     const currentUserId = getCurrentUserId();
@@ -20,13 +26,16 @@ export default function SelfHubPage() {
       <Tabs defaultValue="persona" className="h-full flex flex-col">
         {/* Header with tabs */}
         <div className="px-6 py-4 border-b bg-background">
-          <div className="mb-4 text-center">
+          <div className="mb-4 text-center relative">
             <h1 className="text-base font-medium text-purple-600 dark:text-accent">
               Self
             </h1>
             <p className="text-muted-foreground text-sm">
               Manage your persona and activity.
             </p>
+            <div className="absolute top-0 right-0">
+              <HelpIconButton onClick={() => setHelpOpen(true)} />
+            </div>
           </div>
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="persona">Persona</TabsTrigger>
@@ -52,6 +61,13 @@ export default function SelfHubPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Help Modal */}
+      <HelpModal 
+        open={helpOpen} 
+        onClose={() => setHelpOpen(false)} 
+        pages={selfHubHelp}
+      />
     </div>
   );
 } 

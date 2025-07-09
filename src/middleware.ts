@@ -41,6 +41,9 @@ export function middleware(request: NextRequest) {
     "wss://lovely-koala-465.convex.cloud",
     "https://lovely-koala-465.convex.cloud",
     "https://backend.hicontent.co",
+    "https://content-backend-216038426364.us-central1.run.app",
+    "https://content-backend-216038426364.us-east1.run.app",
+    "https://content-backend-216038426364.us-west1.run.app",
     "http://127.0.0.1:8000",
     "http://localhost:8000",
     "https://us-central1-content-454219.cloudfunctions.net",
@@ -66,7 +69,13 @@ export function middleware(request: NextRequest) {
 
   // If no token and not a public route, redirect to login
   if (!token) {
-    return NextResponse.redirect(new URL('/auth/login', request.url));
+    // Preserve query parameters when redirecting to login (e.g., reason=logged_in_elsewhere)
+    const loginUrl = new URL('/auth/login', request.url);
+    // Copy any existing query parameters from the current request
+    request.nextUrl.searchParams.forEach((value, key) => {
+      loginUrl.searchParams.set(key, value);
+    });
+    return NextResponse.redirect(loginUrl);
   }
 
   // If we have a token, allow access

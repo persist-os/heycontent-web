@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Instagram, Mail, BarChart3, Brain, Settings, Sparkles, RefreshCw } from 'lucide-react'
+import { Instagram, Mail, BarChart3, Brain, Settings, Sparkles, RefreshCw, ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/app/context/auth-context'
 import { RefreshState } from '@/components/ui/refresh-state'
 import { ProgressInsightsState } from '@/components/ui/progress-insights-state'
@@ -13,6 +13,11 @@ import { Button } from '@/components/ui/button'
 import { YouTubeBrandIcon } from '@/lib/YoutubeBrandIcon'
 import { useYouTubeRefresh } from '@/app/hooks/useYouTubeRefresh'
 import { toast } from 'react-hot-toast'
+
+// Help system imports
+import { HelpModal } from '@/components/ui/help-modal'
+import { HelpIconButton } from '@/components/ui/help-icon-button'
+import { contentHubHelp } from '@/helpContent'
 
 // Analytics components and hooks
 import { YouTubePlatform as YouTubeAnalyticsPlatform } from '../../content-analytics/platforms/YouTubePlatform'
@@ -51,9 +56,9 @@ type DataType = 'posts' | 'ai-insights'
 const platformOptions = [
   { value: 'hub-insights', label: 'Content Hub Insights', icon: <Sparkles className="w-4 h-4" /> },
   { value: 'all', label: 'All Platforms', icon: <BarChart3 className="w-4 h-4" /> },
-  { value: 'youtube', label: 'YouTube', icon: <YouTubeBrandIcon href="https://youtube.com/" className="w-4 h-4" /> },
-  { value: 'instagram', label: 'Instagram', icon: <Instagram className="w-4 h-4" /> },
-  { value: 'gmail', label: 'Gmail', icon: <Mail className="w-4 h-4" /> },
+  { value: 'youtube', label: 'YouTube' },
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'gmail', label: 'Gmail' },
 ];
 
 export function ContentHubScreen() {
@@ -63,6 +68,8 @@ export function ContentHubScreen() {
   const analyticsIdParam = searchParams.get('analyticsId')
   const platformParam = searchParams.get('platform')
   const insightParam = searchParams.get('insight') // e.g., ?insight=open
+  const fromChat = searchParams.get('fromChat') === 'true'
+  const chatId = searchParams.get('chatId')
   
   const [selectedView, setSelectedView] = useState<ViewType>(
     analyticsIdParam && platformParam ? (platformParam as ViewType) :
@@ -80,6 +87,7 @@ export function ContentHubScreen() {
   const [currentQuote, setCurrentQuote] = useState<string>('')
   const [expandedInsight, setExpandedInsight] = useState<string | null>(null);
   const [expandHubInsight, setExpandHubInsight] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const { refreshAll: refreshAllYouTube, loading: refreshingYouTube, error: refreshYouTubeError, success: refreshYouTubeSuccess } = useYouTubeRefresh();
   
   const { firebaseUser, authLoading } = useAuth()
@@ -302,11 +310,11 @@ export function ContentHubScreen() {
             </div>
             
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
-              Connect Your Platforms
+              Let's Get Started! 🚀
             </h3>
             
             <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
-              Connect your YouTube, Instagram, and Gmail accounts to view detailed analytics, track content performance, and get insights on your content strategy.
+              Unlock powerful insights by connecting your favorite platforms! We'll help you track performance, understand your audience, and grow your creative presence. It only takes a minute to connect and the insights are worth it!
             </p>
             
             <Button 
@@ -318,7 +326,7 @@ export function ContentHubScreen() {
             </Button>
             
             <div className="mt-3 sm:mt-4 text-xs text-gray-500">
-              You can connect platforms in Settings → Integrations
+              Pro tip: Connect all your platforms for a complete picture of your creative journey!
             </div>
           </Card>
         </div>
@@ -370,11 +378,11 @@ export function ContentHubScreen() {
           </div>
           
           <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
-            No Content Found
+            Your Creative Journey Starts Here! ✨
           </h3>
           
           <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
-            We couldn't find any content in your connected platforms. Create new content to see your analytics here.
+            Your content dashboard is ready and waiting! Once you create and publish content on your connected platforms, you'll see your analytics light up right here. Keep creating - we can't wait to help you track your success!
           </p>
         </Card>
       </div>
@@ -394,11 +402,11 @@ export function ContentHubScreen() {
             </div>
             
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
-              Connect Your Platforms
+              Unlock Your Creative Potential!
             </h3>
             
             <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
-              Connect your YouTube, Instagram, and Gmail accounts to receive AI-powered insights, strategic recommendations, and content performance analysis.
+              Connect your favorite platforms to discover powerful insights about your content! We'll help you understand what's working, spot trends, and find new opportunities to grow your creative impact. It's like having a personal content coach! 🚀
             </p>
             
             <Button 
@@ -410,7 +418,7 @@ export function ContentHubScreen() {
             </Button>
             
             <div className="mt-3 sm:mt-4 text-xs text-gray-500">
-              You can connect platforms in Settings → Integrations
+              Pro tip: Connect all your platforms for a complete picture of your creative journey!
             </div>
           </Card>
         </div>
@@ -455,11 +463,11 @@ export function ContentHubScreen() {
           </div>
           
           <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
-            No Insights Available
+            Your Insights Are Brewing! ☕
           </h3>
           
           <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
-            We couldn't find any insights from your connected platforms. Create new content to receive AI-powered insights and recommendations.
+            We're still getting to know your content! As you create and share more, we'll uncover powerful insights to help you grow. Keep creating amazing content - we'll be here with fresh ideas and recommendations soon!
           </p>
         </Card>
       </div>
@@ -475,13 +483,24 @@ export function ContentHubScreen() {
   // Show toast for refresh success/error
   useEffect(() => {
     if (refreshYouTubeSuccess) {
-      toast.success('YouTube refresh started! Navigate freely while we process your data');
+      toast.success('🎬 YouTube refresh in progress! Your latest content is on its way. Feel free to keep exploring - we will update your dashboard soon!');
     }
   }, [refreshYouTubeSuccess]);
 
   useEffect(() => {
+    console.log('🐛 DEBUG - Toast Error Effect:', {
+      refreshYouTubeError,
+      refreshYouTubeSuccess,
+      shouldShowToast: !!refreshYouTubeError
+    });
     if (refreshYouTubeError) {
-      toast.error(refreshYouTubeError);
+      const friendlyError = refreshYouTubeError.includes('rate limit') 
+        ? "We're getting lots of love from creators right now! Please take a quick break and try again in a moment. Your creative flow is worth the wait! 🎨✨"
+        : refreshYouTubeError.includes('authentication')
+        ? "We need to refresh your YouTube connection. Please check your account settings and try again!"
+        : `Oops! We hit a snag: ${refreshYouTubeError}. Your content is safe - please try again in a moment!`;
+      
+      toast.error(friendlyError);
     }
   }, [refreshYouTubeError]);
 
@@ -490,7 +509,14 @@ export function ContentHubScreen() {
       {/* Fixed Header */}
       <div className="shrink-0 px-6 py-4 bg-background border-b border-border">
         <div className="flex justify-between items-center">
-          <div className="w-[100px] sm:w-[24px]"></div>
+          <div className="w-[100px] sm:w-[24px] flex items-center">
+            {fromChat && (
+              <Button variant="ghost" onClick={() => router.push(chatId ? `/dashboard/chat?id=${chatId}` : '/dashboard/chat')} className="p-2">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Chat
+              </Button>
+            )}
+          </div>
           <div className="flex-1 flex justify-center">
             <div className="text-center">
               <h1 className="text-base font-medium text-purple-600 dark:text-accent">Content Hub</h1>
@@ -499,7 +525,9 @@ export function ContentHubScreen() {
               </p>
             </div>
           </div>
-          <div className="w-[100px] sm:w-auto"></div>
+          <div className="w-[100px] sm:w-auto flex justify-end">
+            <HelpIconButton onClick={() => setHelpOpen(true)} />
+          </div>
         </div>
       </div>
 
@@ -532,7 +560,9 @@ export function ContentHubScreen() {
                   <SelectTrigger className="w-full">
                     <SelectValue>
                       <div className="flex items-center gap-2">
-                        {platformOptions.find(p => p.value === selectedView)?.icon}
+                        {/* Only show icon for hub-insights and all, otherwise just label */}
+                        {platformOptions.find(p => p.value === selectedView)?.icon &&
+                          platformOptions.find(p => p.value === selectedView)?.icon}
                         <span>{platformOptions.find(p => p.value === selectedView)?.label}</span>
                       </div>
                     </SelectValue>
@@ -541,7 +571,8 @@ export function ContentHubScreen() {
                     {platformOptions.map(option => (
                       <SelectItem key={option.value} value={option.value}>
                         <div className="flex items-center gap-2">
-                          {option.icon}
+                          {/* Only show icon for hub-insights and all, otherwise just label */}
+                          {option.icon && option.icon}
                           <span>{option.label}</span>
                         </div>
                       </SelectItem>
@@ -554,7 +585,8 @@ export function ContentHubScreen() {
               <TabsList className="hidden sm:grid w-full grid-cols-5 mb-0">
                 {platformOptions.map(option => (
                   <TabsTrigger key={option.value} value={option.value} className="flex items-center gap-2">
-                    {option.icon}
+                    {/* Only show icon for hub-insights and all, otherwise just label */}
+                    {option.icon && option.icon}
                     {option.label}
                   </TabsTrigger>
                 ))}
@@ -595,15 +627,20 @@ export function ContentHubScreen() {
                       {selectedView === 'all' && renderAllPlatformsAnalytics()}
                       {selectedView === 'youtube' && selectedDataType === 'posts' && (
                         <>
-                          <div className="mb-4 flex items-center gap-4">
-                            <Button
-                              onClick={handleRefreshAllYouTube}
-                              disabled={refreshingYouTube}
-                              className="bg-gradient-to-r from-red-500 to-yellow-500 text-white font-semibold px-4 py-2 rounded-lg shadow hover:from-red-600 hover:to-yellow-600 transition"
-                            >
-                              {refreshingYouTube ? 'Refreshing...' : 'Refresh All YouTube'}
-                            </Button>
-                          </div>
+                          {/* Debug logging before error display */}
+                          {(() => {
+                            console.log('🐛 DEBUG - YouTube Error Display:', {
+                              refreshYouTubeError,
+                              refreshYouTubeSuccess,
+                              youtubeAnalyticsError: youtubeAnalytics.error,
+                              shouldShowError: !!(refreshYouTubeError && !refreshYouTubeSuccess)
+                            });
+                            return null;
+                          })()}
+                          {/* Only show error if there is an error and the last refresh was not successful */}
+                          {refreshYouTubeError && !refreshYouTubeSuccess && (
+                            <div className="text-red-500 text-sm mb-2 text-center">{refreshYouTubeError}</div>
+                          )}
                           <YouTubeAnalyticsPlatform userId={userId} isConnected={youtubeAnalytics.isConnected} error={youtubeAnalytics.error} />
                         </>
                       )}
@@ -727,6 +764,13 @@ export function ContentHubScreen() {
           )}
         </>
       )}
+
+      {/* Help Modal */}
+      <HelpModal 
+        open={helpOpen} 
+        onClose={() => setHelpOpen(false)} 
+        pages={contentHubHelp}
+      />
     </div>
   )
 } 

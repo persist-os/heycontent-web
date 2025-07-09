@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { getApiKey } from '@/app/lib/api-helpers';
@@ -17,29 +17,27 @@ export function useGmailInsights(userId?: string): BatchAnalysisHookReturn {
     userId ? { userId } : "skip"
   );
 
+  // Memoize the accountId to avoid unnecessary re-renders
+  const gmailAccountId = useMemo(
+    () => (gmailAccount && gmailAccount.length > 0 ? gmailAccount[0].email : undefined),
+    [gmailAccount]
+  );
+
   // Fetch Gmail batch analysis insights
   const gmailInsights = useQuery(
     api.gmailQueries.getGmailBatchAnalysis,
-    userId && gmailAccount && gmailAccount.length > 0 ? { 
+    userId && gmailAccountId ? { 
       userId, 
-      gmailAccountId: gmailAccount[0].email 
+      gmailAccountId
     } : "skip"
   );
 
   // Store Gmail batch analysis mutation
   const storeGmailBatchAnalysis = useMutation(api.gmailMutations.storeGmailBatchAnalysis);
 
-  // Extract data - handle both old and new formats during transition
-  console.log('[useGmailInsights] Raw Convex data:', gmailInsights);
-  console.log('[useGmailInsights] gmailInsights?.insights:', gmailInsights?.insights);
-  console.log('[useGmailInsights] Type of gmailInsights?.insights:', typeof gmailInsights?.insights);
-  console.log('[useGmailInsights] Is array?', Array.isArray(gmailInsights?.insights));
-  
   // Check if insights is the universal format object (with insights, metadata, status)
   const rawInsights = gmailInsights?.insights;
   const isUniversalFormat = rawInsights && typeof rawInsights === 'object' && 'insights' in rawInsights;
-  
-  console.log('[useGmailInsights] Is universal format?', isUniversalFormat);
   
   const insightsList: InsightCard[] = isUniversalFormat 
     ? (rawInsights as any).insights || []
@@ -51,10 +49,6 @@ export function useGmailInsights(userId?: string): BatchAnalysisHookReturn {
     ? (rawInsights as any).status || null
     : gmailInsights?.status || null;
     
-  console.log('[useGmailInsights] Extracted insightsList:', insightsList);
-  console.log('[useGmailInsights] Extracted metadata:', metadata);
-  console.log('[useGmailInsights] Extracted status:', status);
-
   // Only show as running if we're actively refreshing AND status is processing/enqueued
   // Don't auto-show loading for old stuck statuses
   // Check both root-level status (updated by mutations) and nested status (from insights)
@@ -73,21 +67,6 @@ export function useGmailInsights(userId?: string): BatchAnalysisHookReturn {
   // Once database status updates to processing/enqueued, continue showing refreshing state
   const isActuallyRunning = isRefreshing || databaseStatus === 'processing' || databaseStatus === 'enqueued' || databaseStatus === 'running';
   
-  console.log('[useGmailInsights] Refresh state debug:', {
-    localIsRefreshing: isRefreshing,
-    rootStatus,
-    nestedStatus,
-    databaseStatus,
-    isActuallyRunning,
-    status: status,
-    rootStatusObject: gmailInsights?.status,
-    currentProgress,
-    rootProgress: gmailInsights?.status?.progress,
-    nestedProgress: status?.progress,
-    hasAccount: !!(gmailAccount && gmailAccount.length > 0),
-    hasInsights: !!insightsList?.length
-  });
-
   // Check if there's an error in the batch analysis
   const batchError = status?.error;
 
@@ -103,11 +82,9 @@ export function useGmailInsights(userId?: string): BatchAnalysisHookReturn {
     if (isRefreshing && databaseStatus) {
       if (databaseStatus === 'completed' || databaseStatus === 'failed') {
         // Task definitively finished - clear local state
-        console.log('[useGmailInsights] Task completed/failed, clearing local refresh state');
         setIsRefreshing(false);
       } else if (databaseStatus === 'processing' || databaseStatus === 'enqueued' || databaseStatus === 'running') {
         // Database caught up with our refresh request - database now drives the state
-        console.log('[useGmailInsights] Database status updated to active, local state can continue');
       }
     }
   }, [isRefreshing, databaseStatus]);
@@ -120,22 +97,9 @@ export function useGmailInsights(userId?: string): BatchAnalysisHookReturn {
 
     // Prevent multiple concurrent refresh attempts
     if (isRefreshing || databaseStatus === 'processing' || databaseStatus === 'enqueued' || databaseStatus === 'running') {
-      console.log('[useGmailInsights] Refresh already in progress, ignoring click', {
-        isRefreshing,
-        databaseStatus,
-        currentTime: new Date().toISOString()
-      });
       return;
     }
 
-    console.log('[useGmailInsights] Starting refresh...', {
-      userId,
-      hasAccount: !!(gmailAccount && gmailAccount.length > 0),
-      threadLimit,
-      currentTime: new Date().toISOString()
-    });
-
-    // Set local refreshing state
     setIsRefreshing(true);
     setError(null);
     
@@ -173,9 +137,6 @@ export function useGmailInsights(userId?: string): BatchAnalysisHookReturn {
       if (data.status === 'enqueued') {
         // Gmail analysis is now async - the status is tracked in the database
         // The results will be automatically available in the query once completed
-        console.log(`✅ Gmail analysis enqueued with task ID: ${data.task_id}`);
-        console.log('[useGmailInsights] Task enqueued, keeping local refresh state until database updates');
-        // Keep refreshing state until task completes - database will update via real-time subscription
       } else if (data.status === 'success') {
         // Handle legacy synchronous response (if any)
         await storeGmailBatchAnalysis({

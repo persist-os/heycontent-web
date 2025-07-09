@@ -6,6 +6,8 @@ import { getHelpMessage } from '../data/help-message'
 import { useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useContentContext } from '@/store/content-context-store'
+import { useRouter } from 'next/navigation'
+import { AuthenticationError } from '@/app/lib/errors'
 
 import { v4 as uuidv4 } from 'uuid';
 
@@ -42,7 +44,14 @@ export const useChat = (
   const createConversationMutation = useMutation(api.chatMutations.createConversation);
   const addMessageToConversationMutation = useMutation(api.chatMutations.addMessageToConversation);
 
+  const router = useRouter();
+
   const handleSendMessage = useCallback(async (content: string) => {
+    console.log('🔗 useChat handleSendMessage called with:', {
+      content: content.substring(0, 100) + '...',
+      hasContentLinks: content.includes('@[')
+    })
+    
     if (!content || typeof content !== 'string' || !content.trim()) return;
 
     // Prevent duplicate messages within a short time window (1 second)
@@ -97,6 +106,11 @@ export const useChat = (
       enhancedQuery = `Context for user question:\n\n${contentContext.analysis}\n\n Make sure to address user question in your response\n\n---\n\nUser question: ${content}`;
     }
 
+    console.log('🔗 useChat: Creating message with:', {
+      content: content.substring(0, 100) + '...',
+      hasContentLinks: content.includes('@[')
+    })
+    
     const newMessage: Message = {
       id: uuidv4() as string,
       content, // Store the original user message for display
@@ -128,11 +142,15 @@ export const useChat = (
         statusHistory: [] // Initialize empty status history
       };
 
-      setMessages(prev => [
-        ...prev,
-        newMessage,
-        typingMessage
-      ]);
+      setMessages(prev => {
+        const newMessages = [...prev, newMessage, typingMessage];
+        console.log('🔗 useChat: Messages after adding user message:', {
+          totalMessages: newMessages.length,
+          userMessage: newMessage,
+          hasContentLinks: newMessage.content.includes('@[')
+        });
+        return newMessages;
+      });
 
       // Status update handler for enhanced loading states
       const handleStatusUpdate = (status: string) => {
@@ -186,6 +204,11 @@ export const useChat = (
 
       // Send the enhanced query to the backend (with analysis injected if enabled)
       // Now includes vector search with status updates
+      console.log('🔗 useChat: Sending to backend:', {
+        enhancedQuery: enhancedQuery.substring(0, 100) + '...',
+        hasContentLinks: enhancedQuery.includes('@[')
+      })
+      
       const data = await sendChatMessage(
         enhancedQuery, 
         isFirstMessage, 
@@ -270,7 +293,16 @@ export const useChat = (
           suggestions: data.suggestions || []
         };
         
-        return [...updatedMessages, newMessage];
+        const finalMessages = [...updatedMessages, newMessage];
+        
+        // Add useful logging from main
+        console.log('🔗 useChat: Messages after assistant response:', {
+          totalMessages: finalMessages.length,
+          userMessages: finalMessages.filter(msg => msg.role === 'user'),
+          userMessageWithLinks: finalMessages.filter(msg => msg.role === 'user' && msg.content.includes('@['))
+        });
+        
+        return finalMessages;
       });
 
       // Remove typing indicator after a brief delay to allow users to see the completion
@@ -288,8 +320,20 @@ export const useChat = (
       }
 
     } catch (error) {
+      if (error instanceof AuthenticationError) {
+        // Optionally clear auth state here if needed
+        router.push('/auth/login?reason=session_expired');
+        return;
+      }
       console.error('Chat error:', error);
-      setError(error instanceof Error ? error.message : 'An error occurred');
+      const friendlyError = error instanceof Error 
+        ? error.message.includes('rate limit') 
+          ? 'We\'re getting lots of love from creators right now! Please take a quick break and try again in a moment. Your creative flow is worth the wait! 🎨✨'
+          : error.message.includes('timeout')
+            ? 'Your creative genius is working hard! Let\'s give it a moment and try that again.'
+            : `We hit a creative block: ${error.message}. Your work is safe - please try again!`
+        : 'Our creative engine is warming up! Please try again in a moment.';
+      setError(friendlyError);
       
       // Remove typing indicator on error and clear status after
       setMessages(prev => prev.filter(msg => msg.status !== 'typing'));
@@ -315,7 +359,8 @@ export const useChat = (
     createConversationMutation,
     addMessageToConversationMutation,
     useContextSearch,
-    contentContext
+    contentContext,
+    router
   ]);
 
   const handleMessageReference = useCallback((message: Message) => {

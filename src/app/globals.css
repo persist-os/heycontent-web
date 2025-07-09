@@ -63,7 +63,7 @@
     --popover-foreground: 0 0% 98%;
 
     --primary: 60 100% 50%; /* #FFFF00 as primary for dark mode */
-    --primary-foreground: 0 0% 100%;
+    --primary-foreground: 0 0% 0%; /* black text on yellow in dark mode */
 
     --secondary: 0 0% 18.9%; /* Slightly lighter than main background */
     --secondary-foreground: 0 0% 98%;

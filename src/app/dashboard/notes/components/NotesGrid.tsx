@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Note, NoteType } from '../types';
 import { NoteCard } from './cards/NoteCard';
 import { ProjectCard } from './projects/ProjectCard';
@@ -29,6 +29,7 @@ interface NotesGridProps {
   onToggleImportant: (noteId: string) => void;
   onUpdateNote: (noteId: string, updates: any) => void;
   isLoading?: boolean;
+  helpButton?: React.ReactNode;
 }
 
 // Add CreateProjectDropZone component
@@ -69,6 +70,7 @@ export function NotesGrid({
   onToggleImportant,
   onUpdateNote,
   isLoading,
+  helpButton,
 }: NotesGridProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<'all' | 'projects' | NoteType>('all');
@@ -302,11 +304,16 @@ export function NotesGrid({
     >
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="text-center mb-6">
+        <div className="text-center mb-6 relative">
           <h1 className="text-base font-medium text-purple-600 dark:text-accent">Smart Notes</h1>
           <p className="text-muted-foreground text-sm">
             Your intelligent note-taking workspace
           </p>
+          {helpButton && (
+            <div className="absolute top-0 right-0">
+              {helpButton}
+            </div>
+          )}
         </div>
 
         {/* Prominent Search Bar */}
@@ -402,7 +409,7 @@ export function NotesGrid({
             <button
               onClick={handleCreateNote}
               disabled={isCreatingNote}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground dark:text-black rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isCreatingNote ? (
                 <>
@@ -484,7 +491,7 @@ export function NotesGrid({
           {isCreatingNote ? (
             <div className="w-6 h-6 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
           ) : (
-            <Plus className="w-6 h-6" />
+            <Plus className="w-6 h-6 text-white dark:text-black" />
           )}
         </button>
 

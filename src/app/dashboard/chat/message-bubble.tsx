@@ -5,7 +5,7 @@ import type { InteractiveOption } from './interactive-response'
 import { MessageSquare, Quote, Search, CheckCircle, Database } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { ExpandableInsights } from './expandable-insights'
-import { MarkdownRenderer } from './markdown-renderer'
+import { MarkdownRenderer, ChatContentRenderer } from './markdown-renderer'
 import { PersonaCardRenderer } from './components/PersonaCardRenderer'
 import { ThinkingIndicator } from './components/main_chat/ThinkingIndicator'
 import { ProgressiveThinkingIndicator } from './components/main_chat/ProgressiveThinkingIndicator'
@@ -66,6 +66,23 @@ export function MessageBubble({
   const accentBgHover = isDark ? 'hover:bg-primary/90' : 'hover:bg-primary/90'
   const accentBgLight = isDark ? 'bg-primary/10' : 'bg-primary/10'
   const accentBorder = isDark ? 'border-primary' : 'border-primary'
+
+  // Check if the message contains linked content
+  const hasLinkedContent = message.content && message.content.includes('@[')
+  
+  // Debug logging for linked content
+  if (hasLinkedContent) {
+    console.log('🔗 MessageBubble linked content detected:', {
+      messageId: message.id,
+      content: message.content.substring(0, 100) + '...',
+      hasMetadata: !!message.metadata,
+      metadata: message.metadata,
+      linkRegistry: message.metadata?.linkRegistry,
+      debug_linkRegistry: message.metadata?.debug_linkRegistry,
+      debug_content: message.metadata?.debug_content,
+      metadataKeys: message.metadata ? Object.keys(message.metadata) : []
+    })
+  }
 
   // Stable selection handler with scroll support
   useEffect(() => {
@@ -183,19 +200,37 @@ export function MessageBubble({
 
   // Handle quote button click
   const handleQuoteText = () => {
-    if (selectedText) {
-      if (notepadOpen && onQuoteToNotepad) {
-        onQuoteToNotepad(`"${selectedText}"`)
-      } else if (onInputPopulate) {
-        onInputPopulate(`"${selectedText}"`)
-      }
-      // Clear the selection after using it
-      setSelectedText('')
-      setSelectionRect(null)
-      setHighlightRects([])
-      setShowQuoteButton(false)
+    if (!selectedText) return;
+
+    // Get the rendered message text (as plain text, for comparison)
+    const messageElement = document.getElementById(`message-${message.id}`);
+    let renderedText = '';
+    if (messageElement) {
+      renderedText = messageElement.innerText.trim();
     }
-  }
+    const selected = selectedText.trim();
+    // If the selection matches the entire message, use the markdown source
+    let quoteToInsert: string;
+    if (renderedText && selected === renderedText) {
+      quoteToInsert = message.content;
+    } else {
+      // Otherwise, insert as markdown blockquote (preserve line breaks)
+      quoteToInsert = selected
+        .split('\n')
+        .map(line => line ? `> ${line}` : '>')
+        .join('\n');
+    }
+    if (notepadOpen && onQuoteToNotepad) {
+      onQuoteToNotepad(quoteToInsert);
+    } else if (onInputPopulate) {
+      onInputPopulate(quoteToInsert);
+    }
+    // Clear the selection after using it
+    setSelectedText('');
+    setSelectionRect(null);
+    setHighlightRects([]);
+    setShowQuoteButton(false);
+  };
 
   // Determine if this message might contain a completed persona
   // Check for explicit completion flags OR content that indicates persona creation
@@ -315,7 +350,15 @@ export function MessageBubble({
                 />
               ) : mightHavePersona && userId ? (
                 <PersonaCardRenderer message={message} userId={userId} />
+              ) : isUser && hasLinkedContent ? (
+                <>
+                  {/* Use ChatContentRenderer for user messages with linked content */}
+                  <ChatContentRenderer 
+                    content={message.content} 
+                  />
+                </>
               ) : (
+                // Use MarkdownRenderer for assistant messages and user messages without linked content
                 <MarkdownRenderer content={message.chat_response || message.content} />
               )}
             </div>
@@ -329,6 +372,22 @@ export function MessageBubble({
                   title="Reply"
                 >
                   <MessageSquare className="w-3 h-3" />
+                </button>
+              )}
+              {/* New: Quote All (markdown) button */}
+              {(onInputPopulate || (notepadOpen && onQuoteToNotepad)) && (
+                <button
+                  onClick={() => {
+                    if (notepadOpen && onQuoteToNotepad) {
+                      onQuoteToNotepad(message.content);
+                    } else if (onInputPopulate) {
+                      onInputPopulate(message.content);
+                    }
+                  }}
+                  className="p-1 rounded-full bg-background/70 backdrop-blur-sm border text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all"
+                  title="Quote entire message (markdown)"
+                >
+                  <Quote className="w-3 h-3" />
                 </button>
               )}
               <CopyButton text={getTextToCopy()} />

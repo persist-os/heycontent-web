@@ -42,7 +42,6 @@ export function useYouTubeAnalytics(userId?: string) {
         
         // --- Always use canonical statistics field ---
         const stats = video.statistics || {};
-        console.log('DEBUG: videoId', videoId, 'canonical statistics', stats, 'raw video:', video);
         const views = Number(stats.views ?? 0);
         const likes = Number(stats.likes ?? 0);
         const dislikes = Number(stats.dislikes ?? 0);

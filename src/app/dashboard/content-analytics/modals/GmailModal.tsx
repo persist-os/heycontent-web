@@ -16,44 +16,17 @@ export const GmailModal: React.FC<GmailModalProps> = ({
   selectedContent,
   onClose
 }) => {
-  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
-
   const router = useRouter();
   const { setGmailContext } = useContentContextActions();
 
-  const requestAiAnalysis = async () => {
-    setLoading(true);
-    // Simulate API call - TODO: Replace with actual API call
-    await new Promise(resolve => setTimeout(resolve, 1200));
-    setAiAnalysis(`AI Analysis for "${selectedContent.content.data.subject}":\n- Open rate (${selectedContent.metrics.openRate}%) is strong. \n- Click rate (${selectedContent.metrics.clickRate}%) could be improved.\n- Consider A/B testing subject lines or call-to-action placement.`);
-    setLoading(false);
-  };
-
   // Handle discuss content with Zustand store
   const handleDiscussContent = () => {
-    // Use the full Convex document if available, otherwise create a fallback
     if (selectedContent.convexData) {
-      // Use the complete Convex document with all fields
-      console.log('🔍 [GMAIL MODAL] Using full Convex document:', {
-        hasData: !!selectedContent.convexData.data,
-        dataKeys: selectedContent.convexData.data ? Object.keys(selectedContent.convexData.data) : 'none',
-        fullConvexData: selectedContent.convexData
-      });
-      
-      // Update the analysis markdown if we have fresh analysis
-      const updatedConvexData = {
+      setGmailContext({
         ...selectedContent.convexData,
-        analysisMarkdown: aiAnalysis || selectedContent.analysisMarkdown || selectedContent.convexData.analysisMarkdown
-      };
-      
-      setGmailContext(updatedConvexData);
+        analysisMarkdown: selectedContent.analysisMarkdown || selectedContent.convexData.analysisMarkdown
+      });
     } else {
-      // Fallback to creating a mock object (shouldn't happen with proper data)
-      console.warn('🔍 [GMAIL MODAL] No convexData available, using fallback mock object');
-      
-      // Create a mock Convex document structure
       const mockConvexData = {
         _id: selectedContent.id as any,
         _creationTime: Date.now(),
@@ -67,15 +40,12 @@ export const GmailModal: React.FC<GmailModalProps> = ({
         messages: selectedContent.content.data?.messages || [],
         data: selectedContent.content.data || {},
         analysis: selectedContent.analysis || null,
-        analysisMarkdown: aiAnalysis || selectedContent.analysisMarkdown || null,
+        analysisMarkdown: selectedContent.analysisMarkdown || null,
         createdAt: new Date(selectedContent.publishedAt).getTime(),
         updatedAt: Date.now(),
       };
-
       setGmailContext(mockConvexData as any);
     }
-    
-    // Navigate to chat
     router.push('/dashboard/chat');
   };
 
@@ -118,46 +88,63 @@ export const GmailModal: React.FC<GmailModalProps> = ({
           {/* Metrics */}
           <div>
             <h3 className="text-base font-medium mb-4 text-black dark:text-white">Performance Metrics</h3>
-            {/* Use a container that mimics the grid structure expected by getMetricsDisplay */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {getMetricsDisplay(selectedContent)}
             </div>
           </div>
 
           {/* AI Analysis */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-base font-medium text-black dark:text-white">AI Analysis</h3>
-              <Button size="sm" onClick={requestAiAnalysis} disabled={loading || !!aiAnalysis}>
-                <Sparkles className="w-4 h-4 mr-2" />
-                {loading ? 'Analyzing...' : (aiAnalysis ? 'Analysis Complete' : 'Request Analysis')}
-              </Button>
-            </div>
-            <Card className="p-4 bg-gradient-to-br from-blue-50 to-heycontent-light-yellow dark:from-gray-800 dark:to-gray-900 min-h-[72px] flex flex-col justify-center">
-              {aiAnalysis ? (
+          {(
+            selectedContent.analysisMarkdown ||
+            (selectedContent.convexData && selectedContent.convexData.analysisMarkdown)
+          ) && (
+            <div>
+              <h3 className="text-base font-medium mb-2 text-black dark:text-white">AI Analysis</h3>
+              <Card className="p-4 bg-gradient-to-br from-blue-50 to-heycontent-light-yellow dark:from-gray-800 dark:to-gray-900 min-h-[72px] flex flex-col justify-center">
                 <div className="space-y-3">
-                  <p className="text-sm text-black dark:text-white whitespace-pre-line">{aiAnalysis}</p>
-                  <Button variant="outline" size="sm" onClick={() => setChatOpen(!chatOpen)}>
-                    <Bot className="w-4 h-4 mr-2" />
-                    {chatOpen ? 'Close Chat' : 'Chat with Analysis'}
-                  </Button>
-                  {chatOpen && (
-                    <div className="mt-2 p-3 border rounded-lg bg-gray-50 dark:bg-gray-700">
-                      {/* TODO: Integrate real chat component here */}
-                      <p className="text-xs text-text-gray italic">Chat interface placeholder. Ask about the analysis results!</p>
-                    </div>
-                  )}
+                  <p className="text-sm text-black dark:text-white whitespace-pre-line">
+                    {selectedContent.analysisMarkdown || (selectedContent.convexData && selectedContent.convexData.analysisMarkdown)}
+                  </p>
                 </div>
-              ) : (
-                <p className="text-text-gray text-sm italic text-center">Click 'Request Analysis' to get AI insights.</p>
-              )}
-            </Card>
-          </div>
+              </Card>
+            </div>
+          )}
+
+          {/* All Messages in Thread */}
+          {selectedContent.content.data.messages && selectedContent.content.data.messages.length > 0 && (
+            <div>
+              <h3 className="text-base font-medium mb-4 text-black dark:text-white">All Messages in Thread</h3>
+              <div className="space-y-4">
+                {selectedContent.content.data.messages.map((msg, idx) => (
+                  <Card
+                    key={msg.id || idx}
+                    className="p-4 bg-white dark:bg-gray-900 border shadow-sm rounded-lg overflow-hidden"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-1">
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        <span className="font-semibold">From:</span> {msg.from}
+                        {msg.subject && <span className="ml-2"><span className="font-semibold">Subject:</span> {msg.subject}</span>}
+                      </div>
+                    </div>
+                    <div
+                      className="text-sm text-black dark:text-white whitespace-pre-line break-words max-h-60 overflow-auto border-t border-gray-100 dark:border-gray-800 pt-2"
+                      style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+                    >
+                      {msg.body || msg.snippet}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
         <div className="px-6 py-4 border-t dark:border-gray-800 flex items-center justify-end gap-3 flex-shrink-0">
-          <Button onClick={handleDiscussContent} className="bg-primary text-primary-foreground dark:text-black hover:bg-primary/90 hover:text-primary-foreground dark:hover:text-black">
+          <Button
+            onClick={handleDiscussContent}
+            className="bg-primary text-primary-foreground dark:text-black hover:bg-primary/90 hover:text-primary-foreground dark:hover:text-black"
+          >
             <MessageSquare className="w-4 h-4 mr-2" />
             Discuss with Content
           </Button>

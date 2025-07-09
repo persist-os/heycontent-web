@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Settings, Mail } from 'lucide-react';
+import { Settings, Mail, RefreshCw } from 'lucide-react';
 import { GmailCard } from '../cards/GmailCard';
 import { GmailModal } from '../modals/GmailModal';
 import { PlatformEmbeddingStatus } from '../components/PlatformEmbeddingStatus';
@@ -13,6 +13,9 @@ import { GmailContentItem, AnyContentItem } from '../types';
 import { sortContent } from '../utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlatformConnectionPrompt } from '../../_components/content-hub/PlatformConnectionPrompt';
+import { useGmailBatchRefresh } from '@/app/hooks/useGmailBatchRefresh';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 
 interface GmailPlatformProps {
   userId: string;
@@ -31,9 +34,28 @@ export function GmailPlatform({
 }: GmailPlatformProps) {
   const router = useRouter();
   const [selectedContent, setSelectedContent] = useState<GmailContentItem | null>(null);
+  const [refreshCount, setRefreshCount] = useState(0);
+
+  // Use the batch Gmail refresh hook
+  const { refresh, loading: refreshing, error: refreshError, success: refreshSuccess } = useGmailBatchRefresh();
+
+  // Pass refreshCount to useGmailAnalytics to trigger refetch
+  const { gmailItems: displayItems, loading: gmailLoading, hasConnectedAccounts: gmailConnected } = useGmailAnalytics(userId, refreshCount);
 
   // Sort items by date
-  const displayItems = sortContent(gmailItems, 'date');
+  const displayItemsSorted = sortContent(gmailItems, 'date');
+
+  // Convex hooks for batch analysis status and mutation
+  const gmailAccounts = useQuery(api.gmailQueries.getGmailAccounts, userId ? { userId } : 'skip');
+  const gmailAccountId = gmailAccounts && gmailAccounts.length > 0 ? gmailAccounts[0].email : undefined;
+  const batchAnalysis = useQuery(
+    api.gmailQueries.getGmailBatchAnalysis,
+    userId && gmailAccountId ? { userId, gmailAccountId } : 'skip'
+  );
+  const updateBatchStatus = useMutation(api.gmailMutations.updateGmailBatchAnalysisStatus);
+  const [cancelling, setCancelling] = useState(false);
+  const batchStatus = batchAnalysis?.status?.status || batchAnalysis?.status?.status?.status || null;
+  const batchTaskId = batchAnalysis?.status?.task_id || batchAnalysis?.status?.status?.task_id || 'gmail-batch-' + userId;
 
   const discussContent = async (item: AnyContentItem) => {
     try {
@@ -88,6 +110,34 @@ export function GmailPlatform({
     }
   };
 
+  const handleRefresh = async () => {
+    // For batch refresh, call refresh with no arguments
+    await refresh();
+    setRefreshCount((c) => c + 1); // Trigger refetch
+  };
+
+  // Cancel handler
+  const handleCancel = async () => {
+    if (!userId || !gmailAccountId || !batchTaskId) return;
+    setCancelling(true);
+    try {
+      await updateBatchStatus({
+        userId,
+        gmailAccountId,
+        statusUpdate: {
+          status: 'cancelled',
+          task_id: batchTaskId,
+          completed_at: new Date().toISOString(),
+          progress: 0,
+        },
+      });
+    } catch (e) {
+      // Optionally show error
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   // Show Gmail connect card if no Gmail account found
   if (!hasConnectedAccounts) {
     return (
@@ -116,6 +166,36 @@ export function GmailPlatform({
 
   return (
     <>
+      {/* Refresh & Cancel Buttons */}
+      <div className="flex justify-end mb-4 gap-2">
+        <Button 
+          size="sm" 
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm"
+        >
+          <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing...' : 'Refresh Gmail'}
+        </Button>
+        {/* Show Cancel if batch analysis is in progress */}
+        {batchStatus && (batchStatus === 'processing' || batchStatus === 'enqueued') && (
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={handleCancel}
+            disabled={cancelling}
+            className="bg-red-500 hover:bg-red-600 text-white border border-red-500"
+          >
+            {cancelling ? 'Cancelling...' : 'Cancel Analysis'}
+          </Button>
+        )}
+      </div>
+      {refreshError && !refreshSuccess && (
+        <div className="text-red-500 text-sm mb-2 text-center">{refreshError}</div>
+      )}
+      {refreshSuccess && (
+        <div className="text-green-500 text-sm mb-2 text-center">Gmail emails refreshed!</div>
+      )}
       {/* Platform Embedding Status */}
       <PlatformEmbeddingStatus 
         platform="gmail" 
@@ -123,7 +203,7 @@ export function GmailPlatform({
         userId={userId} 
       />
 
-      {loading ? (
+      {gmailLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
           {Array.from({ length: 3 }).map((_, index) => (
             <div key={index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 flex flex-col space-y-4">
@@ -165,12 +245,12 @@ export function GmailPlatform({
             </div>
             
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
-              No Emails Found
+              No Business Opportunities Detected
             </h3>
             
             <p className="text-gray-600 mb-4 sm:mb-6 text-sm leading-relaxed">
-              We couldn't find any emails in your connected Gmail account. 
-              Try sending or receiving emails to see your analytics here.
+              We didn't spot any business opportunities in your Gmail just yet. <br />
+              Keep creating, connecting, and collaborating—your next big opportunity could be just one email away! 
             </p>
           </Card>
         </div>

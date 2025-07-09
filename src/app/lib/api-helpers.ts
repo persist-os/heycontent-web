@@ -3,6 +3,7 @@
 import { getFirebaseAuth } from '@/app/lib/firebase';
 import { getValidToken, isTokenExpired } from '@/app/lib/firebase-token-manager';
 import Cookies from 'js-cookie';
+import { AuthenticationError, ServiceUnavailableError, APIError } from './errors';
 
 /**
  * Get API key from cookies or request a new one
@@ -19,7 +20,7 @@ export async function getApiKey(): Promise<string | null> {
       if (process.env.NODE_ENV === 'development') {
         console.warn('getFirebaseAuth() failed:', e);
       }
-      return null;
+      throw new AuthenticationError('Firebase Auth not available');
     }
     if (storedApiKey) {
       const apiKey = JSON.parse(storedApiKey);
@@ -92,32 +93,36 @@ export async function getApiKey(): Promise<string | null> {
               console.warn('Received invalid or temporary API key from backend:', apiKeyValue);
             }
             Cookies.remove('apiKey');
-            return null;
+            throw new AuthenticationError('Invalid or temporary API key received');
           }
         } else {
-          const errorData = await response.json();
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('Failed to get API key from backend:', errorData);
+          if (response.status === 401 || response.status === 403) {
+            throw new AuthenticationError('Token expired or invalid');
+          } else if (response.status >= 500) {
+            throw new ServiceUnavailableError('Backend service unavailable');
+          } else {
+            throw new APIError('Failed to get API key');
           }
-          return null;
         }
       } catch (apiError) {
+        if (apiError instanceof AuthenticationError || apiError instanceof ServiceUnavailableError || apiError instanceof APIError) {
+          throw apiError;
+        }
         if (process.env.NODE_ENV === 'development') {
           console.error('Error requesting API key from backend:', apiError);
         }
-        return null;
+        throw new APIError('Error requesting API key from backend');
       }
-      // No API key available if backend fails
-      return null;
     }
-    
-    // If we get here, it means needsRefresh is true but no auth/currentUser is available
     return null;
   } catch (error) {
+    if (error instanceof AuthenticationError || error instanceof ServiceUnavailableError || error instanceof APIError) {
+      throw error;
+    }
     if (process.env.NODE_ENV === 'development') {
       console.error('Error getting API key:', error);
     }
-    throw new Error('No valid API key available. Please contact support.');
+    throw new APIError('No valid API key available. Please contact support.');
   }
 }
 
@@ -187,29 +192,27 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
     // Check if the response indicates an authentication error
     if (response.status === 401 || response.status === 403) {
       console.warn('Authentication error in API response, attempting token refresh...');
-      
       try {
         // Force refresh the token
         const refreshedToken = await getValidToken(user);
-        
-        // Retry the request with the refreshed token
         const retryHeaders = {
           ...options.headers,
           'Authorization': `Bearer ${refreshedToken}`,
           'Content-Type': 'application/json',
         };
-        
         const retryResponse = await fetch(url, {
           ...options,
           headers: retryHeaders,
           credentials: 'include'
         });
-        
+        if (retryResponse.status === 401 || retryResponse.status === 403) {
+          throw new AuthenticationError('Token expired or invalid');
+        }
         console.log('Request retried with refreshed token');
         return retryResponse;
       } catch (refreshError) {
         console.error('Token refresh failed during API retry:', refreshError);
-        throw new Error('Authentication failed. Please sign in again.');
+        throw new AuthenticationError('Authentication failed. Please sign in again.');
       }
     }
 
@@ -222,7 +225,7 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
 
 export async function fetchWithApiKey(url: string, options: RequestInit = {}): Promise<Response> {
   const apiKey = await getApiKey();
-  if (!apiKey) throw new Error('No API key found. Please log in again.');
+  if (!apiKey) throw new AuthenticationError('No API key found. Please log in again.');
   const headers = {
     ...(options.headers || {}),
     'Authorization': `Bearer ${apiKey}`,
@@ -232,5 +235,8 @@ export async function fetchWithApiKey(url: string, options: RequestInit = {}): P
     ...options,
     headers,
   });
+  if (response.status === 401 || response.status === 403) {
+    throw new AuthenticationError('Token expired or invalid');
+  }
   return response;
 }

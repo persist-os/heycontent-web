@@ -4,6 +4,78 @@ import { Id } from "./_generated/dataModel";
 
 type ExperienceLevel = "Beginner" | "Intermediate" | "Experienced" | "Professional";
 
+// Constants
+const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000; // 14 days in milliseconds
+
+// Query to check if user can generate a new persona (cooldown check)
+export const checkPersonaGenerationEligibility = query({
+  args: {
+    userId: v.string(),
+  },
+  returns: v.object({
+    canGenerate: v.boolean(),
+    nextAvailable: v.optional(v.number()),
+    lastGenerated: v.optional(v.number()),
+    daysRemaining: v.optional(v.number()),
+    mustUpdate: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      const { userId } = args;
+      
+      // Get the most recent persona for this user
+      const mostRecentPersona = await ctx.db
+        .query("personas")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .order("desc")
+        .first();
+
+      if (!mostRecentPersona) {
+        // No previous persona, user can generate
+        return {
+          canGenerate: true,
+          mustUpdate: false,
+        };
+      }
+
+      const now = Date.now();
+      // Use _creationTime for cooldown logic (Convex system field)
+      const lastGenerated = mostRecentPersona._creationTime;
+      const timeSinceLastGeneration = now - lastGenerated;
+      const mustUpdate = timeSinceLastGeneration >= TWO_WEEKS_MS;
+      console.log('[CHECK ELIGIBILITY] now:', now, 'lastGenerated:', lastGenerated, 'timeSinceLastGeneration:', timeSinceLastGeneration, 'TWO_WEEKS_MS:', TWO_WEEKS_MS);
+      if (timeSinceLastGeneration >= TWO_WEEKS_MS) {
+        // Cooldown period has passed
+        console.log('[CHECK ELIGIBILITY] Returning canGenerate: true', { canGenerate: true, lastGenerated, mustUpdate });
+        return {
+          canGenerate: true,
+          lastGenerated,
+          mustUpdate,
+        };
+      } else {
+        // Still in cooldown period
+        const nextAvailable = lastGenerated + TWO_WEEKS_MS;
+        const daysRemaining = Math.ceil((nextAvailable - now) / (24 * 60 * 60 * 1000));
+        console.log('[CHECK ELIGIBILITY] Returning canGenerate: false', { canGenerate: false, nextAvailable, lastGenerated, daysRemaining, mustUpdate });
+        return {
+          canGenerate: false,
+          nextAvailable,
+          lastGenerated,
+          daysRemaining,
+          mustUpdate,
+        };
+      }
+    } catch (error) {
+      console.error("Error checking persona generation eligibility:", error);
+      // Default to allowing generation on error
+      return {
+        canGenerate: true,
+        mustUpdate: false,
+      };
+    }
+  },
+});
+
 // Query to get the active persona for a user
 export const getPersona = query({
   args: {
@@ -116,7 +188,7 @@ export const getPersonaData = query({
   },
 });
 
-// Mutation to create a new persona
+// Mutation to create a new persona (with two-week cooldown enforcement)
 export const createPersona = mutation({
   args: {
     userId: v.string(),
@@ -138,9 +210,48 @@ export const createPersona = mutation({
     style_descriptors: v.array(v.string()),
     audience_type: v.string(),
     engagement_style: v.array(v.string()),
+    bypassCooldown: v.optional(v.boolean()), // Admin override
   },
+  returns: v.union(
+    v.object({
+      success: v.literal(true),
+      personaId: v.id("personas"),
+    }),
+    v.object({
+      success: v.literal(false),
+      error: v.string(),
+      nextAvailable: v.optional(v.number()),
+      daysRemaining: v.optional(v.number()),
+    })
+  ),
   handler: async (ctx, args) => {
+    const { bypassCooldown, ...personaArgs } = args;
     const timestamp = Date.now();
+    
+    // Check cooldown unless bypassed (for admin operations)
+    if (!bypassCooldown) {
+      const mostRecentPersona = await ctx.db
+        .query("personas")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .order("desc")
+        .first();
+
+      if (mostRecentPersona) {
+        // Use _creationTime for cooldown logic
+        const lastGenerated = mostRecentPersona._creationTime;
+        const timeSinceLastGeneration = timestamp - lastGenerated;
+        if (timeSinceLastGeneration < TWO_WEEKS_MS) {
+          const nextAvailable = lastGenerated + TWO_WEEKS_MS;
+          const daysRemaining = Math.ceil((nextAvailable - timestamp) / (24 * 60 * 60 * 1000));
+          return {
+            success: false as const,
+            error: `Your persona is currently in its growth phase! We'll help you evolve it again in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} to track your amazing progress.`,
+            nextAvailable,
+            daysRemaining,
+          };
+        }
+      }
+    }
     
     // Deactivate all previous personas for this user
     const allPersonas = await ctx.db
@@ -156,12 +267,17 @@ export const createPersona = mutation({
     }
 
     // Create new persona with all fields
-    return await ctx.db.insert("personas", {
-      ...args,
+    const personaId = await ctx.db.insert("personas", {
+      ...personaArgs,
       isActive: true,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
+
+         return {
+       success: true as const,
+       personaId,
+     };
   },
 });
 

@@ -24,6 +24,7 @@ interface InstagramPlatformProps {
   isConnected: boolean;
   refresh: () => void;
   refreshing: boolean;
+  refreshSuccess?: boolean;
   instagramAccount: any; // Can be more specific
 }
 
@@ -36,6 +37,7 @@ export function InstagramPlatform({
   isConnected,
   refresh,
   refreshing,
+  refreshSuccess,
   instagramAccount,
 }: InstagramPlatformProps) {
   const router = useRouter();
@@ -176,9 +178,13 @@ export function InstagramPlatform({
             className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Refreshing Analytics & Posts...' : 'Refresh Analytics & Posts'}
+            {refreshing ? 'Refreshing Instagram...' : 'Refresh Instagram'}
           </Button>
         </div>
+
+        {refreshSuccess && (
+          <div className="text-green-500 text-sm mb-2 text-center">Instagram analytics & posts refreshed!</div>
+        )}
 
         {/* Platform Embedding Status */}
         <PlatformEmbeddingStatus 

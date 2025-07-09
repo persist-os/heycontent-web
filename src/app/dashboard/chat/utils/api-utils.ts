@@ -6,10 +6,13 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { getApiKey } from '@/app/lib/api-helpers';
+import { resolveAllLinkContent } from './link-content-resolver';
 
 // Add Convex client import for direct function calls
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
+import { AuthenticationError } from '@/app/lib/errors';
+import { getAllLinkableContent } from "@/convex/notes";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
@@ -1498,7 +1501,7 @@ export async function sendChatMessage(
   // Get API key - make sure we have one before proceeding
   const apiKey = await getApiKey();
   if (!apiKey) {
-    throw new Error('You are not authenticated. Please log in again.');
+    throw new AuthenticationError('We need to verify your account to continue your creative journey. Please sign in again!');
   }
 
   console.log('🐛 [DEBUG] Got API key, length:', apiKey.length);
@@ -1678,10 +1681,38 @@ export async function sendChatMessage(
       relevance_reason: item.relevance_reason
     }));
 
+    // Clean the search query by replacing content IDs with titles (from main)
+    let cleanSearchQuery = content;
+    if (content.includes('@[') && userId) {
+      try {
+        // Get all linkable content for the user
+        const allLinkableContent = await convex.query(api.notes.getAllLinkableContent, { userId });
+        
+        // Create a mapping of content IDs to titles
+        const contentIdToTitle = new Map();
+        allLinkableContent.forEach((item: any) => {
+          const contentIdMatch = content.match(/@\[([^\]]+)\]@/);
+          if (contentIdMatch) {
+            const contentId = contentIdMatch[1];
+            contentIdToTitle.set(contentId, item.title);
+          }
+        });
+        
+        // Replace content IDs with titles
+        cleanSearchQuery = content.replace(/@\[([^\]]+)\]@/g, (match, contentId) => {
+          const title = contentIdToTitle.get(contentId);
+          return title ? `[${title}]` : match;
+        });
+      } catch (error) {
+        console.error('Error cleaning search query:', error);
+        // Keep original content if cleaning fails
+      }
+    }
+
     requestBody.vector_search_metadata = {
       foundRelevantContent: true,
       relevantItemsCount: relevantContext.length,
-      searchQuery: content,
+      searchQuery: cleanSearchQuery,
       context: buildContextString(relevantContext),
       graded: true,
       grading_summary: gradedContext.grading_summary,
@@ -1720,10 +1751,38 @@ export async function sendChatMessage(
     });
   } else if (needsContext && vectorSearchResults && vectorSearchResults.context) {
     // Fall back to original vector search results ONLY if grading actually failed
+    // Clean the search query by replacing content IDs with titles (from main)
+    let cleanSearchQuery = content;
+    if (content.includes('@[') && userId) {
+      try {
+        // Get all linkable content for the user
+        const allLinkableContent = await convex.query(api.notes.getAllLinkableContent, { userId });
+        
+        // Create a mapping of content IDs to titles
+        const contentIdToTitle = new Map();
+        allLinkableContent.forEach((item: any) => {
+          const contentIdMatch = content.match(/@\[([^\]]+)\]@/);
+          if (contentIdMatch) {
+            const contentId = contentIdMatch[1];
+            contentIdToTitle.set(contentId, item.title);
+          }
+        });
+        
+        // Replace content IDs with titles
+        cleanSearchQuery = content.replace(/@\[([^\]]+)\]@/g, (match, contentId) => {
+          const title = contentIdToTitle.get(contentId);
+          return title ? `[${title}]` : match;
+        });
+      } catch (error) {
+        console.error('Error cleaning search query:', error);
+        // Keep original content if cleaning fails
+      }
+    }
+    
     requestBody.vector_search_metadata = {
       foundRelevantContent: true,
       relevantItemsCount: vectorSearchResults.relevantContent.length,
-      searchQuery: content,
+      searchQuery: cleanSearchQuery,
       context: vectorSearchResults.context,
       graded: false,
       intent_analysis: intentAnalysis,
@@ -1766,6 +1825,44 @@ export async function sendChatMessage(
     console.log('🐛 [DEBUG] Context was needed but no relevant results found');
   }
 
+  // Resolve link content if the message contains content IDs
+  if (content.includes('@[') && userId) {
+    console.log('🔗 [LINK RESOLUTION] Message contains content links, resolving...');
+    
+    try {
+      // Get all linkable content for the user
+      const allLinkableContent = await convex.query(api.notes.getAllLinkableContent, { userId });
+      
+      console.log('🔗 [LINK RESOLUTION] All linkable content from Convex:', {
+        totalCount: allLinkableContent?.length || 0,
+        types: allLinkableContent?.map(item => item.type) || [],
+        insightCount: allLinkableContent?.filter(item => item.type === 'insight').length || 0,
+        insights: allLinkableContent?.filter(item => item.type === 'insight').map(item => ({
+          id: item.id,
+          title: item.title
+        })) || []
+      });
+      
+      // Resolve all link content
+      const resolvedLinkContent = await resolveAllLinkContent(content, userId, allLinkableContent);
+      
+      if (resolvedLinkContent.length > 0) {
+        console.log('🔗 [LINK RESOLUTION] Resolved link content:', {
+          count: resolvedLinkContent.length,
+          types: resolvedLinkContent.map(item => item.type)
+        });
+        
+        // Add resolved link content to request body
+        requestBody.link_content = resolvedLinkContent;
+      } else {
+        console.log('🔗 [LINK RESOLUTION] No link content resolved');
+      }
+    } catch (error) {
+      console.error('🔗 [LINK RESOLUTION] Error resolving link content:', error);
+      // Continue without link content if resolution fails
+    }
+  }
+
   // Handle session ID based on whether this is a first message or continuing conversation
   if (isFirstMessageBool) {
     requestBody.session_id = null;
@@ -1777,6 +1874,8 @@ export async function sendChatMessage(
     console.warn('Non-first message without session ID - this may cause issues');
     requestBody.session_id = null;
   }
+
+
 
   // Include content context if available
   if (contentContext) {
@@ -1836,7 +1935,16 @@ export async function sendChatMessage(
     needs_context: needsContext,
     intent_analysis_included: !!requestBody.intent_analysis,
     vector_search_performed: needsContext, // ✅ Log whether vector search was actually performed
-    skip_reason: !needsContext ? (intentAnalysis?.reasoning || 'No intent analysis') : null
+    skip_reason: !needsContext ? (intentAnalysis?.reasoning || 'No intent analysis') : null,
+    has_link_content: !!requestBody.link_content,
+    link_content_count: requestBody.link_content?.length || 0,
+    link_content_types: requestBody.link_content?.map((item: any) => item.type) || [],
+    content_context: contentContext ? {
+      platform: contentContext.platform,
+      contentId: contentContext.contentId,
+      title: contentContext.title,
+      hasAnalysis: !!contentContext.analysis
+    } : null
   });
 
   // Make the final request to the backend
@@ -1849,8 +1957,13 @@ export async function sendChatMessage(
     body: JSON.stringify(requestBody)
   });
 
+  if (response.status === 401 || response.status === 403) {
+    throw new AuthenticationError('Your session has timed out. Please refresh the page to continue your creative work!');
+  }
   if (!response.ok) {
-    throw new Error('Failed to send message');
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData?.message || 'We hit a creative block while sending your message. Your work is safe - please try again in a moment!';
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
@@ -1916,7 +2029,7 @@ export async function loadConversation(id: string) {
     // Get API key for authentication - same pattern as sendChatMessage
     const apiKey = await getApiKey();
     if (!apiKey) {
-      throw new Error('You are not authenticated. Please log in again.');
+      throw new AuthenticationError('We need to verify your account to continue your creative journey. Please sign in again!');
     }
 
     const response = await fetch(`/api/chat/conversation/${id}`, {
@@ -1926,7 +2039,8 @@ export async function loadConversation(id: string) {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to load conversation: ${response.status}`);
+      const errorMessage = `We couldn't load this conversation (${response.status}). Your creative work is safe - please try refreshing the page!`;
+    throw new Error(errorMessage);
     }
 
     return await response.json();
@@ -1961,7 +2075,11 @@ export async function checkPlatformEmbeddings(
     return result;
   } catch (error: any) {
     console.error(`Error checking ${platform} embeddings:`, error);
-    return { hasEmbeddings: false, count: 0 };
+    console.warn(`We're having trouble checking your ${platform} content. Don't worry, we're on it!`);
+    return { 
+      hasEmbeddings: false, 
+      count: 0
+    };
   }
 }
 
@@ -1974,6 +2092,7 @@ export async function checkUserEmbeddings(userId: string): Promise<{ hasEmbeddin
     return result;
   } catch (error: any) {
     console.error('Error checking user embeddings:', error);
+    // Don't show error to user for background checks
     return { hasEmbeddings: false, count: 0 };
   }
 }
@@ -1991,10 +2110,7 @@ export async function deleteAllUserEmbeddings(userId: string): Promise<{ success
     return { 
       success: false, 
       deletedCount: 0, 
-      message: `Failed to delete embeddings: ${error.message}` 
+      message: `We couldn't clear your content index. Don't worry, your data is safe! Please try again or contact support if this continues.`
     };
   }
 }
-
-// We no longer generate local session IDs
-// All session IDs should come from the backend
