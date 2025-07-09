@@ -13,6 +13,7 @@ import { InstagramContentItem, AnyContentItem } from '../types';
 import { sortContent } from '../utils';
 import CardSkeleton from './components/CardSkeleton';
 import PieChartSkeleton from './components/PieChartSkeleton';
+import InstagramCardSkeleton from './components/InstagramCardSkeleton';
 import { PlatformConnectionPrompt } from '../../_components/content-hub/PlatformConnectionPrompt';
 
 interface InstagramPlatformProps {
@@ -354,17 +355,28 @@ export function InstagramPlatform({
       {/* Content Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
         {displayItems.length > 0 ? (
-          displayItems.map((item, index) => {
-            return (
-              <InstagramCard
-                key={item.id}
-                item={item as InstagramContentItem}
-                userId={userId}
-                onDiscussContent={() => discussContent(item)}
-                onViewDetailedAnalytics={() => setSelectedContent(item as InstagramContentItem)}
-              />
-            );
-          })
+          <>
+            {displayItems.map((item, index) => {
+              return (
+                <InstagramCard
+                  key={item.id}
+                  item={item as InstagramContentItem}
+                  userId={userId}
+                  onDiscussContent={() => discussContent(item)}
+                  onViewDetailedAnalytics={() => setSelectedContent(item as InstagramContentItem)}
+                />
+              );
+            })}
+            
+            {/* Show skeleton cards when loading more */}
+            {loadingMore && (
+              <>
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <InstagramCardSkeleton key={`skeleton-${index}`} />
+                ))}
+              </>
+            )}
+          </>
         ) : (
           <div className="col-span-full text-center py-10 text-text-gray dark:text-gray-400">
             <div className="space-y-2">
@@ -378,28 +390,13 @@ export function InstagramPlatform({
       </div>
 
       {/* Load More Button */}
-      {(hasMorePosts || queueCount > 0) && displayItems.length > 0 && (
+      {(hasMorePosts || queueCount > 0) && displayItems.length > 0 && !loadingMore && (
         <div className="flex justify-center mt-8">
           <Button
             onClick={loadMore}
-            disabled={loadingMore}
             className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300"
           >
-            {loadingMore ? (
-              <>
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                Loading More Posts...
-              </>
-            ) : (
-              <>
-                Load More Posts
-                {queueCount > 0 && (
-                  <span className="ml-2 bg-white/20 px-2 py-1 rounded-full text-xs">
-                    {queueCount} queued
-                  </span>
-                )}
-              </>
-            )}
+            Load More Posts
           </Button>
         </div>
       )}
@@ -418,12 +415,7 @@ export function InstagramPlatform({
         </div>
       )}
 
-      {/* Posts Count Info */}
-      {totalPostsFetched > 0 && (
-        <div className="text-center mt-4 text-sm text-gray-600">
-          Showing {displayItems.length} of {totalPostsFetched} posts
-        </div>
-      )}
+
 
       {selectedContent && (
         <InstagramModal
