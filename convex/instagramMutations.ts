@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, action } from "./_generated/server";
+import { mutation, action, query } from "./_generated/server";
 import { MutationCtx, ActionCtx } from "./_generated/server";
 import { api } from "./_generated/api";
 
@@ -68,12 +68,13 @@ export const storeUnifiedPostData = mutation({
         text: v.string(),
         timestamp: v.number(),
         username: v.string(),
-        like_count: v.optional(v.number()),
+        like_count: v.optional(v.union(v.number(), v.null())),
         replies: v.optional(v.array(v.object({
           id: v.string(),
           text: v.string(),
           timestamp: v.number(),
-          username: v.optional(v.string())
+          username: v.optional(v.string()),
+          like_count: v.optional(v.union(v.number(), v.null()))
         })))
       })))
     }))
@@ -145,12 +146,12 @@ export const storeUnifiedPostData = mutation({
           results.push({ status: "created", postId: post.id, internalId });
         }
       } catch (error) {
-        console.error(`Error storing Instagram post ${post.id}:`, error);
-        results.push({ 
-          status: "error", 
-          postId: post.id, 
-          error: error instanceof Error ? error.message : 'Unknown error' 
-        });
+              console.error(`Error storing Instagram post ${post.id}:`, error);
+      results.push({ 
+        status: "error", 
+        postId: post.id, 
+        error: 'Your Instagram post is taking a moment to save. Thanks for your patience—great content is worth waiting for!' 
+      });
       }
     }
 
@@ -237,7 +238,7 @@ export const storePostData = mutation({
       }
     } catch (error) {
       console.error(`Error storing Instagram post ${postId}:`, error);
-      throw new Error(`Failed to store Instagram post: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram post is taking a moment to save. Thanks for your patience—great content is worth waiting for!');
     }
   },
 });
@@ -323,7 +324,7 @@ export const storeProfileData = mutation({
       }
     } catch (error) {
       console.error(`Error storing Instagram account for user ${userId}:`, error);
-      throw new Error(`Failed to store Instagram account: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram account is taking a moment to save. Thanks for your patience—great things take time!');
     }
   },
 });
@@ -441,7 +442,7 @@ export const disconnectInstagram = mutation({
       return { success: true };
     } catch (error) {
       console.error('Error disconnecting Instagram:', error);
-      throw new Error(`Failed to disconnect Instagram: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram disconnection is taking a moment to process. Thanks for your patience—we\'ll have you sorted out soon!');
     }
   },
 });
@@ -570,7 +571,7 @@ export const storeInstagramTrackerAnalysis = mutation({
       }
     } catch (error) {
       console.error(`Error storing Instagram tracker analysis for user ${userId}:`, error);
-      throw new Error(`Failed to store Instagram tracker analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram analysis is taking a moment to save. Thanks for your patience—great insights are worth waiting for!');
     }
   },
 });
@@ -614,7 +615,7 @@ export const storeInstagramBatchAnalysis = mutation({
       }
     } catch (error) {
       console.error(`Error storing Instagram batch analysis for user ${userId}:`, error);
-      throw new Error(`Failed to store Instagram batch analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram batch analysis is taking a moment to save. Thanks for your patience—great insights are worth waiting for!');
     }
   },
 });
@@ -687,7 +688,7 @@ export const updateInstagramBatchAnalysisStatus = mutation({
       }
     } catch (error) {
       console.error(`Error updating Instagram batch analysis status for user ${userId}:`, error);
-      throw new Error(`Failed to update Instagram batch analysis status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram analysis status is taking a moment to update. Thanks for your patience—great insights are worth waiting for!');
     }
   },
 });
@@ -721,7 +722,7 @@ export const storeInstagramWebhookEvent = mutation({
       return { success: true, eventId: id };
     } catch (error) {
       console.error(`Error storing Instagram webhook event: ${error}`);
-      throw new Error(`Failed to store webhook event: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram webhook event is taking a moment to save. Thanks for your patience—great things take time!');
     }
   },
 });
@@ -740,7 +741,7 @@ export const markWebhookEventProcessed = mutation({
       return { success: true };
     } catch (error) {
       console.error(`Error marking webhook event as processed: ${error}`);
-      throw new Error(`Failed to mark event as processed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram webhook event is taking a moment to process. Thanks for your patience—great things take time!');
     }
   },
 });
@@ -787,7 +788,7 @@ export const storeWebhookSubscription = mutation({
       }
     } catch (error) {
       console.error(`Error storing webhook subscription: ${error}`);
-      throw new Error(`Failed to store webhook subscription: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram webhook subscription is taking a moment to save. Thanks for your patience—great things take time!');
     }
   },
 });
@@ -839,7 +840,7 @@ export const storeInstagramStoryInsights = mutation({
       }
     } catch (error) {
       console.error(`Error storing story insights: ${error}`);
-      throw new Error(`Failed to store story insights: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram story insights are taking a moment to save. Thanks for your patience—great insights are worth waiting for!');
     }
   },
 });
@@ -870,13 +871,13 @@ export const updateInstagramPostComments = mutation({
 
       if (!post) {
         console.log(`Post not found for postId ${mediaId}, user ${userId}`);
-        return { success: false, error: "Post not found" };
+        return { success: false, error: "Your Instagram post is taking a moment to load. Thanks for your patience—great content is worth waiting for!" };
       }
 
       // Verify this post belongs to the user for security
       if (post.userId !== userId) {
         console.log(`Post ${mediaId} does not belong to user ${userId}`);
-        return { success: false, error: "Unauthorized access to post" };
+        return { success: false, error: "We need to know it's you to keep your content safe! Please log in again and let's get back to creating amazing things together." };
       }
 
       // Get current comments or initialize empty array
@@ -915,7 +916,7 @@ export const updateInstagramPostComments = mutation({
       return { success: true, status: "updated", postId: post._id, commentId: newComment.id };
     } catch (error) {
       console.error(`Error updating post comments: ${error}`);
-      throw new Error(`Failed to update post comments: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram post comments are taking a moment to update. Thanks for your patience—great engagement is worth waiting for!');
     }
   },
 });
@@ -947,7 +948,7 @@ export const appendCommentToInstagramPost = mutation({
 
       if (!post) {
         console.log(`[appendCommentToInstagramPost] Post not found for postId: ${mediaId}`);
-        return { success: false, error: "Post not found" };
+        return { success: false, error: "Your Instagram post is taking a moment to load. Thanks for your patience—great content is worth waiting for!" };
       }
 
       console.log(`[appendCommentToInstagramPost] Found post: ${post.postId} for user: ${post.userId}`);
@@ -998,7 +999,141 @@ export const appendCommentToInstagramPost = mutation({
       };
     } catch (error) {
       console.error(`[appendCommentToInstagramPost] Error updating post comments: ${error}`);
-      throw new Error(`Failed to update post comments: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('Your Instagram post comments are taking a moment to update. Thanks for your patience—great engagement is worth waiting for!');
     }
   },
 });
+
+// Queue operations for lazy loading
+export const addPostsToQueue = mutation({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+    posts: v.array(v.object({
+      postId: v.string(),
+      mediaType: v.union(v.literal("IMAGE"), v.literal("VIDEO"), v.literal("CAROUSEL_ALBUM"), v.literal("REELS")),
+      data: v.any(),
+      analysis: v.optional(v.any()),
+      analysisMarkdown: v.optional(v.string()),
+    }))
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    
+    // Add posts to queue
+    const queueIds = [];
+    for (const post of args.posts) {
+      const queueId = await ctx.db.insert("instagramPostsQueue", {
+        userId: args.userId,
+        instagramAccountId: args.instagramAccountId,
+        postId: post.postId,
+        mediaType: post.mediaType,
+        data: post.data,
+        analysis: post.analysis,
+        analysisMarkdown: post.analysisMarkdown,
+        createdAt: now,
+        updatedAt: now,
+      });
+      queueIds.push(queueId);
+    }
+    
+    return { success: true, queueIds };
+  },
+});
+
+export const moveQueuePostsToMain = mutation({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Get all queued posts for this user/account
+    const queuedPosts = await ctx.db
+      .query("instagramPostsQueue")
+      .withIndex("by_user_account", (q) => 
+        q.eq("userId", args.userId).eq("instagramAccountId", args.instagramAccountId)
+      )
+      .collect();
+    
+    if (queuedPosts.length === 0) {
+      return { success: true, movedCount: 0 };
+    }
+    
+    const now = Date.now();
+    const movedIds = [];
+    
+    // Move each queued post to main table
+    for (const queuedPost of queuedPosts) {
+      // Check if post already exists in main table
+      const existing = await ctx.db
+        .query("instagramPosts")
+        .withIndex("by_postId", (q) => q.eq("postId", queuedPost.postId))
+        .first();
+      
+      if (!existing) {
+        // Insert into main table
+        const mainId = await ctx.db.insert("instagramPosts", {
+          userId: queuedPost.userId,
+          instagramAccountId: queuedPost.instagramAccountId,
+          postId: queuedPost.postId,
+          mediaType: queuedPost.mediaType,
+          data: queuedPost.data,
+          analysis: queuedPost.analysis,
+          analysisMarkdown: queuedPost.analysisMarkdown,
+          createdAt: queuedPost.createdAt,
+          updatedAt: now,
+        });
+        movedIds.push(mainId);
+      }
+      
+      // Delete from queue
+      await ctx.db.delete(queuedPost._id);
+    }
+    
+    return { success: true, movedCount: movedIds.length };
+  },
+});
+
+export const updateAccountPagination = mutation({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+    nextUrl: v.optional(v.union(v.string(), v.null())),
+    hasMorePosts: v.boolean(),
+    totalPostsFetched: v.number(),
+  },
+  handler: async (ctx, args) => {
+    console.log(`[updateAccountPagination] Updating pagination for user ${args.userId}, account ${args.instagramAccountId}`);
+    
+    // Find the account using the by_instagramAccountId index for better performance
+    const account = await ctx.db
+      .query("instagramAccounts")
+      .withIndex("by_instagramAccountId", (q) => q.eq("instagramAccountId", args.instagramAccountId))
+      .filter((q) => q.eq(q.field("userId"), args.userId))
+      .first();
+    
+    if (!account) {
+      console.error(`[updateAccountPagination] Account not found for user ${args.userId}, account ${args.instagramAccountId}`);
+      throw new Error("Your Instagram account is taking a moment to load. Thanks for your patience—great things take time!");
+    }
+    
+    console.log(`[updateAccountPagination] Found account: ${account._id}`);
+    
+    const now = Date.now();
+    
+    // Update pagination info
+    await ctx.db.patch(account._id, {
+      pagination: {
+        nextUrl: args.nextUrl,
+        hasMorePosts: args.hasMorePosts,
+        lastFetchedAt: now,
+        totalPostsFetched: args.totalPostsFetched,
+      },
+      updatedAt: now,
+    });
+    
+    console.log(`[updateAccountPagination] Successfully updated pagination for account ${account._id}`);
+    return { success: true };
+  },
+});
+

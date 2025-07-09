@@ -13,6 +13,7 @@ import { InstagramContentItem, AnyContentItem } from '../types';
 import { sortContent } from '../utils';
 import CardSkeleton from './components/CardSkeleton';
 import PieChartSkeleton from './components/PieChartSkeleton';
+import InstagramCardSkeleton from './components/InstagramCardSkeleton';
 import { PlatformConnectionPrompt } from '../../_components/content-hub/PlatformConnectionPrompt';
 
 interface InstagramPlatformProps {
@@ -26,6 +27,13 @@ interface InstagramPlatformProps {
   refreshing: boolean;
   refreshSuccess?: boolean;
   instagramAccount: any; // Can be more specific
+  // Load more functionality
+  loadMore: () => void;
+  loadingMore: boolean;
+  loadMoreError: string | null;
+  hasMorePosts: boolean;
+  queueCount: number;
+  totalPostsFetched: number;
 }
 
 export function InstagramPlatform({ 
@@ -39,6 +47,13 @@ export function InstagramPlatform({
   refreshing,
   refreshSuccess,
   instagramAccount,
+  // Load more functionality
+  loadMore,
+  loadingMore,
+  loadMoreError,
+  hasMorePosts,
+  queueCount,
+  totalPostsFetched,
 }: InstagramPlatformProps) {
   const router = useRouter();
   const [selectedContent, setSelectedContent] = useState<InstagramContentItem | null>(null);
@@ -155,17 +170,17 @@ export function InstagramPlatform({
     );
   }
 
-  if (error) {
-    return (
-      <div className="text-center text-red-500 p-4 mb-8">
-        <p>Error: {error}</p>
-        <Button onClick={refresh} className="mt-2">Try Again</Button>
-      </div>
-    );
-  }
+  // --- NEW: Error banner above dashboard ---
+  // Always render dashboard, show error as banner if present
 
   return (
     <>
+      {error && (
+        <div className="w-full bg-amber-100 border border-amber-300 text-amber-800 rounded-md px-4 py-3 mb-4 text-center">
+          <p className="font-medium">Analytics are taking a quick coffee break ☕</p>
+          <p className="text-sm mt-1">Thanks for your patience—your insights will be back soon! In the meantime, why not brainstorm your next big idea?</p>
+        </div>
+      )}
       {/* Instagram Analytics Section */}
       <div className="space-y-6 mb-8">
         {/* Header with Refresh Button */}
@@ -177,8 +192,8 @@ export function InstagramPlatform({
             disabled={refreshing}
             className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm"
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Refreshing Instagram...' : 'Refresh Instagram'}
+            <RefreshCw className="w-4 h-4 mr-2" />
+            {refreshing ? 'Refreshing...' : 'Refresh Instagram'}
           </Button>
         </div>
 
@@ -333,17 +348,28 @@ export function InstagramPlatform({
       {/* Content Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
         {displayItems.length > 0 ? (
-          displayItems.map((item, index) => {
-            return (
-              <InstagramCard
-                key={item.id}
-                item={item as InstagramContentItem}
-                userId={userId}
-                onDiscussContent={() => discussContent(item)}
-                onViewDetailedAnalytics={() => setSelectedContent(item as InstagramContentItem)}
-              />
-            );
-          })
+          <>
+            {displayItems.map((item, index) => {
+              return (
+                <InstagramCard
+                  key={item.id}
+                  item={item as InstagramContentItem}
+                  userId={userId}
+                  onDiscussContent={() => discussContent(item)}
+                  onViewDetailedAnalytics={() => setSelectedContent(item as InstagramContentItem)}
+                />
+              );
+            })}
+            
+            {/* Show skeleton cards when loading more */}
+            {loadingMore && (
+              <>
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <InstagramCardSkeleton key={`skeleton-${index}`} />
+                ))}
+              </>
+            )}
+          </>
         ) : (
           <div className="col-span-full text-center py-10 text-text-gray dark:text-gray-400">
             <div className="space-y-2">
@@ -355,6 +381,32 @@ export function InstagramPlatform({
           </div>
         )}
       </div>
+
+      {/* Load More Button */}
+      {(hasMorePosts || queueCount > 0) && displayItems.length > 0 && !loadingMore && (
+        <div className="flex justify-center mt-8">
+          <Button
+            onClick={loadMore}
+            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300"
+          >
+            Load More Posts
+          </Button>
+        </div>
+      )}
+
+      {/* Load More Error */}
+      {loadMoreError && (
+        <div className="text-center mt-4">
+          <p className="text-red-500 text-sm">{loadMoreError}</p>
+          <Button
+            onClick={loadMore}
+            size="sm"
+            className="mt-2 bg-red-500 hover:bg-red-600 text-white"
+          >
+            Try Again
+          </Button>
+        </div>
+      )}
 
       {selectedContent && (
         <InstagramModal

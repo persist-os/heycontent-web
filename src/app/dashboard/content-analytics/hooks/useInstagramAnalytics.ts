@@ -96,7 +96,9 @@ export function useInstagramAnalytics(userId?: string) {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshSuccess, setRefreshSuccess] = useState(false);
   const [lastFetchTime, setLastFetchTime] = useState<number | null>(null);
-  const [refreshTimestamp, setRefreshTimestamp] = useState<number>(Date.now());
+
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   
   // Refs to track if component is mounted and previous userId
   const isMountedRef = useRef(true);
@@ -111,7 +113,25 @@ export function useInstagramAnalytics(userId?: string) {
   // Get Instagram posts
   const instagramPosts = useQuery(
     api.instagramQueries.getAllInstagramPosts,
-    userId ? { userId, refreshTimestamp } : "skip"
+    userId ? { userId } : "skip"
+  );
+
+  // Get pagination info
+  const paginationInfo = useQuery(
+    api.instagramQueries.getAccountPagination,
+    userId && instagramAccount?.instagramAccountId ? {
+      userId,
+      instagramAccountId: instagramAccount.instagramAccountId
+    } : "skip"
+  );
+
+  // Get queue status
+  const queueStatus = useQuery(
+    api.instagramQueries.getQueueStatus,
+    userId && instagramAccount?.instagramAccountId ? {
+      userId,
+      instagramAccountId: instagramAccount.instagramAccountId
+    } : "skip"
   );
 
   // Get Instagram post insights - REMOVED: This query doesn't exist in the new schema
@@ -337,18 +357,15 @@ export function useInstagramAnalytics(userId?: string) {
         setRefreshSuccess(true);
         setTimeout(() => setRefreshSuccess(false), 3000);
         
-        // Force refetch of posts by updating the refresh timestamp
-        // This will trigger getAllInstagramPosts to refetch with new insights and comments
-        console.log('🔄 Instagram: Forcing refetch of posts with new insights and comments');
-        setRefreshTimestamp(Date.now());
+
       } else if (isMountedRef.current) {
         console.warn('⚠️ Instagram: No valid analysis data found in API response');
-        setError('No analysis data available');
+        setError('Your Instagram analysis is taking a moment to process. Thanks for your patience—great insights are worth waiting for! Keep creating while we work on this.');
       }
     } catch (err) {
       console.error('❌ Instagram: Manual refresh failed:', err);
       if (isMountedRef.current) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch Instagram analysis');
+        setError('Your Instagram analysis is taking a moment to load. Thanks for your patience—great insights are worth waiting for! Keep creating while we work on this.');
       }
     } finally {
       if (isMountedRef.current) {
@@ -356,6 +373,61 @@ export function useInstagramAnalytics(userId?: string) {
       }
     }
   }, [userId, instagramAccountId]);
+
+  // Load more posts function
+  const loadMore = useCallback(async () => {
+    if (!userId || !instagramAccountId || loadingMore) return;
+
+    setLoadingMore(true);
+    setLoadMoreError(null);
+
+    try {
+      console.log('📄 Instagram: Loading more posts...');
+
+      const apiKey = await getApiKey();
+      if (!apiKey) {
+        throw new Error('We need to know it\'s you to keep your content safe! Please log in again and let\'s get back to creating amazing things together.');
+      }
+
+      const response = await fetch(`${window.location.origin}/api/social/instagram/load-more`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          userId,
+          instagramAccountId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to load more posts: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('📄 Instagram: Load more response:', data);
+      
+      if (data.success) {
+        console.log('✅ Instagram: Successfully loaded more posts');
+        console.log('📊 Instagram: Load more response data:', data);
+        
+        // The posts will automatically update via the Convex query
+        // No need to manually update state - Convex will handle it
+      } else {
+        throw new Error('Your Instagram posts are taking a moment to load. Thanks for your patience—great content is worth waiting for!');
+      }
+    } catch (err) {
+      console.error('❌ Instagram: Load more failed:', err);
+      if (isMountedRef.current) {
+        setLoadMoreError('Your Instagram posts are taking a moment to load. Thanks for your patience—great content is worth waiting for!');
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setLoadingMore(false);
+      }
+    }
+  }, [userId, instagramAccountId, loadingMore]);
 
   // Reset analysis when userId changes
   useEffect(() => {
@@ -381,6 +453,13 @@ export function useInstagramAnalytics(userId?: string) {
     instagramAccount,
     lastFetchTime: lastFetchTime ? new Date(lastFetchTime) : null,
     isCached: !!lastFetchTime && (Date.now() - lastFetchTime < CACHE_DURATION),
-    refreshSuccess
+    refreshSuccess,
+    // Load more functionality
+    loadMore,
+    loadingMore,
+    loadMoreError,
+    hasMorePosts: (paginationInfo?.hasMorePosts || false) || (queueStatus?.queueCount || 0) > 0,
+    queueCount: queueStatus?.queueCount || 0,
+    totalPostsFetched: paginationInfo?.totalPostsFetched || 0,
   };
 } 

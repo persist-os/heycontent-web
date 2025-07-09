@@ -1055,11 +1055,7 @@ try {
 }
 });
 
-// Legacy Instagram endpoints - deprecated in favor of unified approach
-// These endpoints are commented out since we now use the unified instagramPosts table
-// Insights and comments are stored within each post record
 
-// TODO: Remove these endpoints after migration is complete
 
 // Get all Instagram posts for a user
 app.get("/api/users/:id/instagram/posts/all", async (c) => {
@@ -1999,7 +1995,7 @@ app.get("/api/collision/gmail", async (c) => {
 // Add unified Instagram posts endpoint
 app.post("/api/instagram/unified_posts", async (c) => {
   const ctx = c.env;
-  const { userId, instagramAccountId, posts } = await c.req.json();
+  const { userId, instagramAccountId, posts, useQueue = false, moveToMain = true } = await c.req.json();
 
   if (!userId || !instagramAccountId || !posts) {
     return c.json({
@@ -2009,12 +2005,50 @@ app.post("/api/instagram/unified_posts", async (c) => {
   }
 
   try {
-    // Call the unified post storage mutation
-    const result = await ctx.runMutation(api.instagramMutations.storeUnifiedPostData, {
-      userId,
-      instagramAccountId,
-      posts
-    });
+    let result;
+    
+    if (useQueue) {
+      // Add to queue first
+      const queueResult = await ctx.runMutation(api.instagramMutations.addPostsToQueue, {
+        userId,
+        instagramAccountId,
+        posts: posts.map(post => {
+          // Remove media_type from data to match schema
+          const { media_type, ...dataWithoutMediaType } = post;
+          return {
+            postId: post.id,
+            mediaType: media_type || "IMAGE",
+            data: dataWithoutMediaType,
+          };
+        })
+      });
+      
+      if (moveToMain) {
+        // For initial fetch: Move from queue to main table
+        const moveResult = await ctx.runMutation(api.instagramMutations.moveQueuePostsToMain, {
+          userId,
+          instagramAccountId,
+        });
+        
+        result = {
+          ...queueResult,
+          movedCount: moveResult.movedCount
+        };
+      } else {
+        // For queue fetch: Keep posts in queue only
+        result = {
+          ...queueResult,
+          movedCount: 0
+        };
+      }
+    } else {
+      // For subsequent fetches: Store directly to main table
+      result = await ctx.runMutation(api.instagramMutations.storeUnifiedPostData, {
+        userId,
+        instagramAccountId,
+        posts
+      });
+    }
 
     return c.json({
       success: true,
@@ -2022,6 +2056,68 @@ app.post("/api/instagram/unified_posts", async (c) => {
     });
   } catch (error) {
     console.error("Error in unified posts endpoint:", error);
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error"
+    }, 500);
+  }
+});
+
+// Move queue posts to main table endpoint
+app.post("/api/instagram/move-queue-to-main", async (c) => {
+  const ctx = c.env;
+  const { userId, instagramAccountId } = await c.req.json();
+
+  if (!userId || !instagramAccountId) {
+    return c.json({
+      success: false,
+      error: "Missing required fields: userId, instagramAccountId"
+    }, 400);
+  }
+
+  try {
+    const result = await ctx.runMutation(api.instagramMutations.moveQueuePostsToMain, {
+      userId,
+      instagramAccountId,
+    });
+
+    return c.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error("Error in move queue to main endpoint:", error);
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error"
+    }, 500);
+  }
+});
+
+// Get Instagram queue status endpoint
+app.post("/api/instagram/queue/status", async (c) => {
+  const ctx = c.env;
+  const { userId, instagramAccountId } = await c.req.json();
+
+  if (!userId || !instagramAccountId) {
+    return c.json({
+      success: false,
+      error: "Missing required fields: userId, instagramAccountId"
+    }, 400);
+  }
+
+  try {
+    const result = await ctx.runQuery(api.instagramQueries.getQueueStatus, {
+      userId,
+      instagramAccountId,
+    });
+
+    return c.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error("Error in queue status endpoint:", error);
     return c.json({
       success: false,
       error: error instanceof Error ? error.message : "Unknown error"
@@ -2181,6 +2277,85 @@ app.post("/api/instagram/post/comments/append", async (c) => {
   } catch (error) {
     console.error("Failed to append comment to Instagram post:", error);
     return c.json({ success: false, error: "Failed to append comment to Instagram post" }, 500);
+  }
+});
+
+// Instagram load more endpoint
+
+// Update Instagram account pagination
+app.post("/api/instagram/pagination/update", async (c) => {
+  const ctx = c.env;
+  const { userId, instagramAccountId, nextUrl, hasMorePosts, totalPostsFetched } = await c.req.json();
+  
+  if (!userId || !instagramAccountId) {
+    return c.json({ success: false, error: "Missing required fields" }, 400);
+  }
+  
+  try {
+    const result = await ctx.runMutation(api.instagramMutations.updateAccountPagination, {
+      userId,
+      instagramAccountId,
+      nextUrl,
+      hasMorePosts,
+      totalPostsFetched,
+    });
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error("Failed to update Instagram pagination:", error);
+    return c.json({ success: false, error: "Failed to update pagination" }, 500);
+  }
+});
+
+// Get Instagram account pagination
+app.get("/api/instagram/pagination/:userId/:instagramAccountId", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("userId");
+  const instagramAccountId = c.req.param("instagramAccountId");
+  
+  try {
+    const pagination = await ctx.runQuery(api.instagramQueries.getAccountPagination, {
+      userId,
+      instagramAccountId,
+    });
+    return c.json({ success: true, data: pagination });
+  } catch (error) {
+    console.error("Failed to get Instagram pagination:", error);
+    return c.json({ success: false, error: "Failed to get pagination" }, 500);
+  }
+});
+
+// Load more Instagram posts
+app.post("/api/social/instagram/load-more", async (c) => {
+  const ctx = c.env;
+  const { userId, instagramAccountId } = await c.req.json();
+  
+  if (!userId || !instagramAccountId) {
+    return c.json({ success: false, error: "Missing required fields" }, 400);
+  }
+  
+  try {
+    // Get current pagination state
+    const pagination = await ctx.runQuery(api.instagramQueries.getAccountPagination, {
+      userId,
+      instagramAccountId,
+    });
+    
+    if (!pagination || !pagination.hasMorePosts) {
+      return c.json({ success: false, error: "No more posts to load" }, 400);
+    }
+    
+    // Return pagination info for frontend to fetch next page
+    return c.json({ 
+      success: true, 
+      data: {
+        hasMorePosts: pagination.hasMorePosts,
+        nextUrl: pagination.nextUrl,
+        totalPostsFetched: pagination.totalPostsFetched,
+      }
+    });
+  } catch (error) {
+    console.error("Failed to load more Instagram posts:", error);
+    return c.json({ success: false, error: "Failed to load more posts" }, 500);
   }
 });
 
