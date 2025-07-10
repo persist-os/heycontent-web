@@ -284,7 +284,7 @@ export default function UpgradeModal({
                         )}
                       </div>
                       <div className="text-sm text-gray-500 mb-4">
-                        {includedRequests.toLocaleString()} API requests included
+                        {includedRequests.toLocaleString()} Requests included
                         <br />
                         <span className="italic">${overagePrice.toFixed(3)} per additional request</span>
                       </div>

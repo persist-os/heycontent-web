@@ -43,6 +43,5 @@ export default function ChatPage() {
     chatId={chatId} 
     contentContext={currentContext} 
     askQuery={askQuery} 
-    welcome={welcome === 'true'} 
   />
 }

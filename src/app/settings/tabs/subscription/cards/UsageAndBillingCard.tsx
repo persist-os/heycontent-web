@@ -29,7 +29,7 @@ export const UsageAndBillingCard: React.FC<UsageAndBillingCardProps> = ({ usage 
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="font-medium">API Requests</span>
+            <span className="font-medium">Requests</span>
             <span className="font-mono">
               {total.toLocaleString()} / {included.toLocaleString()}
               {isOverLimit && ` (+${overage.toLocaleString()})`}

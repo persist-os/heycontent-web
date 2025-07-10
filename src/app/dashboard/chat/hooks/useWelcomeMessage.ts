@@ -2,22 +2,33 @@ import { useState, useEffect } from 'react'
 import { welcomeMessageSteps, getWelcomeStepMessage, welcomeSuggestions, welcomeSuggestionsWithPersona } from '../data/welcome-message'
 
 export function useWelcomeMessage(
-  welcome: boolean, 
   messages: any[], 
   isLoading: boolean, 
   user: any, 
   setMessages: (messages: any[] | ((prev: any[]) => any[])) => void,
-  hasPersona: boolean
+  hasPersona: boolean,
+  isPersonaLoading: boolean = false
 ) {
   const [welcomeStep, setWelcomeStep] = useState(0);
 
-  // Handle welcome message for new users (multi-step)
+  // Handle welcome message for users without a persona (onboarding)
   useEffect(() => {
-    if (welcome && messages.length === 0 && !isLoading) {
+    console.log('🔄 Welcome message effect:', {
+      hasPersona,
+      isPersonaLoading,
+      messagesLength: messages.length,
+      isLoading,
+      hasUser: !!user
+    });
+
+    // Show onboarding if user doesn't have a persona and chat is empty
+    // Wait for both chat loading and persona loading to complete
+    if (hasPersona === false && !isPersonaLoading && messages.length === 0 && !isLoading && user) {
+      console.log('✅ Triggering welcome message for user without persona');
       setWelcomeStep(0);
       setMessages([getWelcomeStepMessage(0)]);
     }
-  }, [welcome, messages.length, isLoading, setMessages]);
+  }, [hasPersona, isPersonaLoading, messages.length, isLoading, setMessages, user]);
 
   // Modified handleSuggestionClick to send messages automatically
   const handleSuggestionClick = (suggestion: any, onSendMessage: (msg: string) => void) => {
