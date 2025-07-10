@@ -61,6 +61,7 @@ function validateNoteUpdate(update: NoteUpdate, context: string): NoteUpdate {
     // Optionally: throw or block here if not explicitly clearing tags
   }
   return update;
+  forcePreview?: boolean;
 }
 
 // --- Robust Autosave Hook ---
@@ -194,6 +195,8 @@ export function NoteArea({
   onLinkContent,
   flushRef,
   fromChat = false,
+  flushRef,
+  forcePreview = false,
 }: NoteAreaProps) {
   // Get all notes from context for tag suggestions
   const { notes, canNavigateBack, navigationStack } = useNotes();
@@ -334,6 +337,10 @@ export function NoteArea({
     userId: firebaseUser?.uid || '' 
   });
 
+  React.useEffect(() => {
+    if (forcePreview) setIsEditingTitle(false);
+  }, [forcePreview]);
+
   // Determine back button context for header
   const getBackButtonContext = () => {
     if (fromChat) {
@@ -391,24 +398,34 @@ export function NoteArea({
       
       {/* Main editor area */}
       <div className="flex-1 overflow-hidden">
-        <RichTextEditor
-          content={content}
-          onContentChange={handleContentChange}
-          placeholder="Start writing your note..."
-          noteId={String(note._id)}
-          noteTitle={note.title}
-          platform={note.platform}
-          tags={note.tags}
-          userId={String(note.userId)}
-          noteType={note.type}
-          availableNotes={availableNotes}
-          allLinkableContent={allLinkableContent || []}
-          onLinkNote={handleLinkNote}
-          onLinkContent={onLinkContent}
-          onAskAI={handleAskAI}
-          onRequestAnalysis={handleRequestAnalysis}
-          onRequestIdeas={handleRequestIdeas}
-        />
+        {(!isEditingTitle && forcePreview) ? (
+          <div className="prose prose-sm max-w-none text-foreground p-6">
+            <NoteContentRenderer
+              content={content}
+              availableNotes={availableNotes}
+              // Optionally pass onLinkNote/onLinkContent if needed
+            />
+          </div>
+        ) : (
+          <RichTextEditor
+            content={content}
+            onContentChange={handleContentChange}
+            placeholder="Start writing your note..."
+            noteId={String(note._id)}
+            noteTitle={note.title}
+            platform={note.platform}
+            tags={note.tags}
+            userId={String(note.userId)}
+            noteType={note.type}
+            availableNotes={availableNotes}
+            allLinkableContent={allLinkableContent || []}
+            onLinkNote={handleLinkNote}
+            onLinkContent={onLinkContent}
+            onAskAI={handleAskAI}
+            onRequestAnalysis={handleRequestAnalysis}
+            onRequestIdeas={handleRequestIdeas}
+          />
+        )}
       </div>
 
       {/* Floating Image Gallery Button */}

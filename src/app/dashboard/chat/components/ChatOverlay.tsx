@@ -107,6 +107,13 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
     const searchParams = useSearchParams();
     const chatId = searchParams.get('id');
 
+    // Handler for X button: go to Smart Notes preview
+    const handleCloseToSmartNotes = () => {
+      let url = `/dashboard/notes?noteId=${contentId}&fromChat=true`;
+      if (chatId) url += `&chatId=${chatId}`;
+      router.push(url);
+    };
+
     return (
       <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-2 sm:p-6">
         <div className="bg-background rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] flex flex-col overflow-hidden border border-border">
@@ -123,7 +130,7 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
             </div>
             <button
               title="Close"
-              onClick={onClose}
+              onClick={handleCloseToSmartNotes}
               className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

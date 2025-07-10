@@ -48,6 +48,7 @@ export default function SmartNotes() {
   // Help modal state
   const [helpOpen, setHelpOpen] = useState(false);
   const noteAreaFlushRef = useRef<() => Promise<void>>();
+  const [shouldForcePreview, setShouldForcePreview] = useState(false);
 
   // Compute activeNote from notes and activeNoteId (single source of truth)
   const activeNote = useMemo(() =>
@@ -253,6 +254,7 @@ export default function SmartNotes() {
           onLinkNote={handleLinkNote}
           onLinkContent={handleLinkContent}
           flushRef={noteAreaFlushRef}
+          forcePreview={shouldForcePreview}
         />
         {/* YouTube Video Card */}
         {selectedVideoId && (
@@ -261,6 +263,8 @@ export default function SmartNotes() {
             onClose={async () => {
               await flushAutosave();
               setSelectedVideoId(null);
+              setShouldForcePreview(true);
+              setTimeout(() => setShouldForcePreview(false), 0);
             }}
             onOpenAnalysis={handleOpenAnalysis}
           />
@@ -272,6 +276,8 @@ export default function SmartNotes() {
             onClose={async () => {
               await flushAutosave();
               setSelectedInsightId(null);
+              setShouldForcePreview(true);
+              setTimeout(() => setShouldForcePreview(false), 0);
             }}
             showAnalysis={true}
           />
