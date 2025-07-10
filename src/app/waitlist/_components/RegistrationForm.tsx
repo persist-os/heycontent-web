@@ -50,7 +50,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
           type="submit"
           className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-white font-bold py-3 px-6 rounded-lg hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2"
         >
-          Join Waitlist
+          Invest in Us
         </button>
       </form>
       

@@ -25,6 +25,7 @@ import { useUIEffects } from './hooks/useUIEffects'
 import { useWelcomeMessage } from './hooks/useWelcomeMessage'
 import { useOnboardingState } from './hooks/useOnboardingState'
 import { usePersonaData } from './hooks/usePersonaData'
+
 import { useAuth } from '@/app/context/auth-context'
 import { checkUserEmbeddings } from './utils/api-utils';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
@@ -44,7 +45,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { CreateNoteButton } from '@/components/ui/CreateNoteButton';
 
-const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery, welcome }) => {
+const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery }) => {
   const router = useRouter()
   
   // Authentication and user data (derived from firebaseUser)
@@ -123,13 +124,13 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Get persona data from the centralized store
   const currentPersona = usePersonaStore(state => state.currentPersona)
-  const isPersonaLoading = usePersonaStore(state => state.isLoading)
+  const isPersonaLoadingFromStore = usePersonaStore(state => state.isLoading)
   const initializePersonaData = usePersonaStore(state => state.initializePersonaData)
   const refreshPersonaData = usePersonaStore(state => state.refreshPersonaData)
   const invalidatePersonaData = usePersonaStore(state => state.invalidatePersonaData)
   
   // Check if user has an existing persona
-  const { hasPersona } = usePersonaData(authData.userId, authData.isAuthenticated)
+  const { hasPersona, isLoading: isPersonaDataLoading } = usePersonaData(authData.userId, authData.isAuthenticated)
 
   // Initialize UI effects hook
   const {
@@ -169,7 +170,12 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     initSession
   } = useConversation(chatState, authData.user)
 
-  // Remove welcome message hook for new chat; only show ambient insights when chat is empty
+  // Initialize welcome message hook for onboarding users without personas
+  const {
+    welcomeStep,
+    setWelcomeStep,
+    handleSuggestionClick: handleWelcomeSuggestionClick
+  } = useWelcomeMessage(messages, isLoading, authData.user, setMessages, hasPersona, !!isPersonaDataLoading)
 
   // Notepad functionality
   const {
@@ -294,11 +300,17 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     handleSendMessage(action);
   }, [handleSendMessage]);
 
-  // Directly send suggestion, no welcome flow
+  // Handle suggestion clicks - use welcome flow for users without personas
   const handleSuggestionClick = useCallback((suggestion: any, onSendMessage: (msg: string) => void) => {
-    const message = typeof suggestion === 'string' ? suggestion : suggestion.description;
-    onSendMessage(message);
-  }, [handleSendMessage]);
+    // If user doesn't have a persona, use the welcome message handler (onboarding flow)
+    if (!hasPersona) {
+      handleWelcomeSuggestionClick(suggestion, onSendMessage);
+    } else {
+      // For users with personas, directly send the message
+      const message = typeof suggestion === 'string' ? suggestion : suggestion.description;
+      onSendMessage(message);
+    }
+  }, [hasPersona, handleWelcomeSuggestionClick]);
 
   const handleInsightClick = useCallback((action: string, insight: any) => {
     handleSendMessageWithUpdateCheck(action);
@@ -469,21 +481,20 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     }
   }, [authData.userId]);
 
-  // Clear conversation state and stale context when component mounts
+  // Clear conversation state and stale context when component mounts for normal navigation
   useEffect(() => {
-    if (!welcome) {
-      setMessages([]);
-      chatState.setSessionId(null);
-      chatState.setIsFirstMessage(true);
-      setContextConsumption({ hasConsumed: false, isDisplayed: false });
-      const { isCacheValid } = useContentContextStore.getState();
-      if (currentContext && !isCacheValid()) {
-        clearContentContext();
-      }
-      askQueryProcessedRef.current = null;
-      loadedConversationRef.current = null;
+    // Always clear state on mount for clean start (not welcome flow)
+    setMessages([]);
+    chatState.setSessionId(null);
+    chatState.setIsFirstMessage(true);
+    setContextConsumption({ hasConsumed: false, isDisplayed: false });
+    const { isCacheValid } = useContentContextStore.getState();
+    if (currentContext && !isCacheValid()) {
+      clearContentContext();
     }
-  }, [welcome]); // Only run on mount and when welcome changes
+    askQueryProcessedRef.current = null;
+    loadedConversationRef.current = null;
+  }, []); // Only run on mount
 
   // Autoscroll functionality
   useEffect(() => {
@@ -531,6 +542,18 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     })), 
     [notes]
   );
+
+  // Debug logging for persona and messages state
+  useEffect(() => {
+    console.log('🎯 [CHAT CONTAINER] State debug:', {
+      hasPersona,
+      isPersonaDataLoading,
+      messagesLength: messages.length,
+      hasMessagesOrContext,
+      authUser: !!authData.user,
+      isLoading
+    });
+  }, [hasPersona, isPersonaDataLoading, messages.length, hasMessagesOrContext, authData.user, isLoading]);
 
   // Debug logging for content context
   useEffect(() => {
@@ -627,22 +650,32 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <AmbientInsightsContainer 
-                userId={authData.userId}
-                handleSendMessage={(msg, context) => {
-                  handleNewChat();
-                  setTimeout(() => {
-                    if (context) clearContentContext();
-                    handleSendMessageWithUpdateCheck(msg);
-                  }, 0);
-                }}
-              />
-            </div>
+            // Ambient insights - only show for users with personas
+            hasPersona ? (
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <AmbientInsightsContainer 
+                  userId={authData.userId}
+                  handleSendMessage={(msg, context) => {
+                    handleNewChat();
+                    setTimeout(() => {
+                      if (context) clearContentContext();
+                      handleSendMessageWithUpdateCheck(msg);
+                    }, 0);
+                  }}
+                />
+              </div>
+            ) : (
+              // For users without personas, show empty state but welcome message should populate messages
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center text-muted-foreground">
+                  <div className="animate-pulse">Setting up your personalized experience...</div>
+                </div>
+              </div>
+            )
           )}
 
-          {/* Bottom Bar Actions */}
-          {authData.user && messages.length === 0 && (
+          {/* Bottom Bar Actions - only show for users with personas */}
+          {authData.user && messages.length === 0 && hasPersona && (
             <div className="flex-shrink-0">
               <BottomBarActions onActionClick={handleActionClick} onInputPopulate={handleInputAppend} />
             </div>
