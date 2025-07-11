@@ -7,7 +7,7 @@ export const selfHubHelp: HelpPage[] = [
   },
   {
     title: "Persona Tab: Your Brand, Your Rules",
-    description: "Set your creator vibe. Change it up whenever. This is your digital alter ego—make it iconic."
+    description: "Set your creator vibe. Change it up whenever. This is your digital alter ego; make it iconic."
   },
   {
     title: "Timeline Tab: Your Story, Unfiltered",

@@ -17,14 +17,6 @@ export const settingsHelp: HelpPage[] = [
     title: "Privacy & Data",
     description: "You’re in charge. Download your data, delete what you want, and control who sees what."
   },
-  {
-    title: "Notifications",
-    description: "Get pinged for the stuff you care about. No spam, just the good stuff."
-  },
-  {
-    title: "Make It Yours",
-    description: "Pick your theme, set your defaults, and customize your vibe. This is your space."
-  }
 ];
 
 // To update: Edit the text above. Keep it light, quick, and user-first! 
