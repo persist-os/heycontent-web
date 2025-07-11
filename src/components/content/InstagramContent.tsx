@@ -269,13 +269,7 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
       console.log('✅ Instagram analysis successful:', responseData);
       
       setAnalysisError(null);
-      setAnalysisSuccess(true);
-      
-      setAnalysisError('Analysis generated successfully! The new analysis will appear shortly.');
-      setTimeout(() => {
-        setAnalysisError(null);
-        setAnalysisSuccess(false);
-      }, 3000);
+      setAnalysisSuccess(false);
       
       onAnalysisGenerated?.();
       
@@ -522,18 +516,17 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
                 </div>
               )}
               
-              {isGeneratingAnalysis ? (
-                <div className="flex items-center justify-center py-16">
-                  <div className="text-center space-y-4">
-                    <div className="relative">
-                      <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-200 border-t-purple-500 mx-auto"></div>
-                      <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 opacity-20 animate-pulse"></div>
-                    </div>
-                    <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto leading-relaxed">
-                      {LOADING_MESSAGES[currentMessageIndex]}
-                    </p>
+                          {isGeneratingAnalysis ? (
+              <div className="flex items-center justify-center py-16">
+                <div className="text-center space-y-4">
+                  <div className="relative w-64 h-8 mx-auto">
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 opacity-60 animate-pulse"></div>
                   </div>
+                  <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto leading-relaxed">
+                    {LOADING_MESSAGES[currentMessageIndex]}
+                  </p>
                 </div>
+              </div>
               ) : (parsedAnalysis || analysis || analysisMarkdown) ? (
                 <div className="space-y-6">
                   {/* Summary */}

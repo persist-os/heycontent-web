@@ -50,8 +50,22 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
     }, 2000);
   }, []);
 
+  // Early return if post is not loaded yet
+  if (!post) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="flex items-center justify-center mb-4">
+            <h3 className="text-lg font-semibold">Loading...</h3>
+          </div>
+          <div className="w-full h-32 bg-muted rounded animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
   // Normalize to the same format as getAllLinkableContent
-  const caption = post.data?.caption || '';
+  const caption = post?.data?.caption || '';
   const postData = post && {
     id: `instagram:${post.postId}`,
     title: caption.length > 80 ? caption.substring(0, 80) + '...' : caption || 'Instagram Post',
@@ -95,6 +109,7 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
   // Extract content themes from analysis
   const contentThemes = postData ? parseAnalysisThemes(postData.analysis) : [];
 
+  // This loading check is now redundant since we check above, but keeping for safety
   if (!postData) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
