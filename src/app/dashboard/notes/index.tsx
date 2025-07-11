@@ -9,6 +9,7 @@ import { useNotes } from '@/app/context/notes-context';
 import { Note } from './types';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { YouTubeVideoCard } from './components/YouTubeVideoCard';
+import { InstagramPostCard } from './components/InstagramPostCard';
 import { InsightOverlay } from '@/components/content/overlays/InsightOverlay';
 
 // Help system imports
@@ -43,6 +44,8 @@ export default function SmartNotes() {
 
   // YouTube video card state
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
+  // Instagram post card state
+  const [selectedInstagramPostId, setSelectedInstagramPostId] = useState<string | null>(null);
   // Insight card state
   const [selectedInsightId, setSelectedInsightId] = useState<string | null>(null);
   
@@ -222,7 +225,7 @@ export default function SmartNotes() {
         setSelectedVideoId(contentId);
         break;
       case 'instagram':
-        // TODO: Implement Instagram post viewing
+        setSelectedInstagramPostId(contentId);
         break;
       default:
         // Unknown content type
@@ -264,6 +267,19 @@ export default function SmartNotes() {
             onClose={async () => {
               await flushAutosave();
               setSelectedVideoId(null);
+              setShouldForcePreview(true);
+              setTimeout(() => setShouldForcePreview(false), 0);
+            }}
+            onOpenAnalysis={handleOpenAnalysis}
+          />
+        )}
+        {/* Instagram Post Card */}
+        {selectedInstagramPostId && (
+          <InstagramPostCard
+            postId={selectedInstagramPostId}
+            onClose={async () => {
+              await flushAutosave();
+              setSelectedInstagramPostId(null);
               setShouldForcePreview(true);
               setTimeout(() => setShouldForcePreview(false), 0);
             }}

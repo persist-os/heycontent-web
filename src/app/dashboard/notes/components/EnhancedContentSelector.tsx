@@ -313,13 +313,13 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
         );
       }
       
-      if (content.type === 'instagram' && content.insights) {
+      if (content.type === 'instagram' && content.statistics) {
         return (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Eye className="w-3 h-3" />
-            <span>{content.insights.impressions?.toLocaleString() || 0}</span>
+            <span>{content.statistics.impressions?.toLocaleString() || 0}</span>
             <Heart className="w-3 h-3" />
-            <span>{content.insights.likes?.toLocaleString() || 0}</span>
+            <span>{content.statistics.likes?.toLocaleString() || 0}</span>
           </div>
         );
       }

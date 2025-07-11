@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { YouTubeOverlay } from '@/components/content/overlays/YouTubeOverlay';
+import { InstagramOverlay } from '@/components/content/overlays/InstagramOverlay';
 import { InsightOverlay } from '@/components/content/overlays/InsightOverlay';
 import { InsightCard } from '@/components/content/InsightCard';
 import { useQuery } from 'convex/react';
@@ -14,7 +15,7 @@ import { NoteMeta } from '@/app/dashboard/notes/components/NoteMeta';
 import { NoteContentRenderer } from '@/app/dashboard/notes/components/NoteContentRenderer';
 
 interface ChatOverlayProps {
-  contentType: 'youtube' | 'insight' | 'note';
+  contentType: 'youtube' | 'instagram' | 'insight' | 'note';
   contentId: string;
   onClose: () => void;
   insightData?: any; // For direct insight data
@@ -31,6 +32,17 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
     return (
       <YouTubeOverlay
         videoId={contentId}
+        onClose={onClose}
+        showAnalysis={true}
+      />
+    );
+  }
+
+  // Render Instagram content using shared component
+  if (contentType === 'instagram') {
+    return (
+      <InstagramOverlay
+        postId={contentId}
         onClose={onClose}
         showAnalysis={true}
       />

@@ -400,6 +400,46 @@ export const getContentByPrefixedId = query({
         }
         break;
 
+      case 'instagram':
+        // Get Instagram post by post ID
+        try {
+          const post = await ctx.db
+            .query("instagramPosts")
+            .withIndex("by_userId", (q) => q.eq("userId", userId))
+            .filter((q) => q.eq(q.field("postId"), contentId))
+            .first();
+            
+          if (post) {
+            return {
+              type: 'instagram' as const,
+              id: prefixedId,
+              title: post.data?.caption?.substring(0, 100) || 'Instagram Post',
+              content: post.data?.caption || '',
+              contentType: post.mediaType?.toLowerCase() || 'image',
+              createdAt: post.data?.timestamp || post.createdAt || Date.now(),
+              updatedAt: post.updatedAt || post.createdAt || Date.now(),
+              platform: 'instagram',
+              tags: [],
+              important: false,
+              analysis: post.analysis,
+              mediaUrl: post.data?.media_url,
+              thumbnailUrl: post.data?.thumbnail_url,
+              insights: post.data?.insights,
+              statistics: {
+                likes: post.data?.insights?.likes || post.data?.like_count || 0,
+                comments: post.data?.insights?.comments || post.data?.comments_count || 0,
+                reach: post.data?.insights?.reach || 0,
+                impressions: post.data?.insights?.impressions || 0,
+                saved: post.data?.insights?.saved || 0,
+                shares: post.data?.insights?.shares || 0
+              }
+            };
+          }
+        } catch (error) {
+          console.error('Error fetching Instagram post:', error);
+        }
+        break;
+
       case 'insight':
         // Get insight by analysis ID and index
         try {
@@ -641,6 +681,35 @@ export const getContentByPlatform = query({
             }
           }));
 
+        case 'instagram':
+          const posts = await ctx.db
+            .query("instagramPosts")
+            .withIndex("by_userId", (q) => q.eq("userId", userId))
+            .collect();
+            
+          return posts.map(post => ({
+            id: `instagram:${post.postId}`,
+            title: post.data?.caption?.substring(0, 100) || 'Instagram Post',
+            type: 'instagram' as const,
+            contentType: post.mediaType?.toLowerCase() || 'image',
+            platform: 'instagram',
+            createdAt: post.data?.timestamp || post.createdAt || Date.now(),
+            important: false,
+            tags: [],
+            analysis: post.analysis,
+            mediaUrl: post.data?.media_url,
+            thumbnailUrl: post.data?.thumbnail_url,
+            insights: post.data?.insights,
+            statistics: {
+              likes: post.data?.insights?.likes || post.data?.like_count || 0,
+              comments: post.data?.insights?.comments || post.data?.comments_count || 0,
+              reach: post.data?.insights?.reach || 0,
+              impressions: post.data?.insights?.impressions || 0,
+              saved: post.data?.insights?.saved || 0,
+              shares: post.data?.insights?.shares || 0
+            }
+          }));
+
         case 'insights':
           const batchAnalyses = await ctx.db
             .query("youtubeBatchAnalysis")
@@ -710,9 +779,10 @@ export const getAllLinkableContent = query({
 
     try {
       // Fetch all data in parallel
-      const [notes, videos, batchAnalyses] = await Promise.all([
+      const [notes, videos, posts, batchAnalyses] = await Promise.all([
         ctx.db.query("notes").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
         ctx.db.query("youtubeVideos").withIndex("by_userId", (q) => q.eq("userId", userId)).collect(),
+        ctx.db.query("instagramPosts").withIndex("by_userId", (q) => q.eq("userId", userId)).collect(),
         ctx.db.query("youtubeBatchAnalysis").withIndex("by_userId", (q) => q.eq("userId", userId)).collect()
       ]);
       
@@ -751,6 +821,31 @@ export const getAllLinkableContent = query({
               likes: video.statistics?.likes ? Number(video.statistics.likes) : 0,
               dislikes: video.statistics?.dislikes ? Number(video.statistics.dislikes) : 0,
               comments: video.statistics?.comments ? Number(video.statistics.comments) : 0
+            }
+          };
+        }),
+        // Transform Instagram posts
+        ...posts.map((post, index) => {
+          return {
+            id: `instagram:${post.postId}`,
+            title: post.data?.caption?.substring(0, 100) || 'Instagram Post',
+            type: 'instagram' as const,
+            contentType: post.mediaType?.toLowerCase() || 'image',
+            platform: 'instagram',
+            createdAt: post.data?.timestamp || post.createdAt || Date.now(),
+            important: false,
+            tags: [],
+            analysis: post.analysis,
+            mediaUrl: post.data?.media_url,
+            thumbnailUrl: post.data?.thumbnail_url,
+            insights: post.data?.insights,
+            statistics: {
+              likes: post.data?.insights?.likes || post.data?.like_count || 0,
+              comments: post.data?.insights?.comments || post.data?.comments_count || 0,
+              reach: post.data?.insights?.reach || 0,
+              impressions: post.data?.insights?.impressions || 0,
+              saved: post.data?.insights?.saved || 0,
+              shares: post.data?.insights?.shares || 0
             }
           };
         }),
