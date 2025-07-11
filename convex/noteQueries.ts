@@ -18,19 +18,7 @@ export const NOTE_TYPES = [
 
 type NoteType = typeof NOTE_TYPES[number];
 
-// Define valid platforms
-export const PLATFORMS = [
-  'youtube',
-  'instagram',
-  'tiktok',
-  'twitter',
-  'linkedin',
-  'facebook',
-  'website',
-  'other'
-] as const;
 
-type Platform = typeof PLATFORMS[number];
 
 /**
  * Get paginated notes for a user with optional filtering and sorting
@@ -59,16 +47,6 @@ export const getUserNotes = query({
         v.literal('email_draft')
       )),
       important: v.optional(v.boolean()),
-      platform: v.optional(v.union(
-        v.literal('youtube'),
-        v.literal('instagram'),
-        v.literal('tiktok'),
-        v.literal('twitter'),
-        v.literal('linkedin'),
-        v.literal('facebook'),
-        v.literal('website'),
-        v.literal('other')
-      )),
       tags: v.optional(v.array(v.string())),
     })),
   },
@@ -101,10 +79,7 @@ export const getUserNotes = query({
       query = query.filter((q) => q.eq(q.field('important'), filters.important));
     }
     
-    // Apply platform filter if provided
-    if (filters.platform) {
-      query = query.filter((q) => q.eq(q.field('platform'), filters.platform));
-    }
+
     
     // Apply tags filter if provided
     if (filters.tags?.length) {
