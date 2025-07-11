@@ -4,7 +4,7 @@ import React from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useAuth } from '@/app/context/auth-context';
-import { Lightbulb } from 'lucide-react';
+import { Lightbulb, X } from 'lucide-react';
 import { ContentOverlay } from '@/components/ui/ContentOverlay';
 import { InsightContent } from '@/components/content/InsightContent';
 
@@ -32,8 +32,15 @@ export const InsightOverlay: React.FC<InsightOverlayProps> = ({
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4">
-          <div className="flex items-center justify-center mb-4">
+          <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">Loading...</h3>
+            <button
+              onClick={onClose}
+              className="p-1 rounded-full hover:bg-muted transition-colors"
+              title="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
           <div className="w-full h-32 bg-muted rounded animate-pulse" />
         </div>
