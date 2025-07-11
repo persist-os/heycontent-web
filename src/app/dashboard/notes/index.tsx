@@ -38,6 +38,7 @@ export default function SmartNotes() {
     navigateBack,
     canNavigateBack,
     clearNavigationStack,
+    navigationStack, // <-- add this line
   } = useNotes();
 
   // YouTube video card state

@@ -30,6 +30,7 @@ interface NoteAreaProps {
   flushRef?: React.MutableRefObject<() => Promise<void> | undefined>;
   // fromChat prop retained for back button logic
   fromChat?: boolean;
+  forcePreview?: boolean;
 }
 
 // Utility: Build safe NoteUpdate object
@@ -61,7 +62,6 @@ function validateNoteUpdate(update: NoteUpdate, context: string): NoteUpdate {
     // Optionally: throw or block here if not explicitly clearing tags
   }
   return update;
-  forcePreview?: boolean;
 }
 
 // --- Robust Autosave Hook ---
@@ -195,7 +195,6 @@ export function NoteArea({
   onLinkContent,
   flushRef,
   fromChat = false,
-  flushRef,
   forcePreview = false,
 }: NoteAreaProps) {
   // Get all notes from context for tag suggestions
