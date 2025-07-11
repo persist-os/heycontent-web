@@ -167,8 +167,8 @@ export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
               </span>
             );
           }
-        } else if (contentId.startsWith('YouTube: ') || contentId.startsWith('Instagram: ')) {
-          // For YouTube and Instagram display format, we can't resolve them here
+        } else if (contentId.startsWith('YouTube: ') || contentId.startsWith('Instagram: ') || contentId.startsWith('Gmail: ')) {
+          // For YouTube, Instagram, and Gmail display format, we can't resolve them here
           // They should be handled by the LinkedContentRenderer with proper prefixed IDs
           parts.push(
             <span

@@ -8,6 +8,7 @@ import {
   FileText, 
   Youtube, 
   Instagram, 
+  Mail,
   Search, 
   X, 
   ExternalLink,
@@ -25,7 +26,7 @@ import { cn } from '@/lib/utils';
 interface LinkableContent {
   id: string;
   title: string;
-  type: 'note' | 'youtube' | 'instagram' | 'insight';
+  type: 'note' | 'youtube' | 'instagram' | 'gmail' | 'insight';
   contentType: string;
   platform: string;
   createdAt: number;
@@ -38,6 +39,10 @@ interface LinkableContent {
   // Instagram specific
   mediaUrl?: string;
   insights?: any;
+  // Gmail specific
+  from?: string;
+  messageCount?: number;
+  category?: string;
 }
 
 interface EnhancedContentSelectorProps {
@@ -61,7 +66,7 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
 }) => {
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid;
-  const [selectedPlatform, setSelectedPlatform] = useState<'all' | 'smart-notes' | 'youtube' | 'instagram' | 'insights'>('all');
+  const [selectedPlatform, setSelectedPlatform] = useState<'all' | 'smart-notes' | 'youtube' | 'instagram' | 'gmail' | 'insights'>('all');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Add error boundary for Convex queries
@@ -73,6 +78,7 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
   const smartNotesContent = useQuery(api.notes.getContentByPlatform, { userId: userId || '', platform: 'smart-notes' as any });
   const youtubeContent = useQuery(api.notes.getContentByPlatform, { userId: userId || '', platform: 'youtube' as any });
   const instagramContent = useQuery(api.notes.getContentByPlatform, { userId: userId || '', platform: 'instagram' as any });
+  const gmailContent = useQuery(api.notes.getContentByPlatform, { userId: userId || '', platform: 'gmail' as any });
   const insightsContent = useQuery(api.notes.getContentByPlatform, { userId: userId || '', platform: 'insights' as any });
 
   // Check if any query is still loading or has errors
@@ -81,6 +87,7 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
     smartNotesContent === undefined || 
     youtubeContent === undefined || 
     instagramContent === undefined ||
+    gmailContent === undefined ||
     insightsContent === undefined;
 
   // Check if any query has errors
@@ -88,6 +95,7 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
     smartNotesContent === null || 
     youtubeContent === null || 
     instagramContent === null ||
+    gmailContent === null ||
     insightsContent === null;
 
   // If there are Convex errors, set the error state
@@ -113,6 +121,8 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
           return youtubeContent || [];
         case 'instagram':
           return instagramContent || [];
+        case 'gmail':
+          return gmailContent || [];
         case 'insights':
           return insightsContent || [];
         default:
@@ -121,7 +131,7 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
     } catch (error) {
       return [];
     }
-  }, [selectedPlatform, allContentData, smartNotesContent, youtubeContent, instagramContent, insightsContent, hasErrors]);
+  }, [selectedPlatform, allContentData, smartNotesContent, youtubeContent, instagramContent, gmailContent, insightsContent, hasErrors]);
 
   // Filter content based on search term and excluded content
   const filteredContent = React.useMemo(() => {
@@ -159,7 +169,7 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
         .slice(0, 20) // Limit results for performance
         .map(content => ({
           ...content,
-          type: content.type as 'note' | 'youtube' | 'instagram' | 'insight'
+          type: content.type as 'note' | 'youtube' | 'instagram' | 'gmail' | 'insight'
         }));
     } catch (error) {
       return [];
@@ -260,6 +270,8 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
         return <Youtube className="w-4 h-4 text-red-500" />;
       case 'instagram':
         return <Instagram className="w-4 h-4 text-pink-500" />;
+      case 'gmail':
+        return <Mail className="w-4 h-4 text-red-500" />;
       case 'insights':
         return <Lightbulb className="w-4 h-4 text-yellow-500" />;
       default:
@@ -324,6 +336,21 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
         );
       }
       
+      if (content.type === 'gmail') {
+        return (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <MessageCircle className="w-3 h-3" />
+            <span>{content.messageCount || 1} message{(content.messageCount || 1) !== 1 ? 's' : ''}</span>
+            {content.from && (
+              <>
+                <span>•</span>
+                <span className="truncate max-w-24">{content.from}</span>
+              </>
+            )}
+          </div>
+        );
+      }
+      
       return null;
     } catch (error) {
       return null;
@@ -367,12 +394,13 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
 
       {/* Platform Filter */}
       <div className="p-3 border-b border-border">
-        <div className="grid grid-cols-5 gap-1">
+        <div className="grid grid-cols-6 gap-1">
           {[
             { key: 'all', label: 'All', icon: <FileText className="w-3 h-3" /> },
             { key: 'smart-notes', label: 'Notes', icon: <FileText className="w-3 h-3" /> },
             { key: 'youtube', label: 'YouTube', icon: <Youtube className="w-3 h-3" /> },
             { key: 'instagram', label: 'Instagram', icon: <Instagram className="w-3 h-3" /> },
+            { key: 'gmail', label: 'Gmail', icon: <Mail className="w-3 h-3" /> },
             { key: 'insights', label: 'Insights', icon: <Lightbulb className="w-3 h-3" /> }
           ].map(({ key, label, icon }) => (
             <button

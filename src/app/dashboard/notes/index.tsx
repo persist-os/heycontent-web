@@ -10,6 +10,7 @@ import { Note } from './types';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { YouTubeVideoCard } from './components/YouTubeVideoCard';
 import { InstagramPostCard } from './components/InstagramPostCard';
+import { GmailThreadCard } from './components/GmailThreadCard';
 import { InsightCard } from '../ai-insights/_components/InsightCard';
 import { InsightOverlay } from '@/components/content/overlays/InsightOverlay';
 
@@ -47,6 +48,8 @@ export default function SmartNotes() {
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   // Instagram post card state
   const [selectedInstagramPostId, setSelectedInstagramPostId] = useState<string | null>(null);
+  // Gmail thread card state
+  const [selectedGmailThreadId, setSelectedGmailThreadId] = useState<string | null>(null);
   // Insight card state
   const [selectedInsightId, setSelectedInsightId] = useState<string | null>(null);
   
@@ -228,6 +231,9 @@ export default function SmartNotes() {
       case 'instagram':
         setSelectedInstagramPostId(contentId);
         break;
+      case 'gmail':
+        setSelectedGmailThreadId(contentId);
+        break;
       default:
         // Unknown content type
         break;
@@ -285,6 +291,18 @@ export default function SmartNotes() {
               setTimeout(() => setShouldForcePreview(false), 0);
             }}
             onOpenAnalysis={handleOpenAnalysis}
+          />
+        )}
+        {/* Gmail Thread Card */}
+        {selectedGmailThreadId && (
+          <GmailThreadCard
+            threadId={selectedGmailThreadId}
+            onClose={async () => {
+              await flushAutosave();
+              setSelectedGmailThreadId(null);
+              setShouldForcePreview(true);
+              setTimeout(() => setShouldForcePreview(false), 0);
+            }}
           />
         )}
         {/* Insight Card */}
