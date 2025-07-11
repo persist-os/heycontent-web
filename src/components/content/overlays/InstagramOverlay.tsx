@@ -6,12 +6,14 @@ import { api } from '@/convex/_generated/api';
 import { useAuth } from '@/app/context/auth-context';
 import { Instagram } from 'lucide-react';
 import { ContentOverlay } from '@/components/ui/ContentOverlay';
-import { InstagramContent } from '@/components/content/InstagramContent';
+import { InstagramContent } from '../../content/InstagramContent';
 
 interface InstagramOverlayProps {
   postId: string;
   onClose: () => void;
   showAnalysis?: boolean;
+  // Optional pre-fetched data to avoid Convex query
+  preFetchedData?: any;
 }
 
 // Helper function to parse structured analysis data for themes
@@ -23,14 +25,15 @@ const parseAnalysisThemes = (analysis: any) => {
 export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
   postId,
   onClose,
-  showAnalysis = true
+  showAnalysis = true,
+  preFetchedData
 }) => {
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid;
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Fetch Instagram post data (raw DB format)
-  const post = useQuery(api.instagramQueries.getInstagramPost, {
+  // Use pre-fetched data if available, otherwise fetch from Convex
+  const post = preFetchedData || useQuery(api.instagramQueries.getInstagramPost, {
     postId,
     userId: userId || ''
   });
