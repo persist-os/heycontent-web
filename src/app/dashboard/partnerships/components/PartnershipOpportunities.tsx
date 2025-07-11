@@ -47,9 +47,12 @@ export default function PartnershipOpportunities({
               <Sparkles className="w-8 h-8 text-muted-foreground" />
             </div>
             <div>
-              <h3 className="font-medium text-foreground mb-2">No Opportunities Found</h3>
-              <p className="text-sm text-muted-foreground">
-                Our AI will analyze your emails to find potential partnership opportunities
+              <h3 className="font-medium text-foreground mb-2">Your AI is getting ready to work some magic! ✨</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                No opportunities spotted yet? That just means you're ahead of the curve! Our AI is learning your style and will start detecting amazing partnership opportunities as your inbox grows.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                💡 <strong>Pro tip:</strong> Keep creating, connecting, and being awesome – partnership opportunities love active creators!
               </p>
             </div>
           </div>

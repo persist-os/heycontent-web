@@ -1,26 +1,33 @@
 'use client'
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { 
   Mail, 
   Search, 
-  RefreshCw
+  RefreshCw,
+  Info
 } from 'lucide-react';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { useGmailAnalytics } from '../../content-analytics/hooks/useGmailAnalytics';
 import { useGmailBatchRefresh } from '@/app/hooks/useGmailBatchRefresh';
-import { GmailContentItem } from '../../content-analytics/types';
-import ActivePartnerships from './ActivePartnerships';
-import PartnershipMetrics from './PartnershipMetrics';
 import { PartnershipDetailPanel } from './PartnershipDetailPanel';
 import { PartnershipHubSkeleton } from './PartnershipHubSkeleton';
+import { GmailProgressScreen } from './GmailProgressScreen';
+import { CategoryEmailList } from './CategoryEmailList';
+import PartnershipMetrics from './PartnershipMetrics';
 import { Partnership } from '../types';
+import { usePartnershipData } from '../hooks/usePartnershipData';
 
 export function PartnershipHub() {
   const userId = getCurrentUserId();
@@ -31,6 +38,12 @@ export function PartnershipHub() {
   const [refreshCount, setRefreshCount] = useState(0);
   const [filterType, setFilterType] = useState<'all' | 'active' | 'needs_response' | 'deal_value'>('all');
   const [isClient, setIsClient] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState({
+    partnership: true,
+    media: true, 
+    business: true,
+    community: true
+  });
 
   // Use Gmail analytics to get real Gmail data
   const { gmailItems, loading: gmailLoading, hasConnectedAccounts } = useGmailAnalytics(userId, refreshCount);
@@ -42,317 +55,82 @@ export function PartnershipHub() {
   );
   const userEmail = gmailAccounts && gmailAccounts.length > 0 ? gmailAccounts[0].email : null;
   
-  // Use Gmail batch refresh hook
-  const { refresh, loading: refreshing, error: refreshError, success: refreshSuccess } = useGmailBatchRefresh();
+  // Use simplified Gmail refresh hook
+  const { refresh, loading: refreshing, error: refreshError, success: refreshSuccess, progress } = useGmailBatchRefresh();
+
+  // Use custom hook for partnership data processing
+  const { partnerships, partnershipMetrics, filteredPartnerships, groupedEmails } = usePartnershipData(
+    gmailItems || [],
+    userEmail,
+    searchQuery,
+    filterType
+  );
+
+  // CRITICAL FIX: Add refs to prevent infinite loop
+  const hasTriggeredAutoRefresh = useRef(false);
+  const manualRefreshInProgress = useRef(false);
 
   // Client-side hydration check
-  React.useEffect(() => {
+  useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // Show ALL emails in partnerships list (no filtering)
-  const isPartnershipEmail = (item: any): boolean => {
-    return true; // Show every email
-  };
-
-  // Helper function to determine if user needs to respond
-  const needsResponse = (item: any): boolean => {
-    if (!userEmail) return false;
-    
-    const messages = item.content?.data?.messages || [];
-    if (messages.length === 0) return false;
-    
-    // Sort messages by timestamp to get the chronologically last message
-    const sortedMessages = [...messages].sort((a, b) => {
-      const aTime = a.timestamp || a.date || 0;
-      const bTime = b.timestamp || b.date || 0;
-      return aTime - bTime;
-    });
-    
-    const lastMessage = sortedMessages[sortedMessages.length - 1];
-    const lastSender = lastMessage?.from || '';
-    
-    // User needs to respond if the last message was NOT from them
-    const userSentLast = lastSender.toLowerCase().includes(userEmail.toLowerCase());
-    return !userSentLast;
-  };
-
-  // Helper function to extract actual deal value from email content
-  const extractDealValue = (item: any): number => {
-    // Check if there's an actual deal value from metrics first
-    const existingDealValue = item.metrics?.dealValue;
-    if (existingDealValue && existingDealValue > 0) {
-      return existingDealValue;
-    }
-    
-    // Get all email content to search for dollar amounts
-    const subject = item.content?.data?.subject || '';
-    const messages = item.content?.data?.messages || [];
-    
-    let allContent = subject;
-    messages.forEach((message: any) => {
-      if (message.body) allContent += ' ' + message.body;
-    });
-    
-    if (!allContent.trim()) return 0;
-    
-         // Only extract CONFIRMED deal values, not rate negotiations
-     const confirmedDealPatterns = [
-       // Explicit confirmed deals with context
-       /(?:agreed|confirmed|approved|accepted|final|total|deal)\s+(?:amount|value|budget|payment|compensation|deal)?\s*:?\s*\$(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/gi,
-       
-       // "We'll pay you $X" or "You'll receive $X"
-       /(?:we'll pay|you'll receive|we're paying|payment of|compensation of)\s+\$(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/gi,
-       
-       // "Total budget: $X" or "Campaign budget: $X"
-       /(?:total|campaign|project|partnership)\s+budget\s*:?\s*\$(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/gi,
-       
-       // K notation with confirmed context
-       /(?:agreed|confirmed|approved|accepted|final|total|deal)\s+(?:amount|value|budget)?\s*:?\s*\$?(\d+(?:\.\d+)?)[kK]/gi,
-       
-       // "Deal worth $X" or "Partnership valued at $X"
-       /(?:deal worth|partnership valued|valued at|worth)\s+\$(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/gi
-     ];
-    
-    
-     
-     // Check if email contains rate negotiation keywords (skip extraction)
-     const isNegotiation = /(?:rate|rates|pricing|quote|proposal|my rates|your rates|rate card|media kit)\s/gi.test(allContent);
-     
-     if (isNegotiation) {
-       console.log('🔄 [RATE NEGOTIATION DETECTED]', {
-         emailId: item.id,
-         subject: subject.substring(0, 50) + '...',
-         reason: 'Email contains rate negotiation keywords - no deal value extracted'
-       });
-       return 0;
-     }
-     
-     let maxValue = 0;
-     
-     for (const pattern of confirmedDealPatterns) {
-       let match;
-       while ((match = pattern.exec(allContent)) !== null) {
-         let value = 0;
-         const numStr = match[1];
-         const fullMatch = match[0];
-         
-         // Skip if this specific match looks like a false positive
-         if (isLikelyFalsePositive(fullMatch, numStr)) {
-           continue;
-         }
-         
-         if (pattern.source.includes('[kK]')) {
-           // Handle k notation (thousands)
-           value = parseFloat(numStr) * 1000;
-         } else {
-           // Handle regular dollar amounts, remove commas
-           value = parseInt(numStr.replace(/,/g, ''));
-         }
-         
-         // Only consider realistic partnership values ($100 - $10M)
-         if (value >= 100 && value <= 10000000 && value > maxValue) {
-           maxValue = value;
-         }
-       }
-       // Reset regex for next iteration
-       pattern.lastIndex = 0;
-     }
-     
-     // Helper function to detect false positives in confirmed deals
-     function isLikelyFalsePositive(fullMatch: string, numStr: string): boolean {
-       const lowerMatch = fullMatch.toLowerCase();
-       const num = parseInt(numStr.replace(/,/g, ''));
-       
-       // Skip years (even in deal context)
-       if (num >= 2020 && num <= 2030) return true;
-       
-       // Skip unrealistic deal amounts (too small or too large)
-       if (num < 100 || num > 10000000) return true;
-       
-       // Since we're only looking at confirmed deal patterns, fewer false positives
-       // But still check for obvious non-monetary context
-       if (lowerMatch.includes('view') || lowerMatch.includes('follower') || 
-           lowerMatch.includes('subscriber') || lowerMatch.includes('message')) {
-         return true;
-       }
-       
-       return false;
-     }
-    
-         // Debug logging for deal value extraction
-     if (maxValue > 0) {
-       console.log('💰 [DEAL VALUE EXTRACTED]', {
-         emailId: item.id,
-         subject: subject.substring(0, 50) + '...',
-         extractedValue: maxValue,
-         contentSample: allContent.substring(0, 200) + '...'
-       });
-     } else {
-       // Log when no value is found to help debug
-       const partnershipTerms = ['partnership', 'collaboration', 'sponsor', 'deal', 'campaign'];
-       const hasPartnershipTerms = partnershipTerms.some(term => allContent.toLowerCase().includes(term));
-       
-       if (hasPartnershipTerms) {
-         console.log('🔍 [NO VALUE FOUND]', {
-           emailId: item.id,
-           subject: subject.substring(0, 50) + '...',
-           reason: 'Partnership email detected but no monetary value extracted',
-           contentSample: allContent.substring(0, 200) + '...'
-         });
-       }
-     }
-     
-     return maxValue;
-  };
-
-  // Process ALL emails - no separation
-  const { partnerships, aiOpportunities } = React.useMemo(() => {
-    if (!gmailItems || gmailItems.length === 0) return { partnerships: [], aiOpportunities: [] };
-    
-    const allPartnerships: Partnership[] = [];
-    
-    gmailItems.forEach((item, index) => {
-      const isPotential = isPartnershipEmail(item);
-      
-      // Process ALL emails (no skipping)
-      
-      const messageCount = item.content?.data?.messageCount || item.content?.data?.messages?.length || 1;
-      const estimatedValue = extractDealValue(item);
-      
-      // Determine status based on message count and actual deal value
-      let status: Partnership['status'] = 'opportunity';
-      
-      if (messageCount > 4) {
-        status = 'negotiating';
-      } else if (messageCount > 2) {
-        status = 'inquiry';
-      } else if (estimatedValue > 10000 || messageCount > 6) {
-        status = 'active';
-      }
-      
-      // Extract brand name more intelligently
-      const fromEmail = item.content?.data?.from || '';
-      const fromDomain = fromEmail.split('@')[1] || '';
-      const brandName = fromDomain.split('.')[0]
-        .replace(/[^a-zA-Z0-9]/g, ' ')
-        .replace(/\b(com|net|org|io|co|inc|llc)\b/gi, '')
-        .trim()
-        .split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ') || 'Unknown Brand';
-      
-      const partnership: Partnership = {
-        id: item.id,
-        emailThreadId: item.content?.data?.threadId || item.id,
-        brandName,
-        subject: item.content?.data?.subject || 'No Subject',
-        status,
-        estimatedValue,
-        lastActivity: new Date(item.publishedAt).getTime(),
-        smartNoteIds: [],
-        messageCount,
-        snippet: item.content?.data?.snippet || '',
-        from: item.content?.data?.from || 'Unknown',
-        createdAt: new Date(item.publishedAt).getTime(),
-        updatedAt: new Date(item.publishedAt).getTime()
-      };
-      
-      // Add ALL emails to partnerships list
-      allPartnerships.push(partnership);
-    });
-    
-    // Log partnership detection results for debugging
-    console.log('🔍 [ALL EMAILS LOADED]', {
-      totalEmails: gmailItems.length,
-      partnershipsShown: allPartnerships.length,
-      totalPipelineValue: allPartnerships.reduce((sum, p) => sum + p.estimatedValue, 0)
-    });
-
-    // Log sample partnerships for debugging
-    if (allPartnerships.length > 0) {
-      console.log('📧 [ALL EMAILS IN LIST]', 
-        allPartnerships.slice(0, 5).map(p => ({
-          brandName: p.brandName,
-          status: p.status,
-          estimatedValue: p.estimatedValue,
-          messageCount: p.messageCount,
-          subject: p.subject.substring(0, 30) + '...'
-        }))
-      );
-    }
-
-    return { 
-      partnerships: allPartnerships, 
-      aiOpportunities: [] // Empty since we're showing all in partnerships
-    };
-  }, [gmailItems]);
-
   const handleRefresh = async () => {
-    await refresh();
-    setRefreshCount((c) => c + 1);
+    console.log('[PARTNERSHIP HUB] Smart refresh triggered at', new Date().toISOString());
+    manualRefreshInProgress.current = true;
+    
+    try {
+      await refresh({ max_threads: 200 });
+      setRefreshCount((c) => c + 1);
+      // Mark that we've done a manual refresh, so auto-refresh shouldn't run anymore
+      hasTriggeredAutoRefresh.current = true;
+    } finally {
+      manualRefreshInProgress.current = false;
+    }
   };
 
-  // Calculate metrics based on actual data
-  const partnershipMetrics = React.useMemo(() => {
-    return {
-      activePartnerships: partnerships.filter(p => 
-        p.messageCount >= 4 || p.estimatedValue > 1000
-      ).length,
-      pendingResponses: partnerships.filter(p => {
-        // Find the corresponding gmail item to check who sent last message
-        const gmailItem = gmailItems.find(item => item.id === p.id);
-        return gmailItem ? needsResponse(gmailItem) : false;
-      }).length,
-      pipelineValue: partnerships.reduce((sum, p) => sum + p.estimatedValue, 0)
-    };
-  }, [partnerships, gmailItems, needsResponse]);
+  // FIXED: Auto-refresh logic with proper guards to prevent infinite loop
+  useEffect(() => {
+    // Only auto-refresh once when user first connects Gmail and has no data
+    if (
+      isClient && 
+      hasConnectedAccounts && 
+      partnerships.length === 0 && 
+      !gmailLoading && 
+      !refreshing && 
+      !hasTriggeredAutoRefresh.current &&
+      !manualRefreshInProgress.current
+    ) {
+      console.log('[PARTNERSHIP HUB] Auto-refresh triggered - first time setup');
+      hasTriggeredAutoRefresh.current = true;
+      handleRefresh();
+    }
+  }, [isClient, hasConnectedAccounts, partnerships.length, gmailLoading, refreshing]);
 
-  const filteredPartnerships = React.useMemo(() => {
-    let filtered = partnerships;
-    
-    // Apply category filter
-    switch (filterType) {
-      case 'active':
-        filtered = partnerships.filter(p => 
-          p.messageCount >= 4 || p.estimatedValue > 1000
-        );
-        break;
-      case 'needs_response':
-        filtered = partnerships.filter(p => {
-          const gmailItem = gmailItems.find(item => item.id === p.id);
-          return gmailItem ? needsResponse(gmailItem) : false;
-        });
-        break;
-      case 'deal_value':
-        filtered = partnerships.filter(p => p.estimatedValue > 0);
-        break;
-      case 'all':
-      default:
-        filtered = partnerships;
-        break;
+  // Reset auto-refresh flag when user disconnects Gmail accounts
+  useEffect(() => {
+    if (!hasConnectedAccounts) {
+      hasTriggeredAutoRefresh.current = false;
     }
-    
-    // Apply search filter on top of category filter
-    if (searchQuery.trim()) {
-      filtered = filtered.filter(p => 
-        p.brandName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.status.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.subject.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-    
-    return filtered;
-  }, [partnerships, searchQuery, filterType, gmailItems, needsResponse]);
+  }, [hasConnectedAccounts]);
 
   const handleUpdateStatus = (partnershipId: string, status: Partnership['status']) => {
-    console.log('Update partnership status:', partnershipId, status);
     // TODO: Implement status update in Convex
   };
 
   const handleUpdatePartnership = (partnershipId: string, updates: Partial<Partnership>) => {
-    console.log('Update partnership:', partnershipId, updates);
     // TODO: Implement partnership update
+  };
+
+  const handleToggleCategory = (category: string) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
+  };
+
+  const handleSelectPartnership = (partnership: Partnership) => {
+    setSelectedPartnership(partnership);
   };
 
   // Show loading during hydration to prevent mismatch
@@ -385,118 +163,246 @@ export function PartnershipHub() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background">
-      {/* Header */}
-      <div className="border-b border-border p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Partnership Hub</h1>
-            <p className="text-muted-foreground">
-              View and manage all emails, track partnerships, and identify collaboration opportunities
-            </p>
+    <TooltipProvider>
+      <div className="min-h-screen flex flex-col bg-background">
+        {/* Header */}
+        <div className="border-b border-border p-4 md:p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 space-y-3 md:space-y-0">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Partnership Hub</h1>
+              <p className="text-muted-foreground">
+                Your command center for discovering collaborations, managing partnerships, and growing your creator business
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleRefresh}
+                    disabled={refreshing}
+                    className="w-full md:w-auto"
+                  >
+                    <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                    {refreshing ? 'Finding opportunities...' : 'Find New Opportunities'}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-md">
+                  <div className="space-y-2">
+                    <p className="font-medium">Smart Gmail Analysis</p>
+                    <p>This will:</p>
+                    <ul className="text-xs space-y-1 list-disc list-inside">
+                      <li>Only analyze emails without the "ProcessedByHeyContent" label</li>
+                      <li>Learn from any label changes you've made in Gmail</li>
+                      <li>Use AI + your creator persona to find partnership opportunities</li>
+                      <li>Automatically organize opportunities by category</li>
+                      <li>Mark all analyzed emails to avoid duplicate processing</li>
+                    </ul>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
+                    <Info className="w-4 h-4" />
+                    <span>Analyzes emails not yet processed by HeyContent</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-sm">
+                  <p>Only emails that have not yet been processed by HeyContent (i.e., emails without the "ProcessedByHeyContent" label) will be analyzed. This prevents duplicate processing and ensures you only see new opportunities.</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Button 
-              variant="outline" 
-              onClick={handleRefresh}
-              disabled={refreshing}
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? 'Syncing...' : 'Sync Gmail'}
-            </Button>
-          </div>
-        </div>
 
-        {/* Status Messages */}
-        {refreshError && (
-          <div className="text-red-500 text-sm mb-2">Error: {refreshError}</div>
-        )}
-        {refreshSuccess && (
-          <div className="text-green-500 text-sm mb-2">Gmail synced successfully!</div>
-        )}
-
-        {/* Search and Filter Status */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder={filterType === 'all' 
-                ? "Search emails, brands, or status..." 
-                : `Search in ${filterType.replace('_', ' ')} emails...`
-              }
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          {filterType !== 'all' && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>Filtered by:</span>
-              <Badge variant="outline" className="bg-primary/10">
-                {filterType.replace('_', ' ')}
-              </Badge>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setFilterType('all')}
-                className="h-6 px-2 text-xs"
-              >
-                Clear
-              </Button>
+          {/* Progress Display */}
+          {refreshing && progress.step !== 'idle' && (
+            <div className="mb-6 p-4 bg-primary/10 rounded-lg border border-primary/20">
+              <div className="flex items-center gap-3">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">{progress.message}</p>
+                  {progress.step === 'processing' && (
+                    <p className="text-xs text-muted-foreground">
+                      Checking for new emails, learning from your Gmail label changes, and finding partnership opportunities with AI...
+                    </p>
+                  )}
+                  {progress.step === 'complete' && progress.data && (
+                    <div className="text-xs space-y-1 mt-2">
+                      {progress.data.learned_signals > 0 && (
+                        <p className="text-success font-medium">
+                          ✅ Learned from {progress.data.learned_signals} of your Gmail label changes
+                        </p>
+                      )}
+                      {progress.data.labeled_count > 0 && (
+                        <p className="text-success font-medium">
+                          🔍 Found {progress.data.labeled_count} new partnership opportunities
+                        </p>
+                      )}
+                      {progress.data.stored_count > 0 && (
+                        <p className="text-success font-medium">
+                          💾 Saved {progress.data.stored_count} opportunities to your dashboard
+                        </p>
+                      )}
+                      {progress.data.processed_count > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          📧 Processed {progress.data.processed_count} new emails
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
-        </div>
 
-        {/* Metrics Cards */}
-        <PartnershipMetrics 
-          totalEmails={partnerships.length}
-          activePartnerships={partnershipMetrics.activePartnerships}
-          pendingResponses={partnershipMetrics.pendingResponses}
-          pipelineValue={partnershipMetrics.pipelineValue}
-          activeFilter={filterType}
-          onFilterChange={setFilterType}
-        />
-      </div>
+          {/* Status Messages */}
+          {refreshError && (
+            <div className="text-destructive text-sm mb-2 p-3 bg-destructive/10 rounded-lg border border-destructive/20">
+              <strong>Sync Issue:</strong> {refreshError}
+              <p className="text-xs mt-1">Please try again in a moment or check your Gmail connection in Settings.</p>
+            </div>
+          )}
+          {refreshSuccess && (
+            <div className="text-success text-sm mb-2 p-3 bg-success/10 rounded-lg border border-success/20">
+              <strong>Success!</strong> Your Gmail analysis is complete. Fresh opportunities are ready to explore!
+            </div>
+          )}
 
-      {/* Two-column layout */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Column - Active Partnerships */}
-        <div className="w-1/2 border-r border-border p-4 overflow-y-auto">
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-lg font-semibold text-foreground">
-                {filterType === 'all' ? 'All Emails' : 
-                 filterType === 'active' ? 'Active Discussions' :
-                 filterType === 'needs_response' ? 'Needs Response' :
-                 filterType === 'deal_value' ? 'Emails with Deal Values' : 'Emails'}
-              </h2>
-              <Badge variant="outline">{filteredPartnerships.length}</Badge>
+          {/* Search and Filter Status */}
+          <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Input
+                    placeholder={filterType === 'all' 
+                      ? "Search your partnerships, brands, or opportunities..." 
+                      : `Search your ${filterType.replace('_', ' ')} opportunities...`
+                    }
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-sm">
+                  <p>Search through your partnership opportunities by brand name, email content, subject line, or sender. Try keywords like "sponsorship", "collaboration", or specific brand names.</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
             {filterType !== 'all' && (
-              <p className="text-sm text-muted-foreground">
-                Showing {filteredPartnerships.length} of {partnerships.length} emails
-              </p>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Filtered by:</span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="outline" className="bg-primary/10">
+                      {filterType.replace('_', ' ')}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>Showing only {filterType.replace('_', ' ')} opportunities. Click 'Clear' to see all opportunities.</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setFilterType('all')}
+                      className="h-6 px-2 text-xs"
+                    >
+                      Clear
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>Remove the current filter and show all partnership opportunities.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             )}
           </div>
-          <ActivePartnerships 
-            partnerships={filteredPartnerships}
-            selectedPartnership={selectedPartnership}
-            onSelectPartnership={setSelectedPartnership}
-            onUpdateStatus={handleUpdateStatus}
-            loading={gmailLoading}
-            hideHeader={true}
+
+          {/* Metrics Cards */}
+          <PartnershipMetrics 
+            totalEmails={partnerships.length}
+            activePartnerships={partnershipMetrics.activePartnerships}
+            pendingResponses={partnershipMetrics.pendingResponses}
+            pipelineValue={partnershipMetrics.pipelineValue}
+            activeFilter={filterType}
+            onFilterChange={setFilterType}
           />
         </div>
 
-        {/* Right Column - Partnership Detail Panel */}
-        <div className="w-1/2 p-4 overflow-y-auto">
-          <PartnershipDetailPanel 
-            partnership={selectedPartnership}
-            onUpdatePartnership={handleUpdatePartnership}
-            gmailData={selectedPartnership ? gmailItems.find(item => item.id === selectedPartnership.id)?.convexData : undefined}
-          />
+        {/* Content Area */}
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+          {/* Show progress screen when initially processing Gmail */}
+          {refreshing && progress.step !== 'idle' && partnerships.length === 0 ? (
+            <GmailProgressScreen progress={progress} />
+          ) : (
+            <>
+              {/* Left Column - Category-Grouped Emails */}
+              <div className="w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r border-border p-4 overflow-y-auto">
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <h2 className="text-lg font-semibold text-foreground cursor-help">
+                          Partnership Opportunities
+                        </h2>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-md">
+                        <div className="space-y-2">
+                          <p className="font-medium">Automatically Organized Categories:</p>
+                          <ul className="text-xs space-y-1">
+                            <li><strong>Partnership:</strong> Direct collaboration requests</li>
+                            <li><strong>Media:</strong> Press coverage and media opportunities</li>
+                            <li><strong>Business:</strong> Commercial partnerships and deals</li>
+                            <li><strong>Community:</strong> Networking and event invitations</li>
+                          </ul>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge variant="outline" className="cursor-help">
+                          {partnerships.length}
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>Total number of partnership opportunities found in your Gmail inbox.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Discover collaborations organized by opportunity type. Click any email to view details and manage the partnership.
+                  </p>
+                </div>
+
+                {/* Category-grouped email display */}
+                <CategoryEmailList
+                  partnerships={partnerships}
+                  groupedEmails={groupedEmails}
+                  expandedCategories={expandedCategories}
+                  onToggleCategory={handleToggleCategory}
+                  onSelectPartnership={handleSelectPartnership}
+                  selectedPartnershipId={selectedPartnership?.id}
+                />
+              </div>
+
+              {/* Right Column - Partnership Detail Panel */}
+              <div className="w-full lg:w-1/2 p-4 overflow-y-auto">
+                <PartnershipDetailPanel 
+                  partnership={selectedPartnership}
+                  onUpdatePartnership={handleUpdatePartnership}
+                  gmailData={selectedPartnership ? gmailItems.find(item => item.id === selectedPartnership.id)?.convexData : undefined}
+                  onCategoryChanged={handleRefresh}
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 } 

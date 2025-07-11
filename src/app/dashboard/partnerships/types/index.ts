@@ -13,6 +13,7 @@ export interface Partnership {
   from?: string;
   createdAt: number;
   updatedAt: number;
+  category?: 'partnership' | 'media' | 'business' | 'community' | 'none';
 }
 
 export interface AIOpportunity {
