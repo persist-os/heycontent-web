@@ -3,15 +3,15 @@ import { HelpPage } from '@/components/ui/help-modal';
 export const contentHubHelp: HelpPage[] = [
   {
     title: "Welcome to Your Content Hub",
-    description: "This is your creative HQ. See all your stuff from everywhere, all in one spot."
+    description: "Imagine your Content Empire, all in one place. This is just that."
   },
   {
     title: "Why Connect Platforms?",
-    description: "Plug in your Instagram, YouTube and Gmail. The more you connect, the smarter your insights."
+    description: "Plug in your Instagram and YouTube. The more connected you are, the smarter your insights will be."
   },
   {
     title: "Get Instant Vibes",
-    description: "See what’s working, what’s flopping, and what’s next. AI gives you remix ideas, hooks, and tips—no thinking required."
+    description: "See what’s working, what’s flopping, and what’s next. We will give you remix ideas, hooks, and tips; no thinking required."
   },
   {
     title: "Switch It Up Fast",
@@ -19,11 +19,11 @@ export const contentHubHelp: HelpPage[] = [
   },
   {
     title: "Bring the Context",
-    description: "Want to talk about a post, video, or email? Click \"Discuss\" and your AI will know exactly what you mean. No more explaining."
+    description: "Want to talk about a post, video, or a reel? Click \"Discuss\" and our platform will know exactly what you mean. No more explaining."
   },
   {
     title: "Why It Matters",
-    description: "Stop guessing. Start growing. This is your shortcut to more views, more likes, and less stress."
+    description: "Stop guessing. Start growing. This is your shortcut to more views, more likes, and a lot less stress."
   }
 ];
 
