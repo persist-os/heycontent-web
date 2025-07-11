@@ -13,11 +13,11 @@ export const NOTE_TYPES = [
   'analytics_insight',
   'reflection_journal',
   'task_checklist',
-  'email_draft'
+  'email_draft',
+  'idea' // Legacy type for existing notes
 ] as const;
 
 type NoteType = typeof NOTE_TYPES[number];
-
 
 
 /**
@@ -44,7 +44,8 @@ export const getUserNotes = query({
         v.literal('analytics_insight'),
         v.literal('reflection_journal'),
         v.literal('task_checklist'),
-        v.literal('email_draft')
+        v.literal('email_draft'),
+        v.literal('idea') // Legacy type for existing notes
       )),
       important: v.optional(v.boolean()),
       tags: v.optional(v.array(v.string())),
@@ -79,8 +80,6 @@ export const getUserNotes = query({
       query = query.filter((q) => q.eq(q.field('important'), filters.important));
     }
     
-
-    
     // Apply tags filter if provided
     if (filters.tags?.length) {
       // For tags, we need to check if any of the tags are in the note's tags array
@@ -94,15 +93,14 @@ export const getUserNotes = query({
       );
     }
 
-    // Apply sorting
+    // Apply sorting and pagination
     const sortDirection = sortOrder === 'asc' ? 'asc' : 'desc';
-    const orderedQuery = query.order(sortDirection);
-
-    // Apply pagination
-    const results = await query.paginate({
-      numItems: limit,
-      cursor: cursor ? JSON.parse(cursor) : undefined,
-    });
+    const results = await query
+      .order(sortDirection)
+      .paginate({
+        numItems: limit,
+        cursor: cursor ? JSON.parse(cursor) : undefined,
+      });
 
     return {
       ...results,
