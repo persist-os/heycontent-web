@@ -314,7 +314,7 @@ export const getContentByPrefixedId = query({
     userId: v.string(),
   },
   returns: v.union(v.null(), v.object({
-    type: v.union(v.literal("note"), v.literal("youtube"), v.literal("instagram"), v.literal("insight")),
+    type: v.union(v.literal("note"), v.literal("youtube"), v.literal("instagram"), v.literal("gmail"), v.literal("insight")),
     id: v.string(),
     title: v.string(),
     content: v.string(),
@@ -328,7 +328,11 @@ export const getContentByPrefixedId = query({
     thumbnailUrl: v.optional(v.string()),
     statistics: v.optional(v.any()),
     mediaUrl: v.optional(v.string()),
-    insights: v.optional(v.any())
+    insights: v.optional(v.any()),
+    // Gmail specific fields
+    from: v.optional(v.string()),
+    messageCount: v.optional(v.number()),
+    category: v.optional(v.string())
   })),
   handler: async (ctx, args) => {
     const { prefixedId, userId } = args;
@@ -397,6 +401,78 @@ export const getContentByPrefixedId = query({
           }
         } catch (error) {
           console.error('Error fetching YouTube video:', error);
+        }
+        break;
+
+      case 'instagram':
+        // Get Instagram post by post ID
+        try {
+          const post = await ctx.db
+            .query("instagramPosts")
+            .withIndex("by_userId", (q) => q.eq("userId", userId))
+            .filter((q) => q.eq(q.field("postId"), contentId))
+            .first();
+            
+          if (post) {
+            return {
+              type: 'instagram' as const,
+              id: prefixedId,
+              title: post.data?.caption?.substring(0, 100) || 'Instagram Post',
+              content: post.data?.caption || '',
+              contentType: post.mediaType?.toLowerCase() || 'image',
+              createdAt: post.data?.timestamp || post.createdAt || Date.now(),
+              updatedAt: post.updatedAt || post.createdAt || Date.now(),
+              platform: 'instagram',
+              tags: [],
+              important: false,
+              analysis: post.analysis,
+              mediaUrl: post.data?.media_url,
+              thumbnailUrl: post.data?.thumbnail_url,
+              insights: post.data?.insights,
+              statistics: {
+                likes: post.data?.insights?.likes || post.data?.like_count || 0,
+                comments: post.data?.insights?.comments || post.data?.comments_count || 0,
+                reach: post.data?.insights?.reach || 0,
+                impressions: post.data?.insights?.impressions || 0,
+                saved: post.data?.insights?.saved || 0,
+                shares: post.data?.insights?.shares || 0
+              }
+            };
+          }
+        } catch (error) {
+          console.error('Error fetching Instagram post:', error);
+        }
+        break;
+
+      case 'gmail':
+        // Get Gmail thread by thread ID
+        try {
+          const thread = await ctx.db
+            .query("gmailThreads")
+            .withIndex("by_userId", (q) => q.eq("userId", userId))
+            .filter((q) => q.eq(q.field("threadId"), contentId))
+            .first();
+            
+          if (thread) {
+            return {
+              type: 'gmail' as const,
+              id: prefixedId,
+              title: thread.subject || thread.data?.subject || 'No Subject',
+              content: thread.snippet || thread.data?.snippet || '',
+              contentType: 'email',
+              createdAt: thread.createdAt || Date.now(),
+              updatedAt: thread.updatedAt || Date.now(),
+              platform: 'gmail',
+              tags: thread.category ? [thread.category] : [],
+              important: false,
+              analysis: thread.analysis,
+              from: thread.from || thread.data?.from || 'Unknown Sender',
+              messageCount: thread.message_count || thread.data?.message_count || 1,
+              category: thread.category || 'none'
+            };
+          }
+        } catch (error) {
+          console.error('Error fetching Gmail thread:', error);
         }
         break;
 
@@ -541,6 +617,26 @@ export const getContentTitlesByPrefixedIds = query({
               }
               break;
               
+            case 'gmail':
+              // Get Gmail thread by threadId
+              try {
+                const thread = await ctx.db
+                  .query("gmailThreads")
+                  .withIndex("by_threadId", (q) => q.eq("threadId", contentId))
+                  .filter((q) => q.eq(q.field("userId"), userId))
+                  .first();
+                  
+                if (thread) {
+                  titles[prefixedId] = thread.subject || thread.data?.subject || 'No Subject';
+                } else {
+                  titles[prefixedId] = null;
+                }
+              } catch (error) {
+                console.error('Error fetching Gmail thread:', error);
+                titles[prefixedId] = null;
+              }
+              break;
+              
             default:
               console.warn('getContentTitlesByPrefixedIds: Unsupported content type', { contentType });
               titles[prefixedId] = null;
@@ -567,13 +663,14 @@ export const getContentByPlatform = query({
       v.literal("smart-notes"),
       v.literal("youtube"), 
       v.literal("instagram"),
+      v.literal("gmail"),
       v.literal("insights")
     )
   },
   returns: v.array(v.object({
     id: v.string(),
     title: v.string(),
-    type: v.union(v.literal("note"), v.literal("youtube"), v.literal("instagram"), v.literal("insight")),
+    type: v.union(v.literal("note"), v.literal("youtube"), v.literal("instagram"), v.literal("gmail"), v.literal("insight")),
     contentType: v.string(),
     platform: v.string(),
     createdAt: v.number(),
@@ -584,7 +681,11 @@ export const getContentByPlatform = query({
     thumbnailUrl: v.optional(v.string()),
     statistics: v.optional(v.any()),
     mediaUrl: v.optional(v.string()),
-    insights: v.optional(v.any())
+    insights: v.optional(v.any()),
+    // Gmail specific fields
+    from: v.optional(v.string()),
+    messageCount: v.optional(v.number()),
+    category: v.optional(v.string())
   })),
   handler: async (ctx, args) => {
     const { userId, platform } = args;
@@ -641,6 +742,56 @@ export const getContentByPlatform = query({
             }
           }));
 
+        case 'instagram':
+          const posts = await ctx.db
+            .query("instagramPosts")
+            .withIndex("by_userId", (q) => q.eq("userId", userId))
+            .collect();
+            
+          return posts.map(post => ({
+            id: `instagram:${post.postId}`,
+            title: post.data?.caption?.substring(0, 100) || 'Instagram Post',
+            type: 'instagram' as const,
+            contentType: post.mediaType?.toLowerCase() || 'image',
+            platform: 'instagram',
+            createdAt: post.data?.timestamp || post.createdAt || Date.now(),
+            important: false,
+            tags: [],
+            analysis: post.analysis,
+            mediaUrl: post.data?.media_url,
+            thumbnailUrl: post.data?.thumbnail_url,
+            insights: post.data?.insights,
+            statistics: {
+              likes: post.data?.insights?.likes || post.data?.like_count || 0,
+              comments: post.data?.insights?.comments || post.data?.comments_count || 0,
+              reach: post.data?.insights?.reach || 0,
+              impressions: post.data?.insights?.impressions || 0,
+              saved: post.data?.insights?.saved || 0,
+              shares: post.data?.insights?.shares || 0
+            }
+          }));
+
+        case 'gmail':
+          const gmailThreads = await ctx.db
+            .query("gmailThreads")
+            .withIndex("by_userId", (q) => q.eq("userId", userId))
+            .collect();
+            
+          return gmailThreads.map(thread => ({
+            id: `gmail:${thread.threadId}`,
+            title: thread.subject || thread.data?.subject || 'No Subject',
+            type: 'gmail' as const,
+            contentType: 'email',
+            platform: 'gmail',
+            createdAt: thread.createdAt || Date.now(),
+            important: false,
+            tags: thread.category ? [thread.category] : [],
+            analysis: thread.analysis,
+            from: thread.from || thread.data?.from || 'Unknown Sender',
+            messageCount: thread.message_count || thread.data?.message_count || 1,
+            category: thread.category || 'none'
+          }));
+
         case 'insights':
           const batchAnalyses = await ctx.db
             .query("youtubeBatchAnalysis")
@@ -688,7 +839,7 @@ export const getAllLinkableContent = query({
   returns: v.array(v.object({
     id: v.string(),
     title: v.string(),
-    type: v.union(v.literal("note"), v.literal("youtube"), v.literal("instagram"), v.literal("insight")),
+    type: v.union(v.literal("note"), v.literal("youtube"), v.literal("instagram"), v.literal("gmail"), v.literal("insight")),
     contentType: v.string(),
     platform: v.string(),
     createdAt: v.number(),
@@ -699,7 +850,11 @@ export const getAllLinkableContent = query({
     thumbnailUrl: v.optional(v.string()),
     statistics: v.optional(v.any()),
     mediaUrl: v.optional(v.string()),
-    insights: v.optional(v.any())
+    insights: v.optional(v.any()),
+    // Gmail specific fields
+    from: v.optional(v.string()),
+    messageCount: v.optional(v.number()),
+    category: v.optional(v.string())
   })),
   handler: async (ctx, args) => {
     const { userId } = args;
@@ -710,9 +865,11 @@ export const getAllLinkableContent = query({
 
     try {
       // Fetch all data in parallel
-      const [notes, videos, batchAnalyses] = await Promise.all([
+      const [notes, videos, posts, gmailThreads, batchAnalyses] = await Promise.all([
         ctx.db.query("notes").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
         ctx.db.query("youtubeVideos").withIndex("by_userId", (q) => q.eq("userId", userId)).collect(),
+        ctx.db.query("instagramPosts").withIndex("by_userId", (q) => q.eq("userId", userId)).collect(),
+        ctx.db.query("gmailThreads").withIndex("by_userId", (q) => q.eq("userId", userId)).collect(),
         ctx.db.query("youtubeBatchAnalysis").withIndex("by_userId", (q) => q.eq("userId", userId)).collect()
       ]);
       
@@ -752,6 +909,48 @@ export const getAllLinkableContent = query({
               dislikes: video.statistics?.dislikes ? Number(video.statistics.dislikes) : 0,
               comments: video.statistics?.comments ? Number(video.statistics.comments) : 0
             }
+          };
+        }),
+        // Transform Instagram posts
+        ...posts.map((post, index) => {
+          return {
+            id: `instagram:${post.postId}`,
+            title: post.data?.caption?.substring(0, 100) || 'Instagram Post',
+            type: 'instagram' as const,
+            contentType: post.mediaType?.toLowerCase() || 'image',
+            platform: 'instagram',
+            createdAt: post.data?.timestamp || post.createdAt || Date.now(),
+            important: false,
+            tags: [],
+            analysis: post.analysis,
+            mediaUrl: post.data?.media_url,
+            thumbnailUrl: post.data?.thumbnail_url,
+            insights: post.data?.insights,
+            statistics: {
+              likes: post.data?.insights?.likes || post.data?.like_count || 0,
+              comments: post.data?.insights?.comments || post.data?.comments_count || 0,
+              reach: post.data?.insights?.reach || 0,
+              impressions: post.data?.insights?.impressions || 0,
+              saved: post.data?.insights?.saved || 0,
+              shares: post.data?.insights?.shares || 0
+            }
+          };
+        }),
+        // Transform Gmail threads
+        ...gmailThreads.map((thread, index) => {
+          return {
+            id: `gmail:${thread.threadId}`,
+            title: thread.subject || thread.data?.subject || 'No Subject',
+            type: 'gmail' as const,
+            contentType: 'email',
+            platform: 'gmail',
+            createdAt: thread.createdAt || Date.now(),
+            important: false,
+            tags: thread.category ? [thread.category] : [],
+            analysis: thread.analysis,
+            from: thread.from || thread.data?.from || 'Unknown Sender',
+            messageCount: thread.message_count || thread.data?.message_count || 1,
+            category: thread.category || 'none'
           };
         }),
         // Transform insights

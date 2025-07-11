@@ -191,19 +191,20 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
     return (
       <div className="space-y-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
         <div className="col-span-full text-center text-muted-foreground">
-          <p>Failed to load insights: {error}</p>
+          <p>Your insights are taking a creative break! 🎨</p>
+          <p className="text-sm mt-2">No worries—great ideas take time to develop. Keep being awesome!</p>
         </div>
       </div>
     );
   }
 
-  // Show empty state if no insights
+  // Show skeleton state if no insights
   if (insights.length === 0) {
     return (
       <div className="space-y-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
-        <div className="col-span-full text-center text-muted-foreground">
-          <p>No insights available yet. Check back soon!</p>
-        </div>
+        {Array.from({ length: 6 }).map((_, index) => (
+          <InsightSkeleton key={index} />
+        ))}
       </div>
     );
   }

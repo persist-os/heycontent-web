@@ -610,3 +610,24 @@ export const getRecentThreadsForContentHub = query({
     }
   },
 });
+
+// Get Gmail thread by thread ID for linking (simplified version)
+export const getGmailThreadForLinking = query({
+  args: { 
+    userId: v.string(),
+    threadId: v.string() 
+  },
+  handler: async (ctx, args) => {
+    try {
+      const thread = await ctx.db
+        .query("gmailThreads")
+        .withIndex("by_threadId", (q) => q.eq("threadId", args.threadId))
+        .filter((q) => q.eq(q.field("userId"), args.userId))
+        .first();
+      return thread;
+    } catch (error) {
+      console.error('Error getting Gmail thread for linking:', error);
+      return null;
+    }
+  },
+});

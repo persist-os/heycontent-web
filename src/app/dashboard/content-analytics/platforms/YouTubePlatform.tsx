@@ -1,12 +1,11 @@
 'use client'
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Settings, RefreshCw } from 'lucide-react';
 import { YouTubeCard } from '../cards/YouTubeCard';
-import { YoutubeModal } from '../modals/YoutubeModal';
 import { PlatformEmbeddingStatus } from '../components/PlatformEmbeddingStatus';
 import { useYouTubeAnalytics } from '../hooks/useYouTubeAnalytics';
 import { YouTubeContentItem, AnyContentItem } from '../types';
@@ -30,7 +29,6 @@ export function YouTubePlatform({
   error,
 }: YouTubePlatformProps) {
   const router = useRouter();
-  const [selectedContent, setSelectedContent] = useState<YouTubeContentItem | null>(null);
   
   // Use the same refresh hook as other platforms
   const { 
@@ -215,19 +213,11 @@ export function YouTubePlatform({
               key={uniqueKey}
               item={item as YouTubeContentItem}
               onDiscussContent={() => discussContent(item)}
-              onViewDetailedAnalytics={() => setSelectedContent(item as YouTubeContentItem)}
+              onViewDetailedAnalytics={() => discussContent(item)}
             />
           );
         })}
       </div>
-
-      {selectedContent && (
-        <YoutubeModal
-          selectedContent={selectedContent}
-          onClose={() => setSelectedContent(null)}
-          onDiscussContent={() => discussContent(selectedContent)}
-        />
-      )}
     </>
   );
 } 

@@ -4,7 +4,7 @@ import React from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Lightbulb, ArrowLeft } from 'lucide-react';
-import { InsightCard } from '../../../ai-insights/_components/InsightCard';
+import { InsightCard } from '@/components/content/InsightCard';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 
@@ -26,10 +26,21 @@ export default function InsightAnalysisPage() {
   } else {
     // Map Convex result to InsightCardProps
     const analysis = insightData.analysis || {};
+    
+    // Parse the insight ID to determine platform
+    const parseInsightPlatform = (id: string): 'youtube' | 'instagram' | 'gmail' | 'content-hub' => {
+      if (id.includes('youtube')) return 'youtube';
+      if (id.includes('instagram')) return 'instagram';
+      if (id.includes('gmail')) return 'gmail';
+      return 'content-hub';
+    };
+
+    const platform = parseInsightPlatform(decodedInsightId);
+    
     cardContent = (
       <InsightCard
-        platform={analysis.platform || 'youtube'}
         title={insightData.title}
+        platform={platform}
         impact={analysis.impact || ''}
         whyNow={analysis.whyNow || []}
         actionSteps={analysis.actionSteps || []}
@@ -37,7 +48,30 @@ export default function InsightAnalysisPage() {
         sourceDetails={analysis.sourceDetails || []}
         relatedItems={analysis.relatedItems || []}
         expanded={true}
-        // Optionally pass other props if needed
+        showAnalysis={true}
+        onDiscuss={(content: string, title: string) => {
+          // Navigate to chat with insight context
+          const context = {
+            platform: 'ai-insights',
+            contentId: decodedInsightId,
+            title: title,
+            source: 'AI Insights Dashboard',
+            originalPlatform: platform,
+            fullInsight: {
+              title: insightData.title,
+              impact: analysis.impact,
+              whyNow: analysis.whyNow || [],
+              actionSteps: analysis.actionSteps || [],
+              expectedOutcome: analysis.expectedOutcome,
+              sourceDetails: analysis.sourceDetails || [],
+              relatedItems: analysis.relatedItems || []
+            },
+            analysis: content
+          };
+          
+          const encodedContext = encodeURIComponent(JSON.stringify(context));
+          window.location.href = `/dashboard/chat?contentContext=${encodedContext}`;
+        }}
       />
     );
   }

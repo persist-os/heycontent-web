@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
-import { Instagram, Users, RefreshCw, MessageSquare, Heart, Forward } from 'lucide-react';
+import { Instagram, Users, RefreshCw, MessageSquare, Heart, Forward, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { InstagramContentItem } from '../types';
@@ -82,6 +82,30 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
     });
   };
 
+  const renderStat = (label: string, value: number | null | undefined, icon: React.ReactNode, colorClass: string) => {
+    if (value === null || value === undefined) {
+      return (
+        <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <div className={`p-2 rounded-lg ${colorClass}`}>{icon}</div>
+          <div>
+            <div className="text-sm font-semibold text-gray-900 dark:text-white">N/A</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
+          </div>
+        </div>
+      );
+    }
+    // Show 0 if value is actually 0
+    return (
+      <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <div className={`p-2 rounded-lg ${colorClass}`}>{icon}</div>
+        <div>
+          <div className="text-sm font-semibold text-gray-900 dark:text-white">{value.toLocaleString()}</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
+        </div>
+      </div>
+    );
+  };
+
   // Handle discuss content with Zustand store
   const handleDiscussContent = () => {
     // Use the full Convex document if available, otherwise create a fallback
@@ -136,9 +160,17 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
     router.push('/dashboard/chat');
   };
 
+  // Handle opening the detailed analytics modal
+  const handleOpenModal = () => {
+    onViewDetailedAnalytics(item);
+  };
+
   return (
     <Card key={item.id} className="overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-pink-500/25 border-2 border-transparent hover:border-pink-500/30 bg-white dark:bg-gray-800">
-      <div className="relative aspect-video bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
+      <div 
+        className="relative aspect-video bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden"
+        onClick={handleOpenModal}
+      >
         {isCarousel ? (
           <div className="relative w-full h-full">
             {children.map((child, idx: number) => (
@@ -172,7 +204,10 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
                       ? 'bg-white shadow-lg scale-110' 
                       : 'bg-white/50 hover:bg-white/70'
                   }`}
-                  onClick={() => setCurrentSlide(idx)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentSlide(idx);
+                  }}
                 />
               ))}
             </div>
@@ -182,46 +217,20 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
               {currentSlide + 1} / {children.length}
             </div>
           </div>
-                  ) : (
-            content.permalink ? (
-              <a href={content.permalink} target="_blank" rel="noopener noreferrer" className="block w-full h-full group-hover:scale-105 transition-transform duration-300">
-                <img
-                  src={content.mediaType === 'VIDEO' || content.mediaType === 'REELS' ? content.thumbnailUrl : content.mediaUrl || content.thumbnailUrl || fallbackImg}
-                  alt={content.text || 'Instagram Post'}
-                  className="w-full h-full object-cover"
-                  style={{ aspectRatio: '16/9', objectFit: 'cover' }}
-                  onError={handleImgError}
-                />
-              </a>
-            ) : (
-              <img
-                src={content.mediaUrl || content.thumbnailUrl || fallbackImg}
-                alt={content.text || 'Instagram Post'}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                style={{ aspectRatio: '16/9', objectFit: 'cover' }}
-                onError={handleImgError}
-              />
-            )
-          )}
+        ) : (
+          <img
+            src={content.mediaType === 'VIDEO' || content.mediaType === 'REELS' ? content.thumbnailUrl : content.mediaUrl || content.thumbnailUrl || fallbackImg}
+            alt={content.text || 'Instagram Post'}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            style={{ aspectRatio: '16/9', objectFit: 'cover' }}
+            onError={handleImgError}
+          />
+        )}
 
         {/* Media Type Badge */}
         <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium text-white capitalize">
           {content.mediaType}
         </div>
-        
-        {/* Date Badge - only show if not carousel (carousel has slide counter) */}
-        {!isCarousel && (
-          <div className="absolute top-3 left-3 bg-white/80 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium text-gray-700">
-            {publishedAt ? formatTimestamp(publishedAt) : ''}
-          </div>
-        )}
-
-        {/* Date Badge for carousel - positioned differently to avoid conflict with slide counter */}
-        {isCarousel && (
-          <div className="absolute bottom-3 right-3 bg-white/80 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium text-gray-700">
-            {publishedAt ? formatTimestamp(publishedAt) : ''}
-          </div>
-        )}
 
         {/* Gradient Overlay for better text readability */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -233,59 +242,50 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
             <Instagram className="w-8 h-8 text-[#C13584]" />
           </div>
           <div>
-            <h3 className="font-medium text-text-dark dark:text-white line-clamp-2">{content.text}</h3>
-            <p className="text-sm text-text-gray dark:text-gray-400">{publishedAt ? formatTimestamp(publishedAt) : ''}</p>
+            <h3 className="font-medium text-text-dark dark:text-white line-clamp-2">
+              {content.text && content.text.length > 80 
+                ? `${content.text.substring(0, 80)}...` 
+                : content.text}
+            </h3>
           </div>
         </div>
         
         {/* Metrics Grid */}
         <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <div className="p-2 rounded-lg bg-heycontent-light-purple">
-              <Users className="w-4 h-4 text-heycontent-purple" />
+          {metrics && (
+            <>
+              {metrics.reach !== undefined && renderStat('Reach', metrics.reach, <Users className="w-4 h-4 text-heycontent-purple" />, 'bg-heycontent-light-purple')}
+              {metrics.likes !== undefined && renderStat('Likes', metrics.likes, <Heart className="w-4 h-4 text-red-500" />, 'bg-red-100 dark:bg-red-900/30')}
+              {metrics.saved !== undefined && renderStat('Saves', metrics.saved, <Forward className="w-4 h-4 text-blue-600" />, 'bg-blue-100 dark:bg-blue-900/30')}
+              {metrics.comments !== undefined && renderStat('Comments', metrics.comments, <MessageSquare className="w-4 h-4 text-heycontent-green" />, 'bg-heycontent-light-green')}
+            </>
+          )}
+          {/* Date - always last, takes full width if odd number of items */}
+          {publishedAt && (
+            <div className={`flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg ${
+              [metrics?.reach, metrics?.likes, metrics?.saved, metrics?.comments].filter(m => m !== undefined).length % 2 === 0 
+                ? 'col-span-1' 
+                : 'col-span-2'
+            }`}>
+              <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700">
+                <Calendar className="w-4 h-4 text-gray-600" />
             </div>
             <div>
-              <div className="text-sm font-semibold text-gray-900 dark:text-white">{formatNumber(metrics?.reach)}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Reach</div>
-            </div>
+                <div className="text-sm font-semibold text-gray-900 dark:text-white">{formatTimestamp(publishedAt)}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Published</div>
           </div>
-          
-          <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
-              <Heart className="w-4 h-4 text-red-500" />
             </div>
-            <div>
-              <div className="text-sm font-semibold text-gray-900 dark:text-white">{formatNumber(metrics?.likes || metrics?.like_count)}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Likes</div>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-              <Forward className="w-4 h-4 text-blue-600" />
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-gray-900 dark:text-white">{formatNumber(metrics?.shares || metrics?.saved)}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Saves</div>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <div className="p-2 rounded-lg bg-heycontent-light-green">
-              <MessageSquare className="w-4 h-4 text-heycontent-green" />
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-gray-900 dark:text-white">{formatNumber(metrics?.comments || metrics?.comments_count)}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Comments</div>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Action Buttons */}
         <div className="flex gap-2 mt-4">
           <button
             className="flex-1 bg-primary text-primary-foreground dark:text-black hover:bg-primary/90 hover:text-primary-foreground dark:hover:text-black px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-            onClick={handleDiscussContent}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDiscussContent();
+            }}
           >
             <MessageSquare className="w-4 h-4 inline mr-2" />
             Discuss With Content
@@ -293,14 +293,20 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
           
           <button
             className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-text-dark dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium transition-colors"
-            onClick={() => onViewDetailedAnalytics(item)}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenModal();
+            }}
           >
             Analytics
           </button>
           
           <button
             className={`relative px-2 py-2 rounded-lg font-medium flex items-center gap-1 transition-colors disabled:opacity-50 bg-gray-100 dark:bg-gray-700 text-text-dark dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600`}
-            onClick={handleRefresh}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRefresh();
+            }}
             disabled={loading}
             title={error ? `Refresh needed: ${error}` : "Refresh data"}
           >

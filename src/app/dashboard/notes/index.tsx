@@ -9,7 +9,12 @@ import { useNotes } from '@/app/context/notes-context';
 import { Note } from './types';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { YouTubeVideoCard } from './components/YouTubeVideoCard';
+import { InstagramPostCard } from './components/InstagramPostCard';
+import { GmailThreadCard } from './components/GmailThreadCard';
 import { InsightCard } from '../ai-insights/_components/InsightCard';
+import { InsightOverlay } from '@/components/content/overlays/InsightOverlay';
+
+// Help system imports
 import { HelpModal } from '@/components/ui/help-modal';
 import { HelpIconButton } from '@/components/ui/help-icon-button';
 import { notesHelp } from '@/helpContent';
@@ -36,15 +41,22 @@ export default function SmartNotes() {
     navigateBack,
     canNavigateBack,
     clearNavigationStack,
+    navigationStack, // <-- add this line
   } = useNotes();
 
   // YouTube video card state
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
+  // Instagram post card state
+  const [selectedInstagramPostId, setSelectedInstagramPostId] = useState<string | null>(null);
+  // Gmail thread card state
+  const [selectedGmailThreadId, setSelectedGmailThreadId] = useState<string | null>(null);
   // Insight card state
-  const [selectedInsight, setSelectedInsight] = useState<{ analysisId: string; insightIndex: number } | null>(null);
+  const [selectedInsightId, setSelectedInsightId] = useState<string | null>(null);
+  
   // Help modal state
   const [helpOpen, setHelpOpen] = useState(false);
   const noteAreaFlushRef = useRef<() => Promise<void>>();
+  const [shouldForcePreview, setShouldForcePreview] = useState(false);
 
   // Compute activeNote from notes and activeNoteId (single source of truth)
   const activeNote = useMemo(() =>
@@ -183,16 +195,31 @@ export default function SmartNotes() {
   };
 
   // Handle insight analysis navigation
-  const handleOpenInsightAnalysis = async (analysisId: string, insightIndex: number) => {
+  const handleOpenInsightAnalysis = async (insightId: string) => {
     await flushAutosave();
-    setSelectedInsight(null); // Close the card
-    const insightId = `insight:${analysisId}:${insightIndex}`;
+    setSelectedInsightId(null); // Close the card
     router.push(`/dashboard/notes/insight-analysis/${encodeURIComponent(insightId)}`);
   };
 
   // Handle content linking (YouTube, Instagram, Insights, etc.)
   const handleLinkContent = async (prefixedId: string) => {
     await flushAutosave();
+    console.log('handleLinkContent called:', {
+      prefixedId,
+      prefixedIdLength: prefixedId.length,
+      prefixedIdIncludesColon: prefixedId.includes(':'),
+      prefixedIdSplit: prefixedId.split(':'),
+      currentActiveNoteId: activeNoteId,
+      currentStack: navigationStack
+    });
+    
+    // Special handling for insight links which have format insight:analysisId:index
+    if (prefixedId.startsWith('insight:')) {
+      setSelectedInsightId(prefixedId);
+      return;
+    }
+    
+    // Parse the prefixed ID to determine the content type for other content types
     const [contentType, contentId] = prefixedId.split(':', 2);
     switch (contentType) {
       case 'note':
@@ -202,7 +229,10 @@ export default function SmartNotes() {
         setSelectedVideoId(contentId);
         break;
       case 'instagram':
-        // TODO: Implement Instagram post viewing
+        setSelectedInstagramPostId(contentId);
+        break;
+      case 'gmail':
+        setSelectedGmailThreadId(contentId);
         break;
       default:
         // Unknown content type
@@ -235,6 +265,7 @@ export default function SmartNotes() {
           onLinkNote={handleLinkNote}
           onLinkContent={handleLinkContent}
           flushRef={noteAreaFlushRef}
+          forcePreview={shouldForcePreview}
         />
         {/* YouTube Video Card */}
         {selectedVideoId && (
@@ -243,18 +274,50 @@ export default function SmartNotes() {
             onClose={async () => {
               await flushAutosave();
               setSelectedVideoId(null);
+              setShouldForcePreview(true);
+              setTimeout(() => setShouldForcePreview(false), 0);
             }}
             onOpenAnalysis={handleOpenAnalysis}
           />
         )}
+        {/* Instagram Post Card */}
+        {selectedInstagramPostId && (
+          <InstagramPostCard
+            postId={selectedInstagramPostId}
+            onClose={async () => {
+              await flushAutosave();
+              setSelectedInstagramPostId(null);
+              setShouldForcePreview(true);
+              setTimeout(() => setShouldForcePreview(false), 0);
+            }}
+            onOpenAnalysis={handleOpenAnalysis}
+          />
+        )}
+        {/* Gmail Thread Card */}
+        {selectedGmailThreadId && (
+          <GmailThreadCard
+            threadId={selectedGmailThreadId}
+            onClose={async () => {
+              await flushAutosave();
+              setSelectedGmailThreadId(null);
+              setShouldForcePreview(true);
+              setTimeout(() => setShouldForcePreview(false), 0);
+            }}
+          />
+        )}
         {/* Insight Card */}
-        {selectedInsight && (async () => {
-          await flushAutosave();
-          const insightId = `insight:${selectedInsight.analysisId}:${selectedInsight.insightIndex}`;
-          setSelectedInsight(null);
-          router.push(`/dashboard/notes/insight-analysis/${encodeURIComponent(insightId)}`);
-          return null;
-        })()}
+        {selectedInsightId && (
+          <InsightOverlay
+            insightId={selectedInsightId}
+            onClose={async () => {
+              await flushAutosave();
+              setSelectedInsightId(null);
+              setShouldForcePreview(true);
+              setTimeout(() => setShouldForcePreview(false), 0);
+            }}
+            showAnalysis={true}
+          />
+        )}
       </div>
     );
   }

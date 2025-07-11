@@ -1,5 +1,5 @@
 export interface LinkReference {
-  type: 'smart_note' | 'youtube' | 'insight';
+  type: 'smart_note' | 'youtube' | 'instagram' | 'gmail' | 'insight';
   id: string;
   index?: number; // For insights, the specific index in the list
 }
@@ -34,6 +34,12 @@ export async function resolveLinkContent(
       
       case 'youtube':
         return await resolveYouTubeContent(link.id, userId, allLinkableContent);
+      
+      case 'instagram':
+        return await resolveInstagramContent(link.id, userId, allLinkableContent);
+      
+      case 'gmail':
+        return await resolveGmailContent(link.id, userId, allLinkableContent);
       
       case 'insight':
         return await resolveInsightContent(link.id, link.index, userId, allLinkableContent);
@@ -217,6 +223,182 @@ async function resolveYouTubeContent(videoId: string, userId: string, allLinkabl
 }
 
 /**
+ * Resolve Instagram content - returns the analysis and statistics
+ */
+async function resolveInstagramContent(postId: string, userId: string, allLinkableContent: any[]): Promise<ResolvedLinkContent | null> {
+  try {
+    // Remove 'instagram:' prefix if present
+    const actualPostId = postId.startsWith('instagram:') ? postId.replace('instagram:', '') : postId;
+    
+    const post = allLinkableContent.find(item => item.id === `instagram:${actualPostId}`);
+
+    if (!post) {
+      console.warn('🔗 [LINK RESOLVER] Instagram post not found:', postId);
+      return null;
+    }
+
+    // Build comprehensive content including caption, insights, statistics, analysis, etc.
+    let contentParts = [];
+
+    // Add caption
+    if (post.content) {
+      contentParts.push(`Caption: ${post.content}`);
+    }
+
+    // Add media type
+    if (post.contentType) {
+      contentParts.push(`Media Type: ${post.contentType.toUpperCase()}`);
+    }
+
+    // Add statistics if available
+    if (post.statistics) {
+      const stats = post.statistics;
+      const statsParts = [];
+      if (stats.likes !== undefined) statsParts.push(`Likes: ${stats.likes.toLocaleString()}`);
+      if (stats.comments !== undefined) statsParts.push(`Comments: ${stats.comments.toLocaleString()}`);
+      if (stats.reach !== undefined) statsParts.push(`Reach: ${stats.reach.toLocaleString()}`);
+      if (stats.impressions !== undefined) statsParts.push(`Impressions: ${stats.impressions.toLocaleString()}`);
+      if (stats.saved !== undefined) statsParts.push(`Saved: ${stats.saved.toLocaleString()}`);
+      if (stats.shares !== undefined) statsParts.push(`Shares: ${stats.shares.toLocaleString()}`);
+      if (statsParts.length > 0) {
+        contentParts.push(`Statistics: ${statsParts.join(', ')}`);
+      }
+    }
+
+    // Add analysis content
+    if (post.analysis) {
+      const analysisText = typeof post.analysis === 'string' ? post.analysis : JSON.stringify(post.analysis, null, 2);
+      contentParts.push(`Analysis: ${analysisText}`);
+    }
+
+    // Add insights if available
+    if (post.insights) {
+      const insightsText = typeof post.insights === 'string' ? post.insights : JSON.stringify(post.insights, null, 2);
+      contentParts.push(`Insights: ${insightsText}`);
+    }
+
+    // Add platform and content type info
+    if (post.platform || post.contentType) {
+      const platformInfo = [];
+      if (post.platform) platformInfo.push(post.platform);
+      if (post.contentType) platformInfo.push(post.contentType);
+      contentParts.push(`Platform: ${platformInfo.join(' - ')}`);
+    }
+
+    // Add creation date if available
+    if (post.createdAt) {
+      const date = new Date(post.createdAt).toLocaleDateString();
+      contentParts.push(`Published: ${date}`);
+    }
+
+    const fullContent = contentParts.join('\n\n');
+    
+    return {
+      type: 'instagram',
+      title: post.title || 'Instagram Post',
+      content: fullContent,
+      contentId: postId,
+      metadata: {
+        contentType: post.contentType,
+        platform: post.platform,
+        createdAt: post.createdAt,
+        mediaUrl: post.mediaUrl,
+        thumbnailUrl: post.thumbnailUrl,
+        insights: post.insights,
+        statistics: post.statistics
+      }
+    };
+  } catch (error) {
+    console.error('🔗 [LINK RESOLVER] Error resolving Instagram content:', error);
+    return null;
+  }
+}
+
+/**
+ * Resolve Gmail content - returns the email thread content
+ */
+async function resolveGmailContent(threadId: string, userId: string, allLinkableContent: any[]): Promise<ResolvedLinkContent | null> {
+  try {
+    // Remove 'gmail:' prefix if present
+    const actualThreadId = threadId.startsWith('gmail:') ? threadId.replace('gmail:', '') : threadId;
+    
+    const thread = allLinkableContent.find(item => item.id === `gmail:${actualThreadId}`);
+
+    if (!thread) {
+      console.warn('🔗 [LINK RESOLVER] Gmail thread not found:', threadId);
+      return null;
+    }
+
+    // Build comprehensive content including subject, messages, and analysis
+    let contentParts = [];
+
+    // Add subject
+    if (thread.title) {
+      contentParts.push(`Subject: ${thread.title}`);
+    }
+
+    // Add thread info
+    if (thread.from) {
+      contentParts.push(`From: ${thread.from}`);
+    }
+
+    if (thread.messageCount) {
+      contentParts.push(`Message Count: ${thread.messageCount}`);
+    }
+
+    if (thread.category) {
+      contentParts.push(`Category: ${thread.category}`);
+    }
+
+    // Add messages content if available
+    if (thread.content) {
+      contentParts.push(`Messages: ${thread.content}`);
+    }
+
+    // Add analysis if available
+    if (thread.analysis) {
+      const analysisText = typeof thread.analysis === 'string' ? thread.analysis : JSON.stringify(thread.analysis, null, 2);
+      contentParts.push(`Analysis: ${analysisText}`);
+    }
+
+    // Add platform and content type info
+    if (thread.platform || thread.contentType) {
+      const platformInfo = [];
+      if (thread.platform) platformInfo.push(thread.platform);
+      if (thread.contentType) platformInfo.push(thread.contentType);
+      contentParts.push(`Platform: ${platformInfo.join(' - ')}`);
+    }
+
+    // Add creation date if available
+    if (thread.createdAt) {
+      const date = new Date(thread.createdAt).toLocaleDateString();
+      contentParts.push(`Date: ${date}`);
+    }
+
+    const fullContent = contentParts.join('\n\n');
+    
+    return {
+      type: 'gmail',
+      title: thread.title || 'Gmail Thread',
+      content: fullContent,
+      contentId: threadId,
+      metadata: {
+        from: thread.from,
+        messageCount: thread.messageCount,
+        category: thread.category,
+        contentType: thread.contentType,
+        platform: thread.platform,
+        createdAt: thread.createdAt,
+        analysis: thread.analysis
+      }
+    };
+  } catch (error) {
+    console.error('🔗 [LINK RESOLVER] Error resolving Gmail content:', error);
+    return null;
+  }
+}
+
+/**
  * Resolve insight content - returns the specific insight (not the whole list)
  */
 async function resolveInsightContent(insightId: string, index?: number, userId?: string, allLinkableContent?: any[]): Promise<ResolvedLinkContent | null> {
@@ -320,6 +502,18 @@ export function parseContentId(contentId: string): LinkReference | null {
       case 'youtube':
         return {
           type: 'youtube',
+          id: parts.slice(1).join(':')
+        };
+      
+      case 'instagram':
+        return {
+          type: 'instagram',
+          id: parts.slice(1).join(':')
+        };
+      
+      case 'gmail':
+        return {
+          type: 'gmail',
           id: parts.slice(1).join(':')
         };
       
@@ -472,6 +666,10 @@ function getContentLabel(contentType: string): string {
       return 'Note';
     case 'youtube':
       return 'YouTube Video';
+    case 'instagram':
+      return 'Instagram Post';
+    case 'gmail':
+      return 'Gmail Thread';
     case 'insight':
       return 'Insight';
     default:

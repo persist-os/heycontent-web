@@ -27,8 +27,8 @@ import { useInstagramAnalytics } from '../../content-analytics/hooks/useInstagra
 import { YouTubeCard } from '../../content-analytics/cards/YouTubeCard'
 import { InstagramCard } from '../../content-analytics/cards/InstagramCard'
 import { InstagramModal } from '../../content-analytics/modals/InstagramModal'
-import { YoutubeModal } from '../../content-analytics/modals/YoutubeModal'
-import { AnyContentItem, YouTubeContentItem, InstagramContentItem } from '../../content-analytics/types'
+import { YouTubeOverlay } from '@/components/content/overlays/YouTubeOverlay'
+import { AnyContentItem, YouTubeContentItem, InstagramContentItem, GmailContentItem } from '../../content-analytics/types'
 import { sortContent } from '../../content-analytics/utils'
 
 // Insights components and hooks
@@ -78,7 +78,7 @@ export function ContentHubScreen() {
   )
   const [selectedContent, setSelectedContent] = useState<AnyContentItem | null>(null)
   const [currentQuote, setCurrentQuote] = useState<string>('')
-  const [expandedInsight, setExpandedInsight] = useState<string | null>(null);
+  const [expandedInsight, setExpandedInsight] = useState<number | null>(null);
   const [expandHubInsight, setExpandHubInsight] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const { refreshAll: refreshAllYouTube, loading: refreshingYouTube, error: refreshYouTubeError, success: refreshYouTubeSuccess } = useYouTubeRefresh();
@@ -298,6 +298,7 @@ export function ContentHubScreen() {
               <InstagramCard
                 key={uniqueKey}
                 item={item as InstagramContentItem}
+                userId={userId || ''}
                 onDiscussContent={() => discussContent(item)}
                 onViewDetailedAnalytics={() => setSelectedContent(item)}
               />
@@ -353,14 +354,19 @@ export function ContentHubScreen() {
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {allInsights.map((insight) => (
+        {allInsights.map((insight, idx) => (
           <InsightCard
-            key={insight.id}
-            insight={insight}
-            isExpanded={expandedInsight === insight.id}
-            onToggleExpanded={() => {
-              setExpandedInsight(expandedInsight === insight.id ? null : insight.id);
-            }}
+            key={idx}
+            platform={insight.platform}
+            title={insight.title}
+            impact={insight.impact}
+            whyNow={insight.whyNow}
+            actionSteps={insight.actionSteps}
+            expectedOutcome={insight.expectedOutcome}
+            sourceDetails={insight.sourceDetails}
+            relatedItems={insight.relatedItems}
+            expanded={expandedInsight === idx}
+            onExpand={() => setExpandedInsight(expandedInsight === idx ? null : idx)}
           />
         ))}
       </div>
@@ -473,6 +479,7 @@ export function ContentHubScreen() {
 
               {/* Content Hub Insights - Home Screen */}
               <TabsContent value="hub-insights" className="space-y-6">
+                {/* Use the old ContentHubInsights card/component for this tab only */}
                 <ContentHubInsights userId={safeUserId} forceExpand={expandHubInsight} />
               </TabsContent>
 
@@ -591,15 +598,17 @@ export function ContentHubScreen() {
                 setSelectedContent(null);
                 clearContentIdFromUrl();
               }}
+              onDiscussContent={() => {}}
             />
           )}
           {selectedContent.platform === 'youtube' && (
-            <YoutubeModal
-              selectedContent={selectedContent as YouTubeContentItem}
+            <YouTubeOverlay
+              videoId={selectedContent.id}
               onClose={() => {
                 setSelectedContent(null);
                 clearContentIdFromUrl();
               }}
+              showAnalysis={true}
             />
           )}
         </>

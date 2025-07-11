@@ -358,6 +358,17 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
             continue
           }
           continue
+        } else if (contentType === 'gmail') {
+          // Use fetched title or show loading state
+          const title = fetchedContentTitles[noteId]
+          if (title && title !== 'Error loading title') {
+            displayContent = displayContent.replace(match[0], `@[Gmail: ${title}]@`)
+          } else {
+            // Keep the original prefixed ID if title not fetched yet
+            // This prevents conversion to "Missing Note"
+            continue
+          }
+          continue
         } else if (contentType === 'insight') {
           // Handle insight display format
           const insight = allLinkableContent?.find(n => n.id === noteId);
@@ -412,7 +423,7 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
       // If it's already a prefixed ID format, keep it as is
       if (titleOrId.includes(':')) {
         const [contentType, id] = titleOrId.split(':', 2)
-        if (contentType === 'note' || contentType === 'youtube' || contentType === 'instagram' || contentType === 'insight') {
+        if (contentType === 'note' || contentType === 'youtube' || contentType === 'instagram' || contentType === 'gmail' || contentType === 'insight') {
           // Already in storage format, don't change
           continue
         }
@@ -451,6 +462,23 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
         // Find the prefixed ID that matches this title
         const prefixedId = Object.keys(fetchedContentTitles).find(
           id => id.startsWith('instagram:') && fetchedContentTitles[id] === postTitle
+        )
+        if (prefixedId) {
+          storageContent = storageContent.replace(match[0], `@[${prefixedId}]@`)
+        } else {
+          // If we can't find the prefixed ID, keep the display format
+          // This prevents conversion to "Missing Note"
+          continue
+        }
+        continue
+      }
+      
+      // Handle Gmail display format - find the original prefixed ID
+      if (titleOrId.startsWith('Gmail: ')) {
+        const threadTitle = titleOrId.replace('Gmail: ', '')
+        // Find the prefixed ID that matches this title
+        const prefixedId = Object.keys(fetchedContentTitles).find(
+          id => id.startsWith('gmail:') && fetchedContentTitles[id] === threadTitle
         )
         if (prefixedId) {
           storageContent = storageContent.replace(match[0], `@[${prefixedId}]@`)

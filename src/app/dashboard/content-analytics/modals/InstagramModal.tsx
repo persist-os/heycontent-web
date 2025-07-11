@@ -11,6 +11,8 @@ import { MarkdownRenderer } from '@/app/dashboard/chat/markdown-renderer';
 import { useRouter } from 'next/navigation';
 import { useContentContextActions } from '@/store/content-context-store';
 import { processContentIfNeeded } from '../utils/markdown-processor';
+import { InstagramContent } from '@/components/content/InstagramContent';
+import { InstagramOverlay } from '@/components/content/overlays/InstagramOverlay';
 
 interface InstagramModalProps {
   selectedContent: InstagramContentItem;
@@ -349,125 +351,33 @@ export const InstagramModal: React.FC<InstagramModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={handleBackdropClick}>
-      <div className="bg-white dark:bg-gray-900 rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="px-6 py-4 border-b dark:border-gray-800 flex items-center justify-between flex-shrink-0">
-          <div>
-            <h2 className="text-lg font-medium text-black dark:text-white flex items-center gap-2">
-              <Instagram className="w-5 h-5 text-pink-500" /> Instagram Analytics
-            </h2>
-            <p className="text-sm text-text-gray dark:text-gray-400">
-              Post • {selectedContent.content.mediaType.charAt(0).toUpperCase() + selectedContent.content.mediaType.slice(1)}
-            </p>
-          </div>
-          <Button variant="ghost" onClick={onClose} aria-label="Close">
-            <X className="w-5 h-5" />
-          </Button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 overflow-y-auto flex-grow space-y-6">
-          {/* Preview */}
-          <Card className="p-4 bg-gray-50 dark:bg-gray-800 flex gap-4">
-            {mediaUrl && (
-               <img
-                  src={mediaUrl}
-                  alt="Instagram content"
-                  className="w-32 h-20 object-cover rounded-lg flex-shrink-0"
-               />
-            )}
-            <div className="flex-grow min-w-0">
-              <h3 className="font-medium text-black dark:text-white mb-1 line-clamp-3 text-sm leading-relaxed">
-                {selectedContent.content.text || 'No caption provided.'}
-              </h3>
-              <p className="text-xs text-text-gray dark:text-gray-400">
-                Published: {new Date(selectedContent.publishedAt).toLocaleString()}
-              </p>
-              {selectedContent.content.permalink && (
-                <a
-                  href={selectedContent.content.permalink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-heycontent-purple hover:underline inline-flex items-center gap-1 mt-1"
-                >
-                  View on Instagram <ExternalLink className="w-3 h-3" />
-                </a>
-              )}
-            </div>
-          </Card>
-
-          {/* Metrics */}
-          <div>
-            <h3 className="text-base font-medium mb-4 text-black dark:text-white">Performance Metrics</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {getMetricsDisplay(selectedContent)}
-            </div>
-          </div>
-
-          {/* AI Analysis */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-base font-medium text-black dark:text-white">AI Analysis</h3>
-              <div className="flex items-center gap-2">
-                <Button size="sm" onClick={requestAiAnalysis} disabled={loading}>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  {loading ? 'Analyzing...' : (aiAnalysis ? 'New Analysis' : 'Request Analysis')}
-                </Button>
-                {analysisTimestamp && (
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {isStoredAnalysis ? 'Saved' : 'Created'}: {new Date(analysisTimestamp).toLocaleString()}
-                  </span>
-                )}
-              </div>
-            </div>
-            
-            <Card className="p-4 bg-gradient-to-br from-pink-50 via-purple-50 to-yellow-50 dark:from-gray-800 dark:to-gray-900 min-h-[120px]">
-              {loading ? (
-                <div className="flex items-center justify-center h-24">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-heycontent-purple"></div>
-                </div>
-              ) : error ? (
-                <div className="text-center text-red-600 dark:text-red-400">
-                  <p className="text-sm mb-2">Error: {error}</p>
-                  <Button size="sm" variant="outline" onClick={requestAiAnalysis}>
-                    Try Again
-                  </Button>
-                </div>
-              ) : aiAnalysis ? (
-                <div className="space-y-3">
-                  <MarkdownRenderer content={processContentIfNeeded(aiAnalysis)} />
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-24">
-                  <p className="text-text-gray text-sm italic text-center">
-                    Click 'Request Analysis' to get AI insights about this post content.
-                  </p>
-                </div>
-              )}
-            </Card>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-4 border-t dark:border-gray-800 flex items-center justify-end gap-3 flex-shrink-0">
-          <Button 
-            onClick={navigateToChat} 
-            disabled={!aiAnalysis}
-            className={`${!aiAnalysis ? 'opacity-50 cursor-not-allowed bg-gray-300 hover:bg-gray-300' : 'bg-heycontent-light-yellow hover:bg-heycontent-yellow/90'} text-black`}
-          >
-            <MessageSquare className="w-4 h-4 mr-2" />
-            {!aiAnalysis ? 'Generate Analysis First' : 'Discuss with Content'}
-          </Button>
-          {selectedContent.content.permalink && (
-            <a href={selectedContent.content.permalink} target="_blank" rel="noopener noreferrer">
-              <Button variant="outline">
-                <ExternalLink className="w-4 h-4 mr-2" /> View on Instagram
-              </Button>
-            </a>
-          )}
-        </div>
-      </div>
-    </div>
+    <InstagramOverlay
+      postId={selectedContent.id}
+      onClose={onClose}
+      showAnalysis={true}
+      preFetchedData={{
+        postId: selectedContent.id,
+        userId: userId || '',
+        mediaType: selectedContent.content.mediaType,
+        data: {
+          id: selectedContent.id,
+          caption: selectedContent.content.text || '',
+          media_url: selectedContent.content.mediaUrl || '',
+          permalink: selectedContent.content.permalink || '',
+          timestamp: new Date(selectedContent.publishedAt || Date.now()).getTime(),
+          username: '',
+          like_count: selectedContent.metrics?.likes || selectedContent.metrics?.like_count || 0,
+          comments_count: selectedContent.metrics?.comments || selectedContent.metrics?.comments_count || 0,
+          thumbnail_url: selectedContent.content.thumbnailUrl || null,
+          children: selectedContent.children || [],
+          comments: selectedContent.content.comments || [],
+          insights: selectedContent.metrics || {},
+        },
+        analysis: selectedContent.analysis || null,
+        analysisMarkdown: aiAnalysis || selectedContent.analysisMarkdown || null,
+        createdAt: new Date(selectedContent.publishedAt || Date.now()).getTime(),
+        updatedAt: Date.now(),
+      }}
+    />
   );
 };

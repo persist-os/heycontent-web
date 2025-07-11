@@ -133,6 +133,8 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
         return `https://www.youtube.com/watch?v=${context.contentId}`;
       case 'instagram':
         return (context as any).permalink || `https://www.instagram.com/p/${context.contentId}`;
+      case 'gmail':
+        return `https://mail.google.com/mail/u/0/#search/in:anywhere+rfc822msgid:${context.contentId}`;
       default:
         return null;
     }
@@ -412,7 +414,7 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
               className="inline-flex items-center gap-1 text-sm text-[#4E87E3] hover:text-[#3A6FBA] transition-colors"
             >
               <ExternalLink className="w-4 h-4" />
-              View on {context.platform === 'youtube' ? 'YouTube' : context.platform === 'instagram' ? 'Instagram' : 'Platform'}
+              View on {context.platform === 'youtube' ? 'YouTube' : context.platform === 'instagram' ? 'Instagram' : context.platform === 'gmail' ? 'Gmail' : 'Platform'}
             </a>
           </div>
         )}

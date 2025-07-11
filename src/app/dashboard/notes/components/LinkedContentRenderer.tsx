@@ -7,6 +7,7 @@ import { useAuth } from '@/app/context/auth-context';
 import { 
   Youtube, 
   Instagram, 
+  Mail,
   ExternalLink,
   Play,
   Image as ImageIcon,
@@ -62,6 +63,15 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
       );
     }
     
+    if (contentType === 'gmail') {
+      return (
+        <div className="inline-flex items-center gap-2 px-3 py-2 mx-1 my-1 rounded-lg border border-border bg-muted/50 text-sm">
+          <Mail className="w-4 h-4 text-red-500" />
+          <span className="text-muted-foreground">Gmail Thread</span>
+        </div>
+      );
+    }
+    
     if (contentType === 'insight') {
       return (
         <div className="inline-flex items-center gap-2 px-3 py-2 mx-1 my-1 rounded-lg border border-border bg-muted/50 text-sm">
@@ -94,6 +104,8 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
         return <Youtube className="w-4 h-4 text-red-500" />;
       case 'instagram':
         return <Instagram className="w-4 h-4 text-pink-500" />;
+      case 'gmail':
+        return <Mail className="w-4 h-4 text-red-500" />;
       case 'insights':
         return <Lightbulb className="w-4 h-4 text-yellow-500" />;
       case 'smart-notes':
@@ -113,6 +125,8 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
         return <Users className="w-3 h-3" />;
       case 'reels':
         return <Play className="w-3 h-3" />;
+      case 'email':
+        return <Mail className="w-3 h-3" />;
       case 'insight':
         return <Lightbulb className="w-3 h-3" />;
       default:
@@ -148,6 +162,22 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
       );
     }
     
+    if (contentData.type === 'gmail') {
+      return (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <MessageCircle className="w-3 h-3" />
+          <span>{contentData.messageCount || 1} message{(contentData.messageCount || 1) !== 1 ? 's' : ''}</span>
+          {contentData.from && (
+            <>
+              <span>•</span>
+              <User className="w-3 h-3" />
+              <span className="truncate max-w-24">{contentData.from}</span>
+            </>
+          )}
+        </div>
+      );
+    }
+    
     if (contentData.type === 'insight' && contentData.analysis) {
       return (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -161,8 +191,8 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
   };
 
   const handleClick = () => {
-    // For YouTube videos, show preview card instead of opening in new tab
-    if (contentData.type === 'youtube') {
+    // For YouTube videos, Gmail threads, and insights, show preview card instead of opening in new tab
+    if (contentData.type === 'youtube' || contentData.type === 'gmail' || contentData.type === 'insight') {
       // Call onLinkContent to trigger preview card
       if (onLinkContent) {
         onLinkContent(prefixedId);
@@ -171,7 +201,7 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
     }
     
     // Handle Instagram posts - open in new tab if permalink exists
-    if (contentData.type === 'instagram' && contentData.permalink) {
+    if (contentData.type === 'instagram' && 'permalink' in contentData && typeof contentData.permalink === 'string') {
       window.open(contentData.permalink, '_blank', 'noopener,noreferrer');
       return;
     }
@@ -188,7 +218,8 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
       className={cn(
         "inline-flex items-start gap-3 px-4 py-3 mx-1 my-1 rounded-lg border border-border bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer group",
         contentData.type === 'youtube' && "hover:border-red-200",
-        contentData.type === 'instagram' && "hover:border-pink-200"
+        contentData.type === 'instagram' && "hover:border-pink-200",
+        contentData.type === 'gmail' && "hover:border-red-200"
       )}
     >
       {/* Platform Icon */}
@@ -203,6 +234,7 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
             {contentData.title || 
               (contentData.type === 'youtube' ? 'YouTube Video' : 
                contentData.type === 'instagram' ? 'Instagram Post' : 
+               contentData.type === 'gmail' ? 'Gmail Thread' :
                contentData.type === 'insight' ? 'Insight' :
                contentData.type === 'note' ? 'Note' :
                'Content')}

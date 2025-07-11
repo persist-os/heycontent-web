@@ -44,6 +44,7 @@ import { chatHelp } from '@/helpContent'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { CreateNoteButton } from '@/components/ui/CreateNoteButton';
+import { ChatOverlay } from './components/ChatOverlay';
 
 const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery }) => {
   const router = useRouter()
@@ -192,6 +193,25 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   // Modal state for notepad warning
   const [showNotepadWarning, setShowNotepadWarning] = useState(false);
+  
+  // Overlay state for content links
+  const [overlayContent, setOverlayContent] = useState<{
+    contentType: 'youtube' | 'instagram' | 'gmail' | 'insight' | 'note';
+    contentId: string;
+  } | null>(null);
+
+  // Handle content click to show overlay
+  const handleContentClick = useCallback((contentType: string, contentId: string) => {
+    setOverlayContent({
+      contentType: contentType as 'youtube' | 'instagram' | 'gmail' | 'insight' | 'note',
+      contentId
+    });
+  }, []);
+
+  // Handle overlay close
+  const handleOverlayClose = useCallback(() => {
+    setOverlayContent(null);
+  }, []);
   const [pendingNewChat, setPendingNewChat] = useState(false);
 
   const { 
@@ -624,6 +644,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                     onInputPopulate={handleInputAppend}
                     notepadOpen={notepadOpen}
                     onQuoteToNotepad={handleQuoteToNotepad}
+                    onContentClick={handleContentClick}
                   />
 
                   {/* Persona tip */}
@@ -667,8 +688,14 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             ) : (
               // For users without personas, show empty state but welcome message should populate messages
               <div className="flex-1 flex items-center justify-center">
-                <div className="text-center text-muted-foreground">
-                  <div className="animate-pulse">Setting up your personalized experience...</div>
+                <div className="text-center space-y-4">
+                  <div className="flex flex-col items-center space-y-3">
+                    <div className={`h-12 w-12 rounded-full ${themeColors.accentBgLight} animate-pulse`}></div>
+                    <div className="space-y-2">
+                      <div className={`h-4 w-48 ${themeColors.accentBgLight} rounded animate-pulse`}></div>
+                      <div className={`h-3 w-32 ${themeColors.accentBgLight} rounded animate-pulse`}></div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )
@@ -755,6 +782,15 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         onClose={() => setHelpOpen(false)} 
         pages={chatHelp}
       />
+
+      {/* Chat Overlay */}
+      {overlayContent && (
+        <ChatOverlay
+          contentType={overlayContent.contentType}
+          contentId={overlayContent.contentId}
+          onClose={handleOverlayClose}
+        />
+      )}
     </>
   );
 }
