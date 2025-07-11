@@ -7,7 +7,7 @@ interface ContentOverlayProps {
   children: React.ReactNode;
   onClose: () => void;
   title?: string;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   icon?: React.ReactNode;
   className?: string;
 }
@@ -33,7 +33,7 @@ export const ContentOverlay: React.FC<ContentOverlayProps> = ({
                     {icon}
                     <div>
                       <h1 className="text-2xl font-bold">{title}</h1>
-                      <p className="text-muted-foreground">{subtitle}</p>
+                      <div className="text-muted-foreground">{subtitle}</div>
                     </div>
                   </div>
                 )}

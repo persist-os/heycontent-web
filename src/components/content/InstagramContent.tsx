@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Eye, Share2, Bookmark, ExternalLink, Instagram, Sparkles } from 'lucide-react';
+import { Heart, MessageCircle, Eye, Share2, Bookmark, ExternalLink, Instagram, Sparkles, TrendingUp, Users, Calendar, Image as ImageIcon, BarChart3, Target, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { useContentContextActions } from '@/store/content-context-store';
 import { getApiKey } from '@/app/lib/api-helpers';
+import { MarkdownRenderer } from '@/app/dashboard/chat/markdown-renderer';
+import { formatNumber } from '@/lib/content-utils';
 
 interface InstagramContentProps {
   postData: any;
@@ -68,6 +70,73 @@ const LOADING_MESSAGES = [
   "Unpacking your social media magic... because every post has a story worth telling"
 ];
 
+// Helper function to parse structured analysis data
+const parseAnalysisData = (analysis: any) => {
+  if (!analysis || typeof analysis !== 'object') return null;
+  
+  const metrics = [];
+  
+  // Parse engagement metrics
+  if (analysis.engagement_metrics) {
+    const engagementMetrics = analysis.engagement_metrics;
+    
+    if (engagementMetrics.engagement_rate) {
+      metrics.push({
+        label: 'Engagement Rate',
+        value: engagementMetrics.engagement_rate,
+        icon: TrendingUp,
+        color: 'text-green-600'
+      });
+    }
+    
+    if (engagementMetrics.save_rate) {
+      metrics.push({
+        label: 'Save Rate',
+        value: engagementMetrics.save_rate,
+        icon: Bookmark,
+        color: 'text-yellow-600'
+      });
+    }
+    
+    if (engagementMetrics.share_rate) {
+      metrics.push({
+        label: 'Share Rate',
+        value: engagementMetrics.share_rate,
+        icon: Share2,
+        color: 'text-blue-600'
+      });
+    }
+    
+    if (engagementMetrics.comment_quality) {
+      metrics.push({
+        label: 'Comment Quality',
+        value: engagementMetrics.comment_quality.charAt(0).toUpperCase() + engagementMetrics.comment_quality.slice(1),
+        icon: MessageCircle,
+        color: 'text-purple-600'
+      });
+    }
+    
+    if (engagementMetrics.viral_potential) {
+      metrics.push({
+        label: 'Viral Potential',
+        value: engagementMetrics.viral_potential.charAt(0).toUpperCase() + engagementMetrics.viral_potential.slice(1),
+        icon: Zap,
+        color: 'text-orange-600'
+      });
+    }
+  }
+  
+  return {
+    metrics,
+    contentThemes: analysis.content_themes || [],
+    contentType: analysis.content_type || '',
+    keyPhrases: analysis.key_phrases || [],
+    performanceInsights: analysis.performance_insights || [],
+    recommendations: analysis.recommendations || [],
+    summary: analysis.summary || ''
+  };
+};
+
 export const InstagramContent: React.FC<InstagramContentProps> = ({
   postData,
   postId,
@@ -85,6 +154,9 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const [analysisSuccess, setAnalysisSuccess] = useState(false);
+  
+  // Carousel state - using content hub logic
+  const [currentSlide, setCurrentSlide] = useState(0);
   
   // Cycling loading message effect
   useEffect(() => {
@@ -108,8 +180,8 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
   // Debug: Log extracted data
   console.log('Extracted data:', { data, analysis, analysisMarkdown, mediaType });
   
-  // Debug: Log the full data structure to see where permalink is
-  console.log('Full data structure:', JSON.stringify(data, null, 2));
+  // Parse structured analysis data
+  const parsedAnalysis = parseAnalysisData(analysis);
   
   // Extract statistics from insights
   const insights = data?.insights;
@@ -120,29 +192,35 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
   const saved = insights?.saved || 0;
   const shares = insights?.shares || 0;
   
-  // Get media URL
+  // Get media URLs - handle carousel posts
   const mediaUrl = data?.media_url;
   const thumbnailUrl = data?.thumbnail_url;
+  const children = data?.children || [];
   
-  // Debug: Log media URLs
-  console.log('Media URLs:', { mediaUrl, thumbnailUrl });
+  // Check if this is a carousel post
+  const isCarousel = mediaType === 'CAROUSEL_ALBUM' && Array.isArray(children) && children.length > 0;
+  
+  // Auto-slide effect for carousels (same as content hub)
+  useEffect(() => {
+    if (!isCarousel || children.length <= 1) return;
+
+    const slideInterval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % children.length);
+    }, 3000); // Change slide every 3 seconds
+
+    return () => clearInterval(slideInterval);
+  }, [isCarousel, children.length]);
   
   // Get caption
   const caption = data?.caption;
 
-  // Get permalink - use the permalink from postData (added by InstagramOverlay)
+  // Get permalink
   const permalink = postData.permalink || data?.permalink || `https://www.instagram.com/p/${postId}`;
-  
-  console.log('Permalink resolution:', {
-    postDataPermalink: postData.permalink,
-    dataPermalink: data?.permalink,
-    finalPermalink: permalink
-  });
 
   // Calculate engagement rate
   const engagementRate = impressions > 0 ? ((likes + comments) / impressions * 100) : 0;
 
-  // Handle AI analysis generation - same logic as InstagramModal
+  // Handle AI analysis generation
   const handleGenerateAnalysis = async () => {
     setIsGeneratingAnalysis(true);
     setAnalysisError(null);
@@ -153,7 +231,6 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
         throw new Error('Authentication required. Please log in again.');
       }
 
-      // Extract user_id from the API key (same as InstagramModal)
       const userIdMatch = apiKey.match(/heycontent_([^_]+)_/);
       const extractedUserId = userIdMatch ? userIdMatch[1] : null;
       
@@ -163,17 +240,11 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
 
       const apiUrl = `${window.location.origin}/api/social/instagram/analyze`;
       
-      // Prepare the request body
       const requestBody = {
         user_id: extractedUserId,
         post_id: postId,
-        format: 'both' // Request both JSON and markdown format
+        format: 'both'
       };
-      
-      console.log('🚀 Instagram Analysis Request Debug:');
-      console.log('📡 URL:', apiUrl);
-      console.log('📦 Post ID:', postId);
-      console.log('📦 Request Body:', requestBody);
       
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -197,20 +268,16 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
 
       console.log('✅ Instagram analysis successful:', responseData);
       
-      // Instead of reloading the page, update the local state with the new analysis
-      // The parent component should handle refreshing the data
-      // For now, we'll show a success message and let the user know the analysis was generated
       setAnalysisError(null);
       setAnalysisSuccess(true);
       
-      // Show a temporary success message
       setAnalysisError('Analysis generated successfully! The new analysis will appear shortly.');
       setTimeout(() => {
         setAnalysisError(null);
         setAnalysisSuccess(false);
       }, 3000);
       
-      onAnalysisGenerated?.(); // Call the callback
+      onAnalysisGenerated?.();
       
     } catch (error: any) {
       console.error('Error generating Instagram analysis:', error);
@@ -222,7 +289,6 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
 
   // Handle "Discuss with Content" functionality
   const handleDiscussContent = () => {
-    // Create the Instagram context using the same logic as InstagramModal
     const instagramContext = {
       _id: postId as any,
       _creationTime: Date.now(),
@@ -253,238 +319,533 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
     console.log('🔍 [INSTAGRAM CONTENT] Setting Instagram context:', instagramContext);
     setInstagramContext(instagramContext as any);
     
-    // Navigate to chat
     router.push('/dashboard/chat');
   };
 
   return (
     <>
-      {/* Post and Stats Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        {/* Post Media */}
-        <div className="lg:col-span-2 flex flex-col">
-          <div className="relative aspect-square bg-muted rounded-lg overflow-hidden cursor-pointer group">
-            {thumbnailUrl || mediaUrl ? (
-              <>
+      {/* Post and Stats Section - Consistent layout */}
+      <div className="mb-8">
+        {/* Side by side layout for medium screens and up */}
+        <div className="hidden xl:flex gap-6">
+          {/* Post Media and Themes Container */}
+          <div className="flex-shrink-0 space-y-4">
+            {/* Post Media - matches statistics height */}
+            <div className="relative bg-muted rounded-lg overflow-hidden cursor-pointer group h-full aspect-square">
+              {isCarousel ? (
+                <div className="relative w-full h-full">
+                  {children.map((child: any, idx: number) => (
+                    <div
+                      key={child.id || idx}
+                      className={`absolute inset-0 transition-all duration-500 ease-in-out ${
+                        idx === currentSlide 
+                          ? 'opacity-100 translate-x-0 scale-100' 
+                          : idx < currentSlide 
+                            ? 'opacity-0 -translate-x-full scale-95'
+                            : 'opacity-0 translate-x-full scale-95'
+                      }`}
+                    >
+                      <img
+                        src={child.media_type === 'VIDEO' ? child.thumbnail_url || child.media_url : child.media_url}
+                        alt={caption || `Instagram Carousel Item ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                        onClick={() => window.open(permalink, '_blank')}
+                      />
+                    </div>
+                  ))}
+                  
+                  {/* Carousel indicators - Content hub style */}
+                  <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex gap-2">
+                    {children.map((_: any, idx: number) => (
+                      <div
+                        key={idx}
+                        className={`w-2 h-2 rounded-full transition-all duration-300 cursor-pointer ${
+                          idx === currentSlide 
+                            ? 'bg-white shadow-lg scale-110' 
+                            : 'bg-white/50 hover:bg-white/70'
+                        }`}
+                        onClick={() => setCurrentSlide(idx)}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Slide counter - Content hub style */}
+                  <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium text-white">
+                    {currentSlide + 1} / {children.length}
+                  </div>
+                </div>
+              ) : (
                 <img
                   src={thumbnailUrl || mediaUrl}
                   alt={postData.title || 'Instagram Post'}
                   className="w-full h-full object-cover"
                   onClick={() => window.open(permalink, '_blank')}
                 />
+              )}
+              
+              {/* External link overlay */}
+              <div 
+                className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => window.open(permalink, '_blank')}
+              >
+                <div className="bg-pink-600 rounded-full p-3">
+                  <ExternalLink className="w-6 h-6 text-white" />
+                </div>
+              </div>
+              
+              {/* Media type badge */}
+              {mediaType && (
+                <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium text-white capitalize">
+                  {mediaType.toLowerCase().replace('_', ' ')}
+                </div>
+              )}
+            </div>
+
+            {/* Content Themes below the image */}
+            {parsedAnalysis && parsedAnalysis.contentThemes.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {parsedAnalysis.contentThemes.map((theme, index) => (
+                  <Badge key={index} variant="outline" className="text-sm">{theme}</Badge>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Statistics - determines height, always on the right */}
+          <div className="flex-1 min-w-[400px]">
+            <Card className="h-full">
+              <CardHeader>
+                <CardTitle>Post Statistics & Performance</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Basic Stats */}
+                  {likes > 0 && (
+                    <div className="text-center p-3 bg-muted/50 rounded-lg">
+                      <Heart className="w-6 h-6 text-red-500 mx-auto mb-2" />
+                      <div className="text-2xl font-bold">{formatNumber(likes)}</div>
+                      <div className="text-xs text-muted-foreground">Likes</div>
+                    </div>
+                  )}
+                  
+                  {comments > 0 && (
+                    <div className="text-center p-3 bg-muted/50 rounded-lg">
+                      <MessageCircle className="w-6 h-6 text-blue-500 mx-auto mb-2" />
+                      <div className="text-2xl font-bold">{formatNumber(comments)}</div>
+                      <div className="text-xs text-muted-foreground">Comments</div>
+                    </div>
+                  )}
+                  
+                  {impressions > 0 && (
+                    <div className="text-center p-3 bg-muted/50 rounded-lg">
+                      <Eye className="w-6 h-6 text-green-500 mx-auto mb-2" />
+                      <div className="text-2xl font-bold">{formatNumber(impressions)}</div>
+                      <div className="text-xs text-muted-foreground">Impressions</div>
+                    </div>
+                  )}
+                  
+                  {reach > 0 && (
+                    <div className="text-center p-3 bg-muted/50 rounded-lg">
+                      <Users className="w-6 h-6 text-purple-500 mx-auto mb-2" />
+                      <div className="text-2xl font-bold">{formatNumber(reach)}</div>
+                      <div className="text-xs text-muted-foreground">Reach</div>
+                    </div>
+                  )}
+                  
+                  {saved > 0 && (
+                    <div className="text-center p-3 bg-muted/50 rounded-lg">
+                      <Bookmark className="w-6 h-6 text-yellow-500 mx-auto mb-2" />
+                      <div className="text-2xl font-bold">{formatNumber(saved)}</div>
+                      <div className="text-xs text-muted-foreground">Saved</div>
+                    </div>
+                  )}
+                  
+                  {shares > 0 && (
+                    <div className="text-center p-3 bg-muted/50 rounded-lg">
+                      <Share2 className="w-6 h-6 text-indigo-500 mx-auto mb-2" />
+                      <div className="text-2xl font-bold">{formatNumber(shares)}</div>
+                      <div className="text-xs text-muted-foreground">Shares</div>
+                    </div>
+                  )}
+                  
+                  {postData.createdAt && (
+                    <div className="text-center p-3 bg-muted/50 rounded-lg">
+                      <Calendar className="w-6 h-6 text-orange-500 mx-auto mb-2" />
+                      <div className="text-sm font-bold">{new Date(postData.createdAt).toLocaleDateString()}</div>
+                      <div className="text-xs text-muted-foreground">Published</div>
+                    </div>
+                  )}
+                  
+                  {engagementRate > 0 && (
+                    <div className="text-center p-3 bg-muted/50 rounded-lg">
+                      <TrendingUp className="w-6 h-6 text-yellow-600 mx-auto mb-2" />
+                      <div className="text-2xl font-bold text-yellow-600">{engagementRate.toFixed(1)}%</div>
+                      <div className="text-xs text-muted-foreground">Engagement Rate</div>
+                    </div>
+                  )}
+
+                  {/* Performance Metrics from Analysis */}
+                  {parsedAnalysis && parsedAnalysis.metrics.map((metric, index) => {
+                    const IconComponent = metric.icon;
+                    return (
+                      <div key={`metric-${index}`} className="text-center p-3 bg-muted/50 rounded-lg">
+                        <IconComponent className={`w-6 h-6 ${metric.color} mx-auto mb-2`} />
+                        <div className="text-lg font-bold">{metric.value}</div>
+                        <div className="text-xs text-muted-foreground">{metric.label}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Stacked layout for smaller screens */}
+        <div className="block xl:hidden">
+          <div className="space-y-6">
+            {/* Post Media - Full width on mobile */}
+            <div className="flex justify-center">
+              <div className="relative aspect-square bg-muted rounded-lg overflow-hidden cursor-pointer group max-w-md w-full">
+                {isCarousel ? (
+                  <div className="relative w-full h-full">
+                    {children.map((child: any, idx: number) => (
+                      <div
+                        key={child.id || idx}
+                        className={`absolute inset-0 transition-all duration-500 ease-in-out ${
+                          idx === currentSlide 
+                            ? 'opacity-100 translate-x-0 scale-100' 
+                            : idx < currentSlide 
+                              ? 'opacity-0 -translate-x-full scale-95'
+                              : 'opacity-0 translate-x-full scale-95'
+                        }`}
+                      >
+                        <img
+                          src={child.media_type === 'VIDEO' ? child.thumbnail_url || child.media_url : child.media_url}
+                          alt={caption || `Instagram Carousel Item ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                          onClick={() => window.open(permalink, '_blank')}
+                        />
+                      </div>
+                    ))}
+                    
+                    {/* Carousel indicators - Content hub style */}
+                    <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex gap-2">
+                      {children.map((_: any, idx: number) => (
+                        <div
+                          key={idx}
+                          className={`w-2 h-2 rounded-full transition-all duration-300 cursor-pointer ${
+                            idx === currentSlide 
+                              ? 'bg-white shadow-lg scale-110' 
+                              : 'bg-white/50 hover:bg-white/70'
+                          }`}
+                          onClick={() => setCurrentSlide(idx)}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Slide counter - Content hub style */}
+                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium text-white">
+                      {currentSlide + 1} / {children.length}
+                    </div>
+                  </div>
+                ) : (
+                  <img
+                    src={thumbnailUrl || mediaUrl}
+                    alt={postData.title || 'Instagram Post'}
+                    className="w-full h-full object-cover"
+                    onClick={() => window.open(permalink, '_blank')}
+                  />
+                )}
+                
                 {/* External link overlay */}
                 <div 
                   className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={() => window.open(permalink, '_blank')}
                 >
-                  <div className="bg-pink-600 rounded-full p-4">
-                    <ExternalLink className="w-8 h-8 text-white" />
+                  <div className="bg-pink-600 rounded-full p-3">
+                    <ExternalLink className="w-6 h-6 text-white" />
                   </div>
                 </div>
+                
                 {/* Media type badge */}
                 {mediaType && (
-                  <div className="absolute top-2 left-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
-                    {mediaType.toUpperCase()}
+                  <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium text-white capitalize">
+                    {mediaType.toLowerCase().replace('_', ' ')}
                   </div>
                 )}
-              </>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Instagram className="w-16 h-16 text-muted-foreground" />
+              </div>
+            </div>
+
+            {/* Content Themes below the image on mobile */}
+            {parsedAnalysis && parsedAnalysis.contentThemes.length > 0 && (
+              <div className="flex flex-wrap gap-2 justify-center">
+                {parsedAnalysis.contentThemes.map((theme, index) => (
+                  <Badge key={index} variant="outline" className="text-sm">{theme}</Badge>
+                ))}
               </div>
             )}
-          </div>
-        </div>
 
-        {/* Stats */}
-        <div className="space-y-6">
-          {/* Post Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Post Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Caption */}
-              {caption && (
-                <div>
-                  <h4 className="font-semibold text-sm text-muted-foreground mb-2">Caption</h4>
-                  <p className="text-sm leading-relaxed">{caption}</p>
-                </div>
-              )}
-
-              {/* Media Type */}
-              {mediaType && (
-                <div>
-                  <h4 className="font-semibold text-sm text-muted-foreground mb-2">Media Type</h4>
-                  <Badge variant="outline">{mediaType.toUpperCase()}</Badge>
-                </div>
-              )}
-
-              {/* Published Date */}
-              {postData.createdAt && (
-                <div>
-                  <h4 className="font-semibold text-sm text-muted-foreground mb-2">Published</h4>
-                  <p className="text-sm">{new Date(postData.createdAt).toLocaleDateString()}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Performance Stats */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Performance</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-2">
-                  <Heart className="w-4 h-4 text-red-500" />
-                  <div>
-                    <p className="text-sm font-medium">{likes.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">Likes</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MessageCircle className="w-4 h-4 text-blue-500" />
-                  <div>
-                    <p className="text-sm font-medium">{comments.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">Comments</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Eye className="w-4 h-4 text-green-500" />
-                  <div>
-                    <p className="text-sm font-medium">{impressions.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">Impressions</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Share2 className="w-4 h-4 text-purple-500" />
-                  <div>
-                    <p className="text-sm font-medium">{shares.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">Shares</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Bookmark className="w-4 h-4 text-yellow-500" />
-                  <div>
-                    <p className="text-sm font-medium">{saved.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">Saved</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-gradient-to-r from-pink-500 to-purple-500 rounded" />
-                  <div>
-                    <p className="text-sm font-medium">{reach.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">Reach</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Engagement Rate */}
-              <div className="pt-2 border-t">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Engagement Rate</span>
-                  <span className="text-sm font-bold text-green-600">
-                    {engagementRate.toFixed(2)}%
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Analysis Section */}
-      {showAnalysis && (
-        <>
-          <div className="border-t my-8" />
-          <div className="space-y-6">
+            {/* Stats - Full width on mobile */}
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold">AI Analysis</h2>
-                <Button 
-                  onClick={handleGenerateAnalysis} 
-                  disabled={isGeneratingAnalysis}
-                  size="sm"
-                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
-                >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  {isGeneratingAnalysis ? 'Generating...' : 'Generate New Analysis'}
-                </Button>
-              </div>
-              
-              {analysisError && (
-                <div className={`mb-4 p-4 border rounded-lg ${
-                  analysisSuccess 
-                    ? 'bg-green-50 border-green-200' 
-                    : 'bg-red-50 border-red-200'
-                }`}>
-                  <p className={`text-sm ${
-                    analysisSuccess ? 'text-green-600' : 'text-red-600'
-                  }`}>{analysisError}</p>
-                  {!analysisSuccess && (
-                    <Button 
-                      onClick={handleGenerateAnalysis}
-                      size="sm"
-                      className="mt-2 bg-red-500 hover:bg-red-600 text-white"
-                    >
-                      Try Again
-                    </Button>
-                  )}
-                </div>
-              )}
-              
-              <Card>
-                <CardContent className="pt-6">
-                  {isGeneratingAnalysis ? (
-                    <div className="flex items-center justify-center h-24">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-500"></div>
-                      <span className="ml-3 text-sm text-muted-foreground">
-                        {LOADING_MESSAGES[currentMessageIndex]}
-                      </span>
-                    </div>
-                  ) : (analysis || analysisMarkdown) ? (
-                    <div className="prose prose-sm max-w-none">
-                      {analysisMarkdown ? (
-                        <div className="whitespace-pre-wrap">{analysisMarkdown}</div>
-                      ) : typeof analysis === 'string' ? (
-                        <div className="whitespace-pre-wrap">{analysis}</div>
-                      ) : (
-                        <pre className="text-sm overflow-x-auto">
-                          {JSON.stringify(analysis, null, 2)}
-                        </pre>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-center h-24">
-                      <p className="text-muted-foreground text-sm italic text-center">
-                        Click 'Generate New Analysis' to get AI insights about this post content.
-                      </p>
-                    </div>
-                  )}
+              <Card className="h-full">
+                <CardHeader>
+                  <CardTitle>Post Statistics & Performance</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Basic Stats */}
+                    {likes > 0 && (
+                      <div className="text-center p-3 bg-muted/50 rounded-lg">
+                        <Heart className="w-6 h-6 text-red-500 mx-auto mb-2" />
+                        <div className="text-2xl font-bold">{formatNumber(likes)}</div>
+                        <div className="text-xs text-muted-foreground">Likes</div>
+                      </div>
+                    )}
+                    
+                    {comments > 0 && (
+                      <div className="text-center p-3 bg-muted/50 rounded-lg">
+                        <MessageCircle className="w-6 h-6 text-blue-500 mx-auto mb-2" />
+                        <div className="text-2xl font-bold">{formatNumber(comments)}</div>
+                        <div className="text-xs text-muted-foreground">Comments</div>
+                      </div>
+                    )}
+                    
+                    {impressions > 0 && (
+                      <div className="text-center p-3 bg-muted/50 rounded-lg">
+                        <Eye className="w-6 h-6 text-green-500 mx-auto mb-2" />
+                        <div className="text-2xl font-bold">{formatNumber(impressions)}</div>
+                        <div className="text-xs text-muted-foreground">Impressions</div>
+                      </div>
+                    )}
+                    
+                    {reach > 0 && (
+                      <div className="text-center p-3 bg-muted/50 rounded-lg">
+                        <Users className="w-6 h-6 text-purple-500 mx-auto mb-2" />
+                        <div className="text-2xl font-bold">{formatNumber(reach)}</div>
+                        <div className="text-xs text-muted-foreground">Reach</div>
+                      </div>
+                    )}
+                    
+                    {saved > 0 && (
+                      <div className="text-center p-3 bg-muted/50 rounded-lg">
+                        <Bookmark className="w-6 h-6 text-yellow-500 mx-auto mb-2" />
+                        <div className="text-2xl font-bold">{formatNumber(saved)}</div>
+                        <div className="text-xs text-muted-foreground">Saved</div>
+                      </div>
+                    )}
+                    
+                    {shares > 0 && (
+                      <div className="text-center p-3 bg-muted/50 rounded-lg">
+                        <Share2 className="w-6 h-6 text-indigo-500 mx-auto mb-2" />
+                        <div className="text-2xl font-bold">{formatNumber(shares)}</div>
+                        <div className="text-xs text-muted-foreground">Shares</div>
+                      </div>
+                    )}
+                    
+                    {postData.createdAt && (
+                      <div className="text-center p-3 bg-muted/50 rounded-lg">
+                        <Calendar className="w-6 h-6 text-orange-500 mx-auto mb-2" />
+                        <div className="text-sm font-bold">{new Date(postData.createdAt).toLocaleDateString()}</div>
+                        <div className="text-xs text-muted-foreground">Published</div>
+                      </div>
+                    )}
+                    
+                    {engagementRate > 0 && (
+                      <div className="text-center p-3 bg-muted/50 rounded-lg">
+                        <TrendingUp className="w-6 h-6 text-yellow-600 mx-auto mb-2" />
+                        <div className="text-2xl font-bold text-yellow-600">{engagementRate.toFixed(1)}%</div>
+                        <div className="text-xs text-muted-foreground">Engagement Rate</div>
+                      </div>
+                    )}
+
+                    {/* Performance Metrics from Analysis */}
+                    {parsedAnalysis && parsedAnalysis.metrics.map((metric, index) => {
+                      const IconComponent = metric.icon;
+                      return (
+                        <div key={`metric-${index}`} className="text-center p-3 bg-muted/50 rounded-lg">
+                          <IconComponent className={`w-6 h-6 ${metric.color} mx-auto mb-2`} />
+                          <div className="text-lg font-bold">{metric.value}</div>
+                          <div className="text-xs text-muted-foreground">{metric.label}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </CardContent>
               </Card>
             </div>
           </div>
-        </>
+        </div>
+      </div>
+
+      {/* Analysis Section - Simplified */}
+      {showAnalysis && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl">AI Analysis</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Deep insights powered by artificial intelligence
+                </p>
+              </div>
+              <Button 
+                onClick={handleGenerateAnalysis} 
+                disabled={isGeneratingAnalysis}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                {isGeneratingAnalysis ? 'Generating...' : 'Generate New Analysis'}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {analysisError && (
+              <div className={`mb-4 p-4 rounded-lg border ${
+                analysisSuccess 
+                  ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' 
+                  : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
+              }`}>
+                <p className={`text-sm ${
+                  analysisSuccess ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                }`}>{analysisError}</p>
+                {!analysisSuccess && (
+                  <Button 
+                    onClick={handleGenerateAnalysis}
+                    size="sm"
+                    className="mt-2 bg-red-500 hover:bg-red-600 text-white"
+                  >
+                    Try Again
+                  </Button>
+                )}
+              </div>
+            )}
+            
+            {isGeneratingAnalysis ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center space-y-4">
+                  <div className="relative">
+                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-200 border-t-purple-500 mx-auto"></div>
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 opacity-20 animate-pulse"></div>
+                  </div>
+                  <p className="text-muted-foreground max-w-md mx-auto leading-relaxed">
+                    {LOADING_MESSAGES[currentMessageIndex]}
+                  </p>
+                </div>
+              </div>
+            ) : (parsedAnalysis || analysis || analysisMarkdown) ? (
+              <div className="space-y-6">
+                {/* Summary */}
+                {parsedAnalysis && parsedAnalysis.summary && (
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4" />
+                      Summary
+                    </h4>
+                    <p className="text-sm leading-relaxed">{parsedAnalysis.summary}</p>
+                  </div>
+                )}
+
+                {/* Performance Insights */}
+                {parsedAnalysis && parsedAnalysis.performanceInsights.length > 0 && (
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4" />
+                      Performance Insights
+                    </h4>
+                    <ul className="space-y-2">
+                      {parsedAnalysis.performanceInsights.map((insight, index) => (
+                        <li key={index} className="text-sm leading-relaxed flex items-start gap-2">
+                          <span className="text-purple-500 mt-1">•</span>
+                          {insight}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Recommendations */}
+                {parsedAnalysis && parsedAnalysis.recommendations.length > 0 && (
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                      <Target className="w-4 h-4" />
+                      Recommendations
+                    </h4>
+                    <ul className="space-y-2">
+                      {parsedAnalysis.recommendations.map((rec, index) => (
+                        <li key={index} className="text-sm leading-relaxed flex items-start gap-2">
+                          <span className="text-green-500 mt-1">•</span>
+                          {rec}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Fallback for Markdown Analysis */}
+                {!parsedAnalysis && (analysisMarkdown || analysis) && (
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4" />
+                      Content Analysis
+                    </h4>
+                    <div className="prose prose-sm max-w-none dark:prose-invert">
+                      {analysisMarkdown ? (
+                        <MarkdownRenderer content={analysisMarkdown} />
+                      ) : typeof analysis === 'string' ? (
+                        <MarkdownRenderer content={analysis} />
+                      ) : (
+                        <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg">
+                          <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
+                            {JSON.stringify(analysis, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Sparkles className="w-8 h-8 text-purple-500" />
+                </div>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  Click 'Generate New Analysis' to get AI-powered insights about this post's content, engagement, and performance.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
-      {/* Action Buttons - Exact copy from InstagramModal */}
-      <div className="flex gap-4 mt-8">
+      {/* Action Buttons */}
+      <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200 dark:border-gray-700">
         <Button 
           onClick={handleDiscussContent} 
           disabled={!analysis && !analysisMarkdown}
-          className={`${!analysis && !analysisMarkdown ? 'opacity-50 cursor-not-allowed bg-gray-300 hover:bg-gray-300' : 'bg-heycontent-light-yellow hover:bg-heycontent-yellow/90'} text-black`}
+          size="lg"
+          className={`flex-1 ${
+            !analysis && !analysisMarkdown 
+              ? 'opacity-50 cursor-not-allowed bg-gray-300 hover:bg-gray-300' 
+              : 'bg-heycontent-light-yellow hover:bg-heycontent-yellow/90 text-black'
+          }`}
         >
-          <MessageCircle className="w-4 h-4 mr-2" />
+          <MessageCircle className="w-5 h-5 mr-2" />
           {!analysis && !analysisMarkdown ? 'Generate Analysis First' : 'Discuss with Content'}
         </Button>
-        <a href={permalink} target="_blank" rel="noopener noreferrer">
-          <Button variant="outline">
-            <ExternalLink className="w-4 h-4 mr-2" /> View on Instagram
-          </Button>
-        </a>
+        
+        <Button 
+          asChild
+          variant="outline" 
+          size="lg"
+          className="flex-1"
+        >
+          <a href={permalink} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="w-5 h-5 mr-2" />
+            View on Instagram
+          </a>
+        </Button>
       </div>
     </>
   );

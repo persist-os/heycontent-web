@@ -14,6 +14,12 @@ interface InstagramOverlayProps {
   showAnalysis?: boolean;
 }
 
+// Helper function to parse structured analysis data for themes
+const parseAnalysisThemes = (analysis: any) => {
+  if (!analysis || typeof analysis !== 'object') return [];
+  return analysis.content_themes || [];
+};
+
 export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
   postId,
   onClose,
@@ -82,6 +88,9 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
   // Debug: Log the normalized post data
   console.log('Normalized Instagram post data:', postData);
 
+  // Extract content themes from analysis
+  const contentThemes = postData ? parseAnalysisThemes(postData.analysis) : [];
+
   if (!postData) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -99,7 +108,31 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
     <ContentOverlay
       onClose={onClose}
       title={postData.title}
-      subtitle="Instagram Post Analysis"
+      subtitle={
+        <div className="space-y-2">
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1">
+              Instagram Post
+            </span>
+            {postData.mediaType && (
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 bg-pink-500 rounded-full" />
+                {postData.mediaType.toUpperCase()}
+              </span>
+            )}
+          </div>
+          {/* Content Themes in header */}
+          {contentThemes.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {contentThemes.map((theme, index) => (
+                <span key={index} className="inline-block bg-muted/60 text-muted-foreground px-1.5 py-0.5 rounded text-xs border border-border/40">
+                  #{theme}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      }
       icon={<Instagram className="w-8 h-8 text-pink-500" />}
     >
       <InstagramContent
