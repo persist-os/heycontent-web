@@ -3,6 +3,7 @@
 import React from 'react';
 import { YouTubeOverlay } from '@/components/content/overlays/YouTubeOverlay';
 import { InstagramOverlay } from '@/components/content/overlays/InstagramOverlay';
+import { GmailOverlay } from '@/components/content/overlays/GmailOverlay';
 import { InsightOverlay } from '@/components/content/overlays/InsightOverlay';
 import { InsightCard } from '@/components/content/InsightCard';
 import { useQuery } from 'convex/react';
@@ -15,7 +16,7 @@ import { NoteMeta } from '@/app/dashboard/notes/components/NoteMeta';
 import { NoteContentRenderer } from '@/app/dashboard/notes/components/NoteContentRenderer';
 
 interface ChatOverlayProps {
-  contentType: 'youtube' | 'instagram' | 'insight' | 'note';
+  contentType: 'youtube' | 'instagram' | 'gmail' | 'insight' | 'note';
   contentId: string;
   onClose: () => void;
   insightData?: any; // For direct insight data
@@ -46,6 +47,17 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
         onClose={onClose}
         showAnalysis={true}
         hideDiscussButton={true}
+      />
+    );
+  }
+
+  // Render Gmail content using shared component
+  if (contentType === 'gmail') {
+    return (
+      <GmailOverlay
+        threadId={contentId}
+        onClose={onClose}
+        showAnalysis={true}
       />
     );
   }

@@ -196,14 +196,14 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   
   // Overlay state for content links
   const [overlayContent, setOverlayContent] = useState<{
-    contentType: 'youtube' | 'instagram' | 'insight' | 'note';
+    contentType: 'youtube' | 'instagram' | 'gmail' | 'insight' | 'note';
     contentId: string;
   } | null>(null);
 
   // Handle content click to show overlay
   const handleContentClick = useCallback((contentType: string, contentId: string) => {
     setOverlayContent({
-      contentType: contentType as 'youtube' | 'instagram' | 'insight' | 'note',
+      contentType: contentType as 'youtube' | 'instagram' | 'gmail' | 'insight' | 'note',
       contentId
     });
   }, []);

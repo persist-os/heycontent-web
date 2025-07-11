@@ -1,5 +1,5 @@
 export interface LinkReference {
-  type: 'smart_note' | 'youtube' | 'instagram' | 'insight';
+  type: 'smart_note' | 'youtube' | 'instagram' | 'gmail' | 'insight';
   id: string;
   index?: number; // For insights, the specific index in the list
 }
@@ -37,6 +37,9 @@ export async function resolveLinkContent(
       
       case 'instagram':
         return await resolveInstagramContent(link.id, userId, allLinkableContent);
+      
+      case 'gmail':
+        return await resolveGmailContent(link.id, userId, allLinkableContent);
       
       case 'insight':
         return await resolveInsightContent(link.id, link.index, userId, allLinkableContent);
@@ -312,6 +315,90 @@ async function resolveInstagramContent(postId: string, userId: string, allLinkab
 }
 
 /**
+ * Resolve Gmail content - returns the email thread content
+ */
+async function resolveGmailContent(threadId: string, userId: string, allLinkableContent: any[]): Promise<ResolvedLinkContent | null> {
+  try {
+    // Remove 'gmail:' prefix if present
+    const actualThreadId = threadId.startsWith('gmail:') ? threadId.replace('gmail:', '') : threadId;
+    
+    const thread = allLinkableContent.find(item => item.id === `gmail:${actualThreadId}`);
+
+    if (!thread) {
+      console.warn('🔗 [LINK RESOLVER] Gmail thread not found:', threadId);
+      return null;
+    }
+
+    // Build comprehensive content including subject, messages, and analysis
+    let contentParts = [];
+
+    // Add subject
+    if (thread.title) {
+      contentParts.push(`Subject: ${thread.title}`);
+    }
+
+    // Add thread info
+    if (thread.from) {
+      contentParts.push(`From: ${thread.from}`);
+    }
+
+    if (thread.messageCount) {
+      contentParts.push(`Message Count: ${thread.messageCount}`);
+    }
+
+    if (thread.category) {
+      contentParts.push(`Category: ${thread.category}`);
+    }
+
+    // Add messages content if available
+    if (thread.content) {
+      contentParts.push(`Messages: ${thread.content}`);
+    }
+
+    // Add analysis if available
+    if (thread.analysis) {
+      const analysisText = typeof thread.analysis === 'string' ? thread.analysis : JSON.stringify(thread.analysis, null, 2);
+      contentParts.push(`Analysis: ${analysisText}`);
+    }
+
+    // Add platform and content type info
+    if (thread.platform || thread.contentType) {
+      const platformInfo = [];
+      if (thread.platform) platformInfo.push(thread.platform);
+      if (thread.contentType) platformInfo.push(thread.contentType);
+      contentParts.push(`Platform: ${platformInfo.join(' - ')}`);
+    }
+
+    // Add creation date if available
+    if (thread.createdAt) {
+      const date = new Date(thread.createdAt).toLocaleDateString();
+      contentParts.push(`Date: ${date}`);
+    }
+
+    const fullContent = contentParts.join('\n\n');
+    
+    return {
+      type: 'gmail',
+      title: thread.title || 'Gmail Thread',
+      content: fullContent,
+      contentId: threadId,
+      metadata: {
+        from: thread.from,
+        messageCount: thread.messageCount,
+        category: thread.category,
+        contentType: thread.contentType,
+        platform: thread.platform,
+        createdAt: thread.createdAt,
+        analysis: thread.analysis
+      }
+    };
+  } catch (error) {
+    console.error('🔗 [LINK RESOLVER] Error resolving Gmail content:', error);
+    return null;
+  }
+}
+
+/**
  * Resolve insight content - returns the specific insight (not the whole list)
  */
 async function resolveInsightContent(insightId: string, index?: number, userId?: string, allLinkableContent?: any[]): Promise<ResolvedLinkContent | null> {
@@ -421,6 +508,12 @@ export function parseContentId(contentId: string): LinkReference | null {
       case 'instagram':
         return {
           type: 'instagram',
+          id: parts.slice(1).join(':')
+        };
+      
+      case 'gmail':
+        return {
+          type: 'gmail',
           id: parts.slice(1).join(':')
         };
       
@@ -575,6 +668,8 @@ function getContentLabel(contentType: string): string {
       return 'YouTube Video';
     case 'instagram':
       return 'Instagram Post';
+    case 'gmail':
+      return 'Gmail Thread';
     case 'insight':
       return 'Insight';
     default:

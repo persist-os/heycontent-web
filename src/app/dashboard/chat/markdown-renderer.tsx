@@ -248,6 +248,8 @@ function ChatContentRenderer({ content, className = '', onContentClick }: ChatCo
               actualContentId = contentId.replace('youtube:', '')
             } else if (contentType === 'instagram' && contentId.startsWith('instagram:')) {
               actualContentId = contentId.replace('instagram:', '')
+            } else if (contentType === 'gmail' && contentId.startsWith('gmail:')) {
+              actualContentId = contentId.replace('gmail:', '')
             }
             onContentClick(contentType, actualContentId)
           } else {
@@ -269,6 +271,10 @@ function ChatContentRenderer({ content, className = '', onContentClick }: ChatCo
               case 'instagram':
                 // For Instagram, navigate to content analytics with back navigation
                 window.open(`/dashboard/content-analytics?analyticsId=${contentId}&platform=instagram&tab=posts&fromChat=true${chatIdParam}`, '_blank')
+                break
+              case 'gmail':
+                // For Gmail, navigate to content analytics with back navigation
+                window.open(`/dashboard/content-analytics?analyticsId=${contentId}&platform=gmail&tab=emails&fromChat=true${chatIdParam}`, '_blank')
                 break
               case 'insight':
                 // Navigate to insight analysis with back navigation
