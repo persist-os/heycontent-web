@@ -12,6 +12,8 @@ At HeyContent, every message—especially errors and empty states—is an opport
 
 **Never** display cold, technical, or defeatist error messages. Our tone is always warm, supportive, and playful—think "cheerleader," not "system admin." We never blame the user or the system. We always thank, encourage, and empower.
 
+AVOID SAYING THE WORD AI ANYWHERE.
+
 ## Core Principles
 
 1. **Reframe, Don't Blame:**

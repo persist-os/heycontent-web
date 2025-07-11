@@ -272,6 +272,13 @@ export default defineSchema({
     }))),
     data: v.optional(v.any()),
     analysis: v.optional(v.any()),
+    category: v.optional(v.union(
+      v.literal("partnership"),
+      v.literal("media"),
+      v.literal("business"),
+      v.literal("community"),
+      v.literal("none")
+    )),
     spamStatus: v.optional(v.union(
       v.literal('unreviewed'),
       v.literal('flagged'),
@@ -287,7 +294,9 @@ export default defineSchema({
   .index("by_userId", ["userId"])
   .index("by_email", ["email"])
   .index("by_threadId", ["threadId"])
-  .index("by_user_email", ["userId", "email"]),
+  .index("by_user_email", ["userId", "email"])
+  .index("by_category", ["category"])
+  .index("by_user_category", ["userId", "category"]),
 
   // Gmail Messages
   gmailMessages: defineTable({
@@ -303,6 +312,13 @@ export default defineSchema({
     sizeEstimate: v.optional(v.number()),
     historyId: v.optional(v.string()),
     data: v.optional(v.any()),
+    category: v.optional(v.union(
+      v.literal("partnership"),
+      v.literal("media"),
+      v.literal("business"),
+      v.literal("community"),
+      v.literal("none")
+    )),
     spamStatus: v.optional(v.union(
       v.literal('unreviewed'),
       v.literal('flagged'),
@@ -319,7 +335,9 @@ export default defineSchema({
   .index("by_email", ["email"])
   .index("by_messageId", ["messageId"])
   .index("by_threadId", ["threadId"])
-  .index("by_user_email", ["userId", "email"]),
+  .index("by_user_email", ["userId", "email"])
+  .index("by_category", ["category"])
+  .index("by_user_category", ["userId", "category"]),
 
   // Gmail History
   gmailHistory: defineTable({

@@ -110,7 +110,15 @@ export function GmailPlatform({
     }
   };
 
+  React.useEffect(() => {
+    console.log('[GMAIL PLATFORM] Mounted');
+    return () => {
+      console.log('[GMAIL PLATFORM] Unmounted');
+    };
+  }, []);
+
   const handleRefresh = async () => {
+    console.log('[GMAIL PLATFORM] handleRefresh called', { time: new Date().toISOString(), stack: new Error().stack });
     // For batch refresh, call refresh with no arguments
     await refresh();
     setRefreshCount((c) => c + 1); // Trigger refetch
@@ -170,7 +178,7 @@ export function GmailPlatform({
       <div className="flex justify-end mb-4 gap-2">
         <Button 
           size="sm" 
-          onClick={handleRefresh}
+          onClick={() => { console.log('[GMAIL PLATFORM] Refresh button clicked'); handleRefresh(); }}
           disabled={refreshing}
           className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm"
         >

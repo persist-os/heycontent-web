@@ -621,6 +621,7 @@ app.post("/api/users/:id/gmail/thread", async (c) => {
     labelIds,
     message_count,
     messages,
+    category, // <-- Accept category from request body
   } = await c.req.json();
 
   // Fix: Convex does not accept null for labelIds
@@ -638,6 +639,7 @@ app.post("/api/users/:id/gmail/thread", async (c) => {
       message_count,
       messages,
       data: { snippet, historyId, labelIds: safeLabelIds },
+      category, // <-- Forward category to mutation
     });
     return c.json({ success: true, result });
   } catch (error) {

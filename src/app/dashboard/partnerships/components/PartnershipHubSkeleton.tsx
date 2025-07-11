@@ -67,9 +67,9 @@ export function PartnershipHubSkeleton({
         </div>
 
         {/* Content Skeleton */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
           {/* Left Column Skeleton */}
-          <div className="w-1/2 border-r border-border p-4">
+          <div className="w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r border-border p-4">
             <div className="mb-4">
               <Skeleton className="h-6 w-32 mb-2" />
               <Skeleton className="h-4 w-48" />
@@ -91,7 +91,7 @@ export function PartnershipHubSkeleton({
           </div>
 
           {/* Right Column Skeleton */}
-          <div className="w-1/2 p-4">
+          <div className="w-full lg:w-1/2 p-4">
             <Skeleton className="h-6 w-40 mb-4" />
             <Card className="p-6">
               <Skeleton className="h-32 w-full mb-4" />
@@ -108,10 +108,10 @@ export function PartnershipHubSkeleton({
   // Preview mode when Gmail not connected
   if (showPreview) {
     const mockMetrics = [
-      { icon: Mail, label: 'Total Emails', value: '247', color: 'text-blue-600' },
-      { icon: Users, label: 'Active Partnerships', value: '12', color: 'text-green-600' },
-      { icon: MessageCircle, label: 'Needs Response', value: '5', color: 'text-orange-600' },
-      { icon: DollarSign, label: 'Pipeline Value', value: '$45.2K', color: 'text-purple-600' }
+      { icon: Mail, label: 'Total Emails', value: '247', color: 'text-primary' },
+      { icon: Users, label: 'Active Partnerships', value: '12', color: 'text-success' },
+      { icon: MessageCircle, label: 'Needs Response', value: '5', color: 'text-secondary-foreground' },
+      { icon: DollarSign, label: 'Pipeline Value', value: '$45.2K', color: 'text-accent-foreground' }
     ];
 
     const mockPartnerships = [
@@ -172,9 +172,9 @@ export function PartnershipHubSkeleton({
           </div>
 
           {/* Mock Content */}
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
             {/* Left Column */}
-            <div className="w-1/2 border-r border-border p-4">
+            <div className="w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r border-border p-4">
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
                   <h2 className="text-lg font-semibold">Active Partnerships</h2>
@@ -186,7 +186,7 @@ export function PartnershipHubSkeleton({
                 {mockPartnerships.map((partnership, i) => (
                   <Card key={i} className="p-4 cursor-pointer hover:shadow-md transition-shadow">
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
+                      <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-sm">
                         {partnership.brand.charAt(0)}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -201,7 +201,7 @@ export function PartnershipHubSkeleton({
                         </p>
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-muted-foreground">2 days ago</span>
-                          <span className="text-sm font-semibold text-green-600">
+                          <span className="text-sm font-semibold text-success">
                             {partnership.value}
                           </span>
                         </div>
@@ -242,19 +242,19 @@ export function PartnershipHubSkeleton({
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
                 <Mail className="w-8 h-8 text-white" />
               </div>
-              <h2 className="text-xl font-semibold mb-3">Connect Gmail to Get Started</h2>
+              <h2 className="text-xl font-semibold mb-3">Ready to unlock your partnership potential? 🚀</h2>
               <p className="text-muted-foreground mb-6 text-sm">
-                Connect your Gmail to automatically detect partnership opportunities, track brand collaborations, and manage your creator business relationships.
+                Connect your Gmail to automatically discover amazing brand collaboration opportunities, track conversations with potential partners, and build your creator business like a pro!
               </p>
-              <Button 
-                onClick={onConnectGmail}
-                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 w-full mb-4"
-              >
+                          <Button 
+              onClick={onConnectGmail}
+              className="bg-primary hover:bg-primary/90 w-full mb-4"
+            >
                 <Mail className="w-4 h-4 mr-2" />
-                Connect Gmail Account
+                Connect Gmail & Find Opportunities
               </Button>
               <p className="text-xs text-muted-foreground">
-                👇 Preview of what you'll get
+                Here's a sneak peek of what's coming your way
               </p>
             </Card>
           </div>

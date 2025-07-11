@@ -47,34 +47,34 @@ export default function PartnershipMetrics({
       icon: Mail,
       color: 'text-primary',
       bgColor: 'bg-primary/10',
-      tooltip: 'Total number of emails loaded in the partnerships view',
+      tooltip: 'All the emails we\'ve loaded in your partnerships view - your collaboration inbox is growing',
       filterKey: 'all' as const
     },
     {
       label: 'Active Discussions',
       value: activePartnerships,
       icon: MessageSquare,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50 dark:bg-green-900/20',
-      tooltip: 'Emails with ongoing conversations or confirmed deals (4+ messages or high value)',
+      color: 'text-success',
+      bgColor: 'bg-success/10',
+      tooltip: 'Hot conversations and deals in the works! These are emails with ongoing chats or high-value partnerships (4+ messages or big opportunities)',
       filterKey: 'active' as const
     },
     {
       label: 'Needs Response',
       value: pendingResponses,
       icon: Clock,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50 dark:bg-orange-900/20',
-      tooltip: 'Emails where the user is not the last sender and needs to respond',
+      color: 'text-secondary-foreground',
+      bgColor: 'bg-secondary/10',
+      tooltip: 'Opportunities waiting for your reply! These brands are ready to hear from you - time to make some magic happen',
       filterKey: 'needs_response' as const
     },
     {
       label: 'Deal Value',
       value: formatValue(pipelineValue),
       icon: DollarSign,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-      tooltip: 'Total confirmed deal values extracted from email content',
+      color: 'text-accent-foreground',
+      bgColor: 'bg-accent/10',
+      tooltip: 'Total value of confirmed partnerships and deals we\'ve spotted in your conversations. Your business is growing',
       filterKey: 'deal_value' as const
     }
   ];

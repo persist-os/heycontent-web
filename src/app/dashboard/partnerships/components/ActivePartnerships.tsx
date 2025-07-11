@@ -150,12 +150,12 @@ export default function ActivePartnerships({
         
         <Card className="p-8 text-center">
           <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-2">No Active Partnerships</h3>
+          <h3 className="text-lg font-medium text-foreground mb-2">Your Partnership Journey Starts Here! 🚀</h3>
           <p className="text-muted-foreground mb-4">
-            Partnerships will appear here as you convert opportunities and begin negotiations.
+            No active partnerships yet? That's totally normal – every creator starts somewhere! Your next big collaboration could be just one email away.
           </p>
           <p className="text-sm text-muted-foreground">
-            Create partnerships from the opportunities panel or Gmail threads.
+            💡 <strong>Pro tip:</strong> Check your opportunities panel or refresh Gmail to discover potential partnerships waiting for you!
           </p>
         </Card>
       </div>
