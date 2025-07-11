@@ -45,6 +45,7 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
         postId={contentId}
         onClose={onClose}
         showAnalysis={true}
+        hideDiscussButton={true}
       />
     );
   }

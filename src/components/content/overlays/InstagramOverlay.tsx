@@ -14,6 +14,7 @@ interface InstagramOverlayProps {
   showAnalysis?: boolean;
   // Optional pre-fetched data to avoid Convex query
   preFetchedData?: any;
+  hideDiscussButton?: boolean;
 }
 
 // Helper function to parse structured analysis data for themes
@@ -26,7 +27,8 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
   postId,
   onClose,
   showAnalysis = true,
-  preFetchedData
+  preFetchedData,
+  hideDiscussButton = false
 }) => {
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid;
@@ -160,6 +162,7 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
         postId={postId}
         showAnalysis={showAnalysis}
         onAnalysisGenerated={handleAnalysisGenerated}
+        hideDiscussButton={hideDiscussButton}
       />
     </ContentOverlay>
   );

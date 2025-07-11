@@ -16,6 +16,7 @@ interface InstagramContentProps {
   postId: string;
   showAnalysis?: boolean;
   onAnalysisGenerated?: () => void; // Callback to trigger data refresh
+  hideDiscussButton?: boolean; // Hide the "Discuss with Content" button when from chat
 }
 
 // Cycling loading messages for Instagram analysis
@@ -141,7 +142,8 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
   postData,
   postId,
   showAnalysis = true,
-  onAnalysisGenerated
+  onAnalysisGenerated,
+  hideDiscussButton = false
 }) => {
   // Debug: Log the received postData
   console.log('InstagramContent received postData:', postData);
@@ -615,25 +617,27 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4">
-          <Button 
-            onClick={handleDiscussContent} 
-            disabled={!analysis && !analysisMarkdown}
-            size="lg"
-            className={`flex-1 ${
-              !analysis && !analysisMarkdown 
-                ? 'opacity-50 cursor-not-allowed bg-gray-300 hover:bg-gray-300' 
-                : 'bg-yellow-400 hover:bg-yellow-500 text-black font-medium'
-            }`}
-          >
-            <MessageCircle className="w-5 h-5 mr-2" />
-            {!analysis && !analysisMarkdown ? 'Generate Analysis First' : 'Discuss with Content'}
-          </Button>
+          {!hideDiscussButton && (
+            <Button 
+              onClick={handleDiscussContent} 
+              disabled={!analysis && !analysisMarkdown}
+              size="lg"
+              className={`flex-1 ${
+                !analysis && !analysisMarkdown 
+                  ? 'opacity-50 cursor-not-allowed bg-gray-300 hover:bg-gray-300' 
+                  : 'bg-yellow-400 hover:bg-yellow-500 text-black font-medium'
+              }`}
+            >
+              <MessageCircle className="w-5 h-5 mr-2" />
+              {!analysis && !analysisMarkdown ? 'Generate Analysis First' : 'Discuss with Content'}
+            </Button>
+          )}
           
           <Button 
             asChild
             variant="outline" 
             size="lg"
-            className="flex-1 border-gray-300 dark:border-gray-600"
+            className={`${hideDiscussButton ? 'w-full' : 'flex-1'} border-gray-300 dark:border-gray-600`}
           >
             <a href={permalink} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="w-5 h-5 mr-2" />
