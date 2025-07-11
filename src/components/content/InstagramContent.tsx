@@ -322,191 +322,41 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
     router.push('/dashboard/chat');
   };
 
+  // Build the stats array
+  const stats = [
+    { key: 'likes', label: 'Likes', value: likes, icon: <Heart className="w-6 h-6" />, color: 'text-red-500' },
+    { key: 'comments', label: 'Comments', value: comments, icon: <MessageCircle className="w-6 h-6" />, color: 'text-blue-500' },
+    { key: 'impressions', label: 'Impressions', value: impressions, icon: <Eye className="w-6 h-6" />, color: 'text-green-500' },
+    { key: 'reach', label: 'Reach', value: reach, icon: <Users className="w-6 h-6" />, color: 'text-purple-500' },
+    { key: 'saved', label: 'Saved', value: saved, icon: <Bookmark className="w-6 h-6" />, color: 'text-yellow-500' },
+    { key: 'shares', label: 'Shares', value: shares, icon: <Share2 className="w-6 h-6" />, color: 'text-indigo-500' },
+  ];
+  const visibleStats = stats.filter(stat => stat.value !== null && stat.value !== undefined);
+  const statCount = visibleStats.length;
+
+  const renderStat = (stat: typeof stats[0]) => (
+    <div
+      key={stat.key}
+      className="text-center p-3 bg-muted/50 rounded-lg flex flex-col items-center justify-center"
+      aria-label={stat.label}
+    >
+      <div className={`mb-2 flex justify-center ${stat.color}`}>{stat.icon}</div>
+      <div className="text-2xl font-bold">{stat.value === null || stat.value === undefined ? 'N/A' : stat.value.toLocaleString()}</div>
+      <div className="text-xs text-muted-foreground">{stat.label}</div>
+    </div>
+  );
+
   return (
     <>
-      {/* Post and Stats Section - Consistent layout */}
-      <div className="mb-8">
-        {/* Side by side layout for medium screens and up */}
-        <div className="hidden xl:flex gap-6">
-          {/* Post Media and Themes Container */}
-          <div className="flex-shrink-0 space-y-4">
-            {/* Post Media - matches statistics height */}
-            <div className="relative bg-muted rounded-lg overflow-hidden cursor-pointer group h-full aspect-square">
-              {isCarousel ? (
-                <div className="relative w-full h-full">
-                  {children.map((child: any, idx: number) => (
-                    <div
-                      key={child.id || idx}
-                      className={`absolute inset-0 transition-all duration-500 ease-in-out ${
-                        idx === currentSlide 
-                          ? 'opacity-100 translate-x-0 scale-100' 
-                          : idx < currentSlide 
-                            ? 'opacity-0 -translate-x-full scale-95'
-                            : 'opacity-0 translate-x-full scale-95'
-                      }`}
-                    >
-                      <img
-                        src={child.media_type === 'VIDEO' ? child.thumbnail_url || child.media_url : child.media_url}
-                        alt={caption || `Instagram Carousel Item ${idx + 1}`}
-                        className="w-full h-full object-cover"
-                        onClick={() => window.open(permalink, '_blank')}
-                      />
-                    </div>
-                  ))}
-                  
-                  {/* Carousel indicators - Content hub style */}
-                  <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex gap-2">
-                    {children.map((_: any, idx: number) => (
-                      <div
-                        key={idx}
-                        className={`w-2 h-2 rounded-full transition-all duration-300 cursor-pointer ${
-                          idx === currentSlide 
-                            ? 'bg-white shadow-lg scale-110' 
-                            : 'bg-white/50 hover:bg-white/70'
-                        }`}
-                        onClick={() => setCurrentSlide(idx)}
-                      />
-                    ))}
-                  </div>
-
-                  {/* Slide counter - Content hub style */}
-                  <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium text-white">
-                    {currentSlide + 1} / {children.length}
-                  </div>
-                </div>
-              ) : (
-                <img
-                  src={thumbnailUrl || mediaUrl}
-                  alt={postData.title || 'Instagram Post'}
-                  className="w-full h-full object-cover"
-                  onClick={() => window.open(permalink, '_blank')}
-                />
-              )}
-              
-              {/* External link overlay */}
-              <div 
-                className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={() => window.open(permalink, '_blank')}
-              >
-                <div className="bg-pink-600 rounded-full p-3">
-                  <ExternalLink className="w-6 h-6 text-white" />
-                </div>
-              </div>
-              
-              {/* Media type badge */}
-              {mediaType && (
-                <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium text-white capitalize">
-                  {mediaType.toLowerCase().replace('_', ' ')}
-                </div>
-              )}
-            </div>
-
-            {/* Content Themes below the image */}
-            {parsedAnalysis && parsedAnalysis.contentThemes.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {parsedAnalysis.contentThemes.map((theme, index) => (
-                  <Badge key={index} variant="outline" className="text-sm">{theme}</Badge>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Statistics - determines height, always on the right */}
-          <div className="flex-1 min-w-[400px]">
-            <Card className="h-full">
-              <CardHeader>
-                <CardTitle>Post Statistics & Performance</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Basic Stats */}
-                  {likes > 0 && (
-                    <div className="text-center p-3 bg-muted/50 rounded-lg">
-                      <Heart className="w-6 h-6 text-red-500 mx-auto mb-2" />
-                      <div className="text-2xl font-bold">{formatNumber(likes)}</div>
-                      <div className="text-xs text-muted-foreground">Likes</div>
-                    </div>
-                  )}
-                  
-                  {comments > 0 && (
-                    <div className="text-center p-3 bg-muted/50 rounded-lg">
-                      <MessageCircle className="w-6 h-6 text-blue-500 mx-auto mb-2" />
-                      <div className="text-2xl font-bold">{formatNumber(comments)}</div>
-                      <div className="text-xs text-muted-foreground">Comments</div>
-                    </div>
-                  )}
-                  
-                  {impressions > 0 && (
-                    <div className="text-center p-3 bg-muted/50 rounded-lg">
-                      <Eye className="w-6 h-6 text-green-500 mx-auto mb-2" />
-                      <div className="text-2xl font-bold">{formatNumber(impressions)}</div>
-                      <div className="text-xs text-muted-foreground">Impressions</div>
-                    </div>
-                  )}
-                  
-                  {reach > 0 && (
-                    <div className="text-center p-3 bg-muted/50 rounded-lg">
-                      <Users className="w-6 h-6 text-purple-500 mx-auto mb-2" />
-                      <div className="text-2xl font-bold">{formatNumber(reach)}</div>
-                      <div className="text-xs text-muted-foreground">Reach</div>
-                    </div>
-                  )}
-                  
-                  {saved > 0 && (
-                    <div className="text-center p-3 bg-muted/50 rounded-lg">
-                      <Bookmark className="w-6 h-6 text-yellow-500 mx-auto mb-2" />
-                      <div className="text-2xl font-bold">{formatNumber(saved)}</div>
-                      <div className="text-xs text-muted-foreground">Saved</div>
-                    </div>
-                  )}
-                  
-                  {shares > 0 && (
-                    <div className="text-center p-3 bg-muted/50 rounded-lg">
-                      <Share2 className="w-6 h-6 text-indigo-500 mx-auto mb-2" />
-                      <div className="text-2xl font-bold">{formatNumber(shares)}</div>
-                      <div className="text-xs text-muted-foreground">Shares</div>
-                    </div>
-                  )}
-                  
-                  {postData.createdAt && (
-                    <div className="text-center p-3 bg-muted/50 rounded-lg">
-                      <Calendar className="w-6 h-6 text-orange-500 mx-auto mb-2" />
-                      <div className="text-sm font-bold">{new Date(postData.createdAt).toLocaleDateString()}</div>
-                      <div className="text-xs text-muted-foreground">Published</div>
-                    </div>
-                  )}
-                  
-                  {engagementRate > 0 && (
-                    <div className="text-center p-3 bg-muted/50 rounded-lg">
-                      <TrendingUp className="w-6 h-6 text-yellow-600 mx-auto mb-2" />
-                      <div className="text-2xl font-bold text-yellow-600">{engagementRate.toFixed(1)}%</div>
-                      <div className="text-xs text-muted-foreground">Engagement Rate</div>
-                    </div>
-                  )}
-
-                  {/* Performance Metrics from Analysis */}
-                  {parsedAnalysis && parsedAnalysis.metrics.map((metric, index) => {
-                    const IconComponent = metric.icon;
-                    return (
-                      <div key={`metric-${index}`} className="text-center p-3 bg-muted/50 rounded-lg">
-                        <IconComponent className={`w-6 h-6 ${metric.color} mx-auto mb-2`} />
-                        <div className="text-lg font-bold">{metric.value}</div>
-                        <div className="text-xs text-muted-foreground">{metric.label}</div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Stacked layout for smaller screens */}
-        <div className="block xl:hidden">
-          <div className="space-y-6">
-            {/* Post Media - Full width on mobile */}
-            <div className="flex justify-center">
-              <div className="relative aspect-square bg-muted rounded-lg overflow-hidden cursor-pointer group max-w-md w-full">
+      {/* Main Content Layout */}
+      <div className="space-y-8">
+        {/* Image and Stats Container */}
+        <div className="lg:grid lg:grid-cols-5 lg:gap-8">
+          {/* Image Section - 60% width on desktop */}
+          <div className="lg:col-span-3 space-y-4">
+            {/* Post Media */}
+            <div className="relative rounded-xl overflow-hidden group">
+              <div className="aspect-square lg:aspect-auto lg:min-h-[400px]">
                 {isCarousel ? (
                   <div className="relative w-full h-full">
                     {children.map((child: any, idx: number) => (
@@ -523,29 +373,29 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
                         <img
                           src={child.media_type === 'VIDEO' ? child.thumbnail_url || child.media_url : child.media_url}
                           alt={caption || `Instagram Carousel Item ${idx + 1}`}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover cursor-pointer"
                           onClick={() => window.open(permalink, '_blank')}
                         />
                       </div>
                     ))}
                     
-                    {/* Carousel indicators - Content hub style */}
-                    <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex gap-2">
+                    {/* Carousel Controls */}
+                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
                       {children.map((_: any, idx: number) => (
-                        <div
+                        <button
                           key={idx}
-                          className={`w-2 h-2 rounded-full transition-all duration-300 cursor-pointer ${
+                          className={`w-2 h-2 rounded-full transition-all duration-300 ${
                             idx === currentSlide 
                               ? 'bg-white shadow-lg scale-110' 
-                              : 'bg-white/50 hover:bg-white/70'
+                              : 'bg-white/60 hover:bg-white/80'
                           }`}
                           onClick={() => setCurrentSlide(idx)}
                         />
                       ))}
                     </div>
 
-                    {/* Slide counter - Content hub style */}
-                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium text-white">
+                    {/* Slide Counter */}
+                    <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-sm rounded-lg px-3 py-1 text-sm font-medium text-white">
                       {currentSlide + 1} / {children.length}
                     </div>
                   </div>
@@ -553,299 +403,251 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
                   <img
                     src={thumbnailUrl || mediaUrl}
                     alt={postData.title || 'Instagram Post'}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover cursor-pointer"
                     onClick={() => window.open(permalink, '_blank')}
                   />
                 )}
                 
-                {/* External link overlay */}
+                {/* Hover Overlay */}
                 <div 
-                  className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                   onClick={() => window.open(permalink, '_blank')}
                 >
-                  <div className="bg-pink-600 rounded-full p-3">
-                    <ExternalLink className="w-6 h-6 text-white" />
+                  <div className="bg-white/90 dark:bg-gray-900/90 rounded-full p-4 shadow-lg">
+                    <ExternalLink className="w-6 h-6 text-gray-900 dark:text-white" />
                   </div>
                 </div>
                 
-                {/* Media type badge */}
+                {/* Media Type Badge */}
                 {mediaType && (
-                  <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium text-white capitalize">
-                    {mediaType.toLowerCase().replace('_', ' ')}
+                  <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm rounded-lg px-3 py-1 text-sm font-medium text-white">
+                    {mediaType.replace('_', ' ')}
                   </div>
                 )}
               </div>
             </div>
+          </div>
 
-            {/* Content Themes below the image on mobile */}
-            {parsedAnalysis && parsedAnalysis.contentThemes.length > 0 && (
-              <div className="flex flex-wrap gap-2 justify-center">
-                {parsedAnalysis.contentThemes.map((theme, index) => (
-                  <Badge key={index} variant="outline" className="text-sm">{theme}</Badge>
-                ))}
+          {/* Stats Section - 40% width on desktop */}
+          <div className="lg:col-span-2 mt-6 lg:mt-0">
+            <div className="rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-sm h-full">
+              <div className="p-6 h-full flex flex-col">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+                  Post Statistics
+                </h3>
+                
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 gap-4 flex-1">
+                  {visibleStats.map((stat) => (
+                    <div
+                      key={stat.key}
+                      className="bg-gray-50/50 dark:bg-gray-800/30 rounded-lg p-4 text-center border border-gray-200 dark:border-gray-700 flex flex-col justify-center"
+                    >
+                      <div className={`inline-flex items-center justify-center w-8 h-8 rounded-lg mb-2 mx-auto ${stat.color.replace('text-', 'bg-').replace('-500', '-100')} dark:${stat.color.replace('text-', 'bg-').replace('-500', '-900/30')}`}>
+                        {React.cloneElement(stat.icon as React.ReactElement, { 
+                          className: `w-4 h-4 ${stat.color}` 
+                        })}
+                      </div>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {stat.value === null || stat.value === undefined ? 'N/A' : stat.value.toLocaleString()}
+                      </div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                        {stat.label}
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Date - Always last, spans full width if total stats count is odd */}
+                  {postData.createdAt && (
+                    <div className={`bg-gray-50/50 dark:bg-gray-800/30 rounded-lg p-4 text-center border border-gray-200 dark:border-gray-700 flex flex-col justify-center ${(visibleStats.length + 1) % 2 === 1 ? 'col-span-2' : 'col-span-1'}`}>
+                      <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 mb-2 mx-auto">
+                        <Calendar className="w-4 h-4 text-orange-500" />
+                      </div>
+                      <div className="text-lg font-bold text-gray-900 dark:text-white">
+                        {new Date(postData.createdAt).toLocaleDateString()}
+                      </div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                        Published
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-
-            {/* Stats - Full width on mobile */}
-            <div>
-              <Card className="h-full">
-                <CardHeader>
-                  <CardTitle>Post Statistics & Performance</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Basic Stats */}
-                    {likes > 0 && (
-                      <div className="text-center p-3 bg-muted/50 rounded-lg">
-                        <Heart className="w-6 h-6 text-red-500 mx-auto mb-2" />
-                        <div className="text-2xl font-bold">{formatNumber(likes)}</div>
-                        <div className="text-xs text-muted-foreground">Likes</div>
-                      </div>
-                    )}
-                    
-                    {comments > 0 && (
-                      <div className="text-center p-3 bg-muted/50 rounded-lg">
-                        <MessageCircle className="w-6 h-6 text-blue-500 mx-auto mb-2" />
-                        <div className="text-2xl font-bold">{formatNumber(comments)}</div>
-                        <div className="text-xs text-muted-foreground">Comments</div>
-                      </div>
-                    )}
-                    
-                    {impressions > 0 && (
-                      <div className="text-center p-3 bg-muted/50 rounded-lg">
-                        <Eye className="w-6 h-6 text-green-500 mx-auto mb-2" />
-                        <div className="text-2xl font-bold">{formatNumber(impressions)}</div>
-                        <div className="text-xs text-muted-foreground">Impressions</div>
-                      </div>
-                    )}
-                    
-                    {reach > 0 && (
-                      <div className="text-center p-3 bg-muted/50 rounded-lg">
-                        <Users className="w-6 h-6 text-purple-500 mx-auto mb-2" />
-                        <div className="text-2xl font-bold">{formatNumber(reach)}</div>
-                        <div className="text-xs text-muted-foreground">Reach</div>
-                      </div>
-                    )}
-                    
-                    {saved > 0 && (
-                      <div className="text-center p-3 bg-muted/50 rounded-lg">
-                        <Bookmark className="w-6 h-6 text-yellow-500 mx-auto mb-2" />
-                        <div className="text-2xl font-bold">{formatNumber(saved)}</div>
-                        <div className="text-xs text-muted-foreground">Saved</div>
-                      </div>
-                    )}
-                    
-                    {shares > 0 && (
-                      <div className="text-center p-3 bg-muted/50 rounded-lg">
-                        <Share2 className="w-6 h-6 text-indigo-500 mx-auto mb-2" />
-                        <div className="text-2xl font-bold">{formatNumber(shares)}</div>
-                        <div className="text-xs text-muted-foreground">Shares</div>
-                      </div>
-                    )}
-                    
-                    {postData.createdAt && (
-                      <div className="text-center p-3 bg-muted/50 rounded-lg">
-                        <Calendar className="w-6 h-6 text-orange-500 mx-auto mb-2" />
-                        <div className="text-sm font-bold">{new Date(postData.createdAt).toLocaleDateString()}</div>
-                        <div className="text-xs text-muted-foreground">Published</div>
-                      </div>
-                    )}
-                    
-                    {engagementRate > 0 && (
-                      <div className="text-center p-3 bg-muted/50 rounded-lg">
-                        <TrendingUp className="w-6 h-6 text-yellow-600 mx-auto mb-2" />
-                        <div className="text-2xl font-bold text-yellow-600">{engagementRate.toFixed(1)}%</div>
-                        <div className="text-xs text-muted-foreground">Engagement Rate</div>
-                      </div>
-                    )}
-
-                    {/* Performance Metrics from Analysis */}
-                    {parsedAnalysis && parsedAnalysis.metrics.map((metric, index) => {
-                      const IconComponent = metric.icon;
-                      return (
-                        <div key={`metric-${index}`} className="text-center p-3 bg-muted/50 rounded-lg">
-                          <IconComponent className={`w-6 h-6 ${metric.color} mx-auto mb-2`} />
-                          <div className="text-lg font-bold">{metric.value}</div>
-                          <div className="text-xs text-muted-foreground">{metric.label}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Analysis Section - Simplified */}
-      {showAnalysis && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-xl">AI Analysis</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Deep insights powered by artificial intelligence
-                </p>
-              </div>
-              <Button 
-                onClick={handleGenerateAnalysis} 
-                disabled={isGeneratingAnalysis}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
-              >
-                <Sparkles className="w-4 h-4 mr-2" />
-                {isGeneratingAnalysis ? 'Generating...' : 'Generate New Analysis'}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {analysisError && (
-              <div className={`mb-4 p-4 rounded-lg border ${
-                analysisSuccess 
-                  ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' 
-                  : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
-              }`}>
-                <p className={`text-sm ${
-                  analysisSuccess ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                }`}>{analysisError}</p>
-                {!analysisSuccess && (
-                  <Button 
-                    onClick={handleGenerateAnalysis}
-                    size="sm"
-                    className="mt-2 bg-red-500 hover:bg-red-600 text-white"
-                  >
-                    Try Again
-                  </Button>
-                )}
-              </div>
-            )}
-            
-            {isGeneratingAnalysis ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center space-y-4">
-                  <div className="relative">
-                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-200 border-t-purple-500 mx-auto"></div>
-                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 opacity-20 animate-pulse"></div>
-                  </div>
-                  <p className="text-muted-foreground max-w-md mx-auto leading-relaxed">
-                    {LOADING_MESSAGES[currentMessageIndex]}
+        {/* Analysis Section */}
+        {showAnalysis && (
+          <div className="rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-sm">
+            <div className="p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    AI Analysis
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Deep insights powered by artificial intelligence
                   </p>
                 </div>
+                <Button 
+                  onClick={handleGenerateAnalysis} 
+                  disabled={isGeneratingAnalysis}
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-sm"
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  {isGeneratingAnalysis ? 'Generating...' : 'Generate Analysis'}
+                </Button>
               </div>
-            ) : (parsedAnalysis || analysis || analysisMarkdown) ? (
-              <div className="space-y-6">
-                {/* Summary */}
-                {parsedAnalysis && parsedAnalysis.summary && (
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <h4 className="font-semibold mb-3 flex items-center gap-2">
-                      <Sparkles className="w-4 h-4" />
-                      Summary
-                    </h4>
-                    <p className="text-sm leading-relaxed">{parsedAnalysis.summary}</p>
-                  </div>
-                )}
 
-                {/* Performance Insights */}
-                {parsedAnalysis && parsedAnalysis.performanceInsights.length > 0 && (
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <h4 className="font-semibold mb-3 flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4" />
-                      Performance Insights
-                    </h4>
-                    <ul className="space-y-2">
-                      {parsedAnalysis.performanceInsights.map((insight, index) => (
-                        <li key={index} className="text-sm leading-relaxed flex items-start gap-2">
-                          <span className="text-purple-500 mt-1">•</span>
-                          {insight}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Recommendations */}
-                {parsedAnalysis && parsedAnalysis.recommendations.length > 0 && (
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <h4 className="font-semibold mb-3 flex items-center gap-2">
-                      <Target className="w-4 h-4" />
-                      Recommendations
-                    </h4>
-                    <ul className="space-y-2">
-                      {parsedAnalysis.recommendations.map((rec, index) => (
-                        <li key={index} className="text-sm leading-relaxed flex items-start gap-2">
-                          <span className="text-green-500 mt-1">•</span>
-                          {rec}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Fallback for Markdown Analysis */}
-                {!parsedAnalysis && (analysisMarkdown || analysis) && (
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <h4 className="font-semibold mb-2 flex items-center gap-2">
-                      <Sparkles className="w-4 h-4" />
-                      Content Analysis
-                    </h4>
-                    <div className="prose prose-sm max-w-none dark:prose-invert">
-                      {analysisMarkdown ? (
-                        <MarkdownRenderer content={analysisMarkdown} />
-                      ) : typeof analysis === 'string' ? (
-                        <MarkdownRenderer content={analysis} />
-                      ) : (
-                        <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg">
-                          <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
-                            {JSON.stringify(analysis, null, 2)}
-                          </pre>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Sparkles className="w-8 h-8 text-purple-500" />
+              {/* Analysis Content */}
+              {analysisError && (
+                <div className={`mb-6 p-4 rounded-lg border ${
+                  analysisSuccess 
+                    ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' 
+                    : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
+                }`}>
+                  <p className={`text-sm ${
+                    analysisSuccess ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                  }`}>{analysisError}</p>
+                  {!analysisSuccess && (
+                    <Button 
+                      onClick={handleGenerateAnalysis}
+                      size="sm"
+                      className="mt-3 bg-red-500 hover:bg-red-600 text-white"
+                    >
+                      Try Again
+                    </Button>
+                  )}
                 </div>
-                <p className="text-muted-foreground max-w-md mx-auto">
-                  Click 'Generate New Analysis' to get AI-powered insights about this post's content, engagement, and performance.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+              )}
+              
+              {isGeneratingAnalysis ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="text-center space-y-4">
+                    <div className="relative">
+                      <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-200 border-t-purple-500 mx-auto"></div>
+                      <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 opacity-20 animate-pulse"></div>
+                    </div>
+                    <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto leading-relaxed">
+                      {LOADING_MESSAGES[currentMessageIndex]}
+                    </p>
+                  </div>
+                </div>
+              ) : (parsedAnalysis || analysis || analysisMarkdown) ? (
+                <div className="space-y-6">
+                  {/* Summary */}
+                  {parsedAnalysis && parsedAnalysis.summary && (
+                    <div className="rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                      <h4 className="font-semibold mb-3 flex items-center gap-2 text-gray-900 dark:text-white">
+                        <Sparkles className="w-4 h-4 text-purple-500" />
+                        Summary
+                      </h4>
+                      <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300">{parsedAnalysis.summary}</p>
+                    </div>
+                  )}
 
-      {/* Action Buttons */}
-      <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200 dark:border-gray-700">
-        <Button 
-          onClick={handleDiscussContent} 
-          disabled={!analysis && !analysisMarkdown}
-          size="lg"
-          className={`flex-1 ${
-            !analysis && !analysisMarkdown 
-              ? 'opacity-50 cursor-not-allowed bg-gray-300 hover:bg-gray-300' 
-              : 'bg-heycontent-light-yellow hover:bg-heycontent-yellow/90 text-black'
-          }`}
-        >
-          <MessageCircle className="w-5 h-5 mr-2" />
-          {!analysis && !analysisMarkdown ? 'Generate Analysis First' : 'Discuss with Content'}
-        </Button>
-        
-        <Button 
-          asChild
-          variant="outline" 
-          size="lg"
-          className="flex-1"
-        >
-          <a href={permalink} target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="w-5 h-5 mr-2" />
-            View on Instagram
-          </a>
-        </Button>
+                  {/* Performance Insights */}
+                  {parsedAnalysis && parsedAnalysis.performanceInsights.length > 0 && (
+                    <div className="rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                      <h4 className="font-semibold mb-3 flex items-center gap-2 text-gray-900 dark:text-white">
+                        <TrendingUp className="w-4 h-4 text-green-500" />
+                        Performance Insights
+                      </h4>
+                      <ul className="space-y-2">
+                        {parsedAnalysis.performanceInsights.map((insight, index) => (
+                          <li key={index} className="text-sm leading-relaxed flex items-start gap-2 text-gray-700 dark:text-gray-300">
+                            <span className="text-purple-500 mt-1 flex-shrink-0">•</span>
+                            {insight}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Recommendations */}
+                  {parsedAnalysis && parsedAnalysis.recommendations.length > 0 && (
+                    <div className="rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                      <h4 className="font-semibold mb-3 flex items-center gap-2 text-gray-900 dark:text-white">
+                        <Target className="w-4 h-4 text-blue-500" />
+                        Recommendations
+                      </h4>
+                      <ul className="space-y-2">
+                        {parsedAnalysis.recommendations.map((rec, index) => (
+                          <li key={index} className="text-sm leading-relaxed flex items-start gap-2 text-gray-700 dark:text-gray-300">
+                            <span className="text-green-500 mt-1 flex-shrink-0">•</span>
+                            {rec}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Fallback for Markdown Analysis */}
+                  {!parsedAnalysis && (analysisMarkdown || analysis) && (
+                    <div className="rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                      <h4 className="font-semibold mb-3 flex items-center gap-2 text-gray-900 dark:text-white">
+                        <Sparkles className="w-4 h-4 text-purple-500" />
+                        Content Analysis
+                      </h4>
+                      <div className="prose prose-sm max-w-none dark:prose-invert">
+                        {analysisMarkdown ? (
+                          <MarkdownRenderer content={analysisMarkdown} />
+                        ) : typeof analysis === 'string' ? (
+                          <MarkdownRenderer content={analysis} />
+                        ) : (
+                          <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
+                            <pre className="text-sm overflow-x-auto whitespace-pre-wrap text-gray-800 dark:text-gray-200">
+                              {JSON.stringify(analysis, null, 2)}
+                            </pre>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+                  <div className="w-16 h-16 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 rounded-2xl flex items-center justify-center">
+                    <Sparkles className="w-8 h-8 text-purple-500" />
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-400 max-w-md">
+                    Click 'Generate Analysis' to get AI-powered insights about this post's content, engagement, and performance.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Button 
+            onClick={handleDiscussContent} 
+            disabled={!analysis && !analysisMarkdown}
+            size="lg"
+            className={`flex-1 ${
+              !analysis && !analysisMarkdown 
+                ? 'opacity-50 cursor-not-allowed bg-gray-300 hover:bg-gray-300' 
+                : 'bg-yellow-400 hover:bg-yellow-500 text-black font-medium'
+            }`}
+          >
+            <MessageCircle className="w-5 h-5 mr-2" />
+            {!analysis && !analysisMarkdown ? 'Generate Analysis First' : 'Discuss with Content'}
+          </Button>
+          
+          <Button 
+            asChild
+            variant="outline" 
+            size="lg"
+            className="flex-1 border-gray-300 dark:border-gray-600"
+          >
+            <a href={permalink} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="w-5 h-5 mr-2" />
+              View on Instagram
+            </a>
+          </Button>
+        </div>
       </div>
     </>
   );

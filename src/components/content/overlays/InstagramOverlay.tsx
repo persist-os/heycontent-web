@@ -51,9 +51,10 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
   }, []);
 
   // Normalize to the same format as getAllLinkableContent
+  const caption = post.data?.caption || '';
   const postData = post && {
     id: `instagram:${post.postId}`,
-    title: post.data?.caption?.substring(0, 100) || 'Instagram Post',
+    title: caption.length > 80 ? caption.substring(0, 80) + '...' : caption || 'Instagram Post',
     type: 'instagram',
     contentType: post.mediaType?.toLowerCase() || 'image',
     platform: 'instagram',
