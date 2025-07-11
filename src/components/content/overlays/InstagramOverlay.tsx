@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useAuth } from '@/app/context/auth-context';
@@ -21,6 +21,7 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
 }) => {
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid;
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Fetch Instagram post data (raw DB format)
   const post = useQuery(api.instagramQueries.getInstagramPost, {
@@ -30,6 +31,15 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
 
   // Debug: Log the raw post data
   console.log('Raw Instagram post data:', post);
+
+  // Callback to handle analysis generation - this will trigger a refetch
+  const handleAnalysisGenerated = useCallback(() => {
+    // Force a re-render by updating the key
+    setTimeout(() => {
+      setRefreshKey(prev => prev + 1);
+      console.log('Analysis generated, triggering component refresh');
+    }, 2000);
+  }, []);
 
   // Normalize to the same format as getAllLinkableContent
   const postData = post && {
@@ -93,9 +103,11 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
       icon={<Instagram className="w-8 h-8 text-pink-500" />}
     >
       <InstagramContent
+        key={refreshKey} // Force re-render when analysis is generated
         postData={postData}
         postId={postId}
         showAnalysis={showAnalysis}
+        onAnalysisGenerated={handleAnalysisGenerated}
       />
     </ContentOverlay>
   );

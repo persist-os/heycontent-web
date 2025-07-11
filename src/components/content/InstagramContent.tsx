@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Eye, Share2, Bookmark, ExternalLink, Instagram, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,12 +13,66 @@ interface InstagramContentProps {
   postData: any;
   postId: string;
   showAnalysis?: boolean;
+  onAnalysisGenerated?: () => void; // Callback to trigger data refresh
 }
+
+// Cycling loading messages for Instagram analysis
+const LOADING_MESSAGES = [
+  // Funny & Relatable
+  "Analyzing your Instagram magic... because even AI needs to understand your aesthetic",
+  "Teaching our AI about your content style... it's learning, we promise!",
+  "Processing your Instagram genius... this is like speed-reading a visual novel",
+  "Decoding your Instagram algorithm... because we're nosy about what makes your posts pop",
+  "AI is getting to know your brand... it's like a first date, but with data",
+  
+  // Transparent & Honest
+  "Fetching your Instagram insights... this might take a moment, but good things come to those who wait",
+  "Crunching numbers and analyzing vibes... we're doing the heavy lifting so you don't have to",
+  "Deep-diving into your content strategy... because surface-level insights are so 2020",
+  "Processing your social media brilliance... we're basically your personal content detective",
+  "Mining your Instagram gold... because every post has a story to tell",
+  
+  // Creator-Focused
+  "Analyzing your creative genius... because every post is a masterpiece in the making",
+  "Decoding your Instagram success... we're basically your personal social media therapist",
+  "Unpacking your content strategy... it's like reading your diary, but with analytics",
+  "Mapping your audience connection... because engagement is just friendship with data",
+  "Processing your Instagram personality... we're getting to know the real you (digitally)",
+  
+  // Playful & Specific
+  "Instagram analysis in progress... because even AI needs to understand your filter game",
+  "Decoding your Instagram story... we're basically your personal content whisperer",
+  "Mining your social media gold... every like, comment, and share tells a story",
+  "Analyzing your visual storytelling... because a picture is worth a thousand insights",
+  "Processing your Instagram algorithm... we're basically your personal social media fortune teller",
+  
+  // Encouraging & Supportive
+  "Preparing your content insights... because every creator deserves to understand their impact",
+  "Unlocking your Instagram potential... we're here to help you shine brighter",
+  "Mapping your audience connection... because your content deserves to be seen",
+  "Analyzing your creative journey... every post is a step toward your goals",
+  "Processing your growth story... because your Instagram journey is worth celebrating",
+  
+  // Tech-Savvy but Friendly
+  "Running Instagram analysis protocols... our AI is having a moment with your content",
+  "Processing your social media DNA... we're basically your personal content scientist",
+  "Syncing with Instagram's algorithm... because we speak fluent social media",
+  "Compiling your content insights... this is like speed-reading your Instagram autobiography",
+  "Optimizing your content analysis... because efficiency is our love language",
+  
+  // Relatable & Human
+  "AI is thinking about your content... it's like having a really smart friend analyze your posts",
+  "Processing your Instagram personality... we're basically your personal social media bestie",
+  "Analyzing your creative fingerprint... because every creator has a unique style",
+  "Decoding your content strategy... we're like your personal Instagram therapist",
+  "Unpacking your social media magic... because every post has a story worth telling"
+];
 
 export const InstagramContent: React.FC<InstagramContentProps> = ({
   postData,
   postId,
-  showAnalysis = true
+  showAnalysis = true,
+  onAnalysisGenerated
 }) => {
   // Debug: Log the received postData
   console.log('InstagramContent received postData:', postData);
@@ -29,6 +83,24 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
   // State for AI analysis generation
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
+  const [analysisSuccess, setAnalysisSuccess] = useState(false);
+  
+  // Cycling loading message effect
+  useEffect(() => {
+    if (!isGeneratingAnalysis) {
+      setCurrentMessageIndex(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setCurrentMessageIndex(prevIndex => 
+        (prevIndex + 1) % LOADING_MESSAGES.length
+      );
+    }, 5000); // Switch every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [isGeneratingAnalysis]);
   
   // Extract data from Instagram post structure
   const { data, analysis, analysisMarkdown, mediaType } = postData;
@@ -125,8 +197,20 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
 
       console.log('✅ Instagram analysis successful:', responseData);
       
-      // Refresh the page to show the new analysis
-      window.location.reload();
+      // Instead of reloading the page, update the local state with the new analysis
+      // The parent component should handle refreshing the data
+      // For now, we'll show a success message and let the user know the analysis was generated
+      setAnalysisError(null);
+      setAnalysisSuccess(true);
+      
+      // Show a temporary success message
+      setAnalysisError('Analysis generated successfully! The new analysis will appear shortly.');
+      setTimeout(() => {
+        setAnalysisError(null);
+        setAnalysisSuccess(false);
+      }, 3000);
+      
+      onAnalysisGenerated?.(); // Call the callback
       
     } catch (error: any) {
       console.error('Error generating Instagram analysis:', error);
@@ -331,15 +415,23 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
               </div>
               
               {analysisError && (
-                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-red-600 text-sm">{analysisError}</p>
-                  <Button 
-                    onClick={handleGenerateAnalysis}
-                    size="sm"
-                    className="mt-2 bg-red-500 hover:bg-red-600 text-white"
-                  >
-                    Try Again
-                  </Button>
+                <div className={`mb-4 p-4 border rounded-lg ${
+                  analysisSuccess 
+                    ? 'bg-green-50 border-green-200' 
+                    : 'bg-red-50 border-red-200'
+                }`}>
+                  <p className={`text-sm ${
+                    analysisSuccess ? 'text-green-600' : 'text-red-600'
+                  }`}>{analysisError}</p>
+                  {!analysisSuccess && (
+                    <Button 
+                      onClick={handleGenerateAnalysis}
+                      size="sm"
+                      className="mt-2 bg-red-500 hover:bg-red-600 text-white"
+                    >
+                      Try Again
+                    </Button>
+                  )}
                 </div>
               )}
               
@@ -348,7 +440,9 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
                   {isGeneratingAnalysis ? (
                     <div className="flex items-center justify-center h-24">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-500"></div>
-                      <span className="ml-3 text-sm text-muted-foreground">Generating AI analysis...</span>
+                      <span className="ml-3 text-sm text-muted-foreground">
+                        {LOADING_MESSAGES[currentMessageIndex]}
+                      </span>
                     </div>
                   ) : (analysis || analysisMarkdown) ? (
                     <div className="prose prose-sm max-w-none">
