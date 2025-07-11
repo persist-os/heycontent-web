@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
@@ -75,7 +75,7 @@ export function PartnershipHub() {
     setIsClient(true);
   }, []);
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     console.log('[PARTNERSHIP HUB] Smart refresh triggered at', new Date().toISOString());
     manualRefreshInProgress.current = true;
     
@@ -87,7 +87,7 @@ export function PartnershipHub() {
     } finally {
       manualRefreshInProgress.current = false;
     }
-  };
+  }, [refresh]);
 
   // FIXED: Auto-refresh logic with proper guards to prevent infinite loop
   useEffect(() => {
@@ -105,7 +105,7 @@ export function PartnershipHub() {
       hasTriggeredAutoRefresh.current = true;
       handleRefresh();
     }
-  }, [isClient, hasConnectedAccounts, partnerships.length, gmailLoading, refreshing]);
+  }, [isClient, hasConnectedAccounts, partnerships.length, gmailLoading, refreshing, handleRefresh]);
 
   // Reset auto-refresh flag when user disconnects Gmail accounts
   useEffect(() => {

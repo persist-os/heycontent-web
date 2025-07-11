@@ -21,6 +21,15 @@ export const CategoryEmailList: React.FC<CategoryEmailListProps> = ({
   onSelectPartnership,
   selectedPartnershipId
 }) => {
+  // Create partnership lookup map for O(1) lookups instead of O(n) find operations
+  const partnershipMap = React.useMemo(() => {
+    const map: Record<string, Partnership> = {};
+    partnerships.forEach(p => {
+      map[p.id] = p;
+    });
+    return map;
+  }, [partnerships]);
+
   if (partnerships.length === 0) {
     return (
       <div className="text-center py-12">
@@ -74,7 +83,7 @@ export const CategoryEmailList: React.FC<CategoryEmailListProps> = ({
             {expandedCategories[category] && (
               <div className="divide-y divide-border">
                 {emails.slice(0, 5).map((email: any, index: number) => {
-                  const partnership = partnerships.find(p => p.id === email.id);
+                  const partnership = partnershipMap[email.id];
                   if (!partnership) return null;
                   
                   return (

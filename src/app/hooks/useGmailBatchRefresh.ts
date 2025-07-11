@@ -120,7 +120,7 @@ export function useGmailBatchRefresh() {
         time: new Date().toISOString()
       });
     }
-  }, [loading]);
+  }, []); // Empty dependency array - setState functions and refs are stable
 
   // Remove reprocess - it's now integrated into refresh
   return { refresh, loading, error, success, progress };
