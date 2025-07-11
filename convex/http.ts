@@ -350,9 +350,40 @@ app.get("/api/users/:userId/notes", async (c) => {
     return c.json({ error: "Missing userId in path" }, 400);
   }
 
+  // Get query parameters for pagination and filtering
+  const cursor = c.req.query("cursor");
+  const numItems = c.req.query("numItems");
+  const sortField = c.req.query("sortField");
+  const sortOrder = c.req.query("sortOrder");
+  const type = c.req.query("type");
+  const important = c.req.query("important");
+  const tags = c.req.query("tags");
+
+  // Build filters object
+  const filters: any = {};
+  if (type) filters.type = type;
+  if (important !== undefined) filters.important = important === 'true';
+  if (tags) filters.tags = tags.split(',');
+
   try {
-    const notes = await ctx.runQuery(api.notes.getNotesByUser, { userId });
-    return c.json({ success: true, notes }); 
+    const result = await ctx.runQuery(api.noteQueries.getUserNotes, { 
+      userId,
+      ...(cursor && { cursor }),
+      ...(numItems && { numItems: parseInt(numItems) }),
+      ...(sortField && { sortField }),
+      ...(sortOrder && { sortOrder: sortOrder as 'asc' | 'desc' }),
+      ...(Object.keys(filters).length > 0 && { filters }),
+    });
+    
+    return c.json({ 
+      success: true, 
+      notes: result.page,
+      pagination: {
+        nextCursor: result.nextCursor,
+        isDone: result.isDone,
+        hasMore: !result.isDone
+      }
+    }); 
   } catch (error: any) {
     console.error("Failed to get notes by user:", error);
     if (error.data) {
@@ -464,8 +495,13 @@ app.post("/api/notes", async (c) => {
       updates: noteData,
     });
     return c.json({ success: true, note: newNote });
-  } catch (error) {
-    return c.json({ success: false, error: "Failed to create note" }, 500);
+  } catch (error: any) {
+    console.error("Failed to create note:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to create note",
+      message: error.message || "Internal Server Error"
+    }, 500);
   }
 });
 

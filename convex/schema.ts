@@ -167,7 +167,8 @@ export default defineSchema({
       v.literal("analytics_insight"),
       v.literal("reflection_journal"),
       v.literal("task_checklist"),
-      v.literal("email_draft")
+      v.literal("email_draft"),
+      v.literal("idea") // Legacy type for existing notes
     )),
     tags: v.array(v.string()),
     analysis: v.optional(v.string()),
