@@ -10,6 +10,7 @@ import { Note } from './types';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { YouTubeVideoCard } from './components/YouTubeVideoCard';
 import { InstagramPostCard } from './components/InstagramPostCard';
+import { InsightCard } from '../ai-insights/_components/InsightCard';
 import { InsightOverlay } from '@/components/content/overlays/InsightOverlay';
 
 // Help system imports

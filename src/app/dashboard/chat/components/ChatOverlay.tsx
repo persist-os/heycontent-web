@@ -182,54 +182,52 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
                     </div>
                   )}
                   <div className="mb-6">
-                    <div className="text-xs text-muted-foreground mb-1">Last updated</div>
-                    <div className="text-xs">{note.updatedAt ? new Date(note.updatedAt).toLocaleString() : 'Just now'}</div>
+                    <div className="text-xs text-muted-foreground mb-1">Created</div>
+                    <div className="text-sm">{note.createdAt ? new Date(note.createdAt).toLocaleDateString() : 'Unknown'}</div>
+                  </div>
+                  <div className="mb-6">
+                    <div className="text-xs text-muted-foreground mb-1">Updated</div>
+                    <div className="text-sm">{note.updatedAt ? new Date(note.updatedAt).toLocaleDateString() : 'Unknown'}</div>
                   </div>
                 </div>
               )}
             </div>
-            {/* Main note content */}
-            <div className="flex-1 overflow-y-auto p-6">
-              {note === undefined ? (
-                <div className="text-center py-8 text-muted-foreground">Loading note...</div>
-              ) : note === null ? (
-                <div className="text-center py-8 text-red-500">Note not found or you do not have access.</div>
+            {/* Main content area */}
+            <div className="flex-1 p-6 overflow-y-auto">
+              {note ? (
+                <div className="max-w-none">
+                  <NoteContentRenderer content={note.content} />
+                </div>
               ) : (
-                <>
-                  <div className="block md:hidden mb-6">
-                    <div className="text-xs text-muted-foreground mb-1">Title</div>
-                    <div className="font-semibold text-lg break-words">{note.title || 'Untitled Note'}</div>
-                    <div className="text-xs text-muted-foreground mt-1">{note.updatedAt ? new Date(note.updatedAt).toLocaleString() : 'Just now'}</div>
-                  </div>
-                  <div className="prose prose-sm max-w-none text-foreground">
-                    <NoteContentRenderer 
-                      content={note.content || ''} 
-                      availableNotes={availableNotes.map(n => ({ _id: String(n._id), title: n.title, type: n.type }))}
-                    />
-                  </div>
-                </>
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Loading note...</p>
+                </div>
               )}
             </div>
           </div>
-          {/* Footer */}
-          {note && (
-            <div className="border-t bg-background/95 px-8 py-5 flex justify-end">
-              <button
-                className="bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg px-5 py-2 text-base transition-colors"
-                onClick={() => {
-                  let url = `/dashboard/notes?noteId=${note._id}&fromChat=true`;
-                  if (chatId) url += `&chatId=${chatId}`;
-                  router.push(url);
-                }}
-              >
-                Open in Smart Notes
-              </button>
-            </div>
-          )}
         </div>
       </div>
     );
   }
 
-  return null;
+  // Fallback
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-background rounded-lg shadow-xl max-w-md w-full p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold">Content Preview</h2>
+          <button
+            onClick={onClose}
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <p className="text-muted-foreground">Content type "{contentType}" not supported yet.</p>
+      </div>
+    </div>
+  );
 }; 

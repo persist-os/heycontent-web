@@ -28,7 +28,7 @@ import { YouTubeCard } from '../../content-analytics/cards/YouTubeCard'
 import { InstagramCard } from '../../content-analytics/cards/InstagramCard'
 import { InstagramModal } from '../../content-analytics/modals/InstagramModal'
 import { YouTubeOverlay } from '@/components/content/overlays/YouTubeOverlay'
-import { AnyContentItem, YouTubeContentItem, InstagramContentItem } from '../../content-analytics/types'
+import { AnyContentItem, YouTubeContentItem, InstagramContentItem, GmailContentItem } from '../../content-analytics/types'
 import { sortContent } from '../../content-analytics/utils'
 
 // Insights components and hooks
