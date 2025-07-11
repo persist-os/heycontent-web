@@ -43,7 +43,7 @@ export const SuggestionChip = ({ suggestion, onClick, onInputPopulate }: Suggest
             {(suggestion as SuggestedAction).type === 'strategic' && <Target className="w-3.5 h-3.5 flex-shrink-0" />}
           </span>
         )}
-        <span className="break-words min-w-0 text-left whitespace-nowrap">
+        <span className="break-words min-w-0 text-left whitespace-normal sm:whitespace-nowrap">
           {displayText}
         </span>
       </button>

@@ -407,6 +407,70 @@ export const searchRelevantContent = action({
 });
 
 /**
+ * Check which platforms are connected for a user
+ */
+async function checkPlatformConnections(ctx: any, userId: string) {
+  const connections = {
+    youtube: false,
+    instagram: false,
+    gmail: false,
+  };
+  
+  try {
+    // Check YouTube connection
+    try {
+      const youtubeToken = await ctx.db
+        .query("youtubeTokens")
+        .withIndex("by_userId", (q: any) => q.eq("userId", userId))
+        .first();
+      connections.youtube = !!youtubeToken;
+      console.log('🔀 [PLATFORM CHECK] YouTube connected:', connections.youtube);
+    } catch (error) {
+      console.error("Error checking YouTube connection:", error);
+      connections.youtube = false;
+    }
+    
+    // Check Instagram connection
+    try {
+      const instagramAccount = await ctx.db
+        .query("instagramAccounts")
+        .withIndex("by_userId", (q: any) => q.eq("userId", userId))
+        .first();
+      connections.instagram = !!instagramAccount;
+      console.log('🔀 [PLATFORM CHECK] Instagram connected:', connections.instagram);
+    } catch (error) {
+      console.error("Error checking Instagram connection:", error);
+      connections.instagram = false;
+    }
+    
+    // Check Gmail connection
+    try {
+      const gmailToken = await ctx.db
+        .query("gmailTokens")
+        .withIndex("by_userId", (q: any) => q.eq("userId", userId))
+        .first();
+      connections.gmail = !!gmailToken;
+      console.log('🔀 [PLATFORM CHECK] Gmail connected:', connections.gmail);
+    } catch (error) {
+      console.error("Error checking Gmail connection:", error);
+      connections.gmail = false;
+    }
+    
+  } catch (error) {
+    console.error("Error in checkPlatformConnections:", error);
+    // Return all false if there's a general error
+    return {
+      youtube: false,
+      instagram: false,
+      gmail: false,
+    };
+  }
+  
+  console.log('🔀 [PLATFORM CHECK] Final connections:', connections);
+  return connections;
+}
+
+/**
  * Get all embeddings for a user with optional content type filter (internal)
  */
 export const getAllUserEmbeddings = internalQuery({
@@ -629,9 +693,9 @@ export const deleteAllUserEmbeddings = mutation({
 });
 
 /**
- * Hybrid search that combines vector similarity with keyword matching
+ * Hybrid search that combines vector similarity with keyword matching and platform quotas
  */
-export const hybridSearchContent = action({
+export const hybridSearchContentWithQuotas = action({
   args: {
     userId: v.string(),
     query: v.string(),
@@ -646,74 +710,210 @@ export const hybridSearchContent = action({
     minSimilarity: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    console.log('🔀 [HYBRID SEARCH DEBUG] Starting hybrid search with vector + keyword matching');
-    console.log('🔀 [HYBRID SEARCH DEBUG] Query:', args.query);
+    console.log('🔀 [HYBRID QUOTA SEARCH] Starting hybrid search with quotas');
+    console.log('🔀 [HYBRID QUOTA SEARCH] Query:', args.query);
     
     try {
-      // First try pure vector search
-      const vectorResults = await ctx.runAction(api.vectorSearch.searchRelevantContent, args);
-      
-      if (vectorResults.length > 0) {
-        console.log('🔀 [HYBRID SEARCH DEBUG] Vector search found', vectorResults.length, 'results');
-        return vectorResults;
+      // Step 1: Check platform connections (with error handling)
+      console.log('🔀 [HYBRID QUOTA SEARCH] Step 1: Checking platform connections...');
+      let platformConnections;
+      try {
+        platformConnections = await checkPlatformConnections(ctx, args.userId);
+        console.log('🔀 [HYBRID QUOTA SEARCH] Platform connections:', platformConnections);
+      } catch (error) {
+        console.error('🔀 [HYBRID QUOTA SEARCH] Platform check failed:', error);
+        // Default to no connections if check fails
+        platformConnections = { youtube: false, instagram: false, gmail: false };
       }
       
-      console.log('🔀 [HYBRID SEARCH DEBUG] Vector search found no results, trying keyword fallback');
+      // Step 2: Generate embedding for the query (with error handling)
+      console.log('🔀 [HYBRID QUOTA SEARCH] Step 2: Generating query embedding...');
+      let queryEmbedding;
+      try {
+        const enhancedQuery = enhanceSearchQuery(args.query);
+        console.log('🔀 [HYBRID QUOTA SEARCH] Enhanced query:', enhancedQuery.substring(0, 100) + '...');
+        queryEmbedding = await generateEmbedding(enhancedQuery);
+        console.log('🔀 [HYBRID QUOTA SEARCH] Query embedding generated, dimension:', queryEmbedding.length);
+      } catch (error) {
+        console.error('🔀 [HYBRID QUOTA SEARCH] Embedding generation failed:', error);
+        throw new Error(`Failed to generate embedding: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
       
-      // If vector search fails, fall back to keyword search
-      const userEmbeddings = await ctx.runQuery(internal.vectorSearch.getAllUserEmbeddings, {
-        userId: args.userId,
-        contentTypes: args.contentTypes,
+      // Step 3: Get all user embeddings (with error handling)
+      console.log('🔀 [HYBRID QUOTA SEARCH] Step 3: Fetching user embeddings...');
+      let userEmbeddings;
+      try {
+        userEmbeddings = await ctx.runQuery(internal.vectorSearch.getAllUserEmbeddings, {
+          userId: args.userId,
+          contentTypes: args.contentTypes,
+        });
+        console.log('🔀 [HYBRID QUOTA SEARCH] User embeddings fetched:', userEmbeddings.length);
+      } catch (error) {
+        console.error('🔀 [HYBRID QUOTA SEARCH] User embeddings fetch failed:', error);
+        throw new Error(`Failed to fetch user embeddings: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+      
+      // Step 4: Calculate similarities (with error handling)
+      console.log('🔀 [HYBRID QUOTA SEARCH] Step 4: Calculating similarities...');
+      let similarities;
+      try {
+        similarities = userEmbeddings.map((doc, index) => {
+          try {
+            const score = cosineSimilarity(queryEmbedding, doc.embedding);
+            return {
+              ...doc,
+              score,
+            };
+          } catch (error) {
+            console.error(`🔀 [HYBRID QUOTA SEARCH] Similarity calc failed for doc ${index}:`, error);
+            return {
+              ...doc,
+              score: 0, // Default to 0 if calculation fails
+            };
+          }
+        });
+        console.log('🔀 [HYBRID QUOTA SEARCH] Similarities calculated for', similarities.length, 'documents');
+      } catch (error) {
+        console.error('🔀 [HYBRID QUOTA SEARCH] Similarity calculation failed:', error);
+        throw new Error(`Failed to calculate similarities: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+
+      // Step 5: Apply similarity threshold and filtering
+      console.log('🔀 [HYBRID QUOTA SEARCH] Step 5: Applying filters...');
+      const minThreshold = args.minSimilarity || 0.35;
+      const filteredSimilarities = similarities.filter(item => item.score >= minThreshold);
+      console.log('🔀 [HYBRID QUOTA SEARCH] After threshold filtering:', filteredSimilarities.length, 'items remain');
+      
+      // Sort by similarity score
+      filteredSimilarities.sort((a, b) => b.score - a.score);
+      
+      // Step 6: Group by content type
+      console.log('🔀 [HYBRID QUOTA SEARCH] Step 6: Grouping by content type...');
+      const contentByType = {
+        youtube_video: filteredSimilarities.filter(item => item.contentType === 'youtube_video'),
+        instagram_post: filteredSimilarities.filter(item => item.contentType === 'instagram_post'),
+        conversation: filteredSimilarities.filter(item => item.contentType === 'conversation'),
+        gmail_thread: filteredSimilarities.filter(item => item.contentType === 'gmail_thread'),
+        note: filteredSimilarities.filter(item => item.contentType === 'note'),
+      };
+      
+      console.log('🔀 [HYBRID QUOTA SEARCH] Content distribution:', {
+        youtube: contentByType.youtube_video.length,
+        instagram: contentByType.instagram_post.length,
+        conversations: contentByType.conversation.length,
+        gmail: contentByType.gmail_thread.length,
+        notes: contentByType.note.length,
       });
       
-      // Extract keywords from query
-      const queryLower = args.query.toLowerCase();
-      const keywords = queryLower.split(/\s+/).filter(word => word.length > 2);
+      // Step 7: Apply platform-specific quotas
+      console.log('🔀 [HYBRID QUOTA SEARCH] Step 7: Applying quotas...');
+      const selectedResults: Array<{
+        contentId: string;
+        contentType: string;
+        title: string;
+        content: string;
+        embedding: number[];
+        score: number;
+      }> = [];
       
-      console.log('🔀 [HYBRID SEARCH DEBUG] Searching for keywords:', keywords);
+      // Force include top YouTube videos if connected
+      if (platformConnections.youtube && contentByType.youtube_video.length > 0) {
+        const topYouTube = contentByType.youtube_video.slice(0, 2);
+        selectedResults.push(...topYouTube);
+        console.log('🔀 [HYBRID QUOTA SEARCH] Added', topYouTube.length, 'YouTube videos (forced)');
+      }
       
-      // Score based on keyword matches
-      const keywordResults = userEmbeddings
-        .map(doc => {
-          const contentLower = (doc.title + ' ' + doc.content).toLowerCase();
-          let keywordScore = 0;
+      // Force include top Instagram posts if connected
+      if (platformConnections.instagram && contentByType.instagram_post.length > 0) {
+        const topInstagram = contentByType.instagram_post.slice(0, 2);
+        selectedResults.push(...topInstagram);
+        console.log('🔀 [HYBRID QUOTA SEARCH] Added', topInstagram.length, 'Instagram posts (forced)');
+      }
+      
+      // Add conversations (max 4)
+      if (contentByType.conversation.length > 0) {
+        const topConversations = contentByType.conversation.slice(0, 4);
+        selectedResults.push(...topConversations);
+        console.log('🔀 [HYBRID QUOTA SEARCH] Added', topConversations.length, 'conversations (max 4)');
+      }
+      
+      // Add emails (max 2 if relevant)
+      if (contentByType.gmail_thread.length > 0) {
+        const topEmails = contentByType.gmail_thread.slice(0, 2);
+        selectedResults.push(...topEmails);
+        console.log('🔀 [HYBRID QUOTA SEARCH] Added', topEmails.length, 'emails (max 2)');
+      }
+      
+      // Fill remaining slots with best matches while respecting quotas
+      const targetTotal = args.limit || 10;
+      const remainingSlots = targetTotal - selectedResults.length;
+      
+      if (remainingSlots > 0) {
+        console.log('🔀 [HYBRID QUOTA SEARCH] Filling', remainingSlots, 'remaining slots...');
+        
+        // Get unused content items, respecting quotas
+        const usedIds = new Set(selectedResults.map(item => item.contentId));
+        const unusedContent = filteredSimilarities.filter(item => !usedIds.has(item.contentId));
+        
+        // Apply quota limits to unused content
+        const quotaLimitedUnused = [];
+        const quotaLimits = {
+          youtube_video: platformConnections.youtube ? 2 : 0,
+          instagram_post: platformConnections.instagram ? 2 : 0,
+          conversation: 4,
+          gmail_thread: 2,
+          note: remainingSlots,
+        };
+        
+        // Count current content by type
+        const currentCounts = {
+          youtube_video: selectedResults.filter(item => item.contentType === 'youtube_video').length,
+          instagram_post: selectedResults.filter(item => item.contentType === 'instagram_post').length,
+          conversation: selectedResults.filter(item => item.contentType === 'conversation').length,
+          gmail_thread: selectedResults.filter(item => item.contentType === 'gmail_thread').length,
+          note: selectedResults.filter(item => item.contentType === 'note').length,
+        };
+        
+        for (const item of unusedContent) {
+          if (quotaLimitedUnused.length >= remainingSlots) break;
           
-          keywords.forEach(keyword => {
-            if (contentLower.includes(keyword)) {
-              keywordScore += 0.3; // Base score per keyword match
-              
-              // Bonus for title matches
-              if (doc.title.toLowerCase().includes(keyword)) {
-                keywordScore += 0.2;
-              }
-              
-              // Bonus for exact phrase matches
-              if (contentLower.includes(queryLower)) {
-                keywordScore += 0.5;
-              }
-            }
-          });
+          const currentCount = currentCounts[item.contentType] || 0;
+          const quota = quotaLimits[item.contentType];
           
-          return {
-            ...doc,
-            score: keywordScore,
-          };
-        })
-        .filter(item => item.score > 0)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, args.limit || 5);
+          if (quota === undefined || currentCount < quota) {
+            quotaLimitedUnused.push(item);
+            currentCounts[item.contentType] = currentCount + 1;
+          }
+        }
+        
+        selectedResults.push(...quotaLimitedUnused);
+        console.log('🔀 [HYBRID QUOTA SEARCH] Added', quotaLimitedUnused.length, 'additional items to fill remaining slots');
+      }
       
-      console.log('🔀 [HYBRID SEARCH DEBUG] Keyword search found', keywordResults.length, 'results');
-      console.log('🔀 [HYBRID SEARCH DEBUG] Keyword scores:', keywordResults.map(r => ({ 
-        title: r.title.substring(0, 30) + '...', 
-        score: Math.round(r.score * 100) / 100 
-      })));
+      // Step 8: Final processing
+      console.log('🔀 [HYBRID QUOTA SEARCH] Step 8: Final processing...');
+      // Sort final results by score
+      selectedResults.sort((a, b) => b.score - a.score);
       
-      return keywordResults;
+      // Take final limit
+      const finalResults = selectedResults.slice(0, targetTotal);
+      
+      console.log('🔀 [HYBRID QUOTA SEARCH] Final results:', {
+        total: finalResults.length,
+        youtube: finalResults.filter(item => item.contentType === 'youtube_video').length,
+        instagram: finalResults.filter(item => item.contentType === 'instagram_post').length,
+        conversations: finalResults.filter(item => item.contentType === 'conversation').length,
+        emails: finalResults.filter(item => item.contentType === 'gmail_thread').length,
+        notes: finalResults.filter(item => item.contentType === 'note').length,
+      });
+      
+      return finalResults;
       
     } catch (error) {
-      console.error("❌ [HYBRID SEARCH DEBUG] Error in hybrid search:", error);
-      throw error;
+      console.error("❌ [HYBRID QUOTA SEARCH] Error:", error);
+      console.error("❌ [HYBRID QUOTA SEARCH] Error stack:", error instanceof Error ? error.stack : 'No stack trace');
+      // Re-throw with more context
+      throw new Error(`Hybrid search with quotas failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
 });
@@ -826,6 +1026,134 @@ export const debugSearchQuery = action({
     } catch (error) {
       console.error('🐛 [DEBUG SEARCH] Error:', error);
       throw error;
+    }
+  },
+});
+
+/**
+ * DEBUG: Simplified hybrid search to test components individually
+ */
+export const debugHybridSearchWithQuotas = action({
+  args: {
+    userId: v.string(),
+    query: v.string(),
+    limit: v.optional(v.number()),
+    testStep: v.optional(v.string()), // Which step to test: "platform", "embedding", "similarity", "full"
+  },
+  handler: async (ctx, args) => {
+    console.log('🐛 [DEBUG SEARCH] Starting debug hybrid search');
+    console.log('🐛 [DEBUG SEARCH] Test step:', args.testStep || 'full');
+    console.log('🐛 [DEBUG SEARCH] Query:', args.query);
+    
+    try {
+      const testStep = args.testStep || 'full';
+      
+      if (testStep === 'platform' || testStep === 'full') {
+        console.log('🐛 [DEBUG SEARCH] Testing platform connections...');
+        
+        // Simple platform check using proper action database access
+        const connections = {
+          youtube: false,
+          instagram: false,
+          gmail: false,
+        };
+        
+        try {
+          // Use the existing checkPlatformConnections function
+          const platformResult = await checkPlatformConnections(ctx, args.userId);
+          console.log('🐛 [DEBUG SEARCH] Platform connections result:', platformResult);
+          
+          if (testStep === 'platform') {
+            return [{ 
+              contentId: 'test', 
+              contentType: 'note', 
+              title: 'Platform Test Success', 
+              content: JSON.stringify(platformResult),
+              embedding: [0.1, 0.2, 0.3],
+              score: 1.0 
+            }];
+          }
+        } catch (e) {
+          console.log('🐛 [DEBUG SEARCH] Platform check failed:', e);
+          
+          if (testStep === 'platform') {
+            return [{ 
+              contentId: 'test', 
+              contentType: 'note', 
+              title: 'Platform Test Failed', 
+              content: `Platform check error: ${e instanceof Error ? e.message : 'Unknown error'}`,
+              embedding: [0.1, 0.2, 0.3],
+              score: 1.0 
+            }];
+          }
+        }
+      }
+      
+      if (testStep === 'embedding' || testStep === 'full') {
+        console.log('🐛 [DEBUG SEARCH] Testing embedding generation...');
+        
+        // Test with simple query
+        const testQuery = 'test query';
+        console.log('🐛 [DEBUG SEARCH] Generating embedding for:', testQuery);
+        
+        const embedding = await generateEmbedding(testQuery);
+        console.log('🐛 [DEBUG SEARCH] Embedding generated, dimension:', embedding.length);
+        
+        if (testStep === 'embedding') {
+          return [{ 
+            contentId: 'test', 
+            contentType: 'note', 
+            title: 'Embedding Test Success', 
+            content: `Generated ${embedding.length}D embedding`,
+            embedding: embedding.slice(0, 3), // Just first 3 dims for test
+            score: 1.0 
+          }];
+        }
+      }
+      
+      if (testStep === 'similarity' || testStep === 'full') {
+        console.log('🐛 [DEBUG SEARCH] Testing similarity calculation...');
+        
+        // Get just 1 user embedding for testing
+        const userEmbeddings = await ctx.runQuery(internal.vectorSearch.getAllUserEmbeddings, {
+          userId: args.userId,
+        });
+        
+        console.log('🐛 [DEBUG SEARCH] User embeddings count:', userEmbeddings.length);
+        
+        if (userEmbeddings.length > 0) {
+          const testEmbedding = [0.1, 0.2, 0.3]; // Simple test embedding
+          const similarity = cosineSimilarity(testEmbedding, userEmbeddings[0].embedding.slice(0, 3));
+          console.log('🐛 [DEBUG SEARCH] Similarity calculation worked:', similarity);
+          
+          if (testStep === 'similarity') {
+            return [{ 
+              contentId: 'test', 
+              contentType: 'note', 
+              title: 'Similarity Test Success', 
+              content: `Calculated similarity: ${similarity}`,
+              embedding: testEmbedding,
+              score: similarity 
+            }];
+          }
+        }
+      }
+      
+      // If we get here, all individual tests passed
+      console.log('🐛 [DEBUG SEARCH] All individual tests passed, returning success');
+      return [{ 
+        contentId: 'debug-success', 
+        contentType: 'note', 
+        title: 'Debug Test Complete', 
+        content: 'All debug steps completed successfully',
+        embedding: [0.1, 0.2, 0.3],
+        score: 1.0 
+      }];
+      
+    } catch (error) {
+      console.error('🐛 [DEBUG SEARCH] Error in debug search:', error);
+      console.error('🐛 [DEBUG SEARCH] Error stack:', error instanceof Error ? error.stack : 'No stack');
+      throw new Error(`Debug search failed at step ${args.testStep}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
 });

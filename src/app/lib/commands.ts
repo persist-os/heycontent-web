@@ -547,6 +547,70 @@ async function vectorSearchContent(query: string, limit: number = 5): Promise<Se
 
     const { convex, api } = await getConvexClient();
     
+    // Try the new enhanced search with quotas first
+    try {
+      const vectorResults = await convex.action(api.vectorSearch.hybridSearchContentWithQuotas, {
+        userId,
+        query,
+        limit,
+        contentTypes: ["conversation", "note", "instagram_post", "youtube_video", "gmail_thread"],
+        minSimilarity: 0.3 // Lower threshold for command palette search
+      });
+
+      if (vectorResults && vectorResults.length > 0) {
+        return vectorResults.map((result: any): SearchResult => {
+          const baseResult = {
+            id: result.contentId || result._id,
+            title: result.title,
+            icon: getIconForContentType(result.contentType),
+            color: getColorForContentType(result.contentType),
+            updatedAt: new Date().toISOString().split('T')[0],
+            path: getPathForContentType(result.contentType, result.contentId || result._id),
+          };
+
+          // Type-specific fields
+          switch (result.contentType) {
+            case 'conversation':
+              return {
+                ...baseResult,
+                type: 'conversation',
+                lastMessage: result.content.substring(0, 100) + '...',
+                participants: ['AI Assistant'],
+              } as ConversationResult;
+            
+            case 'note':
+              return {
+                ...baseResult,
+                type: 'note',
+                preview: result.content.substring(0, 100) + '...',
+                tags: [],
+              } as NoteResult;
+            
+            case 'instagram_post':
+            case 'youtube_video':
+            case 'gmail_thread':
+              return {
+                ...baseResult,
+                type: 'insight',
+                category: result.contentType,
+                summary: result.content.substring(0, 100) + '...',
+              } as InsightResult;
+            
+            default:
+              return {
+                ...baseResult,
+                type: 'insight',
+                category: 'Content',
+                summary: result.content.substring(0, 100) + '...',
+              } as InsightResult;
+          }
+        });
+      }
+    } catch (enhancedError) {
+      console.error('Enhanced vector search failed, falling back to standard search:', enhancedError);
+    }
+
+    // Fallback to old search method
     const vectorResults = await convex.action(api.vectorSearch.searchRelevantContent, {
       userId,
       query,

@@ -27,6 +27,7 @@ export interface Message {
   suggestions?: any[];
   sessionId?: string;
   searchStatus?: string;
+  statusHistory?: string[]; // Array of all status updates for progressive thinking
   metadata?: {
     suggestions?: any[];
     [key: string]: any;

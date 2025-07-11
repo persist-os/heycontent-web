@@ -1,5 +1,8 @@
 import { ComponentType } from 'react';
 
+// Import the enhanced VectorSearchMetadata type
+import type { VectorSearchMetadata } from './utils/api-utils';
+
 export interface PersonaData {
   current_name: string;
   current_description: string;
@@ -35,15 +38,7 @@ export interface ChatResponseData {
     is_persona_complete?: boolean; // Indicates if persona creation is complete
     persona?: PersonaData; // The completed persona data
   };
-  vector_search_metadata?: { // Add vector search metadata
-    foundRelevantContent: boolean;
-    relevantItemsCount: number;
-    relevantContent: Array<{
-      title: string;
-      contentType: string;
-      score: number;
-    }>;
-  };
+  vector_search_metadata?: VectorSearchMetadata; // Use the enhanced type
 }
 
 export interface SuggestedAction {

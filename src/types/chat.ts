@@ -20,6 +20,8 @@ export interface Message {
   timestamp: string
   relatedInsights?: InsightReference[]
   status?: 'sending' | 'sent' | 'failed' | 'typing'
+  searchStatus?: string // Current search status
+  statusHistory?: string[] // Array of all status updates for progressive thinking
   referencedMessage?: {
     id: number
     content: string

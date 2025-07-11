@@ -408,6 +408,7 @@ export async function POST(request: Request) {
       chat_response: chat_response,
       suggestions: suggestions || [],
       session_id: session_id_resp,
+      vector_search_metadata: vector_search_metadata,
       metadata: {
         request_id: requestId,
         processing_time_ms: totalDuration
