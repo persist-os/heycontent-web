@@ -274,43 +274,41 @@ export const useChat = (
 
       // Update messages with the response
       setMessages(prev => {
-        // First, mark the typing message as completed by updating its search status
+        // Transform the typing message into the final response message
         const updatedMessages = prev.map(msg => 
           msg.status === 'typing' 
-            ? { ...msg, searchStatus: '✅ Analysis complete - response ready' }
+            ? { 
+                ...msg, 
+                status: 'sent', // Change status to completed
+                content: data.chat_response, // Replace the "..." with actual content
+                chat_response: data.chat_response, // Set the chat response
+                searchStatus: '✅ Analysis complete - response ready',
+                // Preserve all the progressive thinking data
+                statusHistory: msg.statusHistory || [],
+                vectorSearchMetadata: data.vector_search_metadata,
+                // Add the response metadata
+                sessionId: data.session_id || sessionId,
+                metadata: data.metadata,
+                suggestions: data.suggestions || []
+              }
             : msg
         );
         
-        const newMessage: Message = {
-          id: uuidv4(),
-          content: data.chat_response,
-          role: 'assistant',
-          timestamp: new Date().toISOString(),
-          chat_response: data.chat_response,
-          sessionId: data.session_id || sessionId,
-          metadata: data.metadata,
-          vectorSearchMetadata: data.vector_search_metadata, // Add vector search metadata
-          suggestions: data.suggestions || []
-        };
-        
-        const finalMessages = [...updatedMessages, newMessage];
-        
         // Add useful logging from main
         console.log('🔗 useChat: Messages after assistant response:', {
-          totalMessages: finalMessages.length,
-          userMessages: finalMessages.filter(msg => msg.role === 'user'),
-          userMessageWithLinks: finalMessages.filter(msg => msg.role === 'user' && msg.content.includes('@['))
+          totalMessages: updatedMessages.length,
+          userMessages: updatedMessages.filter(msg => msg.role === 'user'),
+          userMessageWithLinks: updatedMessages.filter(msg => msg.role === 'user' && msg.content.includes('@['))
         });
         
-        return finalMessages;
+        return updatedMessages;
       });
 
-      // Remove typing indicator after a brief delay to allow users to see the completion
+      // Don't remove the typing message anymore - just clear the current status
       setTimeout(() => {
-        setMessages(prev => prev.filter(msg => msg.status !== 'typing'));
-        // Clear search status and status history AFTER the typing message is removed
+        // Clear search status and status history but keep the message
         setSearchStatus('');
-        setStatusHistory([]); // Clear status history after completion
+        setStatusHistory([]); 
       }, 2000); // 2 second delay to show completion state
 
       // Update first message state after first successful response

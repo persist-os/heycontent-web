@@ -7,11 +7,9 @@ import { useTheme } from 'next-themes'
 import { ExpandableInsights } from './expandable-insights'
 import { MarkdownRenderer, ChatContentRenderer } from './markdown-renderer'
 import { PersonaCardRenderer } from './components/PersonaCardRenderer'
-import { ThinkingIndicator } from './components/main_chat/ThinkingIndicator'
-import { ProgressiveThinkingIndicator } from './components/main_chat/ProgressiveThinkingIndicator'
+import { HorizontalProgressiveThinking } from './components/main_chat/HorizontalProgressiveThinking'
 import { CopyButton } from '@/components/ui/copy-button'
 import React, { useState, useEffect } from 'react'
-import VectorSearchContext from './components/VectorSearchContext'
 import { AnimatePresence } from 'framer-motion'
 
 interface MessageBubbleProps {
@@ -329,26 +327,9 @@ export function MessageBubble({
               </button>
             )}
 
-            {/* Vector Search Context Display - ABOVE message content */}
-            {!isUser && message.vectorSearchMetadata && (
-              <VectorSearchContext
-                vectorSearchMetadata={message.vectorSearchMetadata}
-              />
-            )}
-
             {/* Main message content */}
             <div className="prose prose-sm dark:prose-invert prose-p:my-2 prose-headings:my-3 max-w-none break-words">
-              {message.status === 'typing' ? (
-                <ProgressiveThinkingIndicator 
-                  searchStatus={message.searchStatus || ''}
-                  statusHistory={message.statusHistory || []}
-                  isCompleted={message.searchStatus?.includes('Analysis complete - response ready') || false}
-                  onComplete={() => {
-                    // This will be called when thinking is complete
-                    // The parent component will handle the transition
-                  }}
-                />
-              ) : mightHavePersona && userId ? (
+              {mightHavePersona && userId ? (
                 <PersonaCardRenderer message={message} userId={userId} />
               ) : isUser && hasLinkedContent ? (
                 <>
@@ -358,8 +339,29 @@ export function MessageBubble({
                   />
                 </>
               ) : (
-                // Use MarkdownRenderer for assistant messages and user messages without linked content
-                <MarkdownRenderer content={message.chat_response || message.content} />
+                <>
+                  {/* Progressive Thinking Steps - integrated into message content */}
+                  {!isUser && (
+                    message.status === 'typing' || 
+                    message.vectorSearchMetadata?.foundRelevantContent ||
+                    (message.statusHistory && message.statusHistory.length > 0) ||
+                    message.vectorSearchMetadata
+                  ) && (
+                    <HorizontalProgressiveThinking 
+                      searchStatus={message.searchStatus || ''}
+                      statusHistory={message.statusHistory || []}
+                      isCompleted={message.status !== 'typing'}
+                      vectorSearchMetadata={message.vectorSearchMetadata}
+                      onComplete={() => {
+                        // This will be called when thinking is complete
+                        // The parent component will handle the transition
+                      }}
+                    />
+                  )}
+                  
+                  {/* Use MarkdownRenderer for assistant messages and user messages without linked content */}
+                  <MarkdownRenderer content={message.chat_response || message.content} />
+                </>
               )}
             </div>
 
