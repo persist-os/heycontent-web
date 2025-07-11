@@ -246,6 +246,8 @@ function ChatContentRenderer({ content, className = '', onContentClick }: ChatCo
               actualContentId = contentId.replace('note:', '')
             } else if (contentType === 'youtube' && contentId.startsWith('youtube:')) {
               actualContentId = contentId.replace('youtube:', '')
+            } else if (contentType === 'instagram' && contentId.startsWith('instagram:')) {
+              actualContentId = contentId.replace('instagram:', '')
             }
             onContentClick(contentType, actualContentId)
           } else {

@@ -22,11 +22,55 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid;
 
-  // Fetch Instagram post data
-  const postData = useQuery(api.notes.getContentByPrefixedId, {
-    prefixedId: `instagram:${postId}`,
+  // Fetch Instagram post data (raw DB format)
+  const post = useQuery(api.instagramQueries.getInstagramPost, {
+    postId,
     userId: userId || ''
   });
+
+  // Debug: Log the raw post data
+  console.log('Raw Instagram post data:', post);
+
+  // Normalize to the same format as getAllLinkableContent
+  const postData = post && {
+    id: `instagram:${post.postId}`,
+    title: post.data?.caption?.substring(0, 100) || 'Instagram Post',
+    type: 'instagram',
+    contentType: post.mediaType?.toLowerCase() || 'image',
+    platform: 'instagram',
+    createdAt: post.data?.timestamp || post.createdAt || Date.now(),
+    important: false,
+    tags: [],
+    analysis: post.analysis,
+    analysisMarkdown: post.analysisMarkdown,
+    mediaUrl: post.data?.media_url || '',
+    thumbnailUrl: post.data?.thumbnail_url || '',
+    insights: post.data?.insights || {},
+    statistics: {
+      likes: post.data?.insights?.likes ?? post.data?.like_count ?? 0,
+      comments: post.data?.insights?.comments ?? post.data?.comments_count ?? 0,
+      reach: post.data?.insights?.reach ?? 0,
+      impressions: post.data?.insights?.impressions ?? 0,
+      saved: post.data?.insights?.saved ?? 0,
+      shares: post.data?.insights?.shares ?? 0
+    },
+    // Add the raw data structure that InstagramContent expects
+    data: {
+      media_url: post.data?.media_url || '',
+      thumbnail_url: post.data?.thumbnail_url || '',
+      caption: post.data?.caption || '',
+      insights: post.data?.insights || {},
+      like_count: post.data?.like_count || 0,
+      comments_count: post.data?.comments_count || 0,
+      permalink: post.data?.permalink || `https://www.instagram.com/p/${post.postId}`
+    },
+    mediaType: post.mediaType,
+    // Add permalink at the top level for easy access
+    permalink: post.data?.permalink || `https://www.instagram.com/p/${post.postId}`
+  };
+
+  // Debug: Log the normalized post data
+  console.log('Normalized Instagram post data:', postData);
 
   if (!postData) {
     return (
@@ -44,7 +88,7 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
   return (
     <ContentOverlay
       onClose={onClose}
-      title={postData.title || 'Instagram Post'}
+      title={postData.title}
       subtitle="Instagram Post Analysis"
       icon={<Instagram className="w-8 h-8 text-pink-500" />}
     >
