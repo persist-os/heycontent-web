@@ -116,4 +116,20 @@ export const getUserInfo = query({
     };
   },
 });
+
+// Gmail quota optimization - get lastGmailFetch timestamp
+export const getLastGmailFetch = query({
+  args: { userId: v.string() },
+  returns: v.union(v.number(), v.null()),
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+    
+    if (!user) return null;
+    
+    return user.lastGmailFetch || null;
+  },
+});
   
