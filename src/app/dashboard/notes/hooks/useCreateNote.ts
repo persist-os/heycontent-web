@@ -68,7 +68,7 @@ export const useCreateNote = () => {
     setIsCreating(true);
     setError(null);
     try {
-      let noteUpdate: any = { content, title: customTitle };
+      const noteUpdate: any = { content, title: customTitle };
       if (customType && ['idea_bank','content_script','collaboration_note','analytics_insight','reflection_journal','task_checklist'].includes(customType)) {
         noteUpdate.type = customType;
       }

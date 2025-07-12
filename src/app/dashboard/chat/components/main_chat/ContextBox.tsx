@@ -20,8 +20,12 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
   includeAnalysisInQuery = true,
   onToggleAnalysis 
 }) => {
+  // Debug logging to see what context we're receiving
+  console.log('🔍 [CONTEXT BOX] Received context:', context);
+  console.log('🔍 [CONTEXT BOX] Context type:', typeof context);
+  console.log('🔍 [CONTEXT BOX] Context keys:', Object.keys(context || {}));
   // Special handling for AI insights with full insight data
-  if (context.platform === 'ai-insights' && (context as any).fullInsight) {
+  if (context.platform === 'ai-insights' && ((context as any).fullInsight || (context as any).type === 'content-hub-action-step' || (context as any).type === 'content-hub-insight' || (context as any).source === 'content-hub')) {
     const originalPlatform = (context as any).originalPlatform;
     let platformIcon = null;
     if (originalPlatform === 'youtube') {
@@ -65,8 +69,53 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
             </div>
           </div>
           <div className="p-4 pt-0">
-            {/* Display the full AI insight */}
-            <AIInsightDisplayCard context={context as any} showPlatformIcon={false} />
+            {/* Display the full AI insight or content hub insight */}
+            {(context as any).fullInsight ? (
+              <AIInsightDisplayCard context={context as any} showPlatformIcon={false} />
+            ) : (context as any).type === 'content-hub-action-step' || (context as any).type === 'content-hub-insight' || (context as any).source === 'content-hub' ? (
+              <div className="p-4 bg-gradient-to-br from-purple-50 to-white dark:from-purple-900/20 dark:to-gray-900 border border-purple-200 dark:border-purple-700 rounded-lg">
+                <div className="mb-3">
+                  <h4 className="font-semibold text-base text-purple-700 dark:text-purple-300 mb-2 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" />
+                    {(context as any).type === 'content-hub-action-step' ? 'Content Hub Action Step' : 'Content Hub Insight'}
+                  </h4>
+                  <div className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+                    {(() => {
+                      console.log('🔍 [CONTEXT BOX] Content debug:', {
+                        content: typeof context.content,
+                        insight: typeof context.insight,
+                        analysis: typeof context.analysis,
+                        contentValue: context.content,
+                        insightValue: context.insight,
+                        analysisValue: context.analysis
+                      });
+                      
+                      if (typeof context.content === 'string') {
+                        return <MarkdownRenderer content={context.content} />;
+                      } else if (typeof context.insight === 'string') {
+                        return <MarkdownRenderer content={context.insight} />;
+                      } else if (typeof context.analysis === 'string') {
+                        return <MarkdownRenderer content={context.analysis} />;
+                      } else {
+                        return <div>Content not available - Debug: {JSON.stringify({ content: typeof context.content, insight: typeof context.insight, analysis: typeof context.analysis })}</div>;
+                      }
+                    })()}
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {(context as any).contentType && (
+                      <span className="inline-flex items-center px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 text-xs font-medium rounded-full capitalize">
+                        {String((context as any).contentType)}
+                      </span>
+                    )}
+                    {(context as any).originalPlatform && (
+                      <span className="inline-flex items-center px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200 text-xs font-medium rounded-full capitalize">
+                        {String((context as any).originalPlatform)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
             {/* Analysis context toggle */}
             <div className="mt-2 p-3 bg-white dark:bg-gray-900 rounded border border-[#D0ECFF]">

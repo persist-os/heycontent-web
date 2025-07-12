@@ -70,7 +70,7 @@ async function resolveSmartNoteContent(noteId: string, userId: string, allLinkab
     }
 
     // Build comprehensive content including full note body/content, title, statistics, analysis, etc.
-    let contentParts = [];
+    const contentParts = [];
 
     // Add title
     if (note.title) {
@@ -181,7 +181,7 @@ async function resolveYouTubeContent(videoId: string, userId: string, allLinkabl
     }
 
     // Only include analysis and statistics
-    let contentParts = [];
+    const contentParts = [];
     if (video.analysis) {
       console.log('🔗 [LINK RESOLVER] YouTube analysis type:', typeof video.analysis, video.analysis);
       const analysisText = typeof video.analysis === 'string' ? video.analysis : JSON.stringify(video.analysis, null, 2);
@@ -238,7 +238,7 @@ async function resolveInstagramContent(postId: string, userId: string, allLinkab
     }
 
     // Build comprehensive content including caption, insights, statistics, analysis, etc.
-    let contentParts = [];
+    const contentParts = [];
 
     // Add caption
     if (post.content) {
@@ -330,7 +330,7 @@ async function resolveGmailContent(threadId: string, userId: string, allLinkable
     }
 
     // Build comprehensive content including subject, messages, and analysis
-    let contentParts = [];
+    const contentParts = [];
 
     // Add subject
     if (thread.title) {

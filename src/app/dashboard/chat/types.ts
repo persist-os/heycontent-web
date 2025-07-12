@@ -75,6 +75,7 @@ export interface ContentContext {
   actionStep?: string;  // Add this for AI Insights action steps
   source?: string;      // Add this to track the source of the context
   originalPlatform?: 'youtube' | 'instagram' | 'gmail'; // Add this for AI insights
+  insight?: string;     // Add this for content hub insights
   fullInsight?: {       // Add this for full AI insight context
     title: string;
     impact: string;

@@ -8,6 +8,7 @@ import { CreateNoteButton } from '@/components/ui/CreateNoteButton'
 import { RefreshCw, Instagram, Mail, Sparkles, MessageSquare, Plus } from 'lucide-react'
 import { YouTubeBrandIcon } from '@/lib/YoutubeBrandIcon'
 import { useContentHubInsights } from './hooks/useContentHubInsights'
+import { useContentHubActionStepDiscussion } from './hooks/useActionStepDiscussion'
 import { useRouter } from 'next/navigation'
 import { ContentHubInsight } from '@/convex/contentHub'
 import { useContentContextActions } from '@/store/content-context-store'
@@ -20,6 +21,7 @@ interface ContentHubInsightsProps {
 export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsProps) {
   const router = useRouter()
   const { setAIInsightsContext } = useContentContextActions()
+  const { discussActionStep, discussFullInsight } = useContentHubActionStepDiscussion()
   const {
     latestInsight,
     refreshing,
@@ -37,24 +39,14 @@ export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsPr
   }
 
   const discussInsight = (content: string, title: string) => {
-    // Set the AI insights context in the store
-    const insightContext = {
-      title: title,
-      content: content,
-      insight: content, // Also set as insight for backwards compatibility
-      source: 'Content Hub Insights',
-      timestamp: Date.now(),
-      type: 'content-hub-insight'
-    }
-    
-    console.log('🔍 [CONTENT HUB] Setting AI insights context:', insightContext);
-    setAIInsightsContext(insightContext)
-    
-    // Small delay to ensure context is set before navigation
-    setTimeout(() => {
-      console.log('🔍 [CONTENT HUB] Navigating to chat');
-      router.push('/dashboard/chat')
-    }, 100);
+    discussFullInsight(content, title)
+  }
+
+  const handleDiscussActionStep = (actionStep: string, platform: 'youtube' | 'instagram' | 'gmail', contentType: 'hook' | 'format' | 'cta') => {
+    console.log('🔍 [CONTENT HUB] handleDiscussActionStep called with:', { actionStep, platform, contentType });
+    const insightTitle = `${platform.charAt(0).toUpperCase() + platform.slice(1)} ${contentType.charAt(0).toUpperCase() + contentType.slice(1)}`
+    console.log('🔍 [CONTENT HUB] Calling discussActionStep with insightTitle:', insightTitle);
+    discussActionStep(actionStep, insightTitle, platform, contentType)
   }
 
   // Show skeleton while data is loading
@@ -293,6 +285,7 @@ export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsPr
                 format={insight.youtube_format}
                 cta={insight.youtube_cta}
                 onDiscuss={discussInsight}
+                onDiscussActionStep={handleDiscussActionStep}
                 glowColor="hover:shadow-red-500/25 hover:border-red-500/30"
               />
 
@@ -304,6 +297,7 @@ export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsPr
                 format={insight.instagram_format}
                 cta={insight.instagram_cta}
                 onDiscuss={discussInsight}
+                onDiscussActionStep={handleDiscussActionStep}
                 glowColor="hover:shadow-pink-500/25 hover:border-pink-500/30"
               />
 
@@ -315,6 +309,7 @@ export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsPr
                 format={insight.gmail_format}
                 cta={insight.gmail_cta}
                 onDiscuss={discussInsight}
+                onDiscussActionStep={handleDiscussActionStep}
                 glowColor="hover:shadow-blue-500/25 hover:border-blue-500/30"
               />
             </div>
@@ -332,10 +327,11 @@ interface PlatformInsightCardProps {
   format: string
   cta: string
   onDiscuss: (content: string, title: string) => void
+  onDiscussActionStep: (actionStep: string, platform: 'youtube' | 'instagram' | 'gmail', contentType: 'hook' | 'format' | 'cta') => void
   glowColor: string
 }
 
-function PlatformInsightCard({ platform, icon, hook, format, cta, onDiscuss, glowColor }: PlatformInsightCardProps) {
+function PlatformInsightCard({ platform, icon, hook, format, cta, onDiscuss, onDiscussActionStep, glowColor }: PlatformInsightCardProps) {
   return (
     <div className={`border-2 border-transparent rounded-lg p-4 space-y-3 hover:shadow-xl ${glowColor} transition-all duration-300`}>
       <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
@@ -348,6 +344,18 @@ function PlatformInsightCard({ platform, icon, hook, format, cta, onDiscuss, glo
           <div>
             <span className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Hook</span>
             <p className="text-gray-700 dark:text-gray-300 text-sm mt-1">{hook}</p>
+            <Button
+              onClick={() => {
+                console.log('🔍 [CONTENT HUB] Hook button clicked for platform:', platform);
+                onDiscussActionStep(hook, platform.toLowerCase() as 'youtube' | 'instagram' | 'gmail', 'hook')
+              }}
+              size="sm"
+              variant="ghost"
+              className="text-xs mt-2 hover:bg-heycontent-purple hover:text-white dark:hover:bg-gray-800 dark:hover:text-gray-100"
+            >
+              <MessageSquare className="w-3 h-3 mr-1" />
+              Discuss Hook
+            </Button>
           </div>
         )}
         
@@ -355,6 +363,18 @@ function PlatformInsightCard({ platform, icon, hook, format, cta, onDiscuss, glo
           <div>
             <span className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Format</span>
             <p className="text-gray-700 dark:text-gray-300 text-sm mt-1">{format}</p>
+            <Button
+              onClick={() => {
+                console.log('🔍 [CONTENT HUB] Format button clicked for platform:', platform);
+                onDiscussActionStep(format, platform.toLowerCase() as 'youtube' | 'instagram' | 'gmail', 'format')
+              }}
+              size="sm"
+              variant="ghost"
+              className="text-xs mt-2 hover:bg-heycontent-purple hover:text-white dark:hover:bg-gray-800 dark:hover:text-gray-100"
+            >
+              <MessageSquare className="w-3 h-3 mr-1" />
+              Discuss Format
+            </Button>
           </div>
         )}
         
@@ -362,6 +382,18 @@ function PlatformInsightCard({ platform, icon, hook, format, cta, onDiscuss, glo
           <div>
             <span className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Call to Action</span>
             <p className="text-gray-700 dark:text-gray-300 text-sm mt-1">{cta}</p>
+            <Button
+              onClick={() => {
+                console.log('🔍 [CONTENT HUB] CTA button clicked for platform:', platform);
+                onDiscussActionStep(cta, platform.toLowerCase() as 'youtube' | 'instagram' | 'gmail', 'cta')
+              }}
+              size="sm"
+              variant="ghost"
+              className="text-xs mt-2 hover:bg-heycontent-purple hover:text-white dark:hover:bg-gray-800 dark:hover:text-gray-100"
+            >
+              <MessageSquare className="w-3 h-3 mr-1" />
+              Discuss CTA
+            </Button>
           </div>
         )}
       </div>

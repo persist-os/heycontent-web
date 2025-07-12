@@ -10,7 +10,7 @@ import { getApiKey } from '@/app/lib/api-helpers';
 export const useApiKeyMonitor = () => {
   const router = useRouter();
   const hasCheckedOnMount = useRef(false);
-  let lastCheck = 0; // or use localStorage/sessionStorage for cross-tab
+  const lastCheck = 0; // or use localStorage/sessionStorage for cross-tab
 
   useEffect(() => {
     // Only run in browser environment
