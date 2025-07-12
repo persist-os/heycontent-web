@@ -10,7 +10,10 @@ import {
   Calendar,
   Sparkles,
   User,
-  X
+  X,
+  ChevronDown,
+  ChevronUp,
+  Subtitles
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MarkdownRenderer } from '@/app/dashboard/chat/markdown-renderer';
@@ -33,17 +36,101 @@ interface YouTubeContentProps {
   onClose?: () => void;
 }
 
-// Streamlined loading messages for content creators
+interface CaptionEntry {
+  index: number;
+  startTime: string;
+  endTime: string;
+  text: string;
+}
+
+// Add YouTube loading messages (can be YouTube/creator themed)
 const LOADING_MESSAGES = [
-  "Analyzing your video performance...",
-  "Processing your content insights...",
-  "Generating creator analytics...",
-  "Reviewing your audience engagement...",
-  "Analyzing your content strategy...",
-  "Processing your video metrics...",
-  "Generating performance insights...",
-  "Reviewing your content effectiveness..."
+  "Analyzing your YouTube magic... even AI needs to understand your channel's vibe!",
+  "Teaching our AI about your video style... it's learning, we promise!",
+  "Processing your YouTube genius... this is like speed-watching your playlist",
+  "Decoding your YouTube algorithm... because we're nosy about what makes your videos pop",
+  "AI is getting to know your brand... it's like a first date, but with data",
+  "Fetching your YouTube insights... this might take a moment, but good things come to those who wait",
+  "Crunching numbers and analyzing engagement... we're doing the heavy lifting so you don't have to",
+  "Deep-diving into your content strategy... because surface-level insights are so 2020",
+  "Processing your video brilliance... we're basically your personal content detective",
+  "Mining your YouTube gold... because every video has a story to tell",
+  "Analyzing your creative genius... because every upload is a masterpiece in the making",
+  "Decoding your YouTube success... we're basically your personal video therapist",
+  "Unpacking your content strategy... it's like reading your diary, but with analytics",
+  "Mapping your audience connection... because engagement is just friendship with data",
+  "Processing your YouTube personality... we're getting to know the real you (digitally)",
+  "YouTube analysis in progress... even AI needs to understand your thumbnail game",
+  "Decoding your YouTube story... we're basically your personal content whisperer",
+  "Mining your channel gold... every like, comment, and share tells a story",
+  "Analyzing your storytelling... because a video is worth a thousand insights",
+  "Processing your YouTube algorithm... we're basically your personal video fortune teller",
+  "Preparing your content insights... because every creator deserves to understand their impact",
+  "Unlocking your YouTube potential... we're here to help you shine brighter",
+  "Mapping your audience connection... because your content deserves to be seen",
+  "Analyzing your creative journey... every upload is a step toward your goals",
+  "Processing your growth story... because your YouTube journey is worth celebrating",
+  "Running YouTube analysis protocols... our AI is having a moment with your content",
+  "Processing your channel DNA... we're basically your personal content scientist",
+  "Syncing with YouTube's algorithm... because we speak fluent creator",
+  "Compiling your content insights... this is like speed-watching your YouTube autobiography",
+  "Optimizing your content analysis... because efficiency is our love language",
+  "AI is thinking about your videos... it's like having a really smart friend analyze your uploads",
+  "Processing your YouTube personality... we're basically your personal video bestie",
+  "Analyzing your creative fingerprint... because every creator has a unique style",
+  "Decoding your content strategy... we're like your personal YouTube therapist",
+  "Unpacking your channel magic... because every video has a story worth telling"
 ];
+
+// Helper to get a random index, avoiding the previous one
+function getRandomIndex(arrayLength: number, prevIndex: number | null): number {
+  if (arrayLength <= 1) return 0;
+  let idx = Math.floor(Math.random() * arrayLength);
+  // Avoid repeating the previous index
+  while (idx === prevIndex) {
+    idx = Math.floor(Math.random() * arrayLength);
+  }
+  return idx;
+}
+
+// SRT time format regex pattern
+const SRT_TIME_REGEX = /(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})/;
+
+// Parse SRT format captions
+const parseSRTCaptions = (srtText: string): CaptionEntry[] => {
+  if (!srtText || typeof srtText !== 'string') return [];
+  
+  const entries: CaptionEntry[] = [];
+  const blocks = srtText.split('\n\n').filter(block => block.trim());
+  
+  blocks.forEach(block => {
+    const lines = block.split('\n').filter(line => line.trim());
+    if (lines.length >= 3) {
+      const index = parseInt(lines[0].trim(), 10);
+      if (isNaN(index)) return; // Skip this block if the index is not a valid number
+      
+      const timeLine = lines[1].trim();
+      const text = lines.slice(2).join('\n').trim();
+      
+      const timeMatch = timeLine.match(SRT_TIME_REGEX);
+      if (timeMatch) {
+        entries.push({
+          index,
+          startTime: timeMatch[1],
+          endTime: timeMatch[2],
+          text
+        });
+      }
+    }
+  });
+  
+  return entries;
+};
+
+// Format time for display (remove milliseconds for cleaner look)
+const formatCaptionTime = (time: string): string => {
+  return time.replace(/,\d{3}$/, '');
+};
 
 export const YouTubeContent: React.FC<YouTubeContentProps> = ({
   videoData,
@@ -53,8 +140,10 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
 }) => {
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = React.useState(false);
   const [analysisError, setAnalysisError] = React.useState<string | null>(null);
-  const [currentMessageIndex, setCurrentMessageIndex] = React.useState(0);
+  const [currentMessageIndex, setCurrentMessageIndex] = React.useState(() => getRandomIndex(LOADING_MESSAGES.length, null));
+  const [prevMessageIndex, setPrevMessageIndex] = React.useState<number | null>(null);
   const [visibleCommentsCount, setVisibleCommentsCount] = React.useState(5);
+  const [showCaptions, setShowCaptions] = React.useState(false);
 
   const storeVideoAnalysis = useMutation(api.youtubeMutations.storeVideoAnalysis);
 
@@ -77,14 +166,19 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [onClose]);
 
-  // Cycling loading message effect
+  // Cycling loading message effect (random order, no repeats)
   React.useEffect(() => {
     if (!isGeneratingAnalysis) {
-      setCurrentMessageIndex(0);
+      setCurrentMessageIndex(getRandomIndex(LOADING_MESSAGES.length, null));
+      setPrevMessageIndex(null);
       return;
     }
     const interval = setInterval(() => {
-      setCurrentMessageIndex(prevIndex => (prevIndex + 1) % LOADING_MESSAGES.length);
+      setCurrentMessageIndex(prevIdx => {
+        const nextIdx = getRandomIndex(LOADING_MESSAGES.length, prevIdx);
+        setPrevMessageIndex(prevIdx);
+        return nextIdx;
+      });
     }, 3000); // Faster cycling for better UX
     return () => clearInterval(interval);
   }, [isGeneratingAnalysis]);
@@ -144,6 +238,10 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
   const hasMoreComments = comments.length > visibleCommentsCount;
   const commentsToLoad = Math.min(10, comments.length - visibleCommentsCount);
 
+  // Get captions from video data
+  const captionsData = videoData?.captions?.caption_track;
+  const captions = captionsData ? parseSRTCaptions(captionsData.text) : [];
+
   // Debug logging for video data and comments structure
   React.useEffect(() => {
     console.log(`[YouTubeContent] Full videoData structure:`, {
@@ -152,6 +250,8 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
       commentsStructure: videoData?.comments,
       commentsArray: videoData?.comments?.comments,
       commentsLength: videoData?.comments?.comments?.length || 0,
+      hasCaptions: !!captionsData,
+      captionsLength: captions.length,
       videoId: videoId
     });
     
@@ -171,7 +271,7 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
         fullCommentsField: videoData?.comments
       });
     }
-  }, [videoData, comments.length, visibleCommentsCount, hasMoreComments, commentsToLoad, videoId]);
+  }, [videoData, comments.length, visibleCommentsCount, hasMoreComments, commentsToLoad, videoId, captionsData, captions.length]);
 
   const content = (
     <div className="space-y-6">
@@ -243,6 +343,73 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
           </div>
         )}
       </div>
+
+      {/* Captions Section */}
+      {captions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Subtitles className="w-5 h-5" />
+                  Captions & Transcript
+                </CardTitle>
+                <CardDescription>
+                  {captionsData?.language && (
+                    <span className="text-xs bg-muted px-2 py-1 rounded mr-2">
+                      {captionsData.language.toUpperCase()}
+                    </span>
+                  )}
+                  {captions.length} caption entries
+                </CardDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowCaptions(!showCaptions)}
+                className="flex items-center gap-1"
+              >
+                {showCaptions ? (
+                  <>
+                    <ChevronUp className="w-4 h-4" />
+                    Hide
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-4 h-4" />
+                    Show
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardHeader>
+          {showCaptions && (
+            <CardContent>
+              <div className="space-y-3 max-h-80 overflow-y-auto custom-scrollbar">
+                {captions.map((caption, index) => (
+                  <div key={caption.index || index} className="flex gap-3 p-3 bg-muted/20 rounded-lg hover:bg-muted/30 transition-colors">
+                    <div className="flex-shrink-0 text-xs text-muted-foreground font-mono min-w-[80px]">
+                      {formatCaptionTime(caption.startTime)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm leading-relaxed">{caption.text}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 pt-4 border-t border-border">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Total duration: {captions.length > 0 ? (() => {
+                    const lastCaption = captions[captions.length - 1];
+                    return formatCaptionTime(lastCaption.endTime);
+                  })() : 'N/A'}</span>
+                  <span>{captions.length} entries</span>
+                </div>
+              </div>
+            </CardContent>
+          )}
+        </Card>
+      )}
 
       {/* Comments Section */}
       {comments.length > 0 && (
