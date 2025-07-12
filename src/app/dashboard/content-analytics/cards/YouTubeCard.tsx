@@ -136,8 +136,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
     <>
       <Card 
         key={item.id} 
-        className="overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-red-500/25 border-2 border-transparent hover:border-red-500/30 bg-white dark:bg-gray-800"
-        onClick={handleOpenOverlay}
+        className="overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-red-500/25 border-2 border-transparent hover:border-red-500/30 bg-white dark:bg-gray-800"
       >
         {/* Thumbnail */}
         <div className="relative aspect-video bg-gray-100 dark:bg-gray-800 overflow-hidden">
@@ -228,9 +227,10 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
               className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-text-dark dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
-                onViewDetailedAnalytics(item);
+                handleOpenOverlay();
               }}
             >
+              <BarChart3 className="w-4 h-4 inline mr-2" />
               Analytics
             </button>
             <button
