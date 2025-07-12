@@ -176,7 +176,7 @@ export const GmailOverlay: React.FC<GmailOverlayProps> = ({
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Always call the hook, but only use the result if no pre-fetched data
-  const queryResult = useQuery(api.gmailQueries.getGmailThreadForLinking, {
+  const queryResult = useQuery(api.gmailQueries.getGmailThreadByThreadId, {
     threadId,
     userId: userId || ''
   });

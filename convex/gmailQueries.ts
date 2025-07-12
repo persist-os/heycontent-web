@@ -1,412 +1,428 @@
 // Written by Aria
 import { v } from "convex/values";
 import { query } from "./_generated/server";
-import { api } from "./_generated/api";
+import { paginationOptsValidator } from "convex/server";
 
 // Get Gmail account data for a user
 export const getGmailAccounts = query({
   args: { userId: v.string() },
+  returns: v.array(v.object({
+    _id: v.id("gmailAccounts"),
+    _creationTime: v.number(),
+    userId: v.string(),
+    email: v.string(),
+    historyId: v.optional(v.string()),
+    messagesTotal: v.optional(v.number()),
+    threadsTotal: v.optional(v.number()),
+    labelsTotal: v.optional(v.union(v.number(), v.null())),
+    data: v.optional(v.any()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })),
   handler: async (ctx, args) => {
-    try {
-      const gmailAccounts = await ctx.db
-        .query("gmailAccounts")
-        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-        .collect();
-      return gmailAccounts;
-    } catch (error) {
-      console.error('Error getting Gmail accounts:', error);
-      throw new Error(`Failed to get Gmail accounts: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  },
-});
-
-// Get Gmail account by email
-export const getGmailAccountByEmail = query({
-  args: { userId: v.string(), email: v.string() },
-  handler: async (ctx, args) => {
-    try {
-      const gmailAccount = await ctx.db
-        .query("gmailAccounts")
-        .withIndex("by_email", (q) => q.eq("email", args.email))
-        .filter((q) => q.eq(q.field("userId"), args.userId))
-        .first();
-      return gmailAccount;
-    } catch (error) {
-      console.error('Error getting Gmail account by email:', error);
-      throw new Error(`Failed to get Gmail account by email: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return await ctx.db
+      .query("gmailAccounts")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
   },
 });
 
 // Get Gmail account by email (for collision detection - checks across all users)
 export const getGmailAccountByEmailGlobal = query({
   args: { email: v.string() },
+  returns: v.union(
+    v.object({
+      _id: v.id("gmailAccounts"),
+      _creationTime: v.number(),
+      userId: v.string(),
+      email: v.string(),
+      historyId: v.optional(v.string()),
+      messagesTotal: v.optional(v.number()),
+      threadsTotal: v.optional(v.number()),
+      labelsTotal: v.optional(v.union(v.number(), v.null())),
+      data: v.optional(v.any()),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    }),
+    v.null()
+  ),
   handler: async (ctx, args) => {
-    try {
-      console.log('Checking collision for Gmail email:', args.email);
-      
-      const gmailAccount = await ctx.db
-        .query("gmailAccounts")
-        .withIndex("by_email", (q) => q.eq("email", args.email))
-        .first();
-        
-      console.log('Collision check result:', gmailAccount ? {
-        userId: gmailAccount.userId,
-        email: gmailAccount.email
-      } : 'No collision found');
-      
-      return gmailAccount;
-    } catch (error) {
-      console.error('Error checking Gmail account collision:', error);
-      // Return null to allow connection in case of error
-      return null;
-    }
+    return await ctx.db
+      .query("gmailAccounts")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
   },
 });
 
 // Get Gmail token for a user
 export const getGmailToken = query({
   args: { userId: v.string() },
+  returns: v.union(
+    v.object({
+      _id: v.id("gmailTokens"),
+      _creationTime: v.number(),
+      userId: v.string(),
+      accessToken: v.string(),
+      refreshToken: v.string(),
+      expiryDate: v.number(),
+      scope: v.string(),
+      lastRefreshed: v.number(),
+      tokenType: v.string(),
+    }),
+    v.null()
+  ),
   handler: async (ctx, args) => {
-    try {
-      const token = await ctx.db
-        .query("gmailTokens")
-        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-        .first();
-      return token;
-    } catch (error) {
-      console.error('Error getting Gmail token:', error);
-      throw new Error(`Failed to get Gmail token: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return await ctx.db
+      .query("gmailTokens")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
   },
 });
 
-// Get Gmail message by ID
-export const getGmailMessageById = query({
-  args: { 
-    userId: v.string(),
-    email: v.string(), 
-    messageId: v.string() 
-  },
-  handler: async (ctx, args) => {
-    try {
-      const message = await ctx.db
-        .query("gmailMessages")
-        .withIndex("by_messageId", (q) => q.eq("messageId", args.messageId))
-        .filter((q) => 
-          q.eq(q.field("userId"), args.userId) && 
-          q.eq(q.field("email"), args.email)
-        )
-        .first();
-      return message;
-    } catch (error) {
-      console.error('Error getting Gmail message by ID:', error);
-      throw new Error(`Failed to get Gmail message by ID: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  },
-});
-
-// Get Gmail thread by ID
-export const getGmailThreadById = query({
-  args: { 
-    userId: v.string(),
-    email: v.string(), 
-    threadId: v.string() 
-  },
-  handler: async (ctx, args) => {
-    try {
-      const thread = await ctx.db
-        .query("gmailThreads")
-        .withIndex("by_threadId", (q) => q.eq("threadId", args.threadId))
-        .filter((q) => 
-          q.eq(q.field("userId"), args.userId) && 
-          q.eq(q.field("email"), args.email)
-        )
-        .first();
-      return thread;
-    } catch (error) {
-      console.error('Error getting Gmail thread by ID:', error);
-      throw new Error(`Failed to get Gmail thread by ID: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  },
-});
-
-// Get Gmail messages by thread ID
-export const getGmailMessagesByThread = query({
-  args: { 
-    userId: v.string(),
-    email: v.string(), 
-    threadId: v.string() 
-  },
-  handler: async (ctx, args) => {
-    try {
-      const messages = await ctx.db
-        .query("gmailMessages")
-        .withIndex("by_threadId", (q) => q.eq("threadId", args.threadId))
-        .filter((q) => 
-          q.eq(q.field("userId"), args.userId) && 
-          q.eq(q.field("email"), args.email)
-        )
-        .collect();
-      return messages;
-    } catch (error) {
-      console.error('Error getting Gmail messages by thread ID:', error);
-      throw new Error(`Failed to get Gmail messages by thread ID: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  },
-});
-
-// Get recent Gmail messages for a user
-export const getRecentGmailMessages = query({
+// Paginated query for Gmail threads - handles massive datasets efficiently
+export const getGmailThreadsPaginated = query({
   args: { 
     userId: v.string(),
     email: v.optional(v.string()),
-    limit: v.optional(v.number()),
+    paginationOpts: paginationOptsValidator,
   },
+  returns: v.object({
+    page: v.array(v.object({
+      _id: v.id("gmailThreads"),
+      _creationTime: v.number(),
+      userId: v.string(),
+      email: v.string(),
+      threadId: v.string(),
+      from: v.optional(v.string()),
+      subject: v.optional(v.string()),
+      snippet: v.optional(v.string()),
+      message_count: v.optional(v.number()),
+      messages: v.optional(v.array(v.object({
+        id: v.string(),
+        from: v.optional(v.string()),
+        subject: v.optional(v.string()),
+        snippet: v.optional(v.string()),
+        label_ids: v.optional(v.array(v.string())),
+      }))),
+      data: v.optional(v.any()),
+      analysis: v.optional(v.any()),
+      category: v.optional(v.union(
+        v.literal("partnership"),
+        v.literal("media"),
+        v.literal("business"),
+        v.literal("community"),
+        v.literal("none")
+      )),
+      spamStatus: v.optional(v.union(
+        v.literal('unreviewed'),
+        v.literal('flagged'),
+        v.literal('confirmed_spam'),
+        v.literal('not_spam')
+      )),
+      spamScore: v.optional(v.number()),
+      reviewedByUser: v.optional(v.boolean()),
+      reviewedAt: v.optional(v.number()),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })),
+    isDone: v.boolean(),
+    continueCursor: v.union(v.string(), v.null()),
+  }),
   handler: async (ctx, args) => {
-    try {
-      let query = ctx.db
-        .query("gmailMessages")
-        .withIndex("by_userId", (q) => q.eq("userId", args.userId));
-      
-      // Filter by email if provided
-      if (args.email) {
-        query = query.filter((q) => q.eq(q.field("email"), args.email));
-      }
-      
-      // Sort by updatedAt (newest first)
-      const sortedQuery = query.order("desc");
-      
-      // Apply limit if provided
-      const messages = await (args.limit ? sortedQuery.take(args.limit) : sortedQuery.collect());
-      
-      return messages;
-    } catch (error) {
-      console.error('Error getting recent Gmail messages:', error);
-      throw new Error(`Failed to get recent Gmail messages: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    let query = ctx.db
+      .query("gmailThreads")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .order("desc");
+    
+    // Filter by email if provided
+    if (args.email) {
+      query = query.filter((q) => q.eq(q.field("email"), args.email));
     }
+    
+    return await query.paginate(args.paginationOpts);
   },
 });
 
-// Get recent Gmail threads for a user
+// Paginated query for Gmail messages - handles massive datasets efficiently
+export const getGmailMessagesPaginated = query({
+  args: { 
+    userId: v.string(),
+    email: v.optional(v.string()),
+    paginationOpts: paginationOptsValidator,
+  },
+  returns: v.object({
+    page: v.array(v.object({
+      _id: v.id("gmailMessages"),
+      _creationTime: v.number(),
+      userId: v.string(),
+      email: v.string(),
+      messageId: v.string(),
+      threadId: v.string(),
+      from: v.optional(v.string()),
+      subject: v.optional(v.string()),
+      snippet: v.optional(v.string()),
+      labelIds: v.optional(v.array(v.string())),
+      internalDate: v.optional(v.string()),
+      sizeEstimate: v.optional(v.number()),
+      historyId: v.optional(v.string()),
+      data: v.optional(v.any()),
+      category: v.optional(v.union(
+        v.literal("partnership"),
+        v.literal("media"),
+        v.literal("business"),
+        v.literal("community"),
+        v.literal("none")
+      )),
+      spamStatus: v.optional(v.union(
+        v.literal('unreviewed'),
+        v.literal('flagged'),
+        v.literal('confirmed_spam'),
+        v.literal('not_spam')
+      )),
+      spamScore: v.optional(v.number()),
+      reviewedByUser: v.optional(v.boolean()),
+      reviewedAt: v.optional(v.number()),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })),
+    isDone: v.boolean(),
+    continueCursor: v.union(v.string(), v.null()),
+  }),
+  handler: async (ctx, args) => {
+    let query = ctx.db
+      .query("gmailMessages")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .order("desc");
+    
+    // Filter by email if provided
+    if (args.email) {
+      query = query.filter((q) => q.eq(q.field("email"), args.email));
+    }
+    
+    return await query.paginate(args.paginationOpts);
+  },
+});
+
+// Get limited recent Gmail threads (for UI components that need small datasets)
 export const getRecentGmailThreads = query({
   args: { 
     userId: v.string(),
     email: v.optional(v.string()),
     limit: v.optional(v.number()),
   },
+  returns: v.array(v.object({
+    _id: v.id("gmailThreads"),
+    _creationTime: v.number(),
+    userId: v.string(),
+    email: v.string(),
+    threadId: v.string(),
+    from: v.optional(v.string()),
+    subject: v.optional(v.string()),
+    snippet: v.optional(v.string()),
+    message_count: v.optional(v.number()),
+    messages: v.optional(v.array(v.object({
+      id: v.string(),
+      from: v.optional(v.string()),
+      subject: v.optional(v.string()),
+      snippet: v.optional(v.string()),
+      label_ids: v.optional(v.array(v.string())),
+    }))),
+    data: v.optional(v.any()),
+    analysis: v.optional(v.any()),
+    category: v.optional(v.union(
+      v.literal("partnership"),
+      v.literal("media"),
+      v.literal("business"),
+      v.literal("community"),
+      v.literal("none")
+    )),
+    spamStatus: v.optional(v.union(
+      v.literal('unreviewed'),
+      v.literal('flagged'),
+      v.literal('confirmed_spam'),
+      v.literal('not_spam')
+    )),
+    spamScore: v.optional(v.number()),
+    reviewedByUser: v.optional(v.boolean()),
+    reviewedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })),
   handler: async (ctx, args) => {
-    try {
-      let query = ctx.db
-        .query("gmailThreads")
-        .withIndex("by_userId", (q) => q.eq("userId", args.userId));
-      
-      // Filter by email if provided
-      if (args.email) {
-        query = query.filter((q) => q.eq(q.field("email"), args.email));
-      }
-      
-      // Sort by updatedAt (newest first)
-      const sortedQuery = query.order("desc");
-      
-      // Apply limit if provided
-      const threads = await (args.limit ? sortedQuery.take(args.limit) : sortedQuery.collect());
-      
-      return threads;
-    } catch (error) {
-      console.error('Error getting recent Gmail threads:', error);
-      throw new Error(`Failed to get recent Gmail threads: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  },
-});
-
-// Fetch a batch of unreviewed Gmail threads for spam review
-export const getUnreviewedGmailThreads = query({
-  args: { userId: v.string(), limit: v.optional(v.number()) },
-  handler: async (ctx, args) => {
-    const q = ctx.db
+    let query = ctx.db
       .query("gmailThreads")
-      .withIndex("by_userId", q => q.eq("userId", args.userId))
-      .filter(q => q.eq(q.field("spamStatus"), "unreviewed"))
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .order("desc");
-    const threads = args.limit ? await q.take(args.limit) : await q.collect();
-    return threads;
+    
+    // Filter by email if provided
+    if (args.email) {
+      query = query.filter((q) => q.eq(q.field("email"), args.email));
+    }
+    
+    return await query.take(args.limit || 50);
   },
 });
 
-function isNonEmptyString(val) {
-  return typeof val === 'string' && val.trim().length > 0;
-}
-
-// List Gmail threads for content analytics page - compatible with UI components
-export const listUserGmailThreads = query({
-  args: { userId: v.string() },
+// Get Gmail threads by user and email with index (for analysis)
+export const getGmailThreadsByUserEmail = query({
+  args: { 
+    userId: v.string(),
+    email: v.string(),
+    limit: v.optional(v.number())
+  },
+  returns: v.array(v.object({
+    _id: v.id("gmailThreads"),
+    _creationTime: v.number(),
+    userId: v.string(),
+    email: v.string(),
+    threadId: v.string(),
+    from: v.optional(v.string()),
+    subject: v.optional(v.string()),
+    snippet: v.optional(v.string()),
+    message_count: v.optional(v.number()),
+    messages: v.optional(v.array(v.object({
+      id: v.string(),
+      from: v.optional(v.string()),
+      subject: v.optional(v.string()),
+      snippet: v.optional(v.string()),
+      label_ids: v.optional(v.array(v.string())),
+    }))),
+    data: v.optional(v.any()),
+    analysis: v.optional(v.any()),
+    category: v.optional(v.union(
+      v.literal("partnership"),
+      v.literal("media"),
+      v.literal("business"),
+      v.literal("community"),
+      v.literal("none")
+    )),
+    spamStatus: v.optional(v.union(
+      v.literal('unreviewed'),
+      v.literal('flagged'),
+      v.literal('confirmed_spam'),
+      v.literal('not_spam')
+    )),
+    spamScore: v.optional(v.number()),
+    reviewedByUser: v.optional(v.boolean()),
+    reviewedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })),
   handler: async (ctx, args) => {
-    try {
-      const threads = await ctx.db
-        .query("gmailThreads")
-        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-        .order("desc")
-        .collect();
-
-      // Debug log: log the raw threads from Convex
-      console.log('Convex: Raw threads from DB:', JSON.stringify(threads, null, 2));
-
-      // Return threads as-is (UI should use thread.data for user-visible fields)
-      return threads;
-    } catch (error) {
-      console.error('Error in listUserGmailThreads:', error);
-      return [];
-    }
-  }
-});
-
-// List Gmail messages for content analytics page - fetches individual messages with clean data
-export const listUserGmailMessages = query({
-  args: { userId: v.string() },
-  handler: async (ctx, args) => {
-    try {
-      const messages = await ctx.db
-        .query("gmailMessages")
-        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-        .filter((q) => 
-          // Filter out spam messages
-          q.neq(q.field("labelIds"), ["SPAM"])
-        )
-        .order("desc")
-        .collect();
-
-      // Return messages as-is (UI should use message.data for user-visible fields)
-      return messages;
-    } catch (error) {
-      console.error('Error in listUserGmailMessages:', error);
-      return [];
-    }
-  }
-});
-
-// In gmailQueries.ts - Enhanced query that returns threads with messages (filtering done at entry level)
-export const getGmailThreadsWithMessages = query({
-  args: { userId: v.string(), limit: v.optional(v.number()) },
-  handler: async (ctx, args) => {
-    try {
-      // Get threads (already filtered at entry level)
-      const threads = await ctx.db
-        .query("gmailThreads")
-        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-        .order("desc")
-        .take(args.limit || 100);
-      
-      if (threads.length === 0) return [];
-      
-      // Get ALL messages for these threads in ONE query (fixes N+1 problem)
-      const threadIds = threads.map(t => t.threadId);
-      const allMessages = await ctx.db
-        .query("gmailMessages")
-        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-        .filter((q) => {
-          // Filter to only messages from our threads
-          return threadIds.some(threadId => q.eq(q.field("threadId"), threadId));
-        })
-        .collect();
-      
-      // Group messages by threadId
-      const messagesByThread = allMessages.reduce((acc, msg) => {
-        if (!acc[msg.threadId]) acc[msg.threadId] = [];
-        acc[msg.threadId].push(msg);
-        return acc;
-      }, {} as Record<string, typeof allMessages>);
-      
-      // Build response - maintaining frontend compatibility
-      const enhancedThreads = threads.map(thread => {
-        const threadMessages = messagesByThread[thread.threadId] || [];
-        
-        // Get the FIRST message (original email) for thread summary
-        const firstMessage = threadMessages.sort((a, b) => {
-          const aDate = a.data?.internalDate || a.createdAt || 0;
-          const bDate = b.data?.internalDate || b.createdAt || 0;
-          return aDate - bDate; // Ascending = oldest first
-        })[0];
-        
-        // Get the MOST RECENT message for snippet (better preview)
-        const recentMessage = threadMessages.sort((a, b) => {
-          const aDate = a.data?.internalDate || a.createdAt || 0;
-          const bDate = b.data?.internalDate || b.createdAt || 0;
-          return bDate - aDate; // Descending = newest first
-        })[0];
-        
-        // Try multiple sources for snippet (prioritize most recent message)
-        const snippet = recentMessage?.data?.snippet || 
-                       firstMessage?.data?.snippet || 
-                       thread.data?.snippet || 
-                       thread.snippet || 
-                       // If still no snippet, try to extract from message body
-                       (recentMessage?.data?.body && recentMessage.data.body.substring(0, 150)) ||
-                       'No preview available';
-        
-        const subject = firstMessage?.data?.subject || thread.subject || 'No Subject';
-        const from = firstMessage?.data?.from || thread.from || 'Unknown Sender';
-        
-        // Return the SAME format your frontend expects
-        return {
-          ...thread,
-          data: {
-            ...thread.data,
-            // Ensure first message data is available at thread level
-            subject: subject,
-            from: from,
-            snippet: snippet,
-            threadId: thread.threadId,
-            emailId: firstMessage?.messageId,
-          },
-          messages: threadMessages // Include full message list if needed
-        };
-      });
-      
-      console.log(`📧 Convex Gmail Query: Returning ${enhancedThreads.length} threads (filtering done at entry level)`);
-      
-      return enhancedThreads;
-    } catch (error) {
-      console.error('Error in getGmailThreadsWithMessages:', error);
-      return []; // Return empty array for graceful frontend handling
-    }
+    return await ctx.db
+      .query("gmailThreads")
+      .withIndex("by_user_email", q => 
+        q.eq("userId", args.userId).eq("email", args.email)
+      )
+      .order("desc")
+      .take(args.limit || 50);
   },
 });
 
-// Get Gmail account for a user
-export const getGmailAccount = query({
-  args: { userId: v.string() },
+// Get Gmail thread by threadId and userId (for linking)
+export const getGmailThreadByThreadId = query({
+  args: { 
+    userId: v.string(),
+    threadId: v.string() 
+  },
+  returns: v.union(
+    v.object({
+      _id: v.id("gmailThreads"),
+      _creationTime: v.number(),
+      userId: v.string(),
+      email: v.string(),
+      threadId: v.string(),
+      from: v.optional(v.string()),
+      subject: v.optional(v.string()),
+      snippet: v.optional(v.string()),
+      message_count: v.optional(v.number()),
+      messages: v.optional(v.array(v.object({
+        id: v.string(),
+        from: v.optional(v.string()),
+        subject: v.optional(v.string()),
+        snippet: v.optional(v.string()),
+        label_ids: v.optional(v.array(v.string())),
+      }))),
+      data: v.optional(v.any()),
+      analysis: v.optional(v.any()),
+      category: v.optional(v.union(
+        v.literal("partnership"),
+        v.literal("media"),
+        v.literal("business"),
+        v.literal("community"),
+        v.literal("none")
+      )),
+      spamStatus: v.optional(v.union(
+        v.literal('unreviewed'),
+        v.literal('flagged'),
+        v.literal('confirmed_spam'),
+        v.literal('not_spam')
+      )),
+      spamScore: v.optional(v.number()),
+      reviewedByUser: v.optional(v.boolean()),
+      reviewedAt: v.optional(v.number()),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    }),
+    v.null()
+  ),
   handler: async (ctx, args) => {
-    // Always return null on any error to prevent frontend crashes
-    try {
-      // Validate input
-      if (!args.userId || typeof args.userId !== 'string' || args.userId.trim() === '') {
-        console.log('[getGmailAccount] Invalid userId provided:', args.userId);
-        return null;
-      }
+    return await ctx.db
+      .query("gmailThreads")
+      .withIndex("by_threadId", (q) => q.eq("threadId", args.threadId))
+      .filter((q) => q.eq(q.field("userId"), args.userId))
+      .first();
+  },
+});
 
-      console.log('[getGmailAccount] Querying for userId:', args.userId);
-      
-      // Try to get account with index
-      const account = await ctx.db
-        .query("gmailAccounts")
-        .withIndex("by_userId", q => q.eq("userId", args.userId))
-        .first();
-      
-      console.log('[getGmailAccount] Found account:', account ? {
-        userId: account.userId,
-        email: account.email,
-        hasData: !!account.data,
-        createdAt: account.createdAt,
-        updatedAt: account.updatedAt
-      } : 'No account found');
-      
-      return account || null;
-    } catch (error) {
-      console.error('[getGmailAccount] Error (returning null to prevent crashes):', error);
-      // ALWAYS return null instead of throwing to prevent frontend crashes
-      return null;
-    }
+// Get Gmail messages for a specific thread (optimized for thread view)
+export const getGmailMessagesForThread = query({
+  args: { 
+    userId: v.string(),
+    threadId: v.string(),
+    limit: v.optional(v.number())
+  },
+  returns: v.array(v.object({
+    _id: v.id("gmailMessages"),
+    _creationTime: v.number(),
+    userId: v.string(),
+    email: v.string(),
+    messageId: v.string(),
+    threadId: v.string(),
+    from: v.optional(v.string()),
+    subject: v.optional(v.string()),
+    snippet: v.optional(v.string()),
+    labelIds: v.optional(v.array(v.string())),
+    internalDate: v.optional(v.string()),
+    sizeEstimate: v.optional(v.number()),
+    historyId: v.optional(v.string()),
+    data: v.optional(v.any()),
+    category: v.optional(v.union(
+      v.literal("partnership"),
+      v.literal("media"),
+      v.literal("business"),
+      v.literal("community"),
+      v.literal("none")
+    )),
+    spamStatus: v.optional(v.union(
+      v.literal('unreviewed'),
+      v.literal('flagged'),
+      v.literal('confirmed_spam'),
+      v.literal('not_spam')
+    )),
+    spamScore: v.optional(v.number()),
+    reviewedByUser: v.optional(v.boolean()),
+    reviewedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })),
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("gmailMessages")
+      .withIndex("by_threadId", (q) => q.eq("threadId", args.threadId))
+      .filter((q) => q.eq(q.field("userId"), args.userId))
+      .order("asc")
+      .take(args.limit || 100);
   },
 });
 
@@ -416,218 +432,70 @@ export const getGmailBatchAnalysis = query({
     userId: v.string(),
     gmailAccountId: v.string(),
   },
+  returns: v.union(
+    v.object({
+      _id: v.id("gmailBatchAnalysis"),
+      userId: v.string(),
+      gmailAccountId: v.string(),
+      insights: v.optional(v.any()),
+      status: v.optional(v.any()),
+      updatedAt: v.optional(v.number()),
+    }),
+    v.null()
+  ),
   handler: async (ctx, args) => {
-    try {
-      // Validate inputs
-      if (!args.userId || typeof args.userId !== 'string' || args.userId.trim() === '') {
-        console.log('[getGmailBatchAnalysis] Invalid userId provided:', args.userId);
-        return null;
-      }
-      
-      if (!args.gmailAccountId || typeof args.gmailAccountId !== 'string' || args.gmailAccountId.trim() === '') {
-        console.log('[getGmailBatchAnalysis] Invalid gmailAccountId provided:', args.gmailAccountId);
-        return null;
-      }
+    const analysis = await ctx.db
+      .query("gmailBatchAnalysis")
+      .withIndex("by_user_account", q => 
+        q.eq("userId", args.userId)
+         .eq("gmailAccountId", args.gmailAccountId)
+      )
+      .first();
 
-      console.log('[getGmailBatchAnalysis] Querying with:', { 
-        userId: args.userId, 
-        gmailAccountId: args.gmailAccountId 
-      });
-      
-      const analysis = await ctx.db
-        .query("gmailBatchAnalysis")
-        .withIndex("by_user_account", q => 
-          q.eq("userId", args.userId)
-           .eq("gmailAccountId", args.gmailAccountId)
-        )
-        .first();
-
-      console.log('[getGmailBatchAnalysis] Found analysis:', analysis ? {
-        userId: analysis.userId,
-        gmailAccountId: analysis.gmailAccountId,
-        hasInsights: !!analysis.insights,
-        insightsKeys: analysis.insights ? Object.keys(analysis.insights) : null,
-        createdAt: analysis.createdAt,
-        updatedAt: analysis.updatedAt
-      } : 'No analysis found');
-
-      if (!analysis) {
-        return null;
-      }
-
-      return {
-        _id: analysis._id,
-        userId: analysis.userId,
-        gmailAccountId: analysis.gmailAccountId,
-        insights: analysis.insights,
-        status: analysis.status,
-        updatedAt: analysis.updatedAt || analysis._creationTime
-      };
-    } catch (error) {
-      console.error("Error fetching Gmail batch analysis:", error);
-      // Return null instead of throwing to prevent frontend crashes
+    if (!analysis) {
       return null;
     }
+
+    return {
+      _id: analysis._id,
+      userId: analysis.userId,
+      gmailAccountId: analysis.gmailAccountId,
+      insights: analysis.insights,
+      status: analysis.status,
+      updatedAt: analysis.updatedAt || analysis._creationTime
+    };
   },
 });
 
-// Get Gmail threads for analysis
-export const getGmailThreads = query({
-  args: { 
-    userId: v.string(),
+// Get recent threads for content hub (limited to 3 for performance)
+export const getRecentThreadsForContentHub = query({
+  args: { userId: v.string() },
+  returns: v.array(v.object({
+    id: v.string(),
+    subject: v.string(),
+    snippet: v.string(),
+    from: v.string(),
+    to: v.string(),
+    messageCount: v.number(),
+    timestamp: v.number(),
     email: v.string(),
-    limit: v.optional(v.number())
-  },
+  })),
   handler: async (ctx, args) => {
     const threads = await ctx.db
       .query("gmailThreads")
-      .withIndex("by_user_email", q => 
-        q.eq("userId", args.userId).eq("email", args.email)
-      )
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .order("desc")
-      .take(args.limit || 50);
-    
-    return threads;
-  },
-});
+      .take(3);
 
-// Get Gmail messages for analysis
-export const getGmailMessages = query({
-  args: { 
-    userId: v.string(),
-    email: v.string(),
-    limit: v.optional(v.number())
-  },
-  handler: async (ctx, args) => {
-    const messages = await ctx.db
-      .query("gmailMessages")
-      .withIndex("by_user_email", q => 
-        q.eq("userId", args.userId).eq("email", args.email)
-      )
-      .order("desc")
-      .take(args.limit || 100);
-    
-    return messages;
-  },
-});
-
-// Debug query to check Gmail data for a user
-export const debugGmailData = query({
-  args: { userId: v.string() },
-  handler: async (ctx, args) => {
-    try {
-      console.log('[debugGmailData] Checking Gmail data for userId:', args.userId);
-      
-      // Check Gmail accounts
-      const accounts = await ctx.db
-        .query("gmailAccounts")
-        .filter(q => q.eq(q.field("userId"), args.userId))
-        .collect();
-      
-      // Check Gmail tokens
-      const tokens = await ctx.db
-        .query("gmailTokens")
-        .filter(q => q.eq(q.field("userId"), args.userId))
-        .collect();
-      
-      // Check Gmail threads
-      const threads = await ctx.db
-        .query("gmailThreads")
-        .filter(q => q.eq(q.field("userId"), args.userId))
-        .take(5); // Just first 5 for debugging
-      
-      // Check Gmail messages
-      const messages = await ctx.db
-        .query("gmailMessages")
-        .filter(q => q.eq(q.field("userId"), args.userId))
-        .take(5); // Just first 5 for debugging
-      
-      const result = {
-        userId: args.userId,
-        accounts: accounts.length,
-        tokens: tokens.length,
-        threads: threads.length,
-        messages: messages.length,
-        accountDetails: accounts.map(acc => ({
-          email: acc.email,
-          createdAt: acc.createdAt,
-          updatedAt: acc.updatedAt,
-          hasData: !!acc.data
-        })),
-        tokenDetails: tokens.map(token => ({
-          hasAccessToken: !!token.accessToken,
-          hasRefreshToken: !!token.refreshToken,
-          expiryDate: token.expiryDate,
-          lastRefreshed: token.lastRefreshed
-        }))
-      };
-      
-      console.log('[debugGmailData] Result:', result);
-      return result;
-    } catch (error) {
-      console.error('[debugGmailData] Error:', error);
-      return {
-        userId: args.userId,
-        error: error.message,
-        accounts: 0,
-        tokens: 0,
-        threads: 0,
-        messages: 0
-      };
-    }
-  },
-});
-
-// Get 3 most recent Gmail threads for content hub
-export const getRecentThreadsForContentHub = query({
-  args: { userId: v.string() },
-  handler: async (ctx, args) => {
-    try {
-      // Get 3 most recent threads
-      const threads = await ctx.db
-        .query("gmailThreads")
-        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-        .order("desc")
-        .take(3);
-
-      // Return threads with essential data for content analysis
-      const threadsForAnalysis = threads.map(thread => ({
-        id: thread.threadId,
-        subject: thread.data?.subject || thread.subject || 'No Subject',
-        snippet: thread.data?.snippet || thread.snippet || '',
-        from: thread.data?.from || thread.from || 'Unknown Sender',
-        to: thread.data?.to || '',
-        messageCount: thread.message_count || 1,
-        timestamp: thread.createdAt || Date.now(),
-        email: thread.email
-      }));
-
-      console.log(`[getRecentThreadsForContentHub] Found ${threads.length} threads for user ${args.userId}`);
-      return threadsForAnalysis;
-    } catch (error) {
-      console.error('Error getting recent threads for content hub:', error);
-      return [];
-    }
-  },
-});
-
-// Get Gmail thread by thread ID for linking (simplified version)
-export const getGmailThreadForLinking = query({
-  args: { 
-    userId: v.string(),
-    threadId: v.string() 
-  },
-  handler: async (ctx, args) => {
-    try {
-      const thread = await ctx.db
-        .query("gmailThreads")
-        .withIndex("by_threadId", (q) => q.eq("threadId", args.threadId))
-        .filter((q) => q.eq(q.field("userId"), args.userId))
-        .first();
-      return thread;
-    } catch (error) {
-      console.error('Error getting Gmail thread for linking:', error);
-      return null;
-    }
+    return threads.map(thread => ({
+      id: thread.threadId,
+      subject: thread.data?.subject || thread.subject || 'No Subject',
+      snippet: thread.data?.snippet || thread.snippet || '',
+      from: thread.data?.from || thread.from || 'Unknown Sender',
+      to: thread.data?.to || '',
+      messageCount: thread.message_count || 1,
+      timestamp: thread.createdAt || Date.now(),
+      email: thread.email
+    }));
   },
 });

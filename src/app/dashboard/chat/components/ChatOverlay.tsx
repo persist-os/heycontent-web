@@ -230,6 +230,7 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold">Content Preview</h2>
           <button
+            title="Close"
             onClick={onClose}
             className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
           >
