@@ -14,7 +14,7 @@ export function useGmailAnalytics(userId?: string, refreshCount?: number) {
 
   // Use the raw Convex query that returns the exact schema structure
   const gmailThreads = useQuery(
-    api.gmailQueries.listUserGmailThreads,
+    api.gmailQueries.getRecentGmailThreads,
     userId ? { userId } : "skip"
   );
   
