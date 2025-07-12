@@ -1,6 +1,22 @@
 import { NextResponse } from 'next/server';
+import { api } from '@/convex/_generated/api';
+import { ConvexHttpClient } from 'convex/browser';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+const CONVEX_URL = process.env.NEXT_PUBLIC_CONVEX_URL;
+
+// Helper to fetch the user's channelId from Convex
+async function fetchChannelId(userId: string): Promise<string | null> {
+  if (!CONVEX_URL) return null;
+  try {
+    const convex = new ConvexHttpClient(CONVEX_URL);
+    const channel = await convex.query(api.youtubeQueries.getYouTubeChannelData, { userId });
+    return channel?.id || null;
+  } catch (e) {
+    console.error('[YouTube Analyze Route] Failed to fetch channelId from Convex:', e);
+    return null;
+  }
+}
 
 export async function POST(request: Request) {
   const requestId = Math.random().toString(36).substring(7);
@@ -47,11 +63,19 @@ export async function POST(request: Request) {
     }
     console.debug(`[${requestId}] Extracted user_id from API key:`, user_id);
 
+    // Fetch the correct channelId for this user
+    const channelId = await fetchChannelId(user_id);
+    if (!channelId) {
+      console.error(`[${requestId}] Could not determine channelId for user:`, user_id);
+      return NextResponse.json({ error: 'Could not determine channelId for user' }, { status: 400 });
+    }
+
     // Log the request details
     console.info(`[${requestId}] Processing YouTube analysis`, {
       video_url: video_url,
       has_api_key: !!apiKey,
-      user_id: user_id
+      user_id: user_id,
+      channelId: channelId
     });
 
     // Prepare the request to the backend
@@ -124,7 +148,29 @@ export async function POST(request: Request) {
       responseTime: Date.now() - startTime,
     });
 
-    return NextResponse.json(data);
+    // Always store batch analysis in Convex
+    let batchStoreResult = null;
+    try {
+      if (CONVEX_URL) {
+        const batchRes = await fetch(`${CONVEX_URL}/api/youtube/batch_analysis`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user_id, channelId, insights: data })
+        });
+        batchStoreResult = await batchRes.json();
+        if (!batchRes.ok || !batchStoreResult?.success) {
+          console.error(`[${requestId}] Failed to store batch analysis in Convex:`, batchStoreResult);
+        } else {
+          console.info(`[${requestId}] Batch analysis stored in Convex:`, batchStoreResult);
+        }
+      } else {
+        console.error(`[${requestId}] CONVEX_URL not set, cannot store batch analysis`);
+      }
+    } catch (err) {
+      console.error(`[${requestId}] Error storing batch analysis in Convex:`, err);
+    }
+
+    return NextResponse.json({ ...data, channelId });
   } catch (error: any) {
     console.error(`[${requestId}] Error processing YouTube analysis:`, error);
     return NextResponse.json({ 

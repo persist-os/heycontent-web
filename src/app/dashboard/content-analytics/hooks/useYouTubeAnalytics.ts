@@ -12,9 +12,9 @@ export function useYouTubeAnalytics(userId?: string) {
     userId ? { userId } : "skip"
   );
 
-  // Use the raw Convex query that returns the exact schema structure
+  // Use the same query as the UI for consistency
   const youtubeVideos = useQuery(
-    api.youtubeQueries.getYouTubeVideos,
+    api.youtubeQueries.listUserYouTubeVideos,
     userId ? { userId } : "skip"
   );
 
@@ -24,53 +24,9 @@ export function useYouTubeAnalytics(userId?: string) {
   const mappedYouTubeItems: YouTubeContentItem[] = useMemo(() => {
     if (youtubeVideos && Array.isArray(youtubeVideos)) {
       return youtubeVideos.map((video: any): YouTubeContentItem => {
-        // Extract data according to the Convex schema structure
-        const videoId = video.videoId || video.id || '';
-        const title = video.snippet?.title || 'Untitled Video';
-        const description = video.snippet?.description || '';
-        const publishedAt = video.snippet?.published_at || new Date(video.createdAt || Date.now()).toISOString();
-        const channelTitle = video.snippet?.channel?.title || '';
-        const channelId = video.snippet?.channel?.id || '';
-        
-        // Get thumbnail URL from the schema structure
-        const thumbnailUrl = video.snippet?.thumbnails?.high?.url || 
-                           video.snippet?.thumbnails?.medium?.url || 
-                           video.snippet?.thumbnails?.default?.url || '';
-        
-        // Get video URL
-        const videoUrl = video.url || `https://www.youtube.com/watch?v=${videoId}`;
-        
-        // --- Always use canonical statistics field ---
-        const stats = video.statistics || {};
-        const views = Number(stats.views ?? 0);
-        const likes = Number(stats.likes ?? 0);
-        const dislikes = Number(stats.dislikes ?? 0);
-        const comments = Number(stats.comments ?? 0);
-        
-        // Get duration from content_details
-        const duration = video.content_details?.duration || '';
-        
+        // Already formatted by the backend for UI
         return {
-          id: videoId,
-          platform: 'youtube' as const,
-          publishedAt: publishedAt,
-          content: {
-            title: title,
-            description: description,
-            thumbnailUrl: thumbnailUrl,
-            videoUrl: videoUrl,
-            channelTitle: channelTitle,
-            duration: duration,
-          },
-          metrics: {
-            views: views,
-            likes: likes,
-            dislikes: dislikes,
-            comments: comments,
-          },
-          analysis: video.analysis || null,
-          analysisMarkdown: video.analysisMarkdown || null,
-          convexData: video, // Store the complete raw Convex document
+          ...video,
         };
       });
     }
