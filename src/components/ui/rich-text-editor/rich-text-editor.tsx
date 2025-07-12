@@ -884,7 +884,7 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
         onInsertTable={handleInsertTable}
         onGenerateTableFromContent={handleGenerateTableFromContent}
         onLinkNote={handleLinkNote}
-        noteType={noteType}
+        noteType={noteType || 'idea_bank'}
         availableNotes={availableNotes}
         currentNoteId={noteId}
         showNoteLinks={paletteMode === 'notes'}
