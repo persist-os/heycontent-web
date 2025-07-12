@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { api } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
+import { paginationOptsValidator } from "convex/server";
 
 // Helper function to extract thumbnail URL from YouTube video data
 function getThumbnailUrl(video: any): string {
@@ -573,6 +574,65 @@ export const getYoutubeBatchAnalysis = query({
       console.error("Error fetching YouTube batch analysis:", error);
       // Return null instead of throwing to prevent frontend crashes
       return null;
+    }
+  },
+});
+
+// Get paginated YouTube comments for a video
+export const getYouTubeComments = query({
+  args: { 
+    videoId: v.string(),
+    paginationOpts: paginationOptsValidator
+  },
+  returns: v.object({
+    page: v.array(v.object({
+      _id: v.id("youtubeComments"),
+      commentId: v.string(),
+      text: v.string(),
+      publishedAt: v.string(),
+      likes: v.float64(),
+      replies: v.float64(),
+      isReply: v.boolean(),
+      author: v.object({
+        channelId: v.string(),
+        displayName: v.string(),
+        profileImage: v.string(),
+      }),
+      createdAt: v.float64(),
+    })),
+    isDone: v.boolean(),
+    continueCursor: v.union(v.string(), v.null()),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      const result = await ctx.db
+        .query("youtubeComments")
+        .withIndex("by_video_published", (q) => q.eq("videoId", args.videoId))
+        .order("desc") // Most recent first
+        .paginate(args.paginationOpts);
+
+      return {
+        page: result.page.map(comment => ({
+          _id: comment._id,
+          commentId: comment.commentId,
+          text: comment.text,
+          publishedAt: comment.publishedAt,
+          likes: comment.likes,
+          replies: comment.replies,
+          isReply: comment.isReply,
+          author: comment.author,
+          createdAt: comment.createdAt,
+        })),
+        isDone: result.isDone,
+        continueCursor: result.continueCursor,
+      };
+    } catch (error) {
+      console.error('Error getting YouTube comments:', error);
+      return {
+        page: [],
+        isDone: true,
+        continueCursor: null,
+      };
     }
   },
 });

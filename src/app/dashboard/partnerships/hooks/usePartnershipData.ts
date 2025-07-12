@@ -10,8 +10,7 @@ import {
 export const usePartnershipData = (
   gmailItems: any[],
   userEmail: string | null,
-  searchQuery: string,
-  filterType: 'all' | 'active' | 'needs_response' | 'deal_value'
+  searchQuery: string
 ) => {
   // Process Gmail items into partnerships
   const partnerships = useMemo(() => {
@@ -24,39 +23,39 @@ export const usePartnershipData = (
     return calculatePartnershipMetrics(partnerships, gmailItems, userEmail);
   }, [partnerships, gmailItems, userEmail]);
 
-  // Filter partnerships based on metrics and search
-  const filteredPartnerships = useMemo(() => {
-    return filterPartnerships(partnerships, filterType, searchQuery, gmailItems, userEmail);
-  }, [partnerships, filterType, searchQuery, gmailItems, userEmail]);
-
-  // Group ALL emails by category (for when no filter is applied)
+  // Group emails by category
   const groupedEmails = useMemo(() => {
     return groupEmailsByCategory(gmailItems || []);
   }, [gmailItems]);
 
-  // Create filtered grouped emails that respects both category grouping AND metric filtering
+  // Apply search filtering to grouped emails if search query exists
   const filteredGroupedEmails = useMemo(() => {
-    // If no filter is applied, return all grouped emails
-    if (filterType === 'all' && !searchQuery.trim()) {
+    if (!searchQuery.trim()) {
       return groupedEmails;
     }
 
-    // Get the IDs of filtered partnerships
-    const filteredPartnershipIds = new Set(filteredPartnerships.map(p => p.id));
-    
-    // Filter each category's emails based on the filtered partnerships
+    // Filter each category's emails based on search query
     const filtered = Object.entries(groupedEmails).reduce((acc, [category, emails]) => {
-      acc[category] = emails.filter(email => filteredPartnershipIds.has(email.id));
+      acc[category] = emails.filter(email => {
+        const partnership = partnerships.find(p => p.id === email.id);
+        if (!partnership) return false;
+        
+        return (
+          partnership.brandName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          partnership.status.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          partnership.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          partnership.snippet.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+      });
       return acc;
     }, {} as Record<string, any[]>);
     
     return filtered;
-  }, [groupedEmails, filteredPartnerships, filterType, searchQuery]);
+  }, [groupedEmails, partnerships, searchQuery]);
 
   return {
     partnerships,
     partnershipMetrics,
-    filteredPartnerships,
     groupedEmails: filteredGroupedEmails, // Return the filtered version
   };
 }; 

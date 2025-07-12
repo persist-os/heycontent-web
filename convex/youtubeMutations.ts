@@ -17,7 +17,7 @@ function calculateDiff(oldDoc, newDoc, excludeFields = []) {
     : null;
 }
 
-// Store video data - update or insert, never update captions, track diffs
+// Store video data - update or insert, conditionally store captions, track diffs
 export const storeVideoData = mutation({
   args: {
     userId: v.string(),
@@ -37,19 +37,38 @@ export const storeVideoData = mutation({
       .withIndex("by_videoId", q => q.eq("videoId", videoId))
       .filter(q => q.eq(q.field("userId"), userId))
       .first();
-    // Exclude captions from update/diff
-    const { captions, ...videoDataNoCaptions } = videoData;
+    
+    // Determine if we should include captions
+    let shouldIncludeCaptions = false;
+    if (!video) {
+      // New video - include captions if provided
+      shouldIncludeCaptions = true;
+    } else if (video && !video.captions) {
+      // Existing video without captions - include captions if provided
+      shouldIncludeCaptions = true;
+    } else if (video && video.captions && video.captions.status === 'error') {
+      // Existing video with failed captions - include captions if provided
+      shouldIncludeCaptions = true;
+    }
+    
+    // Conditionally exclude captions from update/diff
+    let patchData;
+    if (shouldIncludeCaptions) {
+      patchData = { ...videoData };
+    } else {
+      const { captions, ...videoDataNoCaptions } = videoData;
+      patchData = { ...videoDataNoCaptions };
+    }
 
     // --- Always update statistics from backend refresh ---
     // Always assign statistics under 'statistics', not under 'public_stats'
     if (videoData.public_stats && videoData.public_stats.statistics) {
-      videoDataNoCaptions.statistics = videoData.public_stats.statistics;
+      patchData.statistics = videoData.public_stats.statistics;
     } else if (videoData.statistics) {
-      videoDataNoCaptions.statistics = videoData.statistics;
+      patchData.statistics = videoData.statistics;
     }
 
     // --- Only write comments if fetch was successful ---
-    let patchData = { ...videoDataNoCaptions };
     if (
       patchData.comments &&
       typeof patchData.comments === 'object' &&
@@ -87,11 +106,12 @@ export const storeVideoData = mutation({
     }
 
     if (video) {
-      // Calculate clean diff (excluding captions)
-      const diff = cleanDiff(video, patchData, ["captions"]);
+      // Calculate clean diff (excluding captions only if we're not including them)
+      const excludeFields = shouldIncludeCaptions ? [] : ["captions"];
+      const diff = cleanDiff(video, patchData, excludeFields);
       if (!diff) {
-        // Only captions would change, skip update
-        return { status: "skipped_captions", videoId: video._id };
+        // No changes to store
+        return { status: "skipped_no_change", videoId: video._id };
       }
       // Update doc, append clean diff
       const newDiff = {

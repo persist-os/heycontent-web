@@ -36,7 +36,7 @@ export function PartnershipHub() {
   const [selectedPartnership, setSelectedPartnership] = useState<Partnership | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshCount, setRefreshCount] = useState(0);
-  const [filterType, setFilterType] = useState<'all' | 'active' | 'needs_response' | 'deal_value'>('all');
+
   const [isClient, setIsClient] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState({
     partnership: true,
@@ -59,11 +59,10 @@ export function PartnershipHub() {
   const { refresh, loading: refreshing, error: refreshError, success: refreshSuccess, progress } = useGmailBatchRefresh();
 
   // Use custom hook for partnership data processing
-  const { partnerships, partnershipMetrics, filteredPartnerships, groupedEmails } = usePartnershipData(
+  const { partnerships, partnershipMetrics, groupedEmails } = usePartnershipData(
     gmailItems || [],
     userEmail,
-    searchQuery,
-    filterType
+    searchQuery
   );
 
   // CRITICAL FIX: Add refs to prevent infinite loop
@@ -270,17 +269,14 @@ export function PartnershipHub() {
             </div>
           )}
 
-          {/* Search and Filter Status */}
+          {/* Search */}
           <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Input
-                    placeholder={filterType === 'all' 
-                      ? "Search your partnerships, brands, or opportunities..." 
-                      : `Search your ${filterType.replace('_', ' ')} opportunities...`
-                    }
+                    placeholder="Search your partnerships, brands, or opportunities..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -291,36 +287,6 @@ export function PartnershipHub() {
                 </TooltipContent>
               </Tooltip>
             </div>
-            {filterType !== 'all' && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Filtered by:</span>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge variant="outline" className="bg-primary/10">
-                      {filterType.replace('_', ' ')}
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>Showing only {filterType.replace('_', ' ')} opportunities. Click 'Clear' to see all opportunities.</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => setFilterType('all')}
-                      className="h-6 px-2 text-xs"
-                    >
-                      Clear
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>Remove the current filter and show all partnership opportunities.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            )}
           </div>
 
           {/* Metrics Cards */}
@@ -329,8 +295,6 @@ export function PartnershipHub() {
             activePartnerships={partnershipMetrics.activePartnerships}
             pendingResponses={partnershipMetrics.pendingResponses}
             pipelineValue={partnershipMetrics.pipelineValue}
-            activeFilter={filterType}
-            onFilterChange={setFilterType}
           />
         </div>
 

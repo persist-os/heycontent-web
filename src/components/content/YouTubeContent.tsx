@@ -10,7 +10,11 @@ import {
   Calendar,
   Sparkles,
   User,
-  X
+  X,
+  ChevronDown,
+  ChevronUp,
+  Subtitles,
+  Loader2
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MarkdownRenderer } from '@/app/dashboard/chat/markdown-renderer';
@@ -24,6 +28,7 @@ import { Button } from '@/components/ui/button';
 import { getApiKey } from '@/app/lib/api-helpers';
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { useYouTubeComments } from '@/app/hooks/useYouTubeComments';
 
 interface YouTubeContentProps {
   videoData: any;
@@ -31,6 +36,13 @@ interface YouTubeContentProps {
   userId: string;
   showAnalysis?: boolean;
   onClose?: () => void;
+}
+
+interface CaptionEntry {
+  index: number;
+  startTime: string;
+  endTime: string;
+  text: string;
 }
 
 // Streamlined loading messages for content creators
@@ -45,6 +57,40 @@ const LOADING_MESSAGES = [
   "Reviewing your content effectiveness..."
 ];
 
+// Parse SRT format captions
+const parseSRTCaptions = (srtText: string): CaptionEntry[] => {
+  if (!srtText || typeof srtText !== 'string') return [];
+  
+  const entries: CaptionEntry[] = [];
+  const blocks = srtText.split('\n\n').filter(block => block.trim());
+  
+  blocks.forEach(block => {
+    const lines = block.split('\n').filter(line => line.trim());
+    if (lines.length >= 3) {
+      const index = parseInt(lines[0].trim());
+      const timeLine = lines[1].trim();
+      const text = lines.slice(2).join('\n').trim();
+      
+      const timeMatch = timeLine.match(/(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})/);
+      if (timeMatch) {
+        entries.push({
+          index,
+          startTime: timeMatch[1],
+          endTime: timeMatch[2],
+          text
+        });
+      }
+    }
+  });
+  
+  return entries;
+};
+
+// Format time for display (remove milliseconds for cleaner look)
+const formatCaptionTime = (time: string): string => {
+  return time.replace(/,\d{3}$/, '');
+};
+
 export const YouTubeContent: React.FC<YouTubeContentProps> = ({
   videoData,
   videoId,
@@ -54,9 +100,25 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = React.useState(false);
   const [analysisError, setAnalysisError] = React.useState<string | null>(null);
   const [currentMessageIndex, setCurrentMessageIndex] = React.useState(0);
-  const [visibleCommentsCount, setVisibleCommentsCount] = React.useState(5);
+  const [showCaptions, setShowCaptions] = React.useState(false);
 
   const storeVideoAnalysis = useMutation(api.youtubeMutations.storeVideoAnalysis);
+  
+  // Use new paginated comments system
+  const { 
+    comments: paginatedComments, 
+    hasMore, 
+    loadMore, 
+    isLoadingMore, 
+    isLoading: commentsLoading 
+  } = useYouTubeComments(videoId);
+
+  // Fallback to old nested comments system if no paginated comments
+  const fallbackComments = videoData?.comments?.comments || [];
+  const shouldUseFallback = !commentsLoading && paginatedComments.length === 0 && fallbackComments.length > 0;
+  
+  // Final comments to display
+  const displayComments = shouldUseFallback ? fallbackComments : paginatedComments;
 
   // Handle click outside to close modal
   const handleOverlayClick = (e: React.MouseEvent) => {
@@ -138,40 +200,9 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
     }
   };
 
-  // Get comments from video data
-  const comments = videoData?.comments?.comments || [];
-  const displayComments = comments.slice(0, visibleCommentsCount);
-  const hasMoreComments = comments.length > visibleCommentsCount;
-  const commentsToLoad = Math.min(10, comments.length - visibleCommentsCount);
-
-  // Debug logging for video data and comments structure
-  React.useEffect(() => {
-    console.log(`[YouTubeContent] Full videoData structure:`, {
-      videoData: videoData,
-      hasComments: !!videoData?.comments,
-      commentsStructure: videoData?.comments,
-      commentsArray: videoData?.comments?.comments,
-      commentsLength: videoData?.comments?.comments?.length || 0,
-      videoId: videoId
-    });
-    
-    if (comments.length > 0) {
-      console.log(`[YouTubeContent] Comments processing:`, {
-        totalComments: comments.length,
-        visibleComments: visibleCommentsCount,
-        hasMoreComments: hasMoreComments,
-        commentsToLoad: commentsToLoad,
-        firstComment: comments[0]
-      });
-    } else {
-      console.log(`[YouTubeContent] No comments found - checking data path:`, {
-        videoDataExists: !!videoData,
-        commentsFieldExists: !!videoData?.comments,
-        commentsArrayExists: !!videoData?.comments?.comments,
-        fullCommentsField: videoData?.comments
-      });
-    }
-  }, [videoData, comments.length, visibleCommentsCount, hasMoreComments, commentsToLoad, videoId]);
+  // Get captions from video data
+  const captionsData = videoData?.captions?.caption_track;
+  const captions = captionsData ? parseSRTCaptions(captionsData.text) : [];
 
   const content = (
     <div className="space-y-6">
@@ -244,76 +275,146 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
         )}
       </div>
 
+      {/* Captions Section */}
+      {captions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Subtitles className="w-5 h-5" />
+                  Captions & Transcript
+                </CardTitle>
+                <CardDescription>
+                  {captionsData?.language && (
+                    <span className="text-xs bg-muted px-2 py-1 rounded mr-2">
+                      {captionsData.language.toUpperCase()}
+                    </span>
+                  )}
+                  {captions.length} caption entries
+                </CardDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowCaptions(!showCaptions)}
+                className="flex items-center gap-1"
+              >
+                {showCaptions ? (
+                  <>
+                    <ChevronUp className="w-4 h-4" />
+                    Hide
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-4 h-4" />
+                    Show
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardHeader>
+          {showCaptions && (
+            <CardContent>
+              <div className="space-y-3 max-h-80 overflow-y-auto custom-scrollbar">
+                {captions.map((caption, index) => (
+                  <div key={caption.index || index} className="flex gap-3 p-3 bg-muted/20 rounded-lg hover:bg-muted/30 transition-colors">
+                    <div className="flex-shrink-0 text-xs text-muted-foreground font-mono min-w-[80px]">
+                      {formatCaptionTime(caption.startTime)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm leading-relaxed">{caption.text}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 pt-4 border-t border-border">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Total duration: {captions.length > 0 ? formatCaptionTime(captions[captions.length - 1].endTime) : 'N/A'}</span>
+                  <span>{captions.length} entries</span>
+                </div>
+              </div>
+            </CardContent>
+          )}
+        </Card>
+      )}
+
       {/* Comments Section */}
-      {comments.length > 0 && (
+      {(displayComments.length > 0 || commentsLoading) && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MessageCircle className="w-5 h-5" />
-              Comments ({comments.length})
+              Comments ({displayComments.length})
+              {shouldUseFallback && (
+                <span className="text-xs bg-muted px-2 py-1 rounded">Legacy</span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {displayComments.map((comment: any, index: number) => (
-                <div key={comment.id || index} className="flex gap-3 p-3 bg-muted/20 rounded-lg">
-                  <div className="flex-shrink-0">
-                    {comment.author?.profile_image ? (
-                      <img 
-                        src={comment.author.profile_image} 
-                        alt={comment.author.display_name || 'User'}
-                        className="w-8 h-8 rounded-full"
-                      />
-                    ) : (
-                      <User className="w-8 h-8 text-muted-foreground bg-muted rounded-full p-1" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-sm">{comment.author?.display_name || 'Anonymous'}</span>
-                      {comment.published_at && (
-                        <span className="text-xs text-muted-foreground">
-                          {formatDate(new Date(comment.published_at).getTime())}
-                        </span>
+            {commentsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-muted-foreground">Loading comments...</span>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {displayComments.map((comment: any, index: number) => (
+                  <div key={comment.commentId || comment.id || index} className="flex gap-3 p-3 bg-muted/20 rounded-lg">
+                    <div className="flex-shrink-0">
+                      {(comment.author?.profileImage || comment.author?.profile_image) ? (
+                        <img 
+                          src={comment.author.profileImage || comment.author.profile_image} 
+                          alt={comment.author.displayName || comment.author.display_name || 'User'}
+                          className="w-8 h-8 rounded-full"
+                        />
+                      ) : (
+                        <User className="w-8 h-8 text-muted-foreground bg-muted rounded-full p-1" />
                       )}
                     </div>
-                    <p className="text-sm">{comment.text}</p>
-                    {comment.likes > 0 && (
-                      <div className="flex items-center gap-1 mt-2">
-                        <Heart className="w-3 h-3 text-red-500" />
-                        <span className="text-xs text-muted-foreground">{formatNumber(comment.likes)}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-sm">
+                          {comment.author?.displayName || comment.author?.display_name || 'Anonymous'}
+                        </span>
+                        {(comment.publishedAt || comment.published_at) && (
+                          <span className="text-xs text-muted-foreground">
+                            {formatDate(new Date(comment.publishedAt || comment.published_at).getTime())}
+                          </span>
+                        )}
                       </div>
-                    )}
+                      <p className="text-sm">{comment.text}</p>
+                      {comment.likes > 0 && (
+                        <div className="flex items-center gap-1 mt-2">
+                          <Heart className="w-3 h-3 text-red-500" />
+                          <span className="text-xs text-muted-foreground">{formatNumber(comment.likes)}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-              {hasMoreComments && (
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => {
-                    console.log(`[YouTubeContent] Loading more comments. Current: ${visibleCommentsCount}, Total: ${comments.length}`);
-                    setVisibleCommentsCount(prev => prev + 10);
-                  }}
-                  className="w-full bg-muted/30 hover:bg-muted/50"
-                >
-                  Load More Comments ({commentsToLoad} of {comments.length - visibleCommentsCount} remaining)
-                </Button>
-              )}
-              {visibleCommentsCount > 5 && (
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => {
-                    console.log(`[YouTubeContent] Showing less comments. Resetting to 5`);
-                    setVisibleCommentsCount(5);
-                  }}
-                  className="w-full mt-2"
-                >
-                  Show Less Comments
-                </Button>
-              )}
-            </div>
+                ))}
+                
+                {/* Load More Button for paginated comments */}
+                {!shouldUseFallback && hasMore && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={loadMore}
+                    disabled={isLoadingMore}
+                    className="w-full bg-muted/30 hover:bg-muted/50"
+                  >
+                    {isLoadingMore ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Loading...
+                      </>
+                    ) : (
+                      'Load More Comments'
+                    )}
+                  </Button>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
