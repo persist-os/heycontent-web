@@ -13,14 +13,16 @@ export function useGmailAnalytics(userId?: string, refreshCount?: number) {
   );
 
   // Use the raw Convex query that returns the exact schema structure
+  // Include refreshCount to force refetch when data changes
   const gmailThreads = useQuery(
     api.gmailQueries.getRecentGmailThreads,
-    userId ? { userId } : "skip"
+    userId ? { userId, limit: 50 } : "skip"
   );
   
   const loading = gmailThreads === undefined;
 
   // Map Gmail items according to the actual Convex schema structure
+  // Include refreshCount in dependency to force remapping when data changes
   const mappedGmailItems: GmailContentItem[] = useMemo(() => {
     if (gmailThreads && Array.isArray(gmailThreads)) {
       return gmailThreads.map((thread: any): GmailContentItem => {
@@ -66,7 +68,7 @@ export function useGmailAnalytics(userId?: string, refreshCount?: number) {
       });
     }
     return [];
-  }, [gmailThreads]);
+  }, [gmailThreads, refreshCount]);
 
   // Check if user has connected Gmail accounts
   const hasConnectedAccounts = gmailAccounts && gmailAccounts.length > 0;

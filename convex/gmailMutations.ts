@@ -672,3 +672,114 @@ export const updateGmailThreadCategory = mutation({
     }
   },
 });
+
+// Delete a specific Gmail thread
+export const deleteGmailThread = mutation({
+  args: { 
+    userId: v.string(),
+    threadId: v.string(),
+    email: v.optional(v.string()) // Optional: user's email for additional verification
+  },
+  handler: async (ctx, args) => {
+    const { userId, threadId, email } = args;
+
+    try {
+      // Find the thread in the database
+      const thread = await ctx.db
+        .query("gmailThreads")
+        .withIndex("by_threadId", (q) => q.eq("threadId", threadId))
+        .filter((q) => q.eq(q.field("userId"), userId))
+        .first();
+
+      if (!thread) {
+        throw new Error("Thread not found");
+      }
+
+      // Additional verification if email is provided
+      if (email && thread.email !== email) {
+        throw new Error("Thread email mismatch");
+      }
+
+      // Delete the thread
+      await ctx.db.delete(thread._id);
+
+      // Delete associated messages if they exist
+      const messages = await ctx.db
+        .query("gmailMessages")
+        .withIndex("by_threadId", (q) => q.eq("threadId", threadId))
+        .filter((q) => q.eq(q.field("userId"), userId))
+        .collect();
+
+      for (const message of messages) {
+        await ctx.db.delete(message._id);
+      }
+
+      console.log(`Successfully deleted Gmail thread ${threadId} and ${messages.length} associated messages for user ${userId}`);
+      
+      return { 
+        success: true, 
+        deletedThread: threadId,
+        deletedMessages: messages.length 
+      };
+    } catch (error) {
+      console.error('Error deleting Gmail thread:', error);
+      throw new Error(`Failed to delete Gmail thread: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+// Update Gmail thread status (for partnership status changes)
+export const updateGmailThreadStatus = mutation({
+  args: {
+    userId: v.string(),
+    threadId: v.string(),
+    status: v.union(
+      v.literal("opportunity"),
+      v.literal("inquiry"),
+      v.literal("negotiating"),
+      v.literal("active"),
+      v.literal("completed")
+    ),
+    estimatedValue: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const { userId, threadId, status, estimatedValue } = args;
+
+    try {
+      // Find the thread in the database
+      const thread = await ctx.db
+        .query("gmailThreads")
+        .withIndex("by_threadId", (q) => q.eq("threadId", threadId))
+        .filter((q) => q.eq(q.field("userId"), userId))
+        .first();
+
+      if (!thread) {
+        throw new Error("Thread not found");
+      }
+
+      // Update the thread data with new status
+      const updatedData = {
+        ...thread.data,
+        status,
+        ...(estimatedValue !== undefined && { estimatedValue }),
+        lastUpdated: Date.now()
+      };
+
+      await ctx.db.patch(thread._id, {
+        data: updatedData,
+        updatedAt: Date.now()
+      });
+
+      console.log(`Successfully updated Gmail thread ${threadId} status to ${status} for user ${userId}`);
+      
+      return { 
+        success: true, 
+        updatedThread: threadId,
+        newStatus: status 
+      };
+    } catch (error) {
+      console.error('Error updating Gmail thread status:', error);
+      throw new Error(`Failed to update Gmail thread status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
