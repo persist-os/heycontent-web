@@ -16,7 +16,9 @@ import {
   Mail, 
   Search, 
   RefreshCw,
-  Info
+  MessageSquare,
+  Clock,
+  Users
 } from 'lucide-react';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { useGmailAnalytics } from '../../content-analytics/hooks/useGmailAnalytics';
@@ -25,11 +27,12 @@ import { PartnershipDetailPanel } from './PartnershipDetailPanel';
 import { PartnershipHubSkeleton } from './PartnershipHubSkeleton';
 import { GmailProgressScreen } from './GmailProgressScreen';
 import { CategoryEmailList } from './CategoryEmailList';
-import PartnershipMetrics, { MetricFilter } from './PartnershipMetrics';
 import { Partnership } from '../types';
 import { usePartnershipData } from '../hooks/usePartnershipData';
 import { PartnershipProgressiveThinking } from './PartnershipProgressiveThinking';
 import { getPartnershipColors } from '../utils/emailCategorization';
+
+export type MetricFilter = 'all' | 'active' | 'pending' | 'brand-deals';
 
 export function PartnershipHub() {
   const userId = getCurrentUserId();
@@ -68,6 +71,13 @@ export function PartnershipHub() {
     searchQuery
   );
 
+  // Calculate brand deals count dynamically
+  const brandDealsCount = partnerships.filter(partnership => 
+    partnership.estimatedValue > 500 || 
+    partnership.status === 'negotiating' || 
+    partnership.messageCount > 5
+  ).length;
+
   // Filter partnerships based on active filter
   const filteredPartnerships = partnerships.filter(partnership => {
     switch (activeFilter) {
@@ -78,9 +88,11 @@ export function PartnershipHub() {
       case 'pending':
         // Pending partnerships: opportunities and inquiries that need response
         return partnership.status === 'opportunity' || partnership.status === 'inquiry';
-      case 'high-value':
-        // High-value partnerships: partnerships with identified monetary value
-        return partnership.estimatedValue > 500;
+      case 'brand-deals':
+        // Brand deals: high-value partnerships and serious negotiations
+        return partnership.estimatedValue > 500 || 
+               partnership.status === 'negotiating' || 
+               partnership.messageCount > 5;
       case 'all':
       default:
         return true;
@@ -178,57 +190,21 @@ export function PartnershipHub() {
     <TooltipProvider>
       <div className="min-h-screen flex flex-col bg-background">
         {/* Header */}
-        <div className="border-b border-border p-3 md:p-6">
-          <div className="flex flex-col space-y-3 md:space-y-4">
-            {/* Title and Action Row */}
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between space-y-3 md:space-y-0">
-              <div className="space-y-1">
-                <h1 className="text-xl md:text-2xl font-bold text-foreground">Partnership Hub</h1>
-                <p className="text-sm md:text-base text-muted-foreground">
-                  Your command center for discovering collaborations, managing partnerships, and growing your creator business
-                </p>
-              </div>
-              <div className="flex items-center">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      onClick={handleRefresh}
-                      disabled={refreshing}
-                      className="w-full md:w-auto"
-                      size="sm"
-                    >
-                      <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-                      <span className="hidden sm:inline">
-                        {refreshing ? 'Finding opportunities...' : 'Find New Opportunities'}
-                      </span>
-                      <span className="sm:hidden">
-                        {refreshing ? 'Finding...' : 'Refresh'}
-                      </span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="max-w-xs md:max-w-md">
-                    <div className="space-y-2">
-                      <p className="font-medium">Smart Gmail Analysis</p>
-                      <p>This will:</p>
-                      <ul className="text-xs space-y-1 list-disc list-inside">
-                        <li>Only analyze emails without the "ProcessedByHeyContent" label</li>
-                        <li>Learn from any label changes you've made in Gmail</li>
-                        <li>Use AI + your creator persona to find partnership opportunities</li>
-                        <li>Automatically organize opportunities by category</li>
-                        <li>Mark all analyzed emails to avoid duplicate processing</li>
-                      </ul>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
+        <div className="border-b border-border p-6">
+          <div className="flex flex-col space-y-4">
+            {/* Title */}
+            <div className="space-y-1">
+              <h1 className="text-2xl font-bold text-foreground">Partnership Hub</h1>
+              <p className="text-sm text-muted-foreground">
+                Your command center for discovering collaborations, managing partnerships, and growing your creator business
+              </p>
             </div>
 
             {/* Progress Display */}
             {refreshing && progress.step !== 'idle' && (
-              <div className="p-3 md:p-4 bg-primary/10 rounded-lg border border-primary/20">
-                <div className="flex items-center gap-3 mb-3 md:mb-4">
-                  <div className="animate-spin rounded-full h-4 w-4 md:h-5 md:w-5 border-b-2 border-primary"></div>
+              <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
                   <div>
                     <p className="text-sm font-medium text-foreground">{progress.message}</p>
                   </div>
@@ -254,35 +230,150 @@ export function PartnershipHub() {
               </div>
             )}
 
-            {/* Search */}
-            <div className="flex flex-col space-y-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Input
-                      placeholder="Search partnerships, brands, or opportunities..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="max-w-xs md:max-w-sm">
-                    <p>Search through your partnership opportunities by brand name, email content, subject line, or sender. Try keywords like "sponsorship", "collaboration", or specific brand names.</p>
-                  </TooltipContent>
-                </Tooltip>
+            {/* Metrics and Button Row */}
+            <div className="flex items-center justify-between w-full">
+              {/* Left side - 4 metric boxes */}
+              <div className="flex items-center gap-4">
+                {/* Metric Cards */}
+                <div className="flex items-center gap-3">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div 
+                        className={`flex items-center gap-2 px-4 py-3 border rounded-lg backdrop-blur-sm cursor-pointer transition-all duration-200 ${
+                          activeFilter === 'all' 
+                            ? 'bg-white/15 border-white/30 ring-2 ring-white/30 shadow-lg' 
+                            : 'bg-white/5 border-white/10 hover:bg-white/10'
+                        }`}
+                        onClick={() => setActiveFilter('all')}
+                      >
+                        <Mail className="w-5 h-5 text-white/70" />
+                        <div>
+                          <div className="text-xl font-bold text-white">{partnerships.length}</div>
+                          <div className="text-xs text-white/70">Total Emails</div>
+                        </div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs text-sm">Total partnership opportunities found</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div 
+                        className={`flex items-center gap-2 px-4 py-3 border rounded-lg backdrop-blur-sm cursor-pointer transition-all duration-200 ${
+                          activeFilter === 'active' 
+                            ? 'bg-white/15 border-white/30 ring-2 ring-white/30 shadow-lg' 
+                            : 'bg-white/5 border-white/10 hover:bg-white/10'
+                        }`}
+                        onClick={() => setActiveFilter('active')}
+                      >
+                        <MessageSquare className="w-5 h-5 text-white/70" />
+                        <div>
+                          <div className="text-xl font-bold text-white">{partnershipMetrics.activePartnerships}</div>
+                          <div className="text-xs text-white/70">Active Discussions</div>
+                        </div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs text-sm">Ongoing conversations and deals</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div 
+                        className={`flex items-center gap-2 px-4 py-3 border rounded-lg backdrop-blur-sm cursor-pointer transition-all duration-200 ${
+                          activeFilter === 'pending' 
+                            ? 'bg-white/15 border-white/30 ring-2 ring-white/30 shadow-lg' 
+                            : 'bg-white/5 border-white/10 hover:bg-white/10'
+                        }`}
+                        onClick={() => setActiveFilter('pending')}
+                      >
+                        <Clock className="w-5 h-5 text-white/70" />
+                        <div>
+                          <div className="text-xl font-bold text-white">{partnershipMetrics.pendingResponses}</div>
+                          <div className="text-xs text-white/70">Needs Response</div>
+                        </div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs text-sm">Opportunities waiting for your reply</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div 
+                        className={`flex items-center gap-2 px-4 py-3 border rounded-lg backdrop-blur-sm cursor-pointer transition-all duration-200 ${
+                          activeFilter === 'brand-deals' 
+                            ? 'bg-white/15 border-white/30 ring-2 ring-white/30 shadow-lg' 
+                            : 'bg-white/5 border-white/10 hover:bg-white/10'
+                        }`}
+                        onClick={() => setActiveFilter('brand-deals')}
+                      >
+                        <Users className="w-5 h-5 text-white/70" />
+                        <div>
+                          <div className="text-xl font-bold text-white">{brandDealsCount}</div>
+                          <div className="text-xs text-white/70">Brand Deals</div>
+                        </div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs text-sm">High-value partnerships and serious negotiations</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+
+                {/* Find New Opportunities Button */}
+                <Button 
+                  variant="outline" 
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  className="flex items-center gap-2 justify-center shrink-0"
+                  style={{
+                    borderRadius: '25px',
+                    border: '1px solid var(--Neutral_600, #747474)',
+                    background: 'var(--neutral_950, #2B2B2B)',
+                    width: '219px',
+                    height: '43px',
+                    flexShrink: 0,
+                    color: 'var(--Neutral_400, #BCBCBC)',
+                    fontSize: '14px',
+                    fontStyle: 'normal',
+                    fontWeight: 500,
+                    lineHeight: 'normal'
+                  }}
+                >
+                  <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+                  Find New Opportunities
+                </Button>
+              </div>
+
+              {/* Right side - Deal Value */}
+              <div 
+                className="flex items-center gap-2 px-4 py-3 shrink-0"
+                style={{
+                  borderRadius: '15px',
+                  background: 'rgba(245, 246, 98, 0.13)',
+                  width: '209px',
+                  height: '64px',
+                  flexShrink: 0
+                }}
+              >
+                <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
+                  <span className="text-black font-bold text-sm">$</span>
+                </div>
+                <div>
+                  <div className="text-xl font-bold text-white">
+                    {partnershipMetrics.pipelineValue >= 1000000 ? `$${(partnershipMetrics.pipelineValue / 1000000).toFixed(1)}M` :
+                     partnershipMetrics.pipelineValue >= 1000 ? `$${(partnershipMetrics.pipelineValue / 1000).toFixed(1)}K` :
+                     partnershipMetrics.pipelineValue === 0 ? '$0' : `$${partnershipMetrics.pipelineValue}`}
+                  </div>
+                  <div className="text-xs text-white/70">Deal Value</div>
+                </div>
               </div>
             </div>
-
-            {/* Metrics Cards */}
-            <PartnershipMetrics 
-              totalEmails={partnerships.length}
-              activePartnerships={partnershipMetrics.activePartnerships}
-              pendingResponses={partnershipMetrics.pendingResponses}
-              pipelineValue={partnershipMetrics.pipelineValue}
-              activeFilter={activeFilter}
-              onFilterChange={setActiveFilter}
-            />
           </div>
         </div>
 
@@ -295,51 +386,37 @@ export function PartnershipHub() {
             <>
               {/* Left Column - Category-Grouped Emails */}
               <div className="w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r border-border overflow-y-auto">
-                <div className="p-3 md:p-4">
-                  <div className="mb-3 md:mb-4">
+                <div className="p-4">
+                  <div className="mb-4">
                     <div className="flex items-center justify-between mb-2">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <h2 className="text-base md:text-lg font-semibold text-foreground cursor-help">
-                            Partnership Opportunities
-                          </h2>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="max-w-xs md:max-w-md">
-                          <div className="space-y-2">
-                            <p className="font-medium">Automatically Organized Categories:</p>
-                            <ul className="text-xs space-y-1">
-                              <li><strong>Partnership:</strong> Direct collaboration requests</li>
-                              <li><strong>Media:</strong> Press coverage and media opportunities</li>
-                              <li><strong>Business:</strong> Commercial partnerships and deals</li>
-                              <li><strong>Community:</strong> Networking and event invitations</li>
-                            </ul>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Badge variant="outline" className="cursor-help text-xs">
-                            {filteredPartnerships.length}
-                          </Badge>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">
-                          <p>
-                            {activeFilter === 'all' 
-                              ? 'Total number of partnership opportunities found in your Gmail inbox.' 
-                              : `Filtered partnership opportunities (${filteredPartnerships.length} of ${partnerships.length} total).`
-                            }
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
+                      <h2 className="text-lg font-semibold text-foreground">
+                        Partnership Opportunities
+                      </h2>
+                      <Badge variant="outline" className="text-xs">
+                        {filteredPartnerships.length}
+                      </Badge>
                     </div>
-                    <p className="text-xs md:text-sm text-muted-foreground">
-                      Discover collaborations organized by opportunity type. Click any email to view details and manage the partnership.
+                    <p className="text-sm text-muted-foreground">
+                      Pick a partnership from the left to explore the conversation, draft replies, and turn opportunities into collaborations
                       {activeFilter !== 'all' && (
                         <span className="text-primary ml-2">
                           (Filtered: {filteredPartnerships.length} of {partnerships.length})
                         </span>
                       )}
                     </p>
+                  </div>
+
+                  {/* Search above email list */}
+                  <div className="mb-4">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search partnerships or opportunities..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
                   </div>
 
                   {/* Category-grouped email display */}

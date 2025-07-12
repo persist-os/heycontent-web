@@ -13,7 +13,8 @@ import {
   Users, 
   Clock, 
   DollarSign,
-  MessageSquare
+  MessageSquare,
+  Coins
 } from 'lucide-react';
 
 export type MetricFilter = 'all' | 'active' | 'pending' | 'high-value';
@@ -47,79 +48,104 @@ export default function PartnershipMetrics({
       label: 'Total Emails',
       value: totalEmails,
       icon: Mail,
-      color: 'text-primary',
-      bgColor: 'bg-primary/10',
-      tooltip: 'Click to show all emails in your partnerships view. Your collaboration inbox is growing!',
+      tooltip: 'Total partnership opportunities found',
       filter: 'all' as MetricFilter
     },
     {
       label: 'Active Discussions',
       value: activePartnerships,
       icon: MessageSquare,
-      color: 'text-success',
-      bgColor: 'bg-success/10',
-      tooltip: 'Click to filter hot conversations and deals in the works! These are emails with ongoing chats or high-value partnerships (4+ messages or big opportunities)',
+      tooltip: 'Ongoing conversations and deals',
       filter: 'active' as MetricFilter
     },
     {
       label: 'Needs Response',
       value: pendingResponses,
       icon: Clock,
-      color: 'text-secondary-foreground',
-      bgColor: 'bg-secondary/10',
-      tooltip: 'Click to filter opportunities waiting for your reply! These brands are ready to hear from you - time to make some magic happen',
+      tooltip: 'Opportunities waiting for your reply',
       filter: 'pending' as MetricFilter
-    },
-    {
-      label: 'Deal Value',
-      value: formatValue(pipelineValue),
-      icon: DollarSign,
-      color: 'text-accent-foreground',
-      bgColor: 'bg-accent/10',
-      tooltip: 'Click to filter high-value partnerships and deals we\'ve spotted in your conversations. Your business is growing!',
-      filter: 'high-value' as MetricFilter
     }
   ];
 
   return (
     <TooltipProvider>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {metrics.map((metric) => {
-          const Icon = metric.icon;
-          const isActive = activeFilter === metric.filter;
-          
-          return (
-            <Tooltip key={metric.label}>
-              <TooltipTrigger asChild>
-                <Card 
-                  className={`p-4 cursor-pointer transition-all hover:shadow-md ${
-                    isActive 
-                      ? 'ring-2 ring-primary bg-primary/5' 
-                      : 'hover:bg-muted/50'
-                  }`}
-                  onClick={() => onFilterChange(metric.filter)}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-lg ${metric.bgColor} ${isActive ? 'ring-1 ring-primary/30' : ''}`}>
-                      <Icon className={`w-5 h-5 ${metric.color}`} />
+      <div className="flex items-center justify-between w-full">
+        {/* Main metrics on the left */}
+        <div className="flex items-center gap-3">
+          {metrics.map((metric) => {
+            const Icon = metric.icon;
+            const isActive = activeFilter === metric.filter;
+            
+            return (
+              <Tooltip key={metric.label}>
+                <TooltipTrigger asChild>
+                  <Card 
+                    className="p-3 cursor-pointer transition-all duration-200"
+                    style={{
+                      borderRadius: '15px',
+                      border: '1px solid #FAFAFA',
+                      background: '#2B2B2B',
+                      boxShadow: '0px 0px 20px 0px rgba(255, 255, 255, 0.27) inset, 0px 0px 30px 0px rgba(0, 0, 0, 0.25)'
+                    }}
+                    onClick={() => onFilterChange(metric.filter)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Icon className="w-4 h-4 text-white/70" />
+                          <p className="text-xs font-medium text-white/70">
+                            {metric.label}
+                          </p>
+                        </div>
+                        <p className="text-lg font-bold text-white">
+                          {metric.value}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className={`text-sm ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
-                        {metric.label}
-                      </p>
-                      <p className={`text-xl font-semibold ${isActive ? 'text-primary' : 'text-foreground'}`}>
-                        {typeof metric.value === 'string' ? metric.value : metric.value}
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-xs text-sm">{metric.tooltip}</p>
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
+
+        {/* Deal value metric at the very right */}
+        <div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card 
+                className="p-3 cursor-pointer transition-all duration-200"
+                style={{
+                  borderRadius: '15px',
+                  border: '1px solid #FAFAFA',
+                  background: '#2B2B2B',
+                  boxShadow: '0px 0px 20px 0px rgba(255, 255, 255, 0.27) inset, 0px 0px 30px 0px rgba(0, 0, 0, 0.25)'
+                }}
+                onClick={() => onFilterChange('high-value')}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Coins className="w-4 h-4 text-yellow-400" />
+                      <p className="text-xs font-medium text-white/70">
+                        Total Deal Value
                       </p>
                     </div>
+                    <p className="text-lg font-bold text-white">
+                      {formatValue(pipelineValue)}
+                    </p>
                   </div>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="max-w-xs">{metric.tooltip}</p>
-              </TooltipContent>
-            </Tooltip>
-          );
-        })}
+                </div>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="max-w-xs text-sm">Total value of identified partnerships</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </div>
     </TooltipProvider>
   );
