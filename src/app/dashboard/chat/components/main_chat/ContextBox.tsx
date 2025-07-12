@@ -80,26 +80,15 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
                     {(context as any).type === 'content-hub-action-step' ? 'Content Hub Action Step' : 'Content Hub Insight'}
                   </h4>
                   <div className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
-                    {(() => {
-                      console.log('🔍 [CONTEXT BOX] Content debug:', {
-                        content: typeof context.content,
-                        insight: typeof context.insight,
-                        analysis: typeof context.analysis,
-                        contentValue: context.content,
-                        insightValue: context.insight,
-                        analysisValue: context.analysis
-                      });
-                      
-                      if (typeof context.content === 'string') {
-                        return <MarkdownRenderer content={context.content} />;
-                      } else if (typeof context.insight === 'string') {
-                        return <MarkdownRenderer content={context.insight} />;
-                      } else if (typeof context.analysis === 'string') {
-                        return <MarkdownRenderer content={context.analysis} />;
-                      } else {
-                        return <div>Content not available - Debug: {JSON.stringify({ content: typeof context.content, insight: typeof context.insight, analysis: typeof context.analysis })}</div>;
-                      }
-                    })()}
+                    {typeof context.content === 'string' ? (
+                      <MarkdownRenderer content={context.content} />
+                    ) : typeof context.insight === 'string' ? (
+                      <MarkdownRenderer content={context.insight} />
+                    ) : typeof context.analysis === 'string' ? (
+                      <MarkdownRenderer content={context.analysis} />
+                    ) : (
+                      'Content not available'
+                    )}
                   </div>
                   <div className="flex flex-wrap gap-2 mt-3">
                     {(context as any).contentType && (

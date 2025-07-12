@@ -127,28 +127,8 @@ export function GmailPlatform({ userId, currentQuote, loading }: GmailPlatformPr
                 relatedItems={insight.relatedItems}
                 expanded={expandedInsight === idx}
                 onExpand={() => setExpandedInsight(expandedInsight === idx ? null : idx)}
-                onDiscuss={(content: string, title: string) => {
-                  // Navigate to chat with insight context
-                  const context = {
-                    platform: 'ai-insights',
-                    contentId: `gmail-insight-${idx}`,
-                    title: title,
-                    source: 'AI Insights Dashboard',
-                    originalPlatform: 'gmail',
-                    fullInsight: {
-                      title: insight.title,
-                      impact: insight.impact,
-                      whyNow: insight.whyNow,
-                      actionSteps: insight.actionSteps,
-                      expectedOutcome: insight.expectedOutcome,
-                      sourceDetails: insight.sourceDetails,
-                      relatedItems: insight.relatedItems
-                    },
-                    analysis: content
-                  };
-                  
-                  const encodedContext = encodeURIComponent(JSON.stringify(context));
-                  window.location.href = `/dashboard/chat?contentContext=${encodedContext}`;
+                onDiscuss={() => {
+                  // The InsightCard component handles the context creation internally
                 }}
               />
             ))}
