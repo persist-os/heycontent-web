@@ -38,8 +38,33 @@ export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsPr
     await generateNewInsights()
   }
 
-  const discussInsight = (content: string, title: string) => {
-    discussFullInsight(content, title)
+  // Add normalization utility at the top (after imports)
+  function normalizeInsightForContext(insight: any) {
+    const normalized = {
+      title: insight.title || '',
+      impact: insight.impact || '',
+      whyNow: insight.whyNow || insight.why_now || [],
+      actionSteps: insight.actionSteps || insight.action_steps || [],
+      expectedOutcome: insight.expectedOutcome || insight.expected_outcome || '',
+      sourceDetails: insight.sourceDetails || insight.source_details || [],
+      relatedItems: (insight.relatedItems || insight.related_items || []).map((item: any) =>
+        typeof item === 'object' && item !== null
+          ? { label: item.label || Object.keys(item)[0], value: item.value || Object.values(item)[0] }
+          : { label: '', value: String(item) }
+      ),
+    };
+    console.log('[normalizeInsightForContext] Normalized insight:', normalized);
+    return normalized;
+  }
+
+  // Update discussInsight to accept normalized insight and log
+  const discussInsight = (content: string, title: string, normalizedInsight?: any) => {
+    console.log('[ContentHubInsights] discussInsight called with:', { content, title, normalizedInsight });
+    if (normalizedInsight) {
+      discussFullInsight(content, title, normalizedInsight);
+    } else {
+      discussFullInsight(content, title);
+    }
   }
 
   const handleDiscussActionStep = (actionStep: string, platform: 'youtube' | 'instagram' | 'gmail', contentType: 'hook' | 'format' | 'cta') => {
@@ -205,7 +230,11 @@ export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsPr
                       className="text-xs"
                     />
                     <Button
-                      onClick={() => discussInsight(insight.remix_insight, 'Content Remix Opportunity')}
+                      onClick={() => {
+                        const normalized = normalizeInsightForContext(insight);
+                        console.log('[ContentHubInsights] Discuss Remix Opportunity clicked. Normalized:', normalized);
+                        discussInsight(insight.remix_insight, 'Content Remix Opportunity', normalized);
+                      }}
                       size="sm"
                       variant="ghost"
                       className="text-xs hover:bg-heycontent-purple hover:text-white dark:hover:bg-gray-800 dark:hover:text-gray-100"
@@ -227,7 +256,11 @@ export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsPr
                         className="text-xs"
                       />
                       <Button
-                        onClick={() => discussInsight(insight.smartnote_summary, 'Smart Note Summary')}
+                        onClick={() => {
+                          const normalized = normalizeInsightForContext(insight);
+                          console.log('[ContentHubInsights] Discuss Smart Note Summary clicked. Normalized:', normalized);
+                          discussInsight(insight.smartnote_summary, 'Smart Note Summary', normalized);
+                        }}
                         size="sm"
                         variant="ghost"
                         className="text-xs hover:bg-heycontent-purple hover:text-white dark:hover:bg-gray-800 dark:hover:text-gray-100"
@@ -253,7 +286,11 @@ export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsPr
                         className="text-xs"
                       />
                       <Button
-                        onClick={() => discussInsight(insight.conversation_starter, 'Conversation Starter')}
+                        onClick={() => {
+                          const normalized = normalizeInsightForContext(insight);
+                          console.log('[ContentHubInsights] Discuss Conversation Starter clicked. Normalized:', normalized);
+                          discussInsight(insight.conversation_starter, 'Conversation Starter', normalized);
+                        }}
                         size="sm"
                         variant="ghost"
                         className="text-xs hover:bg-heycontent-purple hover:text-white dark:hover:bg-gray-800 dark:hover:text-gray-100"

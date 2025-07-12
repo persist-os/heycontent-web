@@ -24,6 +24,24 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
   console.log('🔍 [CONTEXT BOX] Received context:', context);
   console.log('🔍 [CONTEXT BOX] Context type:', typeof context);
   console.log('🔍 [CONTEXT BOX] Context keys:', Object.keys(context || {}));
+  // Defensive fallback: if fullInsight is missing but content is an object, construct it
+  if (context.platform === 'ai-insights' && !(context as any).fullInsight && typeof context.content === 'object') {
+    const fallbackFullInsight = {
+      title: context.content.title || '',
+      impact: context.content.impact || '',
+      whyNow: context.content.whyNow || context.content.why_now || [],
+      actionSteps: context.content.actionSteps || context.content.action_steps || [],
+      expectedOutcome: context.content.expectedOutcome || context.content.expected_outcome || '',
+      sourceDetails: context.content.sourceDetails || context.content.source_details || [],
+      relatedItems: (context.content.relatedItems || context.content.related_items || []).map((item: any) =>
+        typeof item === 'object' && item !== null
+          ? { label: item.label || Object.keys(item)[0], value: item.value || Object.values(item)[0] }
+          : { label: '', value: String(item) }
+      ),
+    };
+    console.warn('[CONTEXT BOX] fullInsight missing! Constructed fallback fullInsight:', fallbackFullInsight);
+    (context as any).fullInsight = fallbackFullInsight;
+  }
   // Special handling for AI insights with full insight data
   if (context.platform === 'ai-insights' && ((context as any).fullInsight || (context as any).type === 'content-hub-action-step' || (context as any).type === 'content-hub-insight' || (context as any).source === 'content-hub')) {
     const originalPlatform = (context as any).originalPlatform;
@@ -36,6 +54,11 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
       platformIcon = <Mail className="w-6 h-6 text-blue-500" />;
     } else {
       platformIcon = <Brain className="w-6 h-6 text-gray-600 dark:text-gray-400 flex-shrink-0" />;
+    }
+    // Add logging before rendering AIInsightDisplayCard
+    if ((context as any).fullInsight) {
+      console.log('[CONTEXT BOX] Rendering AIInsightDisplayCard with context:', context);
+      console.log('[CONTEXT BOX] fullInsight:', (context as any).fullInsight);
     }
     return (
       <div className="sticky top-0 z-10">
@@ -71,7 +94,7 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
           <div className="p-4 pt-0">
             {/* Display the full AI insight or content hub insight */}
             {(context as any).fullInsight ? (
-              <AIInsightDisplayCard context={context as any} showPlatformIcon={false} />
+              <AIInsightDisplayCard key={context.contentId || context.title || Math.random()} context={context as any} showPlatformIcon={false} />
             ) : (context as any).type === 'content-hub-action-step' || (context as any).type === 'content-hub-insight' || (context as any).source === 'content-hub' ? (
               <div className="p-4 bg-gradient-to-br from-purple-50 to-white dark:from-purple-900/20 dark:to-gray-900 border border-purple-200 dark:border-purple-700 rounded-lg">
                 <div className="mb-3">

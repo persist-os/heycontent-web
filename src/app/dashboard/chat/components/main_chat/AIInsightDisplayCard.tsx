@@ -28,6 +28,8 @@ const platformIcon = {
 };
 
 export const AIInsightDisplayCard: React.FC<AIInsightDisplayCardProps> = ({ context, showPlatformIcon = true }) => {
+  console.log('[AIInsightDisplayCard] Received context:', context);
+  console.log('[AIInsightDisplayCard] Received fullInsight:', context.fullInsight);
   const { fullInsight, originalPlatform, isPersonaGeneration } = context;
   
   if (!fullInsight) return null;

@@ -269,6 +269,7 @@ export const useContentContextStore = create<ContentContextState>()(
 
       // Set AI Insights context
       setAIInsightsContext: (insight: any) => {
+        console.log('[STORE] setAIInsightsContext called with:', insight);
         const context = {
           platform: 'ai-insights' as const,
           contentId: `insight-${Date.now()}`,
@@ -277,9 +278,11 @@ export const useContentContextStore = create<ContentContextState>()(
           content: insight,
           type: insight.type || undefined, // Pass through the type if provided
           source: insight.source || undefined, // Pass through the source if provided
-          convexData: insight // Store the complete insight data
+          convexData: insight, // Store the complete insight data
+          // Defensive: pass through fullInsight if present
+          ...(insight.fullInsight ? { fullInsight: insight.fullInsight } : {})
         };
-
+        console.log('[STORE] FINAL context to set:', context);
         set({
           currentContext: context,
           cacheTimestamp: Date.now(),
