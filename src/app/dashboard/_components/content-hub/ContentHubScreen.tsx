@@ -42,6 +42,7 @@ import { InsightCardSkeleton } from '../../ai-insights/_components/InsightCardSk
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ContentHubInsights } from './ContentHubInsights'
+import { getCurrentUserId } from '@/app/lib/api-helpers'
 
 type PlatformType = 'all' | 'youtube' | 'instagram'
 type ViewType = 'hub-insights' | 'all' | 'youtube' | 'instagram'
@@ -314,7 +315,7 @@ export function ContentHubScreen() {
   const renderAllPlatformsInsights = () => {
     if (isInsightsLoading) {
       return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="flex flex-col gap-6">
           {Array.from({ length: 6 }).map((_, index) => (
             <InsightCardSkeleton key={index} />
           ))}
@@ -353,7 +354,7 @@ export function ContentHubScreen() {
     }
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="flex flex-col gap-6">
         {allInsights.map((insight, idx) => (
           <InsightCard
             key={idx}
@@ -375,7 +376,12 @@ export function ContentHubScreen() {
 
   const handleRefreshAllYouTube = async () => {
     if (refreshingYouTube) return;
-    await refreshAllYouTube();
+    const apiUserId = getCurrentUserId();
+    if (!apiUserId) {
+      toast.error('Could not determine user ID. Please log in again.');
+      return;
+    }
+    await refreshAllYouTube(apiUserId);
   };
 
   // Show error toast when refresh fails
