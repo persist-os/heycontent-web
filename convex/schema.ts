@@ -528,30 +528,6 @@ export default defineSchema({
   .index("by_views", ["statistics.views"])
   .index("by_likes", ["statistics.likes"]),
 
-  // YouTube Comments - Separate table for better querying and pagination
-  youtubeComments: defineTable({
-    userId: v.string(),
-    videoId: v.string(),
-    commentId: v.string(),
-    text: v.string(),
-    publishedAt: v.string(),
-    likes: v.float64(),
-    replies: v.float64(),
-    isReply: v.boolean(),
-    author: v.object({
-      channelId: v.string(),
-      displayName: v.string(),
-      profileImage: v.string(),
-    }),
-    createdAt: v.float64(),
-    updatedAt: v.float64(),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_videoId", ["videoId"])
-  .index("by_video_published", ["videoId", "publishedAt"])
-  .index("by_user_video", ["userId", "videoId"])
-  .index("by_commentId", ["commentId"]),
-
  // Instagram Accounts (consolidated with tokens and insights)
  instagramAccounts: defineTable({
   userId: v.string(),
