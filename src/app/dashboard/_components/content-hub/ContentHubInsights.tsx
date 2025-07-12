@@ -60,7 +60,12 @@ export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsPr
       sourceDetails.length === 0 &&
       relatedItems.length === 0
     ) {
-      whyNow = [insight.remix_insight || insight.smartnote_summary || insight.conversation_starter || 'No details available.'];
+      let fallbackText = insight.remix_insight || insight.smartnote_summary || insight.conversation_starter || 'No details available.';
+      // Remove redundant 'Insight:' prefix if present
+      if (typeof fallbackText === 'string' && fallbackText.trim().toLowerCase().startsWith('insight:')) {
+        fallbackText = fallbackText.replace(/^insight:\s*/i, '').trim();
+      }
+      whyNow = [fallbackText];
     }
 
     const normalized = {
