@@ -471,8 +471,8 @@ ${message.body}
         </div>
 
         {/* Email Thread Summary */}
-        <Card className="p-3 md:p-4">
-          <div className="space-y-3 md:space-y-4">
+        <Card className="p-2 md:p-3 rounded-xl">
+          <div className="space-y-2 md:space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-medium text-foreground flex items-center text-sm md:text-base">
                 <Mail className="w-4 h-4 mr-2 flex-shrink-0" />
@@ -483,7 +483,7 @@ ${message.body}
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Messages:</span>
                 <span className="text-foreground flex items-center">
@@ -517,8 +517,8 @@ ${message.body}
         </Card>
 
         {/* Draft Reply Section - Moved up */}
-        <Card className="p-3 md:p-4">
-          <div className="space-y-3 md:space-y-4">
+        <Card className="p-2 md:p-3 rounded-xl">
+          <div className="space-y-2 md:space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-medium text-foreground flex items-center text-sm md:text-base">
                 <Edit3 className="w-4 h-4 mr-2 flex-shrink-0" />
@@ -543,14 +543,14 @@ ${message.body}
 
       {/* Email Thread Conversation - Scrollable */}
       <div className="flex-1 overflow-hidden">
-        <Card className="mx-3 md:mx-4 mb-3 md:mb-4 h-full flex flex-col">
-          <div className="p-3 md:p-4 border-b border-border">
+        <Card className="mx-3 md:mx-4 mb-3 md:mb-4 h-full flex flex-col rounded-xl">
+          <div className="p-2 md:p-3 border-b border-border">
             <h3 className="font-medium text-foreground flex items-center text-sm md:text-base">
               <MessageSquare className="w-4 h-4 mr-2 flex-shrink-0" />
               Conversation Thread
             </h3>
           </div>
-          <div className="flex-1 overflow-y-auto p-3 md:p-4">
+          <div className="flex-1 overflow-y-auto p-2 md:p-3">
             {renderEmailThread()}
           </div>
         </Card>

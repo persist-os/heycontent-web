@@ -1,6 +1,6 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Mail, Handshake, Tv, Briefcase, Users } from 'lucide-react';
+import { Mail, Handshake, Tv, Briefcase, Users, ChevronDown, ChevronRight } from 'lucide-react';
 import { Partnership } from '../types';
 import { categoryConfig } from '../utils/emailCategorization';
 
@@ -19,6 +19,80 @@ const iconMap = {
   Briefcase,
   Users,
   Mail
+};
+
+// Custom colors for each category with 11% transparency for headers
+const categoryColors = {
+  partnership: {
+    headerBg: 'bg-[#9D89F7]/[0.11]',
+    border: 'border-[#9D89F7]/20',
+    glow: 'shadow-lg shadow-[#9D89F7]/20',
+    text: 'text-[#9D89F7]',
+    accent: 'border-l-[#9D89F7]',
+    dot: 'bg-[#9D89F7]',
+    badgeBg: 'bg-[#9D89F7]',
+    badgeText: 'text-white'
+  },
+  media: {
+    headerBg: 'bg-[#FF96FB]/[0.11]',
+    border: 'border-[#FF96FB]/20',
+    glow: 'shadow-lg shadow-[#FF96FB]/20',
+    text: 'text-[#FF96FB]',
+    accent: 'border-l-[#FF96FB]',
+    dot: 'bg-[#FF96FB]',
+    badgeBg: 'bg-[#FF96FB]',
+    badgeText: 'text-white'
+  },
+  business: {
+    headerBg: 'bg-[#40E3FF]/[0.11]',
+    border: 'border-[#40E3FF]/20',
+    glow: 'shadow-lg shadow-[#40E3FF]/20',
+    text: 'text-[#40E3FF]',
+    accent: 'border-l-[#40E3FF]',
+    dot: 'bg-[#40E3FF]',
+    badgeBg: 'bg-[#40E3FF]',
+    badgeText: 'text-white'
+  },
+  community: {
+    headerBg: 'bg-[#9BE7B2]/[0.11]',
+    border: 'border-[#9BE7B2]/20',
+    glow: 'shadow-lg shadow-[#9BE7B2]/20',
+    text: 'text-[#9BE7B2]',
+    accent: 'border-l-[#9BE7B2]',
+    dot: 'bg-[#9BE7B2]',
+    badgeBg: 'bg-[#9BE7B2]',
+    badgeText: 'text-white'
+  }
+};
+
+const formatDate = (dateString: string | number) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = Math.abs(now.getTime() - date.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  const options: Intl.DateTimeFormatOptions = { 
+    month: 'short', 
+    day: 'numeric', 
+    year: 'numeric' 
+  };
+  
+  return date.toLocaleDateString('en-US', options);
+};
+
+const getStatusBadgeVariant = (status: string) => {
+  switch (status?.toLowerCase()) {
+    case 'opportunity':
+      return 'default';
+    case 'inquiry':
+      return 'default';
+    case 'negotiating':
+      return 'default';
+    case 'active':
+      return 'default';
+    default:
+      return 'outline';
+  }
 };
 
 export const CategoryEmailList: React.FC<CategoryEmailListProps> = ({
@@ -40,61 +114,65 @@ export const CategoryEmailList: React.FC<CategoryEmailListProps> = ({
 
   if (partnerships.length === 0) {
     return (
-      <div className="text-center py-8 md:py-12 px-4">
-        <div className="p-3 md:p-4 rounded-full bg-muted mx-auto mb-4 w-fit">
-          <Mail className="w-6 h-6 md:w-8 md:h-8 text-muted-foreground" />
+      <div className="text-center py-12 px-4 rounded-lg">
+        <div className="p-4 rounded-full bg-muted mx-auto mb-4 w-fit">
+          <Mail className="w-8 h-8 text-muted-foreground" />
         </div>
-        <h3 className="text-base md:text-lg font-medium text-foreground mb-2">Your inbox is ready for amazing things</h3>
-        <p className="text-sm md:text-base text-muted-foreground mb-4 max-w-md mx-auto">
-          No partnership opportunities found yet? That just means you're about to discover some incredible collaborations! 
-          Keep creating, keep connecting – your next big partnership is probably already in your inbox waiting to be found.
-        </p>
-        <p className="text-xs md:text-sm text-muted-foreground">
-          Try refreshing your Gmail to uncover potential partnerships, or keep being awesome – opportunities love great creators
+        <h3 className="text-lg font-medium text-foreground mb-2">Ready to dive into your next collaboration?</h3>
+        <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
+          Pick a partnership from the left to explore the conversation, draft replies, and turn opportunities into collaborations
         </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3 md:space-y-4">
+    <div className="space-y-0 rounded-lg">
       {Object.entries(groupedEmails).map(([category, categoryEmails]) => {
         const emails = categoryEmails as any[];
         if (emails.length === 0) return null;
         
         const config = categoryConfig[category as keyof typeof categoryConfig] || categoryConfig.uncategorized;
-        const IconComponent = iconMap[config.icon as keyof typeof iconMap] || Mail;
+        const colors = categoryColors[category as keyof typeof categoryColors];
+        const isExpanded = expandedCategories[category];
         
         return (
-          <div key={category} className="bg-card rounded-lg border border-border overflow-hidden">
-            {/* Category Header */}
-            <div className="bg-muted/50 px-3 md:px-4 py-2 md:py-3 border-b border-border">
+          <div key={category} className="border-b border-border last:border-b-0">
+            {/* Category Header with 11% transparency */}
+            <div 
+              className={`px-4 py-3 cursor-pointer rounded-lg ${colors ? `${colors.headerBg}` : 'bg-muted/50'}`}
+              onClick={() => onToggleCategory(category)}
+            >
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2 md:space-x-3 min-w-0 flex-1">
-                  <IconComponent className={`w-4 h-4 md:w-5 md:h-5 ${config.color} flex-shrink-0`} />
-                  <div className="min-w-0 flex-1">
-                    <h3 className={`text-sm md:text-base font-semibold ${config.color} truncate`}>
-                      {config.title}
-                    </h3>
-                    <p className="text-xs text-muted-foreground hidden md:block">{config.description}</p>
-                  </div>
-                  <Badge variant="outline" className="text-xs flex-shrink-0">
+                <div className="flex items-center space-x-2">
+                  <h3 className={`text-sm font-medium ${colors ? colors.text : 'text-foreground'}`}>
+                    {config.title}
+                  </h3>
+                  <Badge 
+                    variant="outline" 
+                    className={`text-xs rounded-full border-0 ${
+                      colors 
+                        ? `${colors.badgeBg} ${colors.badgeText}` 
+                        : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
                     {emails.length}
                   </Badge>
                 </div>
-                <button
-                  onClick={() => onToggleCategory(category)}
-                  className="text-muted-foreground hover:text-foreground text-sm ml-2 p-1 transition-colors"
-                  aria-label={expandedCategories[category] ? 'Collapse category' : 'Expand category'}
-                >
-                  {expandedCategories[category] ? '▼' : '▶'}
-                </button>
+                <div className="flex items-center space-x-2">
+                  {isExpanded ? (
+                    <ChevronDown className={`w-3 h-3 ${colors ? colors.text : 'text-muted-foreground'}`} />
+                  ) : (
+                    <ChevronRight className={`w-3 h-3 ${colors ? colors.text : 'text-muted-foreground'}`} />
+                  )}
+                </div>
               </div>
+              <p className="text-xs text-muted-foreground mt-1">{config.description}</p>
             </div>
             
-            {/* Category Emails */}
-            {expandedCategories[category] && (
-              <div className="divide-y divide-border">
+            {/* Category Emails with theme colors */}
+            {isExpanded && (
+              <div className="bg-card rounded-lg">
                 {emails.map((email) => {
                   const partnership = partnershipMap[email.id];
                   if (!partnership) return null;
@@ -105,6 +183,7 @@ export const CategoryEmailList: React.FC<CategoryEmailListProps> = ({
                       email={email}
                       partnership={partnership}
                       config={config}
+                      colors={colors}
                       isSelected={selectedPartnershipId === partnership.id}
                       onSelect={() => onSelectPartnership(partnership)}
                     />
@@ -123,39 +202,55 @@ interface EmailItemProps {
   email: any;
   partnership: Partnership;
   config: any;
+  colors?: any;
   isSelected: boolean;
   onSelect: () => void;
 }
 
-const EmailItem: React.FC<EmailItemProps> = ({ email, partnership, config, isSelected, onSelect }) => {
+const EmailItem: React.FC<EmailItemProps> = ({ email, partnership, config, colors, isSelected, onSelect }) => {
   return (
     <div 
-      className={`p-3 md:p-4 hover:bg-muted/50 cursor-pointer transition-colors ${
-        isSelected ? `bg-muted border-l-4 ${config.color.replace('text-', 'border-').replace(' dark:text-', ' dark:border-')}` : ''
+      className={`px-4 py-5 cursor-pointer transition-all duration-200 border-b border-border/50 last:border-b-0 rounded-lg ${
+        isSelected ? 'bg-muted/30' : 'hover:bg-muted/10'
       }`}
       onClick={onSelect}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start gap-3">
+        {/* Colored dot */}
+        <div className={`w-2 h-2 rounded-full mt-2 ${colors ? colors.dot : 'bg-muted-foreground'} flex-shrink-0`} />
+        
         <div className="flex-1 min-w-0">
-          <div className="flex items-center space-x-2 mb-1">
-            <h4 className="text-sm font-medium text-foreground truncate flex-1">
-              {email.content?.data?.subject || 'No Subject'}
-            </h4>
-            <Badge variant="outline" className={`text-xs flex-shrink-0 ${isSelected ? config.color : 'text-muted-foreground'}`}>
-              {email.convexData?.category || email.category || 'uncategorized'}
-            </Badge>
+          <div className="flex items-start justify-between gap-3">
+            {/* Left side - Company name, subject, and description */}
+            <div className="flex-1 min-w-0 overflow-hidden">
+              <h4 className="text-sm font-medium text-foreground mb-1 truncate">
+                {partnership.brandName}
+              </h4>
+              <p className="text-sm font-medium text-foreground mb-2 truncate">
+                {email.content?.data?.subject || 'No Subject'}
+              </p>
+              <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 break-words overflow-hidden">
+                {email.content?.data?.snippet || 'No preview available'}
+              </p>
+            </div>
+            
+            {/* Right side - Date and status */}
+            <div className="flex flex-col items-end gap-2 flex-shrink-0 ml-3">
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                {formatDate(partnership.lastActivity)}
+              </span>
+              <Badge 
+                variant="outline"
+                className={`text-xs whitespace-nowrap border-0 rounded-full ${
+                  colors 
+                    ? `${colors.badgeBg} ${colors.badgeText}` 
+                    : 'bg-muted text-muted-foreground'
+                }`}
+              >
+                {partnership.status.charAt(0).toUpperCase() + partnership.status.slice(1)}
+              </Badge>
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground mb-2 truncate">
-            From: {partnership.brandName}
-          </p>
-          <p className="text-xs text-muted-foreground line-clamp-2">
-            {email.content?.data?.snippet || 'No preview available'}
-          </p>
-          {partnership.estimatedValue > 0 && (
-            <p className="text-xs text-green-600 dark:text-green-400 font-medium mt-2">
-              ${partnership.estimatedValue.toLocaleString()}
-            </p>
-          )}
         </div>
       </div>
     </div>
