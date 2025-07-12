@@ -1,6 +1,6 @@
 import { useConvex } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { useContentStore, UnifiedContent } from '@/store/content-store';
+import { useContentStore, UnifiedContent, PlatformContentData } from '@/store/content-store';
 import { useEffect, useMemo } from 'react';
 
 // Content resolution utility that replaces getAllLinkableContent
@@ -27,15 +27,23 @@ export function useContentResolver(userId: string | undefined) {
     
     // Utilities (these replace getAllLinkableContent functionality)
     findContentById: (contentId: string) => store.findContentById(contentId),
-    getContentByPlatform: (platform: keyof typeof store.content) => 
+    getContentByPlatform: (platform: keyof PlatformContentData) => 
       store.getContentByPlatform(platform),
     getAllLinkableContent: () => store.getAllLinkableContent(),
     
     // Actions
     refreshContent: () => userId && store.refreshContent(userId, convex),
-    refreshPlatform: (platform: keyof typeof store.content) => 
+    refreshPlatform: (platform: keyof PlatformContentData) => 
       userId && store.refreshPlatform(userId, platform, convex),
     invalidateContent: store.invalidateContent,
+    
+    // Infinite scroll actions
+    loadMoreContent: (platform: keyof PlatformContentData) => 
+      userId && store.loadMoreContent(userId, platform, convex),
+    resetPlatformScroll: store.resetPlatformScroll,
+    
+    // Platform-specific infinite scroll state
+    getPlatformScrollState: (platform: keyof PlatformContentData) => store.content[platform],
   };
 }
 
@@ -231,7 +239,7 @@ export async function resolveAllLinkContent(
   }
 }
 
-// Helper to get content by platform (replacing getContentByPlatform)
+// Helper to get content by platform with infinite scroll support
 export function useContentByPlatform(platform: 'smart-notes' | 'youtube' | 'instagram' | 'gmail' | 'insights') {
   const content = useContentStore(state => state.content);
   const loading = useContentStore(state => state.loading);
@@ -239,10 +247,19 @@ export function useContentByPlatform(platform: 'smart-notes' | 'youtube' | 'inst
   
   const platformKey = platform === 'smart-notes' ? 'notes' : platform;
   
-  return useMemo(() => ({
-    content: content[platformKey as keyof typeof content] || [],
-    loading: loading[platformKey as keyof typeof loading],
-    error: errors[platformKey as keyof typeof errors],
-    hasError: !!errors[platformKey as keyof typeof errors],
-  }), [content, loading, errors, platformKey]);
+  return useMemo(() => {
+    const platformContent = content[platformKey as keyof typeof content];
+    return {
+      content: platformContent.items || [],
+      loading: loading[platformKey as keyof typeof loading],
+      error: errors[platformKey as keyof typeof errors],
+      hasError: !!errors[platformKey as keyof typeof errors],
+      // Infinite scroll state
+      hasMore: platformContent.hasMore,
+      isLoadingMore: platformContent.isLoadingMore,
+      totalLoaded: platformContent.totalLoaded,
+      nextCursor: platformContent.nextCursor,
+      scrollState: platformContent,
+    };
+  }, [content, loading, errors, platformKey]);
 } 

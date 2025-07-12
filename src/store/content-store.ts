@@ -30,6 +30,23 @@ export interface UnifiedContent {
   category?: string;
 }
 
+// Infinite scroll state per platform
+export interface InfiniteScrollState {
+  items: UnifiedContent[];
+  hasMore: boolean;
+  isLoadingMore: boolean;
+  nextCursor: string | null;
+  totalLoaded: number;
+  isInitialized: boolean;
+  error: string | null;
+  // Memory management
+  maxItems: number;
+  loadedPages: number;
+  // Performance tracking
+  lastLoadTime: number;
+  scrollVelocity: number;
+}
+
 // Loading states per platform
 export interface PlatformLoadingState {
   notes: boolean;
@@ -48,8 +65,17 @@ export interface PlatformErrorState {
   insights: string | null;
 }
 
-// Content data per platform
+// Content data per platform with infinite scroll support
 export interface PlatformContentData {
+  notes: InfiniteScrollState;
+  youtube: InfiniteScrollState;
+  instagram: InfiniteScrollState;
+  gmail: InfiniteScrollState;
+  insights: InfiniteScrollState;
+}
+
+// Legacy flat content arrays for backward compatibility
+export interface LegacyPlatformContentData {
   notes: UnifiedContent[];
   youtube: UnifiedContent[];
   instagram: UnifiedContent[];
@@ -81,10 +107,18 @@ export interface ContentStoreState {
   invalidateContent: () => void;
   isCacheValid: () => boolean;
   
+  // Infinite scroll actions
+  loadMoreContent: (userId: string, platform: keyof PlatformContentData, convex: ConvexReactClient) => Promise<void>;
+  initializePlatform: (userId: string, platform: keyof PlatformContentData, convex: ConvexReactClient) => Promise<void>;
+  resetPlatformScroll: (platform: keyof PlatformContentData) => void;
+  
   // Content resolution helpers
   findContentById: (contentId: string) => UnifiedContent | null;
   getContentByPlatform: (platform: keyof PlatformContentData) => UnifiedContent[];
   getAllLinkableContent: () => UnifiedContent[];
+  
+  // Legacy compatibility
+  getLegacyContentByPlatform: (platform: keyof PlatformContentData) => UnifiedContent[];
 }
 
 const initialPlatformState = {
@@ -103,12 +137,35 @@ const initialErrorState = {
   insights: null,
 };
 
-const initialContentState = {
-  notes: [],
-  youtube: [],
-  instagram: [],
-  gmail: [],
-  insights: [],
+const createInitialInfiniteScrollState = (): InfiniteScrollState => ({
+  items: [],
+  hasMore: true,
+  isLoadingMore: false,
+  nextCursor: null,
+  totalLoaded: 0,
+  isInitialized: false,
+  error: null,
+  maxItems: 500, // Memory limit
+  loadedPages: 0,
+  lastLoadTime: 0,
+  scrollVelocity: 0,
+});
+
+const initialContentState: PlatformContentData = {
+  notes: createInitialInfiniteScrollState(),
+  youtube: createInitialInfiniteScrollState(),
+  instagram: createInitialInfiniteScrollState(),
+  gmail: createInitialInfiniteScrollState(),
+  insights: createInitialInfiniteScrollState(),
+};
+
+// Configuration for infinite scroll
+const INFINITE_SCROLL_CONFIG = {
+  PAGE_SIZE: 20,
+  PRELOAD_THRESHOLD: 0.8, // Load more when 80% scrolled
+  MAX_ITEMS_IN_MEMORY: 500,
+  VIEWPORT_BUFFER: 50, // Items to render outside viewport
+  SCROLL_DEBOUNCE_MS: 100,
 };
 
 export const useContentStore = create<ContentStoreState>()(
@@ -131,7 +188,7 @@ export const useContentStore = create<ContentStoreState>()(
         return state.cacheTimestamp > 0 && (now - state.cacheTimestamp) < state.cacheValidDuration;
       },
 
-      // Initialize content data with aggressive caching
+      // Initialize content data with infinite scroll support
       initializeContent: async (userId: string, convex: ConvexReactClient) => {
         const state = get();
         const initStartTime = performance.now();
@@ -143,8 +200,7 @@ export const useContentStore = create<ContentStoreState>()(
         // Check if we have valid cached data for this user
         if (state.isInitialized && 
             state.lastFetchedUserId === userId && 
-            state.isCacheValid() && 
-            state.allContent.length > 0) {
+            state.isCacheValid()) {
           if (process.env.NODE_ENV === 'development') {
             console.log('🚀 [CONTENT STORE] ⚡ USING CACHED DATA - skipping network request!');
           }
@@ -172,43 +228,26 @@ export const useContentStore = create<ContentStoreState>()(
         });
 
         try {
-                     // Fetch all platform data in parallel
-           const [notesData, youtubeData, instagramData, gmailData, insightsData] = await Promise.allSettled([
-             // Notes
-             convex.query(api.notes.getNotesByUser, { userId }),
-             // YouTube
-             convex.query(api.youtubeQueries.listUserYouTubeVideos, { userId, limit: 100 }),
-             // Instagram
-             convex.query(api.instagramQueries.getAllInstagramPosts, { userId }),
-             // Gmail
-             convex.query(api.gmailQueries.getRecentGmailThreads, { userId, limit: 100 }),
-             // Insights (YouTube batch analysis)
-             convex.query(api.youtubeQueries.getYoutubeBatchAnalysis, { 
-               userId, 
-               channelId: '' // We'll need to get this from YouTube account
-             }),
-           ]);
+          // Initialize all platforms in parallel
+          await Promise.all([
+            get().initializePlatform(userId, 'notes', convex),
+            get().initializePlatform(userId, 'youtube', convex),
+            get().initializePlatform(userId, 'instagram', convex),
+            get().initializePlatform(userId, 'gmail', convex),
+            get().initializePlatform(userId, 'insights', convex),
+          ]);
 
-          // Process and transform data
-          const processedContent = {
-            notes: processNotesData(notesData),
-            youtube: processYouTubeData(youtubeData),
-            instagram: processInstagramData(instagramData),
-            gmail: processGmailData(gmailData),
-            insights: processInsightsData(insightsData),
-          };
-
-          // Combine all content
+          // Update allContent after all platforms are initialized
+          const currentState = get();
           const allContent = [
-            ...processedContent.notes,
-            ...processedContent.youtube,
-            ...processedContent.instagram,
-            ...processedContent.gmail,
-            ...processedContent.insights,
+            ...currentState.content.notes.items,
+            ...currentState.content.youtube.items,
+            ...currentState.content.instagram.items,
+            ...currentState.content.gmail.items,
+            ...currentState.content.insights.items,
           ];
 
           set({
-            content: processedContent,
             allContent,
             loading: initialPlatformState,
             isInitialized: true,
@@ -220,11 +259,11 @@ export const useContentStore = create<ContentStoreState>()(
           if (process.env.NODE_ENV === 'development') {
             console.log('🚀 [CONTENT STORE] ⚡ initializeContent COMPLETED in:', Math.round(totalTime), 'ms');
             console.log('🚀 [CONTENT STORE] Content summary:', {
-              notes: processedContent.notes.length,
-              youtube: processedContent.youtube.length,
-              instagram: processedContent.instagram.length,
-              gmail: processedContent.gmail.length,
-              insights: processedContent.insights.length,
+              notes: currentState.content.notes.items.length,
+              youtube: currentState.content.youtube.items.length,
+              instagram: currentState.content.instagram.items.length,
+              gmail: currentState.content.gmail.items.length,
+              insights: currentState.content.insights.items.length,
               total: allContent.length,
             });
           }
@@ -246,6 +285,232 @@ export const useContentStore = create<ContentStoreState>()(
         }
       },
 
+      // Initialize a specific platform with infinite scroll
+      initializePlatform: async (userId: string, platform: keyof PlatformContentData, convex: ConvexReactClient) => {
+        const state = get();
+        
+        // Skip if already initialized
+        if (state.content[platform].isInitialized) {
+          return;
+        }
+
+        try {
+          // Set platform loading state
+          set(state => ({
+            content: {
+              ...state.content,
+              [platform]: {
+                ...state.content[platform],
+                isLoadingMore: true,
+                error: null,
+              }
+            }
+          }));
+
+          let newItems: UnifiedContent[] = [];
+          let hasMore = true;
+          let nextCursor: string | null = null;
+
+          // Fetch initial batch based on platform
+          switch (platform) {
+            case 'notes':
+              const notesResult = await convex.query(api.notes.getNotesByUser, { userId });
+              newItems = processNotesData({ status: 'fulfilled', value: notesResult });
+              hasMore = false; // Notes don't have pagination yet
+              break;
+            
+            case 'youtube':
+              const youtubeResult = await convex.query(api.youtubeQueries.getYouTubeVideos, { 
+                userId, 
+                limit: INFINITE_SCROLL_CONFIG.PAGE_SIZE,
+                paginationOpts: { numItems: INFINITE_SCROLL_CONFIG.PAGE_SIZE, cursor: null }
+              });
+              newItems = processYouTubeData({ status: 'fulfilled', value: youtubeResult.videos });
+              hasMore = !youtubeResult.isDone;
+              nextCursor = youtubeResult.continueCursor;
+              break;
+            
+            case 'instagram':
+              const instagramResult = await convex.query(api.instagramQueries.getAllInstagramPosts, { userId });
+              newItems = processInstagramData({ status: 'fulfilled', value: instagramResult });
+              hasMore = false; // Instagram doesn't have pagination yet
+              break;
+            
+            case 'gmail':
+              const gmailResult = await convex.query(api.gmailQueries.getGmailThreadsPaginated, { 
+                userId,
+                paginationOpts: { numItems: INFINITE_SCROLL_CONFIG.PAGE_SIZE, cursor: null }
+              });
+              newItems = processGmailData({ status: 'fulfilled', value: gmailResult.page });
+              hasMore = !gmailResult.isDone;
+              nextCursor = gmailResult.continueCursor;
+              break;
+            
+            case 'insights':
+              const insightsResult = await convex.query(api.youtubeQueries.getYoutubeBatchAnalysis, { 
+                userId, 
+                channelId: '' // We'll need to get this from YouTube account
+              });
+              newItems = processInsightsData({ status: 'fulfilled', value: insightsResult });
+              hasMore = false; // Insights don't have pagination yet
+              break;
+          }
+
+          // Update platform state
+          set(state => ({
+            content: {
+              ...state.content,
+              [platform]: {
+                ...state.content[platform],
+                items: newItems,
+                hasMore,
+                nextCursor,
+                totalLoaded: newItems.length,
+                isInitialized: true,
+                isLoadingMore: false,
+                loadedPages: 1,
+                lastLoadTime: Date.now(),
+                error: null,
+              }
+            }
+          }));
+
+        } catch (error) {
+          console.error(`Failed to initialize ${platform}:`, error);
+          set(state => ({
+            content: {
+              ...state.content,
+              [platform]: {
+                ...state.content[platform],
+                isLoadingMore: false,
+                error: error instanceof Error ? error.message : 'Failed to load content',
+              }
+            }
+          }));
+        }
+      },
+
+      // Load more content for a specific platform
+      loadMoreContent: async (userId: string, platform: keyof PlatformContentData, convex: ConvexReactClient) => {
+        const state = get();
+        const platformState = state.content[platform];
+        
+        // Skip if already loading or no more content
+        if (platformState.isLoadingMore || !platformState.hasMore) {
+          return;
+        }
+
+        try {
+          // Set loading state
+          set(state => ({
+            content: {
+              ...state.content,
+              [platform]: {
+                ...state.content[platform],
+                isLoadingMore: true,
+                error: null,
+              }
+            }
+          }));
+
+          let newItems: UnifiedContent[] = [];
+          let hasMore = true;
+          let nextCursor: string | null = null;
+
+          // Fetch next batch based on platform
+          switch (platform) {
+            case 'youtube':
+              const youtubeResult = await convex.query(api.youtubeQueries.getYouTubeVideos, { 
+                userId, 
+                limit: INFINITE_SCROLL_CONFIG.PAGE_SIZE,
+                paginationOpts: { numItems: INFINITE_SCROLL_CONFIG.PAGE_SIZE, cursor: platformState.nextCursor }
+              });
+              newItems = processYouTubeData({ status: 'fulfilled', value: youtubeResult.videos });
+              hasMore = !youtubeResult.isDone;
+              nextCursor = youtubeResult.continueCursor;
+              break;
+            
+            case 'gmail':
+              const gmailResult = await convex.query(api.gmailQueries.getGmailThreadsPaginated, { 
+                userId,
+                paginationOpts: { numItems: INFINITE_SCROLL_CONFIG.PAGE_SIZE, cursor: platformState.nextCursor }
+              });
+              newItems = processGmailData({ status: 'fulfilled', value: gmailResult.page });
+              hasMore = !gmailResult.isDone;
+              nextCursor = gmailResult.continueCursor;
+              break;
+            
+            default:
+              // Other platforms don't support pagination yet
+              return;
+          }
+
+          // Apply memory management (sliding window)
+          const currentItems = platformState.items;
+          const combinedItems = [...currentItems, ...newItems];
+          
+          let finalItems = combinedItems;
+          if (combinedItems.length > INFINITE_SCROLL_CONFIG.MAX_ITEMS_IN_MEMORY) {
+            // Remove oldest items to stay within memory limit
+            const excessItems = combinedItems.length - INFINITE_SCROLL_CONFIG.MAX_ITEMS_IN_MEMORY;
+            finalItems = combinedItems.slice(excessItems);
+          }
+
+          // Update platform state
+          set(state => ({
+            content: {
+              ...state.content,
+              [platform]: {
+                ...state.content[platform],
+                items: finalItems,
+                hasMore,
+                nextCursor,
+                totalLoaded: platformState.totalLoaded + newItems.length,
+                isLoadingMore: false,
+                loadedPages: platformState.loadedPages + 1,
+                lastLoadTime: Date.now(),
+                error: null,
+              }
+            }
+          }));
+
+          // Update allContent
+          const updatedState = get();
+          const allContent = [
+            ...updatedState.content.notes.items,
+            ...updatedState.content.youtube.items,
+            ...updatedState.content.instagram.items,
+            ...updatedState.content.gmail.items,
+            ...updatedState.content.insights.items,
+          ];
+
+          set({ allContent });
+
+        } catch (error) {
+          console.error(`Failed to load more ${platform} content:`, error);
+          set(state => ({
+            content: {
+              ...state.content,
+              [platform]: {
+                ...state.content[platform],
+                isLoadingMore: false,
+                error: error instanceof Error ? error.message : 'Failed to load more content',
+              }
+            }
+          }));
+        }
+      },
+
+      // Reset platform scroll state
+      resetPlatformScroll: (platform: keyof PlatformContentData) => {
+        set(state => ({
+          content: {
+            ...state.content,
+            [platform]: createInitialInfiniteScrollState(),
+          }
+        }));
+      },
+
       // Refresh all content data (force refetch)
       refreshContent: async (userId: string, convex: ConvexReactClient) => {
         const refreshStartTime = performance.now();
@@ -265,6 +530,7 @@ export const useContentStore = create<ContentStoreState>()(
           errors: initialErrorState,
           lastFetchedUserId: userId,
           cacheTimestamp: 0, // Invalidate cache immediately
+          content: initialContentState, // Reset all infinite scroll states
         });
 
         try {
@@ -297,82 +563,27 @@ export const useContentStore = create<ContentStoreState>()(
       refreshPlatform: async (userId: string, platform: keyof PlatformContentData, convex: ConvexReactClient) => {
         const state = get();
         
-        set({
-          loading: {
-            ...state.loading,
-            [platform]: true,
-          },
-          errors: {
-            ...state.errors,
-            [platform]: null,
-          },
-        });
-
-        try {
-          let newData: UnifiedContent[] = [];
-          
-                     switch (platform) {
-             case 'notes':
-               const notesResult = await convex.query(api.notes.getNotesByUser, { userId });
-               newData = processNotesData({ status: 'fulfilled', value: notesResult });
-               break;
-            case 'youtube':
-              const youtubeResult = await convex.query(api.youtubeQueries.listUserYouTubeVideos, { userId, limit: 100 });
-              newData = processYouTubeData({ status: 'fulfilled', value: youtubeResult });
-              break;
-            case 'instagram':
-              const instagramResult = await convex.query(api.instagramQueries.getAllInstagramPosts, { userId });
-              newData = processInstagramData({ status: 'fulfilled', value: instagramResult });
-              break;
-            case 'gmail':
-              const gmailResult = await convex.query(api.gmailQueries.getRecentGmailThreads, { userId, limit: 100 });
-              newData = processGmailData({ status: 'fulfilled', value: gmailResult });
-              break;
-            case 'insights':
-              const insightsResult = await convex.query(api.youtubeQueries.getYoutubeBatchAnalysis, { 
-                userId, 
-                channelId: '' // We'll need to get this from YouTube account
-              });
-              newData = processInsightsData({ status: 'fulfilled', value: insightsResult });
-              break;
+        // Reset platform state and reload
+        set(state => ({
+          content: {
+            ...state.content,
+            [platform]: createInitialInfiniteScrollState(),
           }
+        }));
 
-          const currentState = get();
-          const updatedContent = {
-            ...currentState.content,
-            [platform]: newData,
-          };
+        await get().initializePlatform(userId, platform, convex);
 
-          const allContent = [
-            ...updatedContent.notes,
-            ...updatedContent.youtube,
-            ...updatedContent.instagram,
-            ...updatedContent.gmail,
-            ...updatedContent.insights,
-          ];
+        // Update allContent
+        const updatedState = get();
+        const allContent = [
+          ...updatedState.content.notes.items,
+          ...updatedState.content.youtube.items,
+          ...updatedState.content.instagram.items,
+          ...updatedState.content.gmail.items,
+          ...updatedState.content.insights.items,
+        ];
 
-          set({
-            content: updatedContent,
-            allContent,
-            loading: {
-              ...currentState.loading,
-              [platform]: false,
-            },
-            cacheTimestamp: Date.now(), // Update cache timestamp
-          });
-        } catch (error) {
-          const currentState = get();
-          set({
-            loading: {
-              ...currentState.loading,
-              [platform]: false,
-            },
-            errors: {
-              ...currentState.errors,
-              [platform]: error instanceof Error ? error.message : 'Failed to refresh platform',
-            },
-          });
-        }
+        set({ allContent, cacheTimestamp: Date.now() });
       },
 
       // Invalidate data (force next fetch)
@@ -399,12 +610,18 @@ export const useContentStore = create<ContentStoreState>()(
 
       getContentByPlatform: (platform: keyof PlatformContentData) => {
         const state = get();
-        return state.content[platform] || [];
+        return state.content[platform].items || [];
       },
 
       getAllLinkableContent: () => {
         const state = get();
         return state.allContent;
+      },
+
+      // Legacy compatibility
+      getLegacyContentByPlatform: (platform: keyof PlatformContentData) => {
+        const state = get();
+        return state.content[platform].items || [];
       },
     })),
     {
@@ -512,12 +729,12 @@ function processGmailData(result: PromiseSettledResult<any[]>): UnifiedContent[]
     createdAt: thread.createdAt || Date.now(),
     updatedAt: thread.updatedAt || Date.now(),
     important: false,
-    tags: thread.category ? [thread.category] : [],
+    tags: [],
     analysis: thread.analysis,
     content: thread.snippet || thread.data?.snippet || '',
     from: thread.from || thread.data?.from || 'Unknown Sender',
     messageCount: thread.message_count || thread.data?.message_count || 1,
-    category: thread.category || 'none',
+    category: thread.category,
   }));
 }
 
@@ -527,40 +744,35 @@ function processInsightsData(result: PromiseSettledResult<any>): UnifiedContent[
     return [];
   }
 
-  if (!result.value || !result.value.insights || !result.value.insights.insights) {
+  const insights = result.value;
+  if (!insights || !insights.length) {
     return [];
   }
 
-  return result.value.insights.insights.map((insight: any, index: number) => ({
-    id: `insight:${result.value._id}:${index}`,
-    title: insight.title || 'Untitled Insight',
+  return insights.map((insight: any, index: number) => ({
+    id: `insight:${insight.id || index}`,
+    title: insight.title || 'Content Insight',
     type: 'insight' as const,
-    contentType: 'insight',
+    contentType: 'analysis',
     platform: 'insights',
-    createdAt: result.value.createdAt || Date.now(),
-    updatedAt: result.value.updatedAt || Date.now(),
+    createdAt: insight.createdAt || Date.now(),
+    updatedAt: insight.updatedAt || Date.now(),
     important: false,
     tags: [],
     analysis: insight,
-    content: insight.expectedOutcome || '',
-    insights: insight,
+    content: insight.description || insight.summary || '',
   }));
 }
 
-// Selector hooks for common use cases
+// Export hooks for backward compatibility
 export const useContentData = () => {
-  const allContent = useContentStore(state => state.allContent);
-  const loading = useContentStore(state => state.loading);
-  const errors = useContentStore(state => state.errors);
-  const isInitialized = useContentStore(state => state.isInitialized);
-  
+  const store = useContentStore();
   return {
-    allContent,
-    loading,
-    errors,
-    isInitialized,
-    isLoading: Object.values(loading).some(Boolean),
-    hasErrors: Object.values(errors).some(Boolean),
+    allContent: store.allContent,
+    content: store.content,
+    loading: store.loading,
+    errors: store.errors,
+    isInitialized: store.isInitialized,
   };
 };
 
@@ -570,41 +782,30 @@ export const usePlatformContent = (platform: keyof PlatformContentData) => {
   const error = useContentStore(state => state.errors[platform]);
   
   return {
-    content,
+    content: content.items,
     loading,
     error,
-    hasError: !!error,
+    hasMore: content.hasMore,
+    isLoadingMore: content.isLoadingMore,
+    totalLoaded: content.totalLoaded,
   };
 };
 
-// Content manager hook that uses the centralized store
 export const useContentManager = (userId: string | undefined) => {
+  const convex = useConvex();
   const store = useContentStore();
-  const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL || '');
-
-     useEffect(() => {
-     if (userId && !store.isInitialized) {
-       store.initializeContent(userId, convex);
-     }
-   }, [userId, store.isInitialized]);
+  
+  useEffect(() => {
+    if (userId && !store.isInitialized) {
+      store.initializeContent(userId, convex);
+    }
+  }, [userId, store.isInitialized]);
 
   return {
-    // Data from store
-    allContent: store.allContent,
-    content: store.content,
-    loading: store.loading,
-    errors: store.errors,
-    isInitialized: store.isInitialized,
-    
-    // Helper methods
-    findContentById: store.findContentById,
-    getContentByPlatform: store.getContentByPlatform,
-    getAllLinkableContent: store.getAllLinkableContent,
-    
-    // Actions
     refreshContent: () => userId && store.refreshContent(userId, convex),
-    refreshPlatform: (platform: keyof PlatformContentData) => 
-      userId && store.refreshPlatform(userId, platform, convex),
     invalidateContent: store.invalidateContent,
+    loadMoreContent: (platform: keyof PlatformContentData) => 
+      userId && store.loadMoreContent(userId, platform, convex),
+    resetPlatformScroll: store.resetPlatformScroll,
   };
 }; 
