@@ -15,6 +15,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { useNotes } from '@/app/context/notes-context';
 import { useAuth } from '@/app/context/auth-context';
 import { NoteContentRenderer } from './components/NoteContentRenderer';
+import { useContentResolver } from '@/lib/content-resolver';
 
 interface NoteAreaProps {
   note: Note;
@@ -332,9 +333,7 @@ export function NoteArea({
 
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid;
-  const allLinkableContent = useQuery(api.notes.getAllLinkableContent, { 
-    userId: firebaseUser?.uid || '' 
-  });
+  const { allContent: allLinkableContent } = useContentResolver(userId);
 
   React.useEffect(() => {
     if (forcePreview) setIsEditingTitle(false);
