@@ -21,23 +21,29 @@ import { Partnership } from '../types';
 import { MarkdownNotepad } from '../../chat/components/notepad/MarkdownNotepad';
 import { useNotes } from '@/app/context/notes-context';
 import { useRouter } from 'next/navigation';
-import { categoryConfig } from '../utils/emailCategorization';
+import { categoryConfig, getPartnershipColors } from '../utils/emailCategorization';
 import { api } from '@/convex/_generated/api';
-import { useMutation } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
+import { PartnershipControls } from './PartnershipControls';
+import { usePartnershipOperations } from '../hooks/usePartnershipOperations';
 
 interface PartnershipDetailPanelProps {
   partnership: Partnership | null;
   onUpdatePartnership: (partnershipId: string, updates: Partial<Partnership>) => void;
   onCategoryChanged?: () => void;
+  onPartnershipDeleted?: () => void;
   gmailData?: any; // Full Gmail thread data for displaying email content
+  userEmail?: string | null;
 }
 
 export function PartnershipDetailPanel({ 
   partnership, 
   onUpdatePartnership,
   onCategoryChanged,
-  gmailData 
+  onPartnershipDeleted,
+  gmailData,
+  userEmail
 }: PartnershipDetailPanelProps) {
   const [isDraftingReply, setIsDraftingReply] = useState(false);
   const [notepadWidth, setNotepadWidth] = useState(400);
@@ -204,52 +210,87 @@ ${message.body}
     return text.substring(0, maxLength).trim() + '...';
   };
 
-  const updateThreadCategory = useMutation(api.gmailMutations.updateGmailThreadCategory);
   const updateNote = useMutation(api.notes.updateNote);
-  const [categoryEditLoading, setCategoryEditLoading] = useState(false);
-  const [categoryError, setCategoryError] = useState<string | null>(null);
+  
+  // Partnership operations hook
+  const {
+    handleDeletePartnership,
+    handleUpdateStatus,
+    handleUpdateCategory,
+    statusLoading,
+    deleteLoading,
+    categoryLoading,
+    categoryError
+  } = usePartnershipOperations();
 
-  // Handler for updating category
-  const handleCategoryChange = async (newCategory: 'partnership' | 'media' | 'business' | 'community' | 'none') => {
+  // Partnership operation handlers
+  const handleStatusChange = async (newStatus: Partnership['status']) => {
     if (!partnership) return;
-    setCategoryEditLoading(true);
-    setCategoryError(null);
+    
+    const originalStatus = partnership.status;
+    
+    console.log('🔄 [STATUS UPDATE] Attempting to update status:', {
+      partnershipId: partnership.id,
+      threadId: partnership.emailThreadId,
+      oldStatus: originalStatus,
+      newStatus
+    });
+    
+    // IMMEDIATELY update the UI first
+    onUpdatePartnership(partnership.id, { status: newStatus, lastActivity: Date.now() });
+    
     try {
-      const userId = getCurrentUserId();
-      if (!userId) throw new Error('User not authenticated');
-      
-      console.log('🔧 [CATEGORY UPDATE] Attempting to update category:', {
-        partnershipId: partnership.id,
-        emailThreadId: partnership.emailThreadId,
-        newCategory,
-        userId,
-        gmailData: gmailData ? 'present' : 'missing'
+      // Then update the backend
+      await handleUpdateStatus(partnership, newStatus, (updates) => {
+        console.log('✅ [STATUS UPDATE] Backend update successful:', updates);
+        // Ensure UI stays in sync
+        onUpdatePartnership(partnership.id, updates);
       });
-      
-      // Try the primary thread ID first
-      let threadIdToUse = partnership.emailThreadId;
-      
-      // If we have Gmail data, try to get the thread ID from there as a fallback
-      if (gmailData && gmailData.threadId) {
-        threadIdToUse = gmailData.threadId;
-        console.log('🔧 [CATEGORY UPDATE] Using thread ID from Gmail data:', threadIdToUse);
-      }
-      
-      await updateThreadCategory({
-        userId,
-        threadId: threadIdToUse,
-        category: newCategory,
+    } catch (error) {
+      console.error('❌ [STATUS UPDATE] Failed to update status, reverting:', error);
+      // Revert the UI change on error
+      onUpdatePartnership(partnership.id, { status: originalStatus });
+    }
+  };
+
+  const handleCategoryChange = async (newCategory: Partnership['category']) => {
+    if (!partnership) return;
+    
+    const originalCategory = partnership.category;
+    
+    console.log('🏷️ [CATEGORY UPDATE] Attempting to update category:', {
+      partnershipId: partnership.id,
+      threadId: partnership.emailThreadId,
+      oldCategory: originalCategory,
+      newCategory
+    });
+    
+    // IMMEDIATELY update the UI first
+    onUpdatePartnership(partnership.id, { category: newCategory });
+    
+    try {
+      // Then update the backend
+      await handleUpdateCategory(partnership, newCategory, (updates) => {
+        console.log('✅ [CATEGORY UPDATE] Backend update successful:', updates);
+        // Ensure UI stays in sync
+        onUpdatePartnership(partnership.id, updates);
       });
-      
-      console.log('✅ [CATEGORY UPDATE] Successfully updated category in Convex');
-      onUpdatePartnership(partnership.id, { category: newCategory });
-      if (onCategoryChanged) onCategoryChanged();
-      console.log('✅ [CATEGORY UPDATE] Category update complete');
-    } catch (err: any) {
-      console.error('❌ [CATEGORY UPDATE] Error updating category:', err);
-      setCategoryError(`Failed to update type: ${err.message || 'Please try again.'}`);
-    } finally {
-      setCategoryEditLoading(false);
+    } catch (error) {
+      console.error('❌ [CATEGORY UPDATE] Failed to update category, reverting:', error);
+      // Revert the UI change on error
+      onUpdatePartnership(partnership.id, { category: originalCategory });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!partnership) return;
+    
+    try {
+      await handleDeletePartnership(partnership, userEmail, () => {
+        if (onPartnershipDeleted) onPartnershipDeleted();
+      });
+    } catch (error) {
+      console.error('Failed to delete partnership:', error);
     }
   };
 
@@ -272,11 +313,12 @@ ${message.body}
   }
 
   const getStatusColor = (status: Partnership['status']) => {
+    const colors = getPartnershipColors();
     switch (status) {
-      case 'opportunity': return 'bg-primary/10 text-primary';
-      case 'inquiry': return 'bg-accent/10 text-accent-foreground';
-      case 'negotiating': return 'bg-secondary/10 text-secondary-foreground';
-      case 'active': return 'bg-success/10 text-success';
+      case 'opportunity': return `bg-primary/10 ${colors.status.opportunity}`;
+      case 'inquiry': return `bg-blue-50 dark:bg-blue-950/20 ${colors.status.inquiry}`;
+      case 'negotiating': return `bg-amber-50 dark:bg-amber-950/20 ${colors.status.negotiating}`;
+      case 'active': return `bg-green-50 dark:bg-green-950/20 ${colors.status.active}`;
       case 'completed': return 'bg-muted text-muted-foreground';
       default: return 'bg-muted text-muted-foreground';
     }
@@ -366,38 +408,20 @@ ${message.body}
           <div className="flex-1">
             <h2 className="text-lg font-semibold text-foreground">{partnership.brandName}</h2>
             <p className="text-sm text-muted-foreground">{partnership.subject}</p>
-            {/* Opportunity Type (Category) Editor */}
-            <div className="mt-2">
-              <span className="font-medium">Opportunity Type: </span>
-              {(!partnership.category || partnership.category === 'none') ? (
-                <span>
-                  <span className="text-red-500 font-semibold mr-2">Not set</span>
-                  <span className="inline-flex gap-2">
-                    {(['partnership','media','business','community'] as const).map(type => (
-                      <Button
-                        key={type}
-                        size="sm"
-                        variant="outline"
-                        disabled={categoryEditLoading}
-                        onClick={() => handleCategoryChange(type)}
-                        className="text-xs px-2 py-1"
-                      >
-                        {categoryConfig[type].title}
-                      </Button>
-                    ))}
-                  </span>
-                  {categoryError && <span className="text-xs text-red-500 ml-2">{categoryError}</span>}
-                </span>
-              ) : (
-                <Badge className={categoryConfig[partnership.category]?.color || ''}>
-                  {categoryConfig[partnership.category]?.title}
-                </Badge>
-              )}
+            {/* Partnership Controls */}
+            <div className="mt-4">
+              <PartnershipControls
+                partnership={partnership}
+                onUpdateStatus={handleStatusChange}
+                onUpdateCategory={handleCategoryChange}
+                onDelete={handleDelete}
+                statusLoading={statusLoading}
+                categoryLoading={categoryLoading}
+                deleteLoading={deleteLoading}
+                categoryError={categoryError}
+              />
             </div>
           </div>
-          <Badge className={`${getStatusColor(partnership.status)}`}>
-            {partnership.status}
-          </Badge>
         </div>
       </div>
 
@@ -436,7 +460,7 @@ ${message.body}
               <span className="text-foreground flex items-center font-medium">
                 <DollarSign className="w-3 h-3 mr-1" />
                 {formatValue(partnership.estimatedValue)}
-              </span>
+                            </span>
             </div>
 
             <div className="flex items-center justify-between">
@@ -475,10 +499,11 @@ ${message.body}
                       <p className="text-sm font-medium text-foreground truncate">
                         {note.title || 'Untitled Note'}
                       </p>
+                      {/* Type as plain white text, no Badge */}
                       {note.type && (
-                        <Badge variant="outline" className="text-xs shrink-0">
+                        <span className="text-xs font-medium text-foreground">
                           {note.type.replace('_', ' ')}
-                        </Badge>
+                        </span>
                       )}
                     </div>
                     {note.content && (

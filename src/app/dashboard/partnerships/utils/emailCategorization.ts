@@ -1,37 +1,62 @@
 import { Partnership } from '../types';
 import { extractDealValue } from './dealValueExtraction';
 
+// Theme-aware color utilities
+export const getPartnershipColors = () => ({
+  partnership: "text-primary",
+  media: "text-blue-600 dark:text-blue-400", 
+  business: "text-green-600 dark:text-green-400",
+  community: "text-purple-600 dark:text-purple-400",
+  uncategorized: "text-muted-foreground",
+  // Status colors that work with the theme
+  status: {
+    opportunity: "text-primary",
+    inquiry: "text-blue-600 dark:text-blue-400",
+    negotiating: "text-amber-600 dark:text-amber-400", 
+    active: "text-green-600 dark:text-green-400",
+    completed: "text-muted-foreground"
+  },
+  // Background colors that work with the theme
+  backgrounds: {
+    opportunity: "bg-primary/10 border-primary/20",
+    inquiry: "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800",
+    negotiating: "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800",
+    active: "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800",
+    completed: "bg-muted border-border"
+  }
+});
+
 // Category configuration
 export const categoryConfig = {
   partnership: {
     title: "Partnership Opportunities",
     description: "Brand collaborations, sponsorships, and affiliate opportunities",
-    icon: "",
-    color: "text-blue-600"
+    icon: "Handshake",
+    color: getPartnershipColors().partnership
   },
   media: {
     title: "Media Inquiries", 
     description: "Press requests, interviews, and media mentions",
-    icon: "",
-    color: "text-purple-600"
+    icon: "Tv",
+    color: getPartnershipColors().media
   },
   business: {
     title: "Business Opportunities",
     description: "Speaking, consulting, and business development",
-    icon: "", 
-    color: "text-green-600"
+    icon: "Briefcase", 
+    color: getPartnershipColors().business
   },
   community: {
     title: "Community Connections",
     description: "Fan engagement, feedback, and creator connections",
-    icon: "",
-    color: "text-orange-600"
+    icon: "Users",
+    color: getPartnershipColors().community
   },
   uncategorized: {
     title: "Uncategorized",
     description: "Emails that need a type. Set the opportunity type to organize them.",
-    icon: "",
-    color: "text-gray-500"
+    icon: "Mail",
+    color: getPartnershipColors().uncategorized
   }
 };
 
@@ -67,15 +92,23 @@ export const processGmailItemsToPartnerships = (gmailItems: any[]): Partnership[
     const messageCount = item.content?.data?.messageCount || item.content?.data?.messages?.length || 1;
     const estimatedValue = extractDealValue(item);
     
-    // Determine status based on message count and actual deal value
+    // Check if status is stored in backend, otherwise determine from message count and value
     let status: Partnership['status'] = 'opportunity';
     
-    if (messageCount > 4) {
-      status = 'negotiating';
-    } else if (messageCount > 2) {
-      status = 'inquiry';
-    } else if (estimatedValue > 10000 || messageCount > 6) {
-      status = 'active';
+    // First check if we have a stored status from backend
+    // The backend stores status in thread.data.status, which comes through as item.convexData.data.status
+    const storedStatus = item.convexData?.data?.status;
+    if (storedStatus && ['opportunity', 'inquiry', 'negotiating', 'active', 'completed'].includes(storedStatus)) {
+      status = storedStatus as Partnership['status'];
+    } else {
+      // Fall back to calculated status based on message count and value
+      if (messageCount > 4) {
+        status = 'negotiating';
+      } else if (messageCount > 2) {
+        status = 'inquiry';
+      } else if (estimatedValue > 10000 || messageCount > 6) {
+        status = 'active';
+      }
     }
     
     // Extract brand name more intelligently
@@ -101,7 +134,12 @@ export const processGmailItemsToPartnerships = (gmailItems: any[]): Partnership[
         dataCategory: item.content?.data?.category,
         finalCategory: extractedCategory,
         hasConvexData: !!item.convexData,
-        brandName
+        brandName,
+        storedStatus: item.convexData?.data?.status,
+        finalStatus: status,
+        convexDataKeys: item.convexData ? Object.keys(item.convexData) : 'none',
+        convexDataStatus: item.convexData?.data,
+        threadId: item.convexData?.threadId
       });
     }
     

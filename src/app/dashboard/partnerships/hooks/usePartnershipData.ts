@@ -14,7 +14,9 @@ export const usePartnershipData = (
 ) => {
   // Process Gmail items into partnerships
   const partnerships = useMemo(() => {
+    console.log('🔄 [PARTNERSHIP DATA] Processing Gmail items to partnerships. Item count:', gmailItems.length);
     const processedPartnerships = processGmailItemsToPartnerships(gmailItems);
+    console.log('🔄 [PARTNERSHIP DATA] Processed partnerships:', processedPartnerships.length);
     return processedPartnerships;
   }, [gmailItems]);
 

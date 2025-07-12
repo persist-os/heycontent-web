@@ -14,6 +14,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { Partnership } from '../types';
+import { getPartnershipColors } from '../utils/emailCategorization';
 
 interface ActivePartnershipsProps {
   partnerships: Partnership[];
@@ -33,15 +34,16 @@ export default function ActivePartnerships({
   hideHeader = false
 }: ActivePartnershipsProps) {
   const getStatusColor = (status: Partnership['status']) => {
+    const colors = getPartnershipColors();
     switch (status) {
       case 'opportunity':
-        return 'bg-primary/10 text-primary border-primary/20';
+        return `bg-primary/10 ${colors.status.opportunity} border-primary/20`;
       case 'inquiry':
-        return 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20';
+        return `bg-blue-50 dark:bg-blue-950/20 ${colors.status.inquiry} border-blue-200 dark:border-blue-800`;
       case 'negotiating':
-        return 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20';
+        return `bg-amber-50 dark:bg-amber-950/20 ${colors.status.negotiating} border-amber-200 dark:border-amber-800`;
       case 'active':
-        return 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20';
+        return `bg-green-50 dark:bg-green-950/20 ${colors.status.active} border-green-200 dark:border-green-800`;
       case 'completed':
         return 'bg-muted text-muted-foreground border-border';
       default:
@@ -198,12 +200,10 @@ export default function ActivePartnerships({
 
               {/* Status and Value */}
               <div className="flex items-center justify-between">
-                <Badge 
-                  className={`text-xs flex items-center gap-1 ${getStatusColor(partnership.status)}`}
-                >
+                <span className="text-xs flex items-center gap-1 text-foreground">
                   {getStatusIcon(partnership.status)}
                   {partnership.status}
-                </Badge>
+                </span>
                 
                 {partnership.estimatedValue > 0 && (
                   <span className="text-xs font-medium text-foreground">
