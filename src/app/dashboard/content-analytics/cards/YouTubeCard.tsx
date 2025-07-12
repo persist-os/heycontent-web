@@ -107,7 +107,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
           channel: content.channelTitle,
           published_at: publishedAt,
           thumbnails: {
-            high: { url: content.thumbnailUrl }
+            high: content.thumbnailUrl // <-- Fix: use string, not { url: ... }
           }
         },
         statistics: metrics,
