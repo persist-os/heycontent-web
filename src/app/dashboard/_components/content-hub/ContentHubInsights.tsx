@@ -40,18 +40,37 @@ export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsPr
 
   // Add normalization utility at the top (after imports)
   function normalizeInsightForContext(insight: any) {
+    let whyNow = insight.whyNow || insight.why_now || [];
+    let actionSteps = insight.actionSteps || insight.action_steps || [];
+    let impact = insight.impact || '';
+    let expectedOutcome = insight.expectedOutcome || insight.expected_outcome || '';
+    let sourceDetails = insight.sourceDetails || insight.source_details || [];
+    let relatedItems = (insight.relatedItems || insight.related_items || []).map((item: any) =>
+      typeof item === 'object' && item !== null
+        ? { label: item.label || Object.keys(item)[0], value: item.value || Object.values(item)[0] }
+        : { label: '', value: String(item) }
+    );
+
+    // Fallback: if all are empty, use the main insight text
+    if (
+      !impact &&
+      whyNow.length === 0 &&
+      actionSteps.length === 0 &&
+      !expectedOutcome &&
+      sourceDetails.length === 0 &&
+      relatedItems.length === 0
+    ) {
+      whyNow = [insight.remix_insight || insight.smartnote_summary || insight.conversation_starter || 'No details available.'];
+    }
+
     const normalized = {
       title: insight.title || '',
-      impact: insight.impact || '',
-      whyNow: insight.whyNow || insight.why_now || [],
-      actionSteps: insight.actionSteps || insight.action_steps || [],
-      expectedOutcome: insight.expectedOutcome || insight.expected_outcome || '',
-      sourceDetails: insight.sourceDetails || insight.source_details || [],
-      relatedItems: (insight.relatedItems || insight.related_items || []).map((item: any) =>
-        typeof item === 'object' && item !== null
-          ? { label: item.label || Object.keys(item)[0], value: item.value || Object.values(item)[0] }
-          : { label: '', value: String(item) }
-      ),
+      impact,
+      whyNow,
+      actionSteps,
+      expectedOutcome,
+      sourceDetails,
+      relatedItems,
     };
     console.log('[normalizeInsightForContext] Normalized insight:', normalized);
     return normalized;

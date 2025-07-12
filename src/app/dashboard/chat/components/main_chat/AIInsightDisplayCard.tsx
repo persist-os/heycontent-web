@@ -34,6 +34,24 @@ export const AIInsightDisplayCard: React.FC<AIInsightDisplayCardProps> = ({ cont
   
   if (!fullInsight) return null;
 
+  // Check if this is a fallback Content Hub Insight (only whyNow is set, and all others are empty)
+  const onlyWhyNow =
+    fullInsight.whyNow &&
+    fullInsight.whyNow.length === 1 &&
+    !fullInsight.impact &&
+    (!fullInsight.actionSteps || fullInsight.actionSteps.length === 0) &&
+    !fullInsight.expectedOutcome &&
+    (!fullInsight.sourceDetails || fullInsight.sourceDetails.length === 0) &&
+    (!fullInsight.relatedItems || fullInsight.relatedItems.length === 0);
+
+  if (onlyWhyNow) {
+    return (
+      <Card className="p-4 bg-white dark:bg-gray-900 border border-[#D0ECFF] max-h-64 overflow-y-auto">
+        <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">{fullInsight.whyNow[0]}</p>
+      </Card>
+    );
+  }
+
   return (
     <Card className="p-4 bg-white dark:bg-gray-900 border border-[#D0ECFF] max-h-64 overflow-y-auto">
       {/* Header */}
@@ -44,50 +62,58 @@ export const AIInsightDisplayCard: React.FC<AIInsightDisplayCardProps> = ({ cont
           </span>
         )}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-            <span>Impact: <span className="text-[#4E87E3] font-medium">{fullInsight.impact}</span></span>
-          </div>
+          {fullInsight.impact && (
+            <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <span>Impact: <span className="text-[#4E87E3] font-medium">{fullInsight.impact}</span></span>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="space-y-4 text-base">
         {/* Why Now */}
-        <div>
-          <h4 className="font-semibold text-base text-[#4E87E3] mb-1">Why Now</h4>
-          <div className="space-y-1">
-            {fullInsight.whyNow.map((reason, idx) => (
-              <p key={idx} className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
-                {reason}
-              </p>
-            ))}
+        {fullInsight.whyNow && fullInsight.whyNow.length > 0 && (
+          <div>
+            <h4 className="font-semibold text-base text-[#4E87E3] mb-1">Why Now</h4>
+            <div className="space-y-1">
+              {fullInsight.whyNow.map((reason, idx) => (
+                <p key={idx} className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+                  {reason}
+                </p>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Action Steps */}
-        <div>
-          <h4 className="font-semibold text-base text-[#4E87E3] mb-1">Action Steps</h4>
-          <div className="space-y-1">
-            {fullInsight.actionSteps.map((step, idx) => (
-              <div key={idx} className="flex items-start gap-2">
-                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#4E87E3] text-white text-sm font-semibold flex items-center justify-center">
-                  {idx + 1}
-                </span>
-                <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">{step}</p>
-              </div>
-            ))}
+        {fullInsight.actionSteps && fullInsight.actionSteps.length > 0 && (
+          <div>
+            <h4 className="font-semibold text-base text-[#4E87E3] mb-1">Action Steps</h4>
+            <div className="space-y-1">
+              {fullInsight.actionSteps.map((step, idx) => (
+                <div key={idx} className="flex items-start gap-2">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#4E87E3] text-white text-sm font-semibold flex items-center justify-center">
+                    {idx + 1}
+                  </span>
+                  <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">{step}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Expected Outcome */}
-        <div>
-          <h4 className="font-semibold text-base text-[#4E87E3] mb-1">Expected Outcome</h4>
-          <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
-            {fullInsight.expectedOutcome}
-          </p>
-        </div>
+        {fullInsight.expectedOutcome && (
+          <div>
+            <h4 className="font-semibold text-base text-[#4E87E3] mb-1">Expected Outcome</h4>
+            <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+              {fullInsight.expectedOutcome}
+            </p>
+          </div>
+        )}
 
         {/* Source Details - Collapsed by default */}
-        {fullInsight.sourceDetails.length > 0 && (
+        {fullInsight.sourceDetails && fullInsight.sourceDetails.length > 0 && (
           <div>
             <h4 className="font-semibold text-base text-[#4E87E3] mb-1">Source Details</h4>
             <div className="space-y-1">
