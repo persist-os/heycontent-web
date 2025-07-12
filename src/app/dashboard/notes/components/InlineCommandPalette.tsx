@@ -3,6 +3,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bot, Brain, Lightbulb, Loader2, X, Sparkles, ArrowRight, FileText, Users, BarChart3, BookOpen, CheckSquare, List, Heading1, Heading2, Heading3, Link, ExternalLink, Table } from 'lucide-react';
 import { useNotes } from '@/app/context/notes-context';
+import { 
+  getCommandsForNoteType, 
+  getPromptsForNoteType, 
+  NoteType,
+  CommandOption 
+} from '../utils/command-configs';
 
 interface InlineCommandPaletteProps {
   isOpen: boolean;
@@ -25,16 +31,6 @@ interface InlineCommandPaletteProps {
   showNoteLinks?: boolean;
 }
 
-interface CommandOption {
-  id: string;
-  label: string;
-  description?: string;
-  icon: React.ReactNode;
-  action: () => void;
-  requiresInput?: boolean;
-  category?: string;
-}
-
 interface NoteOption {
   id: string;
   title: string;
@@ -53,12 +49,13 @@ interface DisplayOption {
 }
 
 const NOTE_TYPES = [
-  { value: 'idea_bank', label: 'Idea Bank', description: 'Generate creative concepts and brainstorm new content ideas' },
-  { value: 'content_script', label: 'Content Script', description: 'Structure your content with professional scripting techniques' },
-  { value: 'analytics_insight', label: 'Analytics Insight', description: 'Deep dive into performance metrics and data analysis' },
-  { value: 'collaboration_note', label: 'Collaboration Note', description: 'Organize team discussions and collaborative workflows' },
-  { value: 'reflection_journal', label: 'Reflection Journal', description: 'Document insights and learning experiences' },
-  { value: 'task_checklist', label: 'Task Checklist', description: 'Create actionable task lists and project management tools' },
+  { value: 'idea_bank', label: 'Idea Bank', description: 'Spark fresh concepts and brainstorm your next viral idea' },
+  { value: 'content_script', label: 'Content Script', description: 'Structure your content like a pro creator' },
+  { value: 'analytics_insight', label: 'Analytics Insight', description: 'Turn your data into growth strategies' },
+  { value: 'collaboration_note', label: 'Collaboration Note', description: 'Organize your brand partnerships and team projects' },
+  { value: 'reflection_journal', label: 'Reflection Journal', description: 'Document your creative journey and insights' },
+  { value: 'task_checklist', label: 'Task Checklist', description: 'Stay organized and hit every deadline' },
+  { value: 'email_draft', label: 'Email Draft', description: 'Write emails that get opened and get results' },
 ];
 
 // Note type icons mapping
@@ -69,6 +66,7 @@ const NOTE_TYPE_ICONS: Record<string, React.ReactNode> = {
   collaboration_note: <Users className="w-4 h-4" />,
   reflection_journal: <BookOpen className="w-4 h-4" />,
   task_checklist: <CheckSquare className="w-4 h-4" />,
+  email_draft: <FileText className="w-4 h-4" />,
 };
 
 export function InlineCommandPalette({
@@ -98,6 +96,7 @@ export function InlineCommandPalette({
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [showLinkEmbedInput, setShowLinkEmbedInput] = useState(false);
   const [showTableInput, setShowTableInput] = useState(false);
+  const [showPromptSuggestions, setShowPromptSuggestions] = useState(false);
   const [aiPrompt, setAIPrompt] = useState('');
   const [noteSearchTerm, setNoteSearchTerm] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
@@ -109,18 +108,56 @@ export function InlineCommandPalette({
   const menuRef = useRef<HTMLDivElement>(null);
   const { setActiveNoteId } = useNotes();
 
-  // Debug logging
-  console.log('InlineCommandPalette props:', {
-    isOpen,
-    showNoteLinks,
-    availableNotesCount: availableNotes.length,
-    currentNoteId
-  });
+  // Get dynamic commands based on note type
+  const { typeSpecificCommands, universalCommands, defaultPrompts } = getCommandsForNoteType(noteType as NoteType);
+
+  // Create handlers for type-specific commands
+  const createTypeSpecificHandler = (commandId: string) => {
+    // Since handleTypeSpecificAI already looks up commands dynamically,
+    // we can simply return a handler for any command ID
+    return () => handleTypeSpecificAI(commandId);
+  };
+
+  const handleTypeSpecificAI = async (commandId: string) => {
+    // Get the relevant prompt based on command ID and note type
+    const commandConfig = [...typeSpecificCommands, ...universalCommands].find(cmd => cmd.id === commandId);
+    
+    if (commandConfig) {
+      // Use the command's description as the AI prompt and auto-send it
+      const prompt = commandConfig.description || commandConfig.label;
+      setLoadingCommand(commandId);
+      try {
+        await onAskAI(prompt);
+        onClose();
+      } catch (error) {
+        console.error('Failed to ask AI:', error);
+      } finally {
+        setLoadingCommand(null);
+      }
+    }
+  };
 
   const handleAskAI = async () => {
+    setShowPromptSuggestions(true);
     setShowAIPrompt(true);
     setSelectedIndex(0);
     setTimeout(() => inputRef.current?.focus(), 100);
+  };
+
+  const handlePromptSuggestionSelect = async (prompt: string) => {
+    setAIPrompt(prompt);
+    setShowPromptSuggestions(false);
+    
+    // Auto-send the selected prompt
+    setLoadingCommand('ask-ai');
+    try {
+      await onAskAI(prompt);
+      onClose();
+    } catch (error) {
+      console.error('Failed to ask AI:', error);
+    } finally {
+      setLoadingCommand(null);
+    }
   };
 
   const handleRequestAnalysis = async () => {
@@ -231,98 +268,72 @@ export function InlineCommandPalette({
     }
   };
 
-  const mainCommands: CommandOption[] = [
-    {
-      id: 'ideas',
-      label: 'Generate ideas',
-      icon: <Lightbulb className="w-4 h-4" />,
-      action: handleRequestIdeas,
-      category: 'Write'
-    },
-    {
-      id: 'analysis',
-      label: 'Request analysis',
-      icon: <Brain className="w-4 h-4" />,
-      action: handleRequestAnalysis,
-      category: 'Write'
-    },
-    {
-      id: 'generate-table',
-      label: 'Generate table',
-      description: 'AI creates table from content',
-      icon: <Table className="w-4 h-4" />,
-      action: handleGenerateTableFromContent,
-      category: 'Write'
-    },
-    {
-      id: 'bullet-list',
-      label: 'Bullet list',
-      description: 'Insert bullet points',
-      icon: <List className="w-4 h-4" />,
-      action: () => { onInsertBulletList(); onClose(); },
-      category: 'Format'
-    },
-    {
-      id: 'numbered-list',
-      label: 'Numbered list',
-      description: 'Insert numbered list',
-      icon: <List className="w-4 h-4" />,
-      action: () => { onInsertNumberedList(); onClose(); },
-      category: 'Format'
-    },
-    {
-      id: 'heading-1',
-      label: 'Heading 1',
-      description: 'Large heading',
-      icon: <Heading1 className="w-4 h-4" />,
-      action: () => { onInsertHeading(1); onClose(); },
-      category: 'Format'
-    },
-    {
-      id: 'heading-2',
-      label: 'Heading 2',
-      description: 'Medium heading',
-      icon: <Heading2 className="w-4 h-4" />,
-      action: () => { onInsertHeading(2); onClose(); },
-      category: 'Format'
-    },
-    {
-      id: 'heading-3',
-      label: 'Heading 3',
-      description: 'Small heading',
-      icon: <Heading3 className="w-4 h-4" />,
-      action: () => { onInsertHeading(3); onClose(); },
-      category: 'Format'
-    },
-    {
-      id: 'link',
-      label: 'Insert link',
-      description: 'Add a hyperlink with custom text',
-      icon: <Link className="w-4 h-4" />,
-      action: handleInsertLink,
-      category: 'Format'
-    },
-    {
-      id: 'embed',
-      label: 'Embed link',
-      description: 'Insert rich link preview',
-      icon: <ExternalLink className="w-4 h-4" />,
-      action: handleInsertLinkEmbed,
-      category: 'Format'
-    },
-    {
-      id: 'table',
-      label: 'Insert table',
-      description: 'Create a data table',
-      icon: <Table className="w-4 h-4" />,
-      action: handleInsertTable,
-      category: 'Format'
-    }
-  ];
+  // Create complete command list by merging type-specific and universal commands
+  const createCompleteCommands = (): CommandOption[] => {
+    const commands: CommandOption[] = [];
+
+    // Add type-specific commands with handlers
+    typeSpecificCommands.forEach(cmd => {
+      commands.push({
+        ...cmd,
+        action: createTypeSpecificHandler(cmd.id)
+      });
+    });
+
+    // Add universal commands with existing handlers
+    universalCommands.forEach(cmd => {
+      let action: () => void;
+      
+      switch (cmd.id) {
+        case 'ideas':
+          action = handleRequestIdeas;
+          break;
+        case 'analysis':
+          action = handleRequestAnalysis;
+          break;
+        case 'action-items':
+          action = createTypeSpecificHandler(cmd.id);
+          break;
+        case 'bullet-list':
+          action = () => { onInsertBulletList(); onClose(); };
+          break;
+        case 'numbered-list':
+          action = () => { onInsertNumberedList(); onClose(); };
+          break;
+        case 'heading-1':
+          action = () => { onInsertHeading(1); onClose(); };
+          break;
+        case 'heading-2':
+          action = () => { onInsertHeading(2); onClose(); };
+          break;
+        case 'heading-3':
+          action = () => { onInsertHeading(3); onClose(); };
+          break;
+        case 'table':
+          action = handleInsertTable;
+          break;
+        case 'summary':
+          action = createTypeSpecificHandler(cmd.id);
+          break;
+        default:
+          action = () => console.log(`Universal command not implemented: ${cmd.id}`);
+      }
+
+      commands.push({
+        ...cmd,
+        action
+      });
+    });
+
+    return commands;
+  };
+
+  const mainCommands = createCompleteCommands();
 
   const analysisCommands: CommandOption[] = NOTE_TYPES.map(type => ({
     id: type.value,
     label: type.label,
+    description: type.description,
     icon: <Brain className="w-4 h-4" />,
     action: () => handleAnalysisTypeSelect(type.value),
     category: 'Analysis'
@@ -376,12 +387,9 @@ export function InlineCommandPalette({
     const viewportHeight = window.innerHeight;
     const margin = 20;
     
-    // The position is already calculated by getCursorCoordinates with boundary checking
-    // But we can do a final validation here
     let finalLeft = position.left;
     let finalTop = position.top;
     
-    // Additional safety checks for extreme cases
     if (finalLeft + menuWidth > viewportWidth - margin) {
       finalLeft = Math.max(margin, viewportWidth - menuWidth - margin);
     }
@@ -408,6 +416,10 @@ export function InlineCommandPalette({
         case 'ArrowDown':
           e.preventDefault();
           e.stopPropagation();
+          if (showPromptSuggestions) {
+            // Handle prompt suggestions navigation
+            return;
+          }
           setSelectedIndex(prev => 
             showAIPrompt ? prev : (prev + 1) % displayOptions.length
           );
@@ -415,6 +427,10 @@ export function InlineCommandPalette({
         case 'ArrowUp':
           e.preventDefault();
           e.stopPropagation();
+          if (showPromptSuggestions) {
+            // Handle prompt suggestions navigation
+            return;
+          }
           setSelectedIndex(prev => 
             showAIPrompt ? prev : (prev - 1 + displayOptions.length) % displayOptions.length
           );
@@ -437,12 +453,13 @@ export function InlineCommandPalette({
         case 'Escape':
           e.preventDefault();
           e.stopPropagation();
-          if (showAIPrompt || showAnalysisTypes || showNoteLinks || showLinkInput || showLinkEmbedInput || showTableInput) {
+          if (showAIPrompt || showAnalysisTypes || showNoteLinks || showLinkInput || showLinkEmbedInput || showTableInput || showPromptSuggestions) {
             setShowAIPrompt(false);
             setShowAnalysisTypes(false);
             setShowLinkInput(false);
             setShowLinkEmbedInput(false);
             setShowTableInput(false);
+            setShowPromptSuggestions(false);
             setAIPrompt('');
             setNoteSearchTerm('');
             setLinkUrl('');
@@ -465,7 +482,7 @@ export function InlineCommandPalette({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-        }, [isOpen, selectedIndex, showAIPrompt, showAnalysisTypes, showNoteLinks, showLinkInput, showLinkEmbedInput, showTableInput, aiPrompt, linkUrl, tableRows, tableCols, displayOptions]);
+  }, [isOpen, selectedIndex, showAIPrompt, showAnalysisTypes, showNoteLinks, showLinkInput, showLinkEmbedInput, showTableInput, showPromptSuggestions, aiPrompt, linkUrl, tableRows, tableCols, displayOptions]);
 
   // Handle click outside
   useEffect(() => {
@@ -491,6 +508,7 @@ export function InlineCommandPalette({
       setShowLinkInput(false);
       setShowLinkEmbedInput(false);
       setShowTableInput(false);
+      setShowPromptSuggestions(false);
       setAIPrompt('');
       setNoteSearchTerm('');
       setLinkUrl('');
@@ -528,7 +546,7 @@ export function InlineCommandPalette({
         left: finalPosition.left + 'px',
         width: '600px',
         maxHeight: '400px',
-        maxWidth: 'calc(100vw - 40px)' // Ensure it doesn't exceed viewport width
+        maxWidth: 'calc(100vw - 40px)'
       }}
     >
       {/* Search Input */}
@@ -560,7 +578,7 @@ export function InlineCommandPalette({
               />
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4" /> {/* Spacer */}
+              <div className="w-4 h-4" />
               <input
                 id="link-text-input"
                 type="text"
@@ -607,38 +625,38 @@ export function InlineCommandPalette({
               <Table className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">Table size:</span>
             </div>
-                         <div className="flex items-center gap-4 pl-6">
-               <div className="flex items-center gap-2">
-                 <label htmlFor="table-rows-input" className="text-xs text-muted-foreground">Rows:</label>
-                 <input
-                   id="table-rows-input"
-                   type="number"
-                   min="2"
-                   max="10"
-                   value={tableRows}
-                   onChange={(e) => setTableRows(Math.max(2, Math.min(10, parseInt(e.target.value) || 2)))}
-                   className="w-16 bg-transparent text-sm text-center border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary/30"
-                   autoFocus
-                 />
-               </div>
-               <div className="flex items-center gap-2">
-                 <label htmlFor="table-cols-input" className="text-xs text-muted-foreground">Cols:</label>
-                 <input
-                   id="table-cols-input"
-                   type="number"
-                   min="2"
-                   max="8"
-                   value={tableCols}
-                   onChange={(e) => setTableCols(Math.max(2, Math.min(8, parseInt(e.target.value) || 2)))}
-                   className="w-16 bg-transparent text-sm text-center border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary/30"
-                   onKeyDown={(e) => {
-                     if (e.key === 'Enter') {
-                       handleSubmitTable();
-                     }
-                   }}
-                 />
-               </div>
-             </div>
+            <div className="flex items-center gap-4 pl-6">
+              <div className="flex items-center gap-2">
+                <label htmlFor="table-rows-input" className="text-xs text-muted-foreground">Rows:</label>
+                <input
+                  id="table-rows-input"
+                  type="number"
+                  min="2"
+                  max="10"
+                  value={tableRows}
+                  onChange={(e) => setTableRows(Math.max(2, Math.min(10, parseInt(e.target.value) || 2)))}
+                  className="w-16 bg-transparent text-sm text-center border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  autoFocus
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label htmlFor="table-cols-input" className="text-xs text-muted-foreground">Cols:</label>
+                <input
+                  id="table-cols-input"
+                  type="number"
+                  min="2"
+                  max="8"
+                  value={tableCols}
+                  onChange={(e) => setTableCols(Math.max(2, Math.min(8, parseInt(e.target.value) || 2)))}
+                  className="w-16 bg-transparent text-sm text-center border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSubmitTable();
+                    }
+                  }}
+                />
+              </div>
+            </div>
             <div className="flex items-center gap-2 px-2 py-1 bg-muted/30 rounded text-xs text-muted-foreground">
               <span className="font-mono">Preview:</span>
               <span className="font-mono text-blue-600 dark:text-blue-400">
@@ -652,16 +670,16 @@ export function InlineCommandPalette({
             <input
               ref={mainInputRef}
               type="text"
-              placeholder={showNoteLinks ? "Search notes to link..." : "Ask Content anything..."}
+              placeholder={showNoteLinks ? "Find notes to link..." : "What would you like to create?"}
               className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
               value={showAIPrompt ? aiPrompt : showNoteLinks ? noteSearchTerm : ''}
               onChange={(e) => {
-              if (showAIPrompt) {
-                setAIPrompt(e.target.value);
-              } else if (showNoteLinks) {
-                setNoteSearchTerm(e.target.value);
-              }
-            }}
+                if (showAIPrompt) {
+                  setAIPrompt(e.target.value);
+                } else if (showNoteLinks) {
+                  setNoteSearchTerm(e.target.value);
+                }
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && showAIPrompt && aiPrompt.trim()) {
                   handleSubmitAIPrompt();
@@ -687,7 +705,7 @@ export function InlineCommandPalette({
             >
               <Link className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <div className="flex-1 text-left">
-                <div className="text-sm font-medium">Insert aliased link</div>
+                <div className="text-sm font-medium">Insert link</div>
                 <div className="text-xs text-muted-foreground truncate">
                   Will insert: [{linkText || linkUrl}]({linkUrl})
                 </div>
@@ -722,6 +740,26 @@ export function InlineCommandPalette({
               </div>
             </button>
           </div>
+        ) : showAIPrompt && showPromptSuggestions && defaultPrompts.length > 0 ? (
+          <div className="py-2">
+            <div className="px-3 py-1">
+              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Quick Ideas for {noteType.replace('_', ' ')} ✨
+              </h3>
+            </div>
+            <div className="space-y-0.5">
+              {defaultPrompts.slice(0, 5).map((prompt, index) => (
+                <button
+                  key={index}
+                  onClick={() => handlePromptSuggestionSelect(prompt)}
+                  className="w-full flex items-start gap-3 px-3 py-2 text-left hover:bg-muted/50 rounded-md transition-colors"
+                >
+                  <Lightbulb className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm">{prompt}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         ) : showAIPrompt && aiPrompt.trim() ? (
           <div className="p-3">
             <button
@@ -730,7 +768,7 @@ export function InlineCommandPalette({
               className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-muted/50 rounded-md transition-colors"
             >
               <Bot className="w-4 h-4 text-purple-500 dark:text-yellow-500" />
-              <span className="text-sm">Ask: "{aiPrompt}"</span>
+              <span className="text-sm">Create: "{aiPrompt}"</span>
               {loadingCommand === 'ask-ai' && <Loader2 className="w-4 h-4 animate-spin ml-auto" />}
             </button>
           </div>
