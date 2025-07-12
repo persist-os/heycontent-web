@@ -6,6 +6,7 @@ import { YouTubeBrandIcon } from '../../../../lib/YoutubeBrandIcon';
 import { useRouter } from 'next/navigation';
 import { useContentContextActions } from '@/store/content-context-store';
 import { YouTubeOverlay } from '@/components/content/overlays/YouTubeOverlay';
+import { Button } from '@/components/ui/button';
 
 import { YouTubeContentItem } from '../types';
 
@@ -53,7 +54,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
   const router = useRouter();
   const { setYouTubeContext } = useContentContextActions();
   const [showOverlay, setShowOverlay] = useState(false);
-  
+
   // Create a direct thumbnail URL - prioritize our stored data first
   let thumbnailUrl = '';
 
@@ -212,7 +213,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
             </div>
           </div>
           {/* Actions */}
-          <div className="flex gap-2 mt-4">
+          <div className="flex gap-2 mt-4 flex-wrap">
             <button
               className="flex-1 bg-primary text-primary-foreground dark:text-black hover:bg-primary/90 hover:text-primary-foreground dark:hover:text-black px-3 py-2 rounded-lg text-sm font-medium transition-colors"
               onClick={(e) => {
