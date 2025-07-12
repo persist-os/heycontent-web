@@ -193,118 +193,133 @@ export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsPr
 
           {/* Main Remix Insight */}
           <div className="space-y-4">
-            <div className="border-2 border-transparent rounded-lg p-4 hover:shadow-xl hover:shadow-purple-500/25 hover:border-purple-500/30 transition-all duration-300">
-              <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Remix Opportunity</h4>
-              <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">{insight.remix_insight}</p>
-              <div className="flex gap-2 mt-3">
-                <CreateNoteButton
-                  content={insight.remix_insight}
-                  className="text-xs"
-                />
-                <Button
-                  onClick={() => discussInsight(insight.remix_insight, 'Content Remix Opportunity')}
-                  size="sm"
-                  variant="ghost"
-                  className="text-xs hover:bg-heycontent-purple hover:text-white dark:hover:bg-gray-800 dark:hover:text-gray-100"
-                >
-                  <MessageSquare className="w-3 h-3" />
-                  Discuss
-                </Button>
-              </div>
-            </div>
-
-            {/* Smart Note Summary */}
-            {insight.smartnote_summary && (
-              <div className="border-2 border-transparent rounded-lg p-4 hover:shadow-xl hover:shadow-blue-500/25 hover:border-blue-500/30 transition-all duration-300">
-                <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Smart Note Summary</h4>
-                <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">{insight.smartnote_summary}</p>
-                <div className="flex gap-2 mt-3">
-                  <CreateNoteButton
-                    content={insight.smartnote_summary}
-                    className="text-xs"
-                  />
-                  <Button
-                    onClick={() => discussInsight(insight.smartnote_summary, 'Smart Note Summary')}
-                    size="sm"
-                    variant="ghost"
-                    className="text-xs hover:bg-heycontent-purple hover:text-white dark:hover:bg-gray-800 dark:hover:text-gray-100"
-                  >
-                    <MessageSquare className="w-3 h-3" />
-                    Discuss
-                  </Button>
+            {refreshing ? (
+              <div className="flex flex-col items-center justify-center py-8 w-full">
+                <div className="relative w-64 h-8 mx-auto mb-4">
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 opacity-60 animate-pulse"></div>
                 </div>
+                <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto leading-relaxed text-center">
+                  Generating cross-platform insights...
+                </p>
               </div>
-            )}
-
-            {/* Conversation Starter */}
-            {insight.conversation_starter && (
-              <div className="border-2 border-transparent rounded-lg p-4 hover:shadow-xl hover:shadow-green-500/25 hover:border-green-500/30 transition-all duration-300">
-                <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                  Conversation Starter
-                </h4>
-                <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed mb-3">{insight.conversation_starter}</p>
-                <div className="flex gap-2">
-                  <CreateNoteButton
-                    content={insight.conversation_starter}
-                    className="text-xs"
-                  />
-                  <Button
-                    onClick={() => discussInsight(insight.conversation_starter, 'Conversation Starter')}
-                    size="sm"
-                    variant="ghost"
-                    className="text-xs hover:bg-heycontent-purple hover:text-white dark:hover:bg-gray-800 dark:hover:text-gray-100"
-                  >
-                    <MessageSquare className="w-3 h-3" />
-                    Discuss
-                  </Button>
+            ) : (
+              <>
+                <div className="border-2 border-transparent rounded-lg p-4 hover:shadow-xl hover:shadow-purple-500/25 hover:border-purple-500/30 transition-all duration-300">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Remix Opportunity</h4>
+                  <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">{insight.remix_insight}</p>
+                  <div className="flex gap-2 mt-3">
+                    <CreateNoteButton
+                      content={insight.remix_insight}
+                      className="text-xs"
+                    />
+                    <Button
+                      onClick={() => discussInsight(insight.remix_insight, 'Content Remix Opportunity')}
+                      size="sm"
+                      variant="ghost"
+                      className="text-xs hover:bg-heycontent-purple hover:text-white dark:hover:bg-gray-800 dark:hover:text-gray-100"
+                    >
+                      <MessageSquare className="w-3 h-3" />
+                      Discuss
+                    </Button>
+                  </div>
                 </div>
-              </div>
+
+                {/* Smart Note Summary */}
+                {insight.smartnote_summary && (
+                  <div className="border-2 border-transparent rounded-lg p-4 hover:shadow-xl hover:shadow-blue-500/25 hover:border-blue-500/30 transition-all duration-300">
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Smart Note Summary</h4>
+                    <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">{insight.smartnote_summary}</p>
+                    <div className="flex gap-2 mt-3">
+                      <CreateNoteButton
+                        content={insight.smartnote_summary}
+                        className="text-xs"
+                      />
+                      <Button
+                        onClick={() => discussInsight(insight.smartnote_summary, 'Smart Note Summary')}
+                        size="sm"
+                        variant="ghost"
+                        className="text-xs hover:bg-heycontent-purple hover:text-white dark:hover:bg-gray-800 dark:hover:text-gray-100"
+                      >
+                        <MessageSquare className="w-3 h-3" />
+                        Discuss
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Conversation Starter */}
+                {insight.conversation_starter && (
+                  <div className="border-2 border-transparent rounded-lg p-4 hover:shadow-xl hover:shadow-green-500/25 hover:border-green-500/30 transition-all duration-300">
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                      Conversation Starter
+                    </h4>
+                    <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed mb-3">{insight.conversation_starter}</p>
+                    <div className="flex gap-2">
+                      <CreateNoteButton
+                        content={insight.conversation_starter}
+                        className="text-xs"
+                      />
+                      <Button
+                        onClick={() => discussInsight(insight.conversation_starter, 'Conversation Starter')}
+                        size="sm"
+                        variant="ghost"
+                        className="text-xs hover:bg-heycontent-purple hover:text-white dark:hover:bg-gray-800 dark:hover:text-gray-100"
+                      >
+                        <MessageSquare className="w-3 h-3" />
+                        Discuss
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
 
         {/* Platform-Specific Sections - Always Expanded */}
-        <div className="border-t border-border">
-          <div className="px-6 py-3">
-            <span className="text-sm font-medium text-foreground">Platform-Specific Hooks & Formats</span>
+        {!refreshing && (
+          <div className="border-t border-border">
+            <div className="px-6 py-3">
+              <span className="text-sm font-medium text-foreground">Platform-Specific Hooks & Formats</span>
+            </div>
+
+            <div className="px-6 pb-6 space-y-4">
+              {/* YouTube Section */}
+              <PlatformInsightCard
+                platform="YouTube"
+                icon={<YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8" />}
+                hook={insight.youtube_hook}
+                format={insight.youtube_format}
+                cta={insight.youtube_cta}
+                onDiscuss={discussInsight}
+                glowColor="hover:shadow-red-500/25 hover:border-red-500/30"
+              />
+
+              {/* Instagram Section */}
+              <PlatformInsightCard
+                platform="Instagram"
+                icon={<Instagram className="w-4 h-4 text-gray-600" />}
+                hook={insight.instagram_hook}
+                format={insight.instagram_format}
+                cta={insight.instagram_cta}
+                onDiscuss={discussInsight}
+                glowColor="hover:shadow-pink-500/25 hover:border-pink-500/30"
+              />
+
+              {/* Gmail Section */}
+              <PlatformInsightCard
+                platform="Gmail"
+                icon={<Mail className="w-4 h-4 text-gray-600" />}
+                hook={insight.gmail_hook}
+                format={insight.gmail_format}
+                cta={insight.gmail_cta}
+                onDiscuss={discussInsight}
+                glowColor="hover:shadow-blue-500/25 hover:border-blue-500/30"
+              />
+            </div>
           </div>
-
-          <div className="px-6 pb-6 space-y-4">
-            {/* YouTube Section */}
-            <PlatformInsightCard
-              platform="YouTube"
-              icon={<YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8" />}
-              hook={insight.youtube_hook}
-              format={insight.youtube_format}
-              cta={insight.youtube_cta}
-              onDiscuss={discussInsight}
-              glowColor="hover:shadow-red-500/25 hover:border-red-500/30"
-            />
-
-            {/* Instagram Section */}
-            <PlatformInsightCard
-              platform="Instagram"
-              icon={<Instagram className="w-4 h-4 text-gray-600" />}
-              hook={insight.instagram_hook}
-              format={insight.instagram_format}
-              cta={insight.instagram_cta}
-              onDiscuss={discussInsight}
-              glowColor="hover:shadow-pink-500/25 hover:border-pink-500/30"
-            />
-
-            {/* Gmail Section */}
-            <PlatformInsightCard
-              platform="Gmail"
-              icon={<Mail className="w-4 h-4 text-gray-600" />}
-              hook={insight.gmail_hook}
-              format={insight.gmail_format}
-              cta={insight.gmail_cta}
-              onDiscuss={discussInsight}
-              glowColor="hover:shadow-blue-500/25 hover:border-blue-500/30"
-            />
-          </div>
-        </div>
+        )}
       </Card>
     </div>
   )

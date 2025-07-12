@@ -22,7 +22,7 @@ export const ContentOverlay: React.FC<ContentOverlayProps> = ({
 }) => {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className={`bg-background rounded-lg shadow-xl max-w-7xl w-full max-h-[95vh] flex flex-col overflow-hidden ${className}`}>
+      <div className={`bg-background rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] flex flex-col overflow-hidden ${className}`}>
         {/* Header */}
         <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="p-6">
@@ -50,7 +50,7 @@ export const ContentOverlay: React.FC<ContentOverlayProps> = ({
         </div>
 
         {/* Content */}
-        <div className="max-w-7xl mx-auto p-6 overflow-y-auto flex-1">
+        <div className="w-full p-6 overflow-y-auto flex-1">
           {children}
         </div>
       </div>

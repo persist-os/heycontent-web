@@ -6,6 +6,7 @@ import { YouTubeBrandIcon } from '../../../../lib/YoutubeBrandIcon';
 import { useRouter } from 'next/navigation';
 import { useContentContextActions } from '@/store/content-context-store';
 import { YouTubeOverlay } from '@/components/content/overlays/YouTubeOverlay';
+import { Button } from '@/components/ui/button';
 
 import { YouTubeContentItem } from '../types';
 
@@ -53,7 +54,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
   const router = useRouter();
   const { setYouTubeContext } = useContentContextActions();
   const [showOverlay, setShowOverlay] = useState(false);
-  
+
   // Create a direct thumbnail URL - prioritize our stored data first
   let thumbnailUrl = '';
 
@@ -107,7 +108,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
           channel: content.channelTitle,
           published_at: publishedAt,
           thumbnails: {
-            high: { url: content.thumbnailUrl }
+            high: content.thumbnailUrl // <-- Fix: use string, not { url: ... }
           }
         },
         statistics: metrics,
@@ -136,8 +137,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
     <>
       <Card 
         key={item.id} 
-        className="overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-red-500/25 border-2 border-transparent hover:border-red-500/30 bg-white dark:bg-gray-800"
-        onClick={handleOpenOverlay}
+        className="overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-red-500/25 border-2 border-transparent hover:border-red-500/30 bg-white dark:bg-gray-800"
       >
         {/* Thumbnail */}
         <div className="relative aspect-video bg-gray-100 dark:bg-gray-800 overflow-hidden">
@@ -213,7 +213,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
             </div>
           </div>
           {/* Actions */}
-          <div className="flex gap-2 mt-4">
+          <div className="flex gap-2 mt-4 flex-wrap">
             <button
               className="flex-1 bg-primary text-primary-foreground dark:text-black hover:bg-primary/90 hover:text-primary-foreground dark:hover:text-black px-3 py-2 rounded-lg text-sm font-medium transition-colors"
               onClick={(e) => {
@@ -228,9 +228,10 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
               className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-text-dark dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
-                onViewDetailedAnalytics(item);
+                handleOpenOverlay();
               }}
             >
+              <BarChart3 className="w-4 h-4 inline mr-2" />
               Analytics
             </button>
             <button
