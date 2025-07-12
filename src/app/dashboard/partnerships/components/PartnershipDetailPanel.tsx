@@ -134,14 +134,49 @@ ${message.body}
   };
 
   const handleSaveDraft = async (content: string) => {
-    // TODO: Auto-save as smart note with email_draft type
-    if (partnership && content.trim()) {
-      console.log('Auto-saving draft for partnership:', partnership.id, content);
-      // This would save to smart notes with:
-      // - title: `Email Draft: ${partnership.brandName} - ${partnership.subject}`
-      // - type: 'email_draft'
-      // - tags: ['#email-draft', '#partnership', `#${partnership.brandName.toLowerCase()}`, '#[persona-name]']
-      // - partnershipId: partnership.id
+    if (!partnership || !content.trim()) return;
+    
+    const userId = getCurrentUserId();
+    if (!userId) {
+      console.error('User not authenticated, cannot save email draft');
+      return;
+    }
+
+    try {
+      console.log('Auto-saving email draft for partnership:', partnership.id);
+      
+      // Generate appropriate title
+      const title = `Email Draft: ${partnership.brandName} - ${partnership.subject}`;
+      
+      // Generate tags for partnership context
+      const brandTag = partnership.brandName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+      const tags = [
+        '#email-draft',
+        '#partnership',
+        `#${brandTag}`,
+        `#${partnership.category || 'uncategorized'}`,
+        `#${partnership.status}`
+      ];
+
+      // Save as smart note with email_draft type
+      const newNote = await updateNote({
+        userId,
+        updates: {
+          title,
+          content,
+          type: 'email_draft' as const,
+          tags,
+          platform: 'partnerships'
+        }
+      });
+
+      console.log('✅ Email draft saved successfully as smart note:', newNote?._id);
+      
+      // TODO: Associate the note with the partnership by updating partnership.smartNoteIds
+      // This would require a partnership update mutation that we could implement later
+      
+    } catch (error) {
+      console.error('❌ Failed to save email draft:', error);
     }
   };
 
@@ -170,6 +205,7 @@ ${message.body}
   };
 
   const updateThreadCategory = useMutation(api.gmailMutations.updateGmailThreadCategory);
+  const updateNote = useMutation(api.notes.updateNote);
   const [categoryEditLoading, setCategoryEditLoading] = useState(false);
   const [categoryError, setCategoryError] = useState<string | null>(null);
 

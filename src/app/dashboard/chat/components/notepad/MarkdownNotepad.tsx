@@ -253,6 +253,7 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
           onRequestAnalysis={handleRequestAnalysis}
           onRequestIdeas={handleRequestIdeas}
           userId={firebaseUser?.uid}
+          noteType="idea_bank"
           availableNotes={availableNotes}
           onLinkNote={onLinkNote}
           className="h-full border-0"
