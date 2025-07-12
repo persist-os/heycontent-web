@@ -64,7 +64,7 @@ export const AIInsightDisplayCard: React.FC<AIInsightDisplayCardProps> = ({ cont
         <div className="flex-1 min-w-0">
           {fullInsight.impact && (
             <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-              <span>Impact: <span className="text-[#4E87E3] font-medium">{fullInsight.impact}</span></span>
+              <span className="text-[#4E87E3] font-medium">{fullInsight.impact}</span>
             </div>
           )}
         </div>
