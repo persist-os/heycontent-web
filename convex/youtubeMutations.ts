@@ -61,7 +61,7 @@ function calculateDiff(oldDoc, newDoc, excludeFields = []) {
  */
 function sanitizeVideoData(videoData: any) {
   const sanitized = { ...videoData };
-  let warnings = [];
+  const warnings = [];
 
   // Limit caption size
   if (sanitized.captions?.caption_track?.text) {
@@ -289,7 +289,7 @@ export const storeVideoAnalysis = mutation({
   handler: async (ctx, args) => {
     const { userId, videoId, analysisData } = args;
     const now = Date.now();
-    let warnings = [];
+    const warnings = [];
     
     // Find existing video
     const existing = await ctx.db
@@ -422,7 +422,7 @@ export const saveChannelData = mutation({
   handler: async (ctx, args) => {
     const { userId, channelId, title, customUrl, thumbnails, statistics, updatedAt } = args;
     let { description } = args;
-    let warnings = [];
+    const warnings = [];
     
     // Limit description size
     if (description.length > MAX_DESCRIPTION_LENGTH) {
