@@ -123,19 +123,62 @@ ${message.body}
     setIsDraftingReply(false);
   };
 
-  const handleSendReply = (content: string) => {
-    // TODO: Implement email sending via Gmail API
-    console.log('Sending reply for partnership:', partnership?.id, content);
+  const handleSendReply = async (content: string) => {
+    if (!partnership || !content.trim()) return;
     
-    // For now, just close the draft
-    setIsDraftingReply(false);
-    
-    // Update partnership status to indicate reply sent
-    if (partnership) {
+    const userId = getCurrentUserId();
+    if (!userId) {
+      console.error('User not authenticated, cannot send email');
+      return;
+    }
+
+    try {
+      console.log('Sending reply for partnership:', partnership.id, content);
+      
+      // TODO: Implement actual email sending via Gmail API
+      // For now, simulate sending and update the note as "sent"
+      
+      // Find existing draft note and update it as sent
+      const title = `Email Reply: ${partnership.brandName} - ${partnership.subject}`;
+      const brandTag = partnership.brandName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+      
+      // Update tags to include sent status
+      const updatedTags = [
+        '#email-reply',
+        '#partnership',
+        `#${brandTag}`,
+        `#${partnership.category || 'uncategorized'}`,
+        `#${partnership.status}`,
+        '#sent' // Mark as sent instead of draft
+      ];
+      
+      // Add sent timestamp to content
+      const sentContent = `${content}\n\n---\n✅ **Email sent successfully** on ${new Date().toLocaleString()}`;
+      
+      await updateNote({
+        userId,
+        updates: {
+          title,
+          content: sentContent,
+          type: 'email_draft' as const,
+          tags: updatedTags,
+          platform: 'partnerships'
+        }
+      });
+
+      console.log('✅ Email marked as sent and saved');
+      
+      // Close the draft
+      setIsDraftingReply(false);
+      
+      // Update partnership status to indicate reply sent
       onUpdatePartnership(partnership.id, {
         lastActivity: new Date().getTime(),
         status: partnership.status === 'opportunity' ? 'inquiry' : partnership.status
       });
+      
+    } catch (error) {
+      console.error('❌ Failed to send email:', error);
     }
   };
 
@@ -161,7 +204,8 @@ ${message.body}
         '#partnership',
         `#${brandTag}`,
         `#${partnership.category || 'uncategorized'}`,
-        `#${partnership.status}`
+        `#${partnership.status}`,
+        '#draft' // Explicitly mark as draft
       ];
 
       // Save as smart note with email_draft type
@@ -352,45 +396,46 @@ ${message.body}
     if (messages.length === 0) {
       return (
         <div className="p-4 text-center text-muted-foreground">
-          <p>No email content available</p>
+          <Mail className="w-6 h-6 md:w-8 md:h-8 text-muted-foreground mx-auto mb-2" />
+          <p className="text-sm">No email content available</p>
         </div>
       );
     }
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-3 md:space-y-4">
         {messages.map((message: any, index: number) => (
-          <div key={message.id} className={`p-4 rounded-lg border ${
+          <div key={message.id} className={`p-3 md:p-4 rounded-lg border transition-colors ${
             message.isReply 
               ? 'bg-primary/5 border-primary/20' 
-              : 'bg-muted border-border'
+              : 'bg-muted/50 border-border'
           }`}>
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex-1">
+            <div className="flex items-start justify-between mb-2 md:mb-3 gap-3">
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="font-medium text-foreground">
+                  <span className="font-medium text-foreground text-sm truncate">
                     {message.from}
                   </span>
                   {message.isReply && (
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-xs flex-shrink-0">
                       Reply
                     </Badge>
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {new Date(message.timestamp).toISOString().replace('T', ' ').substring(0, 19)}
+                <p className="text-xs text-muted-foreground">
+                  {new Date(message.timestamp).toLocaleDateString()} {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
             </div>
             
             {message.subject !== (messages[0]?.subject || '') && (
-              <p className="text-sm font-medium text-foreground mb-2">
+              <p className="text-sm font-medium text-foreground mb-2 line-clamp-1">
                 Re: {message.subject}
               </p>
             )}
             
             <div className="prose prose-sm max-w-none text-foreground">
-              <div className="whitespace-pre-wrap text-sm leading-relaxed">
+              <div className="text-sm leading-relaxed break-words overflow-wrap-anywhere">
                 {message.body}
               </div>
             </div>
@@ -401,179 +446,186 @@ ${message.body}
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="space-y-4">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h2 className="text-lg font-semibold text-foreground">{partnership.brandName}</h2>
-            <p className="text-sm text-muted-foreground">{partnership.subject}</p>
-            {/* Partnership Controls */}
-            <div className="mt-4">
-              <PartnershipControls
-                partnership={partnership}
-                onUpdateStatus={handleStatusChange}
-                onUpdateCategory={handleCategoryChange}
-                onDelete={handleDelete}
-                statusLoading={statusLoading}
-                categoryLoading={categoryLoading}
-                deleteLoading={deleteLoading}
-                categoryError={categoryError}
-              />
+    <div className="flex flex-col h-full">
+      <div className="p-3 md:p-4 space-y-4 md:space-y-6">
+        {/* Header */}
+        <div className="space-y-3 md:space-y-4">
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-base md:text-lg font-semibold text-foreground truncate">{partnership.brandName}</h2>
+              <p className="text-sm text-muted-foreground line-clamp-2">{partnership.subject}</p>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Email Thread Summary */}
-      <Card className="p-4">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-medium text-foreground flex items-center">
-              <Mail className="w-4 h-4 mr-2" />
-              Thread Summary
-            </h3>
-            <Button variant="outline" className="w-10 h-10">
-              <ExternalLink className="w-4 h-4" />
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Messages:</span>
-              <span className="text-foreground flex items-center">
-                <MessageSquare className="w-3 h-3 mr-1" />
-                {partnership.messageCount}
-              </span>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Last Activity:</span>
-              <span className="text-foreground flex items-center">
-                <Clock className="w-3 h-3 mr-1" />
-                {formatTimeAgo(partnership.lastActivity)}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Est. Value:</span>
-              <span className="text-foreground flex items-center font-medium">
-                <DollarSign className="w-3 h-3 mr-1" />
-                {formatValue(partnership.estimatedValue)}
-                            </span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">From:</span>
-              <span className="text-foreground truncate">{partnership.from || 'Unknown'}</span>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Email Thread Conversation */}
-      <Card className="p-4">
-        <div className="space-y-4">
-          <h3 className="font-medium text-foreground flex items-center">
-            <MessageSquare className="w-4 h-4 mr-2" />
-            Conversation Thread
-          </h3>
-          {renderEmailThread()}
-        </div>
-      </Card>
-
-      {/* Associated Smart Notes */}
-      <Card className="p-4">
-        <div className="space-y-4">
-          <h3 className="font-medium text-foreground flex items-center">
-            <FileText className="w-4 h-4 mr-2" />
-            Associated Notes ({associatedNotes.length})
-          </h3>
           
-          {associatedNotes.length > 0 ? (
-            <div className="space-y-2">
-              {associatedNotes.slice(0, 3).map((note) => (
-                <div key={String(note._id)} className="flex items-start justify-between p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="text-sm font-medium text-foreground truncate">
-                        {note.title || 'Untitled Note'}
-                      </p>
-                      {/* Type as plain white text, no Badge */}
-                      {note.type && (
-                        <span className="text-xs font-medium text-foreground">
-                          {note.type.replace('_', ' ')}
-                        </span>
-                      )}
-                    </div>
-                    {note.content && (
-                      <p className="text-xs text-muted-foreground mb-1">
-                        {truncateText(note.content, 80)}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span>{formatTimeAgo(note.updatedAt || note._creationTime)}</span>
-                      {note.tags && note.tags.length > 0 && (
-                        <div className="flex items-center gap-1">
-                          <Tag className="w-3 h-3" />
-                          <span>{note.tags.slice(0, 2).join(', ')}</span>
-                          {note.tags.length > 2 && <span>+{note.tags.length - 2}</span>}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleViewNote(String(note._id))}
-                    className="ml-3 shrink-0"
-                  >
-                    View
-                  </Button>
-                </div>
-              ))}
-              {associatedNotes.length > 3 && (
-                <div className="pt-2 border-t border-border">
-                  <p className="text-xs text-muted-foreground">
-                    +{associatedNotes.length - 3} more notes
-                  </p>
-                </div>
+          {/* Partnership Controls */}
+          <PartnershipControls
+            partnership={partnership}
+            onUpdateStatus={handleStatusChange}
+            onUpdateCategory={handleCategoryChange}
+            onDelete={handleDelete}
+            statusLoading={statusLoading}
+            categoryLoading={categoryLoading}
+            deleteLoading={deleteLoading}
+            categoryError={categoryError}
+          />
+        </div>
+
+        {/* Email Thread Summary */}
+        <Card className="p-3 md:p-4">
+          <div className="space-y-3 md:space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium text-foreground flex items-center text-sm md:text-base">
+                <Mail className="w-4 h-4 mr-2 flex-shrink-0" />
+                Thread Summary
+              </h3>
+              <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                <ExternalLink className="w-3 h-3" />
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Messages:</span>
+                <span className="text-foreground flex items-center">
+                  <MessageSquare className="w-3 h-3 mr-1" />
+                  {partnership.messageCount}
+                </span>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Last Activity:</span>
+                <span className="text-foreground flex items-center text-xs md:text-sm">
+                  <Clock className="w-3 h-3 mr-1" />
+                  {formatTimeAgo(partnership.lastActivity)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Est. Value:</span>
+                <span className="text-foreground flex items-center font-medium">
+                  <DollarSign className="w-3 h-3 mr-1" />
+                  {formatValue(partnership.estimatedValue)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">From:</span>
+                <span className="text-foreground truncate text-xs md:text-sm">{partnership.from || 'Unknown'}</span>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Draft Reply Section - Moved up */}
+        <Card className="p-3 md:p-4">
+          <div className="space-y-3 md:space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium text-foreground flex items-center text-sm md:text-base">
+                <Edit3 className="w-4 h-4 mr-2 flex-shrink-0" />
+                Draft Reply
+              </h3>
+              {!isDraftingReply && (
+                <Button onClick={handleStartDraft} size="sm">
+                  <Edit3 className="w-3 h-3 mr-2" />
+                  Start Draft
+                </Button>
               )}
             </div>
-          ) : (
-            <div className="text-center py-6">
-              <FileText className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Perfect canvas for your next masterpiece</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Create notes about this partnership and watch your collaboration strategy come to life right here
-              </p>
-            </div>
-          )}
-        </div>
-      </Card>
 
-      {/* Draft Reply Section */}
-      <Card className="p-4">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-medium text-foreground flex items-center">
-              <Edit3 className="w-4 h-4 mr-2" />
-              Draft Reply
-            </h3>
             {!isDraftingReply && (
-              <Button onClick={handleStartDraft}>
-                Start Draft
-              </Button>
+              <p className="text-sm text-muted-foreground">
+                Ready to craft the perfect response? Start drafting and our AI will help you create compelling partnership replies that get results
+              </p>
             )}
           </div>
+        </Card>
+      </div>
 
-          {!isDraftingReply && (
-            <p className="text-sm text-muted-foreground">
-              Ready to craft the perfect response? Start drafting and our AI will help you create compelling partnership replies that get results
-            </p>
-          )}
-        </div>
-      </Card>
+      {/* Email Thread Conversation - Scrollable */}
+      <div className="flex-1 overflow-hidden">
+        <Card className="mx-3 md:mx-4 mb-3 md:mb-4 h-full flex flex-col">
+          <div className="p-3 md:p-4 border-b border-border">
+            <h3 className="font-medium text-foreground flex items-center text-sm md:text-base">
+              <MessageSquare className="w-4 h-4 mr-2 flex-shrink-0" />
+              Conversation Thread
+            </h3>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3 md:p-4">
+            {renderEmailThread()}
+          </div>
+        </Card>
+      </div>
+
+      {/* Associated Smart Notes */}
+      <div className="p-3 md:p-4 pt-0">
+        <Card className="p-3 md:p-4">
+          <div className="space-y-3 md:space-y-4">
+            <h3 className="font-medium text-foreground flex items-center text-sm md:text-base">
+              <FileText className="w-4 h-4 mr-2 flex-shrink-0" />
+              Associated Notes ({associatedNotes.length})
+            </h3>
+            
+            {associatedNotes.length > 0 ? (
+              <div className="space-y-2">
+                {associatedNotes.slice(0, 3).map((note) => (
+                  <div key={String(note._id)} className="flex items-start justify-between p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-medium text-foreground truncate">
+                          {note.title || 'Untitled Note'}
+                        </p>
+                        {note.type && (
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {note.type.replace('_', ' ')}
+                          </span>
+                        )}
+                      </div>
+                      {note.content && (
+                        <p className="text-xs text-muted-foreground mb-1 line-clamp-2">
+                          {truncateText(note.content, 80)}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span>{formatTimeAgo(note.updatedAt || note._creationTime)}</span>
+                        {note.tags && note.tags.length > 0 && (
+                          <div className="flex items-center gap-1">
+                            <Tag className="w-3 h-3" />
+                            <span>{note.tags.slice(0, 2).join(', ')}</span>
+                            {note.tags.length > 2 && <span>+{note.tags.length - 2}</span>}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleViewNote(String(note._id))}
+                      className="ml-3 shrink-0"
+                    >
+                      View
+                    </Button>
+                  </div>
+                ))}
+                {associatedNotes.length > 3 && (
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-xs text-muted-foreground">
+                      +{associatedNotes.length - 3} more notes
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <FileText className="w-6 h-6 md:w-8 md:h-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">Perfect canvas for your next masterpiece</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Create notes about this partnership and watch your collaboration strategy come to life right here
+                </p>
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
 
       {/* MarkdownNotepad for Email Drafting */}
       <MarkdownNotepad

@@ -8,18 +8,15 @@ import { InsightOverlay } from '@/components/content/overlays/InsightOverlay';
 import { InsightCard } from '@/components/content/InsightCard';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { useAuth } from '@/app/context/auth-context';
-import { useNotes } from '@/app/context/notes-context';
-import { NoteCard } from '@/app/dashboard/notes/components/cards/NoteCard';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { NoteMeta } from '@/app/dashboard/notes/components/NoteMeta';
 import { NoteContentRenderer } from '@/app/dashboard/notes/components/NoteContentRenderer';
+import { getCurrentUserId } from '@/app/lib/api-helpers';
 
 interface ChatOverlayProps {
   contentType: 'youtube' | 'instagram' | 'gmail' | 'insight' | 'note';
   contentId: string;
   onClose: () => void;
-  insightData?: any; // For direct insight data
+  insightData?: any;
 }
 
 export const ChatOverlay: React.FC<ChatOverlayProps> = ({
@@ -28,43 +25,44 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
   onClose,
   insightData
 }) => {
-  // Render YouTube content using shared component
-  if (contentType === 'youtube') {
-    return (
-      <YouTubeOverlay
-        videoId={contentId}
-        onClose={onClose}
-        showAnalysis={true}
-      />
-    );
-  }
+  // All hooks must be called at the top level
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const userId = getCurrentUserId() || '';
+  const note = useQuery(
+    api.notes.getNote,
+    contentType === 'note' ? { noteId: contentId, userId } : 'skip'
+  );
 
-  // Render Instagram content using shared component
-  if (contentType === 'instagram') {
-    return (
-      <InstagramOverlay
-        postId={contentId}
-        onClose={onClose}
-        showAnalysis={true}
-        hideDiscussButton={true}
-      />
-    );
-  }
+  const chatId = searchParams.get('id');
 
-  // Render Gmail content using shared component
-  if (contentType === 'gmail') {
-    return (
-      <GmailOverlay
-        threadId={contentId}
-        onClose={onClose}
-        showAnalysis={true}
-      />
-    );
-  }
+  // Render functions for each content type
+  const renderYouTubeOverlay = () => (
+    <YouTubeOverlay
+      videoId={contentId}
+      onClose={onClose}
+      showAnalysis={true}
+    />
+  );
 
-  // Render insight content using shared component
-  if (contentType === 'insight') {
-    // If we have direct insight data, render it directly
+  const renderInstagramOverlay = () => (
+    <InstagramOverlay
+      postId={contentId}
+      onClose={onClose}
+      showAnalysis={true}
+      hideDiscussButton={true}
+    />
+  );
+
+  const renderGmailOverlay = () => (
+    <GmailOverlay
+      threadId={contentId}
+      onClose={onClose}
+      showAnalysis={true}
+    />
+  );
+
+  const renderInsightOverlay = () => {
     if (insightData) {
       return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -101,7 +99,6 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
                 expanded={true}
                 showAnalysis={true}
                 onDiscuss={(content: string, title: string) => {
-                  // Handle discuss action - could navigate to chat or show a modal
                   console.log('Discuss insight:', { content, title });
                 }}
               />
@@ -111,7 +108,6 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
       );
     }
 
-    // Otherwise use the InsightOverlay
     return (
       <InsightOverlay
         insightId={contentId}
@@ -119,20 +115,9 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
         showAnalysis={true}
       />
     );
-  }
+  };
 
-  // Render note content overlay
-  if (contentType === 'note') {
-    // Get userId for fetching note
-    const { firebaseUser } = useAuth();
-    const userId = firebaseUser?.uid || '';
-    const note = useQuery(api.notes.getNote, { noteId: contentId, userId });
-    const { notes: availableNotes } = useNotes();
-    const router = useRouter();
-    const searchParams = useSearchParams();
-    const chatId = searchParams.get('id');
-
-    // Handler for X button: go to Smart Notes preview
+  const renderNoteOverlay = () => {
     const handleCloseToSmartNotes = () => {
       let url = `/dashboard/notes?noteId=${contentId}&fromChat=true`;
       if (chatId) url += `&chatId=${chatId}`;
@@ -163,6 +148,7 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
               </svg>
             </button>
           </div>
+
           {/* Main content */}
           <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
             {/* Sidebar metadata */}
@@ -188,7 +174,9 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
                       <div className="text-xs text-muted-foreground mb-1">Tags</div>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {note.tags.map((tag, idx) => (
-                          <span key={idx} className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-xs">#{tag}</span>
+                          <span key={idx} className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-xs">
+                            #{tag}
+                          </span>
                         ))}
                       </div>
                     </div>
@@ -204,6 +192,7 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
                 </div>
               )}
             </div>
+
             {/* Main content area */}
             <div className="flex-1 p-6 overflow-y-auto">
               {note ? (
@@ -221,10 +210,9 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
         </div>
       </div>
     );
-  }
+  };
 
-  // Fallback
-  return (
+  const renderFallback = () => (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-background rounded-lg shadow-xl max-w-md w-full p-6">
         <div className="flex items-center justify-between mb-4">
@@ -243,4 +231,20 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
       </div>
     </div>
   );
+
+  // Render based on content type
+  switch (contentType) {
+    case 'youtube':
+      return renderYouTubeOverlay();
+    case 'instagram':
+      return renderInstagramOverlay();
+    case 'gmail':
+      return renderGmailOverlay();
+    case 'insight':
+      return renderInsightOverlay();
+    case 'note':
+      return renderNoteOverlay();
+    default:
+      return renderFallback();
+  }
 }; 

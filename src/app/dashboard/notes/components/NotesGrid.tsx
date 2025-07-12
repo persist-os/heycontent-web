@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Note, NoteType } from '../types';
 import { NoteCard } from './cards/NoteCard';
+import { EmailCard } from './cards/EmailCard';
 import { ProjectCard } from './projects/ProjectCard';
 import { CreateProjectModal } from './projects/CreateProjectModal';
 import { Plus, Search, Folder, X } from 'lucide-react';
@@ -281,6 +282,35 @@ export function NotesGrid({
     return b.updatedAt - a.updatedAt;
   });
 
+  // Helper function to render the appropriate card component
+  const renderNoteCard = (note: Note) => {
+    if (note.type === 'email_draft') {
+      return (
+        <EmailCard
+          note={note}
+          availableNotes={notes.map(n => ({ _id: String(n._id), title: n.title, type: n.type }))}
+          onEdit={onEditNote}
+          onDelete={onDeleteNote}
+          onToggleImportant={onToggleImportant}
+          onUpdate={onUpdateNote}
+          isDraggable={true}
+        />
+      );
+    }
+
+    return (
+      <NoteCard
+        note={note}
+        availableNotes={notes.map(n => ({ _id: String(n._id), title: n.title, type: n.type }))}
+        onEdit={onEditNote}
+        onDelete={onDeleteNote}
+        onToggleImportant={onToggleImportant}
+        onUpdate={onUpdateNote}
+        isDraggable={true}
+      />
+    );
+  };
+
   // Combined items for mixed view (when showing 'all')
   const combinedItems = showingAll ? [
     ...sortedProjects.map(project => ({ type: 'project', item: project, timestamp: project.updatedAt })),
@@ -440,15 +470,7 @@ export function NotesGrid({
                             dragOverProject={dragOverProject}
                           />
                         ) : (
-                          <NoteCard
-                            note={item.item as Note}
-                            availableNotes={notes.map(n => ({ _id: String(n._id), title: n.title, type: n.type }))}
-                            onEdit={onEditNote}
-                            onDelete={onDeleteNote}
-                            onToggleImportant={onToggleImportant}
-                            onUpdate={onUpdateNote}
-                            isDraggable={true}
-                          />
+                          renderNoteCard(item.item as Note)
                         )}
                       </div>
                     ))
@@ -465,15 +487,7 @@ export function NotesGrid({
                     ))
                   : sortedNotes.map((note) => (
                       <div key={String(note._id)} className="break-inside-avoid mb-4 w-full">
-                        <NoteCard
-                          note={note}
-                          availableNotes={notes.map(n => ({ _id: String(n._id), title: n.title, type: n.type }))}
-                          onEdit={onEditNote}
-                          onDelete={onDeleteNote}
-                          onToggleImportant={onToggleImportant}
-                          onUpdate={onUpdateNote}
-                          isDraggable={true}
-                        />
+                        {renderNoteCard(note)}
                       </div>
                     ))
                 }
@@ -519,12 +533,21 @@ export function NotesGrid({
       <DragOverlay>
         {draggedNote ? (
           <div className="transform rotate-3 opacity-90">
-            <NoteCard
-              note={draggedNote}
-              availableNotes={[]}
-              isDraggable={false}
-              isOverlay={true}
-            />
+            {draggedNote.type === 'email_draft' ? (
+              <EmailCard
+                note={draggedNote}
+                availableNotes={[]}
+                isDraggable={false}
+                isOverlay={true}
+              />
+            ) : (
+              <NoteCard
+                note={draggedNote}
+                availableNotes={[]}
+                isDraggable={false}
+                isOverlay={true}
+              />
+            )}
           </div>
         ) : null}
       </DragOverlay>

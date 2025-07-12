@@ -123,7 +123,7 @@ export const getYouTubeVideos = query({
       // Enforce reasonable limits to prevent memory issues
       const effectiveLimit = Math.min(args.limit || DEFAULT_VIDEO_LIMIT, MAX_QUERY_LIMIT);
       
-      let queryBuilder = ctx.db
+      const queryBuilder = ctx.db
         .query("youtubeVideos")
         .withIndex("by_userId", (q) => q.eq("userId", args.userId))
         .order("desc"); // Most recent first
