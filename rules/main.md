@@ -2,8 +2,17 @@
 
 This document defines the required engineering standards for the HeyContent frontend, built with Next.js and deployed on Vercel.
 
+NEVER guess, always look for similar implementations and follow pre existing patterns that way. review the full prd in detail and the current implemmntation before amking any changes.
 
-Keep all code clean, modular, under 400 lines. Never call Firebase Auth directly, use api-helpers/api-utils correctly to get the api key from cookies. 
+Keep all code clean, modular, under 400 lines. Never call Firebase Auth directly, use api-helpers/api-utils correctly to get the api key from cookies.
+
+Never get the user id from the Firebase Auth, always get it from the api key stored in cookies using the helper function in api-helpers.ts
+
+Avoid calling the backend directly, route it through the api/ folder and set up the appropriate route/hooks.
+
+Make sure all Convex queries and mutations are optimized for performance and scalability. They should be small, modular, and reliable. Make sure to think about making full use of Convex's caching behavior, pagination, and other performance optimizations.
+
+Document everything clearly and concisely within the code. 
 
 ## Tech Stack
 
@@ -74,6 +83,7 @@ State and logic should live in hooks.
 - **Light mode background**: MUST be white (`#FFFFFF`)
 - **Primary accent color**: Lean purple for light mode, yellow for dark mode
 - **NO hardcoded colors**: Use CSS variables and semantic color classes only
+- Make sure to use the correct colors for the dark and light mode, and never to use white text on yellow backgrounds or anything similarly unreadable.
 
 **Required approach:**
 - Use `bg-background`, `text-foreground`, `border-border`, etc.

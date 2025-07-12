@@ -65,6 +65,8 @@ export default defineSchema({
       expMonth: v.number(),
       expYear: v.number()
     })),
+    // Gmail quota optimization
+    lastGmailFetch: v.optional(v.number()),
   })
   .index("by_userId", ["userId"])
   .index("by_email", ["email"])
