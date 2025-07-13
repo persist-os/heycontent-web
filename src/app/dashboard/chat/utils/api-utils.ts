@@ -1608,7 +1608,8 @@ export async function sendChatMessage(
   // Include content context if available
   if (contentContext) {
     // Debug logging for content context
-    console.log('🔍 [CONTENT CONTEXT DEBUG] Full content context:', {
+    console.group('🔍 [CONTENT CONTEXT DEBUG] Full content context');
+    console.log('Context structure:', {
       platform: contentContext.platform,
       contentId: contentContext.contentId,
       title: contentContext.title,
@@ -1616,8 +1617,28 @@ export async function sendChatMessage(
       hasConvexData: !!contentContext.convexData,
       convexDataKeys: contentContext.convexData ? Object.keys(contentContext.convexData) : 'none',
       contentKeys: contentContext.content ? Object.keys(contentContext.content) : 'none',
-      fullContext: contentContext
+      hasFullInsight: !!contentContext.fullInsight,
+      hasActionStep: !!contentContext.actionStep,
+      fullInsightKeys: contentContext.fullInsight ? Object.keys(contentContext.fullInsight) : 'none',
+      actionStep: contentContext.actionStep,
+      originalPlatform: contentContext.originalPlatform,
+      additionalContext: contentContext.additionalContext,
     });
+    
+    if (contentContext.fullInsight) {
+      console.log('FullInsight structure:', {
+        hasTitle: !!contentContext.fullInsight.title,
+        hasImpact: !!contentContext.fullInsight.impact,
+        whyNowCount: contentContext.fullInsight.whyNow?.length || 0,
+        actionStepsCount: contentContext.fullInsight.actionSteps?.length || 0,
+        hasExpectedOutcome: !!contentContext.fullInsight.expectedOutcome,
+        sourceDetailsCount: contentContext.fullInsight.sourceDetails?.length || 0,
+        relatedItemsCount: contentContext.fullInsight.relatedItems?.length || 0,
+      });
+    }
+    
+    console.log('Full content context:', contentContext);
+    console.groupEnd();
 
     // Handle both old ContentContext format and new Zustand store format
     if (contentContext.convexData) {
@@ -1633,7 +1654,12 @@ export async function sendChatMessage(
         published_at: contentContext.publishedAt,
         metrics: contentContext.metrics,
         content: contentContext.content,
-        convex_data: convexData
+        convex_data: convexData,
+        // Include AI insights specific fields
+        fullInsight: contentContext.fullInsight,
+        actionStep: contentContext.actionStep,
+        originalPlatform: contentContext.originalPlatform,
+        additionalContext: contentContext.additionalContext
       };
     } else {
       // Legacy ContentContext format
@@ -1645,7 +1671,12 @@ export async function sendChatMessage(
         thumbnail_url: contentContext.thumbnailUrl,
         published_at: contentContext.publishedAt,
         metrics: contentContext.metrics,
-        content: contentContext.content
+        content: contentContext.content,
+        // Include AI insights specific fields
+        fullInsight: contentContext.fullInsight,
+        actionStep: contentContext.actionStep,
+        originalPlatform: contentContext.originalPlatform,
+        additionalContext: contentContext.additionalContext
       };
     }
   }

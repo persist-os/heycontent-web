@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react'
 import { InsightCard } from '@/components/content/InsightCard'
 import { useInstagramInsights } from '../hooks/useInstagramInsights'
+import { useInsightNavigation } from '../hooks/useInsightNavigation'
+import { useActionStepDiscussion } from '../hooks/useActionStepDiscussion'
 import { RefreshState } from '@/components/ui/refresh-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AnalysisDepthPicker } from '../AnalysisDepthPicker'
@@ -39,8 +41,9 @@ interface InstagramPlatformProps {
 
 export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPlatformProps) {
   const [expandedInsight, setExpandedInsight] = useState<number | null>(null)
+  const { navigateWithInsight } = useInsightNavigation()
+  const { discussActionStep } = useActionStepDiscussion()
   const [breakdownCollapsed, setBreakdownCollapsed] = useState(false);
-  
   const { 
     insights, 
     refreshing, 
@@ -214,27 +217,22 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
                 relatedItems={insight.relatedItems}
                 expanded={expandedInsight === idx}
                 onExpand={() => setExpandedInsight(expandedInsight === idx ? null : idx)}
-                onDiscuss={() => {
-                  // Navigate to chat with insight context
-                  const context = {
-                    platform: 'ai-insights',
-                    contentId: `instagram-insight-${idx}`,
-                    title: insight.title,
-                    source: 'AI Insights Dashboard',
-                    originalPlatform: 'instagram',
-                    fullInsight: {
-                      title: insight.title,
-                      impact: insight.impact,
-                      whyNow: insight.whyNow,
-                      actionSteps: insight.actionSteps,
-                      expectedOutcome: insight.expectedOutcome,
-                      sourceDetails: insight.sourceDetails,
-                      relatedItems: insight.relatedItems
-                    },
-                    analysis: insight.whyNow // or another field if more appropriate
-                  };
-                  const encodedContext = encodeURIComponent(JSON.stringify(context));
-                  window.location.href = `/dashboard/chat?contentContext=${encodedContext}`;
+                onActionStepClick={(actionStep, insightData) => {
+                  console.log('🔍 [INSTAGRAM PLATFORM] Action step clicked:', actionStep);
+                  console.log('🔍 [INSTAGRAM PLATFORM] Full insight data:', insightData);
+                  
+                  // Create additional context for the action step
+                  const additionalContext = [
+                    `Platform: INSTAGRAM`,
+                    `Insight: ${insightData.title}`,
+                    `Impact: ${insightData.impact}`,
+                    `Why Now: ${insightData.whyNow.join(', ')}`,
+                    `Expected Outcome: ${insightData.expectedOutcome}`,
+                    `Source: Instagram Insights Dashboard`
+                  ].join('\n');
+                  
+                  // Use the default action step discussion
+                  discussActionStep(actionStep, insightData, 'instagram', additionalContext);
                 }}
               />
             ))}

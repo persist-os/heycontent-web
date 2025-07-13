@@ -32,6 +32,7 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
 
   // Carousel state
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   // Auto-slide effect for carousels
   useEffect(() => {
@@ -51,7 +52,7 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
     console.log('🔄 Instagram: Post refresh completed, triggering refetch');
   }, []);
 
-  const { refresh, loading, error } = useInstagramRefresh(handleRefreshComplete);
+  const { refresh, loading: refreshLoading, error } = useInstagramRefresh(handleRefreshComplete);
   const router = useRouter();
   const { setInstagramContext } = useContentContextActions();
 
@@ -107,57 +108,20 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
   };
 
   // Handle discuss content with Zustand store
-  const handleDiscussContent = () => {
-    // Use the full Convex document if available, otherwise create a fallback
+  const handleDiscussContent = async () => {
+    setLoading(true);
+    let contextToSet;
     if (item.convexData) {
-      // Use the complete Convex document with all fields
-      console.log('🔍 [INSTAGRAM CARD] Using full Convex document:', {
-        hasData: !!item.convexData.data,
-        dataKeys: item.convexData.data ? Object.keys(item.convexData.data) : 'none',
-        hasComments: !!item.convexData.data?.comments,
-        commentsLength: item.convexData.data?.comments?.length || 0,
-        hasInsights: !!item.convexData.data?.insights,
-        insightsKeys: item.convexData.data?.insights ? Object.keys(item.convexData.data.insights) : 'none',
-        fullConvexData: item.convexData
-      });
-      
-      setInstagramContext(item.convexData);
-    } else {
-      // Fallback to creating a mock object (shouldn't happen with proper data)
-      console.warn('🔍 [INSTAGRAM CARD] No convexData available, using fallback mock object');
-      
-      const convexInstagramPost = {
-        _id: item.id as any,
-        _creationTime: Date.now(),
-        userId: userId,
-        instagramAccountId: '',
-        postId: item.id,
-        mediaType: content.mediaType,
-        data: {
-          id: item.id,
-          caption: content.text || '',
-          media_url: content.mediaUrl || '',
-          permalink: content.permalink || '',
-          timestamp: new Date(publishedAt || Date.now()).getTime(),
-          username: '',
-          like_count: metrics?.likes || metrics?.like_count || 0,
-          comments_count: metrics?.comments || metrics?.comments_count || 0,
-          thumbnail_url: content.thumbnailUrl || null,
-          children: children || null,
-          comments: content.comments || [],
-          insights: metrics || null,
-        },
-        analysis: item.analysis || null,
-        analysisMarkdown: item.analysisMarkdown || null,
-        createdAt: new Date(publishedAt || Date.now()).getTime(),
-        updatedAt: Date.now(),
-      };
-
-      setInstagramContext(convexInstagramPost as any);
+      contextToSet = item.convexData;
+      console.log('🔍 [INSTAGRAM CARD] Setting full Convex context:', contextToSet);
+      setInstagramContext(contextToSet);
     }
-    
-    // Navigate to chat
-    router.push('/dashboard/chat');
+    // Wait a short moment to ensure context is set
+    setTimeout(() => {
+      setLoading(false);
+      console.log('🔍 [INSTAGRAM CARD] Navigating to /dashboard/chat with context:', contextToSet);
+      router.push('/dashboard/chat');
+    }, 200);
   };
 
   // Handle opening the detailed analytics modal
@@ -286,9 +250,19 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
               e.stopPropagation();
               handleDiscussContent();
             }}
+            disabled={loading}
           >
-            <MessageSquare className="w-4 h-4 inline mr-2" />
-            Discuss With Content
+            {loading ? (
+              <span className="flex items-center justify-center">
+                <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></span>
+                Loading...
+              </span>
+            ) : (
+              <>
+                <MessageSquare className="w-4 h-4 inline mr-2" />
+                Discuss With Content
+              </>
+            )}
           </button>
           
           <button
@@ -307,14 +281,14 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
               e.stopPropagation();
               handleRefresh();
             }}
-            disabled={loading}
+            disabled={refreshLoading}
             title={error ? `Refresh needed: ${error}` : "Refresh data"}
           >
             {/* Subtle error indicator dot */}
             {error && (
               <div className="absolute -top-1 -right-1 w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
             )}
-            {loading ? (
+            {refreshLoading ? (
               <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
