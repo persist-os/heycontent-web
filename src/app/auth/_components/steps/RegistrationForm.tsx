@@ -171,13 +171,13 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
         >
           <Logo className="h-12 mx-auto mb-4" />
         </motion.div>
-        <h1 className="text-2xl font-bold text-gray-900">Create your account</h1>
-        <p className="text-gray-600 mt-2">Join HeyContent today</p>
+        <h1 className="text-2xl font-bold text-foreground">Create your account</h1>
+        <p className="text-muted-foreground mt-2">Join HeyContent today</p>
       </div>
 
       <StepIndicator currentStep={currentStep} />
 
-      <form onSubmit={handleSubmit} className="space-y-6 bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-8">
+      <form onSubmit={handleSubmit} className="space-y-6 bg-background/80 backdrop-blur-sm shadow-xl rounded-2xl p-8 border border-border">
         {currentStep === 'referral' && (
           <ReferralStep
             referralCode={referralCode}
@@ -217,8 +217,8 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
         )}
 
         <div className="text-center">
-          <a href="/auth/login" className="text-sm text-gray-600 hover:text-gray-900">
-            Already have an account? <span className="text-blue-600 hover:text-blue-700 font-medium">Sign in</span>
+          <a href="/auth/login" className="text-sm text-muted-foreground hover:text-foreground">
+            Already have an account? <span className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">Sign in</span>
           </a>
         </div>
       </form>

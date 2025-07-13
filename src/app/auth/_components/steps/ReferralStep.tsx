@@ -30,7 +30,7 @@ export const ReferralStep: React.FC<ReferralStepProps> = ({
   return (
     <div className="space-y-6">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Referral Code (optional)</label>
+        <label className="block text-sm font-medium text-foreground mb-2">Referral Code (optional)</label>
         <div className="relative">
           <input
             type="text"
@@ -39,23 +39,23 @@ export const ReferralStep: React.FC<ReferralStepProps> = ({
               setSkipped(false);
               handleReferralCodeChange(e.target.value);
             }}
-            className={`w-full px-4 py-3 pl-11 bg-white text-black border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-gray-500 ${
-              referralCodeValid ? 'border-green-500' : 'border-gray-200'
+            className={`w-full px-4 py-3 pl-11 bg-background text-foreground border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-muted-foreground ${
+              referralCodeValid ? 'border-green-500' : 'border-border'
             }`}
             placeholder="Enter your referral code (optional)"
           />
-          <Key className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 transform -translate-y-1/2" />
+          <Key className="w-5 h-5 text-muted-foreground absolute left-4 top-1/2 transform -translate-y-1/2" />
         </div>
         {checkReferralCode === undefined && referralCode && (
-          <div className="text-sm text-gray-500 mt-1">Validating code...</div>
+          <div className="text-sm text-muted-foreground mt-1">Validating code...</div>
         )}
         {referralCodeValid && checkReferralCode?.valid && (
-          <div className="text-sm text-green-600 mt-1">
+          <div className="text-sm text-green-600 dark:text-green-400 mt-1">
             ✓ Valid referral code {checkReferralCode.referrerName && `from ${checkReferralCode.referrerName}`}
           </div>
         )}
         {!referralCodeValid && referralCode && checkReferralCode !== undefined && (
-          <div className="text-sm text-red-600 mt-1">✗ Invalid referral code</div>
+          <div className="text-sm text-red-600 dark:text-red-400 mt-1">✗ Invalid referral code</div>
         )}
       </div>
       <div className="flex gap-3">
@@ -70,7 +70,7 @@ export const ReferralStep: React.FC<ReferralStepProps> = ({
         <button
           type="button"
           onClick={handleSkip}
-          className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl hover:bg-gray-300 transition-colors font-medium"
+          className="flex-1 bg-secondary text-secondary-foreground py-3 rounded-xl hover:bg-secondary/80 transition-colors font-medium"
         >
           Skip
         </button>
