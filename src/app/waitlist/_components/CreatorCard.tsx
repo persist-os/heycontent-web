@@ -166,7 +166,7 @@ export const CreatorCard = ({
           <button
             title="Randomize"
           onClick={handleColorChange}
-            className="p-2 rounded-full bg-white shadow-lg hover:shadow-xl transition-all duration-300 group"
+            className="p-2 rounded-full bg-background shadow-lg hover:shadow-xl transition-all duration-300 group border border-border"
           style={{ color: currentScheme.primary }}
         >
           <Dice6 className="w-6 h-6 transform group-hover:rotate-180 transition-transform duration-500" />
@@ -175,7 +175,7 @@ export const CreatorCard = ({
             title="Share"
             ref={shareButtonRef}
             onClick={() => setShowShareOptions(!showShareOptions)}
-            className="p-2 rounded-full bg-white shadow-lg hover:shadow-xl transition-all duration-300 group"
+            className="p-2 rounded-full bg-background shadow-lg hover:shadow-xl transition-all duration-300 group border border-border"
             style={{ color: currentScheme.primary }}
           >
             <Share2 className="w-6 h-6 transform group-hover:scale-110 transition-transform duration-300" />
@@ -188,43 +188,43 @@ export const CreatorCard = ({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
-            className="absolute -right-48 top-4 bg-white rounded-xl shadow-xl p-3 z-50"
+            className="absolute -right-48 top-4 bg-background rounded-xl shadow-xl p-3 z-50 border border-border"
           >
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => handleShare('twitter')}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-muted transition-colors"
               >
                 <Twitter className="w-5 h-5 text-[#1DA1F2]" />
-                <span className="text-sm font-medium">Share on X</span>
+                <span className="text-sm font-medium text-foreground">Share on X</span>
               </button>
               <button
                 onClick={() => handleShare('linkedin')}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-muted transition-colors"
               >
                 <Linkedin className="w-5 h-5 text-[#0077B5]" />
-                <span className="text-sm font-medium">Share on LinkedIn</span>
+                <span className="text-sm font-medium text-foreground">Share on LinkedIn</span>
               </button>
               <button
                 onClick={() => handleShare('whatsapp')}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-muted transition-colors"
               >
                 <MessageCircle className="w-5 h-5 text-[#25D366]" />
-                <span className="text-sm font-medium">Share on WhatsApp</span>
+                <span className="text-sm font-medium text-foreground">Share on WhatsApp</span>
               </button>
               <button
                 onClick={() => handleShare('instagram')}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-muted transition-colors"
               >
                 <Instagram className="w-5 h-5 text-[#E4405F]" />
-                <span className="text-sm font-medium">Share on Instagram</span>
+                <span className="text-sm font-medium text-foreground">Share on Instagram</span>
               </button>
               <button
                 onClick={() => handleShare('general')}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-muted transition-colors"
               >
-                <Share2 className="w-5 h-5 text-gray-600" />
-                <span className="text-sm font-medium">Copy Link</span>
+                <Share2 className="w-5 h-5 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground">Copy Link</span>
               </button>
             </div>
           </motion.div>
@@ -246,7 +246,10 @@ export const CreatorCard = ({
               setIsFlipped(!isFlipped);
             }}
           >
-            <div className={`absolute inset-0 aspect-[3/4] rounded-2xl overflow-hidden shadow-[0_8px_16px_rgba(0,0,0,0.1)] transition-all duration-500 transform-gpu ${isFlipped ? 'rotate-y-180' : ''}`}>
+            <div 
+              className={`absolute inset-0 aspect-[3/4] rounded-2xl overflow-hidden shadow-[0_8px_16px_rgba(0,0,0,0.1)] transition-all duration-500 transform-gpu border-2 ${isFlipped ? 'rotate-y-180' : ''}`}
+              style={{ borderColor: currentScheme.primary }}
+            >
               {/* Front of card */}
               <div className={`absolute inset-0 backface-hidden ${isFlipped ? 'opacity-0' : 'opacity-100'}`}>
                 {/* Logo section at the top */}
@@ -311,7 +314,7 @@ export const CreatorCard = ({
                       initial={{ opacity: 1 }}
                       animate={{ opacity: showTapHint ? 1 : 0 }}
                       transition={{ duration: 0.5 }}
-                      className="text-sm text-gray-500 mt-4"
+                      className="text-sm text-muted-foreground mt-4"
                     >
                       Tap to flip
                     </motion.p>
@@ -323,19 +326,19 @@ export const CreatorCard = ({
               <div className={`absolute inset-0 backface-hidden rotate-y-180 ${isFlipped ? 'opacity-100' : 'opacity-0'}`}>
                 <div className="h-full flex flex-col items-center justify-center p-8 text-center">
                   <h3 className="text-2xl font-bold mb-6" style={{ color: currentScheme.primary }}>Your Share Message</h3>
-                  <div className="mt-4 p-6 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 relative">
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-3 py-1 rounded-full text-sm font-medium" style={{ color: currentScheme.primary }}>
+                  <div className="mt-4 p-6 rounded-xl bg-background/10 backdrop-blur-sm border border-border relative">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-background px-3 py-1 rounded-full text-sm font-medium border border-border" style={{ color: currentScheme.primary }}>
                       Preview
                     </div>
                     <p className="text-lg font-medium" style={{ color: currentScheme.primary }}>
                       {`🚀 I just joined the @HeyContent beta program as a ${currentScheme.title}! Getting early access to cutting-edge creator tools and features. Who's joining me in the beta? #BetaTester #CreatorTools`}
                     </p>
                   </div>
-                  <div className="mt-6 flex items-center gap-2 text-gray-600">
+                  <div className="mt-6 flex items-center gap-2 text-muted-foreground">
                     <Share2 className="w-5 h-5" />
                     <p>Click the share icon above to post this message</p>
                   </div>
-                  <p className="mt-2 text-sm text-gray-500">Try different colors to customize your message!</p>
+                  <p className="mt-2 text-sm text-muted-foreground">Try different colors to customize your message!</p>
                 </div>
               </div>
             </div>

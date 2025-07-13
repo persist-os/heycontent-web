@@ -36,21 +36,21 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
   return (
     <div className="space-y-6">
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+        <label htmlFor="password" className="block text-sm font-medium text-foreground mb-2">Password</label>
         <div className="relative">
           <input
             id="password"
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={e => setPassword(e.target.value)}
-            className="w-full px-4 py-3 pl-11 pr-11 bg-white text-black border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-gray-500"
+            className="w-full px-4 py-3 pl-11 pr-11 bg-background text-foreground border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-muted-foreground"
             required
             placeholder="Create a password"
           />
-          <Key className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 transform -translate-y-1/2" />
+          <Key className="w-5 h-5 text-muted-foreground absolute left-4 top-1/2 transform -translate-y-1/2" />
           <button
             type="button"
-            className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            className="absolute right-4 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
             onClick={() => setShowPassword(!showPassword)}
             tabIndex={-1}
           >
@@ -62,7 +62,7 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
           <button
             type="button"
             onClick={() => setShowPasswordRequirements(!showPasswordRequirements)}
-            className="flex items-center text-sm text-gray-600 hover:text-gray-900 transition-colors"
+            className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <span className="mr-1">Password requirements</span>
             <svg
@@ -76,25 +76,25 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
           </button>
 
           {showPasswordRequirements && (
-            <div className="mt-2 p-3 bg-gray-50 rounded-xl border border-gray-200">
+            <div className="mt-2 p-3 bg-muted rounded-xl border border-border">
               <ul className="space-y-1.5 text-sm">
-                <li className={`flex items-center ${passwordValid.upper ? 'text-green-600' : 'text-gray-500'}`}>
+                <li className={`flex items-center ${passwordValid.upper ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
                   <span className="mr-2">{passwordValid.upper ? '✓' : '•'}</span>
                   At least one uppercase letter
                 </li>
-                <li className={`flex items-center ${passwordValid.lower ? 'text-green-600' : 'text-gray-500'}`}>
+                <li className={`flex items-center ${passwordValid.lower ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
                   <span className="mr-2">{passwordValid.lower ? '✓' : '•'}</span>
                   At least one lowercase letter
                 </li>
-                <li className={`flex items-center ${passwordValid.number ? 'text-green-600' : 'text-gray-500'}`}>
+                <li className={`flex items-center ${passwordValid.number ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
                   <span className="mr-2">{passwordValid.number ? '✓' : '•'}</span>
                   At least one number
                 </li>
-                <li className={`flex items-center ${passwordValid.special ? 'text-green-600' : 'text-gray-500'}`}>
+                <li className={`flex items-center ${passwordValid.special ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
                   <span className="mr-2">{passwordValid.special ? '✓' : '•'}</span>
                   At least one special character
                 </li>
-                <li className={`flex items-center ${passwordValid.length ? 'text-green-600' : 'text-gray-500'}`}>
+                <li className={`flex items-center ${passwordValid.length ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
                   <span className="mr-2">{passwordValid.length ? '✓' : '•'}</span>
                   At least 8 characters
                 </li>
@@ -105,7 +105,7 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
       </div>
 
       {displayError && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl text-red-600 dark:text-red-200 text-sm">
           {displayError}
         </div>
       )}
@@ -114,7 +114,7 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
         <button
           type="button"
           onClick={onPrevious}
-          className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl hover:bg-gray-200 transition-colors font-medium flex items-center justify-center"
+          className="flex-1 bg-secondary text-secondary-foreground py-3 rounded-xl hover:bg-secondary/80 transition-colors font-medium flex items-center justify-center"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back

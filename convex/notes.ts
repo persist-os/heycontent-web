@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { api } from "./_generated/api";
 import { error } from "console";
 
 // Type definition for note types and reference types
@@ -31,18 +32,13 @@ export const updateNote = mutation({
     noteId: v.optional(v.id("notes")),
     userId: v.string(),
     updates: v.object({
-      content: v.optional(v.string()),
       title: v.optional(v.string()),
-      analysis: v.optional(v.string()),
-      important: v.optional(v.boolean()),
+      content: v.optional(v.string()),
       type: v.optional(noteType),
+      important: v.optional(v.boolean()),
       tags: v.optional(v.array(v.string())),
       platform: v.optional(v.string()),
-      postType: v.optional(v.string()),
-      goal: v.optional(v.string()),
-      fields: v.optional(v.any()),
-      titleGenerated: v.optional(v.boolean()),
-      typeGenerated: v.optional(v.boolean()),
+      analysis: v.optional(v.string()),
       images: v.optional(v.array(v.object({
         url: v.string(),
         filename: v.string(),
@@ -53,7 +49,9 @@ export const updateNote = mutation({
         width: v.optional(v.number()),
         height: v.optional(v.number())
       }))),
-    })
+      titleGenerated: v.optional(v.boolean()),
+      typeGenerated: v.optional(v.boolean()),
+    }),
   },
   handler: async (ctx, args) => {
     const { noteId, userId, updates } = args;
@@ -110,32 +108,81 @@ export const updateNote = mutation({
       };
       const newNoteId = await ctx.db.insert("notes", newNoteData);
       console.log('✅ [Convex updateNote] New note created successfully:', newNoteId);
+
+      // Automatically create embedding for the new note
+      try {
+        const searchableContent = `${updates.title || ""}\n\n${updates.content || ""}`;
+        
+        await ctx.scheduler.runAfter(0, api.vectorSearch.autoCreateEmbedding, {
+          userId,
+          contentId: newNoteId,
+          contentType: "note" as const,
+          title: updates.title || "Untitled Note",
+          content: searchableContent,
+          triggerType: "content_update" as const,
+          platform: "notes" as const,
+        });
+      } catch (error) {
+        console.error('❌ [AUTO EMBEDDING] Failed to schedule note embedding:', error);
+      }
+
       return await ctx.db.get(newNoteId);
     }
 
-    // UPDATE existing note if ID is provided
-    console.log('🔄 [Convex updateNote] Starting note update for ID:', noteId);
-    const note = await ctx.db.get(noteId);
-
-    if (!note) {
-      console.error('❌ [Convex updateNote] Note not found for update:', noteId);
+    // UPDATE existing note
+    console.log('🔄 [Convex updateNote] Updating existing note:', noteId);
+    
+    // Get the existing note to check if it exists and user has access
+    const existingNote = await ctx.db.get(noteId);
+    if (!existingNote) {
       throw new Error("Note not found");
     }
-    if (note.userId !== userId) {
-      console.error('🚫 [Convex updateNote] Unauthorized update attempt:', { noteId, requestUserId: userId });
-      throw new Error("Unauthorized: You do not own this note.");
+    if (existingNote.userId !== userId) {
+      throw new Error("Access denied - note belongs to different user");
     }
 
-    const updateObj = { ...updates, updatedAt: Date.now() };
-    
-    // DEBUG: Log the exact object being patched
-    console.log('📝 [Convex updateNote] Patching note with:', updateObj);
-    
-    await ctx.db.patch(noteId, updateObj);
-    const updatedNote = await ctx.db.get(noteId);
+    // Prepare the update data
+    const updateData: any = {
+      updatedAt: Date.now(),
+    };
 
-    console.log('✅ [Convex updateNote] Note updated successfully:', updatedNote);
-    return updatedNote;
+    // Add each field if it's provided in the updates
+    if (updates.title !== undefined) updateData.title = updates.title;
+    if (updates.content !== undefined) updateData.content = updates.content;
+    if (updates.type !== undefined) updateData.type = updates.type;
+    if (updates.important !== undefined) updateData.important = updates.important;
+    if (updates.tags !== undefined) updateData.tags = updates.tags;
+    if (updates.platform !== undefined) updateData.platform = updates.platform;
+    if (updates.analysis !== undefined) updateData.analysis = updates.analysis;
+    if (updates.images !== undefined) updateData.images = updates.images;
+    if (updates.titleGenerated !== undefined) updateData.titleGenerated = updates.titleGenerated;
+    if (updates.typeGenerated !== undefined) updateData.typeGenerated = updates.typeGenerated;
+
+    // Apply the update
+    await ctx.db.patch(noteId, updateData);
+    console.log('✅ [Convex updateNote] Note updated successfully');
+
+    // Automatically update embedding for the note
+    try {
+      const updatedNote = await ctx.db.get(noteId);
+      if (updatedNote) {
+        const searchableContent = `${updatedNote.title}\n\n${updatedNote.content || ""}`;
+        
+        await ctx.scheduler.runAfter(0, api.vectorSearch.autoCreateEmbedding, {
+          userId,
+          contentId: noteId,
+          contentType: "note" as const,
+          title: updatedNote.title,
+          content: searchableContent,
+          triggerType: "content_update" as const,
+          platform: "notes" as const,
+        });
+      }
+    } catch (error) {
+      console.error('❌ [AUTO EMBEDDING] Failed to schedule note embedding update:', error);
+    }
+
+    return await ctx.db.get(noteId);
   },
 });
 

@@ -43,7 +43,8 @@ const ChatContextBox: React.FC<ChatContextBoxProps> = ({
 
   
   return (
-    <div className="shrink-0">
+    <div className="mb-4 flex flex-col">
+      {/* Only render ContextBox for all context, no extra title or action item box */}
       <ContextBox 
         context={enrichedContext} 
         onRemove={onRemove}

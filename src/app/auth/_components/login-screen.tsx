@@ -90,27 +90,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#F8F0F9] to-blue-50 p-4 light-mode-forced" style={{
-      '--background': '0 0% 100%', // Force white background
-      '--foreground': '240 10% 3.9%', // Force dark text
-      '--card': '0 0% 100%',
-      '--card-foreground': '240 10% 3.9%',
-      '--popover': '0 0% 100%',
-      '--popover-foreground': '240 10% 3.9%',
-      '--primary': '55 95% 58%', // Keep HeyContent yellow
-      '--primary-foreground': '0 0% 0%',
-      '--secondary': '240 4.8% 95.9%',
-      '--secondary-foreground': '240 5.9% 10%',
-      '--muted': '240 4.8% 95.9%',
-      '--muted-foreground': '240 3.8% 46.1%',
-      '--accent': '55 95% 58%',
-      '--accent-foreground': '0 0% 0%',
-      '--destructive': '0 84.2% 60.2%',
-      '--destructive-foreground': '0 0% 98%',
-      '--border': '240 5.9% 90%',
-      '--input': '240 5.9% 90%',
-      '--ring': '55 95% 58%',
-    } as React.CSSProperties}>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background/80 via-muted/20 to-background/80 p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <motion.div
@@ -126,53 +106,51 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
           >
             <Logo className="h-12 mx-auto mb-4" />
           </motion.div>
-          <h1 className="text-2xl font-bold text-gray-900">Welcome back</h1>
-          <p className="text-gray-600 mt-2">Sign in to your account</p>
+          <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
+          <p className="text-muted-foreground mt-2">Sign in to your account</p>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-6 bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-8">
+        <form onSubmit={handleSubmit} className="space-y-6 bg-background/80 backdrop-blur-sm shadow-xl rounded-2xl p-8 border border-border">
           {reason === 'session_expired' && (
-            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-800 text-sm">
+            <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl text-yellow-800 dark:text-yellow-200 text-sm">
               Your session has expired. Please sign in again.
             </div>
           )}
           {reason === 'logged_in_elsewhere' && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 text-sm">
+            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl text-blue-800 dark:text-blue-200 text-sm">
               You've been logged out because you signed in from another device. Please sign in again.
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+            <label className="block text-sm font-medium text-foreground mb-2">Email</label>
             <div className="relative">
               <input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="w-full px-4 py-3 pl-11 bg-white text-black border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-gray-500"
+                className="w-full px-4 py-3 pl-11 bg-background text-foreground border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-muted-foreground"
                 required
                 placeholder="Enter your email"
                 title="Email address"
-                style={{ background: '#fff', color: '#111827', borderColor: '#E5E7EB' }}
               />
-              <Mail className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 transform -translate-y-1/2" />
+              <Mail className="w-5 h-5 text-muted-foreground absolute left-4 top-1/2 transform -translate-y-1/2" />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+            <label className="block text-sm font-medium text-foreground mb-2">Password</label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full px-4 py-3 pl-11 pr-11 bg-white text-black border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-gray-500"
+                className="w-full px-4 py-3 pl-11 pr-11 bg-background text-foreground border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-muted-foreground"
                 required
                 placeholder="Enter your password"
                 title="Password"
-                style={{ background: '#fff', color: '#111827', borderColor: '#E5E7EB' }}
               />
-              <Lock className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 transform -translate-y-1/2" />
+              <Lock className="w-5 h-5 text-muted-foreground absolute left-4 top-1/2 transform -translate-y-1/2" />
               <button
                 type="button"
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setShowPassword(!showPassword)}
                 tabIndex={-1}
               >
@@ -181,7 +159,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
             </div>
           </div>
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl text-red-600 dark:text-red-200 text-sm">
               {error}
             </div>
           )}
@@ -200,19 +178,19 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
             </div>
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200"></div>
+                <div className="w-full border-t border-border"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">or</span>
+                <span className="px-2 bg-background text-muted-foreground">or</span>
               </div>
             </div>
             <div className="text-center">
-              <a href="/auth/register" className="text-sm text-gray-600 hover:text-gray-900">
-                Don't have an account? <span className="text-blue-600 hover:text-blue-700 font-medium">Sign up</span>
+              <a href="/auth/register" className="text-sm text-muted-foreground hover:text-foreground">
+                Don't have an account? <span className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">Sign up</span>
               </a>
             </div>
-            <div className="pt-4 border-t border-gray-200">
-              <p className="text-sm text-gray-600 text-center mb-3">
+            <div className="pt-4 border-t border-border">
+              <p className="text-sm text-muted-foreground text-center mb-3">
                 Want to be a beta tester?<br />
                 Get early access to creator tools and mobile features below.
               </p>

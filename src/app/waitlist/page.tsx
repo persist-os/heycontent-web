@@ -43,40 +43,7 @@ export default function WaitlistPage() {
   };
 
   return (
-    <div
-      className="min-h-screen bg-gradient-to-b from-[#F8F0F9] to-blue-50 light-mode-forced"
-      style={{
-        '--background': '0 0% 100%',
-        '--foreground': '240 10% 3.9%',
-        '--card': '0 0% 100%',
-        '--card-foreground': '240 10% 3.9%',
-        '--popover': '0 0% 100%',
-        '--popover-foreground': '240 10% 3.9%',
-        '--primary': '55 95% 58%',
-        '--primary-foreground': '0 0% 0%',
-        '--secondary': '240 4.8% 95.9%',
-        '--secondary-foreground': '240 5.9% 10%',
-        '--muted': '240 4.8% 95.9%',
-        '--muted-foreground': '240 3.8% 46.1%',
-        '--accent': '55 95% 58%',
-        '--accent-foreground': '0 0% 0%',
-        '--destructive': '0 84.2% 60.2%',
-        '--destructive-foreground': '0 0% 98%',
-        '--border': '240 5.9% 90%',
-        '--input': '0 0% 100%',
-        '--ring': '55 95% 58%',
-      } as React.CSSProperties}
-    >
-      <style>{`
-        .light-mode-forced input,
-        .light-mode-forced input[type="text"],
-        .light-mode-forced input[type="email"],
-        .light-mode-forced input[type="password"],
-        .light-mode-forced textarea {
-          background: #fff !important;
-          color: #222 !important;
-        }
-      `}</style>
+    <div className="min-h-screen bg-gradient-to-b from-background/80 via-muted/20 to-background/80">
       <div className="max-w-4xl mx-auto px-4 py-8">
         <AnimatePresence mode="wait">
           {!name ? (

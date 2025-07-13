@@ -514,325 +514,81 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
   };
 
   try {
-    // Get all conversations
-    const conversations = await convex.query(api.chatQueries.getHistory, { userId, limit: 100 });
+    // Use the new automatic embedding generation system
+    console.log('🚀 [EMBEDDING SETUP] Using new automatic embedding system');
     
-    for (const conv of conversations) {
-      results.conversations.processed++;
+    const embeddingResult = await convex.action(api.vectorSearch.autoGenerateEmbeddings, {
+      userId,
+      contentType: "all",
+      updateType: "manual_update"
+    });
+
+    console.log('🚀 [EMBEDDING SETUP] Embedding generation result:', embeddingResult);
+
+    if (embeddingResult.success) {
+      // Get updated embedding counts
+      const embeddingInfo = await checkUserEmbeddings(userId);
       
-      if (!conv || !conv._id || !conv.title || !conv.messages || !Array.isArray(conv.messages)) {
-        console.warn(`⚠️ [EMBEDDING SETUP] Skipping invalid conversation:`, {
-          hasConv: !!conv,
-          hasId: !!(conv && conv._id),
-          hasTitle: !!(conv && conv.title),
-          hasMessages: !!(conv && conv.messages),
-          isArrayMessages: !!(conv && conv.messages && Array.isArray(conv.messages))
-        });
-        results.conversations.skipped++;
-        continue;
-      }
-
-      if (conv.messages.length === 0) {
-        console.warn(`⚠️ [EMBEDDING SETUP] Skipping conversation "${conv.title}" - no messages`);
-        results.conversations.skipped++;
-        continue;
-      }
-
-      try {
-        const messageContent = conv.messages
-          .filter((m: any) => m && typeof m.content === 'string' && m.content.trim().length > 0)
-          .map((m: any) => `${m.role || 'unknown'}: ${m.content}`)
-          .join('\n');
-
-        if (messageContent.trim().length === 0) {
-          console.warn(`⚠️ [EMBEDDING SETUP] Skipping conversation "${conv.title}" - no valid message content`);
-          results.conversations.skipped++;
-          continue;
-        }
-
-        const searchableContent = `${conv.title}\n\n${messageContent}`;
-        
-        if (searchableContent.trim().length < 10) {
-          console.warn(`⚠️ [EMBEDDING SETUP] Skipping conversation "${conv.title}" - content too short`);
-          results.conversations.skipped++;
-          continue;
-        }
-
-        await convex.action(api.vectorSearch.createEmbedding, {
-          userId,
-          contentId: conv._id,
-          contentType: "conversation" as const,
-          title: conv.title,
-          content: searchableContent,
-        });
-        
-        results.conversations.succeeded++;
-        
-      } catch (error: any) {
-        results.conversations.failed++;
-        const errorMsg = `Failed to embed conversation "${conv.title}": ${error.message}`;
-        console.error('❌ [EMBEDDING SETUP]', errorMsg);
-        results.errors.push(errorMsg);
-        
-        continue;
-      }
+      // Use the detailed stats returned from the backend
+      const detailedStats = embeddingResult.detailedStats || {
+        conversations: { processed: 0, succeeded: 0, failed: 0 },
+        notes: { processed: 0, succeeded: 0, failed: 0 },
+        instagramPosts: { processed: 0, succeeded: 0, failed: 0 },
+        youtubeVideos: { processed: 0, succeeded: 0, failed: 0 },
+        gmailThreads: { processed: 0, succeeded: 0, failed: 0 }
+      };
+      
+      const totalProcessed = embeddingResult.itemsProcessed || 0;
+      const totalSucceeded = embeddingResult.itemsSucceeded || 0;
+      const totalFailed = embeddingResult.itemsFailed || 0;
+      
+      // Return actual results with detailed breakdown from backend
+      return {
+        conversations: { 
+          processed: detailedStats.conversations.processed, 
+          succeeded: detailedStats.conversations.succeeded, 
+          failed: detailedStats.conversations.failed, 
+          skipped: 0 
+        },
+        notes: { 
+          processed: detailedStats.notes.processed, 
+          succeeded: detailedStats.notes.succeeded, 
+          failed: detailedStats.notes.failed, 
+          skipped: 0 
+        },
+        instagramPosts: { 
+          processed: detailedStats.instagramPosts.processed, 
+          succeeded: detailedStats.instagramPosts.succeeded, 
+          failed: detailedStats.instagramPosts.failed, 
+          skipped: 0 
+        },
+        youtubeVideos: { 
+          processed: detailedStats.youtubeVideos.processed, 
+          succeeded: detailedStats.youtubeVideos.succeeded, 
+          failed: detailedStats.youtubeVideos.failed, 
+          skipped: 0 
+        },
+        gmailThreads: { 
+          processed: detailedStats.gmailThreads.processed, 
+          succeeded: detailedStats.gmailThreads.succeeded, 
+          failed: detailedStats.gmailThreads.failed, 
+          skipped: 0 
+        },
+        errors: [],
+        totalEmbeddings: embeddingInfo.count,
+        itemsProcessed: totalProcessed,
+        itemsSucceeded: totalSucceeded,
+        itemsFailed: totalFailed,
+        // Add summary for better user feedback
+        summary: `Processed ${totalProcessed} items total (${totalSucceeded} succeeded, ${totalFailed} failed)`
+      };
+    } else {
+      // Handle error case
+      console.error('❌ [EMBEDDING SETUP] Embedding generation failed:', embeddingResult.error);
+      results.errors.push(`Embedding generation failed: ${embeddingResult.error}`);
+      return results;
     }
 
-    // Get all notes
-    const notes = await convex.query(api.notes.getNotesByUser, { userId });
-    
-    for (const note of notes) {
-      results.notes.processed++;
-      
-      if (!note || !note._id || !note.title) {
-        console.warn(`⚠️ [EMBEDDING SETUP] Skipping invalid note:`, {
-          hasNote: !!note,
-          hasId: !!(note && note._id),
-          hasTitle: !!(note && note.title)
-        });
-        results.notes.skipped++;
-        continue;
-      }
-
-      try {
-        const searchableContent = `${note.title}\n\n${note.content || ''}`;
-        
-        if (searchableContent.trim().length < 5) {
-          console.warn(`⚠️ [EMBEDDING SETUP] Skipping note "${note.title}" - content too short`);
-          results.notes.skipped++;
-          continue;
-        }
-        
-        await convex.action(api.vectorSearch.createEmbedding, {
-          userId,
-          contentId: note._id,
-          contentType: "note" as const,
-          title: note.title,
-          content: searchableContent,
-        });
-        
-        results.notes.succeeded++;
-        
-      } catch (error: any) {
-        results.notes.failed++;
-        const errorMsg = `Failed to embed note "${note.title}": ${error.message}`;
-        console.error('❌ [EMBEDDING SETUP]', errorMsg);
-        results.errors.push(errorMsg);
-        
-        continue;
-      }
-    }
-
-    // Get all Instagram posts
-    try {
-      const instagramPosts = await convex.query(api.instagramQueries.getAllInstagramPosts, { userId });
-      
-      for (const post of instagramPosts) {
-        results.instagramPosts.processed++;
-        
-        if (!post || !post._id || !post.data || !post.data.id) {
-          console.warn(`⚠️ [EMBEDDING SETUP] Skipping invalid Instagram post:`, {
-            hasPost: !!post,
-            hasId: !!(post && post._id),
-            hasData: !!(post && post.data),
-            hasDataId: !!(post && post.data && post.data.id)
-          });
-          results.instagramPosts.skipped++;
-          continue;
-        }
-
-        try {
-          const caption = post.data.caption || '';
-          const username = post.data.username || 'Unknown User';
-          const mediaType = (post.data as any).media_type || 'Unknown';
-          const likeCount = post.data.like_count || 0;
-          const commentsCount = post.data.comments_count || 0;
-          const timestamp = post.data.timestamp ? new Date(post.data.timestamp).toLocaleDateString() : 'Unknown date';
-          
-          const hashtags = caption.match(/#[a-zA-Z0-9_]+/g) || [];
-          const hashtagText = hashtags.length > 0 ? `\n\nHashtags: ${hashtags.join(' ')}` : '';
-          
-          const mentions = caption.match(/@[a-zA-Z0-9_.]+/g) || [];
-          const mentionText = mentions.length > 0 ? `\n\nMentions: ${mentions.join(' ')}` : '';
-          
-          const engagementText = `\n\nEngagement: ${likeCount} likes, ${commentsCount} comments`;
-          
-          const title = `${username} - ${mediaType} Post (${timestamp})`;
-          
-          const searchableContent = [
-            `Instagram Post by ${username}`,
-            `Posted: ${timestamp}`,
-            `Media Type: ${mediaType}`,
-            `Caption: ${caption}`,
-            hashtagText,
-            mentionText,
-            engagementText,
-            `\n\nContext: This is an Instagram ${mediaType.toLowerCase()} post by ${username} with ${likeCount} likes and ${commentsCount} comments.`
-          ].filter(Boolean).join('\n');
-          
-          if (searchableContent.trim().length < 20) {
-            console.warn(`⚠️ [EMBEDDING SETUP] Skipping Instagram post "${post.data.id}" - content too short`);
-            results.instagramPosts.skipped++;
-            continue;
-          }
-          
-          await convex.action(api.vectorSearch.createEmbedding, {
-            userId,
-            contentId: post._id,
-            contentType: "instagram_post" as const,
-            title: title,
-            content: searchableContent,
-          });
-          
-          results.instagramPosts.succeeded++;
-          
-        } catch (error: any) {
-          results.instagramPosts.failed++;
-          const errorMsg = `Failed to embed Instagram post "${post.data.id}": ${error.message}`;
-          console.error('❌ [EMBEDDING SETUP]', errorMsg);
-          results.errors.push(errorMsg);
-          
-          continue;
-        }
-      }
-    } catch (error: any) {
-      console.error('❌ [EMBEDDING SETUP] Error fetching Instagram posts:', error);
-      results.errors.push(`Failed to fetch Instagram posts: ${error.message}`);
-    }
-
-    // Get all YouTube videos
-    try {
-      const youtubeVideos = await convex.query(api.youtubeQueries.getYouTubeVideos, { userId });
-      
-      for (const video of youtubeVideos.videos) {
-        results.youtubeVideos.processed++;
-        
-        if (!video || !video._id || !video.videoId) {
-          console.warn(`⚠️ [EMBEDDING SETUP] Skipping invalid YouTube video:`, {
-            hasVideo: !!video,
-            hasId: !!(video && video._id),
-            hasVideoId: !!(video && video.videoId)
-          });
-          results.youtubeVideos.skipped++;
-          continue;
-        }
-
-        try {
-          const title = video.snippet?.title || `YouTube Video ${video.videoId}`;
-          const description = video.snippet?.description || '';
-          const channelTitle = video.snippet?.channel?.title || 'Unknown Channel';
-          const publishedAt = video.snippet?.published_at || '';
-          
-          let analysisText = '';
-          if (video.analysisMarkdown) {
-            analysisText = `\n\nAnalysis: ${video.analysisMarkdown}`;
-          } else if (video.analysis && typeof video.analysis === 'object') {
-            analysisText = `\n\nAnalysis: ${JSON.stringify(video.analysis)}`;
-          }
-          
-          const searchableContent = `YouTube Video: ${title}\n\nChannel: ${channelTitle}\n\nDescription: ${description}${analysisText}`;
-          
-          if (searchableContent.trim().length < 10) {
-            console.warn(`⚠️ [EMBEDDING SETUP] Skipping YouTube video "${title}" - content too short`);
-            results.youtubeVideos.skipped++;
-            continue;
-          }
-          
-          await convex.action(api.vectorSearch.createEmbedding, {
-            userId,
-            contentId: video._id,
-            contentType: "youtube_video" as const,
-            title: title,
-            content: searchableContent,
-          });
-          
-          results.youtubeVideos.succeeded++;
-          
-        } catch (error: any) {
-          results.youtubeVideos.failed++;
-          const errorMsg = `Failed to embed YouTube video "${video.videoId}": ${error.message}`;
-          console.error('❌ [EMBEDDING SETUP]', errorMsg);
-          results.errors.push(errorMsg);
-          
-          continue;
-        }
-      }
-    } catch (error: any) {
-      console.error('❌ [EMBEDDING SETUP] Error fetching YouTube videos:', error);
-      results.errors.push(`Failed to fetch YouTube videos: ${error.message}`);
-    }
-
-    // Get all Gmail threads
-    try {
-      const gmailThreads = await convex.query(api.gmailQueries.getRecentGmailThreads, { userId, limit: 100 });
-      
-      for (const thread of gmailThreads) {
-        results.gmailThreads.processed++;
-        
-        if (!thread || !thread._id || !thread.threadId) {
-          console.warn(`⚠️ [EMBEDDING SETUP] Skipping invalid Gmail thread:`, {
-            hasThread: !!thread,
-            hasId: !!(thread && thread._id),
-            hasThreadId: !!(thread && thread.threadId)
-          });
-          results.gmailThreads.skipped++;
-          continue;
-        }
-
-        try {
-          const subject = thread.subject || thread.data?.subject || 'No Subject';
-          const from = thread.from || thread.data?.from || 'Unknown Sender';
-          const snippet = thread.snippet || thread.data?.snippet || '';
-          const messageCount = thread.message_count || thread.data?.messageCount || 1;
-          
-          let messageDetails = '';
-          if (thread.messages && Array.isArray(thread.messages) && thread.messages.length > 0) {
-            messageDetails = '\n\nMessages:\n' + thread.messages
-              .slice(0, 3)
-              .map((msg, index) => `${index + 1}. From: ${msg.from || 'Unknown'}\n   Subject: ${msg.subject || subject}\n   Content: ${(msg.snippet || '').substring(0, 200)}`)
-              .join('\n');
-          }
-          
-          let analysisText = '';
-          if (thread.analysis && typeof thread.analysis === 'object') {
-            analysisText = `\n\nAnalysis: ${JSON.stringify(thread.analysis)}`;
-          }
-          
-          const title = `Email Thread: ${subject}`;
-          const searchableContent = `Gmail Thread: ${subject}\n\nFrom: ${from}\n\nSnippet: ${snippet}\n\nMessage Count: ${messageCount}${messageDetails}${analysisText}`;
-          
-          if (searchableContent.trim().length < 20) {
-            console.warn(`⚠️ [EMBEDDING SETUP] Skipping Gmail thread "${subject}" - content too short`);
-            results.gmailThreads.skipped++;
-            continue;
-          }
-          
-          await convex.action(api.vectorSearch.createEmbedding, {
-            userId,
-            contentId: thread._id,
-            contentType: "gmail_thread" as const,
-            title: title,
-            content: searchableContent,
-          });
-          
-          results.gmailThreads.succeeded++;
-          
-        } catch (error: any) {
-          results.gmailThreads.failed++;
-          const errorMsg = `Failed to embed Gmail thread "${thread.threadId}": ${error.message}`;
-          console.error('❌ [EMBEDDING SETUP]', errorMsg);
-          results.errors.push(errorMsg);
-          
-          continue;
-        }
-      }
-    } catch (error: any) {
-      console.error('❌ [EMBEDDING SETUP] Error fetching Gmail threads:', error);
-      results.errors.push(`Failed to fetch Gmail threads: ${error.message}`);
-    }
-
-    return results;
-    
   } catch (error: any) {
     console.error('💥 [EMBEDDING SETUP] Fatal error:', error);
     results.errors.push(`Fatal error: ${error.message}`);
@@ -875,7 +631,7 @@ async function searchRelevantContent(
     try {
       console.log('🎯 [FRONTEND DEBUG] Using standard hybrid search (enhanced search temporarily disabled)...');
       
-      const vectorResults = await convex.action(api.vectorSearch.hybridSearchContent, {
+      const vectorResults = await convex.action(api.vectorSearch.hybridSearchContentWithQuotas, {
         userId,
         query,
         limit: searchLimit,
@@ -1852,7 +1608,8 @@ export async function sendChatMessage(
   // Include content context if available
   if (contentContext) {
     // Debug logging for content context
-    console.log('🔍 [CONTENT CONTEXT DEBUG] Full content context:', {
+    console.group('🔍 [CONTENT CONTEXT DEBUG] Full content context');
+    console.log('Context structure:', {
       platform: contentContext.platform,
       contentId: contentContext.contentId,
       title: contentContext.title,
@@ -1860,8 +1617,28 @@ export async function sendChatMessage(
       hasConvexData: !!contentContext.convexData,
       convexDataKeys: contentContext.convexData ? Object.keys(contentContext.convexData) : 'none',
       contentKeys: contentContext.content ? Object.keys(contentContext.content) : 'none',
-      fullContext: contentContext
+      hasFullInsight: !!contentContext.fullInsight,
+      hasActionStep: !!contentContext.actionStep,
+      fullInsightKeys: contentContext.fullInsight ? Object.keys(contentContext.fullInsight) : 'none',
+      actionStep: contentContext.actionStep,
+      originalPlatform: contentContext.originalPlatform,
+      additionalContext: contentContext.additionalContext,
     });
+    
+    if (contentContext.fullInsight) {
+      console.log('FullInsight structure:', {
+        hasTitle: !!contentContext.fullInsight.title,
+        hasImpact: !!contentContext.fullInsight.impact,
+        whyNowCount: contentContext.fullInsight.whyNow?.length || 0,
+        actionStepsCount: contentContext.fullInsight.actionSteps?.length || 0,
+        hasExpectedOutcome: !!contentContext.fullInsight.expectedOutcome,
+        sourceDetailsCount: contentContext.fullInsight.sourceDetails?.length || 0,
+        relatedItemsCount: contentContext.fullInsight.relatedItems?.length || 0,
+      });
+    }
+    
+    console.log('Full content context:', contentContext);
+    console.groupEnd();
 
     // Handle both old ContentContext format and new Zustand store format
     if (contentContext.convexData) {
@@ -1877,7 +1654,12 @@ export async function sendChatMessage(
         published_at: contentContext.publishedAt,
         metrics: contentContext.metrics,
         content: contentContext.content,
-        convex_data: convexData
+        convex_data: convexData,
+        // Include AI insights specific fields
+        fullInsight: contentContext.fullInsight,
+        actionStep: contentContext.actionStep,
+        originalPlatform: contentContext.originalPlatform,
+        additionalContext: contentContext.additionalContext
       };
     } else {
       // Legacy ContentContext format
@@ -1889,7 +1671,12 @@ export async function sendChatMessage(
         thumbnail_url: contentContext.thumbnailUrl,
         published_at: contentContext.publishedAt,
         metrics: contentContext.metrics,
-        content: contentContext.content
+        content: contentContext.content,
+        // Include AI insights specific fields
+        fullInsight: contentContext.fullInsight,
+        actionStep: contentContext.actionStep,
+        originalPlatform: contentContext.originalPlatform,
+        additionalContext: contentContext.additionalContext
       };
     }
   }
