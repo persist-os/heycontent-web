@@ -34,16 +34,22 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
   includeAnalysisInQuery = true,
   onToggleAnalysis 
 }) => {
+  // Move all useState calls to the top level
+  const [youtubeMinimized, setYoutubeMinimized] = useState(false);
+  const [instagramMinimized, setInstagramMinimized] = useState(false);
+  const [insightOpen, setInsightOpen] = useState(false); // for AI Insights
+  const [actionOpen, setActionOpen] = useState(true);    // for AI Insights
+  // Add more as needed for other platforms
+
   // Platform Content Strategy (Gmail, Instagram, YouTube)
   if (["gmail", "instagram", "youtube"].includes(context.platform)) {
-    let platformIcon = null;
-    if (context.platform === 'youtube') {
-      platformIcon = <YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8 min-w-[20px] min-h-[20px]" />;
-    } else if (context.platform === 'instagram') {
-      platformIcon = <Instagram className="w-6 h-6 text-pink-500" />;
-    } else if (context.platform === 'gmail') {
-      platformIcon = <Mail className="w-6 h-6 text-blue-500" />;
-    }
+    const platformIcon = context.platform === 'youtube'
+      ? <YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8 min-w-[20px] min-h-[20px]" />
+      : context.platform === 'instagram'
+      ? <Instagram className="w-6 h-6 text-pink-500" />
+      : context.platform === 'gmail'
+      ? <Mail className="w-6 h-6 text-blue-500" />
+      : null;
     // Use convexData if available for rich rendering
     const data = (context as any).convexData;
     if (data) {
@@ -56,7 +62,6 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
         const metrics = data.statistics || {};
         const analysisMarkdown = typeof data.analysisMarkdown === 'string' ? data.analysisMarkdown : '';
         const actionItems = Array.isArray(data.analysis?.actionItems) ? data.analysis.actionItems : [];
-        const [minimized, setMinimized] = useState(false);
         
         // Helper to format user-relevant data from analysis
         function formatUserRelevantData(data: any): string {
@@ -112,15 +117,24 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
             <div className="flex items-center gap-3 px-6 pt-5 pb-3 border-b border-[#B3D4FC] dark:border-[#2A3A5A]">
               {platformIcon}
               <span className="text-lg font-bold text-white dark:text-white flex-1">YouTube Video</span>
+              {onRemove && (
+                <button
+                  onClick={onRemove}
+                  className="ml-2 p-1.5 text-blue-400 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-all duration-200"
+                  title="Close context"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
             <div className="flex flex-col gap-2 px-4 pb-4 pt-2">
               {/* Inner Card with Video Title */}
               <Card className="w-full border border-[#B3D4FC] bg-[#1A2332] dark:bg-[#111827] rounded-lg px-4 py-3 mb-2">
-                <div className="flex items-center justify-between cursor-pointer select-none" onClick={() => setMinimized(m => !m)}>
+                <div className="flex items-center justify-between cursor-pointer select-none" onClick={() => setYoutubeMinimized(m => !m)}>
                   <span className="block text-base font-semibold text-blue-200 dark:text-blue-300">{title}</span>
-                  {minimized ? <ChevronRight className="w-5 h-5 text-blue-200" /> : <ChevronDown className="w-5 h-5 text-blue-200" />}
+                  {youtubeMinimized ? <ChevronRight className="w-5 h-5 text-blue-200" /> : <ChevronDown className="w-5 h-5 text-blue-200" />}
                 </div>
-                {!minimized && (
+                {!youtubeMinimized && (
                   <div className="flex gap-4 mt-2">
                     {/* Thumbnail */}
                     {thumbnail && (
@@ -192,7 +206,6 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
         const insights = data.data?.insights || {};
         const analysisMarkdown = typeof data.analysisMarkdown === 'string' ? data.analysisMarkdown : '';
         const actionItems = Array.isArray(data.analysis?.actionItems) ? data.analysis.actionItems : [];
-        const [minimized, setMinimized] = useState(false);
         
         // Helper to format user-relevant data from analysis
         function formatUserRelevantData(data: any): string {
@@ -248,15 +261,24 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
             <div className="flex items-center gap-3 px-6 pt-5 pb-3 border-b border-[#B3D4FC] dark:border-[#2A3A5A]">
               {platformIcon}
               <span className="text-lg font-bold text-white dark:text-white flex-1">Instagram Post</span>
+              {onRemove && (
+                <button
+                  onClick={onRemove}
+                  className="ml-2 p-1.5 text-blue-400 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-all duration-200"
+                  title="Close context"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
             <div className="flex flex-col gap-2 px-4 pb-4 pt-2">
               {/* Inner Card with Post Title */}
               <Card className="w-full border border-[#B3D4FC] bg-[#1A2332] dark:bg-[#111827] rounded-lg px-4 py-3 mb-2">
-                <div className="flex items-center justify-between cursor-pointer select-none" onClick={() => setMinimized(m => !m)}>
+                <div className="flex items-center justify-between cursor-pointer select-none" onClick={() => setInstagramMinimized(m => !m)}>
                   <span className="block text-base font-semibold text-blue-200 dark:text-blue-300">{caption || `@${username}`}</span>
-                  {minimized ? <ChevronRight className="w-5 h-5 text-blue-200" /> : <ChevronDown className="w-5 h-5 text-blue-200" />}
+                  {instagramMinimized ? <ChevronRight className="w-5 h-5 text-blue-200" /> : <ChevronDown className="w-5 h-5 text-blue-200" />}
                 </div>
-                {!minimized && (
+                {!instagramMinimized && (
                   <div className="flex gap-4 mt-2">
                     {/* Thumbnail */}
                     {(mediaUrl || thumbnailUrl) && (
@@ -329,6 +351,15 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
           <span className="block text-lg font-bold text-white dark:text-white">
             {getContextOriginTitle(context.platform)}
           </span>
+          {onRemove && (
+            <button
+              onClick={onRemove}
+              className="ml-2 p-1.5 text-blue-400 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-all duration-200"
+              title="Close context"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
         <div className="flex flex-col gap-2 px-4 pb-4 pt-2">
           <Card className="w-full border border-[#B3D4FC] dark:border-[#2A3A5A] bg-[#1A2332] dark:bg-[#111827] rounded-lg px-4 py-3 mb-2">
@@ -346,7 +377,7 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
 
   // Content Hub Insights
   if (context.platform === 'content-hub-insight' || ('type' in context && context.type === 'content-hub-insight')) {
-    let platformIcon = <Sparkles className="w-6 h-6 text-[#4E87E3]" />;
+    const platformIcon = <Sparkles className="w-6 h-6 text-[#4E87E3]" />;
     return (
       <Card className="w-full border border-[#4E87E3] bg-[#2A3A5A] dark:bg-[#1A2332] rounded-xl px-0 py-0 mb-4">
         {/* Main Title Header */}
@@ -355,6 +386,15 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
           <span className="block text-lg font-bold text-white dark:text-white">
             Content Hub Insights
           </span>
+          {onRemove && (
+            <button
+              onClick={onRemove}
+              className="ml-2 p-1.5 text-blue-400 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-all duration-200"
+              title="Close context"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
         <div className="flex flex-col gap-2 px-4 pb-4 pt-2">
           {/* Insight Card */}
@@ -411,20 +451,15 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
   // AI Insights
   if (context.platform === 'ai-insights' && (context as any).fullInsight) {
     const originalPlatform = (context as any).originalPlatform;
-    let platformIcon = null;
-    if (originalPlatform === 'youtube') {
-      platformIcon = <YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8 min-w-[20px] min-h-[20px]" />;
-    } else if (originalPlatform === 'instagram') {
-      platformIcon = <Instagram className="w-6 h-6 text-pink-500" />;
-    } else if (originalPlatform === 'gmail') {
-      platformIcon = <Mail className="w-6 h-6 text-blue-500" />;
-    } else {
-      platformIcon = <Brain className="w-6 h-6 text-gray-600 dark:text-gray-400 flex-shrink-0" />;
-    }
+    const platformIcon = originalPlatform === 'youtube'
+      ? <YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8 min-w-[20px] min-h-[20px]" />
+      : originalPlatform === 'instagram'
+      ? <Instagram className="w-6 h-6 text-pink-500" />
+      : originalPlatform === 'gmail'
+      ? <Mail className="w-6 h-6 text-blue-500" />
+      : <Brain className="w-6 h-6 text-gray-600 dark:text-gray-400 flex-shrink-0" />;
     const insight = (context as any).fullInsight;
-    // Collapsible state for insight and action item cards
-    const [insightOpen, setInsightOpen] = useState(false);
-    const [actionOpen, setActionOpen] = useState(true);
+    // Use insightOpen/setInsightOpen and actionOpen/setActionOpen as before
     return (
       <Card className="w-full border border-[#4E87E3] bg-[#2A3A5A] dark:bg-[#1A2332] rounded-xl px-0 py-0 mb-4">
         {/* Main Title Header */}
@@ -433,7 +468,16 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
           <span className="block text-lg font-bold text-white dark:text-white">
             {getContextOriginTitle(context.platform, context.originalPlatform)}
           </span>
-            </div>
+            {onRemove && (
+              <button
+                onClick={onRemove}
+                className="ml-2 p-1.5 text-blue-400 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-all duration-200"
+                title="Close context"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+        </div>
         <div className="flex flex-col gap-2 px-4 pb-4 pt-2">
           {/* Insight Card (collapsible) */}
           <Card className="w-full border border-[#B3D4FC] dark:border-[#2A3A5A] bg-[#1A2332] dark:bg-[#111827] rounded-lg px-4 py-3 mb-2 relative">
