@@ -3,12 +3,15 @@
 import React, { useCallback, useState } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { useAuth } from '@/app/context/auth-context';
-import { Instagram, Sparkles } from 'lucide-react';
+import { getCurrentUserId } from '@/app/lib/api-helpers';
+import { Instagram, Sparkles, MessageCircle, User, Heart, Info, ExternalLink, Eye, Users, Calendar, Bookmark, Share2 } from 'lucide-react';
 import { ContentOverlay } from '@/components/ui/ContentOverlay';
 import { InstagramContent } from '../../content/InstagramContent';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatNumber, formatDate } from '@/lib/content-utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface InstagramOverlayProps {
   postId: string;
@@ -120,15 +123,18 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
   preFetchedData,
   hideDiscussButton = false
 }) => {
-  const { firebaseUser } = useAuth();
-  const userId = firebaseUser?.uid;
+  const userId = getCurrentUserId();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [visibleCommentsCount, setVisibleCommentsCount] = useState(5);
+  const [infoOpen, setInfoOpen] = useState(false);
 
   // Always call the hook, but only use the result if no pre-fetched data
-  const queryResult = useQuery(api.instagramQueries.getInstagramPost, {
-    postId,
-    userId: userId || ''
-  });
+  const queryResult = useQuery(api.instagramQueries.getInstagramPost, 
+    userId && postId ? {
+      postId,
+      userId: userId
+    } : "skip"
+  );
   
   // Use pre-fetched data if available, otherwise use query result
   const post = preFetchedData || queryResult;
@@ -183,6 +189,12 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
     return <ErrorState onClose={onClose} error="Post contains no viewable content" />;
   }
 
+  // Get comments from post data
+  const comments = postData.comments || [];
+  const displayComments = comments.slice(0, visibleCommentsCount);
+  const hasMoreComments = comments.length > visibleCommentsCount;
+  const commentsToLoad = Math.min(10, comments.length - visibleCommentsCount);
+
   // Prepare normalized post data with proper null safety
   const normalizedPostData = {
     id: `instagram:${postId}`,
@@ -207,7 +219,8 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
       insights,
       like_count: likeCount,
       comments_count: commentsCount,
-      permalink
+      permalink,
+      comments: comments // Add comments to the data structure
     },
     mediaType,
     // Add permalink at the top level for easy access
@@ -217,6 +230,7 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
   // Extract content themes from analysis with null safety
   const contentThemes = normalizedPostData.analysis ? parseAnalysisThemes(normalizedPostData.analysis) : [];
 
+  // --- Layout: Media, Stats, Comments, Analysis ---
   return (
     <ContentOverlay
       onClose={onClose}
@@ -251,14 +265,170 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
       }
       icon={<Instagram className="w-8 h-8 text-pink-500" />}
     >
-      <InstagramContent
-        key={refreshKey} // Force re-render when analysis is generated
-        postData={normalizedPostData}
-        postId={postId}
-        showAnalysis={showAnalysis}
-        onAnalysisGenerated={handleAnalysisGenerated}
-        hideDiscussButton={hideDiscussButton}
-      />
+      <div className="space-y-6">
+        {/* Media Section */}
+        <div className="relative rounded-xl overflow-hidden group">
+          <div className="aspect-square lg:aspect-auto lg:min-h-[400px]">
+            <img
+              src={thumbnailUrl || mediaUrl}
+              alt={normalizedPostData.title}
+              className="w-full h-full object-cover cursor-pointer"
+              onClick={() => window.open(permalink, '_blank')}
+            />
+            {/* Hover Overlay */}
+            <div 
+              className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+              onClick={() => window.open(permalink, '_blank')}
+            >
+              <div className="bg-white/90 dark:bg-gray-900/90 rounded-full p-4 shadow-lg">
+                <ExternalLink className="w-6 h-6 text-gray-900 dark:text-white" />
+              </div>
+            </div>
+            {/* Media Type Badge */}
+            {mediaType && (
+              <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm rounded-lg px-3 py-1 text-sm font-medium text-white">
+                {mediaType.replace('_', ' ')}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Statistics Section - Compact Row */}
+        <div className="rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-sm mt-4 mb-2 px-4 py-2 flex flex-wrap items-center justify-between gap-2 bg-background/80">
+          {Object.entries(statistics).map(([key, value]) => (
+            <div key={key} className="flex flex-col items-center min-w-[70px]">
+              <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg mb-1 bg-muted">
+                {key === 'likes' && <Heart className="w-4 h-4 text-red-500" />}
+                {key === 'comments' && <MessageCircle className="w-4 h-4 text-blue-500" />}
+                {key === 'impressions' && <Eye className="w-4 h-4 text-green-500" />}
+                {key === 'reach' && <Users className="w-4 h-4 text-purple-500" />}
+                {key === 'saved' && <Bookmark className="w-4 h-4 text-yellow-500" />}
+                {key === 'shares' && <Share2 className="w-4 h-4 text-indigo-500" />}
+              </div>
+              <div className="text-base font-semibold text-gray-900 dark:text-white">
+                {value === null || value === undefined ? 'N/A' : value.toLocaleString()}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {key.charAt(0).toUpperCase() + key.slice(1)}
+              </div>
+            </div>
+          ))}
+          {/* Date at the end */}
+          {createdAt && (
+            <div className="flex flex-col items-center min-w-[90px]">
+              <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg mb-1 bg-orange-100 dark:bg-orange-900/30">
+                <Calendar className="w-4 h-4 text-orange-500" />
+              </div>
+              <div className="text-base font-semibold text-gray-900 dark:text-white">
+                {new Date(createdAt).toLocaleDateString()}
+              </div>
+              <div className="text-xs text-muted-foreground">Published</div>
+            </div>
+          )}
+        </div>
+
+        {/* Comments Section */}
+        {comments.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <MessageCircle className="w-5 h-5 text-blue-500" />
+              <h3 className="text-lg font-semibold">Comments ({comments.length})</h3>
+              <TooltipProvider>
+                <Popover open={infoOpen} onOpenChange={setInfoOpen}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          tabIndex={0}
+                          className="focus:outline-none"
+                          onClick={() => setInfoOpen((v) => !v)}
+                          aria-label="Comments info"
+                        >
+                          <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                        </button>
+                      </PopoverTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">Usernames are shown as returned by Instagram. Some may be anonymous due to Meta's privacy policy.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <PopoverContent side="right" align="start" className="p-2 text-xs max-w-xs min-w-[180px]">
+                    <div className="flex items-center justify-between gap-2">
+                      <span>Usernames are shown as returned by Instagram. Some may be anonymous due to Meta's privacy policy.</span>
+                      <button onClick={() => setInfoOpen(false)} className="ml-2 text-muted-foreground hover:text-foreground text-xs font-bold">✕</button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </TooltipProvider>
+            </div>
+            <div className="space-y-3">
+              {displayComments.map((comment: any, index: number) => (
+                <div key={comment.id || index} className="flex gap-3 p-3 bg-muted/20 rounded-lg">
+                  <div className="flex-shrink-0">
+                    <User className="w-8 h-8 text-muted-foreground bg-muted rounded-full p-1" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium text-sm">
+                        {comment.username}
+                      </span>
+                      {comment.timestamp && (
+                        <span className="text-xs text-muted-foreground">
+                          {formatDate(comment.timestamp)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm">{comment.text}</p>
+                    {comment.like_count > 0 && (
+                      <div className="flex items-center gap-1 mt-2">
+                        <Heart className="w-3 h-3 text-red-500" />
+                        <span className="text-xs text-muted-foreground">
+                          {formatNumber(comment.like_count)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {hasMoreComments && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => {
+                    setVisibleCommentsCount(prev => prev + 10);
+                  }}
+                  className="w-full bg-muted/30 hover:bg-muted/50"
+                >
+                  Load More Comments ({commentsToLoad} of {comments.length - visibleCommentsCount} remaining)
+                </Button>
+              )}
+              {visibleCommentsCount > 5 && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => {
+                    setVisibleCommentsCount(5);
+                  }}
+                  className="w-full mt-2"
+                >
+                  Show Less Comments
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Analysis Section */}
+        <InstagramContent
+          key={refreshKey} // Force re-render when analysis is generated
+          postData={normalizedPostData}
+          postId={postId}
+          showAnalysis={showAnalysis}
+          onAnalysisGenerated={handleAnalysisGenerated}
+          hideDiscussButton={hideDiscussButton}
+        />
+      </div>
     </ContentOverlay>
   );
 }; 

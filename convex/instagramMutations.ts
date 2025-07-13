@@ -502,13 +502,23 @@ export const storePostAnalysis = mutation({
     const { userId, postId, analysisData } = args;
     const now = Date.now();
 
+    console.log('[storePostAnalysis] Called with:', {
+      userId,
+      postId,
+      analysisData,
+      timestamp: new Date().toISOString()
+    });
+
     const post = await ctx.db
       .query("instagramPosts")
       .withIndex("by_postId", (q) => q.eq("postId", postId))
       .first();
 
+    console.log('[storePostAnalysis] Found existing post:', post ? post._id : 'none');
+
     if (!post) {
       // Create a minimal post record if it doesn't exist
+      console.log('[storePostAnalysis] Creating new post record');
       const postId_internal = await ctx.db.insert("instagramPosts", {
         userId,
         instagramAccountId: "unknown",
@@ -541,11 +551,14 @@ export const storePostAnalysis = mutation({
         updateData.analysis = analysisData;
       }
 
+      console.log('[storePostAnalysis] Updating new post with data:', updateData);
       await ctx.db.patch(postId_internal, updateData);
+      console.log('[storePostAnalysis] Successfully created and updated post');
       return { success: true, status: "created", postId: postId_internal };
     }
 
     // Update existing post with analysis
+    console.log('[storePostAnalysis] Updating existing post');
     const updateData: any = { updatedAt: now };
     if (analysisData && typeof analysisData === 'object') {
       if (analysisData.markdown) {
@@ -561,7 +574,9 @@ export const storePostAnalysis = mutation({
       updateData.analysis = analysisData;
     }
 
+    console.log('[storePostAnalysis] Updating existing post with data:', updateData);
     await ctx.db.patch(post._id, updateData);
+    console.log('[storePostAnalysis] Successfully updated existing post');
     return { success: true, status: "updated", postId: post._id };
   },
 });
