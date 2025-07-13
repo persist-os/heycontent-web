@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useAuth } from '@/app/context/auth-context';
+import { useContentResolver } from '@/lib/content-resolver';
 import { 
   FileText, 
   Youtube, 
@@ -72,31 +73,23 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
   // Add error boundary for Convex queries
   const [hasConvexError, setHasConvexError] = useState(false);
 
-  // Fetch content based on selected platform
-  
-  const allContentData = useQuery(api.notes.getAllLinkableContent, { userId: userId || '' });
-  const smartNotesContent = useQuery(api.notes.getContentByPlatform, { userId: userId || '', platform: 'smart-notes' as any });
-  const youtubeContent = useQuery(api.notes.getContentByPlatform, { userId: userId || '', platform: 'youtube' as any });
-  const instagramContent = useQuery(api.notes.getContentByPlatform, { userId: userId || '', platform: 'instagram' as any });
-  const gmailContent = useQuery(api.notes.getContentByPlatform, { userId: userId || '', platform: 'gmail' as any });
-  const insightsContent = useQuery(api.notes.getContentByPlatform, { userId: userId || '', platform: 'insights' as any });
+  // Fetch content based on selected platform using content resolver
+  const { 
+    allContent: allContentData,
+    content: platformContent,
+    isLoading: contentLoading,
+    hasErrors 
+  } = useContentResolver(userId);
+
+  // Extract platform-specific content
+  const smartNotesContent = platformContent.notes;
+  const youtubeContent = platformContent.youtube;
+  const instagramContent = platformContent.instagram;
+  const gmailContent = platformContent.gmail;
+  const insightsContent = platformContent.insights;
 
   // Check if any query is still loading or has errors
-  const isLoading = !userId || 
-    allContentData === undefined || 
-    smartNotesContent === undefined || 
-    youtubeContent === undefined || 
-    instagramContent === undefined ||
-    gmailContent === undefined ||
-    insightsContent === undefined;
-
-  // Check if any query has errors
-  const hasErrors = allContentData === null || 
-    smartNotesContent === null || 
-    youtubeContent === null || 
-    instagramContent === null ||
-    gmailContent === null ||
-    insightsContent === null;
+  const isLoading = !userId || contentLoading;
 
   // If there are Convex errors, set the error state
   React.useEffect(() => {

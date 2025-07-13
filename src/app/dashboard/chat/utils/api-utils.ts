@@ -6,13 +6,12 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { getApiKey } from '@/app/lib/api-helpers';
-import { resolveAllLinkContent } from './link-content-resolver';
+import { resolveContentTitles, resolveAllLinkContent } from '@/lib/content-resolver';
 
 // Add Convex client import for direct function calls
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
 import { AuthenticationError } from '@/app/lib/errors';
-import { getAllLinkableContent } from "@/convex/notes";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
@@ -276,7 +275,7 @@ export async function generateEmbeddingsForPlatform(
         // Get YouTube videos only
         const youtubeVideos = await convex.query(api.youtubeQueries.getYouTubeVideos, { userId });
         
-        for (const video of youtubeVideos) {
+        for (const video of youtubeVideos.videos) {
           results.youtube.processed++;
           
           if (!video || !video._id || !video.videoId) {
@@ -705,7 +704,7 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
     try {
       const youtubeVideos = await convex.query(api.youtubeQueries.getYouTubeVideos, { userId });
       
-      for (const video of youtubeVideos) {
+      for (const video of youtubeVideos.videos) {
         results.youtubeVideos.processed++;
         
         if (!video || !video._id || !video.videoId) {
@@ -1681,26 +1680,19 @@ export async function sendChatMessage(
       relevance_reason: item.relevance_reason
     }));
 
-    // Clean the search query by replacing content IDs with titles (from main)
+    // Clean the search query by replacing content IDs with titles (using new resolver)
     let cleanSearchQuery = content;
     if (content.includes('@[') && userId) {
       try {
-        // Get all linkable content for the user
-        const allLinkableContent = await convex.query(api.notes.getAllLinkableContent, { userId });
+        // Extract content IDs from the message
+        const contentIds = Array.from(content.matchAll(/@\[([^\]]+)\]@/g)).map(match => match[1]);
         
-        // Create a mapping of content IDs to titles
-        const contentIdToTitle = new Map();
-        allLinkableContent.forEach((item: any) => {
-          const contentIdMatch = content.match(/@\[([^\]]+)\]@/);
-          if (contentIdMatch) {
-            const contentId = contentIdMatch[1];
-            contentIdToTitle.set(contentId, item.title);
-          }
-        });
+        // Get titles for these content IDs
+        const contentTitles = await resolveContentTitles(contentIds, userId, convex);
         
         // Replace content IDs with titles
         cleanSearchQuery = content.replace(/@\[([^\]]+)\]@/g, (match, contentId) => {
-          const title = contentIdToTitle.get(contentId);
+          const title = contentTitles[contentId];
           return title ? `[${title}]` : match;
         });
       } catch (error) {
@@ -1751,26 +1743,19 @@ export async function sendChatMessage(
     });
   } else if (needsContext && vectorSearchResults && vectorSearchResults.context) {
     // Fall back to original vector search results ONLY if grading actually failed
-    // Clean the search query by replacing content IDs with titles (from main)
+    // Clean the search query by replacing content IDs with titles (using new resolver)
     let cleanSearchQuery = content;
     if (content.includes('@[') && userId) {
       try {
-        // Get all linkable content for the user
-        const allLinkableContent = await convex.query(api.notes.getAllLinkableContent, { userId });
+        // Extract content IDs from the message
+        const contentIds = Array.from(content.matchAll(/@\[([^\]]+)\]@/g)).map(match => match[1]);
         
-        // Create a mapping of content IDs to titles
-        const contentIdToTitle = new Map();
-        allLinkableContent.forEach((item: any) => {
-          const contentIdMatch = content.match(/@\[([^\]]+)\]@/);
-          if (contentIdMatch) {
-            const contentId = contentIdMatch[1];
-            contentIdToTitle.set(contentId, item.title);
-          }
-        });
+        // Get titles for these content IDs
+        const contentTitles = await resolveContentTitles(contentIds, userId, convex);
         
         // Replace content IDs with titles
         cleanSearchQuery = content.replace(/@\[([^\]]+)\]@/g, (match, contentId) => {
-          const title = contentIdToTitle.get(contentId);
+          const title = contentTitles[contentId];
           return title ? `[${title}]` : match;
         });
       } catch (error) {
@@ -1830,26 +1815,13 @@ export async function sendChatMessage(
     console.log('🔗 [LINK RESOLUTION] Message contains content links, resolving...');
     
     try {
-      // Get all linkable content for the user
-      const allLinkableContent = await convex.query(api.notes.getAllLinkableContent, { userId });
-      
-      console.log('🔗 [LINK RESOLUTION] All linkable content from Convex:', {
-        totalCount: allLinkableContent?.length || 0,
-        types: allLinkableContent?.map(item => item.type) || [],
-        insightCount: allLinkableContent?.filter(item => item.type === 'insight').length || 0,
-        insights: allLinkableContent?.filter(item => item.type === 'insight').map(item => ({
-          id: item.id,
-          title: item.title
-        })) || []
-      });
-      
-      // Resolve all link content
-      const resolvedLinkContent = await resolveAllLinkContent(content, userId, allLinkableContent);
+      // Use the new resolver function
+      const resolvedLinkContent = await resolveAllLinkContent(content, userId, convex);
       
       if (resolvedLinkContent.length > 0) {
         console.log('🔗 [LINK RESOLUTION] Resolved link content:', {
           count: resolvedLinkContent.length,
-          types: resolvedLinkContent.map(item => item.type)
+          types: resolvedLinkContent.map((item: any) => item.type)
         });
         
         // Add resolved link content to request body
