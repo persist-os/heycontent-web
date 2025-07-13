@@ -1,11 +1,12 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import { Instagram, Mail, X, ExternalLink, Brain, Sparkles, ToggleLeft, ToggleRight, MessageSquare } from 'lucide-react';
+import { Instagram, Mail, X, ExternalLink, Brain, Sparkles, ToggleLeft, ToggleRight, MessageSquare, ChevronDown, ChevronRight } from 'lucide-react';
 import { YouTubeBrandIcon } from '../../../../../lib/YoutubeBrandIcon';
 import { ContentContext } from '../../types';
 import { MarkdownRenderer } from '../../markdown-renderer';
 import AIInsightDisplayCard from './AIInsightDisplayCard';
 import { processContentIfNeeded } from '../../../content-analytics/utils/markdown-processor';
+import { useState } from 'react';
 
 interface ContextBoxProps {
   context: ContentContext;
@@ -14,13 +15,181 @@ interface ContextBoxProps {
   onToggleAnalysis?: (enabled: boolean) => void;
 }
 
+// Helper function for context origin title
+function getContextOriginTitle(platform: string, originalPlatform?: string) {
+  if (platform === 'instagram') return 'AI Insights for Instagram';
+  if (platform === 'youtube') return 'AI Insights for YouTube';
+  if (platform === 'gmail') return 'Gmail Content Strategy';
+  if (platform === 'ai-insights') {
+    if (originalPlatform === 'instagram') return 'AI Insights for Instagram';
+    if (originalPlatform === 'youtube') return 'AI Insights for YouTube';
+    if (originalPlatform === 'gmail') return 'Gmail Content Strategy';
+  }
+  return 'AI Insights';
+}
+
 export const ContextBox: React.FC<ContextBoxProps> = ({ 
   context, 
   onRemove, 
   includeAnalysisInQuery = true,
   onToggleAnalysis 
 }) => {
-  // Special handling for AI insights with full insight data
+  // Platform Content Strategy (Gmail, Instagram, YouTube)
+  if (["gmail", "instagram", "youtube"].includes(context.platform)) {
+    let platformIcon = null;
+    if (context.platform === 'youtube') {
+      platformIcon = <YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8 min-w-[20px] min-h-[20px]" />;
+    } else if (context.platform === 'instagram') {
+      platformIcon = <Instagram className="w-6 h-6 text-pink-500" />;
+    } else if (context.platform === 'gmail') {
+      platformIcon = <Mail className="w-6 h-6 text-blue-500" />;
+    }
+    return (
+      <Card className="sticky top-0 z-10 w-full border border-[#4E87E3] bg-[#2A3A5A] dark:bg-[#1A2332] rounded-xl px-0 py-0 mb-4">
+        {/* Main Title Header */}
+        <div className="flex items-center gap-3 px-6 pt-5 pb-3 border-b border-[#B3D4FC] dark:border-[#2A3A5A]">
+          {platformIcon}
+          <span className="block text-lg font-bold text-white dark:text-white">
+            {getContextOriginTitle(context.platform)}
+          </span>
+        </div>
+        <div className="flex flex-col gap-2 px-4 pb-4 pt-2">
+          {/* Strategy Card */}
+          <Card className="w-full border border-[#B3D4FC] dark:border-[#2A3A5A] bg-[#1A2332] dark:bg-[#111827] rounded-lg px-4 py-3 mb-2">
+            {'hook' in context && context.hook && (
+              <div className="mb-2">
+                <div className="font-semibold text-sm mb-1 text-blue-200 dark:text-blue-300">
+                  Hook
+                </div>
+                <div className="text-base text-blue-100 dark:text-blue-100">
+                  <MarkdownRenderer content={String(context.hook)} />
+                </div>
+              </div>
+            )}
+            {'format' in context && context.format && (
+              <div className="mb-2">
+                <div className="font-semibold text-sm mb-1 text-blue-200 dark:text-blue-300">
+                  Format
+                </div>
+                <div className="text-base text-blue-100 dark:text-blue-100">
+                  <MarkdownRenderer content={String(context.format)} />
+                </div>
+              </div>
+            )}
+            {'callToAction' in context && context.callToAction && (
+              <div className="mb-2">
+                <div className="font-semibold text-sm mb-1 text-blue-200 dark:text-blue-300">
+                  Call to Action
+                </div>
+                <div className="text-base text-blue-100 dark:text-blue-100">
+                  <MarkdownRenderer content={String(context.callToAction)} />
+                </div>
+              </div>
+            )}
+          </Card>
+          {/* Context Toggle Card (unchanged) */}
+          <Card className="w-full border border-[#B3D4FC] dark:border-[#2A3A5A] bg-[#1A2332] dark:bg-[#111827] rounded-lg px-4 py-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="block text-base font-semibold text-blue-200 dark:text-blue-300">
+                Context
+              </span>
+              {onToggleAnalysis && (
+                <button
+                  onClick={() => onToggleAnalysis(!includeAnalysisInQuery)}
+                  className={`flex items-center gap-1 text-sm transition-colors ${includeAnalysisInQuery ? 'text-blue-200 dark:text-blue-300' : 'text-gray-400 dark:text-gray-500'} hover:text-blue-100 dark:hover:text-blue-100`}
+                  title={includeAnalysisInQuery ? "Disable insight context" : "Enable insight context"}
+                >
+                  {includeAnalysisInQuery ? (
+                    <>
+                      <ToggleRight className="w-4 h-4 text-blue-200 dark:text-blue-300" />
+                      <span>ON</span>
+                    </>
+                  ) : (
+                    <>
+                      <ToggleLeft className="w-4 h-4" />
+                      <span>OFF</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+            <div className="text-base font-normal text-left text-blue-100 dark:text-blue-100">
+              {includeAnalysisInQuery 
+                ? 'Insight included in questions'
+                : 'Insight not included in questions'
+              }
+            </div>
+          </Card>
+        </div>
+      </Card>
+    );
+  }
+
+  // Content Hub Insights
+  if (context.platform === 'content-hub-insight' || ('type' in context && context.type === 'content-hub-insight')) {
+    let platformIcon = <Sparkles className="w-6 h-6 text-[#4E87E3]" />;
+    return (
+      <Card className="sticky top-0 z-10 w-full border border-[#4E87E3] bg-[#2A3A5A] dark:bg-[#1A2332] rounded-xl px-0 py-0 mb-4">
+        {/* Main Title Header */}
+        <div className="flex items-center gap-3 px-6 pt-5 pb-3 border-b border-[#B3D4FC] dark:border-[#2A3A5A]">
+          {platformIcon}
+          <span className="block text-lg font-bold text-white dark:text-white">
+            Content Hub Insights
+          </span>
+        </div>
+        <div className="flex flex-col gap-2 px-4 pb-4 pt-2">
+          {/* Insight Card */}
+          <Card className="w-full border border-[#B3D4FC] dark:border-[#2A3A5A] bg-[#1A2332] dark:bg-[#111827] rounded-lg px-4 py-3 mb-2">
+            {context.title && (
+              <span className="block text-base font-semibold mb-2 text-blue-200 dark:text-blue-300">
+                {context.title}
+              </span>
+            )}
+            {context.content && (
+              <div className="text-base text-blue-100 dark:text-blue-100">
+                <MarkdownRenderer content={String(context.content)} />
+              </div>
+            )}
+          </Card>
+          {/* Context Toggle Card (unchanged) */}
+          <Card className="w-full border border-[#B3D4FC] dark:border-[#2A3A5A] bg-[#1A2332] dark:bg-[#111827] rounded-lg px-4 py-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="block text-base font-semibold text-blue-200 dark:text-blue-300">
+                Context
+              </span>
+              {onToggleAnalysis && (
+                <button
+                  onClick={() => onToggleAnalysis(!includeAnalysisInQuery)}
+                  className={`flex items-center gap-1 text-sm transition-colors ${includeAnalysisInQuery ? 'text-blue-200 dark:text-blue-300' : 'text-gray-400 dark:text-gray-500'} hover:text-blue-100 dark:hover:text-blue-100`}
+                  title={includeAnalysisInQuery ? "Disable insight context" : "Enable insight context"}
+                >
+                  {includeAnalysisInQuery ? (
+                    <>
+                      <ToggleRight className="w-4 h-4 text-blue-200 dark:text-blue-300" />
+                      <span>ON</span>
+                    </>
+                  ) : (
+                    <>
+                      <ToggleLeft className="w-4 h-4" />
+                      <span>OFF</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+            <div className="text-base font-normal text-left text-blue-100 dark:text-blue-100">
+              {includeAnalysisInQuery 
+                ? 'Insight included in questions'
+                : 'Insight not included in questions'
+              }
+            </div>
+          </Card>
+        </div>
+      </Card>
+    );
+  }
+
+  // AI Insights
   if (context.platform === 'ai-insights' && (context as any).fullInsight) {
     const originalPlatform = (context as any).originalPlatform;
     let platformIcon = null;
@@ -33,64 +202,115 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
     } else {
       platformIcon = <Brain className="w-6 h-6 text-gray-600 dark:text-gray-400 flex-shrink-0" />;
     }
+    const insight = (context as any).fullInsight;
+    // Collapsible state for insight and action item cards
+    const [insightOpen, setInsightOpen] = useState(false);
+    const [actionOpen, setActionOpen] = useState(true);
     return (
-      <div className="sticky top-0 z-10">
-        <Card className="border border-[#B3D4FC] dark:border-[#2A3A5A] bg-[#F5F9FF] dark:bg-[#1A2332] shadow-sm p-6 rounded-lg">
-          <div className="flex items-start mb-4">
-            {/* Platform icon next to title, both left-aligned */}
-            <div className="flex items-center gap-3">
+      <Card className="sticky top-0 z-10 w-full border border-[#4E87E3] bg-[#2A3A5A] dark:bg-[#1A2332] rounded-xl px-0 py-0 mb-4">
+        {/* Main Title Header */}
+        <div className="flex items-center gap-3 px-6 pt-5 pb-3 border-b border-[#B3D4FC] dark:border-[#2A3A5A]">
               {platformIcon}
-              <h2 className="font-semibold text-lg" style={{ color: '#4E87E3' }}>
-                {context.fullInsight?.title || context.title}
-              </h2>
+          <span className="block text-lg font-bold text-white dark:text-white">
+            {getContextOriginTitle(context.platform, context.originalPlatform)}
+          </span>
             </div>
-          </div>
-          {/* Action item in consistent card */}
+        <div className="flex flex-col gap-2 px-4 pb-4 pt-2">
+          {/* Insight Card (collapsible) */}
+          <Card className="w-full border border-[#B3D4FC] dark:border-[#2A3A5A] bg-[#1A2332] dark:bg-[#111827] rounded-lg px-4 py-3 mb-2 relative">
+            <div className="flex items-center justify-between mb-2">
+              <span className="block text-base font-semibold text-blue-200 dark:text-blue-300">
+                {insight.title || 'Insight'}
+              </span>
+                <button
+                className="text-blue-200 dark:text-blue-300 focus:outline-none"
+                onClick={() => setInsightOpen((open) => !open)}
+                aria-label={insightOpen ? 'Collapse' : 'Expand'}
+              >
+                {insightOpen ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                </button>
+            </div>
+            {insightOpen && (
+              <>
+                {insight.whyNow && insight.whyNow.length > 0 && (
+                  <div className="mb-2">
+                    <div className="font-semibold text-sm mb-1 text-blue-200 dark:text-blue-300">
+                      Why Now
+                    </div>
+                    <div className="text-base text-blue-100 dark:text-blue-100">
+                      <MarkdownRenderer content={insight.whyNow.join('\n\n')} />
+                    </div>
+                  </div>
+                )}
+                {insight.expectedOutcome && (
+                  <div className="mb-2">
+                    <div className="font-semibold text-sm mb-1 text-blue-200 dark:text-blue-300">
+                      Expected Outcome
+                    </div>
+                    <div className="text-base text-blue-100 dark:text-blue-100">
+                      <MarkdownRenderer content={insight.expectedOutcome} />
+                    </div>
+                  </div>
+                )}
+                {insight.actionSteps && insight.actionSteps.length > 0 && (
+                  <div className="mb-2">
+                    <div className="font-semibold text-sm mb-1 text-blue-200 dark:text-blue-300">
+                      Action Items
+                    </div>
+                    <div className="text-base text-blue-100 dark:text-blue-100">
+                      <MarkdownRenderer content={insight.actionSteps.map((step: string, index: number) => `${index + 1}. ${step}`).join('\n')} />
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </Card>
+          {/* Action Item Card (not collapsible) */}
           {context.actionStep && (
-            <Card className="w-full border border-[#B3D4FC] dark:border-[#2A3A5A] bg-[#F5F9FF] dark:bg-[#1A2332] rounded-lg px-4 py-3 mb-4">
-              <span className="block text-base font-semibold" style={{ color: '#4E87E3' }}>
+            <Card className="w-full border border-[#B3D4FC] dark:border-[#2A3A5A] bg-[#1A2332] dark:bg-[#111827] rounded-lg px-4 py-3">
+              <span className="block text-base font-semibold text-blue-200 dark:text-blue-300">
                 Action Item
               </span>
-              <span className="block text-base text-gray-900 dark:text-gray-100 mt-1">
+              <span className="block text-base text-blue-100 dark:text-blue-100 mt-1">
                 {context.actionStep}
               </span>
             </Card>
           )}
-          {/* Analysis context toggle, styled like Action Item */}
-          <Card className="w-full border border-[#B3D4FC] dark:border-[#2A3A5A] bg-[#F5F9FF] dark:bg-[#1A2332] rounded-lg px-4 py-3 mb-4">
+          {/* Context Toggle Card (unchanged) */}
+          <Card className="w-full border border-[#B3D4FC] dark:border-[#2A3A5A] bg-[#1A2332] dark:bg-[#111827] rounded-lg px-4 py-3">
             <div className="flex items-center justify-between mb-2">
-              <span className="block text-base font-semibold" style={{ color: '#4E87E3' }}>
-                Context
-              </span>
-              {onToggleAnalysis && (
-                <button
-                  onClick={() => onToggleAnalysis(!includeAnalysisInQuery)}
-                  className={`flex items-center gap-1 text-sm transition-colors ${includeAnalysisInQuery ? 'text-[#4E87E3]' : 'text-gray-600 dark:text-gray-400'} hover:text-[#4E87E3]`}
-                  title={includeAnalysisInQuery ? "Disable insight context" : "Enable insight context"}
-                >
-                  {includeAnalysisInQuery ? (
-                    <>
-                      <ToggleRight className="w-4 h-4 text-[#4E87E3]" />
-                      <span>ON</span>
-                    </>
-                  ) : (
-                    <>
-                      <ToggleLeft className="w-4 h-4" />
-                      <span>OFF</span>
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-            <div className="text-base font-normal text-left text-gray-900 dark:text-gray-100">
-              {includeAnalysisInQuery 
-                ? 'Insight included in questions'
+              <span className="block text-base font-semibold text-blue-200 dark:text-blue-300">
+                    Context
+                  </span>
+                {onToggleAnalysis && (
+                  <button
+                    onClick={() => onToggleAnalysis(!includeAnalysisInQuery)}
+                    className={`flex items-center gap-1 text-sm transition-colors ${includeAnalysisInQuery ? 'text-blue-200 dark:text-blue-300' : 'text-gray-400 dark:text-gray-500'} hover:text-blue-100 dark:hover:text-blue-100`}
+                    title={includeAnalysisInQuery ? "Disable insight context" : "Enable insight context"}
+                  >
+                    {includeAnalysisInQuery ? (
+                      <>
+                        <ToggleRight className="w-4 h-4 text-blue-200 dark:text-blue-300" />
+                        <span>ON</span>
+                      </>
+                    ) : (
+                      <>
+                        <ToggleLeft className="w-4 h-4" />
+                        <span>OFF</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            <div className="text-base font-normal text-left text-blue-100 dark:text-blue-100">
+                {includeAnalysisInQuery 
+                  ? 'Insight included in questions'
                 : 'Insight not included in questions'
-              }
+                }
             </div>
           </Card>
+          </div>
         </Card>
-      </div>
     );
   }
 
