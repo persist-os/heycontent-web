@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { getApiKey } from '@/app/lib/api-helpers';
 import { BatchAnalysisHookReturn, InsightCard } from '@/types/batch-analysis';
+import { PerformanceTimer, isLargeDataset } from '@/app/lib/utils/performance-utils';
 
 export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
   const [error, setError] = useState<string | null>(null);
@@ -40,9 +41,27 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
   const rawInsights = instagramInsights?.insights;
   const isUniversalFormat = rawInsights && typeof rawInsights === 'object' && 'insights' in rawInsights;
   
-  const insightsList: InsightCard[] = isUniversalFormat 
-    ? (rawInsights as any).insights || []
-    : rawInsights || [];
+  // Performance monitoring for data processing
+  const insightsList: InsightCard[] = useMemo(() => {
+    if (!rawInsights) return [];
+    
+    const timer = new PerformanceTimer('Instagram insights processing');
+    
+    const result = isUniversalFormat 
+      ? (rawInsights as any).insights || []
+      : rawInsights || [];
+    
+    // Check if dataset is large and log performance
+    if (isLargeDataset(result.length)) {
+      console.warn(`Large Instagram dataset detected: ${result.length} insights`);
+      timer.endWithThreshold(50); // Warn if processing takes more than 50ms
+    } else {
+      timer.end();
+    }
+    
+    return result;
+  }, [rawInsights, isUniversalFormat]);
+  
   const metadata = isUniversalFormat 
     ? (rawInsights as any).metadata || null
     : (instagramInsights as any)?.metadata || null;

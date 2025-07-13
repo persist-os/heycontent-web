@@ -1151,7 +1151,10 @@ const ctx = c.env;
 const userId = c.req.param("id");
 
 try {
-    const insights = await ctx.runQuery(api.instagramQueries.getInstagramProfileInsights, { userId });
+    const insights = await ctx.runQuery(api.instagramQueries.getInstagramProfileInsights, { 
+      userId,
+      limit: 100 // Add limit parameter to match validator
+    });
     return c.json({ success: true, insights });
 } catch (error) {
     console.error("Failed to get Instagram profile insights:", error);

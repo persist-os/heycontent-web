@@ -204,13 +204,45 @@
   @media (min-width: 768px) {
     .container-mobile {
       max-width: 42rem;
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
     }
   }
 
   @media (min-width: 1024px) {
     .container-mobile {
       max-width: 48rem;
+      padding-left: 2rem;
+      padding-right: 2rem;
     }
+  }
+
+  /* Shimmer animation for hero search bar */
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2s infinite;
+  }
+
+  /* Slower, calmer pulse animation */
+  @keyframes pulse-slow {
+    0%, 100% {
+      opacity: 0.3;
+    }
+    50% {
+      opacity: 0.6;
+    }
+  }
+
+  .animate-pulse-slow {
+    animation: pulse-slow 3s ease-in-out infinite;
   }
 
   /* For Webkit browsers (Chrome, Safari) */

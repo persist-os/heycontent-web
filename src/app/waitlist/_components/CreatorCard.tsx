@@ -102,7 +102,7 @@ export const CreatorCard = ({
 
   const handleShare = async (platform: 'twitter' | 'linkedin' | 'whatsapp' | 'instagram' | 'general') => {
     const creativeVision = CREATIVE_VISIONS[currentScheme.primary] || 'my unique creative vision';
-    const shareText = `🎨 I'm joining @HeyContent as a ${currentScheme.title}! Ready to revolutionize content creation with ${creativeVision}. Who's joining me on this journey?`;
+    const shareText = `🚀 I just joined the @HeyContent beta program as a ${currentScheme.title}! Getting early access to cutting-edge creator tools and features. Who's joining me in the beta? #BetaTester #CreatorTools`;
     
     switch (platform) {
       case 'twitter':
@@ -131,7 +131,7 @@ export const CreatorCard = ({
         if (navigator.share) {
           try {
             await navigator.share({
-              title: 'HeyContent Waitlist',
+              title: 'HeyContent Beta Program',
               text: shareText,
               url: window.location.href
             });
@@ -328,7 +328,7 @@ export const CreatorCard = ({
                       Preview
                     </div>
                     <p className="text-lg font-medium" style={{ color: currentScheme.primary }}>
-                      {`🎨 I'm joining @HeyContent.Co as a ${currentScheme.title}! Ready to revolutionize content creation with ${CREATIVE_VISIONS[currentScheme.primary] || 'my unique creative vision'}. Who's joining me on this journey?`}
+                      {`🚀 I just joined the @HeyContent beta program as a ${currentScheme.title}! Getting early access to cutting-edge creator tools and features. Who's joining me in the beta? #BetaTester #CreatorTools`}
                     </p>
                   </div>
                   <div className="mt-6 flex items-center gap-2 text-gray-600">

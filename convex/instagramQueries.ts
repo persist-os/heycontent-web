@@ -584,22 +584,35 @@ export const getRecentPostsWithAnalysis = query({
 
 // Get Instagram profile insights (return all breakdowns and insights fields)
 export const getInstagramProfileInsights = query({
-  args: { userId: v.string() },
+  args: { 
+    userId: v.string(),
+    limit: v.optional(v.number()) // Add limit parameter for pagination
+  },
   handler: async (ctx, args) => {
     const account = await ctx.db
       .query("instagramAccounts")
       .withIndex("by_userId", q => q.eq("userId", args.userId))
       .first();
     if (!account) return null;
-    // Return all breakdowns and insights fields for the frontend
+    
+    // Apply limit to breakdown arrays to prevent performance issues
+    const limit = args.limit || 100; // Default to 100 items per breakdown
+    
+    // Helper function to limit breakdown arrays
+    const limitBreakdown = (breakdown: any[] | undefined) => {
+      if (!breakdown || !Array.isArray(breakdown)) return [];
+      return breakdown.slice(0, limit);
+    };
+    
+    // Return all breakdowns and insights fields for the frontend with limits applied
     return {
-      age_breakdown: account.age_breakdown || [],
-      city_breakdown: account.city_breakdown || [],
-      contact_button_type_breakdown: account.contact_button_type_breakdown || [],
-      country_breakdown: account.country_breakdown || [],
-      follow_type_breakdown: account.follow_type_breakdown || [],
-      gender_breakdown: account.gender_breakdown || [],
-      media_product_type_breakdown: account.media_product_type_breakdown || [],
+      age_breakdown: limitBreakdown(account.age_breakdown),
+      city_breakdown: limitBreakdown(account.city_breakdown),
+      contact_button_type_breakdown: limitBreakdown(account.contact_button_type_breakdown),
+      country_breakdown: limitBreakdown(account.country_breakdown),
+      follow_type_breakdown: limitBreakdown(account.follow_type_breakdown),
+      gender_breakdown: limitBreakdown(account.gender_breakdown),
+      media_product_type_breakdown: limitBreakdown(account.media_product_type_breakdown),
       insights: account.insights || {},
     };
   },

@@ -11,8 +11,8 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
   return (
     <div className="max-w-md mx-auto bg-white/90 backdrop-blur-sm rounded-xl shadow-xl p-8">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Join the Waitlist</h1>
-        <p className="text-gray-600">Be the first to know when we launch!</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Join Beta Program</h1>
+        <p className="text-gray-600">Get early access to creator tools and mobile features!</p>
       </div>
       
       <form onSubmit={onSubmit} className="space-y-6">
@@ -48,9 +48,9 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
         
         <button
           type="submit"
-          className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-white font-bold py-3 px-6 rounded-lg hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2"
+          className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-3 px-6 rounded-lg hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
         >
-          Invest in Us
+          Join Beta Program
         </button>
       </form>
       

@@ -18,6 +18,8 @@ import {
   groupBreakdownValues,
   getMetricLabel
 } from '@/app/lib/utils/format-utils'
+import { isLargeDataset, PerformanceTimer } from '@/app/lib/utils/performance-utils'
+import { LargeDatasetLoading } from '@/components/ui/loading-states'
 
 const BREAKDOWN_LABELS = {
   country_breakdown: "Country",
@@ -236,6 +238,29 @@ function BreakdownDisplay({ data, label }) {
     );
   }
 
+  // Performance optimization: Check if data is large and show loading state
+  const isLargeDatasetFlag = isLargeDataset(data.length);
+  const [processed, setProcessed] = React.useState(false);
+  const [processingStartTime, setProcessingStartTime] = React.useState<number | null>(null);
+
+  // Show top N for long lists (e.g., cities/countries) - moved outside useMemo
+  const MAX_BARS = 50; // Increased from 10 to 50 for better UX
+
+  // Show loading state for large datasets
+  if (isLargeDatasetFlag && !processed) {
+    if (!processingStartTime) {
+      setProcessingStartTime(performance.now());
+    }
+    
+    return (
+      <LargeDatasetLoading
+        dataCount={data.length}
+        operation={`Processing ${label} breakdown`}
+        showProgress={false}
+      />
+    );
+  }
+
   // Helper to pick formatter based on breakdown type
   function formatName(name, breakdownType) {
     if (breakdownType === 'country_breakdown') return getCountryNameFromCode(name);
@@ -252,16 +277,58 @@ function BreakdownDisplay({ data, label }) {
     return grouped;
   }
 
-  // Show top N for long lists (e.g., cities/countries)
-  const MAX_BARS = 10;
+  // Performance optimization: useMemo for expensive sorting operations
+  const processedData = React.useMemo(() => {
+    if (isLargeDatasetFlag && !processed) {
+      return null; // Still processing
+    }
+
+    const timer = new PerformanceTimer(`Processing ${label} breakdown`);
+    
+    const result = data.map((metricObj, idx) => {
+      const processed = processValues(metricObj.values, label.toLowerCase() + '_breakdown');
+      const topValues = processed.slice(0, MAX_BARS); // Process only visible items
+      const total = processed.reduce((sum, v) => sum + v.value, 0);
+      
+      return {
+        processed,
+        topValues,
+        total,
+        metricObj
+      };
+    });
+
+    timer.endWithThreshold(100); // Warn if processing takes more than 100ms
+    return result;
+  }, [data, label, isLargeDatasetFlag, processed, MAX_BARS]);
+
+  // Mark as processed after first render
+  React.useEffect(() => {
+    if (isLargeDatasetFlag && !processed && processedData) {
+      setProcessed(true);
+      if (processingStartTime) {
+        console.log(`Processed ${label} breakdown in ${performance.now() - processingStartTime}ms`);
+      }
+    }
+  }, [isLargeDatasetFlag, processed, processedData, label, processingStartTime]);
+
+  if (!processedData) {
+    return (
+      <div className="bg-card rounded-lg p-4 shadow space-y-4">
+        <h4 className="text-lg font-semibold mb-2">{label} Breakdown</h4>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-5/6" />
+          <Skeleton className="h-4 w-4/6" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-card rounded-lg p-4 shadow space-y-4">
       <h4 className="text-lg font-semibold mb-2">{label} Breakdown</h4>
-      {data.map((metricObj, idx) => {
-        const processed = processValues(metricObj.values, label.toLowerCase() + '_breakdown');
-        const topValues = processed.slice(0, MAX_BARS);
-        const total = processed.reduce((sum, v) => sum + v.value, 0);
+      {processedData.map(({ processed, topValues, total, metricObj }, idx) => {
         return (
           <div key={idx} className="mb-4">
             <div className="font-medium mb-2 text-sm text-muted-foreground">{getMetricLabel(metricObj.metric)}</div>

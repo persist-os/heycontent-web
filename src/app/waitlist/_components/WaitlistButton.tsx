@@ -81,7 +81,7 @@ export function WaitlistButton({ size = 'default' }: WaitlistButtonProps) {
         }}
       />
       <span style={{ position: 'relative', zIndex: 2 }}>
-        {isLoading ? 'Loading...' : 'Join Waitlist'}
+        {isLoading ? 'Loading...' : 'Get Early Access'}
       </span>
     </motion.button>
   )

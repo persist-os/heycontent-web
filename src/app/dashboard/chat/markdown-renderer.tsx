@@ -9,6 +9,7 @@ import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useAuth } from '@/app/context/auth-context'
 import { useCallback, useMemo } from 'react'
+import { useContentResolver } from '@/lib/content-resolver'
 
 interface MarkdownRendererProps {
   content: string
@@ -117,10 +118,8 @@ function ChatContentRenderer({ content, className = '', onContentClick }: ChatCo
     hasContentLinks: content.includes('@[')
   })
   
-  // Fetch all linkable content
-  const allLinkableContent = useQuery(api.notes.getAllLinkableContent, { 
-    userId: userId || '' 
-  })
+  // Fetch all linkable content using content resolver
+  const { allContent: allLinkableContent } = useContentResolver(userId)
 
   // Process content to render linked content
   const processedContent = useMemo(() => {
