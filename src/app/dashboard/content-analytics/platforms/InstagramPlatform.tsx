@@ -23,9 +23,6 @@ interface InstagramPlatformProps {
   loading: boolean;
   error: string | null;
   isConnected: boolean;
-  refresh: () => void;
-  refreshing: boolean;
-  refreshSuccess?: boolean;
   instagramAccount: any; // Can be more specific
   // Load more functionality
   loadMore: () => void;
@@ -34,6 +31,13 @@ interface InstagramPlatformProps {
   hasMorePosts: boolean;
   queueCount: number;
   totalPostsFetched: number;
+  // Separate refresh functions
+  refreshPosts: () => void;
+  refreshTracker: () => void;
+  refreshingPosts: boolean;
+  refreshingTracker: boolean;
+  refreshPostsSuccess?: boolean;
+  refreshTrackerSuccess?: boolean;
 }
 
 export function InstagramPlatform({ 
@@ -43,9 +47,6 @@ export function InstagramPlatform({
   loading,
   error,
   isConnected,
-  refresh,
-  refreshing,
-  refreshSuccess,
   instagramAccount,
   // Load more functionality
   loadMore,
@@ -54,6 +55,13 @@ export function InstagramPlatform({
   hasMorePosts,
   queueCount,
   totalPostsFetched,
+  // Separate refresh functions
+  refreshPosts,
+  refreshTracker,
+  refreshingPosts,
+  refreshingTracker,
+  refreshPostsSuccess,
+  refreshTrackerSuccess,
 }: InstagramPlatformProps) {
   const router = useRouter();
   const [selectedContent, setSelectedContent] = useState<InstagramContentItem | null>(null);
@@ -183,22 +191,37 @@ export function InstagramPlatform({
       )}
       {/* Instagram Analytics Section */}
       <div className="space-y-6 mb-8">
-        {/* Header with Refresh Button */}
+        {/* Header with Refresh Buttons */}
         <div className="flex justify-between items-center">
-          <div></div> {/* Empty div to push button to the right */}
-          <Button 
-            size="sm" 
-            onClick={refresh}
-            disabled={refreshing}
-            className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm"
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            {refreshing ? 'Refreshing...' : 'Refresh Instagram'}
-          </Button>
+          <div></div> {/* Empty div to push buttons to the right */}
+          <div className="flex gap-3">
+            <Button 
+              size="sm" 
+              onClick={refreshPosts}
+              disabled={refreshingPosts}
+              className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              {refreshingPosts ? 'Refreshing Posts...' : 'Refresh Posts'}
+            </Button>
+            <Button 
+              size="sm" 
+              onClick={refreshTracker}
+              disabled={refreshingTracker}
+              className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              {refreshingTracker ? 'Refreshing Tracker...' : 'Refresh Tracker'}
+            </Button>
+          </div>
         </div>
 
-        {refreshSuccess && (
-          <div className="text-green-500 text-sm mb-2 text-center">Instagram analytics & posts refreshed!</div>
+        {refreshPostsSuccess && (
+          <div className="text-green-500 text-sm mb-2 text-center">Instagram posts refreshed successfully!</div>
+        )}
+
+        {refreshTrackerSuccess && (
+          <div className="text-green-500 text-sm mb-2 text-center">Instagram tracker analysis refreshed successfully!</div>
         )}
 
         {/* Platform Embedding Status */}

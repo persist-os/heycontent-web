@@ -5,27 +5,12 @@ import { query } from "./_generated/server";
 export const getInstagramAccount = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
-    console.log('Querying Instagram account for userId:', args.userId);
-    
-    // First check if we can find any accounts at all
-    const allAccounts = await ctx.db
-      .query("instagramAccounts")
-      .collect();
-    console.log('Total Instagram accounts in DB:', allAccounts.length);
-    
-    // Then try to find the specific account
-    const accounts = await ctx.db
+    // Find the account for this user
+    const account = await ctx.db
       .query("instagramAccounts")
       .withIndex("by_userId", q => q.eq("userId", args.userId))
       .first();
-    
-    console.log('Found account:', accounts ? {
-      userId: accounts.userId,
-      username: accounts.username,
-      instagramAccountId: accounts.instagramAccountId
-    } : 'No account found');
-    
-    return accounts;
+    return account || null;
   },
 });
 
@@ -597,25 +582,26 @@ export const getRecentPostsWithAnalysis = query({
   },
 });
 
-// Get Instagram profile insights
+// Get Instagram profile insights (return all breakdowns and insights fields)
 export const getInstagramProfileInsights = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
-    try {
-      const account = await ctx.db
-        .query("instagramAccounts")
-        .withIndex("by_userId", q => q.eq("userId", args.userId))
-        .first();
-
-      if (!account) {
-        return null;
-      }
-
-      return account.profileInsights || null;
-    } catch (error) {
-      console.error('Error getting Instagram profile insights:', error);
-      throw new Error(`Failed to get Instagram profile insights: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    const account = await ctx.db
+      .query("instagramAccounts")
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
+      .first();
+    if (!account) return null;
+    // Return all breakdowns and insights fields for the frontend
+    return {
+      age_breakdown: account.age_breakdown || [],
+      city_breakdown: account.city_breakdown || [],
+      contact_button_type_breakdown: account.contact_button_type_breakdown || [],
+      country_breakdown: account.country_breakdown || [],
+      follow_type_breakdown: account.follow_type_breakdown || [],
+      gender_breakdown: account.gender_breakdown || [],
+      media_product_type_breakdown: account.media_product_type_breakdown || [],
+      insights: account.insights || {},
+    };
   },
 });
 

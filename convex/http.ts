@@ -190,44 +190,6 @@ app.get("/api/users/:id/conversations", async (c) => {
   return c.json(result);
 });
 
-// Gmail quota optimization endpoints
-app.post("/api/query/getLastGmailFetch", async (c) => {
-  const ctx = c.env;
-  const { userId } = await c.req.json();
-  
-  if (!userId) {
-    return c.json({ success: false, error: "Missing userId" }, 400);
-  }
-  
-  try {
-    const timestamp = await ctx.runQuery(api.userQueries.getLastGmailFetch, { userId });
-    return c.json({ success: true, data: timestamp });
-  } catch (error) {
-    console.error("Failed to get last Gmail fetch timestamp:", error);
-    return c.json({ success: false, error: "Failed to get last Gmail fetch timestamp" }, 500);
-  }
-});
-
-app.post("/api/mutation/updateLastGmailFetch", async (c) => {
-  const ctx = c.env;
-  const { userId, timestamp } = await c.req.json();
-  
-  if (!userId) {
-    return c.json({ success: false, error: "Missing userId" }, 400);
-  }
-  
-  try {
-    const result = await ctx.runMutation(api.userMutations.updateLastGmailFetch, { 
-      userId,
-      timestamp
-    });
-    return c.json({ success: true, data: result });
-  } catch (error) {
-    console.error("Failed to update last Gmail fetch timestamp:", error);
-    return c.json({ success: false, error: "Failed to update last Gmail fetch timestamp" }, 500);
-  }
-});
-
 // Chat with context - Enhanced chat that searches for relevant content
 app.post("/api/users/:id/chat_with_context", async (c) => {
   const ctx = c.env;
@@ -1071,50 +1033,78 @@ app.post("/api/users/:id/instagram/posts/single", async (c) => {
 
 // Store Instagram profile data (updated for consolidated schema)
 app.post("/api/users/:id/instagram/profile", async (c) => {
-const ctx = c.env;
-const userId = c.req.param("id");
-const { username, instagramAccountId, profileData, token, profileInsights, createdAt, updatedAt } = await c.req.json();
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const body = await c.req.json();
+  
+  console.log("[HTTP] Instagram profile endpoint called for user:", userId);
+  console.log("[HTTP] Request body keys:", Object.keys(body));
+  console.log("[HTTP] Has breakdowns:", {
+    age: !!body.age_breakdown,
+    city: !!body.city_breakdown,
+    country: !!body.country_breakdown,
+    gender: !!body.gender_breakdown
+  });
 
-// Validate required fields
-if (!profileData || !profileData.id || !username || !instagramAccountId) {
-    return c.json({ success: false, error: "profileData.id, instagramAccountId, and username are required" }, 400);
-}
-
-try {
-    const result = await ctx.runMutation(api.instagramMutations.storeProfileData, {
-    userId,
+  const {
+    username,
     instagramAccountId,
-    username: username as string,
-    profileData: profileData as {
-        id: string;
-        username: string;
-        account_type: any;
-        profile_picture_url?: any;
-        followers_count: any;
-        follows_count: any;
-        media_count: any;
-        name?: string;
-        biography?: string;
-        website?: string;
-    },
-    ...(token && { token }),
-    ...(profileInsights && { profileInsights }),
-    createdAt: (createdAt ?? Date.now()) as number,
-    updatedAt: (updatedAt ?? Date.now()) as number,
-    });
+    profileData,
+    token,
+    age_breakdown,
+    city_breakdown,
+    contact_button_type_breakdown,
+    country_breakdown,
+    follow_type_breakdown,
+    gender_breakdown,
+    media_product_type_breakdown,
+    insights,
+    pagination,
+    diffs,
+    createdAt,
+    updatedAt,
+  } = body;
 
-    return c.json({ 
-    success: true,
-    status: result.status,
-    instagramAccountId: result.instagramAccountId,
+  // Validate required fields
+  if (!profileData || !profileData.id || !username || !instagramAccountId) {
+    console.log("[HTTP] Validation failed - missing required fields");
+    return c.json({ success: false, error: "profileData.id, instagramAccountId, and username are required" }, 400);
+  }
+
+  try {
+    console.log("[HTTP] Calling storeProfileData mutation");
+    const result = await ctx.runMutation(api.instagramMutations.storeProfileData, {
+      userId,
+      instagramAccountId,
+      username,
+      profileData,
+      token,
+      age_breakdown,
+      city_breakdown,
+      contact_button_type_breakdown,
+      country_breakdown,
+      follow_type_breakdown,
+      gender_breakdown,
+      media_product_type_breakdown,
+      insights,
+      pagination,
+      diffs,
+      createdAt: createdAt ?? Date.now(),
+      updatedAt: updatedAt ?? Date.now(),
     });
-} catch (error) {
-    console.error("Failed to store Instagram profile data:", error);
-    return c.json({ 
-    success: false, 
-    error: `Failed to store Instagram profile data: ${error instanceof Error ? error.message : 'Unknown error'}`
+    console.log("[HTTP] Mutation result:", result);
+    return c.json({
+      success: true,
+      status: result.status,
+      instagramAccountId: result.instagramAccountId,
+    });
+  } catch (error) {
+    console.error("[HTTP] Failed to store Instagram profile data:", error);
+    return c.json({
+      success: false,
+      error: `Failed to store Instagram profile data: ${error instanceof Error ? error.message : 'Unknown error'}`
     }, 500);
-}
+  }
 });
 
 // Get Instagram profile insights
@@ -1742,8 +1732,8 @@ app.get("/api/users/:id/gmail/threads", async (c) => {
   const limitParam = c.req.query("limit");
   const limit = limitParam ? parseInt(limitParam, 10) : undefined;
   
-  // Use the new paginated query with limit parameter
-  const threads = await ctx.runQuery(api.gmailQueries.getRecentGmailThreads, { 
+  // Use the new joined query with limit parameter
+  const threads = await ctx.runQuery(api.gmailQueries.getGmailThreadsWithMessages, { 
     userId,
     limit
   });

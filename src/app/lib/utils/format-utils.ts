@@ -363,3 +363,62 @@ export function truncateText(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength - 3) + '...';
 } 
+
+// Country code to country name mapping (partial, add more as needed)
+const COUNTRY_CODE_MAP: Record<string, string> = {
+  US: "United States",
+  CA: "Canada",
+  GB: "United Kingdom",
+  AU: "Australia",
+  IN: "India",
+  DE: "Germany",
+  FR: "France",
+  // ... add more as needed ...
+};
+
+export function getCountryNameFromCode(code: string): string {
+  return COUNTRY_CODE_MAP[code] || code;
+}
+
+export function getGenderLabel(code: string): string {
+  switch (code) {
+    case "F": return "Female 👩";
+    case "M": return "Male 👨";
+    case "U": return "Unknown 🧑";
+    default: return code;
+  }
+}
+
+const AGE_ORDER = [
+  "13-17", "18-24", "25-34", "35-44", "45-54", "55-64", "65+"
+];
+
+export function sortAgeGroups(values: { name: string, value: number }[]): { name: string, value: number }[] {
+  return [...values].sort((a, b) => {
+    const aIdx = AGE_ORDER.indexOf(a.name);
+    const bIdx = AGE_ORDER.indexOf(b.name);
+    if (aIdx === -1 && bIdx === -1) return a.name.localeCompare(b.name);
+    if (aIdx === -1) return 1;
+    if (bIdx === -1) return -1;
+    return aIdx - bIdx;
+  });
+}
+
+export function groupBreakdownValues(values: { name: string, value: number }[]): { name: string, value: number }[] {
+  const map = new Map<string, number>();
+  for (const { name, value } of values) {
+    map.set(name, (map.get(name) || 0) + value);
+  }
+  return Array.from(map.entries()).map(([name, value]) => ({ name, value }));
+}
+
+export function getMetricLabel(metric: string): string {
+  switch (metric) {
+    case "engaged_audience_demographics": return "Engaged Audience";
+    case "reached_audience_demographics": return "Reached Audience";
+    case "follower_demographics": return "Followers";
+    default:
+      // Prettify snake_case
+      return metric.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+} 
