@@ -382,9 +382,9 @@ export function getCountryNameFromCode(code: string): string {
 
 export function getGenderLabel(code: string): string {
   switch (code) {
-    case "F": return "Female 👩";
-    case "M": return "Male 👨";
-    case "U": return "Unknown 🧑";
+    case "F": return "Female";
+    case "M": return "Male";
+    case "U": return "Unknown";
     default: return code;
   }
 }
