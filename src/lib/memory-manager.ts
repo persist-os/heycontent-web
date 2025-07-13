@@ -37,6 +37,7 @@ export class MemoryManager<T extends UnifiedContent> {
   private config: MemoryConfig;
   private items: Map<string, T> = new Map();
   private accessOrder: string[] = [];
+  private accessIndexMap: Map<string, number> = new Map(); // O(1) index lookup
   private stats: MemoryStats = {
     totalItems: 0,
     totalMemoryMB: 0,
@@ -113,7 +114,16 @@ export class MemoryManager<T extends UnifiedContent> {
   removeItems(ids: string[]): void {
     ids.forEach(id => {
       this.items.delete(id);
-      this.accessOrder = this.accessOrder.filter(accessId => accessId !== id);
+      const index = this.accessIndexMap.get(id);
+      if (index !== undefined) {
+        this.accessOrder.splice(index, 1);
+        this.accessIndexMap.delete(id);
+        
+        // Update indices for items that shifted after removal
+        for (let i = index; i < this.accessOrder.length; i++) {
+          this.accessIndexMap.set(this.accessOrder[i], i);
+        }
+      }
     });
     this.updateStats();
   }
@@ -122,6 +132,7 @@ export class MemoryManager<T extends UnifiedContent> {
   clear(): void {
     this.items.clear();
     this.accessOrder = [];
+    this.accessIndexMap.clear();
     this.updateStats();
   }
 
@@ -132,14 +143,17 @@ export class MemoryManager<T extends UnifiedContent> {
 
     const startTime = performance.now();
     
-    // Remove least recently accessed items
+    // Remove least recently accessed items (from the end of the array)
     const itemsToRemove = this.accessOrder.slice(-itemsToPurge);
     itemsToRemove.forEach(id => {
       this.items.delete(id);
+      this.accessIndexMap.delete(id);
     });
     
-    // Update access order
+    // Update access order by removing the purged items
     this.accessOrder = this.accessOrder.slice(0, -itemsToPurge);
+    
+    // No need to update index map since we only removed from the end
     
     // Update statistics
     this.stats.itemsPurged += itemsToPurge;
@@ -151,12 +165,32 @@ export class MemoryManager<T extends UnifiedContent> {
     }
   }
 
-  // Update access order for an item
+  // Update access order for an item - optimized to avoid O(n²) filtering
   private updateAccessOrder(id: string): void {
-    // Remove from current position
-    this.accessOrder = this.accessOrder.filter(accessId => accessId !== id);
+    const existingIndex = this.accessIndexMap.get(id);
+    
+    if (existingIndex !== undefined && existingIndex > 0) {
+      // Item exists and is not already at front, remove from current position
+      this.accessOrder.splice(existingIndex, 1);
+      
+      // Update index map for items that shifted left after removal
+      for (let i = existingIndex; i < this.accessOrder.length; i++) {
+        this.accessIndexMap.set(this.accessOrder[i], i);
+      }
+    } else if (existingIndex === 0) {
+      // Item is already at front, no need to move
+      return;
+    }
+    
     // Add to front (most recently accessed)
     this.accessOrder.unshift(id);
+    
+    // Update index map: new item at index 0, shift others right
+    this.accessIndexMap.set(id, 0);
+    for (let i = 1; i < this.accessOrder.length; i++) {
+      const itemId = this.accessOrder[i];
+      this.accessIndexMap.set(itemId, i);
+    }
   }
 
   // Update memory statistics

@@ -211,7 +211,7 @@ export function NoteArea({
         }
   );
 
-  const note = liveNoteData || initialNote;
+  const note = (liveNoteData || initialNote) as Note;
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [content, setContent] = useState(note.content || '');
   const [showImageGallery, setShowImageGallery] = useState(false);

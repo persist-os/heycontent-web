@@ -159,6 +159,8 @@ export const InfiniteScrollExample: React.FC<InfiniteScrollExampleProps> = ({
   // State
   const [debugMode, setDebugMode] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const previousScrollTopRef = useRef<number>(0);
+  const lastScrollTimeRef = useRef<number>(Date.now());
 
   // Core infinite scroll hook
   const {
@@ -251,13 +253,21 @@ export const InfiniteScrollExample: React.FC<InfiniteScrollExampleProps> = ({
   // Handle scroll with performance tracking
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const startTime = performance.now();
+    const currentTime = Date.now();
     
-    // Calculate scroll velocity
+    // Calculate scroll velocity properly
     const scrollTop = e.currentTarget.scrollTop;
     const scrollHeight = e.currentTarget.scrollHeight;
     const clientHeight = e.currentTarget.clientHeight;
     
-    const scrollVelocity = Math.abs(scrollTop - (scrollTop || 0));
+    // Calculate actual scroll velocity using previous position and time
+    const scrollDelta = Math.abs(scrollTop - previousScrollTopRef.current);
+    const timeDelta = currentTime - lastScrollTimeRef.current;
+    const scrollVelocity = timeDelta > 0 ? scrollDelta / timeDelta : 0; // pixels per millisecond
+    
+    // Update refs for next calculation
+    previousScrollTopRef.current = scrollTop;
+    lastScrollTimeRef.current = currentTime;
     
     if (enablePerformanceMonitoring) {
       updateScrollVelocity(scrollVelocity);

@@ -137,6 +137,15 @@ const initialErrorState = {
   insights: null,
 };
 
+// Configuration for infinite scroll
+const INFINITE_SCROLL_CONFIG = {
+  PAGE_SIZE: 20,
+  PRELOAD_THRESHOLD: 0.8, // Load more when 80% scrolled
+  MAX_ITEMS_IN_MEMORY: 500,
+  VIEWPORT_BUFFER: 50, // Items to render outside viewport
+  SCROLL_DEBOUNCE_MS: 100,
+};
+
 const createInitialInfiniteScrollState = (): InfiniteScrollState => ({
   items: [],
   hasMore: true,
@@ -145,7 +154,7 @@ const createInitialInfiniteScrollState = (): InfiniteScrollState => ({
   totalLoaded: 0,
   isInitialized: false,
   error: null,
-  maxItems: 500, // Memory limit
+  maxItems: INFINITE_SCROLL_CONFIG.MAX_ITEMS_IN_MEMORY, // Use single constant reference
   loadedPages: 0,
   lastLoadTime: 0,
   scrollVelocity: 0,
@@ -157,15 +166,6 @@ const initialContentState: PlatformContentData = {
   instagram: createInitialInfiniteScrollState(),
   gmail: createInitialInfiniteScrollState(),
   insights: createInitialInfiniteScrollState(),
-};
-
-// Configuration for infinite scroll
-const INFINITE_SCROLL_CONFIG = {
-  PAGE_SIZE: 20,
-  PRELOAD_THRESHOLD: 0.8, // Load more when 80% scrolled
-  MAX_ITEMS_IN_MEMORY: 500,
-  VIEWPORT_BUFFER: 50, // Items to render outside viewport
-  SCROLL_DEBOUNCE_MS: 100,
 };
 
 export const useContentStore = create<ContentStoreState>()(
@@ -347,9 +347,20 @@ export const useContentStore = create<ContentStoreState>()(
               break;
             
             case 'insights':
+              // Get channelId from user's YouTube account
+              const youtubeChannel = await convex.query(api.youtubeQueries.getYouTubeChannelData, { userId });
+              const channelId = youtubeChannel?.id;
+              
+              if (!channelId) {
+                // No YouTube channel connected, return empty insights
+                newItems = [];
+                hasMore = false;
+                break;
+              }
+              
               const insightsResult = await convex.query(api.youtubeQueries.getYoutubeBatchAnalysis, { 
                 userId, 
-                channelId: '' // We'll need to get this from YouTube account
+                channelId 
               });
               newItems = processInsightsData({ status: 'fulfilled', value: insightsResult });
               hasMore = false; // Insights don't have pagination yet

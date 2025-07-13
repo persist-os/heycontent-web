@@ -39,6 +39,7 @@ export class PerformanceMonitor {
   private isMonitoring: boolean = false;
   private frameCount: number = 0;
   private lastFrameTime: number = 0;
+  private monitoringStartTime: number = 0;
   private renderTimes: number[] = [];
   private scrollLatencies: number[] = [];
   private jankEvents: number[] = [];
@@ -57,7 +58,8 @@ export class PerformanceMonitor {
     
     this.isMonitoring = true;
     this.frameCount = 0;
-    this.lastFrameTime = performance.now();
+    this.monitoringStartTime = performance.now();
+    this.lastFrameTime = this.monitoringStartTime;
     
     // Start frame monitoring
     this.monitorFrames();
@@ -114,6 +116,15 @@ export class PerformanceMonitor {
     const memoryCallback = () => {
       if (!this.isMonitoring) return;
       
+      // Record current memory usage
+      const memoryUsage = this.getMemoryUsage();
+      
+      // Store memory usage in performance metrics if available
+      if (this.metrics.length > 0) {
+        const latestMetrics = this.metrics[this.metrics.length - 1];
+        latestMetrics.memoryUsage = memoryUsage;
+      }
+      
       // Schedule next memory check
       setTimeout(memoryCallback, 1000); // Check every second
     };
@@ -125,8 +136,9 @@ export class PerformanceMonitor {
   private calculateMetrics(): void {
     const now = performance.now();
     
-    // Calculate FPS
-    const fps = this.frameCount / ((now - this.lastFrameTime + (this.frameCount * 16.67)) / 1000);
+    // Calculate FPS properly using elapsed time since monitoring started
+    const elapsedSeconds = (now - this.monitoringStartTime) / 1000;
+    const fps = elapsedSeconds > 0 ? this.frameCount / elapsedSeconds : 0;
     
     // Calculate average render time
     const avgRenderTime = this.renderTimes.length > 0 
