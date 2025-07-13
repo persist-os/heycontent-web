@@ -97,6 +97,12 @@ export function useInstagramAnalytics(userId?: string) {
   const [refreshSuccess, setRefreshSuccess] = useState(false);
   const [lastFetchTime, setLastFetchTime] = useState<number | null>(null);
 
+  // New separate refresh states
+  const [refreshingPosts, setRefreshingPosts] = useState(false);
+  const [refreshingTracker, setRefreshingTracker] = useState(false);
+  const [refreshPostsSuccess, setRefreshPostsSuccess] = useState(false);
+  const [refreshTrackerSuccess, setRefreshTrackerSuccess] = useState(false);
+
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   
@@ -303,18 +309,16 @@ export function useInstagramAnalytics(userId?: string) {
     }
   }, [trackerAnalysis, userId, instagramAccountId]);
 
-  // Manual refresh function - only way to trigger expensive backend API calls
-  const refresh = useCallback(async () => {
+  // Separate refresh functions for posts and tracker
+  const refreshPosts = useCallback(async () => {
     if (!userId || !instagramAccountId) return;
 
-    setRefreshing(true);
+    setRefreshingPosts(true);
     setError(null);
-    setRefreshSuccess(false);
+    setRefreshPostsSuccess(false);
 
     try {
-      console.log('🔄 Instagram: Manual refresh - calling expensive backend API');
-
-      const response = await fetch(`${window.location.origin}/api/social/instagram/full-refresh`, {
+      const response = await fetch(`${window.location.origin}/api/social/instagram/refresh-posts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -326,51 +330,45 @@ export function useInstagramAnalytics(userId?: string) {
         })
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch Instagram analysis: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      
-      // Process response data
-      let analysisToSet = null;
-      
-      if (data?.status === 'success' && data?.data) {
-        if (data.data.content && !data.data.last_post) {
-          analysisToSet = data.data.content;
-        } else {
-          analysisToSet = data.data;
-        }
-      } else if (data?.analysis) {
-        if (data.analysis.content) {
-          analysisToSet = data.analysis.content;
-        } else {
-          analysisToSet = data.analysis;
-        }
-      }
-      
-      if (analysisToSet && isMountedRef.current) {
-        setAnalysis(analysisToSet);
-        setLastFetchTime(Date.now());
-        saveCachedData(userId, instagramAccountId, analysisToSet);
-        setError(null);
-        setRefreshSuccess(true);
-        setTimeout(() => setRefreshSuccess(false), 3000);
-        
-
-      } else if (isMountedRef.current) {
-        console.warn('⚠️ Instagram: No valid analysis data found in API response');
-        setError('Your Instagram analysis is taking a moment to process. Thanks for your patience—great insights are worth waiting for! Keep creating while we work on this.');
+      if (response.ok) {
+        setRefreshPostsSuccess(true);
+        setTimeout(() => setRefreshPostsSuccess(false), 3000);
       }
     } catch (err) {
-      console.error('❌ Instagram: Manual refresh failed:', err);
-      if (isMountedRef.current) {
-        setError('Your Instagram analysis is taking a moment to load. Thanks for your patience—great insights are worth waiting for! Keep creating while we work on this.');
-      }
+      console.error('❌ Instagram: Posts refresh failed:', err);
     } finally {
-      if (isMountedRef.current) {
-        setRefreshing(false);
+      setRefreshingPosts(false);
+    }
+  }, [userId, instagramAccountId]);
+
+  const refreshTracker = useCallback(async () => {
+    if (!userId || !instagramAccountId) return;
+
+    setRefreshingTracker(true);
+    setError(null);
+    setRefreshTrackerSuccess(false);
+
+    try {
+      const response = await fetch(`${window.location.origin}/api/social/instagram/refresh-tracker`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await getApiKey()}`,
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          instagram_account_id: instagramAccountId
+        })
+      });
+
+      if (response.ok) {
+        setRefreshTrackerSuccess(true);
+        setTimeout(() => setRefreshTrackerSuccess(false), 3000);
       }
+    } catch (err) {
+      console.error('❌ Instagram: Tracker refresh failed:', err);
+    } finally {
+      setRefreshingTracker(false);
     }
   }, [userId, instagramAccountId]);
 
@@ -445,15 +443,12 @@ export function useInstagramAnalytics(userId?: string) {
   return {
     items: mappedInstagramItems,
     analysis,
-    loading: loading || refreshing,
+    loading: loading || refreshingPosts || refreshingTracker,
     error,
     isConnected: !!instagramAccount,
-    refresh,
-    refreshing,
     instagramAccount,
     lastFetchTime: lastFetchTime ? new Date(lastFetchTime) : null,
     isCached: !!lastFetchTime && (Date.now() - lastFetchTime < CACHE_DURATION),
-    refreshSuccess,
     // Load more functionality
     loadMore,
     loadingMore,
@@ -461,5 +456,12 @@ export function useInstagramAnalytics(userId?: string) {
     hasMorePosts: (paginationInfo?.hasMorePosts || false) || (queueStatus?.queueCount || 0) > 0,
     queueCount: queueStatus?.queueCount || 0,
     totalPostsFetched: paginationInfo?.totalPostsFetched || 0,
+    // New separate refresh functions
+    refreshPosts,
+    refreshTracker,
+    refreshingPosts,
+    refreshingTracker,
+    refreshPostsSuccess,
+    refreshTrackerSuccess,
   };
 } 

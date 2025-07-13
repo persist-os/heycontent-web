@@ -530,58 +530,91 @@ export default defineSchema({
   .index("by_views", ["statistics.views"])
   .index("by_likes", ["statistics.likes"]),
 
- // Instagram Accounts (consolidated with tokens and insights)
- instagramAccounts: defineTable({
-  userId: v.string(),
-  instagramAccountId: v.string(),
-  username: v.string(),
-  profileData: v.object({
-    id: v.string(),
+  // Instagram Accounts (consolidated with tokens and insights)
+  instagramAccounts: defineTable({
+    age_breakdown: v.optional(
+      v.array(
+        v.object({ metric: v.string(), values: v.any() })
+      )
+    ),
+    city_breakdown: v.optional(
+      v.array(
+        v.object({ metric: v.string(), values: v.any() })
+      )
+    ),
+    contact_button_type_breakdown: v.optional(
+      v.array(
+        v.object({ metric: v.string(), values: v.any() })
+      )
+    ),
+    country_breakdown: v.optional(
+      v.array(
+        v.object({ metric: v.string(), values: v.any() })
+      )
+    ),
+    createdAt: v.number(),
+    diffs: v.optional(
+      v.array(
+        v.object({
+          changeType: v.optional(v.string()),
+          changedAt: v.number(),
+          changedFields: v.array(v.string()),
+          current: v.any(),
+        })
+      )
+    ),
+    follow_type_breakdown: v.optional(
+      v.array(
+        v.object({ metric: v.string(), values: v.any() })
+      )
+    ),
+    gender_breakdown: v.optional(
+      v.array(
+        v.object({ metric: v.string(), values: v.any() })
+      )
+    ),
+    insights: v.optional(v.any()),
+    instagramAccountId: v.string(),
+    media_product_type_breakdown: v.optional(
+      v.array(
+        v.object({ metric: v.string(), values: v.any() })
+      )
+    ),
+    pagination: v.optional(
+      v.object({
+        hasMorePosts: v.boolean(),
+        lastFetchedAt: v.number(),
+        nextUrl: v.optional(v.union(v.string(), v.null())),
+        totalPostsFetched: v.number(),
+      })
+    ),
+    profileData: v.object({
+      account_type: v.any(),
+      biography: v.optional(v.string()),
+      followers_count: v.any(),
+      follows_count: v.any(),
+      id: v.string(),
+      media_count: v.any(),
+      name: v.optional(v.string()),
+      profile_picture_url: v.optional(v.any()),
+      username: v.string(),
+      website: v.optional(v.string()),
+    }),
+    token: v.optional(
+      v.object({
+        accessToken: v.string(),
+        expiryDate: v.number(),
+        lastRefreshed: v.number(),
+        scope: v.string(),
+      })
+    ),
+    updatedAt: v.number(),
+    userId: v.string(),
     username: v.string(),
-    account_type: v.any(),
-    profile_picture_url: v.optional(v.any()),
-    followers_count: v.any(),
-    follows_count: v.any(),
-    media_count: v.any(),
-    name: v.optional(v.string()),
-    biography: v.optional(v.string()),
-    website: v.optional(v.string()),
-  }),
-  // Token data (consolidated from instagramTokens table)
-  token: v.optional(v.object({
-    accessToken: v.string(),
-    expiryDate: v.number(),
-    scope: v.string(),
-    lastRefreshed: v.number(),
-  })),
-  // Profile insights data
-  profileInsights: v.optional(v.object({
-    reach: v.optional(v.number()),
-    profile_views: v.optional(v.number()),
-    website_clicks: v.optional(v.number()),
-    follower_count: v.optional(v.number()),
-    period: v.optional(v.string()),
-    lastUpdated: v.optional(v.number()),
-  })),
-  // Pagination state for lazy loading
-  pagination: v.optional(v.object({
-    nextUrl: v.optional(v.union(v.string(), v.null())), // <-- update this line
-    hasMorePosts: v.boolean(),
-    lastFetchedAt: v.number(),
-    totalPostsFetched: v.number(),
-  })),
-  createdAt: v.number(),
-  updatedAt: v.number(),
-  diffs: v.optional(v.array(v.object({
-    changedAt: v.number(),
-    changedFields: v.array(v.string()),
-    current: v.any(),
-    changeType: v.optional(v.string()),
-  })))
-})
-.index("by_userId", ["userId"])
-.index("by_username", ["username"])
-.index("by_instagramAccountId", ["instagramAccountId"]),
+  })
+    .index("by_instagramAccountId", ["instagramAccountId"])
+    .index("by_userId", ["userId"])
+    .index("by_username", ["username"]),
   // Unified Instagram Posts Table - Handles all media types (IMAGE, VIDEO, CAROUSEL_ALBUM, REELS)
   instagramPosts: defineTable({
     userId: v.string(),
@@ -690,9 +723,9 @@ export default defineSchema({
   instagramBatchAnalysis: defineTable({
     insights: v.optional(v.any()),
     status: v.optional(v.any()),
-    createdAt: v.float64(),
+    createdAt: v.number(),
     instagramAccountId: v.string(),
-    updatedAt: v.float64(),
+    updatedAt: v.number(),
     userId: v.string(),
     analysisType: v.literal("batch"),
   })

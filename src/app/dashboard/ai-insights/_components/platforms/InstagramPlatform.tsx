@@ -9,6 +9,27 @@ import { AnalysisDepthPicker } from '../AnalysisDepthPicker'
 import { Instagram } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PlatformConnectionPrompt } from '../../../_components/content-hub/PlatformConnectionPrompt'
+import { useInstagramBreakdowns } from '../hooks/useInstagramBreakdowns'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import {
+  getCountryNameFromCode,
+  getGenderLabel,
+  sortAgeGroups,
+  groupBreakdownValues,
+  getMetricLabel
+} from '@/app/lib/utils/format-utils'
+import { isLargeDataset, PerformanceTimer } from '@/app/lib/utils/performance-utils'
+import { LargeDatasetLoading } from '@/components/ui/loading-states'
+
+const BREAKDOWN_LABELS = {
+  country_breakdown: "Country",
+  city_breakdown: "City",
+  age_breakdown: "Age",
+  gender_breakdown: "Gender",
+  follow_type_breakdown: "Follow Type",
+  media_product_type_breakdown: "Media Product Type",
+  contact_button_type_breakdown: "Contact Button Type",
+};
 
 interface InstagramPlatformProps {
   userId?: string
@@ -33,6 +54,23 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
     setShowCustomInput,
     handleCustomSubmit
   } = useInstagramInsights(userId)
+
+  const breakdowns = useInstagramBreakdowns(userId);
+
+  // Dynamically generate available breakdowns
+  const availableBreakdowns = Object.entries(BREAKDOWN_LABELS)
+    .filter(([key]) => breakdowns && Array.isArray(breakdowns[key]) && breakdowns[key].length > 0)
+    .map(([key, label]) => ({ key, label }));
+
+  const [selectedBreakdown, setSelectedBreakdown] = useState(
+    availableBreakdowns[0]?.key || null
+  );
+
+  useEffect(() => {
+    if (availableBreakdowns.length > 0 && !selectedBreakdown) {
+      setSelectedBreakdown(availableBreakdowns[0].key);
+    }
+  }, [availableBreakdowns, selectedBreakdown]);
 
   const handleRefreshOrConnect = () => {
     if (!isConnected) {
@@ -78,6 +116,36 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
         />
       )}
       
+      {/* Breakdown Filter */}
+      {breakdowns ? (
+        availableBreakdowns.length > 0 ? (
+          <Tabs value={selectedBreakdown || undefined} onValueChange={setSelectedBreakdown} className="w-full">
+            <TabsList className="mb-4 flex flex-wrap gap-2">
+              {availableBreakdowns.map(({ key, label }) => (
+                <TabsTrigger key={key} value={key} className="capitalize">
+                  {label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {availableBreakdowns.map(({ key, label }) => (
+              <TabsContent key={key} value={key}>
+                <BreakdownDisplay data={breakdowns[key]} label={label} />
+              </TabsContent>
+            ))}
+          </Tabs>
+        ) : (
+          <div className="text-center text-muted-foreground py-8">
+            No breakdown data available yet. Keep growing your audience!
+          </div>
+        )
+      ) : (
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-1/2" />
+          <Skeleton className="h-6 w-full" />
+          <Skeleton className="h-6 w-5/6" />
+        </div>
+      )}
+
       {!refreshing && (
         !isConnected ? (
           <div className="text-center py-12 px-4">
@@ -129,12 +197,12 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
                 relatedItems={insight.relatedItems}
                 expanded={expandedInsight === idx}
                 onExpand={() => setExpandedInsight(expandedInsight === idx ? null : idx)}
-                onDiscuss={(content: string, title: string) => {
+                onDiscuss={() => {
                   // Navigate to chat with insight context
                   const context = {
                     platform: 'ai-insights',
                     contentId: `instagram-insight-${idx}`,
-                    title: title,
+                    title: insight.title,
                     source: 'AI Insights Dashboard',
                     originalPlatform: 'instagram',
                     fullInsight: {
@@ -146,9 +214,8 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
                       sourceDetails: insight.sourceDetails,
                       relatedItems: insight.relatedItems
                     },
-                    analysis: content
+                    analysis: insight.whyNow // or another field if more appropriate
                   };
-                  
                   const encodedContext = encodeURIComponent(JSON.stringify(context));
                   window.location.href = `/dashboard/chat?contentContext=${encodedContext}`;
                 }}
@@ -159,4 +226,132 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
       )}
     </div>
   )
+} 
+
+// Creative breakdown display
+function BreakdownDisplay({ data, label }) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="text-center text-muted-foreground py-6">
+        No {label} data yet. Try a different filter!
+      </div>
+    );
+  }
+
+  // Performance optimization: Check if data is large and show loading state
+  const isLargeDatasetFlag = isLargeDataset(data.length);
+  const [processed, setProcessed] = React.useState(false);
+  const [processingStartTime, setProcessingStartTime] = React.useState<number | null>(null);
+
+  // Show top N for long lists (e.g., cities/countries) - moved outside useMemo
+  const MAX_BARS = 50; // Increased from 10 to 50 for better UX
+
+  // Show loading state for large datasets
+  if (isLargeDatasetFlag && !processed) {
+    if (!processingStartTime) {
+      setProcessingStartTime(performance.now());
+    }
+    
+    return (
+      <LargeDatasetLoading
+        dataCount={data.length}
+        operation={`Processing ${label} breakdown`}
+        showProgress={false}
+      />
+    );
+  }
+
+  // Helper to pick formatter based on breakdown type
+  function formatName(name, breakdownType) {
+    if (breakdownType === 'country_breakdown') return getCountryNameFromCode(name);
+    if (breakdownType === 'gender_breakdown') return getGenderLabel(name);
+    return name;
+  }
+
+  // Helper to sort/group values based on breakdown type
+  function processValues(values, breakdownType) {
+    let grouped = groupBreakdownValues(values);
+    if (breakdownType === 'age_breakdown') grouped = sortAgeGroups(grouped);
+    if (breakdownType === 'gender_breakdown') grouped = grouped.sort((a, b) => b.value - a.value);
+    if (breakdownType === 'country_breakdown' || breakdownType === 'city_breakdown') grouped = grouped.sort((a, b) => b.value - a.value);
+    return grouped;
+  }
+
+  // Performance optimization: useMemo for expensive sorting operations
+  const processedData = React.useMemo(() => {
+    if (isLargeDatasetFlag && !processed) {
+      return null; // Still processing
+    }
+
+    const timer = new PerformanceTimer(`Processing ${label} breakdown`);
+    
+    const result = data.map((metricObj, idx) => {
+      const processed = processValues(metricObj.values, label.toLowerCase() + '_breakdown');
+      const topValues = processed.slice(0, MAX_BARS); // Process only visible items
+      const total = processed.reduce((sum, v) => sum + v.value, 0);
+      
+      return {
+        processed,
+        topValues,
+        total,
+        metricObj
+      };
+    });
+
+    timer.endWithThreshold(100); // Warn if processing takes more than 100ms
+    return result;
+  }, [data, label, isLargeDatasetFlag, processed, MAX_BARS]);
+
+  // Mark as processed after first render
+  React.useEffect(() => {
+    if (isLargeDatasetFlag && !processed && processedData) {
+      setProcessed(true);
+      if (processingStartTime) {
+        console.log(`Processed ${label} breakdown in ${performance.now() - processingStartTime}ms`);
+      }
+    }
+  }, [isLargeDatasetFlag, processed, processedData, label, processingStartTime]);
+
+  if (!processedData) {
+    return (
+      <div className="bg-card rounded-lg p-4 shadow space-y-4">
+        <h4 className="text-lg font-semibold mb-2">{label} Breakdown</h4>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-5/6" />
+          <Skeleton className="h-4 w-4/6" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-card rounded-lg p-4 shadow space-y-4">
+      <h4 className="text-lg font-semibold mb-2">{label} Breakdown</h4>
+      {processedData.map(({ processed, topValues, total, metricObj }, idx) => {
+        return (
+          <div key={idx} className="mb-4">
+            <div className="font-medium mb-2 text-sm text-muted-foreground">{getMetricLabel(metricObj.metric)}</div>
+            <ul className="space-y-2">
+              {topValues.map((item, i) => (
+                <li key={i} className="flex items-center gap-4">
+                  <span className="font-medium min-w-[100px] truncate" title={item.name}>{formatName(item.name, label.toLowerCase() + '_breakdown')}</span>
+                  <div className="flex-1 bg-muted rounded h-4 relative">
+                    <div
+                      className="bg-primary h-4 rounded"
+                      style={{ width: total ? `${Math.round((item.value / total) * 100)}%` : '0%' }}
+                    />
+                    <span className="absolute right-2 text-xs text-muted-foreground">{item.value.toLocaleString()}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {processed.length > MAX_BARS && (
+              <div className="text-xs text-muted-foreground mt-2">+{processed.length - MAX_BARS} more</div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
 } 

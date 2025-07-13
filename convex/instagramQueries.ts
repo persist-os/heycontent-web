@@ -5,27 +5,12 @@ import { query } from "./_generated/server";
 export const getInstagramAccount = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
-    console.log('Querying Instagram account for userId:', args.userId);
-    
-    // First check if we can find any accounts at all
-    const allAccounts = await ctx.db
-      .query("instagramAccounts")
-      .collect();
-    console.log('Total Instagram accounts in DB:', allAccounts.length);
-    
-    // Then try to find the specific account
-    const accounts = await ctx.db
+    // Find the account for this user
+    const account = await ctx.db
       .query("instagramAccounts")
       .withIndex("by_userId", q => q.eq("userId", args.userId))
       .first();
-    
-    console.log('Found account:', accounts ? {
-      userId: accounts.userId,
-      username: accounts.username,
-      instagramAccountId: accounts.instagramAccountId
-    } : 'No account found');
-    
-    return accounts;
+    return account || null;
   },
 });
 
@@ -597,25 +582,39 @@ export const getRecentPostsWithAnalysis = query({
   },
 });
 
-// Get Instagram profile insights
+// Get Instagram profile insights (return all breakdowns and insights fields)
 export const getInstagramProfileInsights = query({
-  args: { userId: v.string() },
+  args: { 
+    userId: v.string(),
+    limit: v.optional(v.number()) // Add limit parameter for pagination
+  },
   handler: async (ctx, args) => {
-    try {
-      const account = await ctx.db
-        .query("instagramAccounts")
-        .withIndex("by_userId", q => q.eq("userId", args.userId))
-        .first();
-
-      if (!account) {
-        return null;
-      }
-
-      return account.profileInsights || null;
-    } catch (error) {
-      console.error('Error getting Instagram profile insights:', error);
-      throw new Error(`Failed to get Instagram profile insights: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    const account = await ctx.db
+      .query("instagramAccounts")
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
+      .first();
+    if (!account) return null;
+    
+    // Apply limit to breakdown arrays to prevent performance issues
+    const limit = args.limit || 100; // Default to 100 items per breakdown
+    
+    // Helper function to limit breakdown arrays
+    const limitBreakdown = (breakdown: any[] | undefined) => {
+      if (!breakdown || !Array.isArray(breakdown)) return [];
+      return breakdown.slice(0, limit);
+    };
+    
+    // Return all breakdowns and insights fields for the frontend with limits applied
+    return {
+      age_breakdown: limitBreakdown(account.age_breakdown),
+      city_breakdown: limitBreakdown(account.city_breakdown),
+      contact_button_type_breakdown: limitBreakdown(account.contact_button_type_breakdown),
+      country_breakdown: limitBreakdown(account.country_breakdown),
+      follow_type_breakdown: limitBreakdown(account.follow_type_breakdown),
+      gender_breakdown: limitBreakdown(account.gender_breakdown),
+      media_product_type_breakdown: limitBreakdown(account.media_product_type_breakdown),
+      insights: account.insights || {},
+    };
   },
 });
 

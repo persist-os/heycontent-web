@@ -267,64 +267,108 @@ export const storeProfileData = mutation({
       scope: v.string(),
       lastRefreshed: v.number(),
     })),
-    profileInsights: v.optional(v.object({
-      reach: v.optional(v.number()),
-      profile_views: v.optional(v.number()),
-      website_clicks: v.optional(v.number()),
-      follower_count: v.optional(v.number()),
-      period: v.optional(v.string()),
-      lastUpdated: v.optional(v.number()),
+    age_breakdown: v.optional(v.array(v.object({ metric: v.string(), values: v.any() }))),
+    city_breakdown: v.optional(v.array(v.object({ metric: v.string(), values: v.any() }))),
+    contact_button_type_breakdown: v.optional(v.array(v.object({ metric: v.string(), values: v.any() }))),
+    country_breakdown: v.optional(v.array(v.object({ metric: v.string(), values: v.any() }))),
+    follow_type_breakdown: v.optional(v.array(v.object({ metric: v.string(), values: v.any() }))),
+    gender_breakdown: v.optional(v.array(v.object({ metric: v.string(), values: v.any() }))),
+    media_product_type_breakdown: v.optional(v.array(v.object({ metric: v.string(), values: v.any() }))),
+    insights: v.optional(v.any()),
+    pagination: v.optional(v.object({
+      hasMorePosts: v.boolean(),
+      lastFetchedAt: v.number(),
+      nextUrl: v.optional(v.union(v.string(), v.null())),
+      totalPostsFetched: v.number(),
     })),
+    diffs: v.optional(v.array(v.object({
+      changeType: v.optional(v.string()),
+      changedAt: v.number(),
+      changedFields: v.array(v.string()),
+      current: v.any(),
+    }))),
     createdAt: v.number(),
     updatedAt: v.number(),
   },
   handler: async (ctx, args) => {
-    const { userId, instagramAccountId, username, profileData, token, profileInsights, createdAt, updatedAt } = args;
-    try {
-      // Check if account already exists
-      const existingAccount = await ctx.db
-        .query("instagramAccounts")
-        .withIndex("by_userId", (q) => q.eq("userId", userId))
-        .first();
-      
-      const accountData = {
-        username,
-        instagramAccountId: String(instagramAccountId),
-        profileData,
-        updatedAt,
-        ...(token && { token }),
-        ...(profileInsights && { profileInsights }),
-      };
-
-      if (existingAccount) {
-        const diff = cleanDiff(existingAccount, accountData, ["createdAt", "updatedAt", "diffs", "userId"]);
-        if (!diff) {
-          return { status: "skipped_no_change", instagramAccountId: String(instagramAccountId) };
-        }
-        const newDiff = {
-          changedAt: updatedAt,
-          changedFields: diff.changedFields,
-          current: diff.current,
-          changeType: "update"
-        };
-        const diffs = Array.isArray(existingAccount.diffs) ? [...existingAccount.diffs, newDiff] : [newDiff];
-        await ctx.db.patch(existingAccount._id, {
-          ...accountData,
-          diffs
-        });
-        return { status: "updated", instagramAccountId: String(instagramAccountId) };
-      } else {
-        const id = await ctx.db.insert("instagramAccounts", {
-          userId,
-          ...accountData,
-          createdAt,
-          diffs: []
-        });
-        return { status: "created", instagramAccountId: String(instagramAccountId) };
+    console.log("[storeProfileData] Starting mutation with args:", {
+      userId: args.userId,
+      instagramAccountId: args.instagramAccountId,
+      username: args.username,
+      hasProfileData: !!args.profileData,
+      hasToken: !!args.token,
+      hasBreakdowns: {
+        age: !!args.age_breakdown,
+        city: !!args.city_breakdown,
+        country: !!args.country_breakdown,
+        gender: !!args.gender_breakdown
       }
-    } catch (error) {
-      console.error(`Error storing Instagram account for user ${userId}:`, error);
-      throw new Error('Your Instagram account is taking a moment to save. Thanks for your patience—great things take time!');
+    });
+
+    const {
+      userId,
+      instagramAccountId,
+      username,
+      profileData,
+      token,
+      age_breakdown,
+      city_breakdown,
+      contact_button_type_breakdown,
+      country_breakdown,
+      follow_type_breakdown,
+      gender_breakdown,
+      media_product_type_breakdown,
+      insights,
+      pagination,
+      diffs,
+      createdAt,
+      updatedAt,
+    } = args;
+
+    // Find existing account
+    const existingAccount = await ctx.db
+      .query("instagramAccounts")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .first();
+
+    console.log("[storeProfileData] Existing account found:", !!existingAccount);
+
+    const accountData = {
+      userId,
+      instagramAccountId: String(instagramAccountId),
+      username,
+      profileData,
+      token,
+      age_breakdown,
+      city_breakdown,
+      contact_button_type_breakdown,
+      country_breakdown,
+      follow_type_breakdown,
+      gender_breakdown,
+      media_product_type_breakdown,
+      insights,
+      pagination,
+      diffs: diffs || [],
+      createdAt,
+      updatedAt,
+    };
+
+    if (existingAccount) {
+      console.log("[storeProfileData] Updating existing account:", existingAccount._id);
+      // Only update fields that are present in args (partial update)
+      const patchData = { ...accountData };
+      Object.keys(patchData).forEach((key) => {
+        if (patchData[key] === undefined) delete patchData[key];
+      });
+      console.log("[storeProfileData] Patch data:", Object.keys(patchData));
+      await ctx.db.patch(existingAccount._id, patchData);
+      console.log("[storeProfileData] Account updated successfully");
+      return { status: "updated", instagramAccountId: String(instagramAccountId) };
+    } else {
+      console.log("[storeProfileData] Creating new account");
+      const newId = await ctx.db.insert("instagramAccounts", accountData);
+      console.log("[storeProfileData] Account created successfully with ID:", newId);
+      return { status: "created", instagramAccountId: String(instagramAccountId) };
     }
   },
 });
