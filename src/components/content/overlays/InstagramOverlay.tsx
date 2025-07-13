@@ -350,12 +350,12 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
                       </PopoverTrigger>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p className="text-xs">Usernames are shown as returned by Instagram. Some may be anonymous due to Meta's privacy policy.</p>
+                      <p className="text-xs">Some usernames may be hidden due to Meta's privacy policy.</p>
                     </TooltipContent>
                   </Tooltip>
                   <PopoverContent side="right" align="start" className="p-2 text-xs max-w-xs min-w-[180px]">
                     <div className="flex items-center justify-between gap-2">
-                      <span>Usernames are shown as returned by Instagram. Some may be anonymous due to Meta's privacy policy.</span>
+                      <span>Some usernames may be hidden due to Meta's privacy policy.</span>
                       <button onClick={() => setInfoOpen(false)} className="ml-2 text-muted-foreground hover:text-foreground text-xs font-bold">✕</button>
                     </div>
                   </PopoverContent>

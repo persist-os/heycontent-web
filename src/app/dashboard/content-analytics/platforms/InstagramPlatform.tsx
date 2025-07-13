@@ -218,21 +218,20 @@ export function InstagramPlatform({
           <p className="text-sm mt-1">Thanks for your patience—your insights will be back soon! In the meantime, why not brainstorm your next big idea?</p>
         </div>
       )}
-      {/* Instagram Analytics Section */}
-      <div className="space-y-6 mb-8">
-        {/* Header with Refresh Buttons */}
+    
+        {/* Platform Embedding Status */}
+        <PlatformEmbeddingStatus 
+          platform="instagram" 
+          contentCount={displayItems.length} 
+          userId={userId} 
+        />
+
+  {/* Instagram Analytics Section */}
+  <div className="space-y-6 mb-8">
+        {/* Header with Refresh Tracker Button */}
         <div className="flex justify-between items-center">
-          <div></div> {/* Empty div to push buttons to the right */}
+          <div></div> {/* Empty div to push button to the right */}
           <div className="flex gap-3">
-            <Button 
-              size="sm" 
-              onClick={refreshPosts}
-              disabled={refreshingPosts}
-              className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              {refreshingPosts ? 'Refreshing Posts...' : 'Refresh Posts'}
-            </Button>
             <Button 
               size="sm" 
               onClick={refreshTracker}
@@ -245,20 +244,9 @@ export function InstagramPlatform({
           </div>
         </div>
 
-        {refreshPostsSuccess && (
-          <div className="text-green-500 text-sm mb-2 text-center">Instagram posts refreshed successfully!</div>
-        )}
-
         {refreshTrackerSuccess && (
           <div className="text-green-500 text-sm mb-2 text-center">Instagram tracker analysis refreshed successfully!</div>
         )}
-
-        {/* Platform Embedding Status */}
-        <PlatformEmbeddingStatus 
-          platform="instagram" 
-          contentCount={displayItems.length} 
-          userId={userId} 
-        />
 
         {/* Analytics Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
@@ -395,6 +383,22 @@ export function InstagramPlatform({
             </Card>
           )}
         </div>
+      </div>
+
+      {/* Refresh Posts Button moved below analytics section and above posts grid */}
+      {refreshPostsSuccess && (
+        <div className="text-green-500 text-sm mb-2 text-center">Instagram posts refreshed successfully!</div>
+      )}
+      <div className="w-full flex justify-end mb-6">
+        <Button 
+          size="sm" 
+          onClick={refreshPosts}
+          disabled={refreshingPosts}
+          className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm"
+        >
+          <RefreshCw className="w-4 h-4 mr-2" />
+          {refreshingPosts ? 'Refreshing Posts...' : 'Refresh Posts'}
+        </Button>
       </div>
 
       {/* Content Grid */}
