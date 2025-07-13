@@ -368,11 +368,11 @@ function PlatformInsightCard({ platform, icon, hook, format, cta, onDiscuss, glo
 
       <div className="flex gap-2 mt-3 pt-3 border-t border-border">
         <CreateNoteButton
-          content={`${platform} Content:\n\nHook: ${hook}\n\nFormat: ${format}\n\nCTA: ${cta}`}
+          content={`Hook: ${hook}\n\nFormat: ${format}\n\nCall to Action: ${cta}`}
           className="text-xs"
         />
         <Button
-          onClick={() => onDiscuss(`${platform} Content:\n\nHook: ${hook}\n\nFormat: ${format}\n\nCTA: ${cta}`, `${platform} Content Strategy`)}
+          onClick={() => onDiscuss(`Hook: ${hook}\n\nFormat: ${format}\n\nCall to Action: ${cta}`, `${platform} Content Strategy`)}
           size="sm"
           variant="ghost"
           className="text-xs hover:bg-heycontent-purple hover:text-white dark:hover:bg-gray-800 dark:hover:text-gray-100"
