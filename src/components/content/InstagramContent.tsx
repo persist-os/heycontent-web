@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { Heart, MessageCircle, Eye, Share2, Bookmark, ExternalLink, Instagram, Sparkles, TrendingUp, Users, Calendar, Image as ImageIcon, BarChart3, Target, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { useContentContextActions } from '@/store/content-context-store';
-import { getApiKey } from '@/app/lib/api-helpers';
+import { getApiKey, getCurrentUserId } from '@/app/lib/api-helpers';
 import { MarkdownRenderer } from '@/app/dashboard/chat/markdown-renderer';
 import { formatNumber } from '@/lib/content-utils';
 
@@ -160,6 +162,26 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
   // Carousel state - using content hub logic
   const [currentSlide, setCurrentSlide] = useState(0);
   
+  // Get current user ID
+  const [userId, setUserId] = useState<string | null>(null);
+  
+  // Mutation to store analysis in Convex
+  const storeAnalysisMutation = useMutation(api.instagramMutations.storePostAnalysis);
+  
+  // Get current user ID on component mount
+  useEffect(() => {
+    const currentUserId = getCurrentUserId();
+    setUserId(currentUserId);
+  }, []);
+  
+  // Query to check if analysis exists
+  const existingAnalysis = useQuery(api.instagramQueries.getPostAnalysis, 
+    userId && postId ? {
+      userId: userId,
+      postId: postId
+    } : "skip"
+  );
+  
   // Cycling loading message effect
   useEffect(() => {
     if (!isGeneratingAnalysis) {
@@ -228,6 +250,12 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
     setAnalysisError(null);
     
     try {
+      // Check if we have a valid user ID
+      if (!userId) {
+        throw new Error('User ID not found. Please log in again.');
+      }
+
+      // Always call backend to generate or refresh analysis
       const apiKey = await getApiKey();
       if (!apiKey) {
         throw new Error('Authentication required. Please log in again.');
@@ -270,8 +298,42 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
 
       console.log('✅ Instagram analysis successful:', responseData);
       
+      // Store the analysis in Convex - match backend response structure
+      const analysisData = responseData.data?.json || responseData.data;
+      const markdownData = responseData.data?.markdown;
+      
+      if (analysisData || markdownData) {
+        try {
+          console.log('🔄 Storing analysis in Convex with data:', {
+            userId: userId || extractedUserId,
+            postId: postId,
+            markdown: markdownData,
+            analysis: analysisData
+          });
+          
+          const mutationResult = await storeAnalysisMutation({
+            userId: userId || extractedUserId,
+            postId: postId,
+            analysisData: {
+              markdown: markdownData,
+              analysis: analysisData
+            }
+          });
+          console.log('✅ Analysis stored in Convex successfully:', mutationResult);
+        } catch (storeError) {
+          console.error('❌ Failed to store analysis in Convex:', storeError);
+          // Don't throw - the analysis was generated successfully
+        }
+      } else {
+        console.warn('⚠️ No analysis data found in response:', responseData);
+        console.warn('⚠️ Available keys in responseData:', Object.keys(responseData));
+        if (responseData.data) {
+          console.warn('⚠️ Available keys in responseData.data:', Object.keys(responseData.data));
+        }
+      }
+      
       setAnalysisError(null);
-      setAnalysisSuccess(false);
+      setAnalysisSuccess(true);
       
       onAnalysisGenerated?.();
       
@@ -288,7 +350,7 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
     const instagramContext = {
       _id: postId as any,
       _creationTime: Date.now(),
-      userId: postData.userId || '',
+      userId: userId || '',
       instagramAccountId: postData.instagramAccountId || '',
       postId: postId,
       mediaType: mediaType || 'IMAGE',
@@ -347,131 +409,7 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
       {/* Main Content Layout */}
       <div className="space-y-8">
         {/* Image and Stats Container */}
-        <div className="lg:grid lg:grid-cols-5 lg:gap-8">
-          {/* Image Section - 60% width on desktop */}
-          <div className="lg:col-span-3 space-y-4">
-            {/* Post Media */}
-            <div className="relative rounded-xl overflow-hidden group">
-              <div className="aspect-square lg:aspect-auto lg:min-h-[400px]">
-                {isCarousel ? (
-                  <div className="relative w-full h-full">
-                    {children.map((child: any, idx: number) => (
-                      <div
-                        key={child.id || idx}
-                        className={`absolute inset-0 transition-all duration-500 ease-in-out ${
-                          idx === currentSlide 
-                            ? 'opacity-100 translate-x-0 scale-100' 
-                            : idx < currentSlide 
-                              ? 'opacity-0 -translate-x-full scale-95'
-                              : 'opacity-0 translate-x-full scale-95'
-                        }`}
-                      >
-                        <img
-                          src={child.media_type === 'VIDEO' ? child.thumbnail_url || child.media_url : child.media_url}
-                          alt={caption || `Instagram Carousel Item ${idx + 1}`}
-                          className="w-full h-full object-cover cursor-pointer"
-                          onClick={() => window.open(permalink, '_blank')}
-                        />
-                      </div>
-                    ))}
-                    
-                    {/* Carousel Controls */}
-                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
-                      {children.map((_: any, idx: number) => (
-                        <button
-                          key={idx}
-                          className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                            idx === currentSlide 
-                              ? 'bg-white shadow-lg scale-110' 
-                              : 'bg-white/60 hover:bg-white/80'
-                          }`}
-                          onClick={() => setCurrentSlide(idx)}
-                        />
-                      ))}
-                    </div>
-
-                    {/* Slide Counter */}
-                    <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-sm rounded-lg px-3 py-1 text-sm font-medium text-white">
-                      {currentSlide + 1} / {children.length}
-                    </div>
-                  </div>
-                ) : (
-                  <img
-                    src={thumbnailUrl || mediaUrl}
-                    alt={postData.title || 'Instagram Post'}
-                    className="w-full h-full object-cover cursor-pointer"
-                    onClick={() => window.open(permalink, '_blank')}
-                  />
-                )}
-                
-                {/* Hover Overlay */}
-                <div 
-                  className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                  onClick={() => window.open(permalink, '_blank')}
-                >
-                  <div className="bg-white/90 dark:bg-gray-900/90 rounded-full p-4 shadow-lg">
-                    <ExternalLink className="w-6 h-6 text-gray-900 dark:text-white" />
-                  </div>
-                </div>
-                
-                {/* Media Type Badge */}
-                {mediaType && (
-                  <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm rounded-lg px-3 py-1 text-sm font-medium text-white">
-                    {mediaType.replace('_', ' ')}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Stats Section - 40% width on desktop */}
-          <div className="lg:col-span-2 mt-6 lg:mt-0">
-            <div className="rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-sm h-full">
-              <div className="p-6 h-full flex flex-col">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-                  Post Statistics
-                </h3>
-                
-                {/* Stats Grid */}
-                <div className="grid grid-cols-2 gap-4 flex-1">
-                  {visibleStats.map((stat) => (
-                    <div
-                      key={stat.key}
-                      className="bg-gray-50/50 dark:bg-gray-800/30 rounded-lg p-4 text-center border border-gray-200 dark:border-gray-700 flex flex-col justify-center"
-                    >
-                      <div className={`inline-flex items-center justify-center w-8 h-8 rounded-lg mb-2 mx-auto ${stat.color.replace('text-', 'bg-').replace('-500', '-100')} dark:${stat.color.replace('text-', 'bg-').replace('-500', '-900/30')}`}>
-                        {React.cloneElement(stat.icon as React.ReactElement, { 
-                          className: `w-4 h-4 ${stat.color}` 
-                        })}
-                      </div>
-                      <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {stat.value === null || stat.value === undefined ? 'N/A' : stat.value.toLocaleString()}
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">
-                        {stat.label}
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {/* Date - Always last, spans full width if total stats count is odd */}
-                  {postData.createdAt && (
-                    <div className={`bg-gray-50/50 dark:bg-gray-800/30 rounded-lg p-4 text-center border border-gray-200 dark:border-gray-700 flex flex-col justify-center ${(visibleStats.length + 1) % 2 === 1 ? 'col-span-2' : 'col-span-1'}`}>
-                      <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 mb-2 mx-auto">
-                        <Calendar className="w-4 h-4 text-orange-500" />
-                      </div>
-                      <div className="text-lg font-bold text-gray-900 dark:text-white">
-                        {new Date(postData.createdAt).toLocaleDateString()}
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">
-                        Published
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* REMOVE: The image and statistics section, keep only analysis and action buttons */}
 
         {/* Analysis Section */}
         {showAnalysis && (
@@ -492,7 +430,9 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
                   className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-sm"
                 >
                   <Sparkles className="w-4 h-4 mr-2" />
-                  {isGeneratingAnalysis ? 'Generating...' : 'Generate Analysis'}
+                  {isGeneratingAnalysis ? 'Generating...' : 
+                   (analysis || analysisMarkdown || (existingAnalysis && (existingAnalysis.analysis || existingAnalysis.analysisMarkdown))) 
+                   ? 'Refresh Analysis' : 'Generate Analysis'}
                 </Button>
               </div>
 
@@ -518,7 +458,7 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
                 </div>
               )}
               
-                          {isGeneratingAnalysis ? (
+              {isGeneratingAnalysis ? (
               <div className="flex items-center justify-center py-16">
                 <div className="text-center space-y-4">
                   <div className="relative w-64 h-8 mx-auto">
@@ -607,7 +547,9 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
                     <Sparkles className="w-8 h-8 text-purple-500" />
                   </div>
                   <p className="text-gray-600 dark:text-gray-400 max-w-md">
-                    Click 'Generate Analysis' to get AI-powered insights about this post's content, engagement, and performance.
+                    {(analysis || analysisMarkdown || (existingAnalysis && (existingAnalysis.analysis || existingAnalysis.analysisMarkdown))) 
+                     ? 'Click "Refresh Analysis" to get updated AI-powered insights about this post.'
+                     : 'Click "Generate Analysis" to get AI-powered insights about this post\'s content, engagement, and performance.'}
                   </p>
                 </div>
               )}

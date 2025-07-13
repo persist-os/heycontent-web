@@ -24,7 +24,7 @@ import {
   formatDuration
 } from '@/lib/content-utils';
 import { Button } from '@/components/ui/button';
-import { getApiKey } from '@/app/lib/api-helpers';
+import { getApiKey, getCurrentUserId } from '@/app/lib/api-helpers';
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 
@@ -211,8 +211,7 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
 
       // Store analysis in Convex
       if (data.markdown || data.analysis) {
-        const apiKeyParts = apiKey.split('_');
-        const userId = apiKeyParts.length >= 2 ? apiKeyParts[1] : null;
+        const userId = getCurrentUserId();
         
         if (userId) {
           await storeVideoAnalysis({
