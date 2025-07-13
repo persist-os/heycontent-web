@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { InsightCard } from '@/components/content/InsightCard'
 import { useYouTubeInsights } from '../hooks/useYouTubeInsights'
 import { useInsightNavigation } from '../hooks/useInsightNavigation'
+import { useActionStepDiscussion } from '../hooks/useActionStepDiscussion'
 import { RefreshState } from '@/components/ui/refresh-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AnalysisDepthPicker } from '../AnalysisDepthPicker'
@@ -20,6 +21,7 @@ interface YouTubePlatformProps {
 export function YouTubePlatform({ userId, currentQuote, loading }: YouTubePlatformProps) {
   const [expandedInsight, setExpandedInsight] = useState<number | null>(null)
   const { navigateWithInsight } = useInsightNavigation()
+  const { discussActionStep } = useActionStepDiscussion()
   
   const { 
     insights, 
@@ -130,7 +132,25 @@ export function YouTubePlatform({ userId, currentQuote, loading }: YouTubePlatfo
                 expanded={expandedInsight === idx}
                 onExpand={() => setExpandedInsight(expandedInsight === idx ? null : idx)}
                 onDiscuss={() => {
+                  console.log('🔍 [YOUTUBE PLATFORM] Discussing insight:', insight);
                   navigateWithInsight(insight, 'youtube');
+                }}
+                onActionStepClick={(actionStep, insightData) => {
+                  console.log('🔍 [YOUTUBE PLATFORM] Action step clicked:', actionStep);
+                  console.log('🔍 [YOUTUBE PLATFORM] Full insight data:', insightData);
+                  
+                  // Create additional context for the action step
+                  const additionalContext = [
+                    `Platform: YOUTUBE`,
+                    `Insight: ${insightData.title}`,
+                    `Impact: ${insightData.impact}`,
+                    `Why Now: ${insightData.whyNow.join(', ')}`,
+                    `Expected Outcome: ${insightData.expectedOutcome}`,
+                    `Source: YouTube Insights Dashboard`
+                  ].join('\n');
+                  
+                  // Use the default action step discussion
+                  discussActionStep(actionStep, insightData, 'youtube', additionalContext);
                 }}
               />
             ))}

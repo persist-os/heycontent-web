@@ -12,6 +12,24 @@ import { useInsightNavigation } from '@/app/dashboard/ai-insights/_components/ho
 import { useContentContextActions } from '@/store/content-context-store';
 import { useRouter } from 'next/navigation';
 
+// Comprehensive insight data interface
+export interface InsightData {
+  title: string;
+  impact: string;
+  whyNow: string[];
+  actionSteps: string[];
+  expectedOutcome: string;
+  sourceDetails: string[];
+  relatedItems?: Array<{ label: string; value: string }>;
+  threadDetails?: Array<{
+    threadId: string;
+    subject: string;
+    from: string;
+    snippet: string;
+    date: string;
+  }>;
+}
+
 export interface InsightCardProps {
   platform: 'youtube' | 'instagram' | 'gmail';
   title: string;
@@ -30,7 +48,8 @@ export interface InsightCardProps {
     date: string;
   }>;
   onDiscuss?: () => void;
-  onActionStepClick?: (actionStep: string) => void;
+  // Updated to pass both action step and full insight data
+  onActionStepClick?: (actionStep: string, insight: InsightData) => void;
   expanded?: boolean;
   onExpand?: () => void;
 }
@@ -39,6 +58,47 @@ const platformIcon = {
   youtube: <YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8" />,
   instagram: <Instagram className="w-5 h-5 text-[#C13584]" />,
   gmail: <Mail className="w-5 h-5 text-[#EA4335]" />,
+};
+
+// Utility function for comprehensive logging
+const logInsightData = (operation: string, data: any, platform: string, additionalInfo?: string) => {
+  console.group(`🔍 [INSIGHT CARD] ${operation}`);
+  console.log('Platform:', platform);
+  console.log('Data Structure:', {
+    hasTitle: !!data.title,
+    hasImpact: !!data.impact,
+    whyNowCount: data.whyNow?.length || 0,
+    actionStepsCount: data.actionSteps?.length || 0,
+    hasExpectedOutcome: !!data.expectedOutcome,
+    sourceDetailsCount: data.sourceDetails?.length || 0,
+    relatedItemsCount: data.relatedItems?.length || 0,
+    threadDetailsCount: data.threadDetails?.length || 0,
+  });
+  console.log('Full Data:', data);
+  if (additionalInfo) {
+    console.log('Additional Info:', additionalInfo);
+  }
+  console.groupEnd();
+};
+
+// Utility function to validate insight data
+const validateInsightData = (data: InsightData, platform: string): { isValid: boolean; missingFields: string[] } => {
+  const requiredFields = ['title', 'impact', 'whyNow', 'actionSteps', 'expectedOutcome', 'sourceDetails'];
+  const missingFields: string[] = [];
+  
+  requiredFields.forEach(field => {
+    if (!data[field] || (Array.isArray(data[field]) && data[field].length === 0)) {
+      missingFields.push(field);
+    }
+  });
+  
+  const isValid = missingFields.length === 0;
+  
+  if (!isValid) {
+    console.warn(`⚠️ [INSIGHT CARD] Missing required fields for ${platform}:`, missingFields);
+  }
+  
+  return { isValid, missingFields };
 };
 
 export const InsightCard: React.FC<InsightCardProps> = ({
@@ -65,14 +125,35 @@ export const InsightCard: React.FC<InsightCardProps> = ({
   // Validate platform prop to ensure it's one of the expected values
   const validatedPlatform = ['youtube', 'instagram', 'gmail'].includes(platform) ? platform : 'gmail';
 
+  // Create comprehensive insight data object
+  const insightData: InsightData = {
+    title,
+    impact,
+    whyNow,
+    actionSteps,
+    expectedOutcome,
+    sourceDetails,
+    relatedItems,
+    threadDetails,
+  };
+
+  // Validate insight data on component mount
+  React.useEffect(() => {
+    const validation = validateInsightData(insightData, validatedPlatform);
+    logInsightData('Component Mounted', insightData, validatedPlatform, 
+      validation.isValid ? 'All fields present' : `Missing: ${validation.missingFields.join(', ')}`);
+  }, [insightData, validatedPlatform]);
+
   // Function to navigate to chat with Gmail thread content
   const discussGmailThread = (thread: any) => {
+    console.log('🔍 [INSIGHT CARD] Discussing Gmail thread:', thread);
+    
     const context = {
       platform: 'gmail' as const,
       contentId: thread.threadId,
       title: thread.subject || 'Email Thread',
       source: 'AI Insights - Gmail Thread',
-      originalPlatform: 'gmail',
+      originalPlatform: 'gmail' as const,
       publishedAt: thread.date,
       content: {
         data: {
@@ -86,23 +167,62 @@ export const InsightCard: React.FC<InsightCardProps> = ({
       analysis: `**Email Thread Analysis**\n\n**Subject:** ${thread.subject || 'No Subject'}\n**From:** ${thread.from || 'Unknown Sender'}\n**Date:** ${thread.date || 'Unknown Date'}\n\n**Content Preview:**\n${thread.snippet || 'No preview available'}\n\nThis email thread was identified as part of your ${title.toLowerCase()} opportunities. You can discuss strategies, draft responses, or analyze the content with AI assistance.`
     };
     
+    logInsightData('Setting Gmail Thread Context', context, validatedPlatform);
     setContentContext(context);
     router.push('/dashboard/chat');
   };
 
   // Function to navigate to chat with the full insight context
   const discussFullInsight = () => {
-    const insight = {
-      title,
-      impact,
-      whyNow,
-      actionSteps,
-      expectedOutcome,
-      sourceDetails,
-      relatedItems
-    };
+    console.log('🔍 [INSIGHT CARD] Discussing full insight');
+    logInsightData('Full Insight Discussion', insightData, validatedPlatform);
     
-    navigateWithInsight(insight, validatedPlatform);
+    const validation = validateInsightData(insightData, validatedPlatform);
+    if (!validation.isValid) {
+      console.error('❌ [INSIGHT CARD] Cannot discuss insight - missing required fields:', validation.missingFields);
+      return;
+    }
+    
+    navigateWithInsight(insightData, validatedPlatform);
+  };
+
+  // Enhanced action step handler with comprehensive logging
+  const handleActionStepClick = (step: string, stepIndex: number) => {
+    console.group(`🔍 [INSIGHT CARD] Action Step Clicked`);
+    console.log('Step Index:', stepIndex);
+    console.log('Step Content:', step);
+    console.log('Platform:', validatedPlatform);
+    console.log('Full Insight Data:', insightData);
+    
+    const validation = validateInsightData(insightData, validatedPlatform);
+    if (!validation.isValid) {
+      console.error('❌ [INSIGHT CARD] Cannot process action step - missing required fields:', validation.missingFields);
+      console.groupEnd();
+      return;
+    }
+
+    // Create additional context for the action step
+    const additionalContext = [
+      `Platform: ${validatedPlatform.toUpperCase()}`,
+      `Insight: ${title}`,
+      `Impact: ${impact}`,
+      `Why Now: ${whyNow.join(', ')}`,
+      `Expected Outcome: ${expectedOutcome}`,
+      `Action Step Index: ${stepIndex + 1} of ${actionSteps.length}`,
+      `Total Action Steps: ${actionSteps.length}`
+    ].join('\n');
+
+    console.log('Additional Context:', additionalContext);
+
+    if (onActionStepClick) {
+      console.log('🔍 [INSIGHT CARD] Using custom action step handler');
+      onActionStepClick(step, insightData);
+    } else {
+      console.log('🔍 [INSIGHT CARD] Using default action step handler');
+      discussActionStep(step, insightData, validatedPlatform, additionalContext);
+    }
+    
+    console.groupEnd();
   };
 
   const formatInsightForNote = () => {
@@ -213,18 +333,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
                   className="w-full flex items-center justify-between p-3 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left group"
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (onActionStepClick) {
-                      onActionStepClick(step);
-                    } else {
-                      const additionalContext = [
-                        `Platform: ${validatedPlatform.toUpperCase()}`,
-                        `Insight: ${title}`,
-                        `Impact: ${impact}`,
-                        `Why Now: ${whyNow.join(', ')}`,
-                        `Expected Outcome: ${expectedOutcome}`
-                      ].join('\n');
-                      discussActionStep(step, title, validatedPlatform, additionalContext);
-                    }
+                    handleActionStepClick(step, idx);
                   }}
                 >
                   <span className="text-sm dark:text-gray-300 group-hover:text-heycontent-purple dark:group-hover:text-heycontent-purple transition-colors">{step}</span>
