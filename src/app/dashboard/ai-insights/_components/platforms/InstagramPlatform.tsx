@@ -44,7 +44,6 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
   const [breakdownCollapsed, setBreakdownCollapsed] = useState(false);
   const { navigateWithInsight } = useInsightNavigation()
   const { discussActionStep } = useActionStepDiscussion()
-  const [breakdownCollapsed, setBreakdownCollapsed] = useState(false);
   const { 
     insights, 
     refreshing, 
