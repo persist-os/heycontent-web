@@ -600,6 +600,16 @@ export default defineSchema({
       username: v.string(),
       website: v.optional(v.string()),
     }),
+    profileInsights: v.optional(
+      v.object({
+        follower_count: v.optional(v.union(v.float64(), v.number())),
+        lastUpdated: v.optional(v.union(v.float64(), v.number())),
+        period: v.optional(v.string()),
+        profile_views: v.optional(v.union(v.float64(), v.number())),
+        reach: v.optional(v.union(v.float64(), v.number())),
+        website_clicks: v.optional(v.union(v.float64(), v.number())),
+      })
+    ),
     token: v.optional(
       v.object({
         accessToken: v.string(),
@@ -955,4 +965,39 @@ export default defineSchema({
   .index("by_instagramAccountId", ["instagramAccountId"])
   .index("by_postId", ["postId"])
   .index("by_user_account", ["userId", "instagramAccountId"]),
+
+  // Embedding update tracking
+  embeddingUpdates: defineTable({
+    userId: v.string(),
+    updatedAt: v.number(),
+    type: v.union(
+      v.literal("manual_update"),
+      v.literal("automatic_update"),
+      v.literal("platform_connection"),
+      v.literal("content_update")
+    ),
+    platform: v.optional(v.union(
+      v.literal("instagram"),
+      v.literal("youtube"),
+      v.literal("gmail"),
+      v.literal("conversations"),
+      v.literal("notes"),
+      v.literal("all")
+    )),
+    contentType: v.optional(v.union(
+      v.literal("conversation"),
+      v.literal("instagram_post"),
+      v.literal("youtube_video"),
+      v.literal("gmail_thread"),
+      v.literal("note")
+    )),
+    contentId: v.optional(v.string()),
+    itemsProcessed: v.optional(v.number()),
+    itemsSucceeded: v.optional(v.number()),
+    itemsFailed: v.optional(v.number()),
+  })
+  .index("by_userId", ["userId"])
+  .index("by_updatedAt", ["updatedAt"])
+  .index("by_type", ["type"])
+  .index("by_user_type", ["userId", "type"]),
 });

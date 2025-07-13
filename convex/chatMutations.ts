@@ -5,22 +5,39 @@ import { api } from "./_generated/api";
 export const createConversation = mutation({
     args: {
       userId: v.string(),
-      title: v.optional(v.string()),
+      title: v.string(),
       messages: v.array(v.object({
         content: v.string(),
-        role: v.string(),
+        role: v.union(v.literal("user"), v.literal("assistant")),
         timestamp: v.number(),
       })),
     },
     handler: async (ctx, args) => {
       const conversationId = await ctx.db.insert("conversations", {
         userId: args.userId,
-        title: args.title || "Untitled Chat",
+        title: args.title,
         messages: args.messages,
         createdAt: Date.now(),
         updatedAt: Date.now(),
         starred: false,
       });
+
+      // Automatically create embedding for the new conversation
+      try {
+        const searchableContent = `${args.title}\n\n${args.messages.map((m: any) => `${m.role}: ${m.content}`).join('\n')}`;
+        
+        await ctx.scheduler.runAfter(0, api.vectorSearch.autoCreateEmbedding, {
+          userId: args.userId,
+          contentId: conversationId,
+          contentType: "conversation" as const,
+          title: args.title,
+          content: searchableContent,
+          triggerType: "content_update" as const,
+          platform: "conversations" as const,
+        });
+      } catch (error) {
+        console.error('❌ [AUTO EMBEDDING] Failed to schedule conversation embedding:', error);
+      }
 
       return conversationId;
     },
@@ -29,48 +46,44 @@ export const createConversation = mutation({
 export const addMessageToConversation = mutation({
 args: {
     userId: v.string(),
-    conversationId: v.string(),
+    conversationId: v.id("conversations"),
     message: v.object({
     content: v.string(),
-    role: v.string(),
-    timestamp: v.optional(v.number()),
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    timestamp: v.number(),
     }),
 },
 handler: async (ctx, args) => {
-    // Use direct ID lookup for reliable conversation fetching
-    const doc = await ctx.db.get(args.conversationId as any);
-
-    if (!doc) {
-        throw new Error("Conversation not found");
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation || conversation.userId !== args.userId) {
+      throw new Error("Conversation not found or access denied");
     }
 
-    // Type check to ensure it's a conversation document
-    if (!('userId' in doc) || !('messages' in doc)) {
-        throw new Error("Invalid document type - not a conversation");
-    }
-
-    const conversation = doc as any; // Type assertion after validation
-
-    // Verify ownership
-    if (conversation.userId !== args.userId) {
-        throw new Error("Unauthorized access to conversation");
-    }
-
-    const message = {
-    ...args.message,
-    timestamp: args.message.timestamp || Date.now(),
-    };
-
-    // Add the new message to the existing messages array
-    const updatedMessages = [...conversation.messages, message];
-
-    // Update the conversation with the new message
-    await ctx.db.patch(conversation._id, {
-    messages: updatedMessages,
-    updatedAt: Date.now(),
+    const updatedMessages = [...conversation.messages, args.message];
+    
+    await ctx.db.patch(args.conversationId, {
+      messages: updatedMessages,
+      updatedAt: Date.now(),
     });
 
-    return { success: true, conversationId: args.conversationId };
+    // Automatically update embedding for the conversation with new message
+    try {
+      const searchableContent = `${conversation.title}\n\n${updatedMessages.map((m: any) => `${m.role}: ${m.content}`).join('\n')}`;
+      
+      await ctx.scheduler.runAfter(0, api.vectorSearch.autoCreateEmbedding, {
+        userId: args.userId,
+        contentId: args.conversationId,
+        contentType: "conversation" as const,
+        title: conversation.title,
+        content: searchableContent,
+        triggerType: "content_update" as const,
+        platform: "conversations" as const,
+      });
+    } catch (error) {
+      console.error('❌ [AUTO EMBEDDING] Failed to schedule conversation embedding update:', error);
+    }
+
+    return args.conversationId;
 },
 });
 

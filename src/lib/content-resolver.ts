@@ -74,8 +74,8 @@ export async function resolveContentTitles(
     
     // Process YouTube videos
     if (youtubeVideos.status === 'fulfilled') {
-      youtubeVideos.value.forEach((video: any) => {
-        titles[`youtube:${video.id}`] = video.content?.title || 'Untitled Video';
+      youtubeVideos.value.videos?.forEach((video: any) => {
+        titles[`youtube:${video.videoId || video.id}`] = video.snippet?.title || 'Untitled Video';
       });
     }
     
@@ -159,17 +159,17 @@ export async function resolveAllLinkContent(
             
           case 'youtube':
             if (youtubeVideos.status === 'fulfilled') {
-              foundContent = youtubeVideos.value.find((video: any) => video.id === id);
+              foundContent = youtubeVideos.value.videos?.find((video: any) => (video.videoId || video.id) === id);
               if (foundContent) {
                 resolvedContent.push({
                   type: 'youtube',
                   id: contentId,
-                  title: foundContent.content?.title || 'Untitled Video',
-                  content: foundContent.content?.description || '',
+                  title: foundContent.snippet?.title || 'Untitled Video',
+                  content: foundContent.snippet?.description || '',
                   platform: 'youtube',
-                  createdAt: new Date(foundContent.publishedAt || 0).getTime(),
-                  thumbnailUrl: foundContent.content?.thumbnailUrl,
-                  statistics: foundContent.metrics,
+                  createdAt: new Date(foundContent.snippet?.published_at || foundContent.createdAt || 0).getTime(),
+                  thumbnailUrl: foundContent.snippet?.thumbnails?.high || foundContent.snippet?.thumbnails?.medium,
+                  statistics: foundContent.statistics,
                 });
               }
             }

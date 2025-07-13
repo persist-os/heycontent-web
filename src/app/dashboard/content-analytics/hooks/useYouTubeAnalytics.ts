@@ -14,19 +14,35 @@ export function useYouTubeAnalytics(userId?: string) {
 
   // Use the same query as the UI for consistency
   const youtubeVideos = useQuery(
-    api.youtubeQueries.listUserYouTubeVideos,
-    userId ? { userId } : "skip"
+    api.youtubeQueries.getYouTubeVideos,
+    userId ? { userId, limit: 100 } : "skip"
   );
 
   const loading = youtubeVideos === undefined;
 
   // Map YouTube items using the raw Convex document structure
   const mappedYouTubeItems: YouTubeContentItem[] = useMemo(() => {
-    if (youtubeVideos && Array.isArray(youtubeVideos)) {
-      return youtubeVideos.map((video: any): YouTubeContentItem => {
-        // Already formatted by the backend for UI
+    if (youtubeVideos && youtubeVideos.videos && Array.isArray(youtubeVideos.videos)) {
+      return youtubeVideos.videos.map((video: any): YouTubeContentItem => {
         return {
-          ...video,
+          id: video.videoId || video.id || '',
+          platform: 'youtube' as const,
+          publishedAt: video.snippet?.published_at || (video.createdAt ? new Date(video.createdAt).toISOString() : new Date().toISOString()),
+          content: {
+            title: video.snippet?.title || 'Untitled Video',
+            description: video.snippet?.description || '',
+            thumbnailUrl: video.snippet?.thumbnails?.high || video.snippet?.thumbnails?.medium || '',
+            videoUrl: video.url || `https://www.youtube.com/watch?v=${video.videoId}`,
+            channelTitle: video.snippet?.channel?.title || '',
+          },
+          metrics: {
+            views: Number(video.statistics?.views || 0),
+            likes: Number(video.statistics?.likes || 0),
+            dislikes: Number(video.statistics?.dislikes || 0),
+            comments: Number(video.statistics?.comments || 0),
+          },
+          // Include the full Convex document for complete data access (like Instagram and Gmail)
+          convexData: video,
         };
       });
     }

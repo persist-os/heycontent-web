@@ -214,8 +214,8 @@ export const getVideosByChannel = query({
 });
 
 /**
- * List YouTube videos formatted for content analytics page
- * Optimized with proper limits and efficient transformation
+ * Get YouTube videos for a user with full Convex document access
+ * Returns videos with complete data for chat context
  */
 export const listUserYouTubeVideos = query({
   args: { 
@@ -238,6 +238,7 @@ export const listUserYouTubeVideos = query({
       const uniqueVideos = deduplicateVideos(recentVideos).slice(0, effectiveLimit);
       
       // Transform videos to match the YouTubeContentItem format for UI
+      // BUT include the full Convex document as convexData
       return uniqueVideos.map(video => ({
         id: video.videoId || video.id || '',
         platform: 'youtube' as const,
@@ -255,7 +256,9 @@ export const listUserYouTubeVideos = query({
           likes: Number(video.statistics?.likes || 0),
           dislikes: Number(video.statistics?.dislikes || 0),
           comments: Number(video.statistics?.comments || 0),
-        }
+        },
+        // Include the full Convex document for complete data access (like Instagram and Gmail)
+        convexData: video,
       }));
     } catch (error) {
       console.error('Error listing YouTube videos:', error);

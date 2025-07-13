@@ -1157,3 +1157,525 @@ export const debugHybridSearchWithQuotas = action({
     }
   },
 });
+
+/**
+ * Automatically generate embeddings for new or updated content
+ */
+export const autoCreateEmbedding = action({
+  args: {
+    userId: v.string(),
+    contentId: v.string(),
+    contentType: v.union(
+      v.literal("conversation"),
+      v.literal("instagram_post"),
+      v.literal("youtube_video"),
+      v.literal("gmail_thread"),
+      v.literal("note")
+    ),
+    title: v.string(),
+    content: v.string(),
+    triggerType: v.union(
+      v.literal("content_update"),
+      v.literal("platform_connection"),
+      v.literal("automatic_update")
+    ),
+    platform: v.optional(v.union(
+      v.literal("instagram"),
+      v.literal("youtube"),
+      v.literal("gmail"),
+      v.literal("conversations"),
+      v.literal("notes"),
+      v.literal("all")
+    )),
+  },
+  handler: async (ctx, args) => {
+    console.log('🤖 [AUTO EMBEDDING] Auto-creating embedding for:', {
+      userId: args.userId,
+      contentId: args.contentId,
+      contentType: args.contentType,
+      title: args.title.substring(0, 50) + '...',
+      triggerType: args.triggerType,
+      platform: args.platform
+    });
+
+    try {
+      // Create the embedding
+      await ctx.runAction(api.vectorSearch.createEmbedding, {
+        userId: args.userId,
+      contentId: args.contentId,
+        contentType: args.contentType,
+        title: args.title,
+        content: args.content,
+      });
+
+      // Record the automatic update
+      await ctx.runMutation(internal.vectorSearch.recordEmbeddingUpdate, {
+        userId: args.userId,
+        type: args.triggerType,
+      platform: args.platform,
+        contentType: args.contentType,
+        contentId: args.contentId,
+        itemsProcessed: 1,
+        itemsSucceeded: 1,
+        itemsFailed: 0,
+      });
+
+      console.log('✅ [AUTO EMBEDDING] Successfully created embedding for:', args.contentId);
+      return { success: true };
+    } catch (error: any) {
+      console.error('❌ [AUTO EMBEDDING] Failed to create embedding:', error);
+      
+      // Record the failed update
+      await ctx.runMutation(internal.vectorSearch.recordEmbeddingUpdate, {
+        userId: args.userId,
+        type: args.triggerType,
+        platform: args.platform,
+        contentType: args.contentType,
+        contentId: args.contentId,
+        itemsProcessed: 1,
+        itemsSucceeded: 0,
+        itemsFailed: 1,
+      });
+
+      return { success: false, error: error.message };
+    }
+  },
+});
+
+/**
+ * Automatically create embeddings for multiple content items
+ */
+export const autoCreateEmbeddingsBatch = action({
+  args: {
+    userId: v.string(),
+    items: v.array(v.object({
+      contentId: v.string(),
+      contentType: v.union(
+        v.literal("conversation"),
+        v.literal("instagram_post"),
+        v.literal("youtube_video"),
+        v.literal("gmail_thread"),
+        v.literal("note")
+      ),
+      title: v.string(),
+      content: v.string(),
+    })),
+    triggerType: v.union(
+      v.literal("content_update"),
+      v.literal("platform_connection"),
+      v.literal("automatic_update")
+    ),
+    platform: v.optional(v.union(
+      v.literal("instagram"),
+      v.literal("youtube"),
+      v.literal("gmail"),
+      v.literal("conversations"),
+      v.literal("notes"),
+      v.literal("all")
+    )),
+  },
+  handler: async (ctx, args) => {
+    console.log('🤖 [AUTO EMBEDDING BATCH] Processing', args.items.length, 'items for user:', args.userId);
+
+    const results = {
+      processed: 0,
+      succeeded: 0,
+      failed: 0,
+      errors: [] as string[]
+    };
+
+    for (const item of args.items) {
+      results.processed++;
+      try {
+        await ctx.runAction(api.vectorSearch.autoCreateEmbedding, {
+          userId: args.userId,
+          contentId: item.contentId,
+          contentType: item.contentType,
+          title: item.title,
+          content: item.content,
+          triggerType: args.triggerType,
+          platform: args.platform,
+        });
+        results.succeeded++;
+      } catch (error: any) {
+        results.failed++;
+        const errorMsg = `Failed to embed ${item.contentType} "${item.title}": ${error.message}`;
+        results.errors.push(errorMsg);
+        console.error('❌ [AUTO EMBEDDING BATCH]', errorMsg);
+      }
+    }
+
+    // Record the batch update
+    await ctx.runMutation(internal.vectorSearch.recordEmbeddingUpdate, {
+      userId: args.userId,
+      type: args.triggerType,
+      platform: args.platform,
+      itemsProcessed: results.processed,
+      itemsSucceeded: results.succeeded,
+      itemsFailed: results.failed,
+    });
+
+    console.log('✅ [AUTO EMBEDDING BATCH] Completed:', results);
+    return results;
+  },
+});
+
+/**
+ * Automatically create embeddings for new platform content after refresh
+ */
+export const autoCreateEmbeddingsForNewPlatformContent = action({
+  args: {
+    userId: v.string(),
+    platform: v.union(
+      v.literal("instagram"),
+      v.literal("youtube"),
+      v.literal("gmail")
+    ),
+    triggerType: v.union(
+      v.literal("platform_connection"),
+      v.literal("automatic_update")
+    ),
+  },
+  handler: async (ctx, args) => {
+    console.log('🤖 [AUTO EMBEDDING PLATFORM] Creating embeddings for new', args.platform, 'content for user:', args.userId);
+
+    const results = {
+      processed: 0,
+      succeeded: 0,
+      failed: 0,
+      errors: [] as string[]
+    };
+
+    try {
+      let items: Array<{ contentId: string; contentType: string; title: string; content: string }> = [];
+
+      // Fetch recent content based on platform
+      switch (args.platform) {
+        case "instagram":
+          const instagramPosts = await ctx.runQuery(api.instagramQueries.getAllInstagramPosts, { userId: args.userId });
+          items = instagramPosts.map((post: any) => {
+            const caption = post.data?.caption || '';
+            const username = post.data?.username || 'Unknown User';
+            const mediaType = post.data?.media_type || 'Unknown';
+            const likeCount = post.data?.like_count || 0;
+            const commentsCount = post.data?.comments_count || 0;
+            const timestamp = post.data?.timestamp ? new Date(post.data.timestamp).toLocaleDateString() : 'Unknown date';
+          
+          const hashtags = caption.match(/#[a-zA-Z0-9_]+/g) || [];
+          const hashtagText = hashtags.length > 0 ? `\n\nHashtags: ${hashtags.join(' ')}` : '';
+          
+          const mentions = caption.match(/@[a-zA-Z0-9_.]+/g) || [];
+          const mentionText = mentions.length > 0 ? `\n\nMentions: ${mentions.join(' ')}` : '';
+          
+          const engagementText = `\n\nEngagement: ${likeCount} likes, ${commentsCount} comments`;
+          
+            const title = `${username} - ${mediaType} Post (${timestamp})`;
+            const content = [
+            `Instagram Post by ${username}`,
+            `Posted: ${timestamp}`,
+            `Media Type: ${mediaType}`,
+            `Caption: ${caption}`,
+            hashtagText,
+            mentionText,
+            engagementText,
+            `\n\nContext: This is an Instagram ${mediaType.toLowerCase()} post by ${username} with ${likeCount} likes and ${commentsCount} comments.`
+          ].filter(Boolean).join('\n');
+
+            return {
+              contentId: post._id,
+              contentType: "instagram_post" as const,
+              title,
+              content
+            };
+          });
+        break;
+
+        case "youtube":
+          const youtubeResult = await ctx.runQuery(api.youtubeQueries.getYouTubeVideos, { 
+            userId: args.userId, 
+            limit: 50,
+            paginationOpts: { numItems: 50, cursor: null }
+          });
+          items = youtubeResult.videos.map((video: any) => {
+            const description = video.snippet?.description || '';
+            const channelTitle = video.snippet?.channel?.title || 'Unknown Channel';
+          
+          let analysisText = '';
+            if (video.analysisMarkdown) {
+              analysisText = `\n\nAnalysis: ${video.analysisMarkdown}`;
+            } else if (video.analysis && typeof video.analysis === 'object') {
+              analysisText = `\n\nAnalysis: ${JSON.stringify(video.analysis)}`;
+            }
+            
+            const title = video.snippet?.title || `YouTube Video ${video.videoId}`;
+            const content = `YouTube Video: ${title}\n\nChannel: ${channelTitle}\n\nDescription: ${description}${analysisText}`;
+
+            return {
+              contentId: video._id,
+              contentType: "youtube_video" as const,
+              title,
+              content
+            };
+          });
+        break;
+
+        case "gmail":
+          const gmailResult = await ctx.runQuery(api.gmailQueries.getGmailThreadsPaginated, { 
+            userId: args.userId,
+            paginationOpts: { numItems: 50, cursor: null }
+          });
+          items = gmailResult.page.map((thread: any) => {
+            const subject = thread.subject || thread.data?.subject || 'No Subject';
+            const from = thread.from || thread.data?.from || 'Unknown Sender';
+            const snippet = thread.snippet || thread.data?.snippet || '';
+            const messageCount = thread.message_count || thread.data?.messageCount || 1;
+          
+          let messageDetails = '';
+            if (thread.messages && Array.isArray(thread.messages) && thread.messages.length > 0) {
+              messageDetails = '\n\nMessages:\n' + thread.messages
+              .slice(0, 3)
+              .map((msg: any, index: number) => `${index + 1}. From: ${msg.from || 'Unknown'}\n   Subject: ${msg.subject || subject}\n   Content: ${(msg.snippet || '').substring(0, 200)}`)
+              .join('\n');
+          }
+          
+          let analysisText = '';
+            if (thread.analysis && typeof thread.analysis === 'object') {
+              analysisText = `\n\nAnalysis: ${JSON.stringify(thread.analysis)}`;
+            }
+            
+            const title = `Email Thread: ${subject}`;
+            const content = `Gmail Thread: ${subject}\n\nFrom: ${from}\n\nSnippet: ${snippet}\n\nMessage Count: ${messageCount}${messageDetails}${analysisText}`;
+
+            return {
+              contentId: thread._id,
+              contentType: "gmail_thread" as const,
+        title,
+              content
+            };
+          });
+        break;
+      }
+
+      // Create embeddings for all items
+      for (const item of items) {
+        results.processed++;
+        try {
+          await ctx.runAction(api.vectorSearch.autoCreateEmbedding, {
+            userId: args.userId,
+            contentId: item.contentId,
+            contentType: item.contentType,
+            title: item.title,
+            content: item.content,
+            triggerType: args.triggerType,
+            platform: args.platform,
+          });
+          results.succeeded++;
+        } catch (error: any) {
+          results.failed++;
+          const errorMsg = `Failed to embed ${item.contentType} "${item.title}": ${error.message}`;
+          results.errors.push(errorMsg);
+          console.error('❌ [AUTO EMBEDDING PLATFORM]', errorMsg);
+        }
+      }
+
+      // Record the batch update
+      await ctx.runMutation(internal.vectorSearch.recordEmbeddingUpdate, {
+        userId: args.userId,
+        type: args.triggerType,
+        platform: args.platform,
+        itemsProcessed: results.processed,
+        itemsSucceeded: results.succeeded,
+        itemsFailed: results.failed,
+      });
+
+      console.log('✅ [AUTO EMBEDDING PLATFORM] Completed for', args.platform, ':', results);
+      return results;
+
+    } catch (error: any) {
+      console.error('❌ [AUTO EMBEDDING PLATFORM] Error:', error);
+      return {
+        processed: 0,
+        succeeded: 0,
+        failed: 1,
+        errors: [error.message]
+      };
+    }
+  },
+});
+
+/**
+ * Record embedding update in tracking table (internal)
+ */
+export const recordEmbeddingUpdate = internalMutation({
+  args: {
+    userId: v.string(),
+    type: v.union(
+      v.literal("manual_update"),
+      v.literal("automatic_update"),
+      v.literal("platform_connection"),
+      v.literal("content_update")
+    ),
+    platform: v.optional(v.union(
+      v.literal("instagram"),
+      v.literal("youtube"),
+      v.literal("gmail"),
+      v.literal("conversations"),
+      v.literal("notes"),
+      v.literal("all")
+    )),
+    contentType: v.optional(v.union(
+      v.literal("conversation"),
+      v.literal("instagram_post"),
+      v.literal("youtube_video"),
+      v.literal("gmail_thread"),
+      v.literal("note")
+    )),
+    contentId: v.optional(v.string()),
+    itemsProcessed: v.optional(v.number()),
+    itemsSucceeded: v.optional(v.number()),
+    itemsFailed: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("embeddingUpdates", {
+      userId: args.userId,
+      updatedAt: Date.now(),
+      type: args.type,
+      platform: args.platform,
+      contentType: args.contentType,
+      contentId: args.contentId,
+      itemsProcessed: args.itemsProcessed || 0,
+      itemsSucceeded: args.itemsSucceeded || 0,
+      itemsFailed: args.itemsFailed || 0,
+    });
+  },
+});
+
+/**
+ * Get the last embedding update time for a user
+ */
+export const getLastEmbeddingUpdate = query({
+  args: { userId: v.string() },
+  returns: v.union(v.number(), v.null()),
+  handler: async (ctx, args) => {
+    try {
+      const lastUpdate = await ctx.db
+        .query("embeddingUpdates")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .order("desc")
+        .first();
+      
+      return lastUpdate?.updatedAt || null;
+    } catch (error) {
+      console.error('Error getting last embedding update:', error);
+      return null;
+    }
+  },
+});
+
+/**
+ * Get recent embedding updates for a user
+ */
+export const getRecentEmbeddingUpdates = query({
+  args: { 
+    userId: v.string(),
+    limit: v.optional(v.number())
+  },
+  returns: v.array(v.object({
+    _id: v.id("embeddingUpdates"),
+    _creationTime: v.number(),
+    userId: v.string(),
+    updatedAt: v.number(),
+    type: v.union(
+      v.literal("manual_update"),
+      v.literal("automatic_update"),
+      v.literal("platform_connection"),
+      v.literal("content_update")
+    ),
+    platform: v.optional(v.union(
+      v.literal("instagram"),
+      v.literal("youtube"),
+      v.literal("gmail"),
+      v.literal("conversations"),
+      v.literal("notes"),
+      v.literal("all")
+    )),
+    contentType: v.optional(v.union(
+      v.literal("conversation"),
+      v.literal("instagram_post"),
+      v.literal("youtube_video"),
+      v.literal("gmail_thread"),
+      v.literal("note")
+    )),
+    contentId: v.optional(v.string()),
+    itemsProcessed: v.optional(v.number()),
+    itemsSucceeded: v.optional(v.number()),
+    itemsFailed: v.optional(v.number()),
+  })),
+  handler: async (ctx, args) => {
+    try {
+      const updates = await ctx.db
+        .query("embeddingUpdates")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .order("desc")
+        .take(args.limit || 5);
+      
+      return updates;
+    } catch (error) {
+      console.error('Error getting recent embedding updates:', error);
+      return [];
+    }
+  },
+});
+
+/**
+ * Update the last embedding update time for a user
+ */
+export const updateLastEmbeddingUpdate = mutation({
+  args: { 
+    userId: v.string(),
+    type: v.union(
+      v.literal("manual_update"),
+      v.literal("automatic_update"),
+      v.literal("platform_connection"),
+      v.literal("content_update")
+    ),
+    platform: v.optional(v.union(
+      v.literal("instagram"),
+      v.literal("youtube"),
+      v.literal("gmail"),
+      v.literal("conversations"),
+      v.literal("notes"),
+      v.literal("all")
+    )),
+    contentType: v.optional(v.union(
+      v.literal("conversation"),
+      v.literal("instagram_post"),
+      v.literal("youtube_video"),
+      v.literal("gmail_thread"),
+      v.literal("note")
+    )),
+    contentId: v.optional(v.string()),
+    itemsProcessed: v.optional(v.number()),
+    itemsSucceeded: v.optional(v.number()),
+    itemsFailed: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    try {
+      await ctx.db.insert("embeddingUpdates", {
+        userId: args.userId,
+        updatedAt: Date.now(),
+        type: args.type,
+        platform: args.platform,
+        contentType: args.contentType,
+        contentId: args.contentId,
+        itemsProcessed: args.itemsProcessed,
+        itemsSucceeded: args.itemsSucceeded,
+        itemsFailed: args.itemsFailed,
+      });
+      return true;
+    } catch (error) {
+      console.error('Error updating last embedding update time:', error);
+      return false;
+    }
+  },
+});
