@@ -201,10 +201,6 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
                 relatedItems={insight.relatedItems}
                 expanded={expandedInsight === idx}
                 onExpand={() => setExpandedInsight(expandedInsight === idx ? null : idx)}
-                onDiscuss={() => {
-                  console.log('🔍 [INSTAGRAM PLATFORM] Discussing insight:', insight);
-                  navigateWithInsight(insight, 'instagram');
-                }}
                 onActionStepClick={(actionStep, insightData) => {
                   console.log('🔍 [INSTAGRAM PLATFORM] Action step clicked:', actionStep);
                   console.log('🔍 [INSTAGRAM PLATFORM] Full insight data:', insightData);
