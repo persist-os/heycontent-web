@@ -6,10 +6,9 @@ import { useInstagramInsights } from '../hooks/useInstagramInsights'
 import { RefreshState } from '@/components/ui/refresh-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AnalysisDepthPicker } from '../AnalysisDepthPicker'
-import { Instagram, Users } from 'lucide-react'
+import { Instagram } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PlatformConnectionPrompt } from '../../../_components/content-hub/PlatformConnectionPrompt'
-import InstagramDemographics from '@/app/dashboard/content-analytics/components/InstagramDemographics'
 import { useInstagramBreakdowns } from '../hooks/useInstagramBreakdowns'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
@@ -40,7 +39,7 @@ interface InstagramPlatformProps {
 
 export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPlatformProps) {
   const [expandedInsight, setExpandedInsight] = useState<number | null>(null)
-  const [showDemographics, setShowDemographics] = useState(false)
+  const [breakdownCollapsed, setBreakdownCollapsed] = useState(false);
   
   const { 
     insights, 
@@ -101,70 +100,36 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
 
   return (
     <div className="space-y-6">
-      {!refreshing && (
-        <div className="space-y-6">
-          <div className="flex items-start gap-3 flex-wrap">
-            <div className="flex-1 min-w-0">
-              <AnalysisDepthPicker
-                platform="Instagram"
-                isRefreshing={refreshing}
-                error={error}
-                onRefresh={handleRefreshOrConnect}
-                disabled={!userId}
-                postLimit={postLimit}
-                setPostLimit={setPostLimit}
-                customPostLimit={customPostLimit}
-                setCustomPostLimit={setCustomPostLimit}
-                showCustomInput={showCustomInput}
-                setShowCustomInput={setShowCustomInput}
-                handleCustomSubmit={handleCustomSubmit}
-              />
-            </div>
-            
-            {isConnected && (
-              <button
-                onClick={() => setShowDemographics(!showDemographics)}
-                disabled={refreshing}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  refreshing
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500'
-                    : 'bg-gradient-to-r from-purple-500/10 to-pink-500/10 hover:from-purple-500/20 hover:to-pink-500/20 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:text-purple-800 dark:hover:text-purple-200'
-                }`}
-              >
-                <Users className="w-4 h-4" />
-                <span>
-                  {showDemographics ? 'Hide Demographics' : 'View Demographics'}
-                </span>
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Demographics Section */}
-      {showDemographics && !refreshing && isConnected && (
-        <div className="border-t border-border pt-6">
-          <InstagramDemographics />
-        </div>
-      )}
-      
       {/* Breakdown Filter */}
       {breakdowns ? (
         availableBreakdowns.length > 0 ? (
-          <Tabs value={selectedBreakdown || undefined} onValueChange={setSelectedBreakdown} className="w-full">
-            <TabsList className="mb-4 flex flex-wrap gap-2">
-              {availableBreakdowns.map(({ key, label }) => (
-                <TabsTrigger key={key} value={key} className="capitalize">
-                  {label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            {availableBreakdowns.map(({ key, label }) => (
-              <TabsContent key={key} value={key}>
-                <BreakdownDisplay data={breakdowns[key]} label={label} />
-              </TabsContent>
-            ))}
-          </Tabs>
+          <div className="w-full">
+            <div className="flex items-center justify-end mb-4">
+                <button
+                  onClick={() => setBreakdownCollapsed((prev) => !prev)}
+                  className="ml-2 px-3 py-1 rounded hover:bg-muted/50 text-muted-foreground text-sm font-medium"
+                  aria-label={breakdownCollapsed ? 'Show breakdowns' : 'Hide breakdowns'}
+                >
+                  {breakdownCollapsed ? 'Show' : 'Hide'}
+                </button>
+            </div>
+            {!breakdownCollapsed && (
+              <Tabs value={selectedBreakdown || undefined} onValueChange={setSelectedBreakdown} className="w-full">
+                <TabsList className="mb-4 flex flex-wrap gap-2">
+                  {availableBreakdowns.map(({ key, label }) => (
+                    <TabsTrigger key={key} value={key} className="capitalize">
+                      {label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                {availableBreakdowns.map(({ key, label }) => (
+                  <TabsContent key={key} value={key}>
+                    <BreakdownDisplay data={breakdowns[key]} label={label} />
+                  </TabsContent>
+                ))}
+              </Tabs>
+            )}
+          </div>
         ) : (
           <div className="text-center text-muted-foreground py-8">
             No breakdown data available yet. Keep growing your audience!
@@ -176,6 +141,26 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
           <Skeleton className="h-6 w-full" />
           <Skeleton className="h-6 w-5/6" />
         </div>
+      )}
+
+      {/* Divider before batch analysis/analysis depth section */}
+      <hr className="my-6 border-t border-muted dark:border-white/10" />
+
+      {!refreshing && (
+        <AnalysisDepthPicker
+          platform="Instagram"
+          isRefreshing={refreshing}
+          error={error}
+          onRefresh={handleRefreshOrConnect}
+          disabled={!userId}
+          postLimit={postLimit}
+          setPostLimit={setPostLimit}
+          customPostLimit={customPostLimit}
+          setCustomPostLimit={setCustomPostLimit}
+          showCustomInput={showCustomInput}
+          setShowCustomInput={setShowCustomInput}
+          handleCustomSubmit={handleCustomSubmit}
+        />
       )}
 
       {!refreshing && (
@@ -262,6 +247,8 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
 
 // Creative breakdown display
 function BreakdownDisplay({ data, label }) {
+  // Remove collapse logic from here
+
   if (!data || data.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-6">
@@ -270,20 +257,31 @@ function BreakdownDisplay({ data, label }) {
     );
   }
 
+  // Detect all unique metrics in the data
+  const uniqueMetrics: string[] = React.useMemo(() => {
+    return Array.from(new Set(data.map((metricObj) => metricObj.metric)));
+  }, [data]);
+
+  // Default to first metric
+  const [selectedMetric, setSelectedMetric] = React.useState<string>(uniqueMetrics[0]);
+
+  React.useEffect(() => {
+    if (uniqueMetrics.length > 0 && !selectedMetric) {
+      setSelectedMetric(uniqueMetrics[0]);
+    }
+  }, [uniqueMetrics, selectedMetric]);
+
   // Performance optimization: Check if data is large and show loading state
   const isLargeDatasetFlag = isLargeDataset(data.length);
   const [processed, setProcessed] = React.useState(false);
   const [processingStartTime, setProcessingStartTime] = React.useState<number | null>(null);
 
-  // Show top N for long lists (e.g., cities/countries) - moved outside useMemo
-  const MAX_BARS = 50; // Increased from 10 to 50 for better UX
+  const MAX_BARS = 7;
 
-  // Show loading state for large datasets
   if (isLargeDatasetFlag && !processed) {
     if (!processingStartTime) {
       setProcessingStartTime(performance.now());
     }
-    
     return (
       <LargeDatasetLoading
         dataCount={data.length}
@@ -293,14 +291,12 @@ function BreakdownDisplay({ data, label }) {
     );
   }
 
-  // Helper to pick formatter based on breakdown type
   function formatName(name, breakdownType) {
     if (breakdownType === 'country_breakdown') return getCountryNameFromCode(name);
     if (breakdownType === 'gender_breakdown') return getGenderLabel(name);
     return name;
   }
 
-  // Helper to sort/group values based on breakdown type
   function processValues(values, breakdownType) {
     let grouped = groupBreakdownValues(values);
     if (breakdownType === 'age_breakdown') grouped = sortAgeGroups(grouped);
@@ -309,32 +305,18 @@ function BreakdownDisplay({ data, label }) {
     return grouped;
   }
 
-  // Performance optimization: useMemo for expensive sorting operations
+  // Only show data for the selected metric
+  const selectedMetricObj = data.find((metricObj) => metricObj.metric === selectedMetric);
   const processedData = React.useMemo(() => {
-    if (isLargeDatasetFlag && !processed) {
-      return null; // Still processing
-    }
-
+    if (!selectedMetricObj) return null;
     const timer = new PerformanceTimer(`Processing ${label} breakdown`);
-    
-    const result = data.map((metricObj, idx) => {
-      const processed = processValues(metricObj.values, label.toLowerCase() + '_breakdown');
-      const topValues = processed.slice(0, MAX_BARS); // Process only visible items
-      const total = processed.reduce((sum, v) => sum + v.value, 0);
-      
-      return {
-        processed,
-        topValues,
-        total,
-        metricObj
-      };
-    });
+    const processed = processValues(selectedMetricObj.values, label.toLowerCase() + '_breakdown');
+    const topValues = processed.slice(0, MAX_BARS);
+    const total = processed.reduce((sum, v) => sum + v.value, 0);
+    timer.endWithThreshold(100);
+    return { processed, topValues, total, metricObj: selectedMetricObj };
+  }, [selectedMetricObj, label]);
 
-    timer.endWithThreshold(100); // Warn if processing takes more than 100ms
-    return result;
-  }, [data, label, isLargeDatasetFlag, processed, MAX_BARS]);
-
-  // Mark as processed after first render
   React.useEffect(() => {
     if (isLargeDatasetFlag && !processed && processedData) {
       setProcessed(true);
@@ -359,31 +341,41 @@ function BreakdownDisplay({ data, label }) {
 
   return (
     <div className="bg-card rounded-lg p-4 shadow space-y-4">
-      <h4 className="text-lg font-semibold mb-2">{label} Breakdown</h4>
-      {processedData.map(({ processed, topValues, total, metricObj }, idx) => {
-        return (
-          <div key={idx} className="mb-4">
-            <div className="font-medium mb-2 text-sm text-muted-foreground">{getMetricLabel(metricObj.metric)}</div>
-            <ul className="space-y-2">
-              {topValues.map((item, i) => (
-                <li key={i} className="flex items-center gap-4">
-                  <span className="font-medium min-w-[100px] truncate" title={item.name}>{formatName(item.name, label.toLowerCase() + '_breakdown')}</span>
-                  <div className="flex-1 bg-muted rounded h-4 relative">
-                    <div
-                      className="bg-primary h-4 rounded"
-                      style={{ width: total ? `${Math.round((item.value / total) * 100)}%` : '0%' }}
-                    />
-                    <span className="absolute right-2 text-xs text-muted-foreground">{item.value.toLocaleString()}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            {processed.length > MAX_BARS && (
-              <div className="text-xs text-muted-foreground mt-2">+{processed.length - MAX_BARS} more</div>
-            )}
-          </div>
-        );
-      })}
+      {/* Metric Selector Tabs */}
+      <div className="mb-4">
+        <Tabs value={selectedMetric} onValueChange={(val) => setSelectedMetric(val as string)} className="w-full">
+          <TabsList className="flex flex-wrap gap-2">
+            {uniqueMetrics.map((metric: string) => (
+              <TabsTrigger key={metric} value={metric} className="capitalize">
+                {getMetricLabel(metric)}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      </div>
+
+      <div className="space-y-4">
+        <div className="mb-4">
+          <div className="font-medium mb-2 text-sm text-muted-foreground">{getMetricLabel(processedData.metricObj.metric)}</div>
+          <ul className="space-y-2">
+            {processedData.topValues.map((item, i) => (
+              <li key={i} className="flex items-center gap-4">
+                <span className="font-medium min-w-[100px] truncate" title={item.name}>{formatName(item.name, label.toLowerCase() + '_breakdown')}</span>
+                <div className="flex-1 bg-muted rounded h-4 relative">
+                  <div
+                    className="bg-primary h-4 rounded"
+                    style={{ width: processedData.total ? `${Math.round((item.value / processedData.total) * 100)}%` : '0%' }}
+                  />
+                  <span className="absolute right-2 text-xs text-muted-foreground">{item.value.toLocaleString()}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {processedData.processed.length > MAX_BARS && (
+            <div className="text-xs text-muted-foreground mt-2">+{processedData.processed.length - MAX_BARS} more</div>
+          )}
+        </div>
+      </div>
     </div>
   );
 } 

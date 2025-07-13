@@ -1773,8 +1773,8 @@ app.get("/api/users/:id/gmail/threads", async (c) => {
   const limitParam = c.req.query("limit");
   const limit = limitParam ? parseInt(limitParam, 10) : undefined;
   
-  // Use the new joined query with limit parameter
-  const threads = await ctx.runQuery(api.gmailQueries.getGmailThreadsWithMessages, { 
+  // Use the recent threads query with limit parameter
+  const threads = await ctx.runQuery(api.gmailQueries.getRecentGmailThreads, { 
     userId,
     limit
   });

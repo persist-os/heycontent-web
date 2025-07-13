@@ -3,7 +3,7 @@
 import React from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { useAuth } from '@/app/context/auth-context';
+import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Youtube } from 'lucide-react';
@@ -23,8 +23,7 @@ export const YouTubeOverlay: React.FC<YouTubeOverlayProps> = ({
   onClose,
   showAnalysis = true
 }) => {
-  const { firebaseUser } = useAuth();
-  const userId = firebaseUser?.uid;
+  const userId = getCurrentUserId();
   const router = useRouter();
   const { setYouTubeContext } = useContentContextActions();
 

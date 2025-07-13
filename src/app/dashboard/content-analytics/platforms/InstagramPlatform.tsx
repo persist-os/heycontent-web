@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo, memo } from 'react';
+import React, { useState, useMemo, memo, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -65,6 +65,8 @@ export function InstagramPlatform({
 }: InstagramPlatformProps) {
   const router = useRouter();
   const [selectedContent, setSelectedContent] = useState<InstagramContentItem | null>(null);
+  const observerRef = useRef<HTMLDivElement>(null);
+  const loadingRef = useRef<HTMLDivElement>(null);
   
   // Memoized pie chart data calculation
   const mediaDistributionData = useMemo(() => {
@@ -86,6 +88,33 @@ export function InstagramPlatform({
     if (!analysis?.posting_frequency?.average_days_between_posts) return 0;
     return Math.max(0, Math.min(100, 100 - ((analysis.posting_frequency.average_days_between_posts || 0) / 365 * 100)));
   }, [analysis?.posting_frequency?.average_days_between_posts]);
+
+  // Infinite scroll callback
+  const handleIntersection = useCallback((entries: IntersectionObserverEntry[]) => {
+    const [entry] = entries;
+    if (entry.isIntersecting && hasMorePosts && !loadingMore && !loading) {
+      loadMore();
+    }
+  }, [hasMorePosts, loadingMore, loading, loadMore]);
+
+  // Set up intersection observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(handleIntersection, {
+      root: null,
+      rootMargin: '100px', // Start loading 100px before reaching the bottom
+      threshold: 0.1,
+    });
+
+    if (observerRef.current) {
+      observer.observe(observerRef.current);
+    }
+
+    return () => {
+      if (observerRef.current) {
+        observer.unobserve(observerRef.current);
+      }
+    };
+  }, [handleIntersection]);
 
   // Check connection status first, before any loading states
   // Show Instagram connect card if no Instagram account found
@@ -189,21 +218,20 @@ export function InstagramPlatform({
           <p className="text-sm mt-1">Thanks for your patience—your insights will be back soon! In the meantime, why not brainstorm your next big idea?</p>
         </div>
       )}
-      {/* Instagram Analytics Section */}
-      <div className="space-y-6 mb-8">
-        {/* Header with Refresh Buttons */}
+    
+        {/* Platform Embedding Status */}
+        <PlatformEmbeddingStatus 
+          platform="instagram" 
+          contentCount={displayItems.length} 
+          userId={userId} 
+        />
+
+  {/* Instagram Analytics Section */}
+  <div className="space-y-6 mb-8">
+        {/* Header with Refresh Tracker Button */}
         <div className="flex justify-between items-center">
-          <div></div> {/* Empty div to push buttons to the right */}
+          <div></div> {/* Empty div to push button to the right */}
           <div className="flex gap-3">
-            <Button 
-              size="sm" 
-              onClick={refreshPosts}
-              disabled={refreshingPosts}
-              className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              {refreshingPosts ? 'Refreshing Posts...' : 'Refresh Posts'}
-            </Button>
             <Button 
               size="sm" 
               onClick={refreshTracker}
@@ -216,20 +244,9 @@ export function InstagramPlatform({
           </div>
         </div>
 
-        {refreshPostsSuccess && (
-          <div className="text-green-500 text-sm mb-2 text-center">Instagram posts refreshed successfully!</div>
-        )}
-
         {refreshTrackerSuccess && (
           <div className="text-green-500 text-sm mb-2 text-center">Instagram tracker analysis refreshed successfully!</div>
         )}
-
-        {/* Platform Embedding Status */}
-        <PlatformEmbeddingStatus 
-          platform="instagram" 
-          contentCount={displayItems.length} 
-          userId={userId} 
-        />
 
         {/* Analytics Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
@@ -368,6 +385,22 @@ export function InstagramPlatform({
         </div>
       </div>
 
+      {/* Refresh Posts Button moved below analytics section and above posts grid */}
+      {refreshPostsSuccess && (
+        <div className="text-green-500 text-sm mb-2 text-center">Instagram posts refreshed successfully!</div>
+      )}
+      <div className="w-full flex justify-end mb-6">
+        <Button 
+          size="sm" 
+          onClick={refreshPosts}
+          disabled={refreshingPosts}
+          className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm"
+        >
+          <RefreshCw className="w-4 h-4 mr-2" />
+          {refreshingPosts ? 'Refreshing Posts...' : 'Refresh Posts'}
+        </Button>
+      </div>
+
       {/* Content Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
         {displayItems.length > 0 ? (
@@ -405,15 +438,22 @@ export function InstagramPlatform({
         )}
       </div>
 
-      {/* Load More Button */}
-      {(hasMorePosts || queueCount > 0) && displayItems.length > 0 && !loadingMore && (
-        <div className="flex justify-center mt-8">
-          <Button
-            onClick={loadMore}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300"
-          >
-            Load More Posts
-          </Button>
+      {/* Infinite Scroll Trigger Element */}
+      {(hasMorePosts || queueCount > 0) && displayItems.length > 0 && (
+        <div 
+          ref={observerRef}
+          className="h-4 w-full"
+          aria-label="Infinite scroll trigger"
+        />
+      )}
+
+      {/* Loading indicator at bottom */}
+      {loadingMore && (
+        <div ref={loadingRef} className="flex justify-center py-8">
+          <div className="flex items-center gap-2 text-gray-600">
+            <RefreshCw className="w-4 h-4 animate-spin" />
+            <span>Loading more posts...</span>
+          </div>
         </div>
       )}
 
