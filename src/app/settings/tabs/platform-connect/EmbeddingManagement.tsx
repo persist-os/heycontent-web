@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Brain, RefreshCw, Trash2, Database, CheckCircle, Info } from 'lucide-react';
+import { Brain, RefreshCw, Trash2, Database, CheckCircle, Info, Clock, Settings } from 'lucide-react';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { generateEmbeddingsForUser, checkUserEmbeddings, deleteAllUserEmbeddings } from '../../../dashboard/chat/utils/api-utils';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 
 interface EmbeddingManagementProps {
   userId?: string;
@@ -16,6 +18,22 @@ export function EmbeddingManagement({ userId }: EmbeddingManagementProps) {
     hasEmbeddings: false, 
     count: 0 
   });
+  const [lastManualUpdate, setLastManualUpdate] = useState<number | null>(null);
+  const [timeUntilNextUpdate, setTimeUntilNextUpdate] = useState<string>('');
+
+  const currentUserId = getCurrentUserId();
+  
+  // Get the last embedding update time
+  const lastUpdateTime = useQuery(
+    api.vectorSearch.getLastEmbeddingUpdate,
+    currentUserId ? { userId: currentUserId } : 'skip'
+  );
+
+  // Get recent embedding updates for more context
+  const recentUpdates = useQuery(
+    api.vectorSearch.getRecentEmbeddingUpdates,
+    currentUserId ? { userId: currentUserId, limit: 5 } : 'skip'
+  );
 
   // Check for existing embeddings when component mounts or user changes
   useEffect(() => {
@@ -33,11 +51,46 @@ export function EmbeddingManagement({ userId }: EmbeddingManagementProps) {
     checkEmbeddings();
   }, [userId]);
 
+  // Load last manual update time from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('lastManualEmbeddingUpdate');
+    if (saved) {
+      setLastManualUpdate(parseInt(saved));
+    }
+  }, []);
+
+  // Calculate time until next update is available
+  useEffect(() => {
+    if (lastManualUpdate) {
+      const updateTimer = setInterval(() => {
+        const now = Date.now();
+        const timeSinceUpdate = now - lastManualUpdate;
+        const hoursRemaining = 24 - (timeSinceUpdate / (1000 * 60 * 60));
+        
+        if (hoursRemaining <= 0) {
+          setTimeUntilNextUpdate('');
+        } else {
+          const hours = Math.floor(hoursRemaining);
+          const minutes = Math.floor((hoursRemaining - hours) * 60);
+          setTimeUntilNextUpdate(`${hours}h ${minutes}m`);
+        }
+      }, 1000);
+
+      return () => clearInterval(updateTimer);
+    }
+  }, [lastManualUpdate]);
+
   // Function to generate embeddings for user content
   const handleGenerateEmbeddings = async () => {
     const currentUserId = getCurrentUserId();
     if (!currentUserId) {
       setEmbeddingStatus('No user ID found');
+      return;
+    }
+
+    // Check if 24 hours have passed since last manual update
+    if (lastManualUpdate && Date.now() - lastManualUpdate < 24 * 60 * 60 * 1000) {
+      setEmbeddingStatus('Manual refresh available in ' + timeUntilNextUpdate);
       return;
     }
 
@@ -54,6 +107,11 @@ export function EmbeddingManagement({ userId }: EmbeddingManagementProps) {
       const gmailStats = `Gmail: ${results.gmailThreads.succeeded}/${results.gmailThreads.processed} (${results.gmailThreads.skipped} skipped)`;
       
       setEmbeddingStatus(`Complete! ${convStats}, ${noteStats}, ${instagramStats}, ${youtubeStats}, ${gmailStats}`);
+      
+      // Update last manual update time
+      const now = Date.now();
+      setLastManualUpdate(now);
+      localStorage.setItem('lastManualEmbeddingUpdate', now.toString());
       
       // Refresh embedding info
       const info = await checkUserEmbeddings(currentUserId);
@@ -105,6 +163,28 @@ export function EmbeddingManagement({ userId }: EmbeddingManagementProps) {
     }
   };
 
+  // Format the last update time
+  const formatLastUpdate = (timestamp: number | null) => {
+    if (!timestamp) return 'Never';
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes === 1 ? '' : 's'} ago`;
+    
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours} hour${diffInHours === 1 ? '' : 's'} ago`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) return `${diffInDays} day${diffInDays === 1 ? '' : 's'} ago`;
+    
+    return date.toLocaleDateString();
+  };
+
+  // Check if manual refresh is available
+  const isManualRefreshAvailable = !lastManualUpdate || (Date.now() - lastManualUpdate >= 24 * 60 * 60 * 1000);
+
   return (
     <div className="bg-card border border-border rounded-lg p-6 space-y-4">
       <div className="flex items-center gap-3">
@@ -114,7 +194,7 @@ export function EmbeddingManagement({ userId }: EmbeddingManagementProps) {
         <div>
           <h3 className="text-lg font-semibold text-foreground">Smart Content Memory</h3>
           <p className="text-sm text-muted-foreground">
-            Help me remember and find your content across all platforms
+            Automatically learns and remembers your content across all platforms
           </p>
         </div>
       </div>
@@ -159,64 +239,117 @@ export function EmbeddingManagement({ userId }: EmbeddingManagementProps) {
         )}
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        {embeddingInfo.hasEmbeddings ? (
-          <>
+      {/* Last Update Time */}
+      <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 border border-slate-200/50 dark:border-slate-700/50">
+        <Clock className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+        <div className="text-sm">
+          <span className="text-slate-600 dark:text-slate-400">Last saved to memory: </span>
+          {lastUpdateTime ? (
+            <>
+              <span className="font-medium text-foreground">{formatLastUpdate(lastUpdateTime)}</span>
+              {recentUpdates && recentUpdates.length > 0 && (
+                <>
+                  <span className="text-slate-500 dark:text-slate-400 mx-1">•</span>
+                  <span className="text-slate-600 dark:text-slate-400">
+                    {recentUpdates[0].type === 'content_update' && 'Content updated'}
+                    {recentUpdates[0].type === 'platform_connection' && 'Platform connected'}
+                    {recentUpdates[0].type === 'automatic_update' && 'Automatic refresh'}
+                    {recentUpdates[0].type === 'manual_update' && 'Manual refresh'}
+                    {recentUpdates[0].platform && ` (${recentUpdates[0].platform})`}
+                    {recentUpdates[0].contentType && ` - ${recentUpdates[0].contentType}`}
+                    {recentUpdates[0].itemsProcessed && recentUpdates[0].itemsProcessed > 0 && (
+                      <span className="text-slate-500"> • {recentUpdates[0].itemsSucceeded}/{recentUpdates[0].itemsProcessed} items</span>
+                    )}
+                  </span>
+                </>
+              )}
+            </>
+          ) : (
+            <span className="text-slate-500 dark:text-slate-400">
+              {lastUpdateTime === null ? 'Never' : 'Loading...'}
+              {recentUpdates === undefined && ' (Query loading...)'}
+              {recentUpdates && recentUpdates.length === 0 && ' (No content saved yet)'}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Manual Controls */}
+      <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4 border border-amber-200/50 dark:border-amber-700/50">
+        <div className="flex items-start gap-3 mb-3">
+          <div className="bg-amber-100 dark:bg-amber-800/50 p-2 rounded-full">
+            <Settings className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="text-sm">
+            <p className="font-medium text-amber-800 dark:text-amber-200">Manual Controls</p>
+            <p className="text-amber-700 dark:text-amber-300">
+              {isManualRefreshAvailable 
+                ? 'Manually refresh or clear your content memory. This is usually not needed since the system works automatically.'
+                : `Manual refresh available in ${timeUntilNextUpdate}`
+              }
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3">
+          {embeddingInfo.hasEmbeddings ? (
+            <>
+              <Button
+                onClick={handleGenerateEmbeddings}
+                disabled={isGeneratingEmbeddings || !isManualRefreshAvailable}
+                className="flex-1 bg-amber-600 hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-500 text-white disabled:opacity-50"
+              >
+                {isGeneratingEmbeddings ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Learning New Content...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Refresh Content Memory
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={handleDeleteEmbeddings}
+                disabled={isDeletingEmbeddings || isGeneratingEmbeddings}
+                variant="outline"
+                className="flex-1 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+              >
+                {isDeletingEmbeddings ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Clearing...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Clear All Memory
+                  </>
+                )}
+              </Button>
+            </>
+          ) : (
             <Button
               onClick={handleGenerateEmbeddings}
-              disabled={isGeneratingEmbeddings}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white"
+              disabled={isGeneratingEmbeddings || !isManualRefreshAvailable}
+              className="w-full bg-amber-600 hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-500 text-white disabled:opacity-50"
             >
               {isGeneratingEmbeddings ? (
                 <>
                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Learning New Content...
+                  Creating Memory...
                 </>
               ) : (
                 <>
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Update My Content
+                  <Brain className="w-4 h-4 mr-2" />
+                  Create Content Memory
                 </>
               )}
             </Button>
-            <Button
-              onClick={handleDeleteEmbeddings}
-              disabled={isDeletingEmbeddings || isGeneratingEmbeddings}
-              variant="outline"
-              className="flex-1 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-            >
-              {isDeletingEmbeddings ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Clearing...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Clear All
-                </>
-              )}
-            </Button>
-          </>
-        ) : (
-          <Button
-            onClick={handleGenerateEmbeddings}
-            disabled={isGeneratingEmbeddings}
-            className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white"
-          >
-            {isGeneratingEmbeddings ? (
-              <>
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                Creating Memory...
-              </>
-            ) : (
-              <>
-                <Brain className="w-4 h-4 mr-2" />
-                Create Content Memory
-              </>
-            )}
-          </Button>
-        )}
+          )}
+        </div>
       </div>
 
       {embeddingStatus && (

@@ -82,6 +82,32 @@ export async function POST(request: NextRequest) {
         posts_refreshed: data.posts_refreshed
       });
 
+      // Trigger automatic embedding creation for new Instagram posts
+      try {
+        const convexUrl = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api/autoCreateEmbeddingsForNewPlatformContent`;
+        const convexResponse = await fetch(convexUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authHeader
+          },
+          body: JSON.stringify({
+            userId: user_id,
+            platform: 'instagram',
+            triggerType: 'platform_connection'
+          })
+        });
+
+        if (convexResponse.ok) {
+          console.log(`[${requestId}] Automatic embedding creation triggered for Instagram posts`);
+        } else {
+          console.error(`[${requestId}] Failed to trigger automatic embedding creation:`, convexResponse.status);
+        }
+      } catch (embeddingError) {
+        console.error(`[${requestId}] Error triggering automatic embedding creation:`, embeddingError);
+        // Don't fail the main request if embedding creation fails
+      }
+
       // Return the backend response
       return NextResponse.json(data);
     } catch (fetchError) {
