@@ -41,6 +41,7 @@ interface InstagramPlatformProps {
 
 export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPlatformProps) {
   const [expandedInsight, setExpandedInsight] = useState<number | null>(null)
+  const [breakdownCollapsed, setBreakdownCollapsed] = useState(false);
   const { navigateWithInsight } = useInsightNavigation()
   const { discussActionStep } = useActionStepDiscussion()
   const [breakdownCollapsed, setBreakdownCollapsed] = useState(false);
