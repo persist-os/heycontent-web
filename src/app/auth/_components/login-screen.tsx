@@ -213,8 +213,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
             </div>
             <div className="pt-4 border-t border-gray-200">
               <p className="text-sm text-gray-600 text-center mb-3">
-                Need access?<br />
-                Join the waitlist below, or ask a friend for their invite code.
+                Want to be a beta tester?<br />
+                Get early access to creator tools and mobile features below.
               </p>
               <div className="flex justify-center">
                 <WaitlistButton />

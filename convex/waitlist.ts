@@ -2,14 +2,14 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from './_generated/dataModel';
 
-// Mutation to add a person to the waitlist
+// Mutation to add a person to the beta program
 export const add = mutation({
   args: {
     name: v.string(),
     email: v.string(),
   },
   handler: async (ctx, args) => {
-    // Check if the email already exists in the waitlist
+    // Check if the email already exists in the beta program
     const existingEntry = await ctx.db
       .query("waitlist")
       .withIndex("by_email", (q) => q.eq("email", args.email))
@@ -18,11 +18,11 @@ export const add = mutation({
     if (existingEntry) {
       return {
         success: false,
-        message: "Email already exists in the waitlist",
+        message: "Email already exists in the beta program",
       };
     }
     
-    // Add new entry to the waitlist
+    // Add new entry to the beta program
     const id = await ctx.db.insert("waitlist", {
       name: args.name,
       email: args.email,
@@ -33,7 +33,7 @@ export const add = mutation({
     return {
       success: true,
       id,
-      message: "Successfully added to the waitlist",
+      message: "Successfully joined the beta program",
     };
   },
 });
