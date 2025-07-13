@@ -18,6 +18,11 @@ export interface ContentContextState {
     source?: string; // For backwards compatibility
     // Full Convex document data
     convexData?: Doc<'instagramPosts'> | Doc<'youtubeVideos'> | Doc<'gmailThreads'> | any;
+    // AI Insights specific fields
+    fullInsight?: any;
+    actionStep?: string;
+    originalPlatform?: 'youtube' | 'instagram' | 'gmail';
+    additionalContext?: string;
   } | null;
   
   // Loading states
@@ -269,23 +274,88 @@ export const useContentContextStore = create<ContentContextState>()(
 
       // Set AI Insights context
       setAIInsightsContext: (insight: any) => {
+        console.group('🔍 [CONTENT CONTEXT STORE] Setting AI Insights context');
+        console.log('Input insight structure:', {
+          platform: insight.platform,
+          contentId: insight.contentId || `insight-${Date.now()}`,
+          title: insight.title,
+          hasActionStep: !!insight.actionStep,
+          hasFullInsight: !!insight.fullInsight,
+          hasAnalysis: !!insight.analysis,
+          hasContent: !!insight.content,
+          hasConvexData: !!insight.convexData,
+          originalPlatform: insight.originalPlatform,
+          additionalContext: insight.additionalContext,
+        });
+        
+        if (insight.fullInsight) {
+          console.log('FullInsight structure:', {
+            hasTitle: !!insight.fullInsight.title,
+            hasImpact: !!insight.fullInsight.impact,
+            whyNowCount: insight.fullInsight.whyNow?.length || 0,
+            actionStepsCount: insight.fullInsight.actionSteps?.length || 0,
+            hasExpectedOutcome: !!insight.fullInsight.expectedOutcome,
+            sourceDetailsCount: insight.fullInsight.sourceDetails?.length || 0,
+            relatedItemsCount: insight.fullInsight.relatedItems?.length || 0,
+            threadDetailsCount: insight.fullInsight.threadDetails?.length || 0,
+          });
+        }
+        
+        console.log('Full input insight:', insight);
+        console.groupEnd();
+        
         const context = {
           platform: 'ai-insights' as const,
-          contentId: `insight-${Date.now()}`,
+          contentId: insight.contentId || `insight-${Date.now()}`,
           title: insight.title || 'AI Insight',
-          analysis: insight.insight || insight.content || null,
-          content: insight,
+          analysis: insight.analysis || insight.insight || insight.content || null,
+          content: insight.content || insight,
           type: insight.type || undefined, // Pass through the type if provided
           source: insight.source || undefined, // Pass through the source if provided
-          convexData: insight // Store the complete insight data
+          convexData: insight.convexData || insight, // Store the complete insight data
+          // Preserve all fields from the insight object for backend access
+          fullInsight: insight.fullInsight || insight,
+          actionStep: insight.actionStep || undefined,
+          originalPlatform: insight.originalPlatform || undefined,
+          additionalContext: insight.additionalContext || undefined,
+          // Additional fields for comprehensive context
+          thumbnailUrl: insight.thumbnailUrl,
+          publishedAt: insight.publishedAt,
+          metrics: insight.metrics,
         };
 
-        set({
-          currentContext: context,
-          cacheTimestamp: Date.now(),
-          error: null
+        console.group('🔍 [CONTENT CONTEXT STORE] Final AI Insights context');
+        console.log('Final context structure:', {
+          platform: context.platform,
+          contentId: context.contentId,
+          title: context.title,
+          hasAnalysis: !!context.analysis,
+          hasContent: !!context.content,
+          hasConvexData: !!context.convexData,
+          hasFullInsight: !!context.fullInsight,
+          hasActionStep: !!context.actionStep,
+          originalPlatform: context.originalPlatform,
+          additionalContext: context.additionalContext,
         });
-      }
+        
+        if (context.fullInsight) {
+          console.log('Final fullInsight structure:', {
+            hasTitle: !!context.fullInsight.title,
+            hasImpact: !!context.fullInsight.impact,
+            whyNowCount: context.fullInsight.whyNow?.length || 0,
+            actionStepsCount: context.fullInsight.actionSteps?.length || 0,
+            hasExpectedOutcome: !!context.fullInsight.expectedOutcome,
+            sourceDetailsCount: context.fullInsight.sourceDetails?.length || 0,
+            relatedItemsCount: context.fullInsight.relatedItems?.length || 0,
+            threadDetailsCount: context.fullInsight.threadDetails?.length || 0,
+          });
+        }
+        
+        console.log('Final context:', context);
+        console.groupEnd();
+
+        set({ currentContext: context });
+      },
     })),
     {
       name: 'content-context-store-cache',
@@ -317,7 +387,12 @@ export const useContentContext = () => {
     publishedAt: currentContext?.publishedAt,
     metrics: currentContext?.metrics,
     content: currentContext?.content,
-    convexData: currentContext?.convexData
+    convexData: currentContext?.convexData,
+    // AI Insights specific fields
+    fullInsight: currentContext?.fullInsight,
+    actionStep: currentContext?.actionStep,
+    originalPlatform: currentContext?.originalPlatform,
+    additionalContext: currentContext?.additionalContext
   };
 };
 

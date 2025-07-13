@@ -35,79 +35,60 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
     }
     return (
       <div className="sticky top-0 z-10">
-        <Card className="border border-[#D0ECFF] bg-white dark:bg-gray-900 shadow-sm">
-          <div className="relative flex items-center min-h-[48px] mb-2 px-4">
-            <div className="absolute left-6 p-2">
+        <Card className="border border-[#B3D4FC] dark:border-[#2A3A5A] bg-[#F5F9FF] dark:bg-[#1A2332] shadow-sm p-6 rounded-lg">
+          <div className="flex items-start mb-4">
+            {/* Platform icon next to title, both left-aligned */}
+            <div className="flex items-center gap-3">
               {platformIcon}
+              <h2 className="font-semibold text-lg" style={{ color: '#4E87E3' }}>
+                {context.fullInsight?.title || context.title}
+              </h2>
             </div>
-            
-            <div className="w-full flex flex-col items-center justify-center">
-              <h3 className="font-semibold text-base text-[#4E87E3] dark:text-[#4E87E3] text-center line-clamp-2 leading-tight px-2">
-                {context.platform === 'ai-insights' ? `AI Insight: ${context.title}` : `Discussing: ${context.title || `${context.platform} content`}`}
-              </h3>
-              <p className="text-sm text-gray-700 dark:text-gray-300">
-                {context.platform === 'ai-insights'
-                  ? `From ${originalPlatform ? originalPlatform.charAt(0).toUpperCase() + originalPlatform.slice(1) : 'Dashboard'}`
-                  : `${context.platform}${context.contentId ? ` • Content ID: ${context.contentId}` : ''}`}
-              </p>
-            </div>
-            
-            <div className="absolute right-4">
-              {onRemove && (
+          </div>
+          {/* Action item in consistent card */}
+          {context.actionStep && (
+            <Card className="w-full border border-[#B3D4FC] dark:border-[#2A3A5A] bg-[#F5F9FF] dark:bg-[#1A2332] rounded-lg px-4 py-3 mb-4">
+              <span className="block text-base font-semibold" style={{ color: '#4E87E3' }}>
+                Action Item
+              </span>
+              <span className="block text-base text-gray-900 dark:text-gray-100 mt-1">
+                {context.actionStep}
+              </span>
+            </Card>
+          )}
+          {/* Analysis context toggle, styled like Action Item */}
+          <Card className="w-full border border-[#B3D4FC] dark:border-[#2A3A5A] bg-[#F5F9FF] dark:bg-[#1A2332] rounded-lg px-4 py-3 mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="block text-base font-semibold" style={{ color: '#4E87E3' }}>
+                Context
+              </span>
+              {onToggleAnalysis && (
                 <button
-                  onClick={onRemove}
-                  className="text-gray-400 hover:text-[#4E87E3] dark:hover:text-[#4E87E3]"
-                  title="Remove context"
+                  onClick={() => onToggleAnalysis(!includeAnalysisInQuery)}
+                  className={`flex items-center gap-1 text-sm transition-colors ${includeAnalysisInQuery ? 'text-[#4E87E3]' : 'text-gray-600 dark:text-gray-400'} hover:text-[#4E87E3]`}
+                  title={includeAnalysisInQuery ? "Disable insight context" : "Enable insight context"}
                 >
-                  <X className="w-5 h-5" />
+                  {includeAnalysisInQuery ? (
+                    <>
+                      <ToggleRight className="w-4 h-4 text-[#4E87E3]" />
+                      <span>ON</span>
+                    </>
+                  ) : (
+                    <>
+                      <ToggleLeft className="w-4 h-4" />
+                      <span>OFF</span>
+                    </>
+                  )}
                 </button>
               )}
             </div>
-          </div>
-          <div className="p-4 pt-0">
-            {/* Display the full AI insight */}
-            <AIInsightDisplayCard context={context as any} showPlatformIcon={false} />
-
-            {/* Analysis context toggle */}
-            <div className="mt-2 p-3 bg-white dark:bg-gray-900 rounded border border-[#D0ECFF]">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-base font-semibold text-gray-900 dark:text-white">
-                    Context
-                  </span>
-                </div>
-                {onToggleAnalysis && (
-                  <button
-                    onClick={() => onToggleAnalysis(!includeAnalysisInQuery)}
-                    className={`flex items-center gap-1 text-sm transition-colors ${includeAnalysisInQuery ? 'text-[#4E87E3]' : 'text-gray-600 dark:text-gray-400'} hover:text-[#4E87E3]`}
-                    title={includeAnalysisInQuery ? "Disable insight context" : "Enable insight context"}
-                  >
-                    {includeAnalysisInQuery ? (
-                      <>
-                        <ToggleRight className="w-4 h-4 text-[#4E87E3]" />
-                        <span>ON</span>
-                      </>
-                    ) : (
-                      <>
-                        <ToggleLeft className="w-4 h-4" />
-                        <span>OFF</span>
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
-              <div className={`mt-2 text-xs px-2 py-1 rounded ${
-                includeAnalysisInQuery 
-                  ? 'text-[#4E87E3] bg-[#D0ECFF]/40' 
-                  : 'text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800'
-              }`}>
-                {includeAnalysisInQuery 
-                  ? 'Insight included in questions'
-                  : ''
-                }
-              </div>
+            <div className="text-base font-normal text-left text-gray-900 dark:text-gray-100">
+              {includeAnalysisInQuery 
+                ? 'Insight included in questions'
+                : 'Insight not included in questions'
+              }
             </div>
-          </div>
+          </Card>
         </Card>
       </div>
     );

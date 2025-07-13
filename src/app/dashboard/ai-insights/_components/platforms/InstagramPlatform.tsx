@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { InsightCard } from '@/components/content/InsightCard'
 import { useInstagramInsights } from '../hooks/useInstagramInsights'
 import { useInsightNavigation } from '../hooks/useInsightNavigation'
+import { useActionStepDiscussion } from '../hooks/useActionStepDiscussion'
 import { RefreshState } from '@/components/ui/refresh-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AnalysisDepthPicker } from '../AnalysisDepthPicker'
@@ -41,6 +42,7 @@ interface InstagramPlatformProps {
 export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPlatformProps) {
   const [expandedInsight, setExpandedInsight] = useState<number | null>(null)
   const { navigateWithInsight } = useInsightNavigation()
+  const { discussActionStep } = useActionStepDiscussion()
   
   const { 
     insights, 
@@ -200,7 +202,25 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
                 expanded={expandedInsight === idx}
                 onExpand={() => setExpandedInsight(expandedInsight === idx ? null : idx)}
                 onDiscuss={() => {
+                  console.log('🔍 [INSTAGRAM PLATFORM] Discussing insight:', insight);
                   navigateWithInsight(insight, 'instagram');
+                }}
+                onActionStepClick={(actionStep, insightData) => {
+                  console.log('🔍 [INSTAGRAM PLATFORM] Action step clicked:', actionStep);
+                  console.log('🔍 [INSTAGRAM PLATFORM] Full insight data:', insightData);
+                  
+                  // Create additional context for the action step
+                  const additionalContext = [
+                    `Platform: INSTAGRAM`,
+                    `Insight: ${insightData.title}`,
+                    `Impact: ${insightData.impact}`,
+                    `Why Now: ${insightData.whyNow.join(', ')}`,
+                    `Expected Outcome: ${insightData.expectedOutcome}`,
+                    `Source: Instagram Insights Dashboard`
+                  ].join('\n');
+                  
+                  // Use the default action step discussion
+                  discussActionStep(actionStep, insightData, 'instagram', additionalContext);
                 }}
               />
             ))}

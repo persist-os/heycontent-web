@@ -28,7 +28,7 @@ export interface InsightCardProps {
     date: string;
   }>;
   onDiscuss?: () => void;
-  onActionStepClick?: (actionStep: string) => void;
+  onActionStepClick?: (actionStep: string, insight: InsightCardProps) => void;
   expanded?: boolean;
   onExpand?: () => void;
 }
@@ -254,8 +254,24 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
                   className="w-full flex items-center justify-between p-3 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left group"
                   onClick={(e) => {
                     e.stopPropagation();
+                    const fullInsight = {
+                      platform,
+                      title,
+                      impact,
+                      whyNow,
+                      actionSteps,
+                      expectedOutcome,
+                      outcomeColor,
+                      sourceDetails,
+                      relatedItems,
+                      threadDetails,
+                      onDiscuss,
+                      onActionStepClick,
+                      expanded,
+                      onExpand
+                    };
                     if (onActionStepClick) {
-                      onActionStepClick(step);
+                      onActionStepClick(step, fullInsight);
                     } else {
                       const additionalContext = [
                         `Platform: ${validatedPlatform.toUpperCase()}`,
@@ -264,8 +280,7 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
                         `Why Now: ${whyNow.join(', ')}`,
                         `Expected Outcome: ${expectedOutcome}`
                       ].join('\n');
-                      
-                      discussActionStep(step, title, validatedPlatform, additionalContext);
+                      discussActionStep(step, fullInsight, validatedPlatform, additionalContext);
                     }
                   }}
                 >
