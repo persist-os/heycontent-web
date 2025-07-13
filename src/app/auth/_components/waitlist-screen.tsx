@@ -144,12 +144,12 @@ const WaitlistScreen: React.FC<WaitlistScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background/80 via-muted/20 to-background/80 p-4">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="bg-white rounded-xl shadow-lg max-w-md w-full mx-2 sm:mx-4 p-4 sm:p-8"
+        className="bg-background rounded-xl shadow-lg max-w-md w-full mx-2 sm:mx-4 p-4 sm:p-8 border border-border"
       >
         <motion.div
           initial={{ opacity: 0 }}
@@ -157,7 +157,7 @@ const WaitlistScreen: React.FC<WaitlistScreenProps> = ({
           transition={{ delay: 0.3 }}
           className="text-center mb-8"
         >
-          <h2 className="text-gray-700 font-medium mb-6 tracking-wide">
+          <h2 className="text-foreground font-medium mb-6 tracking-wide">
             YOU ARE NOW IN THE QUEUE
           </h2>
           
@@ -194,7 +194,7 @@ const WaitlistScreen: React.FC<WaitlistScreenProps> = ({
               opacity: peopleAhead === 0 ? 0.5 : 1,
               y: peopleAhead === 0 ? 5 : 0
             }}
-            className="text-gray-500 text-sm tracking-wide mb-2">
+            className="text-muted-foreground text-sm tracking-wide mb-2">
             {peopleAhead === 0 ? 'YOU ARE NEXT!' : 'PEOPLE AHEAD OF YOU'}
           </motion.p>
           
@@ -202,7 +202,7 @@ const WaitlistScreen: React.FC<WaitlistScreenProps> = ({
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex items-center justify-center text-sm text-blue-600"
+              className="flex items-center justify-center text-sm text-blue-600 dark:text-blue-400"
             >
               <RefreshCcw size={14} className="animate-spin mr-2" />
               Generating your access credentials...
@@ -211,7 +211,7 @@ const WaitlistScreen: React.FC<WaitlistScreenProps> = ({
         </motion.div>
 
         <div className="mb-6 relative">
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full bg-muted rounded-full h-2">
             <motion.div 
               className="bg-blue-600 h-2 rounded-full"
               initial={{ width: 0 }}
@@ -224,7 +224,7 @@ const WaitlistScreen: React.FC<WaitlistScreenProps> = ({
           {[25, 50, 75].map(position => (
             <motion.div 
               key={position}
-              className={`absolute top-0 h-2 w-2 rounded-full ${progress >= position ? 'bg-blue-600' : 'bg-gray-300'}`}
+              className={`absolute top-0 h-2 w-2 rounded-full ${progress >= position ? 'bg-blue-600' : 'bg-muted-foreground'}`}
               style={{ left: `${position}%`, marginLeft: '-4px' }}
               animate={{
                 scale: progress >= position ? [1, 1.5, 1] : 1,
@@ -238,7 +238,7 @@ const WaitlistScreen: React.FC<WaitlistScreenProps> = ({
           ))}
         </div>
 
-        <div className="mb-8 text-center text-sm text-gray-500">
+        <div className="mb-8 text-center text-sm text-muted-foreground">
           <p className="font-mono">QUEUE ID: {queueId}</p>
         </div>
 
@@ -247,45 +247,45 @@ const WaitlistScreen: React.FC<WaitlistScreenProps> = ({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="border border-gray-200 rounded-lg p-4 text-center hover:border-gray-300 transition-colors"
+            className="border border-border rounded-lg p-4 text-center hover:border-border/70 transition-colors"
           >
             <div className="flex justify-center mb-3">
-              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                <Check size={16} className="text-gray-600" />
+              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                <Check size={16} className="text-muted-foreground" />
               </div>
             </div>
-            <h3 className="text-xs font-medium mb-2">Stick To One Device</h3>
-            <p className="text-xs text-gray-500">Join the queue from one browser on one device.</p>
+            <h3 className="text-xs font-medium mb-2 text-foreground">Stick To One Device</h3>
+            <p className="text-xs text-muted-foreground">Join the queue from one browser on one device.</p>
           </motion.div>
           
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="border border-gray-200 rounded-lg p-4 text-center hover:border-gray-300 transition-colors"
+            className="border border-border rounded-lg p-4 text-center hover:border-border/70 transition-colors"
           >
             <div className="flex justify-center mb-3">
-              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                <Check size={16} className="text-gray-600" />
+              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                <Check size={16} className="text-muted-foreground" />
               </div>
             </div>
-            <h3 className="text-xs font-medium mb-2">One Tab Only</h3>
-            <p className="text-xs text-gray-500">Multiple tabs may cause you to lose your place in line.</p>
+            <h3 className="text-xs font-medium mb-2 text-foreground">One Tab Only</h3>
+            <p className="text-xs text-muted-foreground">Multiple tabs may cause you to lose your place in line.</p>
           </motion.div>
           
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="border border-gray-200 rounded-lg p-4 text-center hover:border-gray-300 transition-colors"
+            className="border border-border rounded-lg p-4 text-center hover:border-border/70 transition-colors"
           >
             <div className="flex justify-center mb-3">
-              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                <AlertCircle size={16} className="text-gray-600" />
+              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                <AlertCircle size={16} className="text-muted-foreground" />
               </div>
             </div>
-            <h3 className="text-xs font-medium mb-2">Bot Detection is Live</h3>
-            <p className="text-xs text-gray-500">Disable any browser extensions that may cause issues.</p>
+            <h3 className="text-xs font-medium mb-2 text-foreground">Bot Detection is Live</h3>
+            <p className="text-xs text-muted-foreground">Disable any browser extensions that may cause issues.</p>
           </motion.div>
         </div>
 
@@ -307,7 +307,7 @@ const WaitlistScreen: React.FC<WaitlistScreenProps> = ({
                 transition={{ type: "tween" }}
               />
             </button>
-            <p className="text-xs text-center mt-3 text-gray-500">
+            <p className="text-xs text-center mt-3 text-muted-foreground">
               API Key successfully generated and ready to use
             </p>
           </motion.div>

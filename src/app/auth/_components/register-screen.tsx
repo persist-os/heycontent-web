@@ -69,27 +69,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#F8F0F9] to-blue-50 p-4 light-mode-forced" style={{
-      '--background': '0 0% 100%', // Force white background
-      '--foreground': '240 10% 3.9%', // Force dark text
-      '--card': '0 0% 100%',
-      '--card-foreground': '240 10% 3.9%',
-      '--popover': '0 0% 100%',
-      '--popover-foreground': '240 10% 3.9%',
-      '--primary': '55 95% 58%', // Keep HeyContent yellow
-      '--primary-foreground': '0 0% 0%',
-      '--secondary': '240 4.8% 95.9%',
-      '--secondary-foreground': '240 5.9% 10%',
-      '--muted': '240 4.8% 95.9%',
-      '--muted-foreground': '240 3.8% 46.1%',
-      '--accent': '55 95% 58%',
-      '--accent-foreground': '0 0% 0%',
-      '--destructive': '0 84.2% 60.2%',
-      '--destructive-foreground': '0 0% 98%',
-      '--border': '240 5.9% 90%',
-      '--input': '240 5.9% 90%',
-      '--ring': '55 95% 58%',
-    } as React.CSSProperties}>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background/80 via-muted/20 to-background/80 p-4">
       <div className="w-full max-w-md">
         {step === 'payment' && (
           <UpgradeModal
@@ -104,7 +84,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
           <>
             <RegistrationForm onSuccess={handleRegisterSuccess} />
             <div className="mt-6 text-center">
-              <p className="text-gray-600 mb-2 text-sm">
+              <p className="text-muted-foreground mb-2 text-sm">
                 Want to be a beta tester?<br />
                 Get early access to creator tools and mobile features below.
               </p>
@@ -113,9 +93,9 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
           </>
         )}
         {step === 'register' && registrationSuccess && (
-          <div className="bg-white shadow-lg rounded-xl p-8 text-center">
-            <h2 className="text-2xl font-bold mb-4 text-green-600">Registration successful!</h2>
-            <p className="mb-6 text-gray-700">Your account has been created. Click below to continue.</p>
+          <div className="bg-background shadow-lg rounded-xl p-8 text-center border border-border">
+            <h2 className="text-2xl font-bold mb-4 text-green-600 dark:text-green-400">Registration successful!</h2>
+            <p className="mb-6 text-foreground">Your account has been created. Click below to continue.</p>
             <button
               className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
               onClick={handleContinueAfterSuccess}

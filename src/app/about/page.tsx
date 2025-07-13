@@ -8,7 +8,7 @@ export default function About() {
       <nav className="mb-12">
         <Link 
           href="/" 
-          className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium"
+          className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors duration-200 font-medium"
         >
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -18,19 +18,19 @@ export default function About() {
       </nav>
 
       {/* Document Header */}
-      <header className="mb-16 border-b border-gray-200 pb-8">
-        <h1 className="text-5xl font-light text-gray-900 mb-4 tracking-tight">
+      <header className="mb-16 border-b border-border pb-8">
+        <h1 className="text-5xl font-light text-foreground mb-4 tracking-tight">
           About HeyContent
         </h1>
-        <p className="text-lg text-gray-600">
+        <p className="text-lg text-muted-foreground">
           Last updated: June 06, 2025
         </p>
       </header>
 
-      <article className="space-y-12 text-gray-800 leading-relaxed">
+      <article className="space-y-12 text-foreground leading-relaxed">
         {/* Platform Overview */}
         <section className="space-y-6">
-          <h2 className="text-3xl font-medium text-gray-900 border-b border-gray-100 pb-3">What is HeyContent?</h2>
+          <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">What is HeyContent?</h2>
           <p>
             HeyContent is an AI-powered platform designed for creators, brands, and digital teams who want to elevate their content strategy and audience engagement. We provide advanced tools for content creation, analytics, and workflow optimization, all in one place.
           </p>
@@ -41,7 +41,7 @@ export default function About() {
 
         {/* Mission and Vision */}
         <section className="space-y-6">
-          <h2 className="text-3xl font-medium text-gray-900 border-b border-gray-100 pb-3">Our Mission</h2>
+          <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">Our Mission</h2>
           <p>
             Our mission is to empower creators and brands to make smarter, data-driven decisions and grow their digital presence. We believe in democratizing access to high-quality content strategy and analytics, making it possible for anyone to compete and thrive online.
           </p>
@@ -49,7 +49,7 @@ export default function About() {
 
         {/* What You Can Do with HeyContent */}
         <section className="space-y-6">
-          <h2 className="text-3xl font-medium text-gray-900 border-b border-gray-100 pb-3">What You Can Do</h2>
+          <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">What You Can Do</h2>
           <ul className="space-y-2 ml-6 list-disc">
             <li>Connect your YouTube, Instagram, and Gmail accounts to centralize your content analytics and communications.</li>
             <li>Analyze your content performance across platforms with AI-powered insights and recommendations.</li>
@@ -62,7 +62,7 @@ export default function About() {
 
         {/* How It Works */}
         <section className="space-y-6">
-          <h2 className="text-3xl font-medium text-gray-900 border-b border-gray-100 pb-3">How It Works</h2>
+          <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">How It Works</h2>
           <ul className="space-y-2 ml-6 list-disc">
             <li>Sign up and authenticate securely with Firebase.</li>
             <li>Connect your social and email accounts (YouTube, Instagram, Gmail, Google) to unlock analytics and insights.</li>
@@ -74,7 +74,7 @@ export default function About() {
 
         {/* Who We Serve */}
         <section className="space-y-6">
-          <h2 className="text-3xl font-medium text-gray-900 border-b border-gray-100 pb-3">Who We Serve</h2>
+          <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">Who We Serve</h2>
           <ul className="space-y-2 ml-6 list-disc">
             <li>Individual creators looking to grow their audience and monetize their content.</li>
             <li>Brands and agencies seeking deeper insights into their digital campaigns and partnerships.</li>
@@ -84,7 +84,7 @@ export default function About() {
 
         {/* Our Technology and Values */}
         <section className="space-y-6">
-          <h2 className="text-3xl font-medium text-gray-900 border-b border-gray-100 pb-3">Our Technology & Values</h2>
+          <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">Our Technology & Values</h2>
           <ul className="space-y-2 ml-6 list-disc">
             <li>Proprietary AI models for content analysis, trend detection, and personalized recommendations.</li>
             <li>Direct integrations with YouTube, Instagram, Gmail, and Google for seamless data access.</li>
@@ -98,8 +98,8 @@ export default function About() {
         </section>
 
         {/* Join Us Section */}
-        <section className="space-y-6 border-t border-gray-200 pt-12">
-          <h2 className="text-3xl font-medium text-gray-900 border-b border-gray-100 pb-3">Join HeyContent</h2>
+        <section className="space-y-6 border-t border-border pt-12">
+          <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">Join HeyContent</h2>
           <p>
             Whether you're a creator, brand, or team, HeyContent is here to help you unlock your digital potential. Sign up today to experience the next generation of AI-powered content strategy and analytics.
           </p>

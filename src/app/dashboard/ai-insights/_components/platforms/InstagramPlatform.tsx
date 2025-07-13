@@ -6,9 +6,10 @@ import { useInstagramInsights } from '../hooks/useInstagramInsights'
 import { RefreshState } from '@/components/ui/refresh-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AnalysisDepthPicker } from '../AnalysisDepthPicker'
-import { Instagram } from 'lucide-react'
+import { Instagram, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PlatformConnectionPrompt } from '../../../_components/content-hub/PlatformConnectionPrompt'
+import InstagramDemographics from '@/app/dashboard/content-analytics/components/InstagramDemographics'
 import { useInstagramBreakdowns } from '../hooks/useInstagramBreakdowns'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
@@ -39,6 +40,7 @@ interface InstagramPlatformProps {
 
 export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPlatformProps) {
   const [expandedInsight, setExpandedInsight] = useState<number | null>(null)
+  const [showDemographics, setShowDemographics] = useState(false)
   
   const { 
     insights, 
@@ -100,20 +102,50 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
   return (
     <div className="space-y-6">
       {!refreshing && (
-        <AnalysisDepthPicker
-          platform="Instagram"
-          isRefreshing={refreshing}
-          error={error}
-          onRefresh={handleRefreshOrConnect}
-          disabled={!userId}
-          postLimit={postLimit}
-          setPostLimit={setPostLimit}
-          customPostLimit={customPostLimit}
-          setCustomPostLimit={setCustomPostLimit}
-          showCustomInput={showCustomInput}
-          setShowCustomInput={setShowCustomInput}
-          handleCustomSubmit={handleCustomSubmit}
-        />
+        <div className="space-y-6">
+          <div className="flex items-start gap-3 flex-wrap">
+            <div className="flex-1 min-w-0">
+              <AnalysisDepthPicker
+                platform="Instagram"
+                isRefreshing={refreshing}
+                error={error}
+                onRefresh={handleRefreshOrConnect}
+                disabled={!userId}
+                postLimit={postLimit}
+                setPostLimit={setPostLimit}
+                customPostLimit={customPostLimit}
+                setCustomPostLimit={setCustomPostLimit}
+                showCustomInput={showCustomInput}
+                setShowCustomInput={setShowCustomInput}
+                handleCustomSubmit={handleCustomSubmit}
+              />
+            </div>
+            
+            {isConnected && (
+              <button
+                onClick={() => setShowDemographics(!showDemographics)}
+                disabled={refreshing}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  refreshing
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500'
+                    : 'bg-gradient-to-r from-purple-500/10 to-pink-500/10 hover:from-purple-500/20 hover:to-pink-500/20 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:text-purple-800 dark:hover:text-purple-200'
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                <span>
+                  {showDemographics ? 'Hide Demographics' : 'View Demographics'}
+                </span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Demographics Section */}
+      {showDemographics && !refreshing && isConnected && (
+        <div className="border-t border-border pt-6">
+          <InstagramDemographics />
+        </div>
       )}
       
       {/* Breakdown Filter */}
