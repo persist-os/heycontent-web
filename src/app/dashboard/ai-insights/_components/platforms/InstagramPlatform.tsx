@@ -99,23 +99,6 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
 
   return (
     <div className="space-y-6">
-      {!refreshing && (
-        <AnalysisDepthPicker
-          platform="Instagram"
-          isRefreshing={refreshing}
-          error={error}
-          onRefresh={handleRefreshOrConnect}
-          disabled={!userId}
-          postLimit={postLimit}
-          setPostLimit={setPostLimit}
-          customPostLimit={customPostLimit}
-          setCustomPostLimit={setCustomPostLimit}
-          showCustomInput={showCustomInput}
-          setShowCustomInput={setShowCustomInput}
-          handleCustomSubmit={handleCustomSubmit}
-        />
-      )}
-      
       {/* Breakdown Filter */}
       {breakdowns ? (
         availableBreakdowns.length > 0 ? (
@@ -144,6 +127,23 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
           <Skeleton className="h-6 w-full" />
           <Skeleton className="h-6 w-5/6" />
         </div>
+      )}
+
+      {!refreshing && (
+        <AnalysisDepthPicker
+          platform="Instagram"
+          isRefreshing={refreshing}
+          error={error}
+          onRefresh={handleRefreshOrConnect}
+          disabled={!userId}
+          postLimit={postLimit}
+          setPostLimit={setPostLimit}
+          customPostLimit={customPostLimit}
+          setCustomPostLimit={setCustomPostLimit}
+          showCustomInput={showCustomInput}
+          setShowCustomInput={setShowCustomInput}
+          handleCustomSubmit={handleCustomSubmit}
+        />
       )}
 
       {!refreshing && (
@@ -230,6 +230,8 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
 
 // Creative breakdown display
 function BreakdownDisplay({ data, label }) {
+  const [isCollapsed, setIsCollapsed] = React.useState(false);
+
   if (!data || data.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-6">
@@ -244,7 +246,7 @@ function BreakdownDisplay({ data, label }) {
   const [processingStartTime, setProcessingStartTime] = React.useState<number | null>(null);
 
   // Show top N for long lists (e.g., cities/countries) - moved outside useMemo
-  const MAX_BARS = 50; // Increased from 10 to 50 for better UX
+  const MAX_BARS = 7; // Reduced from 50 to 10 for cleaner display
 
   // Show loading state for large datasets
   if (isLargeDatasetFlag && !processed) {
@@ -327,31 +329,56 @@ function BreakdownDisplay({ data, label }) {
 
   return (
     <div className="bg-card rounded-lg p-4 shadow space-y-4">
-      <h4 className="text-lg font-semibold mb-2">{label} Breakdown</h4>
-      {processedData.map(({ processed, topValues, total, metricObj }, idx) => {
-        return (
-          <div key={idx} className="mb-4">
-            <div className="font-medium mb-2 text-sm text-muted-foreground">{getMetricLabel(metricObj.metric)}</div>
-            <ul className="space-y-2">
-              {topValues.map((item, i) => (
-                <li key={i} className="flex items-center gap-4">
-                  <span className="font-medium min-w-[100px] truncate" title={item.name}>{formatName(item.name, label.toLowerCase() + '_breakdown')}</span>
-                  <div className="flex-1 bg-muted rounded h-4 relative">
-                    <div
-                      className="bg-primary h-4 rounded"
-                      style={{ width: total ? `${Math.round((item.value / total) * 100)}%` : '0%' }}
-                    />
-                    <span className="absolute right-2 text-xs text-muted-foreground">{item.value.toLocaleString()}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            {processed.length > MAX_BARS && (
-              <div className="text-xs text-muted-foreground mt-2">+{processed.length - MAX_BARS} more</div>
-            )}
-          </div>
-        );
-      })}
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="flex items-center justify-between w-full text-left hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors"
+      >
+        <h4 className="text-lg font-semibold">{label} Breakdown</h4>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            {processedData.reduce((total, { processed }) => total + processed.length, 0)} items
+          </span>
+          <svg
+            className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
+              isCollapsed ? 'rotate-180' : ''
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </button>
+      
+      {!isCollapsed && (
+        <div className="space-y-4">
+          {processedData.map(({ processed, topValues, total, metricObj }, idx) => {
+            return (
+              <div key={idx} className="mb-4">
+                <div className="font-medium mb-2 text-sm text-muted-foreground">{getMetricLabel(metricObj.metric)}</div>
+                <ul className="space-y-2">
+                  {topValues.map((item, i) => (
+                    <li key={i} className="flex items-center gap-4">
+                      <span className="font-medium min-w-[100px] truncate" title={item.name}>{formatName(item.name, label.toLowerCase() + '_breakdown')}</span>
+                      <div className="flex-1 bg-muted rounded h-4 relative">
+                        <div
+                          className="bg-primary h-4 rounded"
+                          style={{ width: total ? `${Math.round((item.value / total) * 100)}%` : '0%' }}
+                        />
+                        <span className="absolute right-2 text-xs text-muted-foreground">{item.value.toLocaleString()}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                {processed.length > MAX_BARS && (
+                  <div className="text-xs text-muted-foreground mt-2">+{processed.length - MAX_BARS} more</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 } 
