@@ -23,7 +23,34 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({ user_id: userId }),
       });
+      
       if (response.ok) {
+        // Trigger automatic embedding creation for new YouTube videos
+        try {
+          const convexUrl = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api/autoCreateEmbeddingsForNewPlatformContent`;
+          const convexResponse = await fetch(convexUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              userId: userId,
+              platform: 'youtube',
+              triggerType: 'platform_connection'
+            })
+          });
+
+          if (convexResponse.ok) {
+            console.log('Automatic embedding creation triggered for YouTube videos');
+          } else {
+            console.error('Failed to trigger automatic embedding creation:', convexResponse.status);
+          }
+        } catch (embeddingError) {
+          console.error('Error triggering automatic embedding creation:', embeddingError);
+          // Don't fail the main request if embedding creation fails
+        }
+
         return new Response(JSON.stringify({ success: true }), { status: 200 });
       } else {
         const data = await response.json();
