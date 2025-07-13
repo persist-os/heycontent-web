@@ -105,8 +105,8 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
             <RegistrationForm onSuccess={handleRegisterSuccess} />
             <div className="mt-6 text-center">
               <p className="text-gray-600 mb-2 text-sm">
-                Need access?<br />
-                Join the waitlist below, or ask a friend for their invite code.
+                Want to be a beta tester?<br />
+                Get early access to creator tools and mobile features below.
               </p>
               <WaitlistButton />
             </div>
