@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { extractAuthInfo } from '@/app/lib/api-helpers-server';
-import { getAllLinkableContent } from '@/convex/notes';
 import { resolveLinkContent, parseContentId } from '@/app/dashboard/chat/utils/link-content-resolver';
 
 import dotenv from 'dotenv';

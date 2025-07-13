@@ -166,28 +166,43 @@ export function HeroSection() {
         <div onClick={() => router.push('/auth/login')} 
              className="w-full relative cursor-pointer group mb-8">
           <div className="relative">
+            {/* Pulsing ring effect */}
+            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-500/20 to-purple-500/20 animate-pulse-slow transition-opacity duration-300" />
+            
+            {/* Subtle shimmer effect */}
+            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            
             <input
               type="text"
               placeholder={placeholder}
-              className="w-full py-3 sm:py-4 px-4 sm:px-6 pr-12 bg-white border border-gray-200 rounded-lg 
+              className="w-full py-3 sm:py-4 px-4 sm:px-6 pr-20 bg-white border-2 border-gray-200 rounded-lg 
                        text-gray-700 placeholder-gray-500 focus:outline-none focus:border-blue-500
-                       cursor-pointer group-hover:border-blue-400 text-base sm:text-lg shadow-sm
-                       transition-all duration-300"
+                       cursor-pointer group-hover:border-blue-400 group-hover:shadow-lg text-base sm:text-lg shadow-sm
+                       transition-all duration-300 relative z-10"
               readOnly
             />
+            
             <div 
-              className={`absolute left-4 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-blue-500 transition-opacity duration-300 ${
+              className={`absolute left-4 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-blue-500 transition-opacity duration-300 z-20 ${
                 showCursor ? 'opacity-100' : 'opacity-0'
               }`}
               style={{ left: 'calc(1rem + 0.5rem)' }}
             />
-            <ArrowRight className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 
-                                  group-hover:text-blue-500 transition-colors w-5 h-5 sm:w-6 sm:h-6" />
+            
+            {/* Enhanced arrow with "Login" text */}
+            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-2 z-20">
+              <span className="text-xs font-medium text-gray-500 group-hover:text-blue-600 transition-colors duration-300 hidden sm:block">
+                Login
+              </span>
+              <div className="bg-blue-500 group-hover:bg-blue-600 text-white rounded-md p-2 transition-all duration-300 group-hover:scale-110">
+                <ArrowRight className="w-4 h-4" />
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="text-center">
-          <p className="text-gray-600 mb-4">Be among the first to experience the future of content creation</p>
+          <p className="text-gray-600 mb-4">Join our exclusive beta program and get early access to cutting-edge creator tools</p>
           <div
             onClick={() => router.push('/waitlist')}
             className="inline-block cursor-pointer"

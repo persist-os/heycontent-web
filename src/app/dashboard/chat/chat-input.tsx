@@ -8,6 +8,7 @@ import { EnhancedContentSelector } from '@/app/dashboard/notes/components/Enhanc
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useAuth } from '@/app/context/auth-context'
+import { useContentResolver } from '@/lib/content-resolver'
 
 interface ChatInputProps {
   onSend: (message: string) => void
@@ -86,10 +87,8 @@ export function ChatInput({
   const { firebaseUser } = useAuth()
   const userId = firebaseUser?.uid
   
-  // Fetch all linkable content
-  const allLinkableContent = useQuery(api.notes.getAllLinkableContent, { 
-    userId: userId || '' 
-  })
+  // Fetch all linkable content using the new content resolver
+  const { allContent: allLinkableContent, isLoading: isContentLoading } = useContentResolver(userId)
   
   // Theme-aware accent colors
   const isDark = theme === 'dark'
