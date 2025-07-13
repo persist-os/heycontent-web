@@ -343,20 +343,7 @@ ${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.m
               }}
               className="flex-1"
             />
-            
             {/* Legacy discuss button if provided */}
-            {onDiscuss && (
-              <Button
-                variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDiscuss();
-                }}
-                className="flex-1"
-              >
-                Discuss Individual Steps
-              </Button>
-            )}
           </div>
         </div>
       )}

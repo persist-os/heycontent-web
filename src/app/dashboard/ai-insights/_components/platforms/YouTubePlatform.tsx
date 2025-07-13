@@ -131,10 +131,6 @@ export function YouTubePlatform({ userId, currentQuote, loading }: YouTubePlatfo
                 relatedItems={insight.relatedItems}
                 expanded={expandedInsight === idx}
                 onExpand={() => setExpandedInsight(expandedInsight === idx ? null : idx)}
-                onDiscuss={() => {
-                  console.log('🔍 [YOUTUBE PLATFORM] Discussing insight:', insight);
-                  navigateWithInsight(insight, 'youtube');
-                }}
                 onActionStepClick={(actionStep, insightData) => {
                   console.log('🔍 [YOUTUBE PLATFORM] Action step clicked:', actionStep);
                   console.log('🔍 [YOUTUBE PLATFORM] Full insight data:', insightData);
