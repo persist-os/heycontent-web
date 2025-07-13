@@ -9,15 +9,15 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
   onEmailChange,
 }) => {
   return (
-    <div className="max-w-md mx-auto bg-white/90 backdrop-blur-sm rounded-xl shadow-xl p-8">
+    <div className="max-w-md mx-auto bg-background/90 backdrop-blur-sm rounded-xl shadow-xl p-8 border border-border">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Join Beta Program</h1>
-        <p className="text-gray-600">Get early access to creator tools and mobile features!</p>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Join Beta Program</h1>
+        <p className="text-muted-foreground">Get early access to creator tools and mobile features!</p>
       </div>
       
       <form onSubmit={onSubmit} className="space-y-6">
         <div className="space-y-1">
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="name" className="block text-sm font-medium text-foreground">
             Your Name
           </label>
           <input
@@ -25,14 +25,14 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
             id="name"
             value={name}
             onChange={(e) => onNameChange(e.target.value)}
-            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all duration-200"
+            className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all duration-200 placeholder-muted-foreground"
             placeholder="John Doe"
             required
           />
         </div>
         
         <div className="space-y-1">
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="email" className="block text-sm font-medium text-foreground">
             Email Address
           </label>
           <input
@@ -40,7 +40,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
             id="email"
             value={email}
             onChange={(e) => onEmailChange(e.target.value)}
-            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all duration-200"
+            className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all duration-200 placeholder-muted-foreground"
             placeholder="you@example.com"
             required
           />

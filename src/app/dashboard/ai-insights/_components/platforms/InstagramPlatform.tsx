@@ -43,7 +43,7 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
   const [expandedInsight, setExpandedInsight] = useState<number | null>(null)
   const { navigateWithInsight } = useInsightNavigation()
   const { discussActionStep } = useActionStepDiscussion()
-  
+  const [breakdownCollapsed, setBreakdownCollapsed] = useState(false);
   const { 
     insights, 
     refreshing, 
@@ -106,20 +106,33 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
       {/* Breakdown Filter */}
       {breakdowns ? (
         availableBreakdowns.length > 0 ? (
-          <Tabs value={selectedBreakdown || undefined} onValueChange={setSelectedBreakdown} className="w-full">
-            <TabsList className="mb-4 flex flex-wrap gap-2">
-              {availableBreakdowns.map(({ key, label }) => (
-                <TabsTrigger key={key} value={key} className="capitalize">
-                  {label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            {availableBreakdowns.map(({ key, label }) => (
-              <TabsContent key={key} value={key}>
-                <BreakdownDisplay data={breakdowns[key]} label={label} />
-              </TabsContent>
-            ))}
-          </Tabs>
+          <div className="w-full">
+            <div className="flex items-center justify-end mb-4">
+                <button
+                  onClick={() => setBreakdownCollapsed((prev) => !prev)}
+                  className="ml-2 px-3 py-1 rounded hover:bg-muted/50 text-muted-foreground text-sm font-medium"
+                  aria-label={breakdownCollapsed ? 'Show breakdowns' : 'Hide breakdowns'}
+                >
+                  {breakdownCollapsed ? 'Show' : 'Hide'}
+                </button>
+            </div>
+            {!breakdownCollapsed && (
+              <Tabs value={selectedBreakdown || undefined} onValueChange={setSelectedBreakdown} className="w-full">
+                <TabsList className="mb-4 flex flex-wrap gap-2">
+                  {availableBreakdowns.map(({ key, label }) => (
+                    <TabsTrigger key={key} value={key} className="capitalize">
+                      {label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                {availableBreakdowns.map(({ key, label }) => (
+                  <TabsContent key={key} value={key}>
+                    <BreakdownDisplay data={breakdowns[key]} label={label} />
+                  </TabsContent>
+                ))}
+              </Tabs>
+            )}
+          </div>
         ) : (
           <div className="text-center text-muted-foreground py-8">
             No breakdown data available yet. Keep growing your audience!
@@ -132,6 +145,9 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
           <Skeleton className="h-6 w-5/6" />
         </div>
       )}
+
+      {/* Divider before batch analysis/analysis depth section */}
+      <hr className="my-6 border-t border-muted dark:border-white/10" />
 
       {!refreshing && (
         <AnalysisDepthPicker
@@ -229,7 +245,7 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
 
 // Creative breakdown display
 function BreakdownDisplay({ data, label }) {
-  const [isCollapsed, setIsCollapsed] = React.useState(false);
+  // Remove collapse logic from here
 
   if (!data || data.length === 0) {
     return (
@@ -239,20 +255,31 @@ function BreakdownDisplay({ data, label }) {
     );
   }
 
+  // Detect all unique metrics in the data
+  const uniqueMetrics: string[] = React.useMemo(() => {
+    return Array.from(new Set(data.map((metricObj) => metricObj.metric)));
+  }, [data]);
+
+  // Default to first metric
+  const [selectedMetric, setSelectedMetric] = React.useState<string>(uniqueMetrics[0]);
+
+  React.useEffect(() => {
+    if (uniqueMetrics.length > 0 && !selectedMetric) {
+      setSelectedMetric(uniqueMetrics[0]);
+    }
+  }, [uniqueMetrics, selectedMetric]);
+
   // Performance optimization: Check if data is large and show loading state
   const isLargeDatasetFlag = isLargeDataset(data.length);
   const [processed, setProcessed] = React.useState(false);
   const [processingStartTime, setProcessingStartTime] = React.useState<number | null>(null);
 
-  // Show top N for long lists (e.g., cities/countries) - moved outside useMemo
-  const MAX_BARS = 7; // Reduced from 50 to 10 for cleaner display
+  const MAX_BARS = 7;
 
-  // Show loading state for large datasets
   if (isLargeDatasetFlag && !processed) {
     if (!processingStartTime) {
       setProcessingStartTime(performance.now());
     }
-    
     return (
       <LargeDatasetLoading
         dataCount={data.length}
@@ -262,14 +289,12 @@ function BreakdownDisplay({ data, label }) {
     );
   }
 
-  // Helper to pick formatter based on breakdown type
   function formatName(name, breakdownType) {
     if (breakdownType === 'country_breakdown') return getCountryNameFromCode(name);
     if (breakdownType === 'gender_breakdown') return getGenderLabel(name);
     return name;
   }
 
-  // Helper to sort/group values based on breakdown type
   function processValues(values, breakdownType) {
     let grouped = groupBreakdownValues(values);
     if (breakdownType === 'age_breakdown') grouped = sortAgeGroups(grouped);
@@ -278,32 +303,18 @@ function BreakdownDisplay({ data, label }) {
     return grouped;
   }
 
-  // Performance optimization: useMemo for expensive sorting operations
+  // Only show data for the selected metric
+  const selectedMetricObj = data.find((metricObj) => metricObj.metric === selectedMetric);
   const processedData = React.useMemo(() => {
-    if (isLargeDatasetFlag && !processed) {
-      return null; // Still processing
-    }
-
+    if (!selectedMetricObj) return null;
     const timer = new PerformanceTimer(`Processing ${label} breakdown`);
-    
-    const result = data.map((metricObj, idx) => {
-      const processed = processValues(metricObj.values, label.toLowerCase() + '_breakdown');
-      const topValues = processed.slice(0, MAX_BARS); // Process only visible items
-      const total = processed.reduce((sum, v) => sum + v.value, 0);
-      
-      return {
-        processed,
-        topValues,
-        total,
-        metricObj
-      };
-    });
+    const processed = processValues(selectedMetricObj.values, label.toLowerCase() + '_breakdown');
+    const topValues = processed.slice(0, MAX_BARS);
+    const total = processed.reduce((sum, v) => sum + v.value, 0);
+    timer.endWithThreshold(100);
+    return { processed, topValues, total, metricObj: selectedMetricObj };
+  }, [selectedMetricObj, label]);
 
-    timer.endWithThreshold(100); // Warn if processing takes more than 100ms
-    return result;
-  }, [data, label, isLargeDatasetFlag, processed, MAX_BARS]);
-
-  // Mark as processed after first render
   React.useEffect(() => {
     if (isLargeDatasetFlag && !processed && processedData) {
       setProcessed(true);
@@ -328,56 +339,41 @@ function BreakdownDisplay({ data, label }) {
 
   return (
     <div className="bg-card rounded-lg p-4 shadow space-y-4">
-      <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className="flex items-center justify-between w-full text-left hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors"
-      >
-        <h4 className="text-lg font-semibold">{label} Breakdown</h4>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">
-            {processedData.reduce((total, { processed }) => total + processed.length, 0)} items
-          </span>
-          <svg
-            className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
-              isCollapsed ? 'rotate-180' : ''
-            }`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+      {/* Metric Selector Tabs */}
+      <div className="mb-4">
+        <Tabs value={selectedMetric} onValueChange={(val) => setSelectedMetric(val as string)} className="w-full">
+          <TabsList className="flex flex-wrap gap-2">
+            {uniqueMetrics.map((metric: string) => (
+              <TabsTrigger key={metric} value={metric} className="capitalize">
+                {getMetricLabel(metric)}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      </div>
+
+      <div className="space-y-4">
+        <div className="mb-4">
+          <div className="font-medium mb-2 text-sm text-muted-foreground">{getMetricLabel(processedData.metricObj.metric)}</div>
+          <ul className="space-y-2">
+            {processedData.topValues.map((item, i) => (
+              <li key={i} className="flex items-center gap-4">
+                <span className="font-medium min-w-[100px] truncate" title={item.name}>{formatName(item.name, label.toLowerCase() + '_breakdown')}</span>
+                <div className="flex-1 bg-muted rounded h-4 relative">
+                  <div
+                    className="bg-primary h-4 rounded"
+                    style={{ width: processedData.total ? `${Math.round((item.value / processedData.total) * 100)}%` : '0%' }}
+                  />
+                  <span className="absolute right-2 text-xs text-muted-foreground">{item.value.toLocaleString()}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {processedData.processed.length > MAX_BARS && (
+            <div className="text-xs text-muted-foreground mt-2">+{processedData.processed.length - MAX_BARS} more</div>
+          )}
         </div>
-      </button>
-      
-      {!isCollapsed && (
-        <div className="space-y-4">
-          {processedData.map(({ processed, topValues, total, metricObj }, idx) => {
-            return (
-              <div key={idx} className="mb-4">
-                <div className="font-medium mb-2 text-sm text-muted-foreground">{getMetricLabel(metricObj.metric)}</div>
-                <ul className="space-y-2">
-                  {topValues.map((item, i) => (
-                    <li key={i} className="flex items-center gap-4">
-                      <span className="font-medium min-w-[100px] truncate" title={item.name}>{formatName(item.name, label.toLowerCase() + '_breakdown')}</span>
-                      <div className="flex-1 bg-muted rounded h-4 relative">
-                        <div
-                          className="bg-primary h-4 rounded"
-                          style={{ width: total ? `${Math.round((item.value / total) * 100)}%` : '0%' }}
-                        />
-                        <span className="absolute right-2 text-xs text-muted-foreground">{item.value.toLocaleString()}</span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-                {processed.length > MAX_BARS && (
-                  <div className="text-xs text-muted-foreground mt-2">+{processed.length - MAX_BARS} more</div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+      </div>
     </div>
   );
 } 

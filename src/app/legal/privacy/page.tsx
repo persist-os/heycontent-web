@@ -5,16 +5,16 @@ export default function Privacy() {
   return (
     <div className="max-w-none">
       {/* Google API Limited Use Disclosure */}
-      <div className="mb-8 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-md">
-        <p className="text-base text-yellow-800 font-semibold">
-          HeyContent's use and transfer of information received from Google APIs to any other app will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="underline text-yellow-900 hover:text-yellow-700">Google API Services User Data Policy</a>, including the Limited Use requirements.
+      <div className="mb-8 p-4 bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 rounded-r-md">
+        <p className="text-base text-yellow-800 dark:text-yellow-200 font-semibold">
+          HeyContent's use and transfer of information received from Google APIs to any other app will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="underline text-yellow-900 dark:text-yellow-100 hover:text-yellow-700 dark:hover:text-yellow-300">Google API Services User Data Policy</a>, including the Limited Use requirements.
         </p>
       </div>
       {/* Header Navigation */}
       <nav className="mb-12">
         <Link 
           href="/" 
-          className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium"
+          className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors duration-200 font-medium"
         >
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -24,36 +24,36 @@ export default function Privacy() {
       </nav>
 
       {/* Document Header */}
-      <header className="mb-16 border-b border-gray-200 pb-8">
-        <h1 className="text-5xl font-light text-gray-900 mb-4 tracking-tight">
+      <header className="mb-16 border-b border-border pb-8">
+        <h1 className="text-5xl font-light text-foreground mb-4 tracking-tight">
           Privacy Policy
         </h1>
-        <p className="text-lg text-gray-600">
+        <p className="text-lg text-muted-foreground">
           Last updated: June 06, 2025
         </p>
-        <p className="mt-4 text-base text-gray-700">
+        <p className="mt-4 text-base text-foreground">
           This Privacy Policy describes how Divertissement AI, Inc. ("we", "us", or "our") collects, uses, and discloses your information when you use HeyContent. It also explains your privacy rights and how the law protects you. By using HeyContent, you agree to the collection and use of information in accordance with this Privacy Policy.
         </p>
         {/* Explicit clarity for Chrome Web Store compliance */}
         <section className="mt-8 space-y-4">
-          <h2 className="text-2xl font-semibold text-gray-900">No Sale or Unrelated Transfer of Data</h2>
-          <p className="text-base text-gray-700">
+          <h2 className="text-2xl font-semibold text-foreground">No Sale or Unrelated Transfer of Data</h2>
+          <p className="text-base text-foreground">
             We do <strong>not</strong> sell, rent, or transfer your personal data to third parties for advertising, marketing, or any unrelated purposes. All data is used solely to provide HeyContent's features and services to you, and to match you with brand deals or collaborations only with your explicit consent and request.
           </p>
-          <h2 className="text-2xl font-semibold text-gray-900">No Ads or Ad Targeting</h2>
-          <p className="text-base text-gray-700">
+          <h2 className="text-2xl font-semibold text-foreground">No Ads or Ad Targeting</h2>
+          <p className="text-base text-foreground">
             We do <strong>not</strong> serve ads on our platform, nor do we use your data for ad targeting or monetization. Your data is never used for advertising purposes.
           </p>
         </section>
       </header>
 
-      <article className="space-y-12 text-gray-800 leading-relaxed">
+      <article className="space-y-12 text-foreground leading-relaxed">
         {/* Interpretation and Definitions */}
         <section className="space-y-6">
-          <h2 className="text-3xl font-medium text-gray-900 border-b border-gray-100 pb-3">Interpretation and Definitions</h2>
-          <h3 className="text-xl font-medium text-gray-900">Interpretation</h3>
+          <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">Interpretation and Definitions</h2>
+          <h3 className="text-xl font-medium text-foreground">Interpretation</h3>
           <p>The words with initial capital letters have meanings defined below. These definitions apply regardless of whether they appear in singular or plural.</p>
-          <h3 className="text-xl font-medium text-gray-900">Definitions</h3>
+          <h3 className="text-xl font-medium text-foreground">Definitions</h3>
           <ul className="space-y-2 ml-6">
             <li><strong>Account</strong>: A unique account created for you to access HeyContent.</li>
             <li><strong>Company</strong>: Divertissement AI, Inc. ("we", "us", or "our").</li>
@@ -65,16 +65,16 @@ export default function Privacy() {
             <li><strong>Service Provider</strong>: Any natural or legal person who processes data on behalf of the Company, including third-party companies or individuals who help provide or analyze the Service.</li>
             <li><strong>Third-party Social Media Service</strong>: Any website or social network through which a user can log in or create an account to use HeyContent (e.g., Google, Instagram, YouTube).</li>
             <li><strong>Usage Data</strong>: Data collected automatically, either generated by the use of HeyContent or from the platform infrastructure itself (e.g., duration of a page visit).</li>
-            <li><strong>Website</strong>: HeyContent, accessible from <a href="https://www.heycontent.co/" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">https://www.heycontent.co/</a></li>
+            <li><strong>Website</strong>: HeyContent, accessible from <a href="https://www.heycontent.co/" className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">https://www.heycontent.co/</a></li>
             <li><strong>You</strong>: The individual accessing or using HeyContent, or the company or other legal entity on behalf of which such individual is accessing or using HeyContent, as applicable.</li>
           </ul>
         </section>
 
         {/* Collecting and Using Your Personal Data */}
         <section className="space-y-6">
-          <h2 className="text-3xl font-medium text-gray-900 border-b border-gray-100 pb-3">Collecting and Using Your Personal Data</h2>
-          <h3 className="text-xl font-medium text-gray-900">Types of Data Collected</h3>
-          <h4 className="text-lg font-medium text-gray-900">Personal Data</h4>
+          <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">Collecting and Using Your Personal Data</h2>
+          <h3 className="text-xl font-medium text-foreground">Types of Data Collected</h3>
+          <h4 className="text-lg font-medium text-foreground">Personal Data</h4>
           <p>We may ask you to provide certain personally identifiable information that can be used to contact or identify you. This may include, but is not limited to:</p>
           <ul className="space-y-2 ml-6">
             <li>Email address</li>
@@ -82,17 +82,17 @@ export default function Privacy() {
             <li>Profile information</li>
             <li>Usage Data</li>
           </ul>
-          <h4 className="text-lg font-medium text-gray-900">Usage Data</h4>
+          <h4 className="text-lg font-medium text-foreground">Usage Data</h4>
           <p>Usage Data is collected automatically when using HeyContent. This may include information such as your device's IP address, browser type, browser version, the pages you visit, the time and date of your visit, time spent on those pages, unique device identifiers, and other diagnostic data.</p>
-          <h4 className="text-lg font-medium text-gray-900">Information from Third-Party Social Media Services</h4>
+          <h4 className="text-lg font-medium text-foreground">Information from Third-Party Social Media Services</h4>
           <p>HeyContent allows you to connect your account to Google, Instagram, and YouTube. If you choose to connect, we may collect information associated with those accounts, such as your name, email address, and analytics or engagement data, as permitted by your settings and the third-party's policies.</p>
-          <h4 className="text-lg font-medium text-gray-900">Cookies and Tracking Technologies</h4>
-          <p>We use cookies and similar tracking technologies to track activity on HeyContent and store certain information. You can instruct your browser to refuse all cookies or to indicate when a cookie is being sent. However, if you do not accept cookies, you may not be able to use some parts of HeyContent. For more information, see our <Link href="/legal/security" className="text-blue-600 hover:underline">Cookie Policy</Link>.</p>
+          <h4 className="text-lg font-medium text-foreground">Cookies and Tracking Technologies</h4>
+          <p>We use cookies and similar tracking technologies to track activity on HeyContent and store certain information. You can instruct your browser to refuse all cookies or to indicate when a cookie is being sent. However, if you do not accept cookies, you may not be able to use some parts of HeyContent. For more information, see our <Link href="/legal/security" className="text-blue-600 dark:text-blue-400 hover:underline">Cookie Policy</Link>.</p>
         </section>
 
         {/* Use of Your Personal Data */}
         <section className="space-y-6">
-          <h3 className="text-xl font-medium text-gray-900">How We Use Your Personal Data</h3>
+          <h3 className="text-xl font-medium text-foreground">How We Use Your Personal Data</h3>
           <ul className="space-y-2 ml-6">
             <li>To provide and maintain HeyContent, including to monitor usage and improve the Service.</li>
             <li>To manage your account and provide you with access to features.</li>
@@ -105,7 +105,7 @@ export default function Privacy() {
 
         {/* Sharing Your Personal Data */}
         <section className="space-y-6">
-          <h3 className="text-xl font-medium text-gray-900">Sharing Your Personal Data</h3>
+          <h3 className="text-xl font-medium text-foreground">Sharing Your Personal Data</h3>
           <ul className="space-y-2 ml-6">
             <li>With service providers who help us operate and improve HeyContent.</li>
             <li>With business partners, with your consent, to offer you certain features or opportunities.</li>
@@ -116,20 +116,20 @@ export default function Privacy() {
 
         {/* Retention of Your Personal Data */}
         <section className="space-y-6">
-          <h3 className="text-xl font-medium text-gray-900">Retention of Your Personal Data</h3>
+          <h3 className="text-xl font-medium text-foreground">Retention of Your Personal Data</h3>
           <p>We retain your personal data only as long as necessary for the purposes set out in this Privacy Policy, or as required by law. You may request deletion of your data at any time by deleting your account or contacting us.</p>
         </section>
 
         {/* Transfer of Your Personal Data */}
         <section className="space-y-6">
-          <h3 className="text-xl font-medium text-gray-900">Transfer of Your Personal Data</h3>
+          <h3 className="text-xl font-medium text-foreground">Transfer of Your Personal Data</h3>
           <p>Your information may be processed and stored in countries other than your own. By using HeyContent, you consent to such transfers. We take reasonable steps to ensure your data is treated securely and in accordance with this Privacy Policy.</p>
         </section>
 
         {/* Data Security */}
         <section className="space-y-6">
-          <h3 className="text-xl font-medium text-gray-900">Data Security</h3>
-          <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded-r-md">
+          <h3 className="text-xl font-medium text-foreground">Data Security</h3>
+          <div className="bg-green-50 dark:bg-green-900/20 border-l-4 border-green-400 p-4 rounded-r-md">
             <div className="flex items-start">
               <div className="flex-shrink-0">
                 <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
@@ -137,7 +137,7 @@ export default function Privacy() {
                 </svg>
               </div>
               <div className="ml-3">
-                <p className="text-sm text-green-700 font-medium">
+                <p className="text-sm text-green-700 dark:text-green-200 font-medium">
                   Security procedures are in place to protect the confidentiality of your data. We implement industry-standard security measures to safeguard your personal information against unauthorized access, alteration, or destruction.
                 </p>
               </div>
@@ -147,54 +147,54 @@ export default function Privacy() {
 
         {/* Delete Your Personal Data */}
         <section className="space-y-6">
-          <h3 className="text-xl font-medium text-gray-900">Delete Your Personal Data</h3>
+          <h3 className="text-xl font-medium text-foreground">Delete Your Personal Data</h3>
           <p>You may delete your account and associated data at any time from within HeyContent. We may retain certain information as required by law or for legitimate business purposes.</p>
         </section>
 
         {/* Children's Privacy */}
         <section className="space-y-6">
-          <h2 className="text-3xl font-medium text-gray-900 border-b border-gray-100 pb-3">Children's Privacy</h2>
+          <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">Children's Privacy</h2>
           <p>HeyContent is not intended for anyone under the age of 13. We do not knowingly collect personal information from children under 13. If you believe a child has provided us with personal data, please contact us and we will take steps to remove that information.</p>
         </section>
 
         {/* Links to Other Websites */}
         <section className="space-y-6">
-          <h2 className="text-3xl font-medium text-gray-900 border-b border-gray-100 pb-3">Links to Other Websites</h2>
+          <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">Links to Other Websites</h2>
           <p>HeyContent may contain links to other websites not operated by us. We are not responsible for the content or privacy practices of those sites. We encourage you to review the privacy policy of every site you visit.</p>
         </section>
 
         {/* Changes to this Privacy Policy */}
         <section className="space-y-6">
-          <h2 className="text-3xl font-medium text-gray-900 border-b border-gray-100 pb-3">Changes to this Privacy Policy</h2>
+          <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">Changes to this Privacy Policy</h2>
           <p>We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last updated" date. You are advised to review this Privacy Policy periodically for any changes.</p>
         </section>
 
         {/* YouTube API & Google Privacy Policy Section */}
-        <section className="space-y-6 border-t border-gray-200 pt-12">
-          <h2 className="text-3xl font-medium text-gray-900 border-b border-gray-100 pb-3">Third-Party API Services</h2>
+        <section className="space-y-6 border-t border-border pt-12">
+          <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">Third-Party API Services</h2>
           
-          <h3 className="text-xl font-medium text-gray-900">YouTube API Services</h3>
+          <h3 className="text-xl font-medium text-foreground">YouTube API Services</h3>
           <p>
-            Our application uses YouTube API Services. By using HeyContent, you are also agreeing to be bound by the <a href="https://www.youtube.com/t/terms" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">YouTube Terms of Service</a> and the <a href="https://www.google.com/policies/privacy" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">Google Privacy Policy</a>.
+            Our application uses YouTube API Services. By using HeyContent, you are also agreeing to be bound by the <a href="https://www.youtube.com/t/terms" className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">YouTube Terms of Service</a> and the <a href="https://www.google.com/policies/privacy" className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">Google Privacy Policy</a>.
           </p>
           
-          <h3 className="text-xl font-medium text-gray-900">Instagram API Services</h3>
+          <h3 className="text-xl font-medium text-foreground">Instagram API Services</h3>
           <p>
-            Our application uses Instagram API Services provided by Meta. By using HeyContent's Instagram integration, you are also agreeing to be bound by the <a href="https://developers.facebook.com/terms" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">Meta Platform Terms</a>, <a href="https://help.instagram.com/581066165581870" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">Instagram Terms of Use</a>, and <a href="https://www.facebook.com/about/privacy" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">Meta Privacy Policy</a>.
+            Our application uses Instagram API Services provided by Meta. By using HeyContent's Instagram integration, you are also agreeing to be bound by the <a href="https://developers.facebook.com/terms" className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">Meta Platform Terms</a>, <a href="https://help.instagram.com/581066165581870" className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">Instagram Terms of Use</a>, and <a href="https://www.facebook.com/about/privacy" className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">Meta Privacy Policy</a>.
           </p>
           <p>
             When you connect your Instagram account, we may collect and process information such as your Instagram profile information, posts, engagement metrics, and insights data as permitted by your Instagram account settings and Meta's policies.
           </p>
           
           <p>
-            <strong>Data Deletion and Revoking Access:</strong> You can revoke this application's access to your YouTube data at any time via the <a href="https://security.google.com/settings/" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">Google security settings page</a>. For Instagram data, you can revoke access through your Instagram account settings or If you wish to delete any data stored by our app, please delete your account at the bottom of the settings page and <strong>all your data will be permanently deleted</strong>.
+            <strong>Data Deletion and Revoking Access:</strong> You can revoke this application's access to your YouTube data at any time via the <a href="https://security.google.com/settings/" className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">Google security settings page</a>. For Instagram data, you can revoke access through your Instagram account settings or If you wish to delete any data stored by our app, please delete your account at the bottom of the settings page and <strong>all your data will be permanently deleted</strong>.
           </p>
         </section>
 
         {/* Contact Section */}
-        <section className="space-y-6 border-t border-gray-200 pt-12">
-          <h2 className="text-3xl font-medium text-gray-900 border-b border-gray-100 pb-3">Contact Us</h2>
-          <p>If you have any questions about this Privacy Policy, you can contact us at <a href="mailto:hello@divertissement.ai" className="text-blue-600 hover:underline">hello@divertissement.ai</a>.</p>
+        <section className="space-y-6 border-t border-border pt-12">
+          <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">Contact Us</h2>
+          <p>If you have any questions about this Privacy Policy, you can contact us at <a href="mailto:hello@divertissement.ai" className="text-blue-600 dark:text-blue-400 hover:underline">hello@divertissement.ai</a>.</p>
         </section>
       </article>
     </div>
