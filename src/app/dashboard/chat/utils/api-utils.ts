@@ -1878,7 +1878,6 @@ export async function sendChatMessage(
         hasExpectedOutcome: !!contentContext.fullInsight.expectedOutcome,
         sourceDetailsCount: contentContext.fullInsight.sourceDetails?.length || 0,
         relatedItemsCount: contentContext.fullInsight.relatedItems?.length || 0,
-        threadDetailsCount: contentContext.fullInsight.threadDetails?.length || 0,
       });
     }
     
