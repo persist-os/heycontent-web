@@ -45,7 +45,7 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
       platformIcon = <Mail className="w-6 h-6 text-blue-500" />;
     }
     return (
-      <Card className="sticky top-0 z-10 w-full border border-[#4E87E3] bg-[#2A3A5A] dark:bg-[#1A2332] rounded-xl px-0 py-0 mb-4">
+      <Card className="w-full border border-[#4E87E3] bg-[#2A3A5A] dark:bg-[#1A2332] rounded-xl px-0 py-0 mb-4">
         {/* Main Title Header */}
         <div className="flex items-center gap-3 px-6 pt-5 pb-3 border-b border-[#B3D4FC] dark:border-[#2A3A5A]">
           {platformIcon}
@@ -129,7 +129,7 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
   if (context.platform === 'content-hub-insight' || ('type' in context && context.type === 'content-hub-insight')) {
     let platformIcon = <Sparkles className="w-6 h-6 text-[#4E87E3]" />;
     return (
-      <Card className="sticky top-0 z-10 w-full border border-[#4E87E3] bg-[#2A3A5A] dark:bg-[#1A2332] rounded-xl px-0 py-0 mb-4">
+      <Card className="w-full border border-[#4E87E3] bg-[#2A3A5A] dark:bg-[#1A2332] rounded-xl px-0 py-0 mb-4">
         {/* Main Title Header */}
         <div className="flex items-center gap-3 px-6 pt-5 pb-3 border-b border-[#B3D4FC] dark:border-[#2A3A5A]">
           {platformIcon}
@@ -207,7 +207,7 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
     const [insightOpen, setInsightOpen] = useState(false);
     const [actionOpen, setActionOpen] = useState(true);
     return (
-      <Card className="sticky top-0 z-10 w-full border border-[#4E87E3] bg-[#2A3A5A] dark:bg-[#1A2332] rounded-xl px-0 py-0 mb-4">
+      <Card className="w-full border border-[#4E87E3] bg-[#2A3A5A] dark:bg-[#1A2332] rounded-xl px-0 py-0 mb-4">
         {/* Main Title Header */}
         <div className="flex items-center gap-3 px-6 pt-5 pb-3 border-b border-[#B3D4FC] dark:border-[#2A3A5A]">
               {platformIcon}
