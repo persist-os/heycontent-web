@@ -44,9 +44,286 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
     } else if (context.platform === 'gmail') {
       platformIcon = <Mail className="w-6 h-6 text-blue-500" />;
     }
+    // Use convexData if available for rich rendering
+    const data = (context as any).convexData;
+    if (data) {
+      // YouTube rich card
+      if (context.platform === 'youtube') {
+        const title = typeof data.snippet?.title === 'string' ? data.snippet.title : 'Untitled Video';
+        const channel = typeof data.snippet?.channel === 'string' ? data.snippet.channel : '';
+        const thumbnail = data.snippet?.thumbnails?.high;
+        const description = typeof data.snippet?.description === 'string' ? data.snippet.description : '';
+        const metrics = data.statistics || {};
+        const analysisMarkdown = typeof data.analysisMarkdown === 'string' ? data.analysisMarkdown : '';
+        const actionItems = Array.isArray(data.analysis?.actionItems) ? data.analysis.actionItems : [];
+        const [minimized, setMinimized] = useState(false);
+        
+        // Helper to format user-relevant data from analysis
+        function formatUserRelevantData(data: any): string {
+          let formatted = '';
+          
+          // Video performance metrics
+          if (data.statistics) {
+            formatted += '## 📊 Performance Metrics\n\n';
+            if (data.statistics.views) formatted += `- **Views:** ${data.statistics.views.toLocaleString()}\n`;
+            if (data.statistics.likes) formatted += `- **Likes:** ${data.statistics.likes.toLocaleString()}\n`;
+            if (data.statistics.comments) formatted += `- **Comments:** ${data.statistics.comments.toLocaleString()}\n`;
+            if (data.statistics.dislikes) formatted += `- **Dislikes:** ${data.statistics.dislikes.toLocaleString()}\n`;
+            formatted += '\n';
+          }
+          
+          // Content analysis
+          if (data.analysis) {
+            if (data.analysis.keyInsights && Array.isArray(data.analysis.keyInsights)) {
+              formatted += '## 💡 Key Insights\n\n';
+              data.analysis.keyInsights.forEach((insight: string, index: number) => {
+                formatted += `${index + 1}. ${insight}\n`;
+              });
+              formatted += '\n';
+            }
+            
+            if (data.analysis.audienceEngagement) {
+              formatted += '## 👥 Audience Engagement\n\n';
+              formatted += `- **Engagement Rate:** ${data.analysis.audienceEngagement}\n`;
+              formatted += '\n';
+            }
+            
+            if (data.analysis.contentQuality) {
+              formatted += '## ⭐ Content Quality\n\n';
+              formatted += `- **Quality Score:** ${data.analysis.contentQuality}\n`;
+              formatted += '\n';
+            }
+          }
+          
+          // Action items
+          if (actionItems.length > 0) {
+            formatted += '## 🎯 Action Items\n\n';
+            actionItems.forEach((item: string, index: number) => {
+              formatted += `${index + 1}. ${item}\n`;
+            });
+          }
+          
+          return formatted || 'No analysis data available';
+        }
+        
+        return (
+          <Card className="w-full border border-[#4E87E3] bg-[#232F47] dark:bg-[#1A2332] rounded-xl px-0 py-0 mb-4">
+            {/* Main Title Header */}
+            <div className="flex items-center gap-3 px-6 pt-5 pb-3 border-b border-[#B3D4FC] dark:border-[#2A3A5A]">
+              {platformIcon}
+              <span className="text-lg font-bold text-white dark:text-white flex-1">YouTube Video</span>
+            </div>
+            <div className="flex flex-col gap-2 px-4 pb-4 pt-2">
+              {/* Inner Card with Video Title */}
+              <Card className="w-full border border-[#B3D4FC] bg-[#1A2332] dark:bg-[#111827] rounded-lg px-4 py-3 mb-2">
+                <div className="flex items-center justify-between cursor-pointer select-none" onClick={() => setMinimized(m => !m)}>
+                  <span className="block text-base font-semibold text-blue-200 dark:text-blue-300">{title}</span>
+                  {minimized ? <ChevronRight className="w-5 h-5 text-blue-200" /> : <ChevronDown className="w-5 h-5 text-blue-200" />}
+                </div>
+                {!minimized && (
+                  <div className="flex gap-4 mt-2">
+                    {/* Thumbnail */}
+                    {thumbnail && (
+                      <img src={thumbnail} alt="Video thumbnail" className="w-40 h-30 object-cover rounded border border-[#B3D4FC] flex-shrink-0" />
+                    )}
+                    {/* Basic Stats */}
+                    <div className="flex flex-col gap-2 text-sm text-blue-100 dark:text-blue-100">
+                      {channel && <div><span className="font-semibold text-blue-200">Channel:</span> {channel}</div>}
+                      {metrics.views !== undefined && <div><span className="font-semibold text-blue-200">Views:</span> {metrics.views.toLocaleString()}</div>}
+                      {metrics.likes !== undefined && <div><span className="font-semibold text-blue-200">Likes:</span> {metrics.likes.toLocaleString()}</div>}
+                      {metrics.comments !== undefined && <div><span className="font-semibold text-blue-200">Comments:</span> {metrics.comments.toLocaleString()}</div>}
+                      {metrics.dislikes !== undefined && <div><span className="font-semibold text-blue-200">Dislikes:</span> {metrics.dislikes.toLocaleString()}</div>}
+                    </div>
+                  </div>
+                )}
+                {/* Video Description */}
+                {description && (
+                  <div className="mt-3 text-sm text-blue-100 dark:text-blue-100">
+                    <span className="font-semibold text-blue-200 dark:text-blue-300">Description: </span>
+                    <div className="mt-1">
+                      <MarkdownRenderer content={description} />
+                    </div>
+                  </div>
+                )}
+              </Card>
+              {/* Context Toggle Card - Always at bottom */}
+              <Card className="w-full border border-[#B3D4FC] bg-[#1A2332] dark:bg-[#111827] rounded-lg px-4 py-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="block text-base font-semibold text-blue-200 dark:text-blue-300">Context</span>
+                  {onToggleAnalysis && (
+                    <button
+                      onClick={() => onToggleAnalysis(!includeAnalysisInQuery)}
+                      className={`flex items-center gap-1 text-sm transition-colors ${includeAnalysisInQuery ? 'text-blue-200 dark:text-blue-300' : 'text-gray-400 dark:text-gray-500'} hover:text-blue-100 dark:hover:text-blue-100`}
+                      title={includeAnalysisInQuery ? "Disable insight context" : "Enable insight context"}
+                    >
+                      {includeAnalysisInQuery ? (
+                        <>
+                          <ToggleRight className="w-4 h-4 text-blue-200 dark:text-blue-300" />
+                          <span>ON</span>
+                        </>
+                      ) : (
+                        <>
+                          <ToggleLeft className="w-4 h-4" />
+                          <span>OFF</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+                <div className="text-base font-normal text-left text-blue-100 dark:text-blue-100">
+                  {includeAnalysisInQuery 
+                    ? 'Insight included in questions'
+                    : 'Insight not included in questions'
+                  }
+                </div>
+              </Card>
+            </div>
+          </Card>
+        );
+      }
+      // Instagram rich card
+      if (context.platform === 'instagram') {
+        const caption = typeof data.data?.caption === 'string' ? data.data.caption : '';
+        const username = typeof data.data?.username === 'string' ? data.data.username : '';
+        const mediaUrl = data.data?.media_url;
+        const thumbnailUrl = data.data?.thumbnail_url;
+        const timestamp = data.data?.timestamp;
+        const metrics = data.data || {};
+        const insights = data.data?.insights || {};
+        const analysisMarkdown = typeof data.analysisMarkdown === 'string' ? data.analysisMarkdown : '';
+        const actionItems = Array.isArray(data.analysis?.actionItems) ? data.analysis.actionItems : [];
+        const [minimized, setMinimized] = useState(false);
+        
+        // Helper to format user-relevant data from analysis
+        function formatUserRelevantData(data: any): string {
+          let formatted = '';
+          
+          // Post performance metrics
+          if (data.data) {
+            formatted += '## 📊 Performance Metrics\n\n';
+            if (data.data.like_count) formatted += `- **Likes:** ${data.data.like_count.toLocaleString()}\n`;
+            if (data.data.comments_count) formatted += `- **Comments:** ${data.data.comments_count.toLocaleString()}\n`;
+            if (data.data.shares_count) formatted += `- **Shares:** ${data.data.shares_count.toLocaleString()}\n`;
+            if (data.data.saves_count) formatted += `- **Saves:** ${data.data.saves_count.toLocaleString()}\n`;
+            formatted += '\n';
+          }
+          
+          // Content analysis
+          if (data.analysis) {
+            if (data.analysis.keyInsights && Array.isArray(data.analysis.keyInsights)) {
+              formatted += '## 💡 Key Insights\n\n';
+              data.analysis.keyInsights.forEach((insight: string, index: number) => {
+                formatted += `${index + 1}. ${insight}\n`;
+              });
+              formatted += '\n';
+            }
+            
+            if (data.analysis.audienceEngagement) {
+              formatted += '## 👥 Audience Engagement\n\n';
+              formatted += `- **Engagement Rate:** ${data.analysis.audienceEngagement}\n`;
+              formatted += '\n';
+            }
+            
+            if (data.analysis.contentQuality) {
+              formatted += '## ⭐ Content Quality\n\n';
+              formatted += `- **Quality Score:** ${data.analysis.contentQuality}\n`;
+              formatted += '\n';
+            }
+          }
+          
+          // Action items
+          if (actionItems.length > 0) {
+            formatted += '## 🎯 Action Items\n\n';
+            actionItems.forEach((item: string, index: number) => {
+              formatted += `${index + 1}. ${item}\n`;
+            });
+          }
+          
+          return formatted || 'No analysis data available';
+        }
+        
+        return (
+          <Card className="w-full border border-[#4E87E3] bg-[#232F47] dark:bg-[#1A2332] rounded-xl px-0 py-0 mb-4">
+            {/* Main Title Header */}
+            <div className="flex items-center gap-3 px-6 pt-5 pb-3 border-b border-[#B3D4FC] dark:border-[#2A3A5A]">
+              {platformIcon}
+              <span className="text-lg font-bold text-white dark:text-white flex-1">Instagram Post</span>
+            </div>
+            <div className="flex flex-col gap-2 px-4 pb-4 pt-2">
+              {/* Inner Card with Post Title */}
+              <Card className="w-full border border-[#B3D4FC] bg-[#1A2332] dark:bg-[#111827] rounded-lg px-4 py-3 mb-2">
+                <div className="flex items-center justify-between cursor-pointer select-none" onClick={() => setMinimized(m => !m)}>
+                  <span className="block text-base font-semibold text-blue-200 dark:text-blue-300">{caption || `@${username}`}</span>
+                  {minimized ? <ChevronRight className="w-5 h-5 text-blue-200" /> : <ChevronDown className="w-5 h-5 text-blue-200" />}
+                </div>
+                {!minimized && (
+                  <div className="flex gap-4 mt-2">
+                    {/* Thumbnail */}
+                    {(mediaUrl || thumbnailUrl) && (
+                      <img 
+                        src={mediaUrl || thumbnailUrl} 
+                        alt="Instagram thumbnail" 
+                        className="w-48 h-48 object-cover rounded border border-[#B3D4FC] flex-shrink-0" 
+                      />
+                    )}
+                    {/* Basic Stats - Single Column */}
+                    <div className="flex flex-col gap-2 text-sm text-blue-100 dark:text-blue-100">
+                      {/* Posted Date */}
+                      {timestamp && (
+                        <div><span className="font-semibold text-blue-200">Posted:</span> {new Date(timestamp).toLocaleDateString()}</div>
+                      )}
+                      {/* Basic Stats */}
+                      {metrics.like_count !== undefined && <div><span className="font-semibold text-blue-200">Likes:</span> {metrics.like_count.toLocaleString()}</div>}
+                      {metrics.comments_count !== undefined && <div><span className="font-semibold text-blue-200">Comments:</span> {metrics.comments_count.toLocaleString()}</div>}
+                      {/* Insights Stats */}
+                      {insights.impressions !== undefined && <div><span className="font-semibold text-blue-200">Impressions:</span> {insights.impressions.toLocaleString()}</div>}
+                      {insights.reach !== undefined && <div><span className="font-semibold text-blue-200">Reach:</span> {insights.reach.toLocaleString()}</div>}
+                      {insights.saved !== undefined && <div><span className="font-semibold text-blue-200">Saves:</span> {insights.saved.toLocaleString()}</div>}
+                      {insights.shares !== undefined && <div><span className="font-semibold text-blue-200">Shares:</span> {insights.shares.toLocaleString()}</div>}
+                      {insights.views !== undefined && <div><span className="font-semibold text-blue-200">Views:</span> {insights.views.toLocaleString()}</div>}
+                    </div>
+                  </div>
+                )}
+              </Card>
+              {/* Context Toggle Card - Always at bottom */}
+              <Card className="w-full border border-[#B3D4FC] bg-[#1A2332] dark:bg-[#111827] rounded-lg px-4 py-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="block text-base font-semibold text-blue-200 dark:text-blue-300">Context</span>
+                  {onToggleAnalysis && (
+                    <button
+                      onClick={() => onToggleAnalysis(!includeAnalysisInQuery)}
+                      className={`flex items-center gap-1 text-sm transition-colors ${includeAnalysisInQuery ? 'text-blue-200 dark:text-blue-300' : 'text-gray-400 dark:text-gray-500'} hover:text-blue-100 dark:hover:text-blue-100`}
+                      title={includeAnalysisInQuery ? "Disable insight context" : "Enable insight context"}
+                    >
+                      {includeAnalysisInQuery ? (
+                        <>
+                          <ToggleRight className="w-4 h-4 text-blue-200 dark:text-blue-300" />
+                          <span>ON</span>
+                        </>
+                      ) : (
+                        <>
+                          <ToggleLeft className="w-4 h-4" />
+                          <span>OFF</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+                <div className="text-base font-normal text-left text-blue-100 dark:text-blue-100">
+                  {includeAnalysisInQuery 
+                    ? 'Insight included in questions'
+                    : 'Insight not included in questions'
+                  }
+                </div>
+              </Card>
+            </div>
+          </Card>
+        );
+      }
+    }
+    // Fallback to generic card if no convexData
     return (
       <Card className="w-full border border-[#4E87E3] bg-[#2A3A5A] dark:bg-[#1A2332] rounded-xl px-0 py-0 mb-4">
-        {/* Main Title Header */}
         <div className="flex items-center gap-3 px-6 pt-5 pb-3 border-b border-[#B3D4FC] dark:border-[#2A3A5A]">
           {platformIcon}
           <span className="block text-lg font-bold text-white dark:text-white">
@@ -54,70 +331,12 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
           </span>
         </div>
         <div className="flex flex-col gap-2 px-4 pb-4 pt-2">
-          {/* Strategy Card */}
           <Card className="w-full border border-[#B3D4FC] dark:border-[#2A3A5A] bg-[#1A2332] dark:bg-[#111827] rounded-lg px-4 py-3 mb-2">
-            {'hook' in context && context.hook && (
-              <div className="mb-2">
-                <div className="font-semibold text-sm mb-1 text-blue-200 dark:text-blue-300">
-                  Hook
-                </div>
-                <div className="text-base text-blue-100 dark:text-blue-100">
-                  <MarkdownRenderer content={String(context.hook)} />
-                </div>
-              </div>
-            )}
-            {'format' in context && context.format && (
-              <div className="mb-2">
-                <div className="font-semibold text-sm mb-1 text-blue-200 dark:text-blue-300">
-                  Format
-                </div>
-                <div className="text-base text-blue-100 dark:text-blue-100">
-                  <MarkdownRenderer content={String(context.format)} />
-                </div>
-              </div>
-            )}
-            {'callToAction' in context && context.callToAction && (
-              <div className="mb-2">
-                <div className="font-semibold text-sm mb-1 text-blue-200 dark:text-blue-300">
-                  Call to Action
-                </div>
-                <div className="text-base text-blue-100 dark:text-blue-100">
-                  <MarkdownRenderer content={String(context.callToAction)} />
-                </div>
-              </div>
-            )}
-          </Card>
-          {/* Context Toggle Card (unchanged) */}
-          <Card className="w-full border border-[#B3D4FC] dark:border-[#2A3A5A] bg-[#1A2332] dark:bg-[#111827] rounded-lg px-4 py-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="block text-base font-semibold text-blue-200 dark:text-blue-300">
-                Context
-              </span>
-              {onToggleAnalysis && (
-                <button
-                  onClick={() => onToggleAnalysis(!includeAnalysisInQuery)}
-                  className={`flex items-center gap-1 text-sm transition-colors ${includeAnalysisInQuery ? 'text-blue-200 dark:text-blue-300' : 'text-gray-400 dark:text-gray-500'} hover:text-blue-100 dark:hover:text-blue-100`}
-                  title={includeAnalysisInQuery ? "Disable insight context" : "Enable insight context"}
-                >
-                  {includeAnalysisInQuery ? (
-                    <>
-                      <ToggleRight className="w-4 h-4 text-blue-200 dark:text-blue-300" />
-                      <span>ON</span>
-                    </>
-                  ) : (
-                    <>
-                      <ToggleLeft className="w-4 h-4" />
-                      <span>OFF</span>
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-            <div className="text-base font-normal text-left text-blue-100 dark:text-blue-100">
-              {includeAnalysisInQuery 
-                ? 'Insight included in questions'
-                : 'Insight not included in questions'
-              }
+            <span className="block text-base font-semibold mb-2 text-blue-200 dark:text-blue-300">
+              {context.title}
+            </span>
+            <div className="text-base text-blue-100 dark:text-blue-100">
+              <MarkdownRenderer content={String(context.content)} />
             </div>
           </Card>
         </div>
@@ -239,7 +458,7 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
                     </div>
                     <div className="text-base text-blue-100 dark:text-blue-100">
                       <MarkdownRenderer content={insight.whyNow.join('\n\n')} />
-                    </div>
+          </div>
                   </div>
                 )}
                 {insight.expectedOutcome && (
@@ -259,8 +478,8 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
                     </div>
                     <div className="text-base text-blue-100 dark:text-blue-100">
                       <MarkdownRenderer content={insight.actionSteps.map((step: string, index: number) => `${index + 1}. ${step}`).join('\n')} />
-                    </div>
-                  </div>
+                </div>
+              </div>
                 )}
               </>
             )}

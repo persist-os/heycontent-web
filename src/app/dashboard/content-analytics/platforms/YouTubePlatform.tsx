@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,17 +40,57 @@ export function YouTubePlatform({
 
   // Fetch video data directly from Convex
   const videoData = useQuery(
-    api.youtubeQueries.listUserYouTubeVideos,
-    userId ? { userId } : 'skip'
+    api.youtubeQueries.getYouTubeVideos,
+    userId ? { userId, limit: 100 } : 'skip'
   );
 
   // Log the query result and userId for debugging in non-production environments
   if (process.env.NODE_ENV !== 'production') {
     console.log('[YouTubePlatform] userId:', userId, 'videoData:', videoData);
+    
+    // Additional detailed logging for debugging convexData
+    if (videoData && videoData.videos && Array.isArray(videoData.videos)) {
+      console.log('[YouTubePlatform] Video data analysis:', {
+        totalVideos: videoData.videos.length,
+        videosWithConvexData: videoData.videos.filter(v => v.convexData).length,
+        videosWithoutConvexData: videoData.videos.filter(v => !v.convexData).length,
+        sampleVideo: videoData.videos[0] ? {
+          hasConvexData: !!videoData.videos[0].convexData,
+          convexDataKeys: videoData.videos[0].convexData ? Object.keys(videoData.videos[0].convexData) : 'none',
+          itemKeys: Object.keys(videoData.videos[0])
+        } : 'no videos'
+      });
+    }
   }
 
+  // Transform the raw video data to match the expected format with convexData
+  const displayItems = useMemo(() => {
+    if (!videoData || !videoData.videos) return [];
+    
+    return videoData.videos.map((video: any) => ({
+      id: video.videoId || video.id || '',
+      platform: 'youtube' as const,
+      publishedAt: video.snippet?.published_at || (video.createdAt ? new Date(video.createdAt).toISOString() : new Date().toISOString()),
+      content: {
+        title: video.snippet?.title || 'Untitled Video',
+        description: video.snippet?.description || '',
+        thumbnailUrl: video.snippet?.thumbnails?.high || video.snippet?.thumbnails?.medium || '',
+        videoUrl: video.url || `https://www.youtube.com/watch?v=${video.videoId}`,
+        channelTitle: video.snippet?.channel?.title || '',
+      },
+      metrics: {
+        views: Number(video.statistics?.views || 0),
+        likes: Number(video.statistics?.likes || 0),
+        dislikes: Number(video.statistics?.dislikes || 0),
+        comments: Number(video.statistics?.comments || 0),
+      },
+      // Include the full Convex document for complete data access (like Instagram and Gmail)
+      convexData: video,
+    }));
+  }, [videoData]);
+
   // Sort items by date
-  const displayItems = videoData ? sortContent(videoData, 'date') : [];
+  const sortedItems = sortContent(displayItems, 'date');
 
   const handleRefreshAll = async () => {
     await refreshAll(userId);
@@ -137,7 +177,7 @@ export function YouTubePlatform({
     );
   }
 
-  if (displayItems.length === 0) {
+  if (sortedItems.length === 0) {
     return (
       <>
         {/* Refresh Button (top right, consistent with other platforms) */}
@@ -200,13 +240,13 @@ export function YouTubePlatform({
       <div className="w-full mb-4">
         <PlatformEmbeddingStatus 
           platform="youtube" 
-          contentCount={displayItems.length} 
+          contentCount={sortedItems.length} 
           userId={userId} 
         />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
-        {displayItems.map((item, index) => {
+        {sortedItems.map((item, index) => {
           const uniqueKey = `${item.platform}-${item.id}-${index}`;
           return (
             <YouTubeCard

@@ -54,6 +54,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
   const router = useRouter();
   const { setYouTubeContext } = useContentContextActions();
   const [showOverlay, setShowOverlay] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Create a direct thumbnail URL - prioritize our stored data first
   let thumbnailUrl = '';
@@ -72,7 +73,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
   const likes = metrics?.likes ? Number(metrics.likes) : 0;
   const comments = metrics?.comments ? Number(metrics.comments) : 0;
 
-  const { refresh, loading, error, success } = useYouTubeRefresh();
+  const { refresh, loading: refreshLoading, error, success } = useYouTubeRefresh();
 
   const handleRefresh = async () => {
     const videoUrl = content.videoUrl || `https://www.youtube.com/watch?v=${cleanVideoId}`;
@@ -80,22 +81,32 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
   };
 
   // Handle discuss content with Zustand store
-  const handleDiscussContent = () => {
-    // Use the full Convex document if available, otherwise create a fallback
+  const handleDiscussContent = async () => {
+    setLoading(true);
+    let contextToSet;
+    
+    // Log the full item structure for debugging
+    console.log('🔍 [YOUTUBE CARD] Full item structure:', {
+      hasConvexData: !!item.convexData,
+      convexDataKeys: item.convexData ? Object.keys(item.convexData) : 'none',
+      itemKeys: Object.keys(item),
+      itemId: item.id,
+      platform: item.platform
+    });
+    
     if (item.convexData) {
-      // Use the complete Convex document with all fields
-      console.log('🔍 [YOUTUBE CARD] Using full Convex document:', {
-        hasData: !!item.convexData.data,
-        dataKeys: item.convexData.data ? Object.keys(item.convexData.data) : 'none',
-        fullConvexData: item.convexData
+      contextToSet = item.convexData;
+      console.log('🔍 [YOUTUBE CARD] Setting full Convex context:', {
+        hasVideoId: !!contextToSet.videoId,
+        hasSnippet: !!contextToSet.snippet,
+        hasStatistics: !!contextToSet.statistics,
+        hasAnalysis: !!contextToSet.analysis,
+        hasAnalysisMarkdown: !!contextToSet.analysisMarkdown,
+        fullContext: contextToSet
       });
-      
-      setYouTubeContext(item.convexData);
+      setYouTubeContext(contextToSet);
     } else {
       // Fallback to creating a mock object (shouldn't happen with proper data)
-      console.warn('🔍 [YOUTUBE CARD] No convexData available, using fallback mock object');
-      
-      // Create a mock Convex document structure
       const mockConvexData = {
         _id: item.id as any,
         _creationTime: Date.now(),
@@ -108,7 +119,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
           channel: content.channelTitle,
           published_at: publishedAt,
           thumbnails: {
-            high: content.thumbnailUrl // <-- Fix: use string, not { url: ... }
+            high: content.thumbnailUrl
           }
         },
         statistics: metrics,
@@ -120,12 +131,16 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
         createdAt: new Date(publishedAt).getTime(),
         updatedAt: Date.now(),
       };
-
-      setYouTubeContext(mockConvexData as any);
+      contextToSet = mockConvexData;
+      console.log('🔍 [YOUTUBE CARD] Setting mock context (convexData missing):', contextToSet);
+      setYouTubeContext(contextToSet as any);
     }
-    
-    // Navigate to chat
-    router.push('/dashboard/chat');
+    // Wait a short moment to ensure context is set
+    setTimeout(() => {
+      setLoading(false);
+      console.log('🔍 [YOUTUBE CARD] Navigating to /dashboard/chat with context:', contextToSet);
+      router.push('/dashboard/chat');
+    }, 200);
   };
 
   // Handle opening the overlay
@@ -220,9 +235,19 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
                 e.stopPropagation();
                 handleDiscussContent();
               }}
+              disabled={loading}
             >
-              <MessageSquare className="w-4 h-4 inline mr-2" />
-              Discuss With Content
+              {loading ? (
+                <span className="flex items-center justify-center">
+                  <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></span>
+                  Loading...
+                </span>
+              ) : (
+                <>
+                  <MessageSquare className="w-4 h-4 inline mr-2" />
+                  Discuss With Content
+                </>
+              )}
             </button>
             <button
               className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-text-dark dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium transition-colors"
