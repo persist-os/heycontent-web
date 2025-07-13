@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { InsightCard } from '@/components/content/InsightCard'
 import { useGmailInsights } from '../hooks/useGmailInsights'
+import { useInsightNavigation } from '../hooks/useInsightNavigation'
 import { RefreshState } from '@/components/ui/refresh-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AnalysisDepthPicker } from '../AnalysisDepthPicker'
@@ -18,6 +19,7 @@ interface GmailPlatformProps {
 
 export function GmailPlatform({ userId, currentQuote, loading }: GmailPlatformProps) {
   const [expandedInsight, setExpandedInsight] = useState<number | null>(null)
+  const { navigateWithInsight } = useInsightNavigation()
   
   const { 
     insights, 
@@ -127,28 +129,8 @@ export function GmailPlatform({ userId, currentQuote, loading }: GmailPlatformPr
                 relatedItems={insight.relatedItems}
                 expanded={expandedInsight === idx}
                 onExpand={() => setExpandedInsight(expandedInsight === idx ? null : idx)}
-                onDiscuss={(content: string, title: string) => {
-                  // Navigate to chat with insight context
-                  const context = {
-                    platform: 'ai-insights',
-                    contentId: `gmail-insight-${idx}`,
-                    title: title,
-                    source: 'AI Insights Dashboard',
-                    originalPlatform: 'gmail',
-                    fullInsight: {
-                      title: insight.title,
-                      impact: insight.impact,
-                      whyNow: insight.whyNow,
-                      actionSteps: insight.actionSteps,
-                      expectedOutcome: insight.expectedOutcome,
-                      sourceDetails: insight.sourceDetails,
-                      relatedItems: insight.relatedItems
-                    },
-                    analysis: content
-                  };
-                  
-                  const encodedContext = encodeURIComponent(JSON.stringify(context));
-                  window.location.href = `/dashboard/chat?contentContext=${encodedContext}`;
+                onDiscuss={() => {
+                  navigateWithInsight(insight, 'gmail');
                 }}
               />
             ))}

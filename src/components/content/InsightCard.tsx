@@ -7,6 +7,10 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useActionStepDiscussion } from '@/app/dashboard/ai-insights/_components/hooks/useActionStepDiscussion';
 import { CreateNoteButton } from '@/components/ui/CreateNoteButton';
+import { cleanImpactString } from '@/app/lib/utils/impact-utils';
+import { useInsightNavigation } from '@/app/dashboard/ai-insights/_components/hooks/useInsightNavigation';
+import { useContentContextActions } from '@/store/content-context-store';
+import { useRouter } from 'next/navigation';
 
 export interface InsightCardProps {
   platform: 'youtube' | 'instagram' | 'gmail';
@@ -54,6 +58,9 @@ export const InsightCard: React.FC<InsightCardProps> = ({
   onExpand,
 }) => {
   const { discussActionStep } = useActionStepDiscussion();
+  const { navigateWithInsight } = useInsightNavigation();
+  const { setContentContext } = useContentContextActions();
+  const router = useRouter();
 
   // Validate platform prop to ensure it's one of the expected values
   const validatedPlatform = ['youtube', 'instagram', 'gmail'].includes(platform) ? platform : 'gmail';
@@ -61,7 +68,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
   // Function to navigate to chat with Gmail thread content
   const discussGmailThread = (thread: any) => {
     const context = {
-      platform: 'gmail',
+      platform: 'gmail' as const,
       contentId: thread.threadId,
       title: thread.subject || 'Email Thread',
       source: 'AI Insights - Gmail Thread',
@@ -78,36 +85,28 @@ export const InsightCard: React.FC<InsightCardProps> = ({
       },
       analysis: `**Email Thread Analysis**\n\n**Subject:** ${thread.subject || 'No Subject'}\n**From:** ${thread.from || 'Unknown Sender'}\n**Date:** ${thread.date || 'Unknown Date'}\n\n**Content Preview:**\n${thread.snippet || 'No preview available'}\n\nThis email thread was identified as part of your ${title.toLowerCase()} opportunities. You can discuss strategies, draft responses, or analyze the content with AI assistance.`
     };
-    const encodedContext = encodeURIComponent(JSON.stringify(context));
-    window.location.href = `/dashboard/chat?contentContext=${encodedContext}`;
+    
+    setContentContext(context);
+    router.push('/dashboard/chat');
   };
 
   // Function to navigate to chat with the full insight context
   const discussFullInsight = () => {
-    const cleanImpact = impact.replace(/^Impact:\s*/i, '');
-    const fullInsightContext = {
-      platform: 'ai-insights',
-      contentId: `insight-${Date.now()}`,
-      title: title,
-      source: 'AI Insights Dashboard',
-      originalPlatform: validatedPlatform,
-      fullInsight: {
-        title,
-        impact: cleanImpact,
-        whyNow,
-        actionSteps,
-        expectedOutcome,
-        sourceDetails,
-        relatedItems
-      },
-      analysis: `**Platform:** ${validatedPlatform.toUpperCase()}\n**Impact:** ${cleanImpact}\n\n### Why Now?\n${whyNow.map(reason => `• ${reason}`).join('\n')}\n\n### Action Steps\n${actionSteps.map((step, idx) => `${idx + 1}. ${step}`).join('\n')}\n\n### Expected Outcome\n${expectedOutcome}\n\n### Source Details\n${sourceDetails.join('\n')}\n\n${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.map(item => `• ${item.label}: ${item.value}`).join('\n')}` : ''}`
+    const insight = {
+      title,
+      impact,
+      whyNow,
+      actionSteps,
+      expectedOutcome,
+      sourceDetails,
+      relatedItems
     };
-    const encodedContext = encodeURIComponent(JSON.stringify(fullInsightContext));
-    window.location.href = `/dashboard/chat?contentContext=${encodedContext}`;
+    
+    navigateWithInsight(insight, validatedPlatform);
   };
 
   const formatInsightForNote = () => {
-    const cleanImpact = impact.replace(/^Impact:\s*/i, '');
+    const cleanImpact = cleanImpactString(impact);
     return `\n# ${title}\n\n**Platform:** ${validatedPlatform.toUpperCase()}\n**Impact:** ${cleanImpact}\n\n### Why Now?\n${whyNow.map(reason => `• ${reason}`).join('\n')}\n\n### Action Steps\n${actionSteps.map((step, idx) => `${idx + 1}. ${step}`).join('\n')}\n\n### Expected Outcome\n${expectedOutcome}\n\n### Source Details\n${sourceDetails.join('\n')}\n\n${relatedItems && relatedItems.length > 0 ? `### Related Items\n${relatedItems.map(item => `• ${item.label}: ${item.value}`).join('\n')}` : ''}`.trim();
   };
 

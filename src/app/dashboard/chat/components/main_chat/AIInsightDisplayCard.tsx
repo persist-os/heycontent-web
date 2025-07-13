@@ -2,6 +2,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Instagram, Mail } from 'lucide-react';
 import { YouTubeBrandIcon } from '../../../../../lib/YoutubeBrandIcon';
+import { cleanImpactString } from '@/app/lib/utils/impact-utils';
 
 interface AIInsightDisplayCardProps {
   context: {
@@ -43,7 +44,7 @@ export const AIInsightDisplayCard: React.FC<AIInsightDisplayCardProps> = ({ cont
         )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-            <span>Impact: <span className="text-[#4E87E3] font-medium">{fullInsight.impact}</span></span>
+            <span>Impact: <span className="text-[#4E87E3] font-medium">{cleanImpactString(fullInsight.impact)}</span></span>
           </div>
         </div>
       </div>
