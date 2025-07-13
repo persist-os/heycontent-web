@@ -190,6 +190,44 @@ app.get("/api/users/:id/conversations", async (c) => {
   return c.json(result);
 });
 
+// Gmail quota optimization endpoints
+app.post("/api/query/getLastGmailFetch", async (c) => {
+  const ctx = c.env;
+  const { userId } = await c.req.json();
+
+  if (!userId) {
+    return c.json({ success: false, error: "Missing userId" }, 400);
+  }
+
+  try {
+    const timestamp = await ctx.runQuery(api.userQueries.getLastGmailFetch, { userId });
+    return c.json({ success: true, data: timestamp });
+  } catch (error) {
+    console.error("Failed to get last Gmail fetch timestamp:", error);
+    return c.json({ success: false, error: "Failed to get last Gmail fetch timestamp" }, 500);
+  }
+});
+
+app.post("/api/mutation/updateLastGmailFetch", async (c) => {
+  const ctx = c.env;
+  const { userId, timestamp } = await c.req.json();
+
+  if (!userId) {
+    return c.json({ success: false, error: "Missing userId" }, 400);
+  }
+
+  try {
+    const result = await ctx.runMutation(api.userMutations.updateLastGmailFetch, { 
+      userId,
+      timestamp
+    });
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error("Failed to update last Gmail fetch timestamp:", error);
+    return c.json({ success: false, error: "Failed to update last Gmail fetch timestamp" }, 500);
+  }
+});
+
 // Chat with context - Enhanced chat that searches for relevant content
 app.post("/api/users/:id/chat_with_context", async (c) => {
   const ctx = c.env;
