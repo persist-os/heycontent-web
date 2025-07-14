@@ -1,4 +1,4 @@
-import { PlatformContentData } from '@/store/content-store';
+import { PlatformContentData } from '@/types/content';
 
 // Performance metrics interface
 export interface PerformanceMetrics {

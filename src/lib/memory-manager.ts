@@ -1,4 +1,4 @@
-import { UnifiedContent } from '@/store/content-store';
+import { UnifiedContent } from '@/types/content';
 
 // Memory management configuration
 export interface MemoryConfig {

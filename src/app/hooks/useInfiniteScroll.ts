@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
-import { useContentStore, PlatformContentData } from '@/store/content-store';
+import { PlatformContentData } from '@/types/content';
+import { useContentStore } from '@/store/content-store';
 import { useContentResolver } from '@/lib/content-resolver';
 
 // Intersection observer hook for detecting when user approaches end of content

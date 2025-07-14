@@ -4,7 +4,7 @@ import { usePerformanceMonitor } from '@/lib/performance-monitor';
 import { useInfiniteScrollErrorHandler } from '@/lib/error-handler';
 import { useMemoryManager } from '@/lib/memory-manager';
 import { InfiniteVirtualList } from './virtual-list';
-import { UnifiedContent, PlatformContentData } from '@/store/content-store';
+import { UnifiedContent, PlatformContentData } from '@/types/content';
 import { cn } from '@/lib/utils';
 
 // Props for the infinite scroll example
