@@ -15,6 +15,8 @@ import CardSkeleton from './components/CardSkeleton';
 import PieChartSkeleton from './components/PieChartSkeleton';
 import InstagramCardSkeleton from './components/InstagramCardSkeleton';
 import { PlatformConnectionPrompt } from '../../_components/content-hub/PlatformConnectionPrompt';
+import InstagramDemographics from '../components/InstagramDemographics';
+import { useInstagramDemographics } from '../hooks/useInstagramDemographics';
 
 interface InstagramPlatformProps {
   userId: string;
@@ -69,6 +71,9 @@ export function InstagramPlatform({
   const observerRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef<HTMLDivElement>(null);
   
+  // Hook for demographics data
+  const { demographicsData, loading: demographicsLoading, error: demographicsError, hasData } = useInstagramDemographics(userId);
+
   // Memoized pie chart data calculation
   const mediaDistributionData = useMemo(() => {
     if (!analysis?.media_distribution) {
@@ -229,7 +234,17 @@ export function InstagramPlatform({
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-4">
             {/* Demographics Toggle Button */}
-            
+            {hasData && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDemographics(!showDemographics)}
+                className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm"
+              >
+                <Users className="w-4 h-4 mr-2" />
+                {showDemographics ? 'Hide Demographics' : 'Show Demographics'}
+              </Button>
+            )}
           </div>
           <div className="flex gap-3">
             {/*
@@ -251,7 +266,42 @@ export function InstagramPlatform({
         )}
 
         {/* Demographics Section */}
-        
+        {showDemographics && (
+          <div className="mb-8">
+            {demographicsLoading ? (
+              <div className="bg-card rounded-xl border shadow-xl">
+                <div className="p-6">
+                  <div className="flex items-center justify-center h-64">
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Loading demographics data...</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : demographicsError ? (
+              <div className="bg-card rounded-xl border shadow-xl">
+                <div className="p-6">
+                  <div className="text-center text-red-500">
+                    <p className="font-medium">Error loading demographics</p>
+                    <p className="text-sm mt-1">{demographicsError}</p>
+                  </div>
+                </div>
+              </div>
+            ) : demographicsData ? (
+              <InstagramDemographics demographicsData={demographicsData} />
+            ) : (
+              <div className="bg-card rounded-xl border shadow-xl">
+                <div className="p-6">
+                  <div className="text-center text-gray-500">
+                    <p className="font-medium">No demographics data available</p>
+                    <p className="text-sm mt-1">Demographics data will appear here once available</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Analytics Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
