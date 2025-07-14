@@ -106,10 +106,18 @@ jobs:
           retry-exempt-status-codes: 400,401,403,404,422
           script: |
             const frontendResult = '${{ needs.frontend-quality.result }}';
-            const typecheckStatus = '${{ needs.frontend-quality.outputs.typecheck }}' || 'unknown';
-            const lintStatus = '${{ needs.frontend-quality.outputs.lint }}' || 'unknown';
-            const testsStatus = '${{ needs.frontend-quality.outputs.tests }}' || 'unknown';
-            const buildStatus = '${{ needs.frontend-quality.outputs.build }}' || 'unknown';
+            const prNumber = context.payload.pull_request?.number;
+            
+            if (!prNumber) {
+              console.log('No PR number available, skipping PR comment');
+              return;
+            }
+            
+            // Get step outcomes directly from the job
+            const typecheckStatus = '${{ steps.typecheck.outcome }}' || 'unknown';
+            const lintStatus = '${{ steps.lint.outcome }}' || 'unknown';
+            const testsStatus = '${{ steps.tests.outcome }}' || 'unknown';
+            const buildStatus = '${{ steps.build.outcome }}' || 'unknown';
             const securityStatus = '${{ env.SECURITY_STATUS }}' || 'unknown';
             
             let message = '## 🔍 Frontend Quality Assessment\n\n';
@@ -124,15 +132,22 @@ jobs:
             if (frontendResult === 'success') {
               message += '🚀 **READY FOR DEV** - All quality gates passed. @MyatPyaePaingPie ready for your review.';
             } else {
-              message += '⚠️ **BLOCKED** - Quality issues must be resolved before merging to dev.';
+              message += '⚠️ **BLOCKED** - Quality issues must be resolved before merging to dev.\n\n';
+              message += 'Issues will be created automatically for tracking and resolution.';
             }
             
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: message
-            });
+            try {
+              await github.rest.issues.createComment({
+                issue_number: prNumber,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: message
+              });
+              
+              console.log(`Posted quality report comment on PR #${prNumber}`);
+            } catch (error) {
+              console.log('Error posting PR comment:', error);
+            }
 
       - name: Create quality failure issue
         if: needs.frontend-quality.result == 'failure'
@@ -140,54 +155,62 @@ jobs:
         with:
           retries: 3
           script: |
-            const prNumber = context.issue.number;
-            const branchName = context.payload.pull_request.head.ref;
+            // Get PR details safely
+            const prNumber = context.payload.pull_request?.number;
+            const branchName = context.payload.pull_request?.head?.ref;
+            const author = context.payload.pull_request?.user?.login;
+            const prTitle = context.payload.pull_request?.title;
+            const commitSha = context.payload.pull_request?.head?.sha?.substring(0, 7);
             
-            // Check for existing quality failure issues for this PR
-            const { data: existingIssues } = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              labels: 'quality-failure',
-              state: 'open'
-            });
-            
-            const existingIssue = existingIssues.find(issue => 
-              issue.title.includes(`PR #${prNumber}`) || issue.title.includes(branchName)
-            );
-            
-            if (existingIssue) {
-              console.log(`Quality failure issue already exists: #${existingIssue.number}`);
+            if (!prNumber || !branchName || !author) {
+              console.log('Missing PR context, skipping issue creation');
               return;
             }
-            const prNumber = context.issue.number;
-            const commitSha = context.payload.pull_request.head.sha.substring(0, 7);
-            const branchName = context.payload.pull_request.head.ref;
-            const author = context.payload.pull_request.user.login;
-            const prTitle = context.payload.pull_request.title;
             
-            // Check which specific checks failed
-            const typecheckStatus = '${{ needs.frontend-quality.outputs.typecheck }}' || 'unknown';
-            const lintStatus = '${{ needs.frontend-quality.outputs.lint }}' || 'unknown';
-            const testsStatus = '${{ needs.frontend-quality.outputs.tests }}' || 'unknown';
-            const buildStatus = '${{ needs.frontend-quality.outputs.build }}' || 'unknown';
+            // Check for existing quality failure issues for this PR
+            try {
+              const { data: existingIssues } = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: 'quality-failure',
+                state: 'open'
+              });
+              
+              const existingIssue = existingIssues.find(issue => 
+                issue.title.includes(`PR #${prNumber}`) || issue.title.includes(branchName)
+              );
+              
+              if (existingIssue) {
+                console.log(`Quality failure issue already exists: #${existingIssue.number}`);
+                return;
+              }
+            } catch (error) {
+              console.log('Error checking existing issues:', error);
+            }
+            
+            // Get failure details
+            const typecheckStatus = '${{ steps.typecheck.outcome }}' || 'unknown';
+            const lintStatus = '${{ steps.lint.outcome }}' || 'unknown';  
+            const testsStatus = '${{ steps.tests.outcome }}' || 'unknown';
+            const buildStatus = '${{ steps.build.outcome }}' || 'unknown';
             
             let failedChecks = [];
-            if (typecheckStatus !== 'success') failedChecks.push('TypeScript compilation');
-            if (lintStatus !== 'success') failedChecks.push('Code linting');
-            if (testsStatus !== 'success') failedChecks.push('Unit tests');
-            if (buildStatus !== 'success') failedChecks.push('Build process');
+            if (typecheckStatus === 'failure') failedChecks.push('TypeScript compilation');
+            if (lintStatus === 'failure') failedChecks.push('Code linting');
+            if (testsStatus === 'failure') failedChecks.push('Unit tests');
+            if (buildStatus === 'failure') failedChecks.push('Build process');
             
             const issueBody = `## ❌ Quality Gate Failure
             
-            **Pull Request**: #${prNumber} - ${prTitle}
+            **Pull Request**: #${prNumber} - ${prTitle || 'PR'}
             **Branch**: \`${branchName}\`
             **Author**: @${author}
-            **Commit**: \`${commitSha}\`
+            **Commit**: \`${commitSha || 'unknown'}\`
             
-            **Failed Checks**: ${failedChecks.join(', ')}
+            **Failed Checks**: ${failedChecks.length > 0 ? failedChecks.join(', ') : 'See workflow logs for details'}
             
             **Actions Required:**
-            ${failedChecks.map(check => `- [ ] Fix ${check} issues`).join('\n')}
+            ${failedChecks.map(check => `- [ ] Fix ${check} issues`).join('\n') || '- [ ] Review workflow logs and fix identified issues'}
             
             **Investigation Steps:**
             1. Check the [workflow run](${context.payload.repository.html_url}/actions/runs/${context.runId}) for detailed logs
@@ -208,32 +231,44 @@ jobs:
             ---
             *Auto-generated from failed quality gate - closes automatically when issues resolved*`;
             
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `🚨 Quality Issues: ${branchName} (PR #${prNumber})`,
-              body: issueBody,
-              labels: ['quality-failure', 'needs-fix', 'automated'],
-              assignees: [author]
-            });
+            try {
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `🚨 Quality Issues: ${branchName} (PR #${prNumber})`,
+                body: issueBody,
+                labels: ['quality-failure', 'needs-fix', 'automated'],
+                assignees: [author]
+              });
+              
+              console.log(`Created quality failure issue: #${issue.data.number}`);
+            } catch (error) {
+              console.log('Error creating quality failure issue:', error);
+            }
 
       - name: Create security issue
         if: env.SECURITY_STATUS == 'failed'
         uses: actions/github-script@v7
         with:
           script: |
-            const prNumber = context.issue.number;
-            const commitSha = context.payload.pull_request.head.sha.substring(0, 7);
-            const branchName = context.payload.pull_request.head.ref;
-            const author = context.payload.pull_request.user.login;
-            const prTitle = context.payload.pull_request.title;
+            // Get PR details safely  
+            const prNumber = context.payload.pull_request?.number;
+            const branchName = context.payload.pull_request?.head?.ref;
+            const author = context.payload.pull_request?.user?.login;
+            const prTitle = context.payload.pull_request?.title;
+            const commitSha = context.payload.pull_request?.head?.sha?.substring(0, 7);
+            
+            if (!prNumber || !branchName || !author) {
+              console.log('Missing PR context, skipping security issue creation');
+              return;
+            }
             
             const issueBody = `## 🔒 Security Vulnerabilities Detected
             
-            **Pull Request**: #${prNumber} - ${prTitle}
+            **Pull Request**: #${prNumber} - ${prTitle || 'PR'}
             **Branch**: \`${branchName}\`
             **Author**: @${author}
-            **Commit**: \`${commitSha}\`
+            **Commit**: \`${commitSha || 'unknown'}\`
             
             **Security Alert**: High or critical vulnerabilities found in dependencies
             
@@ -269,11 +304,17 @@ jobs:
             ---
             *Auto-generated security alert - must be resolved before production*`;
             
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `🔒 Security Alert: ${branchName} (PR #${prNumber})`,
-              body: issueBody,
-              labels: ['security', 'vulnerability', 'urgent', 'needs-fix'],
-              assignees: [author, 'MyatPyaePaingPie']
-            });
+            try {
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `🔒 Security Alert: ${branchName} (PR #${prNumber})`,
+                body: issueBody,
+                labels: ['security', 'vulnerability', 'urgent', 'needs-fix'],
+                assignees: [author, 'MyatPyaePaingPie']
+              });
+              
+              console.log(`Created security issue: #${issue.data.number}`);
+            } catch (error) {
+              console.log('Error creating security issue:', error);
+            }
