@@ -50,11 +50,15 @@ export function AnalysisDepthPicker({
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-6">
         <div className="flex-1 max-w-xl">
           <div className="mb-2 flex items-center justify-between">
-            <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-              Analysis Depth
-            </h3>
-            <button onClick={() => setIsCollapsed(!isCollapsed)} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800" title="Toggle analysis depth">
-              <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${!isCollapsed ? 'transform rotate-180' : ''}`} />
+            <button 
+              onClick={() => setIsCollapsed(!isCollapsed)} 
+              className="flex items-center justify-between w-full p-2 -m-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
+              title="Toggle analysis depth"
+            >
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-heycontent-yellow transition-colors">
+                Analysis Depth
+              </h3>
+              <ChevronDown className={`w-4 h-4 text-gray-500 group-hover:text-heycontent-yellow transition-all duration-200 ${!isCollapsed ? 'transform rotate-180' : ''}`} />
             </button>
           </div>
           <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isCollapsed ? 'max-h-0' : 'max-h-96'}`}>

@@ -15,14 +15,7 @@ import {
   CartesianGrid, 
   Tooltip, 
   Legend, 
-  ResponsiveContainer,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-  LineChart,
-  Line
+  ResponsiveContainer
 } from 'recharts';
 import { 
   MapPin, 
@@ -38,199 +31,271 @@ import {
   Camera
 } from 'lucide-react';
 
-// Mock data for different categories
-const demographicsData = {
-  ageGroups: {
-    chart: [
-      { name: '13-17', value: 8, color: '#9046FF' },
-      { name: '18-24', value: 32, color: '#B266FF' },
-      { name: '25-34', value: 28, color: '#C285FF' },
-      { name: '35-44', value: 18, color: '#EC4899' },
-      { name: '45-54', value: 10, color: '#F97316' },
-      { name: '55+', value: 4, color: '#45E290' }
-    ],
-    insights: "Your audience is predominantly young adults aged 18-34 (60%), which is ideal for trendy fashion and lifestyle content. The 25-34 age group shows the highest engagement rates and purchasing power.",
-    title: "Age Distribution",
-    type: "pie"
-  },
-  gender: {
-    chart: [
-      { name: 'Female', value: 68, color: '#EC4899' },
-      { name: 'Male', value: 30, color: '#3B82F6' },
-      { name: 'Non-binary', value: 2, color: '#45E290' }
-    ],
-    insights: "Your audience is predominantly female (68%), which aligns well with beauty, fashion, and lifestyle content. Consider creating content that resonates with female interests while not excluding your male audience.",
-    title: "Gender Breakdown",
-    type: "pie"
-  },
-  topCities: {
-    chart: [
-      { name: 'New York', value: 15, followers: 23400 },
-      { name: 'Los Angeles', value: 12, followers: 18600 },
-      { name: 'London', value: 8, followers: 12400 },
-      { name: 'Toronto', value: 6, followers: 9300 },
-      { name: 'Paris', value: 5, followers: 7800 },
-      { name: 'Sydney', value: 4, followers: 6200 },
-      { name: 'Berlin', value: 3, followers: 4700 },
-      { name: 'Miami', value: 3, followers: 4500 },
-      { name: 'Tokyo', value: 2, followers: 3200 },
-      { name: 'Amsterdam', value: 2, followers: 3100 },
-      { name: 'Others', value: 36, followers: 56300, isOthers: true }
-    ],
-    fullData: [
-      { name: 'New York', value: 15, followers: 23400 },
-      { name: 'Los Angeles', value: 12, followers: 18600 },
-      { name: 'London', value: 8, followers: 12400 },
-      { name: 'Toronto', value: 6, followers: 9300 },
-      { name: 'Paris', value: 5, followers: 7800 },
-      { name: 'Sydney', value: 4, followers: 6200 },
-      { name: 'Berlin', value: 3, followers: 4700 },
-      { name: 'Miami', value: 3, followers: 4500 },
-      { name: 'Tokyo', value: 2, followers: 3200 },
-      { name: 'Amsterdam', value: 2, followers: 3100 },
-      { name: 'Barcelona', value: 2, followers: 2900 },
-      { name: 'Rome', value: 2, followers: 2800 },
-      { name: 'Madrid', value: 2, followers: 2700 },
-      { name: 'Singapore', value: 2, followers: 2600 },
-      { name: 'Dubai', value: 2, followers: 2500 },
-      { name: 'Mumbai', value: 2, followers: 2400 },
-      { name: 'São Paulo', value: 2, followers: 2300 },
-      { name: 'Mexico City', value: 2, followers: 2200 },
-      { name: 'Bangkok', value: 2, followers: 2100 },
-      { name: 'Seoul', value: 1, followers: 1900 },
-      { name: 'Stockholm', value: 1, followers: 1800 },
-      { name: 'Copenhagen', value: 1, followers: 1700 },
-      { name: 'Vienna', value: 1, followers: 1600 },
-      { name: 'Zurich', value: 1, followers: 1500 },
-      { name: 'Brussels', value: 1, followers: 1400 },
-      { name: 'Oslo', value: 1, followers: 1300 },
-      { name: 'Helsinki', value: 1, followers: 1200 },
-      { name: 'Dublin', value: 1, followers: 1100 },
-      { name: 'Lisbon', value: 1, followers: 1000 }
-    ],
-    insights: "Your top cities show strong metropolitan concentration with 64% from major urban centers. The remaining 36% is distributed across 95+ cities globally. NYC and LA lead your US presence, while London represents your strongest international market.",
-    title: "Top Cities",
-    type: "bar",
-    hasLargeDataset: true
-  },
-  countries: {
-    chart: [
-      { name: 'United States', value: 45, color: '#9046FF' },
-      { name: 'Canada', value: 15, color: '#B266FF' },
-      { name: 'United Kingdom', value: 12, color: '#EC4899' },
-      { name: 'Australia', value: 8, color: '#45E290' },
-      { name: 'Germany', value: 6, color: '#F97316' },
-      { name: 'France', value: 4, color: '#EF4444' },
-      { name: 'Others', value: 10, color: '#6B7280', isOthers: true }
-    ],
-    fullData: [
-      { name: 'United States', value: 45, color: '#9046FF' },
-      { name: 'Canada', value: 15, color: '#B266FF' },
-      { name: 'United Kingdom', value: 12, color: '#EC4899' },
-      { name: 'Australia', value: 8, color: '#45E290' },
-      { name: 'Germany', value: 6, color: '#F97316' },
-      { name: 'France', value: 4, color: '#EF4444' },
-      { name: 'Netherlands', value: 2, color: '#3B82F6' },
-      { name: 'Spain', value: 2, color: '#10B981' },
-      { name: 'Italy', value: 2, color: '#F59E0B' },
-      { name: 'Brazil', value: 2, color: '#8B5CF6' },
-      { name: 'Sweden', value: 1, color: '#EC4899' },
-      { name: 'Norway', value: 1, color: '#06B6D4' }
-    ],
-    insights: "Your audience spans 65+ countries with strong English-speaking market dominance (80%). The US leads with 45%, followed by Canada and UK. This global reach offers opportunities for international brand partnerships and localized content strategies.",
-    title: "Country Distribution",
-    type: "pie",
-    hasLargeDataset: true
-  },
-  interests: {
-    chart: [
-      { category: 'Fashion', score: 85, color: '#EC4899' },
-      { category: 'Lifestyle', score: 78, color: '#9046FF' },
-      { category: 'Beauty', score: 72, color: '#F97316' },
-      { category: 'Travel', score: 65, color: '#45E290' },
-      { category: 'Food', score: 58, color: '#EF4444' },
-      { category: 'Fitness', score: 45, color: '#3B82F6' }
-    ],
-    insights: "Fashion and lifestyle dominate your audience interests, followed by beauty content. This suggests your audience is highly engaged with aspirational content. Consider expanding into travel and food content to capture growing interest.",
-    title: "Audience Interests",
-    type: "radar"
-  },
-  engagement: {
-    chart: [
-      { time: '6 AM', likes: 120, comments: 15, shares: 8 },
-      { time: '9 AM', likes: 340, comments: 42, shares: 18 },
-      { time: '12 PM', likes: 580, comments: 78, shares: 35 },
-      { time: '3 PM', likes: 720, comments: 95, shares: 42 },
-      { time: '6 PM', likes: 890, comments: 125, shares: 55 },
-      { time: '9 PM', likes: 950, comments: 140, shares: 68 },
-      { time: '12 AM', likes: 420, comments: 35, shares: 20 }
-    ],
-    insights: "Peak engagement occurs between 6-9 PM when your audience is most active. Evening posts receive 3x more engagement than morning posts. Schedule your most important content during these golden hours.",
-    title: "Engagement Patterns",
-    type: "line"
-  },
-  deviceUsage: {
-    chart: [
-      { name: 'Mobile', value: 78, color: '#9046FF' },
-      { name: 'Desktop', value: 15, color: '#EC4899' },
-      { name: 'Tablet', value: 7, color: '#45E290' }
-    ],
-    insights: "Your audience primarily uses mobile devices (78%), which means your content should be optimized for mobile viewing. Vertical videos and mobile-first design are crucial for maximum engagement.",
-    title: "Device Usage",
-    type: "pie"
-  },
-  followTypes: {
-    chart: [
-      { name: 'Organic Followers', value: 82, color: '#45E290' },
-      { name: 'Paid Campaigns', value: 12, color: '#F97316' },
-      { name: 'Influencer Collabs', value: 6, color: '#9046FF' }
-    ],
-    insights: "Most of your followers (82%) found you organically, indicating strong content quality and discoverability. Your paid campaigns show good ROI, and influencer collaborations could be expanded for growth.",
-    title: "Follow Sources",
-    type: "pie"
-  },
-  contentTypes: {
-    chart: [
-      { name: 'Reels', engagement: 8.9, reach: 156, saves: 12.4, color: '#EF4444' },
-      { name: 'Video Posts', engagement: 6.8, reach: 92, saves: 8.7, color: '#3B82F6' },
-      { name: 'Carousel Posts', engagement: 5.4, reach: 79, saves: 15.2, color: '#9046FF' },
-      { name: 'Photo Posts', engagement: 4.2, reach: 85, saves: 6.1, color: '#45E290' },
-      { name: 'Stories', engagement: 3.7, reach: 67, saves: 2.8, color: '#F97316' },
-      { name: 'IGTV', engagement: 2.1, reach: 35, saves: 4.3, color: '#EC4899' }
-    ],
-    insights: "Reels are your top performing content type with 8.9% engagement and 156% reach. Carousel posts generate the most saves (15.2%), indicating high value content. Consider creating more Reels and carousels to maximize your reach and engagement.",
-    title: "Content Performance",
-    type: "bar"
-  }
+// Data transformation utilities
+const transformAgeData = (age_breakdown: any[]) => {
+  const colors = ['#9046FF', '#B266FF', '#C285FF', '#EC4899', '#F97316', '#45E290'];
+  return age_breakdown.map((breakdown, index) => ({
+    metric: breakdown.metric,
+    title: getMetricLabel(breakdown.metric),
+    chart: breakdown.values.map((item: any, itemIndex: number) => ({
+      name: item.name,
+      value: item.value,
+      color: colors[itemIndex % colors.length]
+    })),
+    type: 'bar' as const,
+    insights: generateAgeInsights(breakdown.values)
+  }));
 };
 
-const menuItems = [
-  { key: 'ageGroups', label: 'Age Groups', icon: Users, color: 'from-purple-500 to-pink-500' },
-  { key: 'gender', label: 'Gender', icon: UserCheck, color: 'from-pink-500 to-rose-500' },
-  { key: 'topCities', label: 'Top Cities', icon: MapPin, color: 'from-blue-500 to-purple-500' },
-  { key: 'countries', label: 'Countries', icon: Globe, color: 'from-green-500 to-blue-500' },
-  { key: 'interests', label: 'Interests', icon: Heart, color: 'from-orange-500 to-pink-500' },
-  { key: 'engagement', label: 'Engagement', icon: TrendingUp, color: 'from-emerald-500 to-teal-500' },
-  { key: 'deviceUsage', label: 'Devices', icon: Smartphone, color: 'from-indigo-500 to-purple-500' },
-  { key: 'followTypes', label: 'Follow Sources', icon: Target, color: 'from-amber-500 to-orange-500' },
-  { key: 'contentTypes', label: 'Content Types', icon: Camera, color: 'from-red-500 to-pink-500' }
-];
+const transformGenderData = (gender_breakdown: any[]) => {
+  const genderColors = { 'F': '#EC4899', 'M': '#3B82F6', 'U': '#45E290' };
+  const genderLabels = { 'F': 'Female', 'M': 'Male', 'U': 'Unknown' };
+  
+  return gender_breakdown.map(breakdown => ({
+    metric: breakdown.metric,
+    title: getMetricLabel(breakdown.metric),
+    chart: breakdown.values.map((item: any) => ({
+      name: genderLabels[item.name as keyof typeof genderLabels] || item.name,
+      value: item.value,
+      color: genderColors[item.name as keyof typeof genderColors] || '#6B7280'
+    })),
+    type: 'pie' as const,
+    insights: generateGenderInsights(breakdown.values)
+  }));
+};
 
-const InstagramDemographics = () => {
-  const [selectedCategory, setSelectedCategory] = useState('ageGroups');
+const transformLocationData = (location_breakdown: any[], type: 'city' | 'country') => {
+  const colors = ['#9046FF', '#B266FF', '#C285FF', '#EC4899', '#F97316', '#45E290', '#EF4444', '#3B82F6', '#10B981', '#F59E0B'];
+  
+  return location_breakdown.map(breakdown => ({
+    metric: breakdown.metric,
+    title: getMetricLabel(breakdown.metric),
+    chart: breakdown.values
+      .sort((a: any, b: any) => b.value - a.value)
+      .slice(0, 10)
+      .map((item: any, index: number) => ({
+        name: type === 'country' ? getCountryName(item.name) : item.name,
+        value: item.value,
+        color: colors[index % colors.length]
+      })),
+    fullData: breakdown.values
+      .sort((a: any, b: any) => b.value - a.value)
+      .map((item: any, index: number) => ({
+        name: type === 'country' ? getCountryName(item.name) : item.name,
+        value: item.value,
+        color: colors[index % colors.length]
+      })),
+    type: 'bar' as const,
+    hasLargeDataset: breakdown.values.length > 10,
+    insights: generateLocationInsights(breakdown.values, type)
+  }));
+};
+
+const transformFollowTypeData = (follow_type_breakdown: any[]) => {
+  const colors = ['#45E290', '#F97316', '#9046FF'];
+  const labels = { 'FOLLOWER': 'Followers', 'NON_FOLLOWER': 'Non-Followers', 'UNKNOWN': 'Unknown' };
+  
+  return follow_type_breakdown.map(breakdown => ({
+    metric: breakdown.metric,
+    title: getMetricLabel(breakdown.metric),
+    chart: breakdown.values.map((item: any, index: number) => ({
+      name: labels[item.name as keyof typeof labels] || item.name,
+      value: item.value,
+      color: colors[index % colors.length]
+    })),
+    type: 'pie' as const,
+    insights: generateFollowTypeInsights(breakdown.values)
+  }));
+};
+
+const transformMediaTypeData = (media_product_type_breakdown: any[]) => {
+  const colors = ['#EF4444', '#3B82F6', '#9046FF', '#45E290', '#F97316', '#EC4899'];
+  const labels = { 
+    'REEL': 'Reels', 
+    'CAROUSEL_CONTAINER': 'Carousel Posts', 
+    'POST': 'Photo Posts',
+    'STORY': 'Stories',
+    'IGTV': 'IGTV',
+    'VIDEO': 'Video Posts'
+  };
+  
+  return media_product_type_breakdown.map(breakdown => ({
+    metric: breakdown.metric,
+    title: getMetricLabel(breakdown.metric),
+    chart: breakdown.values.map((item: any, index: number) => ({
+      name: labels[item.name as keyof typeof labels] || item.name,
+      value: item.value,
+      color: colors[index % colors.length]
+    })),
+    type: 'bar' as const,
+    insights: generateMediaTypeInsights(breakdown.values)
+  }));
+};
+
+// Helper functions
+const getMetricLabel = (metric: string) => {
+  const labels = {
+    'engaged_audience_demographics': 'Engaged Audience',
+    'reached_audience_demographics': 'Reached Audience', 
+    'follower_demographics': 'Followers',
+    'reach': 'Reach',
+    'views': 'Views',
+    'total_interactions': 'Total Interactions',
+    'likes': 'Likes',
+    'comments': 'Comments',
+    'shares': 'Shares',
+    'saves': 'Saves'
+  };
+  return labels[metric as keyof typeof labels] || metric.replace(/_/g, ' ');
+};
+
+const getCountryName = (code: string) => {
+  const countries = {
+    'US': 'United States', 'CA': 'Canada', 'GB': 'United Kingdom', 'AU': 'Australia', 
+    'DE': 'Germany', 'FR': 'France', 'BR': 'Brazil', 'IN': 'India', 'CN': 'China',
+    'JP': 'Japan', 'KR': 'South Korea', 'IT': 'Italy', 'ES': 'Spain', 'NL': 'Netherlands',
+    'MX': 'Mexico', 'TR': 'Turkey', 'RU': 'Russia', 'SA': 'Saudi Arabia', 'AE': 'UAE',
+    'PH': 'Philippines', 'TH': 'Thailand', 'ID': 'Indonesia', 'MY': 'Malaysia', 'SG': 'Singapore',
+    'NO': 'Norway', 'SE': 'Sweden', 'DK': 'Denmark', 'FI': 'Finland', 'CH': 'Switzerland',
+    'AT': 'Austria', 'BE': 'Belgium', 'IE': 'Ireland', 'PT': 'Portugal', 'GR': 'Greece',
+    'PL': 'Poland', 'CZ': 'Czech Republic', 'HU': 'Hungary', 'RO': 'Romania', 'BG': 'Bulgaria',
+    'HR': 'Croatia', 'SI': 'Slovenia', 'SK': 'Slovakia', 'LT': 'Lithuania', 'LV': 'Latvia',
+    'EE': 'Estonia', 'IS': 'Iceland', 'LU': 'Luxembourg', 'MT': 'Malta', 'CY': 'Cyprus',
+    'PK': 'Pakistan', 'BD': 'Bangladesh', 'LK': 'Sri Lanka', 'NP': 'Nepal', 'BT': 'Bhutan',
+    'MV': 'Maldives', 'AF': 'Afghanistan', 'IR': 'Iran', 'IQ': 'Iraq', 'SY': 'Syria',
+    'LB': 'Lebanon', 'JO': 'Jordan', 'IL': 'Israel', 'PS': 'Palestine', 'KW': 'Kuwait',
+    'BH': 'Bahrain', 'QA': 'Qatar', 'OM': 'Oman', 'YE': 'Yemen', 'EG': 'Egypt',
+    'LY': 'Libya', 'TN': 'Tunisia', 'DZ': 'Algeria', 'MA': 'Morocco', 'SD': 'Sudan',
+    'SS': 'South Sudan', 'ET': 'Ethiopia', 'ER': 'Eritrea', 'DJ': 'Djibouti', 'SO': 'Somalia',
+    'KE': 'Kenya', 'UG': 'Uganda', 'TZ': 'Tanzania', 'RW': 'Rwanda', 'BI': 'Burundi',
+    'MG': 'Madagascar', 'MU': 'Mauritius', 'SC': 'Seychelles', 'KM': 'Comoros',
+    'ZA': 'South Africa', 'NA': 'Namibia', 'BW': 'Botswana', 'ZW': 'Zimbabwe',
+    'ZM': 'Zambia', 'MW': 'Malawi', 'MZ': 'Mozambique', 'SZ': 'Eswatini', 'LS': 'Lesotho',
+    'AO': 'Angola', 'CD': 'Democratic Republic of Congo', 'CG': 'Republic of Congo',
+    'CM': 'Cameroon', 'CF': 'Central African Republic', 'TD': 'Chad', 'NE': 'Niger',
+    'NG': 'Nigeria', 'BJ': 'Benin', 'TG': 'Togo', 'GH': 'Ghana', 'CI': 'Ivory Coast',
+    'LR': 'Liberia', 'SL': 'Sierra Leone', 'GN': 'Guinea', 'GW': 'Guinea-Bissau',
+    'SN': 'Senegal', 'GM': 'Gambia', 'ML': 'Mali', 'BF': 'Burkina Faso', 'MR': 'Mauritania',
+    'CV': 'Cape Verde', 'ST': 'São Tomé and Príncipe', 'GQ': 'Equatorial Guinea', 'GA': 'Gabon',
+    'AR': 'Argentina', 'CL': 'Chile', 'PE': 'Peru', 'BO': 'Bolivia', 'PY': 'Paraguay',
+    'UY': 'Uruguay', 'CO': 'Colombia', 'VE': 'Venezuela', 'GY': 'Guyana', 'SR': 'Suriname',
+    'EC': 'Ecuador', 'PA': 'Panama', 'CR': 'Costa Rica', 'NI': 'Nicaragua', 'HN': 'Honduras',
+    'GT': 'Guatemala', 'BZ': 'Belize', 'SV': 'El Salvador', 'CU': 'Cuba', 'JM': 'Jamaica',
+    'HT': 'Haiti', 'DO': 'Dominican Republic', 'PR': 'Puerto Rico', 'TT': 'Trinidad and Tobago',
+    'BB': 'Barbados', 'GD': 'Grenada', 'VC': 'Saint Vincent and the Grenadines',
+    'LC': 'Saint Lucia', 'DM': 'Dominica', 'AG': 'Antigua and Barbuda', 'KN': 'Saint Kitts and Nevis',
+    'BS': 'Bahamas', 'VN': 'Vietnam', 'LA': 'Laos', 'KH': 'Cambodia', 'MM': 'Myanmar',
+    'BN': 'Brunei', 'TL': 'East Timor', 'FJ': 'Fiji', 'PG': 'Papua New Guinea',
+    'SB': 'Solomon Islands', 'VU': 'Vanuatu', 'NC': 'New Caledonia', 'PF': 'French Polynesia',
+    'WS': 'Samoa', 'KI': 'Kiribati', 'TO': 'Tonga', 'MH': 'Marshall Islands',
+    'FM': 'Federated States of Micronesia', 'PW': 'Palau', 'NR': 'Nauru', 'TV': 'Tuvalu',
+    'NZ': 'New Zealand', 'UA': 'Ukraine', 'BY': 'Belarus', 'MD': 'Moldova', 'GE': 'Georgia',
+    'AM': 'Armenia', 'AZ': 'Azerbaijan', 'KZ': 'Kazakhstan', 'KG': 'Kyrgyzstan',
+    'TJ': 'Tajikistan', 'TM': 'Turkmenistan', 'UZ': 'Uzbekistan', 'MN': 'Mongolia',
+    'HK': 'Hong Kong', 'MO': 'Macau', 'TW': 'Taiwan'
+  };
+  return countries[code as keyof typeof countries] || code;
+};
+
+// Insight generation functions
+const generateAgeInsights = (values: any[]) => {
+  const total = values.reduce((sum, item) => sum + item.value, 0);
+  const youngAdults = values.filter(item => ['18-24', '25-34'].includes(item.name)).reduce((sum, item) => sum + item.value, 0);
+  const percentage = Math.round((youngAdults / total) * 100);
+  return `Your audience is ${percentage}% young adults (18-34), which is ideal for trendy content. This demographic shows high engagement rates and strong purchasing power.`;
+};
+
+const generateGenderInsights = (values: any[]) => {
+  const total = values.reduce((sum, item) => sum + item.value, 0);
+  const female = values.find(item => item.name === 'F')?.value || 0;
+  const percentage = Math.round((female / total) * 100);
+  return `Your audience is ${percentage}% female, which aligns well with beauty, fashion, and lifestyle content. Consider creating content that resonates with this demographic while maintaining inclusive messaging.`;
+};
+
+const generateLocationInsights = (values: any[], type: 'city' | 'country') => {
+  const total = values.reduce((sum, item) => sum + item.value, 0);
+  const topLocation = values.sort((a, b) => b.value - a.value)[0];
+  const percentage = Math.round((topLocation.value / total) * 100);
+  const locationName = type === 'country' ? getCountryName(topLocation.name) : topLocation.name;
+  return `${locationName} represents your strongest market at ${percentage}% of your audience. This geographic concentration offers opportunities for localized content and partnerships.`;
+};
+
+const generateFollowTypeInsights = (values: any[]) => {
+  const followerData = values.find(item => item.name === 'FOLLOWER');
+  const nonFollowerData = values.find(item => item.name === 'NON_FOLLOWER');
+  const total = values.reduce((sum, item) => sum + item.value, 0);
+  
+  if (followerData && nonFollowerData) {
+    const followerPercentage = Math.round((followerData.value / total) * 100);
+    return `${followerPercentage}% of your reach comes from existing followers, indicating strong content quality and audience loyalty. The remaining reach from non-followers shows good discoverability.`;
+  }
+  return 'Your content reaches both followers and non-followers, showing good organic growth potential.';
+};
+
+const generateMediaTypeInsights = (values: any[]) => {
+  const sortedValues = values.sort((a, b) => b.value - a.value);
+  const topType = sortedValues[0];
+  const total = values.reduce((sum, item) => sum + item.value, 0);
+  const percentage = Math.round((topType.value / total) * 100);
+  return `${topType.name} content performs best, representing ${percentage}% of your engagement. Consider creating more of this content type to maximize reach and engagement.`;
+};
+
+interface InstagramDemographicsProps {
+  demographicsData: {
+    age_breakdown: any[];
+    gender_breakdown: any[];
+    city_breakdown: any[];
+    country_breakdown: any[];
+    follow_type_breakdown: any[];
+    media_product_type_breakdown: any[];
+    profileData: any;
+    updatedAt: number;
+  };
+}
+
+const InstagramDemographics: React.FC<InstagramDemographicsProps> = ({ demographicsData }) => {
+  const [selectedCategory, setSelectedCategory] = useState('age');
+  const [selectedMetric, setSelectedMetric] = useState(0);
   const [showFullData, setShowFullData] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
-  const currentData = demographicsData[selectedCategory as keyof typeof demographicsData];
-  
-  // Reset full data view when category changes
+  // Transform API data into chart format
+  const processedData = React.useMemo(() => {
+    return {
+      age: transformAgeData(demographicsData.age_breakdown || []),
+      gender: transformGenderData(demographicsData.gender_breakdown || []),
+      cities: transformLocationData(demographicsData.city_breakdown || [], 'city'),
+      countries: transformLocationData(demographicsData.country_breakdown || [], 'country'),
+      followTypes: transformFollowTypeData(demographicsData.follow_type_breakdown || []),
+      mediaTypes: transformMediaTypeData(demographicsData.media_product_type_breakdown || [])
+    };
+  }, [demographicsData]);
+
+  // Menu items with data availability check
+  const menuItems = [
+    { key: 'age', label: 'Age Groups', icon: Users, color: 'from-purple-500 to-pink-500', available: processedData.age.length > 0 },
+    { key: 'gender', label: 'Gender', icon: UserCheck, color: 'from-pink-500 to-rose-500', available: processedData.gender.length > 0 },
+    { key: 'cities', label: 'Top Cities', icon: MapPin, color: 'from-blue-500 to-purple-500', available: processedData.cities.length > 0 },
+    { key: 'countries', label: 'Countries', icon: Globe, color: 'from-green-500 to-blue-500', available: processedData.countries.length > 0 },
+    { key: 'followTypes', label: 'Follow Types', icon: Target, color: 'from-amber-500 to-orange-500', available: processedData.followTypes.length > 0 },
+    { key: 'mediaTypes', label: 'Media Types', icon: Camera, color: 'from-red-500 to-pink-500', available: processedData.mediaTypes.length > 0 }
+  ].filter(item => item.available);
+
+  // Get current data
+  const currentDataSet = processedData[selectedCategory as keyof typeof processedData] || [];
+  const currentData = currentDataSet[selectedMetric] || currentDataSet[0];
+
+  // Reset states when category changes
   React.useEffect(() => {
+    setSelectedMetric(0);
     setShowFullData(false);
     setSearchTerm('');
   }, [selectedCategory]);
   
   // Handle large dataset display logic
   const getDisplayData = () => {
+    if (!currentData) return [];
+    
     if (!(currentData as any).hasLargeDataset) {
       return currentData.chart;
     }
@@ -248,7 +313,7 @@ const InstagramDemographics = () => {
     return currentData.chart;
   };
 
-  // Custom tooltip component for dark/light mode compatibility
+  // Custom tooltip component
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
@@ -256,7 +321,7 @@ const InstagramDemographics = () => {
           <p className="font-medium mb-2">{label}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
-              {entry.name}: {entry.value}{entry.name === 'Engagement %' || entry.name === 'Reach %' || entry.name === 'Saves %' ? '%' : ''}
+              {entry.name}: {entry.value.toLocaleString()}
             </p>
           ))}
         </div>
@@ -272,7 +337,10 @@ const InstagramDemographics = () => {
     }
   };
 
+  // Render chart based on type
   const renderChart = () => {
+    if (!currentData) return null;
+    
     const displayData = getDisplayData();
     
     switch (currentData.type) {
@@ -285,8 +353,8 @@ const InstagramDemographics = () => {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, value }) => `${name}: ${value}%`}
-                outerRadius="80%"
+                label={({ name, value }) => `${name}: ${value.toLocaleString()}`}
+                outerRadius="65%"
                 fill="#8884d8"
                 dataKey="value"
                 onClick={handleChartClick}
@@ -301,24 +369,6 @@ const InstagramDemographics = () => {
         );
       
       case 'bar':
-        // Special handling for content types with multiple metrics
-        if (selectedCategory === 'contentTypes') {
-          return (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={displayData} margin={{ top: 10, right: 15, left: 10, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" fontSize={11} />
-                <YAxis fontSize={11} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                <Bar dataKey="engagement" fill="#9046FF" radius={[4, 4, 0, 0]} name="Engagement %" />
-                <Bar dataKey="reach" fill="#EC4899" radius={[4, 4, 0, 0]} name="Reach %" />
-                <Bar dataKey="saves" fill="#45E290" radius={[4, 4, 0, 0]} name="Saves %" />
-              </BarChart>
-            </ResponsiveContainer>
-          );
-        }
-        // Standard bar chart for other categories
         return (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={displayData} margin={{ top: 10, right: 15, left: 10, bottom: 20 }}>
@@ -331,46 +381,22 @@ const InstagramDemographics = () => {
           </ResponsiveContainer>
         );
       
-      case 'radar':
-        return (
-          <ResponsiveContainer width="100%" height="100%">
-            <RadarChart data={displayData}>
-              <PolarGrid />
-              <PolarAngleAxis dataKey="category" fontSize={11} />
-              <PolarRadiusAxis angle={90} domain={[0, 100]} fontSize={10} />
-              <Radar
-                name="Interest Score"
-                dataKey="score"
-                stroke="#9046FF"
-                fill="#9046FF"
-                fillOpacity={0.3}
-                strokeWidth={2}
-              />
-              <Tooltip content={<CustomTooltip />} />
-            </RadarChart>
-          </ResponsiveContainer>
-        );
-      
-      case 'line':
-        return (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={displayData} margin={{ top: 10, right: 15, left: 10, bottom: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="time" fontSize={11} />
-              <YAxis fontSize={11} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Line type="monotone" dataKey="likes" stroke="#9046FF" strokeWidth={3} />
-              <Line type="monotone" dataKey="comments" stroke="#EC4899" strokeWidth={2} />
-              <Line type="monotone" dataKey="shares" stroke="#45E290" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
-        );
-      
       default:
         return null;
     }
   };
+
+  if (!currentData) {
+    return (
+      <div className="w-full h-full bg-background relative overflow-hidden">
+        <div className="p-6">
+          <div className="text-center">
+            <p className="text-muted-foreground">No demographics data available</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full bg-background relative overflow-hidden">
@@ -394,7 +420,7 @@ const InstagramDemographics = () => {
 
       {/* Main Canvas Area */}
       <div className="px-6 pb-6">
-        <div className="min-h-[600px] bg-card rounded-xl border shadow-xl">
+        <div className="min-h-[600px]">
           
           {/* Mobile-First Responsive Layout */}
           <div className="p-4 lg:p-6">
@@ -430,6 +456,33 @@ const InstagramDemographics = () => {
                 })}
               </div>
             </div>
+
+            {/* Metric Selection */}
+            {currentDataSet.length > 1 && (
+              <div className="mb-6">
+                <div className="mb-3">
+                  <h3 className="text-lg font-bold text-card-foreground">Metrics</h3>
+                  <div className="w-12 h-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {currentDataSet.map((data, index) => (
+                    <button
+                      key={index}
+                      className={`
+                        px-3 py-2 rounded-lg transition-all duration-300 text-xs font-medium whitespace-nowrap
+                        ${selectedMetric === index 
+                          ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md' 
+                          : 'bg-background text-foreground border border-border hover:border-purple-300 dark:hover:border-purple-700'
+                        }
+                      `}
+                      onClick={() => setSelectedMetric(index)}
+                    >
+                      {data.title}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Main Content - Responsive Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -478,14 +531,14 @@ const InstagramDemographics = () => {
                   </div>
                 </div>
                 
-                <div className="bg-background rounded-xl p-3 lg:p-4 border h-[300px] lg:h-[400px]">
+                <div className="h-[300px] lg:h-[400px]">
                   {renderChart()}
                   
                   {/* Others click hint */}
                   {(currentData as any).hasLargeDataset && !showFullData && (
                     <div className="mt-2 text-center">
                       <p className="text-xs text-muted-foreground">
-                        💡 Click "Others" to see all items
+                        💡 Click "Show All" to see all items
                       </p>
                     </div>
                   )}
@@ -501,13 +554,13 @@ const InstagramDemographics = () => {
                   <div className="w-12 h-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
                 </div>
                 
-                <div className="bg-gradient-to-br from-purple-500/5 to-pink-500/5 rounded-xl p-4 lg:p-5 border border-purple-200/50 dark:border-purple-800/50 h-[300px] lg:h-[400px] overflow-y-auto">
+                <div className="p-4 lg:p-5 h-[300px] lg:h-[400px] overflow-y-auto">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
                       <TrendingUp className="h-4 w-4 text-white" />
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      Updated 2 min ago
+                      Updated {new Date(demographicsData.updatedAt).toLocaleDateString()}
                     </div>
                   </div>
                   
@@ -518,7 +571,7 @@ const InstagramDemographics = () => {
                     
                     {/* Additional insight cards */}
                     <div className="space-y-3 mt-6">
-                      <div className="bg-background/60 rounded-lg p-3 border border-border/50">
+                      <div className="p-3">
                         <div className="flex items-center gap-2 mb-2">
                           <div className="w-2 h-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500"></div>
                           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -530,7 +583,7 @@ const InstagramDemographics = () => {
                         </p>
                       </div>
                       
-                      <div className="bg-background/60 rounded-lg p-3 border border-border/50">
+                      <div className="p-3">
                         <div className="flex items-center gap-2 mb-2">
                           <div className="w-2 h-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500"></div>
                           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">

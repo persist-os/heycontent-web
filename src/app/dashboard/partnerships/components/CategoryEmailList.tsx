@@ -51,7 +51,7 @@ const categoryColors = {
     accent: 'border-l-[#40E3FF]',
     dot: 'bg-[#40E3FF]',
     badgeBg: 'bg-[#40E3FF]',
-    badgeText: 'text-white'
+    badgeText: 'text-black'
   },
   community: {
     headerBg: 'bg-[#9BE7B2]/[0.11]',
@@ -61,7 +61,7 @@ const categoryColors = {
     accent: 'border-l-[#9BE7B2]',
     dot: 'bg-[#9BE7B2]',
     badgeBg: 'bg-[#9BE7B2]',
-    badgeText: 'text-white'
+    badgeText: 'text-black'
   }
 };
 
