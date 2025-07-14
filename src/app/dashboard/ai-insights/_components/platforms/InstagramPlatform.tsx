@@ -109,6 +109,19 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
 
   return (
     <div className="space-y-6">
+      {/* Only show demographics if data exists and not collapsed */}
+      {hasAnyDemographicData && !breakdownCollapsed && (
+        <InstagramDemographics demographicsData={transformedDemographicsData} />
+      )}
+
+      {/* No data message */}
+      {breakdowns && !hasAnyDemographicData && (
+        <div className="text-center text-muted-foreground py-8">
+          No breakdown data available yet. Keep growing your audience!
+        </div>
+      )}
+
+      {/* Analysis Depth Picker and Insights remain unchanged */}
       {!refreshing && (
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-6">
           <div className="flex-1">
@@ -127,7 +140,6 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
               handleCustomSubmit={handleCustomSubmit}
             />
           </div>
-          
           {/* Demographics Toggle Button - next to refresh controls */}
           {hasAnyDemographicData && (
             <div className="flex-shrink-0">
@@ -143,38 +155,9 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
         </div>
       )}
 
-      {/* Demographics Section - New Design - appears below the buttons */}
-      {hasAnyDemographicData && !breakdownCollapsed && (
-        <InstagramDemographics demographicsData={transformedDemographicsData} />
-      )}
-
-      {/* No data message */}
-      {breakdowns && !hasAnyDemographicData && (
-        <div className="text-center text-muted-foreground py-8">
-          No breakdown data available yet. Keep growing your audience!
-        </div>
-      )}
-
+      {/* Insights and loading states remain unchanged */}
       {!refreshing && (
-        !isConnected ? (
-          <div className="text-center py-12 px-4">
-            <Instagram className="w-16 h-16 mx-auto mb-4 text-pink-500" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-              Connect Your Instagram Account
-            </h3>
-            <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-4">
-              Connect your Instagram account to view detailed analytics, track post performance, 
-              and get insights on your content strategy.
-            </p>
-            <Button 
-              onClick={() => window.location.href = '/settings?tab=integrations'}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-lg font-medium transition-colors"
-            >
-              <Instagram className="w-4 h-4" />
-              Connect Instagram
-            </Button>
-          </div>
-        ) : loading ? (
+        loading ? (
           <div className="grid gap-6">
             {Array.from({ length: 3 }).map((_, index) => (
               <div key={index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 flex flex-col space-y-4">
@@ -209,7 +192,6 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
                 onActionStepClick={(actionStep, insightData) => {
                   console.log('🔍 [INSTAGRAM PLATFORM] Action step clicked:', actionStep);
                   console.log('🔍 [INSTAGRAM PLATFORM] Full insight data:', insightData);
-                  
                   // Create additional context for the action step
                   const additionalContext = [
                     `Platform: INSTAGRAM`,
@@ -219,7 +201,6 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
                     `Expected Outcome: ${insightData.expectedOutcome}`,
                     `Source: Instagram Insights Dashboard`
                   ].join('\n');
-                  
                   // Use the default action step discussion
                   discussActionStep(actionStep, insightData, 'instagram', additionalContext);
                 }}
