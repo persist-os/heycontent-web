@@ -74,8 +74,25 @@ export function NoteHeader({
   return (
     <div className="border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-10">
       <div className="px-4 py-3 flex items-center">
-        {/* Left spacer for centering */}
-        <div className="flex-1"></div>
+        {/* Left side with back button */}
+        <div className="flex-1 flex justify-start">
+          {/* Enhanced back button with smart navigation context */}
+          {(isMobile || fromChat || canNavigateBack) && (
+            <button
+              onClick={onBack}
+              className={`w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted/60 transition-all duration-200 group ${
+                canNavigateBack && !fromChat ? 'bg-muted/40 ring-1 ring-primary/20' : ''
+              }`}
+              title={getBackButtonTitle()}
+            >
+              <ArrowLeft className={`w-5 h-5 transition-colors duration-200 ${
+                canNavigateBack && !fromChat 
+                  ? 'text-primary group-hover:text-primary/80' 
+                  : 'text-muted-foreground group-hover:text-foreground'
+              }`} />
+            </button>
+          )}
+        </div>
         
         {/* Centered title with optional breadcrumb */}
         <div className="text-center">
@@ -96,25 +113,9 @@ export function NoteHeader({
           )}
         </div>
         
-        {/* Right side with back button and action buttons */}
+        {/* Right side with action buttons */}
         <div className="flex-1 flex justify-end">
           <div className="flex gap-2">
-            {/* Enhanced back button with smart navigation context */}
-            {(isMobile || fromChat || canNavigateBack) && (
-              <button
-                onClick={onBack}
-                className={`w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted/60 transition-all duration-200 group ${
-                  canNavigateBack && !fromChat ? 'bg-muted/40 ring-1 ring-primary/20' : ''
-                }`}
-                title={getBackButtonTitle()}
-              >
-                <ArrowLeft className={`w-5 h-5 transition-colors duration-200 ${
-                  canNavigateBack && !fromChat 
-                    ? 'text-primary group-hover:text-primary/80' 
-                    : 'text-muted-foreground group-hover:text-foreground'
-                }`} />
-              </button>
-            )}
             <button
               className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 group ${
                 note.type === 'idea_bank' 
@@ -140,24 +141,27 @@ export function NoteHeader({
                   : 'bg-muted/60 hover:bg-primary border border-transparent'
               }`}
               onClick={() => onUpdate(String(note._id), { important: !note.important })}
-              title={note.important ? 'Remove importance' : 'Mark as important'}
+              title={note.important ? 'Unmark as important' : 'Mark as important'}
             >
               <Star 
                 size={16} 
-                fill={note.important ? "currentColor" : "none"}
                 className={
-                  note.important
+                  note.important 
                     ? '!text-white group-hover:!text-white dark:!text-black dark:group-hover:!text-black dark:group-hover:stroke-black'
                     : 'text-black dark:text-white group-hover:!text-white dark:group-hover:!text-white dark:group-hover:stroke-black'
                 }
               />
             </button>
             <button
-              className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary border border-white dark:border-primary hover:bg-primary/90 transition-all duration-200 shadow-sm group"
               onClick={handleSave}
+              className="w-8 h-8 rounded-lg flex items-center justify-center bg-muted/60 hover:bg-primary border border-transparent transition-all duration-200 group"
               title="Save note"
             >
-              <Save size={16} className="!text-white dark:!text-black" />
+              {isAnalyzing ? (
+                <Loader2 size={16} className="animate-spin text-black dark:text-white" />
+              ) : (
+                <Save size={16} className="text-black dark:text-white group-hover:!text-white dark:group-hover:!text-white dark:group-hover:stroke-black" />
+              )}
             </button>
           </div>
         </div>

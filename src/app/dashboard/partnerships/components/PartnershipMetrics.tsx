@@ -80,24 +80,22 @@ export default function PartnershipMetrics({
               <Tooltip key={metric.label}>
                 <TooltipTrigger asChild>
                   <Card 
-                    className="p-3 cursor-pointer transition-all duration-200"
-                    style={{
-                      borderRadius: '15px',
-                      border: '1px solid #FAFAFA',
-                      background: '#2B2B2B',
-                      boxShadow: '0px 0px 20px 0px rgba(255, 255, 255, 0.27) inset, 0px 0px 30px 0px rgba(0, 0, 0, 0.25)'
-                    }}
+                    className={`p-3 cursor-pointer transition-all duration-200 ${
+                      isActive 
+                        ? 'bg-primary/10 border-primary/30 ring-2 ring-primary/30 shadow-lg' 
+                        : 'bg-card border-border hover:bg-muted'
+                    }`}
                     onClick={() => onFilterChange(metric.filter)}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <Icon className="w-4 h-4 text-white/70" />
-                          <p className="text-xs font-medium text-white/70">
+                          <Icon className="w-4 h-4 text-muted-foreground" />
+                          <p className="text-xs font-medium text-muted-foreground">
                             {metric.label}
                           </p>
                         </div>
-                        <p className="text-lg font-bold text-white">
+                        <p className="text-lg font-bold text-foreground">
                           {metric.value}
                         </p>
                       </div>
@@ -117,24 +115,22 @@ export default function PartnershipMetrics({
           <Tooltip>
             <TooltipTrigger asChild>
               <Card 
-                className="p-3 cursor-pointer transition-all duration-200"
-                style={{
-                  borderRadius: '15px',
-                  border: '1px solid #FAFAFA',
-                  background: '#2B2B2B',
-                  boxShadow: '0px 0px 20px 0px rgba(255, 255, 255, 0.27) inset, 0px 0px 30px 0px rgba(0, 0, 0, 0.25)'
-                }}
+                className={`p-3 cursor-pointer transition-all duration-200 ${
+                  activeFilter === 'high-value' 
+                    ? 'bg-primary/10 border-primary/30 ring-2 ring-primary/30 shadow-lg' 
+                    : 'bg-card border-border hover:bg-muted'
+                }`}
                 onClick={() => onFilterChange('high-value')}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <Coins className="w-4 h-4 text-yellow-400" />
-                      <p className="text-xs font-medium text-white/70">
+                      <Coins className="w-4 h-4 text-yellow-500 dark:text-yellow-400" />
+                      <p className="text-xs font-medium text-muted-foreground">
                         Total Deal Value
                       </p>
                     </div>
-                    <p className="text-lg font-bold text-white">
+                    <p className="text-lg font-bold text-foreground">
                       {formatValue(pipelineValue)}
                     </p>
                   </div>

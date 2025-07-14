@@ -12,26 +12,9 @@ import { Instagram } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PlatformConnectionPrompt } from '../../../_components/content-hub/PlatformConnectionPrompt'
 import { useInstagramBreakdowns } from '../hooks/useInstagramBreakdowns'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import {
-  getCountryNameFromCode,
-  getGenderLabel,
-  sortAgeGroups,
-  groupBreakdownValues,
-  getMetricLabel
-} from '@/app/lib/utils/format-utils'
-import { isLargeDataset, PerformanceTimer } from '@/app/lib/utils/performance-utils'
-import { LargeDatasetLoading } from '@/components/ui/loading-states'
+import InstagramDemographics from '../../../content-analytics/components/InstagramDemographics'
 
-const BREAKDOWN_LABELS = {
-  country_breakdown: "Country",
-  city_breakdown: "City",
-  age_breakdown: "Age",
-  gender_breakdown: "Gender",
-  follow_type_breakdown: "Follow Type",
-  media_product_type_breakdown: "Media Product Type",
-  contact_button_type_breakdown: "Contact Button Type",
-};
+
 
 interface InstagramPlatformProps {
   userId?: string
@@ -61,20 +44,43 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
 
   const breakdowns = useInstagramBreakdowns(userId);
 
-  // Dynamically generate available breakdowns
-  const availableBreakdowns = Object.entries(BREAKDOWN_LABELS)
-    .filter(([key]) => breakdowns && Array.isArray(breakdowns[key]) && breakdowns[key].length > 0)
-    .map(([key, label]) => ({ key, label }));
+  // Transform AI Insights breakdowns data to match InstagramDemographics component format
+  const transformedDemographicsData = React.useMemo(() => {
+    if (!breakdowns) return null;
+    
+    // Create a function to convert breakdown data to the expected format
+    const transformBreakdownData = (breakdownKey: string) => {
+      const data = breakdowns[breakdownKey];
+      if (!data || !Array.isArray(data)) return [];
+      
+      // Each breakdown item should have a metric and values array
+      return data.map(item => ({
+        metric: item.metric || "engaged_audience_demographics",
+        values: item.values || []
+      }));
+    };
 
-  const [selectedBreakdown, setSelectedBreakdown] = useState(
-    availableBreakdowns[0]?.key || null
+    return {
+      age_breakdown: transformBreakdownData('age_breakdown'),
+      gender_breakdown: transformBreakdownData('gender_breakdown'),
+      city_breakdown: transformBreakdownData('city_breakdown'),
+      country_breakdown: transformBreakdownData('country_breakdown'),
+      follow_type_breakdown: transformBreakdownData('follow_type_breakdown'),
+      media_product_type_breakdown: transformBreakdownData('media_product_type_breakdown'),
+      profileData: (breakdowns as any)?.profileData || {},
+      updatedAt: (breakdowns as any)?.updatedAt || Date.now()
+    };
+  }, [breakdowns]);
+
+  // Check if we have any demographic data
+  const hasAnyDemographicData = transformedDemographicsData && (
+    transformedDemographicsData.age_breakdown.length > 0 ||
+    transformedDemographicsData.gender_breakdown.length > 0 ||
+    transformedDemographicsData.city_breakdown.length > 0 ||
+    transformedDemographicsData.country_breakdown.length > 0 ||
+    transformedDemographicsData.follow_type_breakdown.length > 0 ||
+    transformedDemographicsData.media_product_type_breakdown.length > 0
   );
-
-  useEffect(() => {
-    if (availableBreakdowns.length > 0 && !selectedBreakdown) {
-      setSelectedBreakdown(availableBreakdowns[0].key);
-    }
-  }, [availableBreakdowns, selectedBreakdown]);
 
   const handleRefreshOrConnect = () => {
     if (!isConnected) {
@@ -103,67 +109,50 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
 
   return (
     <div className="space-y-6">
-      {/* Breakdown Filter */}
-      {breakdowns ? (
-        availableBreakdowns.length > 0 ? (
-          <div className="w-full">
-            <div className="flex items-center justify-end mb-4">
-                <button
-                  onClick={() => setBreakdownCollapsed((prev) => !prev)}
-                  className="ml-2 px-3 py-1 rounded hover:bg-muted/50 text-muted-foreground text-sm font-medium"
-                  aria-label={breakdownCollapsed ? 'Show breakdowns' : 'Hide breakdowns'}
-                >
-                  {breakdownCollapsed ? 'Show' : 'Hide'}
-                </button>
+      {!refreshing && (
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-6">
+          <div className="flex-1">
+            <AnalysisDepthPicker
+              platform="Instagram"
+              isRefreshing={refreshing}
+              error={error}
+              onRefresh={handleRefreshOrConnect}
+              disabled={!userId}
+              postLimit={postLimit}
+              setPostLimit={setPostLimit}
+              customPostLimit={customPostLimit}
+              setCustomPostLimit={setCustomPostLimit}
+              showCustomInput={showCustomInput}
+              setShowCustomInput={setShowCustomInput}
+              handleCustomSubmit={handleCustomSubmit}
+            />
+          </div>
+          
+          {/* Demographics Toggle Button - next to refresh controls */}
+          {hasAnyDemographicData && (
+            <div className="flex-shrink-0">
+              <button
+                onClick={() => setBreakdownCollapsed((prev) => !prev)}
+                className="px-3 py-2 rounded-lg border border-border hover:bg-muted/50 text-muted-foreground text-sm font-medium transition-colors"
+                aria-label={breakdownCollapsed ? 'Show demographics' : 'Hide demographics'}
+              >
+                {breakdownCollapsed ? 'Show Demographics' : 'Hide Demographics'}
+              </button>
             </div>
-            {!breakdownCollapsed && (
-              <Tabs value={selectedBreakdown || undefined} onValueChange={setSelectedBreakdown} className="w-full">
-                <TabsList className="mb-4 flex flex-wrap gap-2">
-                  {availableBreakdowns.map(({ key, label }) => (
-                    <TabsTrigger key={key} value={key} className="capitalize">
-                      {label}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-                {availableBreakdowns.map(({ key, label }) => (
-                  <TabsContent key={key} value={key}>
-                    <BreakdownDisplay data={breakdowns[key]} label={label} />
-                  </TabsContent>
-                ))}
-              </Tabs>
-            )}
-          </div>
-        ) : (
-          <div className="text-center text-muted-foreground py-8">
-            No breakdown data available yet. Keep growing your audience!
-          </div>
-        )
-      ) : (
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-1/2" />
-          <Skeleton className="h-6 w-full" />
-          <Skeleton className="h-6 w-5/6" />
+          )}
         </div>
       )}
 
-      {/* Divider before batch analysis/analysis depth section */}
-      <hr className="my-6 border-t border-muted dark:border-white/10" />
+      {/* Demographics Section - New Design - appears below the buttons */}
+      {hasAnyDemographicData && !breakdownCollapsed && (
+        <InstagramDemographics demographicsData={transformedDemographicsData} />
+      )}
 
-      {!refreshing && (
-        <AnalysisDepthPicker
-          platform="Instagram"
-          isRefreshing={refreshing}
-          error={error}
-          onRefresh={handleRefreshOrConnect}
-          disabled={!userId}
-          postLimit={postLimit}
-          setPostLimit={setPostLimit}
-          customPostLimit={customPostLimit}
-          setCustomPostLimit={setCustomPostLimit}
-          showCustomInput={showCustomInput}
-          setShowCustomInput={setShowCustomInput}
-          handleCustomSubmit={handleCustomSubmit}
-        />
+      {/* No data message */}
+      {breakdowns && !hasAnyDemographicData && (
+        <div className="text-center text-muted-foreground py-8">
+          No breakdown data available yet. Keep growing your audience!
+        </div>
       )}
 
       {!refreshing && (
@@ -241,139 +230,4 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
       )}
     </div>
   )
-} 
-
-// Creative breakdown display
-function BreakdownDisplay({ data, label }) {
-  // Remove collapse logic from here
-
-  if (!data || data.length === 0) {
-    return (
-      <div className="text-center text-muted-foreground py-6">
-        No {label} data yet. Try a different filter!
-      </div>
-    );
-  }
-
-  // Detect all unique metrics in the data
-  const uniqueMetrics: string[] = React.useMemo(() => {
-    return Array.from(new Set(data.map((metricObj) => metricObj.metric)));
-  }, [data]);
-
-  // Default to first metric
-  const [selectedMetric, setSelectedMetric] = React.useState<string>(uniqueMetrics[0]);
-
-  React.useEffect(() => {
-    if (uniqueMetrics.length > 0 && !selectedMetric) {
-      setSelectedMetric(uniqueMetrics[0]);
-    }
-  }, [uniqueMetrics, selectedMetric]);
-
-  // Performance optimization: Check if data is large and show loading state
-  const isLargeDatasetFlag = isLargeDataset(data.length);
-  const [processed, setProcessed] = React.useState(false);
-  const [processingStartTime, setProcessingStartTime] = React.useState<number | null>(null);
-
-  const MAX_BARS = 7;
-
-  if (isLargeDatasetFlag && !processed) {
-    if (!processingStartTime) {
-      setProcessingStartTime(performance.now());
-    }
-    return (
-      <LargeDatasetLoading
-        dataCount={data.length}
-        operation={`Processing ${label} breakdown`}
-        showProgress={false}
-      />
-    );
-  }
-
-  function formatName(name, breakdownType) {
-    if (breakdownType === 'country_breakdown') return getCountryNameFromCode(name);
-    if (breakdownType === 'gender_breakdown') return getGenderLabel(name);
-    return name;
-  }
-
-  function processValues(values, breakdownType) {
-    let grouped = groupBreakdownValues(values);
-    if (breakdownType === 'age_breakdown') grouped = sortAgeGroups(grouped);
-    if (breakdownType === 'gender_breakdown') grouped = grouped.sort((a, b) => b.value - a.value);
-    if (breakdownType === 'country_breakdown' || breakdownType === 'city_breakdown') grouped = grouped.sort((a, b) => b.value - a.value);
-    return grouped;
-  }
-
-  // Only show data for the selected metric
-  const selectedMetricObj = data.find((metricObj) => metricObj.metric === selectedMetric);
-  const processedData = React.useMemo(() => {
-    if (!selectedMetricObj) return null;
-    const timer = new PerformanceTimer(`Processing ${label} breakdown`);
-    const processed = processValues(selectedMetricObj.values, label.toLowerCase() + '_breakdown');
-    const topValues = processed.slice(0, MAX_BARS);
-    const total = processed.reduce((sum, v) => sum + v.value, 0);
-    timer.endWithThreshold(100);
-    return { processed, topValues, total, metricObj: selectedMetricObj };
-  }, [selectedMetricObj, label]);
-
-  React.useEffect(() => {
-    if (isLargeDatasetFlag && !processed && processedData) {
-      setProcessed(true);
-      if (processingStartTime) {
-        console.log(`Processed ${label} breakdown in ${performance.now() - processingStartTime}ms`);
-      }
-    }
-  }, [isLargeDatasetFlag, processed, processedData, label, processingStartTime]);
-
-  if (!processedData) {
-    return (
-      <div className="bg-card rounded-lg p-4 shadow space-y-4">
-        <h4 className="text-lg font-semibold mb-2">{label} Breakdown</h4>
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-5/6" />
-          <Skeleton className="h-4 w-4/6" />
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-card rounded-lg p-4 shadow space-y-4">
-      {/* Metric Selector Tabs */}
-      <div className="mb-4">
-        <Tabs value={selectedMetric} onValueChange={(val) => setSelectedMetric(val as string)} className="w-full">
-          <TabsList className="flex flex-wrap gap-2">
-            {uniqueMetrics.map((metric: string) => (
-              <TabsTrigger key={metric} value={metric} className="capitalize">
-                {getMetricLabel(metric)}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-      </div>
-
-      <div className="space-y-4">
-        <div className="mb-4">
-          <div className="font-medium mb-2 text-sm text-muted-foreground">{getMetricLabel(processedData.metricObj.metric)}</div>
-          <ul className="space-y-2">
-            {processedData.topValues.map((item, i) => (
-              <li key={i} className="flex items-center gap-4">
-                <span className="font-medium min-w-[100px] truncate" title={item.name}>{formatName(item.name, label.toLowerCase() + '_breakdown')}</span>
-                <div className="flex-1 bg-muted rounded h-4 relative">
-                  <div
-                    className="bg-primary h-4 rounded"
-                    style={{ width: processedData.total ? `${Math.round((item.value / processedData.total) * 100)}%` : '0%' }}
-                  />
-                  <span className="absolute right-2 text-xs text-muted-foreground">{item.value.toLocaleString()}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
-          {processedData.processed.length > MAX_BARS && (
-            <div className="text-xs text-muted-foreground mt-2">+{processedData.processed.length - MAX_BARS} more</div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
 } 
