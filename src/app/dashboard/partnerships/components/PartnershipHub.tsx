@@ -241,15 +241,15 @@ export function PartnershipHub() {
                       <div 
                         className={`flex items-center gap-2 px-4 py-3 border rounded-lg backdrop-blur-sm cursor-pointer transition-all duration-200 ${
                           activeFilter === 'all' 
-                            ? 'bg-white/15 border-white/30 ring-2 ring-white/30 shadow-lg' 
-                            : 'bg-white/5 border-white/10 hover:bg-white/10'
+                            ? 'bg-primary/10 border-primary/30 ring-2 ring-primary/30 shadow-lg' 
+                            : 'bg-card border-border hover:bg-muted'
                         }`}
                         onClick={() => setActiveFilter('all')}
                       >
-                        <Mail className="w-5 h-5 text-white/70" />
+                        <Mail className="w-5 h-5 text-muted-foreground" />
                         <div>
-                          <div className="text-xl font-bold text-white">{partnerships.length}</div>
-                          <div className="text-xs text-white/70">Total Emails</div>
+                          <div className="text-xl font-bold text-foreground">{partnerships.length}</div>
+                          <div className="text-xs text-muted-foreground">Total Emails</div>
                         </div>
                       </div>
                     </TooltipTrigger>
@@ -263,15 +263,15 @@ export function PartnershipHub() {
                       <div 
                         className={`flex items-center gap-2 px-4 py-3 border rounded-lg backdrop-blur-sm cursor-pointer transition-all duration-200 ${
                           activeFilter === 'active' 
-                            ? 'bg-white/15 border-white/30 ring-2 ring-white/30 shadow-lg' 
-                            : 'bg-white/5 border-white/10 hover:bg-white/10'
+                            ? 'bg-primary/10 border-primary/30 ring-2 ring-primary/30 shadow-lg' 
+                            : 'bg-card border-border hover:bg-muted'
                         }`}
                         onClick={() => setActiveFilter('active')}
                       >
-                        <MessageSquare className="w-5 h-5 text-white/70" />
+                        <MessageSquare className="w-5 h-5 text-muted-foreground" />
                         <div>
-                          <div className="text-xl font-bold text-white">{partnershipMetrics.activePartnerships}</div>
-                          <div className="text-xs text-white/70">Active Discussions</div>
+                          <div className="text-xl font-bold text-foreground">{partnershipMetrics.activePartnerships}</div>
+                          <div className="text-xs text-muted-foreground">Active Discussions</div>
                         </div>
                       </div>
                     </TooltipTrigger>
@@ -285,15 +285,15 @@ export function PartnershipHub() {
                       <div 
                         className={`flex items-center gap-2 px-4 py-3 border rounded-lg backdrop-blur-sm cursor-pointer transition-all duration-200 ${
                           activeFilter === 'pending' 
-                            ? 'bg-white/15 border-white/30 ring-2 ring-white/30 shadow-lg' 
-                            : 'bg-white/5 border-white/10 hover:bg-white/10'
+                            ? 'bg-primary/10 border-primary/30 ring-2 ring-primary/30 shadow-lg' 
+                            : 'bg-card border-border hover:bg-muted'
                         }`}
                         onClick={() => setActiveFilter('pending')}
                       >
-                        <Clock className="w-5 h-5 text-white/70" />
+                        <Clock className="w-5 h-5 text-muted-foreground" />
                         <div>
-                          <div className="text-xl font-bold text-white">{partnershipMetrics.pendingResponses}</div>
-                          <div className="text-xs text-white/70">Needs Response</div>
+                          <div className="text-xl font-bold text-foreground">{partnershipMetrics.pendingResponses}</div>
+                          <div className="text-xs text-muted-foreground">Needs Response</div>
                         </div>
                       </div>
                     </TooltipTrigger>
@@ -307,15 +307,15 @@ export function PartnershipHub() {
                       <div 
                         className={`flex items-center gap-2 px-4 py-3 border rounded-lg backdrop-blur-sm cursor-pointer transition-all duration-200 ${
                           activeFilter === 'brand-deals' 
-                            ? 'bg-white/15 border-white/30 ring-2 ring-white/30 shadow-lg' 
-                            : 'bg-white/5 border-white/10 hover:bg-white/10'
+                            ? 'bg-primary/10 border-primary/30 ring-2 ring-primary/30 shadow-lg' 
+                            : 'bg-card border-border hover:bg-muted'
                         }`}
                         onClick={() => setActiveFilter('brand-deals')}
                       >
-                        <Users className="w-5 h-5 text-white/70" />
+                        <Users className="w-5 h-5 text-muted-foreground" />
                         <div>
-                          <div className="text-xl font-bold text-white">{brandDealsCount}</div>
-                          <div className="text-xs text-white/70">Brand Deals</div>
+                          <div className="text-xl font-bold text-foreground">{brandDealsCount}</div>
+                          <div className="text-xs text-muted-foreground">Brand Deals</div>
                         </div>
                       </div>
                     </TooltipTrigger>
@@ -365,12 +365,12 @@ export function PartnershipHub() {
                   <span className="text-black font-bold text-sm">$</span>
                 </div>
                 <div>
-                  <div className="text-xl font-bold text-white">
+                  <div className="text-xl font-bold text-foreground">
                     {partnershipMetrics.pipelineValue >= 1000000 ? `$${(partnershipMetrics.pipelineValue / 1000000).toFixed(1)}M` :
                      partnershipMetrics.pipelineValue >= 1000 ? `$${(partnershipMetrics.pipelineValue / 1000).toFixed(1)}K` :
                      partnershipMetrics.pipelineValue === 0 ? '$0' : `$${partnershipMetrics.pipelineValue}`}
                   </div>
-                  <div className="text-xs text-white/70">Deal Value</div>
+                  <div className="text-xs text-muted-foreground">Deal Value</div>
                 </div>
               </div>
             </div>
