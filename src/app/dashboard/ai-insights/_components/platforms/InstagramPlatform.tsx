@@ -13,7 +13,8 @@ import { Button } from '@/components/ui/button'
 import { PlatformConnectionPrompt } from '../../../_components/content-hub/PlatformConnectionPrompt'
 import { useInstagramBreakdowns } from '../hooks/useInstagramBreakdowns'
 import InstagramDemographics from '../../../content-analytics/components/InstagramDemographics'
-
+import { toast } from 'sonner';
+import { getApiKey, getCurrentUserId } from '@/app/lib/api-helpers';
 
 
 interface InstagramPlatformProps {
@@ -22,16 +23,19 @@ interface InstagramPlatformProps {
   loading: boolean
 }
 
-export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPlatformProps) {
+export function InstagramPlatform({ userId: propUserId, currentQuote, loading }: InstagramPlatformProps) {
+  const userId = propUserId || getCurrentUserId();
   const [expandedInsight, setExpandedInsight] = useState<number | null>(null)
   const [breakdownCollapsed, setBreakdownCollapsed] = useState(false);
   const { navigateWithInsight } = useInsightNavigation()
   const { discussActionStep } = useActionStepDiscussion()
-  const { 
-    insights, 
-    refreshing, 
-    error, 
-    isConnected, 
+  const [refreshingDemographics, setRefreshingDemographics] = useState(false);
+
+  const {
+    insights,
+    refreshing,
+    error,
+    isConnected,
     refresh,
     postLimit,
     setPostLimit,
@@ -40,7 +44,7 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
     showCustomInput,
     setShowCustomInput,
     handleCustomSubmit
-  } = useInstagramInsights(userId)
+  } = useInstagramInsights(userId);
 
   const breakdowns = useInstagramBreakdowns(userId);
 
@@ -90,6 +94,45 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
     }
   };
 
+  const handleRefreshDemographics = async () => {
+    setRefreshingDemographics(true);
+    try {
+      const apiKey = await getApiKey();
+      if (!apiKey) {
+        toast.error('No API key found. Please log in again.');
+        setRefreshingDemographics(false);
+        return;
+      }
+      // Extract user_id from API key
+      const apiKeyParts = apiKey.split('_');
+      const user_id = apiKeyParts.length >= 2 && apiKeyParts[0] === 'heycontent' ? apiKeyParts[1] : null;
+      if (!user_id) {
+        toast.error('Invalid API key format. Please log in again.');
+        setRefreshingDemographics(false);
+        return;
+      }
+      const res = await fetch('/api/social/instagram/refresh-demographics', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({}), // Optionally add expires_at, scope if needed
+      });
+      const data = await res.json();
+      if (res.ok && (data.success || data.profile_stored)) {
+        toast.success('Demographics refreshed!');
+        // Optionally, trigger a refetch of breakdowns here if your hook supports it
+      } else {
+        toast.error(data.error || 'Failed to refresh demographics');
+      }
+    } catch (err) {
+      toast.error('Failed to refresh demographics');
+    } finally {
+      setRefreshingDemographics(false);
+    }
+  };
+
   // Handle Instagram not connected state
   if (!isConnected) {
     return (
@@ -109,6 +152,25 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
 
   return (
     <div className="space-y-6">
+      {/* Demographics Controls: Top Right */}
+      <div className="flex justify-end items-center gap-3">
+        <button
+          onClick={handleRefreshDemographics}
+          className="px-4 py-2 rounded-lg bg-pink-600 hover:bg-pink-700 text-white font-medium transition-colors disabled:opacity-60"
+          disabled={refreshingDemographics || !userId}
+        >
+          {refreshingDemographics ? 'Refreshing...' : 'Refresh Demographics'}
+        </button>
+        {hasAnyDemographicData && (
+          <button
+            onClick={() => setBreakdownCollapsed((prev) => !prev)}
+            className="px-3 py-2 rounded-lg border border-border hover:bg-muted/50 text-muted-foreground text-sm font-medium transition-colors"
+            aria-label={breakdownCollapsed ? 'Show demographics' : 'Hide demographics'}
+          >
+            {breakdownCollapsed ? 'Show Demographics' : 'Hide Demographics'}
+          </button>
+        )}
+      </div>
       {/* Only show demographics if data exists and not collapsed */}
       {hasAnyDemographicData && !breakdownCollapsed && (
         <InstagramDemographics demographicsData={transformedDemographicsData} />
@@ -140,18 +202,6 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
               handleCustomSubmit={handleCustomSubmit}
             />
           </div>
-          {/* Demographics Toggle Button - next to refresh controls */}
-          {hasAnyDemographicData && (
-            <div className="flex-shrink-0">
-              <button
-                onClick={() => setBreakdownCollapsed((prev) => !prev)}
-                className="px-3 py-2 rounded-lg border border-border hover:bg-muted/50 text-muted-foreground text-sm font-medium transition-colors"
-                aria-label={breakdownCollapsed ? 'Show demographics' : 'Hide demographics'}
-              >
-                {breakdownCollapsed ? 'Show Demographics' : 'Hide Demographics'}
-              </button>
-            </div>
-          )}
         </div>
       )}
 
@@ -209,6 +259,17 @@ export function InstagramPlatform({ userId, currentQuote, loading }: InstagramPl
           </div>
         )
       )}
+
+      {/* Batch Analysis Controls: Bottom */}
+      <div className="flex justify-end mt-8">
+        <Button
+          onClick={handleRefreshOrConnect}
+          disabled={!userId}
+          variant="outline"
+        >
+          Refresh Instagram
+        </Button>
+      </div>
     </div>
   )
 } 
