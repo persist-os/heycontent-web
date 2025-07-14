@@ -75,7 +75,7 @@ jobs:
             message += `**Frontend Quality**: ${frontendResult === 'success' ? '✅ READY' : '❌ BLOCKED'}\n\n`;
             
             if (frontendResult === 'success') {
-              message += '🚀 **FRONTEND READY** - All quality gates passed. Ready for dev deployment and your review @paing.';
+              message += '🚀 **FRONTEND READY** - All quality gates passed. Ready for dev deployment and your review @MyatPyaePaingPie.';
             } else {
               message += '⚠️ **BLOCKED** - Frontend quality checks failed. Address issues before dev deployment.';
             }
