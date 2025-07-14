@@ -1,11 +1,11 @@
-name: Production Deployment
+name: Production Deployment & Sync
 
 on:
   push:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
   issues: write
   pull-requests: write
 
@@ -15,6 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
       - name: Wait for Vercel production deployment
         run: |
           echo "Waiting for Vercel production auto-deployment to complete..."
@@ -72,10 +77,45 @@ jobs:
             exit 1
           fi
 
+  sync-dev-branch:
+    name: Sync Dev with Main
+    runs-on: ubuntu-latest
+    needs: [verify-production-deployment]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: Sync dev branch with main
+        run: |
+          echo "🔄 Syncing dev branch with main after deployment..."
+          
+          # Fetch all branches
+          git fetch origin
+          
+          # Switch to dev branch
+          git checkout dev
+          
+          # Merge main into dev to sync them
+          git merge origin/main --no-ff -m "🤖 Auto-sync dev with main after production deployment"
+          
+          # Push the updated dev branch
+          git push origin dev
+          
+          echo "✅ Dev branch successfully synced with main"
+
   production-notification:
     name: Production Success Notification
     runs-on: ubuntu-latest
-    needs: [verify-production-deployment]
+    needs: [verify-production-deployment, sync-dev-branch]
     
     steps:
       - name: Close production review issue
@@ -130,6 +170,7 @@ jobs:
             - ✅ Health checks passed
             - ✅ Essential pages accessible
             - ✅ Production environment verified
+            - ✅ Dev branch synced with main
             
             **Team Notifications:**
             - @MyatPyaePaingPie ✅ Quality review completed
@@ -163,6 +204,7 @@ jobs:
             - Quality gates passed by @MyatPyaePaingPie
             - Production approved by @Shreyboiii  
             - Successfully deployed and verified
+            - Dev branch synced with main
             
             **Quick Links:**
             - [🌐 Live Site](https://heycontent-web-divertissement-ai.vercel.app)
