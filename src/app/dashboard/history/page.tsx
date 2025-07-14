@@ -8,11 +8,14 @@ import {
   MessageSquare,
   Trash2,
   Star,
-  Clock
+  Clock,
+  AlertTriangle
 } from 'lucide-react'
 import { ChatHistory } from '@/app/types/chat'
 import { getApiKey } from '@/app/lib/api-helpers'
 import { Skeleton } from '@/components/ui/skeleton'
+import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog'
+import { Button } from '@/components/ui/button'
 
 // Helper function to format relative time
 const formatRelativeTime = (timestamp: string | number): string => {
@@ -38,6 +41,11 @@ export default function HistoryPage() {
   const [chats, setChats] = useState<ChatHistory[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false)
+  const [chatToDelete, setChatToDelete] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isDeletingAll, setIsDeletingAll] = useState(false)
 
   // Fetch chats
   useEffect(() => {
@@ -66,15 +74,7 @@ export default function HistoryPage() {
   }, [firebaseUser?.uid])
 
   const handleDeleteChat = async (chatId: string) => {
-    // Show confirmation dialog
-    const isConfirmed = window.confirm(
-      'Are you sure you want to delete this conversation? This action cannot be undone.'
-    );
-    
-    if (!isConfirmed) {
-      return;
-    }
-
+    setIsDeleting(true)
     try {
       const apiKey = await getApiKey();
       
@@ -96,18 +96,126 @@ export default function HistoryPage() {
     } catch (error) {
       console.error('Failed to delete chat:', error);
       alert('Failed to delete conversation. Please try again.');
+    } finally {
+      setIsDeleting(false)
+      setDeleteDialogOpen(false)
+      setChatToDelete(null)
     }
+  }
+
+  const handleDeleteAllChats = async () => {
+    setIsDeletingAll(true)
+    try {
+      const apiKey = await getApiKey();
+      
+      // Delete all chats one by one
+      const deletePromises = chats.map(chat => 
+        fetch(`/api/chat/${chat.id}`, { 
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+          },
+        })
+      );
+      
+      const results = await Promise.allSettled(deletePromises);
+      
+      // Check for any failures
+      const failures = results.filter(result => result.status === 'rejected');
+      if (failures.length > 0) {
+        console.error('Some deletions failed:', failures);
+        alert(`Failed to delete ${failures.length} conversations. Please try again.`);
+      } else {
+        // All deletions successful
+        setChats([]);
+        console.log('Successfully deleted all conversations');
+      }
+    } catch (error) {
+      console.error('Failed to delete all chats:', error);
+      alert('Failed to delete all conversations. Please try again.');
+    } finally {
+      setIsDeletingAll(false)
+      setDeleteAllDialogOpen(false)
+    }
+  }
+
+  const openDeleteDialog = (chatId: string) => {
+    setChatToDelete(chatId)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = () => {
+    if (chatToDelete) {
+      handleDeleteChat(chatToDelete)
+    }
+  }
+
+  const cancelDelete = () => {
+    setDeleteDialogOpen(false)
+    setChatToDelete(null)
+  }
+
+  const openDeleteAllDialog = () => {
+    setDeleteAllDialogOpen(true)
+  }
+
+  const cancelDeleteAll = () => {
+    setDeleteAllDialogOpen(false)
+  }
+
+  const confirmDeleteAll = () => {
+    handleDeleteAllChats()
   }
 
   const filteredChats = chats.filter(chat =>
     chat.topic.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
+  const totalChats = chats.length
+  const displayedChats = filteredChats.length
+
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6">
-      {/* Search */}
+      {/* Header with count and actions */}
       <div className="mt-4 sm:mt-8 mb-6">
-        <h1 className="text-foreground text-xl font-semibold mb-3">Your chat history</h1>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-foreground text-xl font-semibold">Chat History</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {isLoading ? (
+                'Loading conversations...'
+              ) : (
+                <>
+                  {totalChats === 0 ? (
+                    'No conversations yet'
+                  ) : (
+                    <>
+                      {searchQuery ? (
+                        `${displayedChats} of ${totalChats} conversations`
+                      ) : (
+                        `${totalChats} conversation${totalChats === 1 ? '' : 's'}`
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+            </p>
+          </div>
+          {!isLoading && totalChats > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={openDeleteAllDialog}
+              disabled={isDeletingAll}
+              className="gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              {isDeletingAll ? 'Deleting All...' : 'Delete All'}
+            </Button>
+          )}
+        </div>
+        
+        {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <input
@@ -142,16 +250,18 @@ export default function HistoryPage() {
       ) : filteredChats.length === 0 ? (
         <div className="text-center py-12">
           <MessageSquare className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-foreground/80 mb-2">No conversations found</h3>
+          <h3 className="text-lg font-medium text-foreground/80 mb-2">
+            {searchQuery ? 'No conversations found' : 'No conversations yet'}
+          </h3>
           <p className="text-muted-foreground/70 mb-6">
             {searchQuery ? 'No conversations match your search.' : 'Start a conversation to see your chat history here.'}
           </p>
-          <button
+          <Button
             onClick={() => router.push('/dashboard/chat')}
-            className="bg-primary text-primary-foreground px-5 py-2.5 rounded-lg hover:bg-primary/90 transition-colors font-medium"
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
             Start New Chat
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="space-y-3">
@@ -192,7 +302,7 @@ export default function HistoryPage() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDeleteChat(chat.id);
+                      openDeleteDialog(chat.id);
                     }}
                     className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-destructive/10 rounded-md transition-all text-destructive/80 hover:text-destructive"
                     title="Delete chat"
@@ -206,6 +316,27 @@ export default function HistoryPage() {
           ))}
         </div>
       )}
+
+      {/* Delete Single Chat Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={deleteDialogOpen}
+        onClose={cancelDelete}
+        onConfirm={confirmDelete}
+        title="Delete Conversation"
+        description="Are you sure you want to delete this conversation? This action cannot be undone."
+        isLoading={isDeleting}
+      />
+
+      {/* Delete All Chats Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={deleteAllDialogOpen}
+        onClose={cancelDeleteAll}
+        onConfirm={confirmDeleteAll}
+        title="Delete All Conversations"
+        description={`Are you sure you want to delete all ${totalChats} conversations? This action cannot be undone and will permanently remove all your chat history.`}
+        confirmText="Delete All"
+        isLoading={isDeletingAll}
+      />
     </div>
   )
 }
