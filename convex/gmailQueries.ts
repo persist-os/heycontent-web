@@ -127,6 +127,8 @@ export const getGmailThreadsPaginated = query({
     })),
     isDone: v.boolean(),
     continueCursor: v.union(v.string(), v.null()),
+    pageStatus: v.optional(v.any()),
+    splitCursor: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
     let query = ctx.db
@@ -187,6 +189,8 @@ export const getGmailMessagesPaginated = query({
     })),
     isDone: v.boolean(),
     continueCursor: v.union(v.string(), v.null()),
+    pageStatus: v.optional(v.any()),
+    splitCursor: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
     let query = ctx.db

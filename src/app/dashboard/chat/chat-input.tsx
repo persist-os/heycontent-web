@@ -9,6 +9,7 @@ import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useAuth } from '@/app/context/auth-context'
 import { useContentResolver } from '@/lib/content-resolver'
+import { getCurrentUserId } from '@/app/lib/api-helpers'
 
 interface ChatInputProps {
   onSend: (message: string) => void
@@ -31,6 +32,7 @@ interface ChatInputProps {
   quotedForNotepad?: string
   onClearQuoted?: () => void
   disabled?: boolean
+  currentTab?: string // Add currentTab prop for tab-specific @ linking
 }
 
 const placeholders = [
@@ -67,7 +69,8 @@ export function ChatInput({
   openNotepad,
   quotedForNotepad,
   onClearQuoted,
-  disabled = false
+  disabled = false,
+  currentTab = 'all'
 }: ChatInputProps) {
   const [input, setInput] = useState('')
   const [placeholder, setPlaceholder] = useState(placeholders[0])
@@ -83,12 +86,26 @@ export function ChatInput({
   const [contentSelectorPosition, setContentSelectorPosition] = useState({ top: 100, left: 100 })
   const [contentSearchTerm, setContentSearchTerm] = useState('')
   
-  // Auth context for content fetching
-  const { firebaseUser } = useAuth()
-  const userId = firebaseUser?.uid
+  // Get current user ID from API key
+  const userId = getCurrentUserId()
   
-  // Fetch all linkable content using the new content resolver
-  const { allContent: allLinkableContent, isLoading: isContentLoading } = useContentResolver(userId)
+  // Fetch content using the new content resolver
+  const { getContentByTab, isLoading: isContentLoading } = useContentResolver(userId)
+  
+  // Get tab-specific content for @ linking
+  const tabSpecificContent = getContentByTab(currentTab)
+  const allLinkableContent = tabSpecificContent
+  
+  // Debug logging
+  console.log('[ChatInput] Content resolution:', {
+    currentTab: currentTab || 'undefined',
+    contentCount: tabSpecificContent?.length || 0,
+    sampleContent: tabSpecificContent?.slice(0, 3).map(item => ({ 
+      id: item.id, 
+      title: item.title, 
+      platform: item.platform 
+    })) || []
+  });
   
   // Theme-aware accent colors
   const isDark = theme === 'dark'
@@ -689,6 +706,7 @@ export function ChatInput({
         position={contentSelectorPosition}
         searchTerm={contentSearchTerm}
         onSearchChange={setContentSearchTerm}
+        currentTab={currentTab}
       />
     </div>
   )

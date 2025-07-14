@@ -116,6 +116,7 @@ export interface ContentStoreState {
   findContentById: (contentId: string) => UnifiedContent | null;
   getContentByPlatform: (platform: keyof PlatformContentData) => UnifiedContent[];
   getAllLinkableContent: () => UnifiedContent[];
+  getContentByTab: (currentTab: string) => UnifiedContent[];
   
   // Legacy compatibility
   getLegacyContentByPlatform: (platform: keyof PlatformContentData) => UnifiedContent[];
@@ -291,10 +292,17 @@ export const useContentStore = create<ContentStoreState>()(
         
         // Skip if already initialized
         if (state.content[platform].isInitialized) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`🔄 [CONTENT STORE] Platform ${platform} already initialized, skipping`);
+          }
           return;
         }
 
         try {
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`🚀 [CONTENT STORE] Initializing platform: ${platform} for user: ${userId}`);
+          }
+
           // Set platform loading state
           set(state => ({
             content: {
@@ -314,57 +322,160 @@ export const useContentStore = create<ContentStoreState>()(
           // Fetch initial batch based on platform
           switch (platform) {
             case 'notes':
+              if (process.env.NODE_ENV === 'development') {
+                console.log(`📝 [CONTENT STORE] Fetching notes for user: ${userId}`);
+              }
               const notesResult = await convex.query(api.notes.getNotesByUser, { userId });
+              if (process.env.NODE_ENV === 'development') {
+                console.log(`📝 [CONTENT STORE] Notes raw result:`, { count: notesResult?.length, sample: notesResult?.slice(0, 2) });
+              }
               newItems = processNotesData({ status: 'fulfilled', value: notesResult });
               hasMore = false; // Notes don't have pagination yet
               break;
             
             case 'youtube':
+              if (process.env.NODE_ENV === 'development') {
+                console.log(`🎥 [CONTENT STORE] Fetching YouTube videos for user: ${userId}`);
+              }
               const youtubeResult = await convex.query(api.youtubeQueries.getYouTubeVideos, { 
                 userId, 
                 limit: INFINITE_SCROLL_CONFIG.PAGE_SIZE,
                 paginationOpts: { numItems: INFINITE_SCROLL_CONFIG.PAGE_SIZE, cursor: null }
               });
-              newItems = processYouTubeData({ status: 'fulfilled', value: youtubeResult.videos });
+              if (process.env.NODE_ENV === 'development') {
+                console.log(`🎥 [CONTENT STORE] YouTube raw result:`, { 
+                  videosCount: youtubeResult?.videos?.length || 0, 
+                  pageCount: youtubeResult?.page?.length || 0,
+                  isDone: youtubeResult?.isDone,
+                  sample: youtubeResult?.videos?.slice(0, 2) || youtubeResult?.page?.slice(0, 2)
+                });
+              }
+              newItems = processYouTubeData({ status: 'fulfilled', value: youtubeResult.videos || youtubeResult.page });
               hasMore = !youtubeResult.isDone;
               nextCursor = youtubeResult.continueCursor;
               break;
             
             case 'instagram':
+              if (process.env.NODE_ENV === 'development') {
+                console.log(`📸 [CONTENT STORE] Fetching Instagram posts for user: ${userId}`);
+              }
               const instagramResult = await convex.query(api.instagramQueries.getAllInstagramPosts, { userId });
+              if (process.env.NODE_ENV === 'development') {
+                console.log(`📸 [CONTENT STORE] Instagram raw result:`, { count: instagramResult?.length, sample: instagramResult?.slice(0, 2) });
+              }
               newItems = processInstagramData({ status: 'fulfilled', value: instagramResult });
               hasMore = false; // Instagram doesn't have pagination yet
               break;
             
             case 'gmail':
+              if (process.env.NODE_ENV === 'development') {
+                console.log(`📧 [CONTENT STORE] Fetching Gmail threads for user: ${userId}`);
+              }
               const gmailResult = await convex.query(api.gmailQueries.getGmailThreadsPaginated, { 
                 userId,
                 paginationOpts: { numItems: INFINITE_SCROLL_CONFIG.PAGE_SIZE, cursor: null }
               });
+              if (process.env.NODE_ENV === 'development') {
+                console.log(`📧 [CONTENT STORE] Gmail raw result:`, { 
+                  pageCount: gmailResult?.page?.length || 0,
+                  isDone: gmailResult?.isDone,
+                  sample: gmailResult?.page?.slice(0, 2)
+                });
+              }
               newItems = processGmailData({ status: 'fulfilled', value: gmailResult.page });
               hasMore = !gmailResult.isDone;
               nextCursor = gmailResult.continueCursor;
               break;
             
             case 'insights':
-              // Get channelId from user's YouTube account
-              const youtubeChannel = await convex.query(api.youtubeQueries.getYouTubeChannelData, { userId });
-              const channelId = youtubeChannel?.id;
-              
-              if (!channelId) {
-                // No YouTube channel connected, return empty insights
-                newItems = [];
-                hasMore = false;
-                break;
+              if (process.env.NODE_ENV === 'development') {
+                console.log(`💡 [CONTENT STORE] Fetching insights for user: ${userId}`);
               }
               
-              const insightsResult = await convex.query(api.youtubeQueries.getYoutubeBatchAnalysis, { 
-                userId, 
-                channelId 
+              // Fetch insights from platform analyses only (excluding ambient insights)
+              const [youtubeBatchAnalysis, instagramBatchAnalysis, gmailBatchAnalysis] = await Promise.allSettled([
+                // Get YouTube batch analysis if channel exists
+                (async () => {
+                  const youtubeChannel = await convex.query(api.youtubeQueries.getYouTubeChannelData, { userId });
+                  if (youtubeChannel) {
+                    return await convex.query(api.youtubeQueries.getVideoAnalyses, { userId });
+                  }
+                  return null;
+                })(),
+                // Get Instagram batch analysis if account exists
+                (async () => {
+                  const instagramAccount = await convex.query(api.instagramQueries.getInstagramAccount, { userId });
+                  if (instagramAccount?.instagramAccountId) {
+                    return await convex.query(api.instagramQueries.getInstagramBatchAnalysis, { userId, instagramAccountId: instagramAccount.instagramAccountId });
+                  }
+                  return null;
+                })(),
+                // Get Gmail batch analysis if account exists
+                (async () => {
+                  const gmailAccounts = await convex.query(api.gmailQueries.getGmailAccounts, { userId });
+                  if (gmailAccounts.length > 0) {
+                    return await convex.query(api.gmailQueries.getGmailBatchAnalysis, { userId, gmailAccountId: gmailAccounts[0]._id });
+                  }
+                  return null;
+                })()
+              ]);
+              
+              if (process.env.NODE_ENV === 'development') {
+                console.log(`💡 [CONTENT STORE] Insights results:`, { 
+                  youtubeBatchAnalysis: youtubeBatchAnalysis.status === 'fulfilled' ? 
+                    { hasValue: !!youtubeBatchAnalysis.value, hasAnalyses: !!youtubeBatchAnalysis.value?.analyses, analysesCount: youtubeBatchAnalysis.value?.analyses?.length } : 
+                    youtubeBatchAnalysis.status,
+                  instagramBatchAnalysis: instagramBatchAnalysis.status === 'fulfilled' ? 
+                    { hasValue: !!instagramBatchAnalysis.value, hasInsights: !!instagramBatchAnalysis.value?.insights, insightsType: typeof instagramBatchAnalysis.value?.insights } : 
+                    instagramBatchAnalysis.status,
+                  gmailBatchAnalysis: gmailBatchAnalysis.status === 'fulfilled' ? !!gmailBatchAnalysis.value : gmailBatchAnalysis.status
+                });
+                
+                // Additional debug for failed fetches
+                if (youtubeBatchAnalysis.status === 'rejected') {
+                  console.error('💡 [CONTENT STORE] YouTube batch analysis error:', youtubeBatchAnalysis.reason);
+                }
+                if (instagramBatchAnalysis.status === 'rejected') {
+                  console.error('💡 [CONTENT STORE] Instagram batch analysis error:', instagramBatchAnalysis.reason);
+                }
+                if (gmailBatchAnalysis.status === 'rejected') {
+                  console.error('💡 [CONTENT STORE] Gmail batch analysis error:', gmailBatchAnalysis.reason);
+                }
+              }
+              
+              newItems = processAllInsightsData({
+                youtubeBatchAnalysis,
+                instagramBatchAnalysis,
+                gmailBatchAnalysis
               });
-              newItems = processInsightsData({ status: 'fulfilled', value: insightsResult });
+              
+              console.log(`💡 [CONTENT STORE] Final processed insights:`, {
+                totalInsights: newItems.length,
+                insightsByType: {
+                  youtube: newItems.filter(i => i.contentType === 'youtube_analysis').length,
+                  instagram: newItems.filter(i => i.contentType === 'instagram_analysis').length,
+                  gmail: newItems.filter(i => i.contentType === 'gmail_insight').length,
+                },
+                sampleInsights: newItems.slice(0, 3).map(i => ({ 
+                  id: i.id, 
+                  title: i.title, 
+                  type: i.type, 
+                  platform: i.platform,
+                  contentType: i.contentType 
+                }))
+              });
+              
               hasMore = false; // Insights don't have pagination yet
               break;
+          }
+
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`✅ [CONTENT STORE] Platform ${platform} initialized successfully:`, {
+              itemsCount: newItems.length,
+              hasMore,
+              nextCursor: !!nextCursor,
+              sampleItems: newItems.slice(0, 3).map(item => ({ id: item.id, title: item.title, platform: item.platform }))
+            });
           }
 
           // Update platform state
@@ -387,15 +498,32 @@ export const useContentStore = create<ContentStoreState>()(
           }));
 
         } catch (error) {
-          console.error(`Failed to initialize ${platform}:`, error);
+          const errorMessage = error instanceof Error ? error.message : 'Failed to load content';
+          if (process.env.NODE_ENV === 'development') {
+            console.error(`❌ [CONTENT STORE] Failed to initialize ${platform}:`, {
+              error: errorMessage,
+              userId,
+              stack: error instanceof Error ? error.stack : undefined,
+              fullError: error
+            });
+          } else {
+            console.error(`Failed to initialize ${platform}:`, errorMessage);
+          }
+          
           set(state => ({
             content: {
               ...state.content,
               [platform]: {
                 ...state.content[platform],
                 isLoadingMore: false,
-                error: error instanceof Error ? error.message : 'Failed to load content',
+                error: `${platform}: ${errorMessage}`,
+                isInitialized: false, // Ensure it's marked as not initialized on error
               }
+            },
+            // Also update the errors state for easier debugging
+            errors: {
+              ...state.errors,
+              [platform]: `${platform}: ${errorMessage}`
             }
           }));
         }
@@ -629,6 +757,62 @@ export const useContentStore = create<ContentStoreState>()(
         return state.allContent;
       },
 
+      getContentByTab: (currentTab: string) => {
+        const state = get();
+        
+        // Map tab names to content types and platforms
+        let result: UnifiedContent[] = [];
+        const tabLower = currentTab.toLowerCase();
+        
+        switch (tabLower) {
+          case 'notes':
+          case 'smart-notes':
+            result = state.content.notes.items;
+            break;
+          
+          case 'youtube':
+            result = state.content.youtube.items;
+            break;
+          
+          case 'instagram':
+            result = state.content.instagram.items;
+            break;
+          
+          case 'gmail':
+            result = state.content.gmail.items;
+            break;
+          
+          case 'insights':
+          case 'ai-insights':
+            result = state.content.insights.items;
+            break;
+          
+          case 'all':
+          default:
+            // Return all content for 'all' tab or unknown tabs
+            result = state.allContent;
+            break;
+        }
+        
+        // Debug logging
+        console.log('[ContentStore] getContentByTab:', {
+          currentTab,
+          tabLower,
+          resultCount: result.length,
+          contentCounts: {
+            notes: state.content.notes.items.length,
+            youtube: state.content.youtube.items.length,
+            instagram: state.content.instagram.items.length,
+            gmail: state.content.gmail.items.length,
+            insights: state.content.insights.items.length,
+            allContent: state.allContent.length
+          },
+          sampleResult: result.slice(0, 3).map(item => ({ id: item.id, title: item.title, platform: item.platform }))
+        });
+        
+        return result;
+      },
+
       // Legacy compatibility
       getLegacyContentByPlatform: (platform: keyof PlatformContentData) => {
         const state = get();
@@ -676,21 +860,38 @@ function processYouTubeData(result: PromiseSettledResult<any[]>): UnifiedContent
     return [];
   }
 
-  return result.value.map(video => ({
-    id: `youtube:${video.id}`,
-    title: video.content?.title || 'Untitled Video',
+  if (!Array.isArray(result.value)) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('🎥 [CONTENT STORE] processYouTubeData: Expected array but got:', typeof result.value, result.value);
+    }
+    return [];
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🎥 [CONTENT STORE] processYouTubeData: Processing', result.value.length, 'videos');
+  }
+
+  const processed = result.value.map(video => ({
+    id: `youtube:${video.id || video.videoId}`,
+    title: video.content?.title || video.snippet?.title || 'Untitled Video',
     type: 'youtube' as const,
     contentType: 'video',
     platform: 'youtube',
-    createdAt: new Date(video.publishedAt || 0).getTime(),
-    updatedAt: new Date(video.publishedAt || 0).getTime(),
+    createdAt: new Date(video.publishedAt || video.snippet?.published_at || 0).getTime(),
+    updatedAt: new Date(video.publishedAt || video.snippet?.published_at || 0).getTime(),
     important: false,
-    tags: [],
+    tags: video.snippet?.tags || [],
     analysis: video.analysis,
-    content: video.content?.description || '',
-    thumbnailUrl: video.content?.thumbnailUrl,
-    statistics: video.metrics,
+    content: video.content?.description || video.snippet?.description || '',
+    thumbnailUrl: video.content?.thumbnailUrl || video.snippet?.thumbnails?.high || video.snippet?.thumbnails?.medium,
+    statistics: video.metrics || video.statistics,
   }));
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🎥 [CONTENT STORE] processYouTubeData: Processed', processed.length, 'videos successfully');
+  }
+
+  return processed;
 }
 
 function processInstagramData(result: PromiseSettledResult<any[]>): UnifiedContent[] {
@@ -699,7 +900,18 @@ function processInstagramData(result: PromiseSettledResult<any[]>): UnifiedConte
     return [];
   }
 
-  return result.value.map(post => ({
+  if (!Array.isArray(result.value)) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('📸 [CONTENT STORE] processInstagramData: Expected array but got:', typeof result.value, result.value);
+    }
+    return [];
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('📸 [CONTENT STORE] processInstagramData: Processing', result.value.length, 'posts');
+  }
+
+  const processed = result.value.map(post => ({
     id: `instagram:${post.postId}`,
     title: post.data?.caption?.substring(0, 100) || 'Instagram Post',
     type: 'instagram' as const,
@@ -723,6 +935,12 @@ function processInstagramData(result: PromiseSettledResult<any[]>): UnifiedConte
       shares: post.data?.insights?.shares || 0,
     },
   }));
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('📸 [CONTENT STORE] processInstagramData: Processed', processed.length, 'posts successfully');
+  }
+
+  return processed;
 }
 
 function processGmailData(result: PromiseSettledResult<any[]>): UnifiedContent[] {
@@ -731,7 +949,18 @@ function processGmailData(result: PromiseSettledResult<any[]>): UnifiedContent[]
     return [];
   }
 
-  return result.value.map(thread => ({
+  if (!Array.isArray(result.value)) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('📧 [CONTENT STORE] processGmailData: Expected array but got:', typeof result.value, result.value);
+    }
+    return [];
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('📧 [CONTENT STORE] processGmailData: Processing', result.value.length, 'threads');
+  }
+
+  const processed = result.value.map(thread => ({
     id: `gmail:${thread.threadId}`,
     title: thread.subject || thread.data?.subject || 'No Subject',
     type: 'gmail' as const,
@@ -747,8 +976,131 @@ function processGmailData(result: PromiseSettledResult<any[]>): UnifiedContent[]
     messageCount: thread.message_count || thread.data?.message_count || 1,
     category: thread.category,
   }));
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('📧 [CONTENT STORE] processGmailData: Processed', processed.length, 'threads successfully');
+  }
+
+  return processed;
 }
 
+// New function to handle all insight sources
+function processAllInsightsData(results: {
+  youtubeBatchAnalysis: PromiseSettledResult<any>;
+  instagramBatchAnalysis: PromiseSettledResult<any>;
+  gmailBatchAnalysis: PromiseSettledResult<any>;
+}): UnifiedContent[] {
+  const allInsights: UnifiedContent[] = [];
+
+  // Process YouTube Video Analyses
+  if (results.youtubeBatchAnalysis.status === 'fulfilled' && results.youtubeBatchAnalysis.value?.analyses) {
+    const ytAnalyses = results.youtubeBatchAnalysis.value.analyses;
+    if (Array.isArray(ytAnalyses)) {
+      ytAnalyses.forEach((video: any, index: number) => {
+        if (video.analysis || video.analysisMarkdown) {
+          allInsights.push({
+            id: `insight:youtube:${video.id}:${index}`,
+            title: `${video.title} - Analysis`,
+            type: 'insight' as const,
+            contentType: 'youtube_analysis',
+            platform: 'insights',
+            createdAt: new Date(video.publishedAt || Date.now()).getTime(),
+            updatedAt: new Date(video.publishedAt || Date.now()).getTime(),
+            important: false,
+            tags: ['youtube', 'analysis'],
+            analysis: video.analysis,
+            content: video.analysisMarkdown || video.analysis?.summary || 'YouTube video analysis'
+          });
+        }
+      });
+    }
+  }
+
+  // Process Instagram Batch Analysis
+  if (results.instagramBatchAnalysis.status === 'fulfilled' && results.instagramBatchAnalysis.value?.insights) {
+    const igAnalysis = results.instagramBatchAnalysis.value;
+    
+    // Handle different insight structures
+    let insightArray: any[] = [];
+    if (igAnalysis.insights.insights && Array.isArray(igAnalysis.insights.insights)) {
+      insightArray = igAnalysis.insights.insights;
+    } else if (Array.isArray(igAnalysis.insights)) {
+      insightArray = igAnalysis.insights;
+    } else if (igAnalysis.insights.content && Array.isArray(igAnalysis.insights.content)) {
+      insightArray = igAnalysis.insights.content;
+    }
+    
+    if (insightArray.length > 0) {
+      insightArray.forEach((insight: any, index: number) => {
+        allInsights.push({
+          id: `insight:instagram:${igAnalysis._id}:${index}`,
+          title: insight.title || insight.heading || 'Instagram Insight',
+          type: 'insight' as const,
+          contentType: 'instagram_analysis',
+          platform: 'insights',
+          createdAt: igAnalysis.updatedAt || Date.now(),
+          updatedAt: igAnalysis.updatedAt || Date.now(),
+          important: false,
+          tags: ['instagram', insight.category || 'engagement'],
+          analysis: insight,
+          content: insight.analysis || insight.content || insight.description || 'Instagram batch analysis insight'
+        });
+      });
+    } else {
+      // If no structured insights, create a single insight from the batch analysis
+      allInsights.push({
+        id: `insight:instagram:${igAnalysis._id}:batch`,
+        title: 'Instagram Batch Analysis',
+        type: 'insight' as const,
+        contentType: 'instagram_analysis',
+        platform: 'insights',
+        createdAt: igAnalysis.updatedAt || Date.now(),
+        updatedAt: igAnalysis.updatedAt || Date.now(),
+        important: false,
+        tags: ['instagram', 'batch-analysis'],
+        analysis: igAnalysis.insights,
+        content: JSON.stringify(igAnalysis.insights, null, 2)
+      });
+    }
+  }
+
+  // Process Gmail Batch Analysis
+  if (results.gmailBatchAnalysis.status === 'fulfilled' && results.gmailBatchAnalysis.value?.insights) {
+    const gmailAnalysis = results.gmailBatchAnalysis.value;
+    if (gmailAnalysis.insights.insights && Array.isArray(gmailAnalysis.insights.insights)) {
+      gmailAnalysis.insights.insights.forEach((insight: any, index: number) => {
+        allInsights.push({
+          id: `insight:gmail:${gmailAnalysis._id}:${index}`,
+          title: insight.title || 'Gmail Insight',
+          type: 'insight' as const,
+          contentType: 'gmail_insight',
+          platform: 'insights',
+          createdAt: gmailAnalysis.updatedAt || Date.now(),
+          updatedAt: gmailAnalysis.updatedAt || Date.now(),
+          important: false,
+          tags: ['gmail', insight.category || 'communication'],
+          analysis: insight,
+          content: insight.analysis || insight.content || ''
+        });
+      });
+    }
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('💡 [CONTENT STORE] processAllInsightsData: Processed', allInsights.length, 'total insights');
+    console.log('💡 [CONTENT STORE] processAllInsightsData: Breakdown by source:', {
+      youtubeAnalyses: allInsights.filter(i => i.contentType === 'youtube_analysis').length,
+      instagramAnalyses: allInsights.filter(i => i.contentType === 'instagram_analysis').length,
+      gmailAnalyses: allInsights.filter(i => i.contentType === 'gmail_insight').length,
+      sampleTitles: allInsights.slice(0, 5).map(i => i.title)
+    });
+  }
+
+  // Sort by creation time (most recent first)
+  return allInsights.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+// Legacy function for backward compatibility
 function processInsightsData(result: PromiseSettledResult<any>): UnifiedContent[] {
   if (result.status === 'rejected') {
     console.error('Failed to fetch insights data:', result.reason);
@@ -756,11 +1108,37 @@ function processInsightsData(result: PromiseSettledResult<any>): UnifiedContent[
   }
 
   const insights = result.value;
-  if (!insights || !insights.length) {
+  if (process.env.NODE_ENV === 'development') {
+    console.log('💡 [CONTENT STORE] processInsightsData: Raw insights data:', insights);
+  }
+
+  if (!insights) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('💡 [CONTENT STORE] processInsightsData: No insights data found');
+    }
     return [];
   }
 
-  return insights.map((insight: any, index: number) => ({
+  // Handle different insight data structures
+  let insightArray: any[] = [];
+  if (Array.isArray(insights)) {
+    insightArray = insights;
+  } else if (insights.insights && Array.isArray(insights.insights)) {
+    insightArray = insights.insights;
+  } else if (insights.insights && insights.insights.insights && Array.isArray(insights.insights.insights)) {
+    insightArray = insights.insights.insights;
+  } else {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('💡 [CONTENT STORE] processInsightsData: Unexpected insights structure:', insights);
+    }
+    return [];
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('💡 [CONTENT STORE] processInsightsData: Processing', insightArray.length, 'insights');
+  }
+
+  const processed = insightArray.map((insight: any, index: number) => ({
     id: `insight:${insight.id || index}`,
     title: insight.title || 'Content Insight',
     type: 'insight' as const,
@@ -773,6 +1151,12 @@ function processInsightsData(result: PromiseSettledResult<any>): UnifiedContent[
     analysis: insight,
     content: insight.description || insight.summary || '',
   }));
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('💡 [CONTENT STORE] processInsightsData: Processed', processed.length, 'insights successfully');
+  }
+
+  return processed;
 }
 
 // Export hooks for backward compatibility
