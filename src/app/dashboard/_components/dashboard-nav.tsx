@@ -5,11 +5,12 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Logo } from '@/components/ui/logo'
 import {
-  Users, Settings, FileText, LogOut, BarChart3, Menu, X, MessageSquare, Clock, Handshake
+  Users, Settings, FileText, LogOut, BarChart3, Menu, X, MessageSquare, Clock, Handshake, Trash2
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { useSidebar } from '@/app/context/sidebar-context'
 import { getApiKey } from '@/app/lib/api-helpers'
+import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog'
 
 const navItems = [
   {
@@ -68,6 +69,9 @@ export const DashboardNav = memo(function DashboardNav() {
   const { isExpanded, setIsExpanded } = useSidebar();
   const [recentChats, setRecentChats] = useState<ChatHistory[]>([])
   const [apiKeyError, setApiKeyError] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [chatToDelete, setChatToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // Refs for throttling
   const lastMouseMoveTime = useRef(0);
@@ -140,6 +144,54 @@ export const DashboardNav = memo(function DashboardNav() {
       document.removeEventListener('mousemove', handleMouseMove);
     };
   }, [handleMouseMove]);
+
+  const handleDeleteChat = useCallback(async (chatId: string) => {
+    setIsDeleting(true);
+    try {
+      const apiKey = await getApiKey();
+      
+      const response = await fetch(`/api/chat/${chatId}`, { 
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete conversation');
+      }
+      
+      // Remove from local state only after successful deletion
+      setRecentChats(prev => prev.filter(chat => chat.id !== chatId));
+      console.log('Successfully deleted conversation:', chatId);
+    } catch (error) {
+      console.error('Failed to delete chat:', error);
+      // Show error to user - you might want to add a toast notification here
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setChatToDelete(null);
+    }
+  }, []);
+
+  const openDeleteDialog = useCallback((chatId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setChatToDelete(chatId);
+    setDeleteDialogOpen(true);
+  }, []);
+
+  const confirmDelete = useCallback(() => {
+    if (chatToDelete) {
+      handleDeleteChat(chatToDelete);
+    }
+  }, [chatToDelete, handleDeleteChat]);
+
+  const cancelDelete = useCallback(() => {
+    setDeleteDialogOpen(false);
+    setChatToDelete(null);
+  }, []);
 
   // Memoize active item calculation
   const isItemActive = useCallback((item: typeof navItems[0]) => {
@@ -255,25 +307,37 @@ export const DashboardNav = memo(function DashboardNav() {
             <div className="space-y-1">
               {recentChats.length > 0 ? (
                 recentChats.map((chat) => (
-                  <Link
+                  <div
                     key={chat.id}
-                    href={`/dashboard/chat?id=${chat.id}`}
-                    onClick={() => setIsExpanded(false)}
-                    className="flex items-center gap-3 p-2 rounded-md hover:bg-muted"
-                    title={chat.topic}
+                    className="group flex items-center gap-3 p-2 rounded-md hover:bg-muted"
                   >
-                    <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <div className="flex flex-col flex-1 min-w-0">
-                      <span className="text-sm text-black dark:text-white truncate">{chat.topic}</span>
-                      {chat.createdAt ? (
-                        <span className="text-xs text-black dark:text-white">
-                          {formatRelativeTime(chat.createdAt)}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-red-500">No timestamp</span>
-                      )}
-                    </div>
-                  </Link>
+                    <Link
+                      href={`/dashboard/chat?id=${chat.id}`}
+                      onClick={() => setIsExpanded(false)}
+                      className="flex items-center gap-3 flex-1 min-w-0"
+                      title={chat.topic}
+                    >
+                      <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <span className="text-sm text-black dark:text-white truncate">{chat.topic}</span>
+                        {chat.createdAt ? (
+                          <span className="text-xs text-black dark:text-white">
+                            {formatRelativeTime(chat.createdAt)}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-red-500">No timestamp</span>
+                        )}
+                      </div>
+                    </Link>
+                    <button
+                      onClick={(e) => openDeleteDialog(chat.id, e)}
+                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded-md transition-all text-destructive/80 hover:text-destructive shrink-0"
+                      title="Delete chat"
+                      aria-label="Delete chat"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground p-2">No recent chats.</p>
@@ -286,6 +350,16 @@ export const DashboardNav = memo(function DashboardNav() {
           <ThemeToggle />
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={deleteDialogOpen}
+        onClose={cancelDelete}
+        onConfirm={confirmDelete}
+        title="Delete Conversation"
+        description="Are you sure you want to delete this conversation? This action cannot be undone."
+        isLoading={isDeleting}
+      />
     </div>
   )
 });
