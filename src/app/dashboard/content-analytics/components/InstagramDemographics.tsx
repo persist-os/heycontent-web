@@ -411,10 +411,6 @@ const InstagramDemographics: React.FC<InstagramDemographicsProps> = ({ demograph
               Explore your audience data with interactive visualizations
             </p>
           </div>
-          <Badge variant="outline" className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800">
-            <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-            Live Data
-          </Badge>
         </div>
       </div>
 
