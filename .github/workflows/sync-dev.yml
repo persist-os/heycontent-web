@@ -1,0 +1,72 @@
+name: Sync Dev After Main Deployment
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  sync-dev-branch:
+    name: Sync Dev with Main
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Use the default GITHUB_TOKEN (automatically available)
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0  # Fetch full history for proper sync
+      
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: Sync dev branch with main
+        run: |
+          echo "🔄 Syncing dev branch with main after deployment..."
+          
+          # Switch to dev branch
+          git checkout dev
+          
+          # Merge main into dev to sync them
+          git merge origin/main --no-ff -m "🤖 Auto-sync dev with main after production deployment"
+          
+          # Push the updated dev branch
+          git push origin dev
+          
+          echo "✅ Dev branch successfully synced with main"
+      
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Failed to sync dev branch with main',
+              body: `
+              ## ⚠️ Dev Branch Sync Failed
+              
+              The automatic sync of the dev branch with main failed after deployment.
+              
+              **Repository**: ${context.repo.repo}
+              **Workflow**: ${context.workflow}
+              **Run**: ${context.runNumber}
+              
+              **Action Required**: 
+              Someone needs to manually sync the dev branch with main to prevent merge conflicts.
+              
+              ### Manual Sync Commands:
+              \`\`\`bash
+              git checkout dev
+              git pull origin main
+              git push origin dev
+              \`\`\`
+              
+              **Triggered by**: @${context.actor}
+              **Commit**: ${context.sha}
+              `,
+              labels: ['bug', 'urgent', 'dev-ops']
+            });
