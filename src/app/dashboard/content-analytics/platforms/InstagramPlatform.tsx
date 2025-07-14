@@ -232,6 +232,7 @@ export function InstagramPlatform({
         <div className="flex justify-between items-center">
           <div></div> {/* Empty div to push button to the right */}
           <div className="flex gap-3">
+            {/*
             <Button 
               size="sm" 
               onClick={refreshTracker}
@@ -241,6 +242,7 @@ export function InstagramPlatform({
               <RefreshCw className="w-4 h-4 mr-2" />
               {refreshingTracker ? 'Refreshing Tracker...' : 'Refresh Tracker'}
             </Button>
+            */}
           </div>
         </div>
 
@@ -390,6 +392,7 @@ export function InstagramPlatform({
         <div className="text-green-500 text-sm mb-2 text-center">Instagram posts refreshed successfully!</div>
       )}
       <div className="w-full flex justify-end mb-6">
+        {/*
         <Button 
           size="sm" 
           onClick={refreshPosts}
@@ -399,6 +402,7 @@ export function InstagramPlatform({
           <RefreshCw className="w-4 h-4 mr-2" />
           {refreshingPosts ? 'Refreshing Posts...' : 'Refresh Posts'}
         </Button>
+        */}
       </div>
 
       {/* Content Grid */}
