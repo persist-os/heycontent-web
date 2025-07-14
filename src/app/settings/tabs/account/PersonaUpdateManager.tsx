@@ -9,7 +9,7 @@ import { NewPersonaCard } from './NewPersonaCard';
 
 interface PersonaUpdateManagerProps {
   userId: string;
-  renderNewPersonaButton?: () => void;
+  renderNewPersonaButton?: () => React.ReactNode;
 }
 
 export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ userId, renderNewPersonaButton }) => {
