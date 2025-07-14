@@ -179,7 +179,7 @@ export const getVideosByChannel = query({
     try {
       const effectiveLimit = Math.min(args.limit || DEFAULT_VIDEO_LIMIT, MAX_QUERY_LIMIT);
       
-      let queryBuilder = ctx.db
+      const queryBuilder = ctx.db
         .query("youtubeVideos")
         .withIndex("by_channelId", (q) => q.eq("snippet.channel.id", args.channelId))
         .filter((q) => q.eq(q.field("userId"), args.userId))
@@ -397,7 +397,7 @@ export const getVideoAnalyses = query({
     try {
       const effectiveLimit = Math.min(args.limit || DEFAULT_VIDEO_LIMIT, MAX_QUERY_LIMIT);
       
-      let queryBuilder = ctx.db
+      const queryBuilder = ctx.db
         .query("youtubeVideos")
         .withIndex("by_userId", (q) => q.eq("userId", args.userId))
         .filter((q) => q.or(

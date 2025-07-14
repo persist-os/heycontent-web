@@ -30,6 +30,7 @@ export function useContentResolver(userId: string | undefined) {
     getContentByPlatform: (platform: keyof PlatformContentData) => 
       store.getContentByPlatform(platform),
     getAllLinkableContent: () => store.getAllLinkableContent(),
+    getContentByTab: (currentTab: string) => store.getContentByTab(currentTab),
     
     // Actions
     refreshContent: () => userId && store.refreshContent(userId, convex),
@@ -61,7 +62,7 @@ export async function resolveContentTitles(
       convex.query(api.notes.getNotesByUser, { userId }),
       convex.query(api.youtubeQueries.listUserYouTubeVideos, { userId, limit: 100 }),
       convex.query(api.instagramQueries.getAllInstagramPosts, { userId }),
-      convex.query(api.gmailQueries.getRecentGmailThreads, { userId, limit: 100 }),
+      convex.query(api.gmailQueries.getGmailThreadsByUserEmail, { userId, limit: 100 }),
     ]);
     
     // Process notes
@@ -130,7 +131,7 @@ export async function resolveAllLinkContent(
       convex.query(api.notes.getNotesByUser, { userId }),
       convex.query(api.youtubeQueries.listUserYouTubeVideos, { userId, limit: 100 }),
       convex.query(api.instagramQueries.getAllInstagramPosts, { userId }),
-      convex.query(api.gmailQueries.getRecentGmailThreads, { userId, limit: 100 }),
+      convex.query(api.gmailQueries.getGmailThreadsByUserEmail, { userId, limit: 100 }),
     ]);
     
     for (const contentId of contentIds) {
