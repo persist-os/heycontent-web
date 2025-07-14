@@ -12,6 +12,7 @@ import { useContentContextActions } from '@/store/content-context-store';
 import { getApiKey, getCurrentUserId } from '@/app/lib/api-helpers';
 import { MarkdownRenderer } from '@/app/dashboard/chat/markdown-renderer';
 import { formatNumber } from '@/lib/content-utils';
+import { processContentIfNeeded } from '@/app/dashboard/content-analytics/utils/markdown-processor';
 
 interface InstagramContentProps {
   postData: any;
@@ -527,9 +528,9 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
                       </h4>
                       <div className="prose prose-sm max-w-none dark:prose-invert">
                         {analysisMarkdown ? (
-                          <MarkdownRenderer content={analysisMarkdown} />
+                          <MarkdownRenderer content={processContentIfNeeded(analysisMarkdown)} />
                         ) : typeof analysis === 'string' ? (
-                          <MarkdownRenderer content={analysis} />
+                          <MarkdownRenderer content={processContentIfNeeded(analysis)} />
                         ) : (
                           <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
                             <pre className="text-sm overflow-x-auto whitespace-pre-wrap text-gray-800 dark:text-gray-200">
