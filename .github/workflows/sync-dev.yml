@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
 
+# Add explicit permissions for the GITHUB_TOKEN
+permissions:
+  contents: write        # Needed to push to branches
+  pull-requests: write   # Needed to create PRs if needed
+  issues: write          # Needed to create issues on failure
+
 jobs:
   sync-dev-branch:
     name: Sync Dev with Main
@@ -13,10 +19,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # Use the default GITHUB_TOKEN (automatically available)
           token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0  # Fetch full history for proper sync
-      
+          fetch-depth: 0  # Fetch full history
+          
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
@@ -25,6 +30,9 @@ jobs:
       - name: Sync dev branch with main
         run: |
           echo "🔄 Syncing dev branch with main after deployment..."
+          
+          # Fetch all branches
+          git fetch origin
           
           # Switch to dev branch
           git checkout dev
@@ -37,7 +45,7 @@ jobs:
           
           echo "✅ Dev branch successfully synced with main"
       
-      - name: Notify on failure
+      - name: Create issue on failure
         if: failure()
         uses: actions/github-script@v7
         with:
@@ -52,21 +60,22 @@ jobs:
               The automatic sync of the dev branch with main failed after deployment.
               
               **Repository**: ${context.repo.repo}
-              **Workflow**: ${context.workflow}
-              **Run**: ${context.runNumber}
+              **Workflow Run**: [${context.runNumber}](${context.payload.repository.html_url}/actions/runs/${context.runId})
+              **Error**: Check the workflow logs for details
               
               **Action Required**: 
-              Someone needs to manually sync the dev branch with main to prevent merge conflicts.
+              Someone needs to manually sync the dev branch with main.
               
               ### Manual Sync Commands:
               \`\`\`bash
               git checkout dev
-              git pull origin main
+              git pull origin dev
+              git merge origin/main
               git push origin dev
               \`\`\`
               
-              **Triggered by**: @${context.actor}
-              **Commit**: ${context.sha}
+              **Triggered by**: ${context.actor}
+              **Commit**: ${context.sha.substring(0, 7)}
               `,
-              labels: ['bug', 'urgent', 'dev-ops']
+              labels: ['bug', 'urgent', 'automation']
             });
