@@ -56,7 +56,7 @@ export interface Command {
   label: string;
   type: 'metadata' | 'format' | 'block';
   metadata?: {
-    type: 'important' | 'idea';
+    type: 'important' | 'idea_bank';
     value: boolean;
   };
   template?: string;

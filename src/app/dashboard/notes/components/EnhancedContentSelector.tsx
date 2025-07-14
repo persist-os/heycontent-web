@@ -54,6 +54,7 @@ interface EnhancedContentSelectorProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
   excludeContentId?: string; // ID to exclude from results
+  currentTab?: string; // Current tab for filtering content
 }
 
 export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = ({
@@ -63,7 +64,8 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
   position,
   searchTerm,
   onSearchChange,
-  excludeContentId
+  excludeContentId,
+  currentTab = 'all'
 }) => {
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid;
@@ -73,20 +75,15 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
   // Add error boundary for Convex queries
   const [hasConvexError, setHasConvexError] = useState(false);
 
-  // Fetch content based on selected platform using content resolver
+  // Fetch content using content resolver  
   const { 
-    allContent: allContentData,
-    content: platformContent,
+    getContentByTab,
     isLoading: contentLoading,
     hasErrors 
   } = useContentResolver(userId);
 
-  // Extract platform-specific content
-  const smartNotesContent = platformContent.notes;
-  const youtubeContent = platformContent.youtube;
-  const instagramContent = platformContent.instagram;
-  const gmailContent = platformContent.gmail;
-  const insightsContent = platformContent.insights;
+  // Get tab-specific content for @ linking
+  const tabSpecificContent = getContentByTab(currentTab);
 
   // Check if any query is still loading or has errors
   const isLoading = !userId || contentLoading;
@@ -99,32 +96,66 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
     }
   }, [hasErrors, hasConvexError]);
 
-  // Select the appropriate content based on platform filter
+  // Filter content based on internal platform selection
   const allContent = React.useMemo(() => {
     try {
       // If there are errors, return empty array
       if (hasErrors) {
+        console.log('🔍 [EnhancedContentSelector] Returning empty array due to errors');
         return [];
       }
 
-      switch (selectedPlatform) {
-        case 'smart-notes':
-          return smartNotesContent || [];
-        case 'youtube':
-          return youtubeContent || [];
-        case 'instagram':
-          return instagramContent || [];
-        case 'gmail':
-          return gmailContent || [];
-        case 'insights':
-          return insightsContent || [];
-        default:
-          return allContentData || [];
+      // Get all content from the current tab
+      const baseContent = tabSpecificContent || [];
+      
+      console.log('🔍 [EnhancedContentSelector] Debug info:', {
+        currentTab,
+        selectedPlatform,
+        baseContentCount: baseContent.length,
+        baseContentSample: baseContent.slice(0, 3).map(c => ({ id: c.id, title: c.title, type: c.type, platform: c.platform })),
+        hasErrors,
+        contentLoading
+      });
+      
+      // Apply internal platform filter
+      if (selectedPlatform === 'all') {
+        console.log('🔍 [EnhancedContentSelector] Returning all content:', baseContent.length, 'items');
+        return baseContent;
       }
+      
+      // Filter by selected platform
+      const filtered = baseContent.filter(content => {
+        switch (selectedPlatform) {
+          case 'smart-notes':
+            return content.platform === 'smart-notes' || content.type === 'note';
+          case 'youtube':
+            return content.platform === 'youtube' || content.type === 'youtube';
+          case 'instagram':
+            return content.platform === 'instagram' || content.type === 'instagram';
+          case 'gmail':
+            return content.platform === 'gmail' || content.type === 'gmail';
+          case 'insights':
+            const isInsight = content.platform === 'insights' || content.type === 'insight';
+            if (isInsight) {
+              console.log('🔍 [EnhancedContentSelector] Found insight item:', { id: content.id, title: content.title, type: content.type, platform: content.platform });
+            }
+            return isInsight;
+          default:
+            return true;
+        }
+      });
+      
+      console.log('🔍 [EnhancedContentSelector] Filtered content for platform', selectedPlatform, ':', filtered.length, 'items');
+      if (selectedPlatform === 'insights') {
+        console.log('🔍 [EnhancedContentSelector] Insights content:', filtered.map(c => ({ id: c.id, title: c.title, type: c.type, platform: c.platform })));
+      }
+      
+      return filtered;
     } catch (error) {
+      console.error('🔍 [EnhancedContentSelector] Error in allContent useMemo:', error);
       return [];
     }
-  }, [selectedPlatform, allContentData, smartNotesContent, youtubeContent, instagramContent, gmailContent, insightsContent, hasErrors]);
+  }, [tabSpecificContent, hasErrors, selectedPlatform, currentTab, contentLoading]);
 
   // Filter content based on search term and excluded content
   const filteredContent = React.useMemo(() => {
@@ -140,8 +171,9 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
           
           // Filter out malformed insight IDs
           if (content.type === 'insight') {
-            // Should match insight:someid:index
-            if (!/^insight:[^:]+:[0-9]+$/.test(content.id)) {
+            // Should match insight:platform:id:index patterns like:
+            // insight:youtube:videoId:0, insight:instagram:id:0, insight:gmail:id:0
+            if (!/^insight:[^:]+:[^:]+:[0-9]+$/.test(content.id)) {
               console.warn('Filtering out malformed insight ID:', content.id);
               return false;
             }
