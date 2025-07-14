@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { extractAuthInfo } from '@/app/lib/api-helpers-server';
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,23 +11,19 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Get API key from Authorization header
+    // Extract API key and user ID from Authorization header
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const { apiKey, userId: extractedUserId } = extractAuthInfo(authHeader);
+    
+    if (!apiKey || !extractedUserId) {
       return NextResponse.json({ 
         success: false, 
         error: 'We need to know it\'s you to keep your content safe! Please log in again and let\'s get back to creating amazing things together.' 
       }, { status: 401 });
     }
-    
-    // Extract the API key
-    const apiKey = authHeader.substring(7).replace(/"/g, '');
-    
-    // Extract user ID from API key
-    const apiKeyParts = apiKey.split('_');
-    const user_id = apiKeyParts.length >= 2 && apiKeyParts[0] === 'heycontent' ? apiKeyParts[1] : null;
-    
-    if (!user_id) {
+
+    // Verify that the user ID from the request matches the one extracted from the API key
+    if (userId !== extractedUserId) {
       return NextResponse.json({ 
         success: false, 
         error: 'Your authentication needs a quick refresh! No worries—this happens to the best of us. Let\'s reconnect and get you back to creating.' 

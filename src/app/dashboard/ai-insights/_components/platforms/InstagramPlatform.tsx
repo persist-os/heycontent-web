@@ -14,7 +14,7 @@ import { PlatformConnectionPrompt } from '../../../_components/content-hub/Platf
 import { useInstagramBreakdowns } from '../hooks/useInstagramBreakdowns'
 import InstagramDemographics from '../../../content-analytics/components/InstagramDemographics'
 import { toast } from 'sonner';
-import { getApiKey, getCurrentUserId } from '@/app/lib/api-helpers';
+import { getApiKey, getCurrentUserId, fetchWithApiKey } from '@/app/lib/api-helpers';
 
 
 interface InstagramPlatformProps {
@@ -97,26 +97,8 @@ export function InstagramPlatform({ userId: propUserId, currentQuote, loading }:
   const handleRefreshDemographics = async () => {
     setRefreshingDemographics(true);
     try {
-      const apiKey = await getApiKey();
-      if (!apiKey) {
-        toast.error('No API key found. Please log in again.');
-        setRefreshingDemographics(false);
-        return;
-      }
-      // Extract user_id from API key
-      const apiKeyParts = apiKey.split('_');
-      const user_id = apiKeyParts.length >= 2 && apiKeyParts[0] === 'heycontent' ? apiKeyParts[1] : null;
-      if (!user_id) {
-        toast.error('Invalid API key format. Please log in again.');
-        setRefreshingDemographics(false);
-        return;
-      }
-      const res = await fetch('/api/social/instagram/refresh-demographics', {
+      const res = await fetchWithApiKey('/api/social/instagram/refresh-demographics', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
         body: JSON.stringify({}), // Optionally add expires_at, scope if needed
       });
       const data = await res.json();
@@ -259,17 +241,6 @@ export function InstagramPlatform({ userId: propUserId, currentQuote, loading }:
           </div>
         )
       )}
-
-      {/* Batch Analysis Controls: Bottom */}
-      <div className="flex justify-end mt-8">
-        <Button
-          onClick={handleRefreshOrConnect}
-          disabled={!userId}
-          variant="outline"
-        >
-          Refresh Instagram
-        </Button>
-      </div>
     </div>
   )
 } 
