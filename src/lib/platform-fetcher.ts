@@ -39,12 +39,12 @@ export async function initializePlatform(
         if (process.env.NODE_ENV === 'development') {
           console.log(`📝 [PLATFORM FETCHER] Fetching notes for user: ${userId}`);
         }
-        const notesResult = await convex.query(api.notes.getNotesByUser, { userId });
+        const notesResult = await convex.query(api.noteQueries.getUserNotes, { userId, numItems: 1000 });
         if (process.env.NODE_ENV === 'development') {
-          console.log(`📝 [PLATFORM FETCHER] Notes raw result:`, { count: notesResult?.length, sample: notesResult?.slice(0, 2) });
+          console.log(`📝 [PLATFORM FETCHER] Notes raw result:`, { count: notesResult?.page?.length, sample: notesResult?.page?.slice(0, 2) });
         }
-        newItems = processNotesData({ status: 'fulfilled', value: notesResult });
-        hasMore = false; // Notes don't have pagination yet
+        newItems = processNotesData({ status: 'fulfilled', value: notesResult.page });
+        hasMore = !notesResult.isDone; // Check if there are more pages
         break;
       
       case 'youtube':

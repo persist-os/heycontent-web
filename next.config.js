@@ -40,6 +40,7 @@ const nextConfig = {
       'heycontent-web-216038426364.us-central1.run.app',
       'i.ytimg.com',
       'img.youtube.com',
+      'scontent-ord5-2.cdninstagram.com', // Instagram CDN
     ],
     remotePatterns: [
       {
@@ -77,6 +78,10 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'img.youtube.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'scontent-ord5-2.cdninstagram.com', // Instagram CDN
       },
     ],
   },

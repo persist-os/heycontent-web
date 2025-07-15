@@ -309,10 +309,10 @@ async function searchUserContentTextBased(ctx: any, userId: string, query: strin
   try {
     console.log("📝 [TEXT SEARCH FALLBACK] Searching notes...");
     // Search notes - using the correct query name
-    const notes = await ctx.runQuery(api.notes.getNotesByUser, { userId });
-    console.log("📝 [TEXT SEARCH FALLBACK] Found", notes.length, "notes to search");
+    const notesResult = await ctx.runQuery(api.noteQueries.getUserNotes, { userId, numItems: 1000 });
+    console.log("📝 [TEXT SEARCH FALLBACK] Found", notesResult.page.length, "notes to search");
     
-    for (const note of notes) {
+    for (const note of notesResult.page) {
       const titleMatches = note.title.toLowerCase().includes(queryLower);
       const contentMatches = note.content && note.content.toLowerCase().includes(queryLower);
       

@@ -589,9 +589,9 @@ export const generateEmbeddingsForExistingContent = action({
 
       // Generate embeddings for notes
       console.log('🚀 [EMBEDDING GENERATION] Processing notes...');
-      const notes = await ctx.runQuery(api.notes.getNotesByUser, { userId: args.userId });
+      const notesResult = await ctx.runQuery(api.noteQueries.getUserNotes, { userId: args.userId, numItems: 1000 });
       
-      for (const note of notes) {
+      for (const note of notesResult.page) {
         results.notes.processed++;
         try {
           // Combine title and content for searchable content

@@ -13,16 +13,16 @@ export function useProjects(userId: string | undefined) {
 
   // Queries
   const projects = useQuery(
-    api.projects.getProjectsForUser,
+    api.projectsQueries.getProjectsForUser,
     userId ? { userId } : "skip"
   );
 
   // Mutations
-  const createProjectMutation = useMutation(api.projects.createProject);
-  const updateProjectMutation = useMutation(api.projects.updateProject);
-  const deleteProjectMutation = useMutation(api.projects.deleteProject);
-  const addItemMutation = useMutation(api.projects.addItemToProject);
-  const removeItemMutation = useMutation(api.projects.removeItemFromProject);
+  const createProjectMutation = useMutation(api.projectsMutations.createProject);
+  const updateProjectMutation = useMutation(api.projectsMutations.updateProject);
+  const deleteProjectMutation = useMutation(api.projectsMutations.deleteProject);
+  const addItemMutation = useMutation(api.projectsMutations.addItemToProject);
+  const removeItemMutation = useMutation(api.projectsMutations.removeItemFromProject);
 
   // Create project
   const createProject = useCallback(async (name: string, description?: string) => {
@@ -59,6 +59,7 @@ export function useProjects(userId: string | undefined) {
     try {
       await updateProjectMutation({
         projectId,
+        userId,
         ...updates,
       });
       
@@ -76,7 +77,7 @@ export function useProjects(userId: string | undefined) {
   // Delete project
   const deleteProject = useCallback(async (projectId: Id<"projects">) => {
     try {
-      await deleteProjectMutation({ projectId });
+      await deleteProjectMutation({ projectId, userId });
       toast.success('Project deleted successfully');
       return true;
     } catch (error) {
@@ -95,12 +96,14 @@ export function useProjects(userId: string | undefined) {
     try {
       await addItemMutation({
         projectId,
+        userId,
         itemType,
         itemId,
       });
       
       const displayName = itemType === 'instagramPost' ? 'Instagram post' : 
                          itemType === 'youtubeVideo' ? 'YouTube video' : 
+                         itemType === 'analysis' ? 'Analysis report' :
                          itemType;
       toast.success(`${displayName} added to project`);
       return true;
@@ -108,6 +111,7 @@ export function useProjects(userId: string | undefined) {
       console.error('Failed to add item to project:', error);
       const displayName = itemType === 'instagramPost' ? 'Instagram post' : 
                          itemType === 'youtubeVideo' ? 'YouTube video' : 
+                         itemType === 'analysis' ? 'Analysis report' :
                          itemType;
       toast.error(`Failed to add ${displayName} to project`);
       return false;
@@ -123,12 +127,14 @@ export function useProjects(userId: string | undefined) {
     try {
       await removeItemMutation({
         projectId,
+        userId,
         itemType,
         itemId,
       });
       
       const displayName = itemType === 'instagramPost' ? 'Instagram post' : 
                          itemType === 'youtubeVideo' ? 'YouTube video' : 
+                         itemType === 'analysis' ? 'Analysis report' :
                          itemType;
       toast.success(`${displayName} removed from project`);
       return true;
@@ -136,6 +142,7 @@ export function useProjects(userId: string | undefined) {
       console.error('Failed to remove item from project:', error);
       const displayName = itemType === 'instagramPost' ? 'Instagram post' : 
                          itemType === 'youtubeVideo' ? 'YouTube video' : 
+                         itemType === 'analysis' ? 'Analysis report' :
                          itemType;
       toast.error(`Failed to remove ${displayName} from project`);
       return false;

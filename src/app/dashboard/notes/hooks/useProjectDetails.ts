@@ -6,7 +6,7 @@ import { Id } from '@/convex/_generated/dataModel';
 
 export function useProjectDetails(projectId: Id<"projects"> | null) {
   const projectDetails = useQuery(
-    api.projects.getProjectDetails,
+    api.projectsQueries.getProjectDetails,
     projectId ? { projectId } : "skip"
   );
 
