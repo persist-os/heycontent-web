@@ -324,5 +324,5 @@ jobs:
               
               console.log(`Created security issue: #${issue.data.number}`);
             } catch (error) {
-              console.log('Error creating security issue:', error);
+              console.log('Error creating security issue: ', error);
             }
