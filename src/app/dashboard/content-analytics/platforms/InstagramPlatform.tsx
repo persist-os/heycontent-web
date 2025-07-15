@@ -73,7 +73,7 @@ export function InstagramPlatform({
   
   // Hook for demographics data
   const { demographicsData, loading: demographicsLoading, error: demographicsError, hasData } = useInstagramDemographics(userId);
-
+  
   // Memoized pie chart data calculation
   const mediaDistributionData = useMemo(() => {
     if (!analysis?.media_distribution) {
@@ -221,15 +221,15 @@ export function InstagramPlatform({
         </div>
       )}
     
-      {/* Platform Embedding Status */}
-      <PlatformEmbeddingStatus 
-        platform="instagram" 
-        contentCount={displayItems.length} 
-        userId={userId} 
-      />
+        {/* Platform Embedding Status */}
+        <PlatformEmbeddingStatus 
+          platform="instagram" 
+          contentCount={displayItems.length} 
+          userId={userId} 
+        />
 
-      {/* Instagram Analytics Section */}
-      <div className="space-y-6 mb-8">
+  {/* Instagram Analytics Section */}
+  <div className="space-y-6 mb-8">
         {/* Header with Refresh Tracker Button */}
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-4">

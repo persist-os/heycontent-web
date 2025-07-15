@@ -329,7 +329,7 @@ export const UsageHeatmap: React.FC<UsageHeatmapProps> = ({ userId }) => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-productivity-insights>
       {/* Main Activity Card - Heatmap Left, Top Features Right */}
       <Card>
         <CardHeader className="pb-4">

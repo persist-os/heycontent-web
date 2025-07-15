@@ -373,6 +373,7 @@ export function NotesGrid({
                   ? "bg-background text-foreground shadow-sm border-2 border-primary"
                   : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
               )}
+              {...(type.key === 'projects' && { 'data-projects-filter': true })}
             >
               <div className={cn("w-2 h-2 rounded-full", type.color)}></div>
               {type.label}

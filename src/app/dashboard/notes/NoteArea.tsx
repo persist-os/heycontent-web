@@ -398,7 +398,7 @@ export function NoteArea({
       </div>
       
       {/* Main editor area */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden" data-note-editor>
         {(!isEditingTitle && forcePreview) ? (
           <div className="prose prose-sm max-w-none text-foreground p-6">
             <NoteContentRenderer

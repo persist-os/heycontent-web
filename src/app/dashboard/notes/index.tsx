@@ -17,7 +17,10 @@ import { InsightOverlay } from '@/components/content/overlays/InsightOverlay';
 // Help system imports
 import { HelpModal } from '@/components/ui/help-modal';
 import { HelpIconButton } from '@/components/ui/help-icon-button';
+import { EnhancedHelpButton } from '@/components/ui/enhanced-help-button';
+import { InteractiveTooltip } from '@/components/ui/interactive-tooltip';
 import { notesHelp } from '@/helpContent';
+import { interactiveTours } from '@/helpContent/interactiveTours';
 import { buildNoteUpdate, validateNoteUpdate } from './NoteArea';
 
 export default function SmartNotes() {
@@ -57,6 +60,8 @@ export default function SmartNotes() {
   
   // Help modal state
   const [helpOpen, setHelpOpen] = useState(false);
+  const [interactiveTourOpen, setInteractiveTourOpen] = useState(false);
+  const [quickStartOpen, setQuickStartOpen] = useState(false);
   const noteAreaFlushRef = useRef<() => Promise<void>>();
   const [shouldForcePreview, setShouldForcePreview] = useState(false);
 
@@ -338,13 +343,35 @@ export default function SmartNotes() {
         onToggleImportant={handleToggleImportant}
         onUpdateNote={handleNoteUpdate}
         isLoading={notesIsLoading}
-        helpButton={<HelpIconButton onClick={() => setHelpOpen(true)} />}
+        helpButton={
+          <EnhancedHelpButton 
+            onInteractiveTour={() => setInteractiveTourOpen(true)}
+          />
+        }
       />
       {/* Help Modal */}
       <HelpModal 
         open={helpOpen} 
         onClose={() => setHelpOpen(false)} 
         pages={notesHelp}
+      />
+
+      {/* Interactive Tour */}
+      <InteractiveTooltip
+        isOpen={interactiveTourOpen}
+        onClose={() => setInteractiveTourOpen(false)}
+        steps={interactiveTours.notes}
+        title="Smart Notes Features Tour"
+        autoPlay={false}
+      />
+
+      {/* Quick Start Tour */}
+      <InteractiveTooltip
+        isOpen={quickStartOpen}
+        onClose={() => setQuickStartOpen(false)}
+        steps={interactiveTours.quickStart}
+        title="Quick Start Guide"
+        autoPlay={true}
       />
     </div>
   );

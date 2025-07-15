@@ -565,6 +565,7 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
               onClick={handleDiscussContent} 
               disabled={!analysis && !analysisMarkdown}
               size="lg"
+              data-discuss-button
               className={`flex-1 ${
                 !analysis && !analysisMarkdown 
                   ? 'opacity-50 cursor-not-allowed bg-gray-300 hover:bg-gray-300' 

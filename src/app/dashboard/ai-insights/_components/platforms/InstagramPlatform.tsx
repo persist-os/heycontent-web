@@ -137,20 +137,20 @@ export function InstagramPlatform({ userId: propUserId, currentQuote, loading }:
       {!refreshing && (
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-6">
           <div className="flex-1">
-            <AnalysisDepthPicker
-              platform="Instagram"
-              isRefreshing={refreshing}
-              error={error}
-              onRefresh={handleRefreshOrConnect}
-              disabled={!userId}
-              postLimit={postLimit}
-              setPostLimit={setPostLimit}
-              customPostLimit={customPostLimit}
-              setCustomPostLimit={setCustomPostLimit}
-              showCustomInput={showCustomInput}
-              setShowCustomInput={setShowCustomInput}
-              handleCustomSubmit={handleCustomSubmit}
-            />
+        <AnalysisDepthPicker
+          platform="Instagram"
+          isRefreshing={refreshing}
+          error={error}
+          onRefresh={handleRefreshOrConnect}
+          disabled={!userId}
+          postLimit={postLimit}
+          setPostLimit={setPostLimit}
+          customPostLimit={customPostLimit}
+          setCustomPostLimit={setCustomPostLimit}
+          showCustomInput={showCustomInput}
+          setShowCustomInput={setShowCustomInput}
+          handleCustomSubmit={handleCustomSubmit}
+        />
           </div>
           
           {/* Demographics Controls */}

@@ -40,7 +40,10 @@ import { useContentContext, useContentContextActions, useContentContextStore } f
 // Help system imports
 import { HelpModal } from '@/components/ui/help-modal'
 import { HelpIconButton } from '@/components/ui/help-icon-button'
+import { EnhancedHelpButton } from '@/components/ui/enhanced-help-button'
+import { InteractiveTooltip } from '@/components/ui/interactive-tooltip'
 import { chatHelp } from '@/helpContent'
+import { interactiveTours } from '@/helpContent/interactiveTours'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { CreateNoteButton } from '@/components/ui/CreateNoteButton';
@@ -108,6 +111,75 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   
   // Help modal state
   const [helpOpen, setHelpOpen] = useState(false)
+  const [interactiveTourOpen, setInteractiveTourOpen] = useState(false)
+  const [quickStartOpen, setQuickStartOpen] = useState(false)
+  const [fullAppTourOpen, setFullAppTourOpen] = useState(false)
+
+  // Cleanup effect to ensure proper modal state management
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setHelpOpen(false)
+        setInteractiveTourOpen(false)
+        setQuickStartOpen(false)
+        setFullAppTourOpen(false)
+      }
+    }
+
+    const resetBodyStyles = () => {
+      // Ensure body is interactive after modals close
+      document.body.style.pointerEvents = ''
+      document.body.style.overflow = ''
+    }
+
+    // Reset body styles when any modal closes
+    if (!helpOpen && !interactiveTourOpen && !quickStartOpen && !fullAppTourOpen) {
+      resetBodyStyles()
+    }
+
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('keydown', handleEscape)
+      resetBodyStyles()
+    }
+  }, [helpOpen, interactiveTourOpen, quickStartOpen, fullAppTourOpen])
+
+  // Enhanced close handlers with cleanup
+  const handleCloseHelp = () => {
+    setHelpOpen(false)
+    // Ensure no lingering overlay issues
+    setTimeout(() => {
+      document.body.style.pointerEvents = ''
+      document.body.style.overflow = ''
+    }, 100)
+  }
+
+  const handleCloseInteractiveTour = () => {
+    setInteractiveTourOpen(false)
+    // Ensure no lingering overlay issues
+    setTimeout(() => {
+      document.body.style.pointerEvents = ''
+      document.body.style.overflow = ''
+    }, 100)
+  }
+
+  const handleCloseQuickStart = () => {
+    setQuickStartOpen(false)
+    // Ensure no lingering overlay issues
+    setTimeout(() => {
+      document.body.style.pointerEvents = ''
+      document.body.style.overflow = ''
+    }, 100)
+  }
+
+  const handleCloseFullAppTour = () => {
+    setFullAppTourOpen(false)
+    // Ensure no lingering overlay issues
+    setTimeout(() => {
+      document.body.style.pointerEvents = ''
+      document.body.style.overflow = ''
+    }, 100)
+  }
 
   // Auto-disable context search when content context is available, unless it's YouTube without analysis
   useEffect(() => {
@@ -591,7 +663,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         {/* Header */}
         <ChatHeader 
           onNewChat={handleNewChat}
-          onShowHelp={() => setHelpOpen(true)}
+          onInteractiveTour={() => setInteractiveTourOpen(true)}
         />
 
         {/* Main Content */}
@@ -770,9 +842,19 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       {/* Help Modal */}
       <HelpModal 
         open={helpOpen} 
-        onClose={() => setHelpOpen(false)} 
+        onClose={handleCloseHelp} 
         pages={chatHelp}
       />
+
+      {/* Interactive Tour */}
+      <InteractiveTooltip
+        isOpen={interactiveTourOpen}
+        onClose={handleCloseInteractiveTour}
+        steps={interactiveTours.chat}
+        title="Chat Features Tour"
+        autoPlay={false}
+      />
+
 
       {/* Chat Overlay */}
       {overlayContent && (

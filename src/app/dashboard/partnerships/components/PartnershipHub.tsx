@@ -32,6 +32,12 @@ import { usePartnershipData } from '../hooks/usePartnershipData';
 import { PartnershipProgressiveThinking } from './PartnershipProgressiveThinking';
 import { getPartnershipColors } from '../utils/emailCategorization';
 
+// Help system imports
+import { HelpModal } from '@/components/ui/help-modal';
+import { EnhancedHelpButton } from '@/components/ui/enhanced-help-button';
+import { InteractiveTooltip } from '@/components/ui/interactive-tooltip';
+import { interactiveTours } from '@/helpContent/interactiveTours';
+
 export type MetricFilter = 'all' | 'active' | 'pending' | 'brand-deals';
 
 export function PartnershipHub() {
@@ -50,6 +56,10 @@ export function PartnershipHub() {
     business: true,
     community: true
   });
+
+  // Help system state
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [interactiveTourOpen, setInteractiveTourOpen] = useState(false);
 
   // Use Gmail analytics to get real Gmail data
   const { gmailItems, loading: gmailLoading, hasConnectedAccounts } = useGmailAnalytics(userId, refreshCount);
@@ -194,10 +204,19 @@ export function PartnershipHub() {
           <div className="flex flex-col space-y-4">
             {/* Title */}
             <div className="space-y-1">
-              <h1 className="text-2xl font-bold text-foreground">Partnership Hub</h1>
-              <p className="text-sm text-muted-foreground">
-                Your command center for discovering collaborations, managing partnerships, and growing your creator business
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold text-foreground">Partnership Hub</h1>
+                  <p className="text-sm text-muted-foreground">
+                    Your command center for discovering collaborations, managing partnerships, and growing your creator business
+                  </p>
+                </div>
+                <div>
+                  <EnhancedHelpButton 
+                    onInteractiveTour={() => setInteractiveTourOpen(true)}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Progress Display */}
@@ -331,6 +350,7 @@ export function PartnershipHub() {
                   onClick={handleRefresh}
                   disabled={refreshing}
                   className="flex items-center gap-2 justify-center shrink-0"
+                  data-find-opportunities-button
                   style={{
                     borderRadius: '25px',
                     border: '1px solid var(--Neutral_600, #747474)',
@@ -445,6 +465,22 @@ export function PartnershipHub() {
             </>
           )}
         </div>
+        
+        {/* Help Modal */}
+        <HelpModal 
+          open={helpOpen} 
+          onClose={() => setHelpOpen(false)} 
+          pages={[]} // TODO: Add partnership hub help pages
+        />
+
+        {/* Interactive Tour */}
+        <InteractiveTooltip
+          isOpen={interactiveTourOpen}
+          onClose={() => setInteractiveTourOpen(false)}
+          steps={interactiveTours.partnershipHub}
+          title="Partnership Hub Features Tour"
+          autoPlay={false}
+        />
       </div>
     </TooltipProvider>
   );

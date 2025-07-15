@@ -236,6 +236,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
                 handleDiscussContent();
               }}
               disabled={loading}
+              data-discuss-button
             >
               {loading ? (
                 <span className="flex items-center justify-center">
