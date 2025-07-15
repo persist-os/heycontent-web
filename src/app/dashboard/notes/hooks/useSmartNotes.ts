@@ -19,7 +19,7 @@ interface SmartNotesHook {
 
 export function useSmartNotes(userId: string | undefined): SmartNotesHook {
   // Fetch notes using Convex useQuery
-  const notesFromConvex = useQuery(api.notesQueries.getNotesByUser, userId ? { userId } : "skip");
+  const notesFromConvex = useQuery(api.noteQueries.getUserNotes, userId ? { userId } : "skip");
 
   // State variables
   const [isSaving, setIsSaving] = useState<boolean>(false);
