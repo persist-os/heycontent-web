@@ -129,7 +129,7 @@ export async function resolveAllLinkContent(
   try {
     // Fetch content from each platform in parallel
     const [notes, youtubeVideos, instagramPosts, gmailThreads] = await Promise.allSettled([
-      convex.query(api.noteQueries.getUserNotes, { userId, numItems: 1000 }), // Get up to 1000 notes
+      convex.query(api.notesQueries.getNotesByUser, { userId }),
       convex.query(api.youtubeQueries.listUserYouTubeVideos, { userId, limit: 100 }),
       convex.query(api.instagramQueries.getAllInstagramPosts, { userId }),
       convex.query(api.gmailQueries.getGmailThreadsByUserEmail, { userId, limit: 100 }),

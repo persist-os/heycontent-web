@@ -77,12 +77,12 @@ export function AttachmentPanel({ projectId, project, isOpen, onClose }: Attachm
   const availableItems = filteredItems.filter(item => !item.isAttached);
 
   const handleToggleItem = async (item: AttachableItem) => {
-    // For analysis items, use the full ID; for others, extract the raw database ID
-    const idToUse = item.type === 'analysis' ? item.id : extractRawId(item.id);
+    // Extract the raw database ID for the project system
+    const rawId = extractRawId(item.id);
     if (item.isAttached) {
-      await removeItemFromProject(projectId, item.type, idToUse);
+      await removeItemFromProject(projectId, item.type, rawId);
     } else {
-      await addItemToProject(projectId, item.type, idToUse);
+      await addItemToProject(projectId, item.type, rawId);
     }
   };
 
