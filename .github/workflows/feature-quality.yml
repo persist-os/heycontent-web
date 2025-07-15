@@ -126,6 +126,7 @@ jobs:
             const lintStatus = '${{ needs.frontend-quality.outputs.lint-result }}' || 'unknown';  
             const testsStatus = '${{ needs.frontend-quality.outputs.tests-result }}' || 'unknown';
             const buildStatus = '${{ needs.frontend-quality.outputs.build-result }}' || 'unknown';
+            const securityStatus = '${{ needs.frontend-quality.outputs.security-result }}' || 'unknown';
             
             let message = '## 🔍 Frontend Quality Assessment\n\n';
             message += `**Overall Status**: ${frontendResult === 'success' ? '✅ READY' : '❌ BLOCKED'}\n\n`;
