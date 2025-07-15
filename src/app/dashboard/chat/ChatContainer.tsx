@@ -563,17 +563,10 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     [notes]
   );
 
-  // Debug logging for persona and messages state
-  useEffect(() => {
-    console.log('🎯 [CHAT CONTAINER] State debug:', {
-      hasPersona,
-      isPersonaDataLoading,
-      messagesLength: messages.length,
-      hasMessagesOrContext,
-      authUser: !!authData.user,
-      isLoading
-    });
-  }, [hasPersona, isPersonaDataLoading, messages.length, hasMessagesOrContext, authData.user, isLoading]);
+  // Debug state information - only log critical issues
+  if (process.env.NODE_ENV === 'development' && !hasPersona && !isPersonaDataLoading) {
+    console.warn('🎯 [CHAT CONTAINER] Missing persona for user');
+  }
 
   // Debug logging for content context
   useEffect(() => {
@@ -597,10 +590,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       >
         {/* Header */}
         <ChatHeader 
-          isRefreshing={isRefreshing} 
           onNewChat={handleNewChat}
-          isAuthenticated={authData.isAuthenticated}
-          rightContent={<HelpIconButton onClick={() => setHelpOpen(true)} />}
+          onShowHelp={() => setHelpOpen(true)}
         />
 
         {/* Main Content */}

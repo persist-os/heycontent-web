@@ -181,18 +181,114 @@ export async function resolveAllLinkContent(
             if (instagramPosts.status === 'fulfilled') {
               foundContent = instagramPosts.value.find((post: any) => post.postId === id);
               if (foundContent) {
+                // Build comprehensive content including caption, insights, statistics, analysis, etc.
+                let contentParts = [];
+
+                // Add caption
+                if (foundContent.data?.caption) {
+                  contentParts.push(`Caption: ${foundContent.data.caption}`);
+                }
+
+                // Add media type
+                if (foundContent.mediaType) {
+                  contentParts.push(`Media Type: ${foundContent.mediaType.toUpperCase()}`);
+                }
+
+                // Add comprehensive statistics from insights
+                const insights = foundContent.data?.insights || {};
+                if (insights && Object.keys(insights).length > 0) {
+                  const statsParts = [];
+                  if (insights.likes !== undefined && insights.likes !== null) statsParts.push(`Likes: ${insights.likes.toLocaleString()}`);
+                  if (insights.comments !== undefined && insights.comments !== null) statsParts.push(`Comments: ${insights.comments.toLocaleString()}`);
+                  if (insights.reach !== undefined && insights.reach !== null) statsParts.push(`Reach: ${insights.reach.toLocaleString()}`);
+                  if (insights.impressions !== undefined && insights.impressions !== null) statsParts.push(`Impressions: ${insights.impressions.toLocaleString()}`);
+                  if (insights.saved !== undefined && insights.saved !== null) statsParts.push(`Saved: ${insights.saved.toLocaleString()}`);
+                  if (insights.shares !== undefined && insights.shares !== null) statsParts.push(`Shares: ${insights.shares.toLocaleString()}`);
+                  if (insights.total_interactions !== undefined && insights.total_interactions !== null) statsParts.push(`Total Interactions: ${insights.total_interactions.toLocaleString()}`);
+                  if (insights.profile_visits !== undefined && insights.profile_visits !== null) statsParts.push(`Profile Visits: ${insights.profile_visits.toLocaleString()}`);
+                  if (insights.views !== undefined && insights.views !== null) statsParts.push(`Views: ${insights.views.toLocaleString()}`);
+                  
+                  if (statsParts.length > 0) {
+                    contentParts.push(`Statistics: ${statsParts.join(', ')}`);
+                  }
+                }
+
+                // Add analysis content if available
+                if (foundContent.analysis) {
+                  const analysisText = typeof foundContent.analysis === 'string' ? foundContent.analysis : JSON.stringify(foundContent.analysis, null, 2);
+                  contentParts.push(`Analysis: ${analysisText}`);
+                }
+
+                // Add additional insights if available
+                if (foundContent.insights && foundContent.insights !== foundContent.data?.insights) {
+                  const additionalInsights = typeof foundContent.insights === 'string' ? foundContent.insights : JSON.stringify(foundContent.insights, null, 2);
+                  contentParts.push(`Additional Insights: ${additionalInsights}`);
+                }
+
+                // Add platform and content type info
+                if (foundContent.platform || foundContent.mediaType) {
+                  const platformInfo = [];
+                  if (foundContent.platform) platformInfo.push(foundContent.platform);
+                  if (foundContent.mediaType) platformInfo.push(foundContent.mediaType);
+                  contentParts.push(`Platform: ${platformInfo.join(' - ')}`);
+                }
+
+                // Add creation date if available
+                if (foundContent.data?.timestamp || foundContent.createdAt) {
+                  const timestamp = foundContent.data?.timestamp || foundContent.createdAt;
+                  const date = new Date(timestamp).toLocaleDateString();
+                  contentParts.push(`Published: ${date}`);
+                }
+
+                // Add media URLs for reference
+                if (foundContent.data?.media_url) {
+                  contentParts.push(`Media URL: ${foundContent.data.media_url}`);
+                }
+                if (foundContent.data?.thumbnail_url && foundContent.data.thumbnail_url !== foundContent.data.media_url) {
+                  contentParts.push(`Thumbnail URL: ${foundContent.data.thumbnail_url}`);
+                }
+
+                // Add permalink if available
+                if (foundContent.data?.permalink) {
+                  contentParts.push(`Permalink: ${foundContent.data.permalink}`);
+                }
+
+                const fullContent = contentParts.join('\n\n');
+
+                console.log('🔗 [CONTENT RESOLVER] Built comprehensive Instagram content:', {
+                  postId: id,
+                  contentLength: fullContent.length,
+                  hasInsights: !!foundContent.data?.insights,
+                  hasAnalysis: !!foundContent.analysis,
+                  insightsKeys: foundContent.data?.insights ? Object.keys(foundContent.data.insights) : 'none',
+                  contentPreview: fullContent.substring(0, 200) + '...'
+                });
+
                 resolvedContent.push({
                   type: 'instagram',
                   id: contentId,
                   title: foundContent.data?.caption?.substring(0, 100) || 'Instagram Post',
-                  content: foundContent.data?.caption || '',
+                  content: fullContent, // Now includes comprehensive data
                   platform: 'instagram',
                   createdAt: foundContent.data?.timestamp || foundContent.createdAt || Date.now(),
                   mediaUrl: foundContent.data?.media_url,
                   statistics: {
                     likes: foundContent.data?.insights?.likes || foundContent.data?.like_count || 0,
                     comments: foundContent.data?.insights?.comments || foundContent.data?.comments_count || 0,
+                    reach: foundContent.data?.insights?.reach || 0,
+                    impressions: foundContent.data?.insights?.impressions || 0,
+                    saved: foundContent.data?.insights?.saved || 0,
+                    shares: foundContent.data?.insights?.shares || 0,
+                    total_interactions: foundContent.data?.insights?.total_interactions || 0,
+                    profile_visits: foundContent.data?.insights?.profile_visits || 0,
+                    views: foundContent.data?.insights?.views || 0,
                   },
+                  metadata: {
+                    mediaType: foundContent.mediaType,
+                    insights: foundContent.data?.insights,
+                    analysis: foundContent.analysis,
+                    permalink: foundContent.data?.permalink
+                  }
                 });
               }
             }

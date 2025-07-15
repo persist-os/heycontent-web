@@ -96,17 +96,6 @@ export function ChatInput({
   const tabSpecificContent = getContentByTab(currentTab)
   const allLinkableContent = tabSpecificContent
   
-  // Debug logging
-  console.log('[ChatInput] Content resolution:', {
-    currentTab: currentTab || 'undefined',
-    contentCount: tabSpecificContent?.length || 0,
-    sampleContent: tabSpecificContent?.slice(0, 3).map(item => ({ 
-      id: item.id, 
-      title: item.title, 
-      platform: item.platform 
-    })) || []
-  });
-  
   // Theme-aware accent colors
   const isDark = theme === 'dark'
   const accentColor = isDark ? 'text-accent' : 'text-purple-600'
