@@ -20,7 +20,7 @@ This document describes the current state of data integration in the RoadmapView
 | Folder Color | Data Type | Convex Query Used                | Schema Table         |
 |--------------|----------|----------------------------------|---------------------|
 | Blue         | Chat     | `api.chatQueries.getHistory`     | `conversations`     |
-| Purple       | Notes    | `api.notes.getNotesByUser`       | `notes`             |
+| Purple       | Notes    | `api.noteQueries.getUserNotes`   | `notes`             |
 | Orange       | Content  | `api.contentHub.getByUserId`     | `contentHubInsights`|
 | Yellow       | Analytics| `api.notes.getAnalyticsInsights` | `notes` (analytics) |
 
