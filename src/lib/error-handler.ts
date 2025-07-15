@@ -1,4 +1,4 @@
-import { PlatformContentData } from '@/store/content-store';
+import { PlatformContentData } from '@/types/content';
 
 // Error types for infinite scroll
 export enum InfiniteScrollErrorType {

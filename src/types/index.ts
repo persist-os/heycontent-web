@@ -1,4 +1,5 @@
 export * from './chat'  // Re-export chat types
+export * from './content'  // Re-export content types
 
 export interface Partnership {
   id: number
