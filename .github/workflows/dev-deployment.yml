@@ -32,14 +32,15 @@ jobs:
         run: |
           echo "🔄 Syncing dev branch with main..."
           
-          # Checkout dev branch
-          git checkout dev
+          # Delete the remote dev branch
+          git push origin --delete dev || echo "Dev branch may not exist remotely"
           
-          # Reset dev to match main exactly
-          git reset --hard origin/main
+          # Create and checkout new dev branch from main
+          git checkout main
+          git checkout -b dev
           
-          # Force push to update dev branch
-          git push origin dev --force
+          # Push the new dev branch
+          git push origin dev
           
           echo "✅ Dev branch successfully synced with main"
           echo "SYNC_STATUS=success" >> $GITHUB_ENV
