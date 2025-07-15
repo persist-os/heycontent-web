@@ -365,7 +365,7 @@ app.get("/api/notes/:noteId", async (c) => {
   }
 
   try {
-    const note = await ctx.runQuery(api.notes.getNote, { noteId, userId });
+    const note = await ctx.runQuery(api.noteQueries.getNote, { noteId, userId });
     if (note) {
       return c.json({ success: true, note });
     } else {
@@ -445,7 +445,7 @@ app.patch("/api/notes/:noteId", async (c) => {
       return c.json({ error: "Missing or empty 'updates' object in request body" }, 400);
     }
 
-    const updatedNote = await ctx.runMutation(api.notes.updateNote, {
+    const updatedNote = await ctx.runMutation(api.noteMutations.updateNote, {
       noteId: noteId as Id<"notes">, // Cast string from path to Id<"notes">
       userId,
       updates,
@@ -481,9 +481,9 @@ app.delete("/api/notes/:noteId", async (c) => {
       return c.json({ error: "Missing required field in body: userId" }, 400);
     }
 
-    // Run the delete mutation (api.notes.deleteNote now expects noteId as v.id("notes"))
+    // Run the delete mutation (api.noteMutations.deleteNote now expects noteId as v.id("notes"))
     // Convex handles string to Id conversion, but we cast for TypeScript type safety.
-    const deleteResult = await ctx.runMutation(api.notes.deleteNote, {
+    const deleteResult = await ctx.runMutation(api.noteMutations.deleteNote, {
       noteId: noteIdStr as Id<"notes">,
       userId,
     });
@@ -493,8 +493,8 @@ app.delete("/api/notes/:noteId", async (c) => {
     }
 
     // Verification Step: Attempt to fetch the note to confirm deletion
-    // (api.notes.getNote expects noteId as string)
-    const stillExists = await ctx.runQuery(api.notes.getNote, { 
+    // (api.noteQueries.getNote expects noteId as string)
+    const stillExists = await ctx.runQuery(api.noteQueries.getNote, { 
       noteId: noteIdStr, 
       userId // Pass userId, as getNote might require it for auth, though for a deleted note it should be null regardless
     });
@@ -528,9 +528,13 @@ app.post("/api/notes", async (c) => {
     return c.json({ error: "Missing userId" }, 400);
   }
   try {
-    const newNote = await ctx.runMutation(api.notes.updateNote, {
+    const newNote = await ctx.runMutation(api.noteMutations.createNote, {
       userId,
-      updates: noteData,
+      title: noteData.title,
+      content: noteData.content,
+      type: noteData.type,
+      tags: noteData.tags,
+      platform: noteData.platform,
     });
     return c.json({ success: true, note: newNote });
   } catch (error: any) {

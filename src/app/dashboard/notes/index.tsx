@@ -27,6 +27,8 @@ export default function SmartNotes() {
   const noteIdParam = searchParams.get('noteId');
   const fromChat = searchParams.get('fromChat') === 'true';
   const chatId = searchParams.get('chatId');
+  const fromProject = searchParams.get('fromProject') === 'true';
+  const projectId = searchParams.get('projectId');
   const router = useRouter();
 
   const {
@@ -156,13 +158,13 @@ export default function SmartNotes() {
       }
     }
 
-    // Use smart navigation if we have a stack, otherwise go to grid or chat
-    if (canNavigateBack && !fromChat) {
+    // Use smart navigation if we have a stack, otherwise go to grid, chat, or project
+    if (canNavigateBack && !fromChat && !fromProject) {
       const previousNoteId = navigateBack();
       console.log('🔙 Smart back navigation to:', previousNoteId);
       // If navigateBack returns null, we're already at the grid
     } else {
-      // Clear navigation stack and go to grid or chat
+      // Clear navigation stack and go to grid, chat, or project
       clearNavigationStack();
       setActiveNoteId(undefined);
       clearNoteIdFromUrl();
@@ -171,6 +173,10 @@ export default function SmartNotes() {
       if (fromChat) {
         const chatUrl = chatId ? `/dashboard/chat?id=${chatId}` : '/dashboard/chat';
         router.push(chatUrl);
+      }
+      // If we came from project, navigate back to project
+      else if (fromProject && projectId) {
+        router.push(`/dashboard/notes/projects/${projectId}`);
       }
     }
   };

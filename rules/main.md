@@ -12,7 +12,7 @@ Avoid calling the backend directly, route it through the api/ folder and set up 
 
 Make sure all Convex queries and mutations are optimized for performance and scalability. They should be small, modular, and reliable. Make sure to think about making full use of Convex's caching behavior, pagination, and other performance optimizations.
 
-Document everything clearly and concisely within the code. 
+Document everything clearly and concisely within the code.
 
 ## Tech Stack
 
