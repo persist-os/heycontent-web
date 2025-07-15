@@ -12,13 +12,19 @@ export interface UnifiedContent {
   important: boolean;
   tags: string[];
   analysis?: any;
+  analysisMarkdown?: string; // Markdown-formatted analysis
   content?: string;
   // YouTube specific
   thumbnailUrl?: string;
   statistics?: any;
   // Instagram specific
   mediaUrl?: string;
+  mediaType?: string; // Original media type (IMAGE, VIDEO, CAROUSEL_ALBUM, REELS)
+  permalink?: string; // Direct link to the post
   insights?: any;
+  comments?: any[]; // Comments array
+  children?: any[]; // Children for carousel posts
+  convexData?: any; // Full Convex document for complete data access
   // Gmail specific
   from?: string;
   messageCount?: number;

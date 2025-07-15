@@ -1,3 +1,6 @@
+import { useContentStore } from '@/store/content-store';
+import { ConvexReactClient } from 'convex/react';
+
 export interface LinkReference {
   type: 'smart_note' | 'youtube' | 'instagram' | 'gmail' | 'insight';
   id: string;
@@ -230,12 +233,40 @@ async function resolveInstagramContent(postId: string, userId: string, allLinkab
     // Remove 'instagram:' prefix if present
     const actualPostId = postId.startsWith('instagram:') ? postId.replace('instagram:', '') : postId;
     
+    console.log('🔗 [LINK RESOLVER] Resolving Instagram content:', {
+      originalPostId: postId,
+      actualPostId,
+      allLinkableContentCount: allLinkableContent.length,
+      instagramItemsCount: allLinkableContent.filter(item => item.id?.startsWith('instagram:')).length
+    });
+    
     const post = allLinkableContent.find(item => item.id === `instagram:${actualPostId}`);
 
     if (!post) {
       console.warn('🔗 [LINK RESOLVER] Instagram post not found:', postId);
+      console.log('🔗 [LINK RESOLVER] Available Instagram IDs:', 
+        allLinkableContent
+          .filter(item => item.id?.startsWith('instagram:'))
+          .map(item => item.id)
+          .slice(0, 10) // Show first 10
+      );
       return null;
     }
+
+    console.log('🔗 [LINK RESOLVER] Found Instagram post:', {
+      id: post.id,
+      title: post.title,
+      hasContent: !!post.content,
+      hasStatistics: !!post.statistics,
+      statisticsKeys: post.statistics ? Object.keys(post.statistics) : 'none',
+      hasInsights: !!post.insights,
+      insightsKeys: post.insights ? Object.keys(post.insights) : 'none',
+      hasAnalysis: !!post.analysis,
+      hasAnalysisMarkdown: !!post.analysisMarkdown,
+      hasConvexData: !!post.convexData,
+      contentType: post.contentType,
+      mediaType: post.mediaType,
+    });
 
     // Build comprehensive content including caption, insights, statistics, analysis, etc.
     let contentParts = [];
@@ -250,31 +281,40 @@ async function resolveInstagramContent(postId: string, userId: string, allLinkab
       contentParts.push(`Media Type: ${post.contentType.toUpperCase()}`);
     }
 
-    // Add statistics if available
-    if (post.statistics) {
-      const stats = post.statistics;
+    // Add statistics if available - use both insights and statistics fields
+    const stats = post.statistics || post.insights || {};
+    if (stats && Object.keys(stats).length > 0) {
       const statsParts = [];
-      if (stats.likes !== undefined) statsParts.push(`Likes: ${stats.likes.toLocaleString()}`);
-      if (stats.comments !== undefined) statsParts.push(`Comments: ${stats.comments.toLocaleString()}`);
-      if (stats.reach !== undefined) statsParts.push(`Reach: ${stats.reach.toLocaleString()}`);
-      if (stats.impressions !== undefined) statsParts.push(`Impressions: ${stats.impressions.toLocaleString()}`);
-      if (stats.saved !== undefined) statsParts.push(`Saved: ${stats.saved.toLocaleString()}`);
-      if (stats.shares !== undefined) statsParts.push(`Shares: ${stats.shares.toLocaleString()}`);
+      if (stats.likes !== undefined && stats.likes !== null) statsParts.push(`Likes: ${stats.likes.toLocaleString()}`);
+      if (stats.comments !== undefined && stats.comments !== null) statsParts.push(`Comments: ${stats.comments.toLocaleString()}`);
+      if (stats.reach !== undefined && stats.reach !== null) statsParts.push(`Reach: ${stats.reach.toLocaleString()}`);
+      if (stats.impressions !== undefined && stats.impressions !== null) statsParts.push(`Impressions: ${stats.impressions.toLocaleString()}`);
+      if (stats.saved !== undefined && stats.saved !== null) statsParts.push(`Saved: ${stats.saved.toLocaleString()}`);
+      if (stats.shares !== undefined && stats.shares !== null) statsParts.push(`Shares: ${stats.shares.toLocaleString()}`);
+      if (stats.total_interactions !== undefined && stats.total_interactions !== null) statsParts.push(`Total Interactions: ${stats.total_interactions.toLocaleString()}`);
+      if (stats.profile_visits !== undefined && stats.profile_visits !== null) statsParts.push(`Profile Visits: ${stats.profile_visits.toLocaleString()}`);
+      if (stats.views !== undefined && stats.views !== null) statsParts.push(`Views: ${stats.views.toLocaleString()}`);
+      
       if (statsParts.length > 0) {
         contentParts.push(`Statistics: ${statsParts.join(', ')}`);
+        console.log('🔗 [LINK RESOLVER] Added statistics:', statsParts.join(', '));
       }
+    } else {
+      console.log('🔗 [LINK RESOLVER] No statistics found for post');
     }
 
-    // Add analysis content
+    // Add analysis content if available
     if (post.analysis) {
       const analysisText = typeof post.analysis === 'string' ? post.analysis : JSON.stringify(post.analysis, null, 2);
       contentParts.push(`Analysis: ${analysisText}`);
+      console.log('🔗 [LINK RESOLVER] Added analysis (length:', analysisText.length, ')');
     }
 
-    // Add insights if available
-    if (post.insights) {
+    // Add additional insights if available and different from statistics
+    if (post.insights && post.insights !== post.statistics) {
       const insightsText = typeof post.insights === 'string' ? post.insights : JSON.stringify(post.insights, null, 2);
-      contentParts.push(`Insights: ${insightsText}`);
+      contentParts.push(`Additional Insights: ${insightsText}`);
+      console.log('🔗 [LINK RESOLVER] Added additional insights');
     }
 
     // Add platform and content type info
@@ -291,7 +331,18 @@ async function resolveInstagramContent(postId: string, userId: string, allLinkab
       contentParts.push(`Published: ${date}`);
     }
 
+    // Add media URLs for reference
+    if (post.mediaUrl) {
+      contentParts.push(`Media URL: ${post.mediaUrl}`);
+    }
+    if (post.thumbnailUrl && post.thumbnailUrl !== post.mediaUrl) {
+      contentParts.push(`Thumbnail URL: ${post.thumbnailUrl}`);
+    }
+
     const fullContent = contentParts.join('\n\n');
+    
+    console.log('🔗 [LINK RESOLVER] Built comprehensive content (length:', fullContent.length, ')');
+    console.log('🔗 [LINK RESOLVER] Content preview:', fullContent.substring(0, 300) + '...');
     
     return {
       type: 'instagram',
@@ -305,7 +356,8 @@ async function resolveInstagramContent(postId: string, userId: string, allLinkab
         mediaUrl: post.mediaUrl,
         thumbnailUrl: post.thumbnailUrl,
         insights: post.insights,
-        statistics: post.statistics
+        statistics: post.statistics,
+        analysis: post.analysis
       }
     };
   } catch (error) {
@@ -552,22 +604,52 @@ export function parseContentId(contentId: string): LinkReference | null {
 /**
  * Extract all content IDs from a message and resolve their content
  */
+// Function to extract content IDs from message content
+function extractContentIds(content: string): string[] {
+  const contentIdPattern = /@\[([^\]]+)\]@/g;
+  const contentIds: string[] = [];
+  let match;
+  
+  while ((match = contentIdPattern.exec(content)) !== null) {
+    contentIds.push(match[1]);
+  }
+  
+  return contentIds;
+}
+
 export async function resolveAllLinkContent(
   message: string, 
-  userId: string,
-  allLinkableContent: any[]
+  userId: string, 
+  convex: ConvexReactClient
 ): Promise<ResolvedLinkContent[]> {
   try {
-    // Extract all content IDs from the message
-    const contentIdPattern = /@\[([^\]]+)\]@/g;
-    const contentIds: string[] = [];
-    let match;
-    
-    while ((match = contentIdPattern.exec(message)) !== null) {
-      contentIds.push(match[1]);
-    }
+    console.log('🔗 [LINK RESOLVER] Starting to resolve all link content in message:', message);
 
+    // Get all content for the user from the unified content store
+    const allLinkableContent = useContentStore.getState().getAllLinkableContent();
+    
+    console.log('🔗 [LINK RESOLVER] Retrieved all linkable content:', {
+      totalCount: allLinkableContent.length,
+      instagramCount: allLinkableContent.filter(item => item.id?.startsWith('instagram:')).length,
+      instagramItems: allLinkableContent
+        .filter(item => item.id?.startsWith('instagram:'))
+        .slice(0, 3) // Show first 3 Instagram items
+        .map(item => ({
+          id: item.id,
+          title: item.title,
+          hasStatistics: !!item.statistics,
+          hasInsights: !!item.insights,
+          hasAnalysis: !!item.analysis,
+          statisticsKeys: item.statistics ? Object.keys(item.statistics) : 'none',
+          insightsKeys: item.insights ? Object.keys(item.insights) : 'none'
+        }))
+    });
+
+    // Extract content IDs from the message
+    const contentIds = extractContentIds(message);
+    
     if (contentIds.length === 0) {
+      console.log('🔗 [LINK RESOLVER] No content IDs found in message');
       return [];
     }
 
@@ -581,6 +663,12 @@ export async function resolveAllLinkContent(
           console.warn('🔗 [LINK RESOLVER] Could not parse content ID:', contentId);
           return null;
         }
+        
+        console.log('🔗 [LINK RESOLVER] About to resolve:', {
+          contentId,
+          linkRef,
+          allLinkableContentCount: allLinkableContent.length
+        });
         
         return await resolveLinkContent(linkRef, userId, allLinkableContent);
       })
