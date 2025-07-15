@@ -1,0 +1,637 @@
+/* Timeline Month View Styles */
+
+.timeline-container {
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: auto; /* Enable horizontal scrolling */
+  overflow-y: auto;
+  padding-bottom: 8rem;
+}
+
+.timeline-content {
+  width: 100%;
+  min-width: 100vw; /* At least full viewport width */
+  padding: 2rem;
+  padding-top: 140px; /* Extra padding for folder dots */
+  overflow: visible;
+}
+
+.timeline-header {
+  text-align: center;
+  margin-bottom: 4rem;
+}
+
+.timeline-title {
+  font-size: 1.875rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.timeline-date-range {
+  font-size: 1.25rem;
+}
+
+/* Camera-style timeline ruler - exact match to screenshot */
+.timeline-ruler-container {
+  position: relative;
+  width: 100%;
+  margin-bottom: 5rem;
+  height: 200px;
+  overflow: visible; /* Ensure folder dots above aren't clipped */
+}
+
+.timeline-main-line {
+  position: absolute;
+  top: 130px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #eab308;
+  z-index: 10;
+}
+
+.timeline-ruler-content {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  overflow: visible;
+}
+
+.timeline-day-container {
+  position: absolute;
+  top: 130px;
+  transform: translateX(-50%);
+}
+
+/* Major tick marks - tall yellow marks below the line */
+.timeline-tick.major,
+.timeline-tick.minor {
+  position: absolute;
+  width: 2px; /* major will override to 1px for minor below */
+  left: -1px; /* major will override to 0px for minor below */
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 15;
+}
+
+.timeline-tick.major {
+  height: 20px;
+  background: #eab308;
+}
+
+.timeline-tick.major.has-data {
+  background: #eab308;
+}
+
+.timeline-tick.major.no-data {
+  background: #6b7280;
+}
+
+/* Minor tick marks - shorter marks below the line */
+.timeline-tick.minor {
+  width: 1px;
+  height: 12px;
+  left: 0px;
+  background: #eab308;
+}
+
+.timeline-tick.minor.has-data {
+  background: #eab308;
+}
+
+.timeline-tick.minor.no-data {
+  background: #6b7280;
+}
+
+/* Day numbers below the tick marks */
+.timeline-day-number {
+  position: absolute;
+  left: 50%;
+  font-size: 0.75rem;
+  transform: translateX(-50%);
+  top: 25px;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+}
+
+/* Enhanced day number styling for major ticks */
+.timeline-day-number.major {
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: hsl(var(--foreground));
+}
+
+/* Vertical connecting lines from timeline to folder dots */
+.timeline-vertical-line {
+  position: absolute;
+  left: 0px;
+  width: 1px;
+  background: hsl(var(--muted-foreground) / 0.4);
+  bottom: 2px;
+  z-index: 5;
+}
+
+/* Folder dots - colored dots stacked above timeline */
+.timeline-folder-dot {
+  position: absolute;
+  z-index: 30;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  left: -8px;
+}
+
+.timeline-folder-dot:hover {
+  transform: scale(1.25);
+}
+
+.timeline-folder-dot.blue {
+  background-color: #82b4e9;
+  box-shadow:
+    0 0 12px rgba(130, 180, 233, 0.8),
+    0 0 24px rgba(130, 180, 233, 0.4);
+  top: -130px;
+}
+
+.timeline-folder-dot.purple {
+  background-color: #ad88f3;
+  box-shadow:
+    0 0 12px rgba(173, 136, 243, 0.8),
+    0 0 24px rgba(173, 136, 243, 0.4);
+  top: -100px;
+}
+
+.timeline-folder-dot.orange {
+  background-color: #f79c5d;
+  box-shadow:
+    0 0 12px rgba(247, 156, 93, 0.8),
+    0 0 24px rgba(247, 156, 93, 0.4);
+  top: -70px;
+}
+
+.timeline-folder-dot.yellow {
+  background-color: #fcee7e;
+  box-shadow:
+    0 0 12px rgba(252, 238, 126, 0.8),
+    0 0 24px rgba(252, 238, 126, 0.4);
+  top: -40px;
+}
+
+.timeline-dot-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  font-size: 8px;
+  background: white;
+  color: black;
+  border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Stacked Persona Cards */
+.persona-stacks-container {
+  position: relative;
+  margin-bottom: 3rem;
+  height: 200px;
+  overflow: visible;
+}
+
+.persona-stack-wrapper {
+  position: absolute;
+  width: 100%;
+  z-index: 30;
+}
+
+.persona-stack {
+  position: absolute;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 160px;
+  height: 80px;
+}
+
+.persona-stack:hover {
+  transform: translateX(10px) translateY(-5px) !important;
+}
+
+.persona-card {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: hsl(var(--background) / 0.98);
+  border: 1px solid hsl(var(--border) / 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px hsl(var(--foreground) / 0.15);
+  width: 160px;
+  height: 80px;
+  text-align: center;
+  z-index: 10;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.persona-card:hover {
+  background: hsl(var(--background) / 1);
+  border-color: hsl(var(--primary) / 0.5);
+  box-shadow: 0 12px 48px hsl(var(--foreground) / 0.2);
+  transform: translateY(-2px);
+}
+
+.persona-stack-bg {
+  position: absolute;
+  width: 160px;
+  height: 80px;
+  border-radius: 0.75rem;
+  background: hsl(var(--background) / 0.7);
+  border: 1px solid hsl(var(--border) / 0.4);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px hsl(var(--foreground) / 0.1);
+}
+
+.persona-stack-bg:hover {
+  background: hsl(var(--background) / 0.85);
+  border-color: hsl(var(--primary) / 0.4);
+}
+
+.persona-stack-bg-1 {
+  top: -8px;
+  left: 8px;
+  transform: rotate(4deg);
+  z-index: 3;
+}
+
+.persona-stack-bg-2 {
+  top: -16px;
+  left: -8px;
+  transform: rotate(-4deg);
+  z-index: 2;
+}
+
+.persona-stack-bg-3 {
+  top: -24px;
+  left: 4px;
+  transform: rotate(6deg);
+  z-index: 1;
+}
+
+.persona-creation-date {
+  font-size: 0.7rem;
+  margin-bottom: 0.25rem;
+  opacity: 0.7;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+}
+
+.persona-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: hsl(var(--foreground));
+  margin-bottom: 0.5rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.persona-stack-indicator {
+  font-size: 0.65rem;
+  opacity: 0.6;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+  padding: 0.125rem 0.375rem;
+  background: hsl(var(--muted) / 0.3);
+  border-radius: 0.25rem;
+  display: inline-block;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.persona-stack-indicator:hover {
+  opacity: 0.8;
+  background: hsl(var(--muted) / 0.5);
+  color: hsl(var(--foreground));
+}
+
+.persona-connection-dot {
+  position: absolute;
+  width: 0.75rem;
+  height: 0.75rem;
+  background: transparent;
+  border-radius: 50%;
+  border: 2px solid hsl(var(--background));
+  z-index: 20;
+  transform: translateX(-50%);
+  top: 120px;
+  box-shadow: none;
+}
+
+/* Events */
+.events-container {
+  position: relative;
+  min-height: 800px;
+  margin-bottom: 5rem;
+}
+
+.event-wrapper {
+  position: absolute;
+  width: 100%;
+}
+
+.event-connecting-line {
+  position: absolute;
+  width: 2px;
+  height: 2rem;
+  background: #eab308;
+  top: -2rem;
+  transform: translateX(-50%);
+  border-radius: 1px;
+  z-index: 10;
+}
+
+.event-marker {
+  position: absolute;
+  width: 0.875rem;
+  height: 0.875rem;
+  background: #eab308;
+  border-radius: 50%;
+  border: 2px solid hsl(var(--background));
+  top: -38px;
+  transform: translateX(-50%);
+  z-index: 20;
+  box-shadow: 0 2px 8px hsl(var(--foreground) / 0.15);
+}
+
+.event-card-wrapper {
+  position: absolute;
+  width: 20rem;
+  z-index: 10;
+}
+
+.event-card-wrapper.even {
+  left: auto;
+}
+
+.event-card-wrapper.odd {
+  right: auto;
+}
+
+.event-date-label {
+  position: absolute;
+  font-size: 0.75rem;
+  top: 0px;
+  transform: translateX(-50%);
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  background: hsl(var(--background) / 0.9);
+  border-radius: 0.25rem;
+  border: 1px solid hsl(var(--border) / 0.2);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+/* Month view: center ticks on the line */
+.month-view .timeline-tick.major,
+.month-view .timeline-tick.minor {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Year view: center ticks on the line (like month view) */
+.year-view .timeline-tick.major,
+.year-view .timeline-tick.minor {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Year view: make major ticks (months) more prominent */
+.year-view .timeline-tick.major {
+  height: 28px;
+  width: 3px;
+  background: #eab308;
+}
+
+.year-view .timeline-tick.minor {
+  height: 10px;
+  width: 1px;
+  background: #eab308;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1400px) {
+  .timeline-content {
+    width: 100%; /* Use full available width */
+  }
+}
+
+@media (max-width: 1200px) {
+  .timeline-content {
+    width: 100%; /* Use full available width */
+  }
+}
+
+/* Timeline-integrated Persona Info - No Card */
+.persona-card-figma-dark {
+  position: absolute;
+  top: 60px;
+  left: 0;
+  right: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+  width: 200px;
+  min-height: 80px; /* Fixed minimum height for consistent layout */
+  text-align: left;
+  z-index: 10;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.persona-card-figma-dark:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: transparent;
+}
+
+.persona-name-figma {
+  font-weight: 700;
+  color: hsl(var(--foreground));
+  margin-bottom: 0.5rem;
+  line-height: 1.2;
+  /* Allow natural text wrapping */
+  min-height: 1.32rem; /* Minimum single line height */
+  overflow: visible;
+  white-space: normal;
+  text-overflow: unset;
+  display: block;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.streak-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: 0.75rem;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  border: none;
+}
+
+.streak-placeholder-text {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+
+.folder-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  align-items: flex-start;
+  position: relative;
+  z-index: 20;
+}
+
+.folder-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 1.5rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  min-width: 120px;
+  max-width: 100%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 25;
+  background-clip: padding-box;
+}
+
+.folder-bar:hover {
+  transform: translateX(2px);
+  opacity: 0.9;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.folder-bar.blue {
+  background: #4f87c7;
+  color: white;
+}
+
+.folder-bar.purple {
+  background: #8b5cf6;
+  color: white;
+}
+
+.folder-bar.orange {
+  background: #f97316;
+  color: white;
+}
+
+.folder-bar.yellow {
+  background: #eab308;
+  color: white;
+}
+
+.folder-bar-icon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.9;
+}
+
+.folder-bar-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.stack-indicator-figma {
+  position: absolute;
+  bottom: -1.5rem;
+  right: 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--background) / 0.8);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  border: 1px solid hsl(var(--border) / 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.stack-indicator-figma:hover {
+  background: hsl(var(--primary) / 0.1);
+  color: hsl(var(--primary));
+  border-color: hsl(var(--primary) / 0.3);
+}
+
+/* Connecting line styling */
+.persona-stack-wrapper .absolute.w-0\.5 {
+  z-index: 5 !important;
+  opacity: 0.6;
+}
+
+/* Ensure the connecting line is visible */
+.persona-connection-dot {
+  background: hsl(var(--foreground)) !important;
+  border: 2px solid hsl(var(--background)) !important;
+  box-shadow: 0 0 0 1px hsl(var(--border)) !important;
+  z-index: 15;
+}
+
+.achievement-badge {
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  margin-top: 0.5rem; /* Add margin to separate from persona name */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.5rem;
+}
+
+.achievement-icon {
+  font-size: 0.875rem;
+}
+
+.achievement-text {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  white-space: nowrap;
+}
+
+.achievement-level {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--muted) / 0.5);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  margin-left: auto;
+}

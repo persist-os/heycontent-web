@@ -1,0 +1,431 @@
+name: Production Deployment & Sync
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  repository-projects: read
+
+jobs:
+  verify-production-deployment:
+    name: Verify Production Deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Wait for Vercel production deployment
+        run: |
+          echo "⏳ Waiting for Vercel production deployment..."
+          sleep 180  # Give Vercel 3 minutes to deploy to production
+      
+      - name: Production health check
+        id: health-check
+        run: |
+          echo "🔍 Checking production environment health..."
+          
+          # Check if the production site is accessible
+          for i in {1..15}; do
+            if curl -f -s https://heycontent-web-divertissement-ai.vercel.app > /dev/null; then
+              echo "✅ Production site is accessible"
+              echo "HEALTH_STATUS=success" >> $GITHUB_ENV
+              break
+            else
+              echo "⏳ Attempt $i: Production site not ready yet, waiting..."
+              sleep 30
+            fi
+            
+            if [ $i -eq 15 ]; then
+              echo "❌ Production site failed health check after 15 attempts"
+              echo "HEALTH_STATUS=failed" >> $GITHUB_ENV
+              exit 1
+            fi
+          done
+      
+      - name: Production smoke tests
+        id: smoke-tests
+        run: |
+          echo "🧪 Running production smoke tests..."
+          
+          # Basic HTTP status check
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://heycontent-web-divertissement-ai.vercel.app)
+          
+          if [ $STATUS -eq 200 ]; then
+            echo "✅ Production site returns 200 OK"
+          else
+            echo "❌ Production site returned status: $STATUS"
+            echo "SMOKE_STATUS=failed" >> $GITHUB_ENV
+            exit 1
+          fi
+          
+          # Check essential pages
+          echo "🔍 Checking essential pages..."
+          
+          # Home page
+          if curl -f -s https://heycontent-web-divertissement-ai.vercel.app > /dev/null; then
+            echo "✅ Homepage accessible"
+          else
+            echo "❌ Homepage failed"
+            exit 1
+          fi
+          
+          # Login page (allow redirects, just check it doesn't 500)
+          LOGIN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://heycontent-web-divertissement-ai.vercel.app/sign-in)
+          if [ $LOGIN_STATUS -lt 500 ]; then
+            echo "✅ Login page accessible (status: $LOGIN_STATUS)"
+          else
+            echo "❌ Login page failed with status: $LOGIN_STATUS"
+            exit 1
+          fi
+          
+          echo "SMOKE_STATUS=success" >> $GITHUB_ENV
+          echo "✅ All smoke tests passed"
+
+  sync-dev-branch:
+    name: Sync Dev with Main
+    runs-on: ubuntu-latest
+    needs: [verify-production-deployment]
+    if: success()
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: Sync dev branch with main
+        id: sync
+        run: |
+          echo "🔄 Syncing dev branch with main after successful production deployment..."
+          
+          # Retry logic for sync
+          for i in {1..3}; do
+            echo "Sync attempt $i/3"
+            
+            # Fetch all branches
+            git fetch origin
+            
+            # Switch to dev branch
+            git checkout dev
+            
+            # Pull latest dev changes first
+            git pull origin dev
+            
+            # Try to merge main into dev
+            if git merge origin/main --no-ff -m "🤖 Auto-sync dev with main after production deployment"; then
+              # Push the updated dev branch
+              if git push origin dev; then
+                echo "✅ Dev branch successfully synced with main on attempt $i"
+                echo "SYNC_STATUS=success" >> $GITHUB_ENV
+                exit 0
+              else
+                echo "⚠️ Push failed on attempt $i, retrying..."
+                git reset --hard HEAD~1  # Reset the merge
+                sleep 10
+              fi
+            else
+              echo "⚠️ Merge failed on attempt $i - likely conflicts"
+              git merge --abort 2>/dev/null || true
+              sleep 10
+            fi
+          done
+          
+          echo "❌ Failed to sync after 3 attempts"
+          echo "SYNC_STATUS=failed" >> $GITHUB_ENV
+          exit 1
+
+  handle-production-failure:
+    name: Handle Production Deployment Failure
+    runs-on: ubuntu-latest
+    needs: [verify-production-deployment]
+    if: failure()
+    
+    steps:
+      - name: Create production failure issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const commitSha = context.sha.substring(0, 7);
+            const commitMessage = context.payload.head_commit?.message || 'No commit message';
+            const author = context.payload.head_commit?.author?.name || 'Unknown';
+            
+            const issueBody = `## 🚨 PRODUCTION DEPLOYMENT FAILED
+            
+            **Critical Production Issue - Immediate Action Required**
+            
+            **Failed Deployment Details:**
+            - **Commit**: \`${commitSha}\`
+            - **Message**: ${commitMessage}
+            - **Author**: ${author}
+            - **Time**: ${new Date().toISOString()}
+            - **Workflow**: [Failed Run](${context.payload.repository.html_url}/actions/runs/${context.runId})
+            
+            **Failure Impact**: 🔴 **CRITICAL** - Production deployment verification failed
+            
+            **Immediate Response Team:**
+            - **Primary**: @MyatPyaePaingPie (Quality Lead)
+            - **Secondary**: @Shreyboiii (Technical Lead)
+            - **Escalation**: @ariaxhan (if needed)
+            
+            **Emergency Response Checklist:**
+            
+            **Phase 1: Assessment (0-15 minutes)**
+            - [ ] Check [Vercel production deployment](https://vercel.com/divertissement-ai/heycontent-web/deployments)
+            - [ ] Test production site: https://heycontent-web-divertissement-ai.vercel.app
+            - [ ] Review [workflow failure logs](${context.payload.repository.html_url}/actions/runs/${context.runId})
+            - [ ] Determine if site is accessible to users
+            - [ ] Assess severity and user impact
+            
+            **Phase 2: Immediate Action (15-30 minutes)**
+            - [ ] **Option A**: Site is down → Emergency rollback
+            - [ ] **Option B**: Site has issues → Hotfix deployment
+            - [ ] **Option C**: False positive → Re-run verification
+            
+            **Rollback Commands (if needed):**
+            \`\`\`bash
+            # Emergency rollback to previous version
+            git log --oneline -10  # Find last working commit
+            git revert ${context.sha} --no-edit
+            git push origin main   # Triggers new deployment
+            \`\`\`
+            
+            **Hotfix Process (if needed):**
+            \`\`\`bash
+            # Create emergency hotfix
+            git checkout -b hotfix/emergency-${commitSha}
+            # Make minimal fixes
+            git commit -m "Emergency hotfix for production issue"
+            # Create PR to main immediately
+            \`\`\`
+            
+            **Investigation Areas:**
+            - [ ] Vercel deployment status and logs
+            - [ ] Environment variables configuration
+            - [ ] Database connectivity (if applicable)
+            - [ ] Third-party service integrations
+            - [ ] Recent code changes that might cause issues
+            
+            **Communication:**
+            - [ ] Update team on status
+            - [ ] Notify stakeholders if user-facing
+            - [ ] Document resolution steps
+            
+            **Priority**: 🚨 **P0 - CRITICAL** - Production system health
+            
+            ---
+            *Auto-generated critical production failure alert*`;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 CRITICAL: Production Deployment Failed (${commitSha})`,
+              body: issueBody,
+              labels: ['production-failed', 'critical', 'urgent', 'p0-incident'],
+              assignees: ['MyatPyaePaingPie', 'Shreyboiii']
+            });
+
+  production-success-notification:
+    name: Production Success Notification
+    runs-on: ubuntu-latest
+    needs: [verify-production-deployment, sync-dev-branch]
+    if: success()
+    
+    steps:
+      - name: Close production review issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Find and close the production review issue
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'production-review',
+              state: 'open'
+            });
+            
+            for (const issue of issues) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: '✅ **PRODUCTION DEPLOYMENT SUCCESSFUL** ✅\n\nThis review has been completed successfully. Production is live and all systems operational!'
+              });
+              
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed',
+                labels: ['production-review', 'deployed', 'successful']
+              });
+            }
+      
+      - name: Create production deployment record
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const commitSha = context.sha.substring(0, 7);
+            const commitMessage = context.payload.head_commit?.message || 'No commit message';
+            const author = context.payload.head_commit?.author?.name || 'Unknown';
+            
+            const issueBody = `## 🚀 Production Deployment Successful
+            
+            **Deployment Completed Successfully**
+            
+            **Deployment Details:**
+            - **Commit**: \`${commitSha}\`
+            - **Message**: ${commitMessage}
+            - **Author**: ${author}
+            - **Deployed At**: ${new Date().toISOString()}
+            - **Workflow**: [Successful Run](${context.payload.repository.html_url}/actions/runs/${context.runId})
+            
+            **Production Environment:**
+            - 🌐 **Live Site**: https://heycontent-web-divertissement-ai.vercel.app
+            - 🔗 **Custom Domain**: (Add your custom domain if available)
+            
+            **Verification Status:**
+            - ✅ Health checks passed
+            - ✅ Essential pages accessible
+            - ✅ Production environment verified
+            - ✅ Dev branch synced with main
+            - ✅ All smoke tests successful
+            
+            **Team Achievement:**
+            - **Quality Assurance**: @MyatPyaePaingPie ✅ Review completed
+            - **Production Approval**: @Shreyboiii ✅ Approved for deployment
+            - **Development**: @ariaxhan 📢 New features live
+            - **Deployment**: github-actions[bot] ✅ Automated deployment successful
+            
+            **Quick Access Links:**
+            - [🌐 Live Production Site](https://heycontent-web-divertissement-ai.vercel.app)
+            - [🔐 Production Login](https://heycontent-web-divertissement-ai.vercel.app/sign-in)
+            - [📊 Production Dashboard](https://heycontent-web-divertissement-ai.vercel.app/dashboard)
+            
+            **Post-Deployment:**
+            - Dev environment synced and ready for next development cycle
+            - Production monitoring active
+            - All systems operational
+            
+            **Next Development Cycle:** Ready to begin! 🎯
+            
+            ---
+            *🎉 Production deployment completed successfully - All systems go!*`;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚀 Production Live: ${commitSha} - Deployment Successful`,
+              body: issueBody,
+              labels: ['production-deployed', 'announcement', 'successful']
+            });
+      
+      - name: Production success commit comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const commitSha = context.sha;
+            const commitMessage = context.payload.head_commit?.message || 'No commit message';
+            
+            const commentBody = `## 🚀 PRODUCTION DEPLOYMENT SUCCESSFUL
+            
+            **Status**: ✅ Live in production
+            **Health Check**: ✅ All systems operational  
+            **Production URL**: https://heycontent-web-divertissement-ai.vercel.app
+            
+            **Deployment Summary:**
+            - **Quality Gates**: Passed by @MyatPyaePaingPie ✅
+            - **Production Approval**: Approved by @Shreyboiii ✅
+            - **Deployment**: Successful and verified ✅
+            - **Dev Sync**: Completed ✅
+            
+            **Production Links:**
+            - [🌐 Live Site](https://heycontent-web-divertissement-ai.vercel.app)
+            - [🔐 Login Page](https://heycontent-web-divertissement-ai.vercel.app/sign-in)
+            - [📊 Dashboard](https://heycontent-web-divertissement-ai.vercel.app/dashboard)
+            
+            **Pipeline Status**: Complete ✅ - Ready for next development cycle
+            
+            ---
+            🎉 **All systems operational!** 🎉`;
+            
+            await github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: commitSha,
+              body: commentBody
+            });
+
+  handle-sync-failure:
+    name: Handle Dev Sync Failure
+    runs-on: ubuntu-latest
+    needs: [sync-dev-branch]
+    if: failure()
+    
+    steps:
+      - name: Create dev sync failure issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const commitSha = context.sha.substring(0, 7);
+            
+            const issueBody = `## ⚠️ Dev Branch Sync Failed After Production Deployment
+            
+            **Production Status**: ✅ Successfully deployed
+            **Dev Sync Status**: ❌ Failed to sync dev with main
+            
+            **Issue**: The dev branch could not be automatically synced with main after successful production deployment.
+            
+            **Impact**: 
+            - Production deployment was successful
+            - Dev branch is now behind main
+            - Future development may have conflicts
+            
+            **Manual Sync Required:**
+            @MyatPyaePaingPie - Please manually sync the dev branch:
+            
+            \`\`\`bash
+            # Manual sync commands
+            git checkout dev
+            git pull origin dev
+            git merge origin/main --no-ff -m "Manual sync dev with main after production deployment"
+            git push origin dev
+            \`\`\`
+            
+            **Verification:**
+            - [ ] Dev branch successfully updated
+            - [ ] No merge conflicts resolved
+            - [ ] Dev environment deploys correctly
+            - [ ] Ready for next development cycle
+            
+            **Investigation:**
+            - Check for merge conflicts between main and dev
+            - Review recent commits that might cause conflicts
+            - Verify branch protection rules
+            
+            **Priority**: 🟡 Medium - Production is healthy, but dev pipeline needs attention
+            
+            ---
+            *Auto-generated from failed dev sync - production deployment was successful*`;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `⚠️ Dev Sync Failed After Production: ${commitSha}`,
+              body: issueBody,
+              labels: ['dev-sync-failure', 'manual-intervention-needed', 'post-production'],
+              assignees: ['MyatPyaePaingPie']
+            });

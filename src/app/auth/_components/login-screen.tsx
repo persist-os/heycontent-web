@@ -1,0 +1,208 @@
+"use client";
+
+import React, { useState } from "react";
+import { Eye, EyeOff, Mail, Lock } from "lucide-react";
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { getFirebaseAuth } from '@/app/lib/firebase';
+import { WaitlistButton } from '@/app/waitlist/_components/WaitlistButton';
+import { Logo } from '@/components/ui/logo';
+import { motion } from "framer-motion";
+import Cookies from 'js-cookie';
+
+interface LoginScreenProps {
+  onSuccess?: (apiKey: string) => void;
+  reason?: string | null;
+}
+
+const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    Cookies.remove('apiKey');
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+    try {
+      // Use Firebase Auth to validate credentials
+      let auth;
+      try {
+        auth = getFirebaseAuth();
+      } catch (e) {
+        setError('Firebase Auth not initialized');
+        setIsLoading(false);
+        return;
+      }
+      let userCredential;
+      try {
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
+      } catch (err: any) {
+        setError('Invalid email or password.');
+        setIsLoading(false);
+        return;
+      }
+      const user = userCredential.user;
+      if (!user) {
+        setError('Authentication failed: No user returned.');
+        setIsLoading(false);
+        return;
+      }
+      // Get ID token
+      let idToken: string;
+      try {
+        // Use the enhanced token manager to get and store the token properly
+        const { setFirebaseToken, updateTokenForUser } = await import('@/app/lib/firebase-token-manager');
+        idToken = await updateTokenForUser(user, true);
+      } catch (err: any) {
+        setError('Failed to get Firebase ID token: ' + (err.message || err.code));
+        setIsLoading(false);
+        return;
+      }
+      // Send ID token to backend
+      const apiKeyResponse = await fetch('/api/auth/firebase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
+      const apiKeyData = await apiKeyResponse.json();
+      if (apiKeyResponse.ok) {
+        if (apiKeyData.apiKey) {
+          Cookies.set('apiKey', JSON.stringify(apiKeyData.apiKey), { expires: 7, sameSite: 'Lax', secure: process.env.NODE_ENV === 'production', path: '/' });
+        }
+        if (apiKeyData.redirect) {
+          window.location.href = apiKeyData.redirect;
+          return;
+        }
+      } else {
+        setError(apiKeyData.error || 'Failed to get API key');
+        setIsLoading(false);
+        return;
+      }
+      if (onSuccess) onSuccess(apiKeyData.apiKey || "");
+    } catch (err: any) {
+      setError(err.message || 'An error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background/80 via-muted/20 to-background/80 p-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <motion.div
+            animate={{
+              y: [0, -10, 0],
+              rotate: [0, 2, 0, -2, 0],
+            }}
+            transition={{
+              duration: 4,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          >
+            <Logo className="h-12 mx-auto mb-4" />
+          </motion.div>
+          <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
+          <p className="text-muted-foreground mt-2">Sign in to your account</p>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-6 bg-background/80 backdrop-blur-sm shadow-xl rounded-2xl p-8 border border-border">
+          {reason === 'session_expired' && (
+            <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl text-yellow-800 dark:text-yellow-200 text-sm">
+              Your session has expired. Please sign in again.
+            </div>
+          )}
+          {reason === 'logged_in_elsewhere' && (
+            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl text-blue-800 dark:text-blue-200 text-sm">
+              You've been logged out because you signed in from another device. Please sign in again.
+            </div>
+          )}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Email</label>
+            <div className="relative">
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                className="w-full px-4 py-3 pl-11 bg-background text-foreground border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-muted-foreground"
+                required
+                placeholder="Enter your email"
+                title="Email address"
+              />
+              <Mail className="w-5 h-5 text-muted-foreground absolute left-4 top-1/2 transform -translate-y-1/2" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Password</label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className="w-full px-4 py-3 pl-11 pr-11 bg-background text-foreground border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-muted-foreground"
+                required
+                placeholder="Enter your password"
+                title="Password"
+              />
+              <Lock className="w-5 h-5 text-muted-foreground absolute left-4 top-1/2 transform -translate-y-1/2" />
+              <button
+                type="button"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
+          </div>
+          {error && (
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl text-red-600 dark:text-red-200 text-sm">
+              {error}
+            </div>
+          )}
+          <button
+            type="submit"
+            className="w-full bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Signing in...' : 'Sign In'}
+          </button>
+          <div className="space-y-4">
+            <div className="text-center">
+              <a href="/auth/forgot-password" className="text-sm text-blue-600 hover:text-blue-700 hover:underline">
+                Forgot your password?
+              </a>
+            </div>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-background text-muted-foreground">or</span>
+              </div>
+            </div>
+            <div className="text-center">
+              <a href="/auth/register" className="text-sm text-muted-foreground hover:text-foreground">
+                Don't have an account? <span className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">Sign up</span>
+              </a>
+            </div>
+            <div className="pt-4 border-t border-border">
+              <p className="text-sm text-muted-foreground text-center mb-3">
+                Want to be a beta tester?<br />
+                Get early access to creator tools and mobile features below.
+              </p>
+              <div className="flex justify-center">
+                <WaitlistButton />
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default LoginScreen;
