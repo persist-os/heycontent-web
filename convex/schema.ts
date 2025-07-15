@@ -202,6 +202,8 @@ export default defineSchema({
     conversationIds: v.optional(v.array(v.string())),
     instagramPostIds: v.optional(v.array(v.string())),
     youtubeVideoIds: v.optional(v.array(v.string())),
+    gmailIds: v.optional(v.array(v.string())),
+    analysisIds: v.optional(v.array(v.string())),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

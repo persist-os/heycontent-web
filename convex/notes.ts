@@ -15,16 +15,6 @@ const noteType = v.union(
   v.literal("email_draft")
 );
 
-export const getNotesByUser = query({
-  args: { userId: v.string() },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("notes")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .collect();
-  },
-});
-
 // UPDATE NOTE MUTATION
 
 export const updateNote = mutation({
@@ -526,10 +516,23 @@ export const getContentByPrefixedId = query({
       case 'insight':
         // Get insight by analysis ID and index
         try {
-          const [analysisId, indexStr] = contentId.split(':', 2);
+          const parts = contentId.split(':');
+          if (parts.length < 2) {
+            console.error('Invalid insight ID format:', contentId);
+            return null;
+          }
+          
+          const analysisId = parts[0];
+          const indexStr = parts[1];
+          
+          if (!analysisId || !indexStr) {
+            console.error('Invalid insight index:', indexStr);
+            return null;
+          }
+          
           const index = parseInt(indexStr, 10);
           
-          if (isNaN(index)) {
+          if (isNaN(index) || index < 0) {
             console.error('Invalid insight index:', indexStr);
             return null;
           }

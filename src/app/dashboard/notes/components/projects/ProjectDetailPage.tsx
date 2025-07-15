@@ -6,9 +6,9 @@ import { ProjectWithItems } from '../../types/project';
 import { useProjectDetails } from '../../hooks/useProjectDetails';
 import { useProjects } from '../../hooks/useProjects';
 import { useCreateNote } from '../../hooks/useCreateNote';
-import { useAuth } from '@/app/context/auth-context';
 import { useNotes } from '@/app/context/notes-context';
 import { Id } from '@/convex/_generated/dataModel';
+import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, Trash2, Plus } from 'lucide-react';
 import { AttachmentPanel } from './AttachmentPanel';
@@ -22,9 +22,9 @@ interface ProjectDetailPageProps {
 
 export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
   const router = useRouter();
-  const { firebaseUser } = useAuth();
+  const userId = getCurrentUserId();
   const { project, isLoading } = useProjectDetails(projectId);
-  const { deleteProject, updateProject, addItemToProject, isUpdating } = useProjects(firebaseUser?.uid);
+  const { deleteProject, updateProject, addItemToProject, isUpdating } = useProjects(userId);
   const { createNote, isCreating: isCreatingNote } = useCreateNote();
   const { setActiveNoteId } = useNotes();
   

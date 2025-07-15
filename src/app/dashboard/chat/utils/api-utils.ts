@@ -446,9 +446,9 @@ export async function generateEmbeddingsForPlatform(
 
       case 'notes':
         // Get notes only
-        const notes = await convex.query(api.notes.getNotesByUser, { userId });
+        const notesResult = await convex.query(api.noteQueries.getUserNotes, { userId, numItems: 1000 });
         
-        for (const note of notes) {
+        for (const note of notesResult.page) {
           results.notes.processed++;
           
           if (!note || !note._id || !note.title) {
