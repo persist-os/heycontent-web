@@ -1,73 +1,87 @@
-name: Dev Environment Ready
+name: Sync Dev with Main and Deploy
 
 on:
   push:
-    branches: [dev]
+    branches: [main]
 
 permissions:
-  contents: read
+  contents: write
   issues: write
   pull-requests: write
-  repository-projects: read
 
 jobs:
-  verify-deployment:
-    name: Verify Dev Deployment
+  sync-dev-and-deploy:
+    name: Sync Dev Branch and Deploy Convex
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     
     steps:
-      - name: Wait for Vercel deployment
-        run: |
-          echo "Waiting for Vercel auto-deployment to complete..."
-          sleep 120  # Give Vercel 2 minutes to deploy
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for proper sync
+          token: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Health check dev environment
-        id: health-check
+      - name: Configure Git
         run: |
-          echo "Checking dev environment health..."
-          
-          # Check if the site is accessible
-          for i in {1..10}; do
-            if curl -f -s https://heycontent-web-git-dev-divertissement-ai.vercel.app > /dev/null; then
-              echo "✅ Dev site is accessible"
-              echo "HEALTH_STATUS=success" >> $GITHUB_ENV
-              break
-            else
-              echo "⏳ Attempt $i: Site not ready yet, waiting..."
-              sleep 30
-            fi
-            
-            if [ $i -eq 10 ]; then
-              echo "❌ Dev site failed health check after 10 attempts"
-              echo "HEALTH_STATUS=failed" >> $GITHUB_ENV
-              exit 1
-            fi
-          done
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
       
-      - name: Verify site functionality
-        id: functionality-check
+      - name: Sync dev branch with main
+        id: sync-dev
         run: |
-          # Basic HTTP status check
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://heycontent-web-git-dev-divertissement-ai.vercel.app)
+          echo "🔄 Syncing dev branch with main..."
           
-          if [ $STATUS -eq 200 ]; then
-            echo "✅ Dev site returns 200 OK"
-            echo "FUNC_STATUS=success" >> $GITHUB_ENV
-          else
-            echo "❌ Dev site returned status: $STATUS"
-            echo "FUNC_STATUS=failed" >> $GITHUB_ENV
-            exit 1
-          fi
+          # Checkout dev branch
+          git checkout dev
+          
+          # Reset dev to match main exactly
+          git reset --hard origin/main
+          
+          # Force push to update dev branch
+          git push origin dev --force
+          
+          echo "✅ Dev branch successfully synced with main"
+          echo "SYNC_STATUS=success" >> $GITHUB_ENV
+        continue-on-error: false
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: './package-lock.json'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Deploy to Convex
+        id: convex-deploy
+        run: |
+          echo "🚀 Deploying to Convex..."
+          npx convex deploy
+          echo "✅ Convex deployment completed"
+          echo "CONVEX_STATUS=success" >> $GITHUB_ENV
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        continue-on-error: false
+      
+      - name: Verify deployment success
+        run: |
+          echo "📊 Deployment Summary:"
+          echo "- Dev Sync: ${{ env.SYNC_STATUS }}"
+          echo "- Convex Deploy: ${{ env.CONVEX_STATUS }}"
+          echo ""
+          echo "✅ All operations completed successfully"
 
-  handle-deployment-issues:
-    name: Handle Deployment Issues
+  handle-sync-failure:
+    name: Handle Sync/Deploy Failures
     runs-on: ubuntu-latest
-    needs: [verify-deployment]
+    needs: [sync-dev-and-deploy]
     if: failure()
     
     steps:
-      - name: Create dev deployment failure issue
+      - name: Create sync failure issue
         uses: actions/github-script@v7
         with:
           script: |
@@ -75,197 +89,110 @@ jobs:
             const commitMessage = context.payload.head_commit?.message || 'No commit message';
             const author = context.payload.head_commit?.author?.name || 'Unknown';
             
-            const issueBody = `## 🚨 Dev Environment Deployment Failed
+            const issueBody = `## 🚨 Dev Sync/Deploy Failed
             
-            **Deployment Failure Details:**
+            **Main Branch Update Failed to Sync to Dev**
+            
+            **Failure Details:**
             - **Commit**: \`${commitSha}\`
             - **Message**: ${commitMessage}
             - **Author**: ${author}
             - **Time**: ${new Date().toISOString()}
-            - **Branch**: dev
+            - **Branch**: main → dev (sync failed)
             
-            **Failure Type**: Dev environment health check failed
+            **Failed Operations:**
+            The automated sync from main to dev branch failed. This could be due to:
+            - Git sync issues (merge conflicts, branch protection)
+            - Convex deployment failures
+            - Network/authentication issues
             
-            **Immediate Investigation Required:**
-            @MyatPyaePaingPie - Dev deployment verification failed, blocking production pipeline
+            **Manual Recovery Required:**
+            @MyatPyaePaingPie - Immediate attention needed
+            
+            **Manual Sync Steps:**
+            \`\`\`bash
+            # 1. Sync dev branch manually
+            git checkout dev
+            git reset --hard origin/main
+            git push origin dev --force
+            
+            # 2. Deploy to Convex
+            npm ci
+            npx convex deploy
+            \`\`\`
             
             **Investigation Checklist:**
-            - [ ] Check [Vercel deployment status](https://vercel.com/divertissement-ai/heycontent-web/deployments)
-            - [ ] Review [GitHub Actions logs](${context.payload.repository.html_url}/actions/runs/${context.runId})
-            - [ ] Test dev site manually: https://heycontent-web-git-dev-divertissement-ai.vercel.app
-            - [ ] Check for build/runtime errors in Vercel logs
-            - [ ] Verify environment variables are properly set
+            - [ ] Check [GitHub Actions logs](${context.payload.repository.html_url}/actions/runs/${context.runId})
+            - [ ] Verify branch protection rules on dev branch
+            - [ ] Check Convex deployment key configuration
+            - [ ] Test manual sync process
+            - [ ] Verify no blocking issues in dev branch
             
-            **Possible Root Causes:**
-            - [ ] Vercel deployment failed or timed out
-            - [ ] Site returning error status codes (5xx, 4xx)
-            - [ ] Network connectivity issues
-            - [ ] Environment configuration problems
-            - [ ] Breaking changes in recent commits
+            **Root Cause Analysis:**
+            - [ ] Git operation failure (permissions, conflicts)
+            - [ ] Convex authentication/deployment issues
+            - [ ] Repository configuration problems
+            - [ ] Network/infrastructure issues
             
-            **Resolution Steps:**
-            1. **Identify**: Determine root cause from logs and manual testing
-            2. **Fix**: Address the underlying issue (redeploy, fix code, update config)
-            3. **Verify**: Ensure dev environment is fully functional
-            4. **Notify**: Update this issue when resolved
+            **Resolution Priority**: 🔴 **HIGH**
+            Dev branch out of sync with main blocks development workflow
             
-            **Impact**: 🔴 **HIGH** - Dev environment unavailable, production promotion blocked
-            
-            **Escalation**: If not resolved within 2 hours, consider:
-            - Reverting the problematic commit
-            - Emergency hotfix deployment
-            - Manual intervention in Vercel dashboard
+            **Next Steps:**
+            1. Investigate root cause from workflow logs
+            2. Perform manual sync if needed
+            3. Fix underlying issue to prevent recurrence
+            4. Update workflow if necessary
             
             ---
-            *Auto-generated from failed dev deployment - production pipeline halted*`;
+            *Auto-generated from failed dev sync - manual intervention required*`;
             
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `🚨 Dev Deployment Failed: ${commitSha}`,
+              title: `🚨 Dev Sync Failed: ${commitSha}`,
               body: issueBody,
-              labels: ['dev-deployment-failure', 'urgent', 'needs-MyatPyaePaingPie-review', 'pipeline-blocked'],
+              labels: ['dev-sync-failure', 'urgent', 'needs-MyatPyaePaingPie-review', 'manual-intervention'],
               assignees: ['MyatPyaePaingPie']
             });
 
-  notify-readiness:
-    name: Notify Production Readiness Review
+  notify-success:
+    name: Notify Successful Sync
     runs-on: ubuntu-latest
-    needs: [verify-deployment]
+    needs: [sync-dev-and-deploy]
     if: success()
     
     steps:
-      - name: Close previous review issues
-        uses: actions/github-script@v7
-        with:
-          script: |
-            // Find and close any existing production review issues
-            const { data: issues } = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              labels: 'production-review',
-              state: 'open'
-            });
-            
-            for (const issue of issues) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issue.number,
-                body: '🔄 **Superseded by new dev deployment** - Closing this review as dev environment has been updated.'
-              });
-              
-              await github.rest.issues.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issue.number,
-                state: 'closed',
-                labels: ['production-review', 'superseded']
-              });
-            }
-      
-      - name: Create production readiness review issue
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const commitSha = context.sha.substring(0, 7);
-            const commitMessage = context.payload.head_commit?.message || 'No commit message';
-            const author = context.payload.head_commit?.author?.name || 'Unknown';
-            
-            const issueBody = `## 🔧 Production Readiness Review Required
-            
-            **Dev Environment Successfully Updated**
-            
-            **Latest Changes:**
-            - **Commit**: \`${commitSha}\`
-            - **Message**: ${commitMessage}
-            - **Author**: ${author}
-            - **Deployed**: ${new Date().toISOString()}
-            
-            **Environment URLs:**
-            - 🔧 **Dev Frontend**: https://heycontent-web-git-dev-divertissement-ai.vercel.app
-            - 🔧 **Dev Backend**: https://backend.hicontent.co (if applicable)
-            
-            **Production Readiness Checklist:**
-            @MyatPyaePaingPie - Please review and check off each item:
-            
-            **Functionality Review:**
-            - [ ] ✅ Core features work correctly in dev environment
-            - [ ] ✅ New functionality performs as expected
-            - [ ] ✅ User flows complete successfully
-            - [ ] ✅ No breaking changes or regressions
-            
-            **Performance & Quality:**
-            - [ ] ✅ Page load times are acceptable
-            - [ ] ✅ No console errors or warnings
-            - [ ] ✅ Mobile responsiveness maintained
-            - [ ] ✅ Performance meets standards
-            
-            **Integration & Security:**
-            - [ ] ✅ Backend integration working (if applicable)
-            - [ ] ✅ Authentication flows functional
-            - [ ] ✅ No security vulnerabilities introduced
-            - [ ] ✅ Environment variables properly configured
-            
-            **Production Deployment Process:**
-            Once all items are checked and approved:
-            
-            1. **Create Production PR**: 
-               - Base: \`main\` ← Compare: \`dev\`
-               - Title: "Production Release: ${commitMessage}"
-               
-            2. **Get Final Approval**: 
-               - Tag @Shreyboiii for production approval
-               - Tag COO if major changes
-               
-            3. **Deploy**: 
-               - Merge PR to trigger production deployment
-               - Monitor deployment success
-            
-            **Quick Test Links:**
-            - [🏠 Homepage](https://heycontent-web-git-dev-divertissement-ai.vercel.app)
-            - [🔐 Login](https://heycontent-web-git-dev-divertissement-ai.vercel.app/sign-in)
-            - [⚙️ Dashboard](https://heycontent-web-git-dev-divertissement-ai.vercel.app/dashboard)
-            
-            **Priority**: Ready for production when all checks complete ✅
-            
-            ---
-            *Auto-generated production readiness review*`;
-            
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `🔧 Production Review: ${commitSha} Ready`,
-              body: issueBody,
-              labels: ['production-review', 'needs-MyatPyaePaingPie-review', 'ready-for-review'],
-              assignees: ['MyatPyaePaingPie']
-            });
-      
-      - name: Notify on commit
+      - name: Add commit comment
         uses: actions/github-script@v7
         with:
           script: |
             const commitSha = context.sha;
             const commitMessage = context.payload.head_commit?.message || 'No commit message';
             
-            const commentBody = `## ✅ Dev Environment Deployment Successful
+            const commentBody = `## ✅ Dev Environment Successfully Synced
             
-            **Status**: 🟢 Ready for production review
-            **Health Check**: ✅ All systems operational
-            **Dev URL**: https://heycontent-web-git-dev-divertissement-ai.vercel.app
+            **Sync Status**: 🟢 Complete
+            **Operations Completed**:
+            - ✅ Dev branch synced with main
+            - ✅ Convex deployment successful
             
-            **Next Steps**: 
-            @MyatPyaePaingPie - Production readiness review issue created automatically
+            **Dev Branch Status**: Now matches main exactly
+            **Next Steps**: Development can continue on updated dev branch
             
-            **Quick Access:**
-            - [🏠 Test Homepage](https://heycontent-web-git-dev-divertissement-ai.vercel.app)
-            - [🔐 Test Login](https://heycontent-web-git-dev-divertissement-ai.vercel.app/sign-in)
-            - [📋 Review Checklist](${context.payload.repository.html_url}/issues?q=is%3Aopen+label%3Aproduction-review)
+            **Quick Commands for Developers:**
+            \`\`\`bash
+            # Pull latest dev changes
+            git checkout dev
+            git pull origin dev
             
-            **Deployment Pipeline**: Dev ✅ → Production Review → Main → Live 🚀
+            # Create new feature branch
+            git checkout -b feature/your-feature-name
+            \`\`\`
+            
+            **Environment Ready**: Dev branch ready for new feature development
             
             ---
-            *Dev environment ready - awaiting production review*`;
+            *Auto-synced: main → dev*`;
             
             await github.rest.repos.createCommitComment({
               owner: context.repo.owner,
