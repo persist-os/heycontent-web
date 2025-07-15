@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { extractAuthInfo } from '@/app/lib/api-helpers-server';
 
 export async function POST(req: NextRequest) {
-  // Require Authorization header
+  // Extract API key and user ID from Authorization header
   const authHeader = req.headers.get('authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  const { apiKey, userId } = extractAuthInfo(authHeader);
+  
+  if (!apiKey || !userId) {
     return NextResponse.json({ error: 'Unauthorized - Missing or invalid Authorization header' }, { status: 401 });
-  }
-  const apiKey = authHeader.substring(7).replace(/"/g, '');
-  // Extract user_id from API key
-  const apiKeyParts = apiKey.split('_');
-  const user_id = apiKeyParts.length >= 2 && apiKeyParts[0] === 'heycontent' ? apiKeyParts[1] : null;
-  if (!user_id) {
-    return NextResponse.json({ error: 'Unauthorized - Invalid API key format or missing user_id' }, { status: 401 });
   }
 
   // Parse any additional body fields (expires_at, scope)
@@ -30,7 +26,7 @@ export async function POST(req: NextRequest) {
         'Authorization': `Bearer ${apiKey}`, // <-- forward the API key!
       },
       body: JSON.stringify({
-        user_id,
+        user_id: userId,
         expires_at,
         scope,
       }),
