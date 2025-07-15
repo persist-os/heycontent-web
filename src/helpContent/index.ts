@@ -1,5 +1,4 @@
 // Export all help content for easy importing
-export { contentHubHelp } from './contentHubHelp';
 export { notesHelp } from './notesHelp';
 export { selfHubHelp } from './selfHubHelp';
 export { settingsHelp } from './settingsHelp';
@@ -19,7 +18,7 @@ HELP CONTENT MANAGEMENT GUIDE:
    - Import and use it in your page component
 
 2. UPDATING EXISTING HELP:
-   - Edit the specific help file (e.g., contentHubHelp.ts)
+   - Edit the specific help file (e.g., notesHelp.ts)
    - No changes needed to this index.ts unless adding new files
 
 3. HELP CONTENT STRUCTURE:
@@ -31,9 +30,11 @@ HELP CONTENT MANAGEMENT GUIDE:
      content?: ReactNode;  // For complex JSX content
    }
 
-4. USAGE PATTERN:
+NOTE: For new interactive tours, use the tour system in /helpContent/interactiveTours.tsx
+
+4. USAGE PATTERN (OLD MODAL SYSTEM):
    import { HelpModal, HelpIconButton } from '@/components/ui/help-modal';
-   import { contentHubHelp } from '@/helpContent';
+   import { notesHelp } from '@/helpContent';
    
    // In your component:
    const [helpOpen, setHelpOpen] = useState(false);
@@ -42,7 +43,7 @@ HELP CONTENT MANAGEMENT GUIDE:
    <HelpModal 
      open={helpOpen} 
      onClose={() => setHelpOpen(false)} 
-     pages={contentHubHelp}
-     title="Content Hub Help"
+     pages={notesHelp}
+     title="Notes Help"
    />
 */ 

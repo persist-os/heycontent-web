@@ -15,11 +15,8 @@ import { useYouTubeRefresh } from '@/app/hooks/useYouTubeRefresh'
 import { toast } from 'react-hot-toast'
 
 // Help system imports
-import { HelpModal } from '@/components/ui/help-modal'
-import { HelpIconButton } from '@/components/ui/help-icon-button'
 import { EnhancedHelpButton } from '@/components/ui/enhanced-help-button'
 import { InteractiveTooltip } from '@/components/ui/interactive-tooltip'
-import { contentHubHelp } from '@/helpContent'
 import { interactiveTours } from '@/helpContent/interactiveTours'
 
 // Analytics components and hooks
@@ -84,7 +81,7 @@ export function ContentHubScreen() {
   const [currentQuote, setCurrentQuote] = useState<string>('')
   const [expandedInsight, setExpandedInsight] = useState<number | null>(null);
   const [expandHubInsight, setExpandHubInsight] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
+
   const [interactiveTourOpen, setInteractiveTourOpen] = useState(false);
   const [quickStartOpen, setQuickStartOpen] = useState(false);
   const [fullAppTourOpen, setFullAppTourOpen] = useState(false);
@@ -652,12 +649,7 @@ export function ContentHubScreen() {
         </>
       )}
 
-      {/* Help Modal */}
-      <HelpModal 
-        open={helpOpen} 
-        onClose={() => setHelpOpen(false)} 
-        pages={contentHubHelp} 
-      />
+
 
       {/* Interactive Tour */}
       <InteractiveTooltip
