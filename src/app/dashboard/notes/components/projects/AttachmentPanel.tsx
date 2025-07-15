@@ -4,17 +4,25 @@ import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ProjectWithItems, ItemType } from '../../types/project';
 import { useProjects } from '../../hooks/useProjects';
-import { useAuth } from '@/app/context/auth-context';
 import { useNotes } from '@/app/context/notes-context';
 import { Id } from '@/convex/_generated/dataModel';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { Search, Plus, Minus, FileText, MessageSquare, Instagram, Youtube } from 'lucide-react';
+import { useContentManager, usePlatformContent } from '@/app/hooks/use-content';
+import { getCurrentUserId } from '@/app/lib/api-helpers';
+import { Search, Plus, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  AttachableItem,
+  extractRawId,
+  convertToAttachableItems,
+  getItemIcon,
+  getItemColor,
+  filterItems,
+} from '../../utils/project-items';
 
 interface AttachmentPanelProps {
   projectId: Id<"projects">;
@@ -23,107 +31,45 @@ interface AttachmentPanelProps {
   onClose: () => void;
 }
 
-interface AttachableItem {
-  id: string;
-  type: ItemType;
-  title: string;
-  preview?: string;
-  date: number;
-  isAttached: boolean;
-}
-
 export function AttachmentPanel({ projectId, project, isOpen, onClose }: AttachmentPanelProps) {
-  const { firebaseUser } = useAuth();
+  const userId = getCurrentUserId();
   const { notes } = useNotes();
-  const { addItemToProject, removeItemFromProject } = useProjects(firebaseUser?.uid);
+  const { addItemToProject, removeItemFromProject } = useProjects(userId);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<'all' | ItemType>('all');
 
-  // Fetch conversations
+  // Initialize content manager
+  useContentManager(userId);
+
+  // Fetch conversations (keeping direct query for now as it may not be part of content system)
   const conversations = useQuery(
     api.chatQueries.getHistory,
-    firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
+    userId ? { userId } : "skip"
   );
 
-  // Fetch Instagram posts
-  const instagramPosts = useQuery(
-    api.instagramQueries.getAllInstagramPosts,
-    firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
-  );
-
-  // Fetch YouTube videos
-  const youtubeVideos = useQuery(
-    api.youtubeQueries.getYouTubeVideos,
-    firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
-  );
+  // Fetch platform content using content hooks
+  const { content: instagramPosts } = usePlatformContent('instagram');
+  const { content: youtubeVideos } = usePlatformContent('youtube');
+  const { content: gmailContent } = usePlatformContent('gmail');
+  const { content: analysisContent } = usePlatformContent('insights');
 
   // Convert all available items to a unified format
   const allItems = useMemo(() => {
-    const items: AttachableItem[] = [];
-
-    // Add notes
-    notes.forEach(note => {
-      items.push({
-        id: String(note._id),
-        type: 'note',
-        title: note.title,
-        preview: note.content?.substring(0, 100),
-        date: note.updatedAt || note._creationTime || 0,
-        isAttached: project.noteIds?.includes(String(note._id)) || false,
-      });
-    });
-
-    // Add conversations
-    (conversations || []).forEach(conversation => {
-      items.push({
-        id: String(conversation._id),
-        type: 'conversation',
-        title: conversation.title,
-        preview: conversation.messages?.[conversation.messages.length - 1]?.content?.substring(0, 100),
-        date: conversation.updatedAt || conversation._creationTime || 0,
-        isAttached: project.conversationIds?.includes(String(conversation._id)) || false,
-      });
-    });
-
-    // Add Instagram posts
-    (instagramPosts || []).forEach(post => {
-      items.push({
-        id: String(post._id),
-        type: 'instagramPost',
-        title: post.data?.caption?.substring(0, 50) || 'Instagram Post',
-        preview: post.data?.caption?.substring(0, 100),
-        date: post.data?.timestamp || post.createdAt || 0,
-        isAttached: project.instagramPostIds?.includes(String(post._id)) || false,
-      });
-    });
-
-    // Add YouTube videos
-    (youtubeVideos || []).forEach(video => {
-      items.push({
-        id: String(video._id),
-        type: 'youtubeVideo',
-        title: video.snippet?.title || 'YouTube Video',
-        preview: video.snippet?.description?.substring(0, 100),
-        date: video.snippet?.published_at ? new Date(video.snippet.published_at).getTime() : video.createdAt || 0,
-        isAttached: project.youtubeVideoIds?.includes(String(video._id)) || false,
-      });
-    });
-
-    return items;
-  }, [notes, conversations, instagramPosts, youtubeVideos, project]);
+    return convertToAttachableItems(
+      notes,
+      conversations || [],
+      instagramPosts || [],
+      youtubeVideos || [],
+      gmailContent || [],
+      analysisContent || [],
+      project
+    );
+  }, [notes, conversations, instagramPosts, youtubeVideos, gmailContent, analysisContent, project]);
 
   // Filter items based on search and type
   const filteredItems = useMemo(() => {
-    return allItems.filter(item => {
-      const matchesSearch = searchTerm === '' || 
-        item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.preview?.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesType = selectedType === 'all' || item.type === selectedType;
-
-      return matchesSearch && matchesType;
-    });
+    return filterItems(allItems, searchTerm, selectedType);
   }, [allItems, searchTerm, selectedType]);
 
   // Group items by attached/available
@@ -131,28 +77,12 @@ export function AttachmentPanel({ projectId, project, isOpen, onClose }: Attachm
   const availableItems = filteredItems.filter(item => !item.isAttached);
 
   const handleToggleItem = async (item: AttachableItem) => {
+    // For analysis items, use the full ID; for others, extract the raw database ID
+    const idToUse = item.type === 'analysis' ? item.id : extractRawId(item.id);
     if (item.isAttached) {
-      await removeItemFromProject(projectId, item.type, item.id);
+      await removeItemFromProject(projectId, item.type, idToUse);
     } else {
-      await addItemToProject(projectId, item.type, item.id);
-    }
-  };
-
-  const getItemIcon = (type: ItemType) => {
-    switch (type) {
-      case 'note': return FileText;
-      case 'conversation': return MessageSquare;
-      case 'instagramPost': return Instagram;
-      case 'youtubeVideo': return Youtube;
-    }
-  };
-
-  const getItemColor = (type: ItemType) => {
-    switch (type) {
-      case 'note': return 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/20';
-      case 'conversation': return 'text-green-600 bg-green-100 dark:bg-green-900/20';
-      case 'instagramPost': return 'text-pink-600 bg-pink-100 dark:bg-pink-900/20';
-      case 'youtubeVideo': return 'text-red-600 bg-red-100 dark:bg-red-900/20';
+      await addItemToProject(projectId, item.type, idToUse);
     }
   };
 
@@ -162,6 +92,8 @@ export function AttachmentPanel({ projectId, project, isOpen, onClose }: Attachm
     { key: 'conversation', label: 'Conversations' },
     { key: 'instagramPost', label: 'Instagram' },
     { key: 'youtubeVideo', label: 'YouTube' },
+    { key: 'gmail', label: 'Gmail' },
+    { key: 'analysis', label: 'Analysis' },
   ] as const;
 
   return (

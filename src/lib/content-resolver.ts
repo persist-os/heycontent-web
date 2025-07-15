@@ -60,7 +60,7 @@ export async function resolveContentTitles(
   try {
     // Fetch content from each platform in parallel
     const [notes, youtubeVideos, instagramPosts, gmailThreads] = await Promise.allSettled([
-      convex.query(api.notes.getNotesByUser, { userId }),
+      convex.query(api.noteQueries.getUserNotes, { userId, numItems: 1000 }), // Get up to 1000 notes
       convex.query(api.youtubeQueries.listUserYouTubeVideos, { userId, limit: 100 }),
       convex.query(api.instagramQueries.getAllInstagramPosts, { userId }),
       convex.query(api.gmailQueries.getGmailThreadsByUserEmail, { userId, limit: 100 }),
@@ -68,7 +68,7 @@ export async function resolveContentTitles(
     
     // Process notes
     if (notes.status === 'fulfilled') {
-      notes.value.forEach((note: any) => {
+      notes.value.page.forEach((note: any) => {
         titles[String(note._id)] = note.title || 'Untitled Note';
         titles[`note:${note._id}`] = note.title || 'Untitled Note';
       });
@@ -129,7 +129,7 @@ export async function resolveAllLinkContent(
   try {
     // Fetch content from each platform in parallel
     const [notes, youtubeVideos, instagramPosts, gmailThreads] = await Promise.allSettled([
-      convex.query(api.notes.getNotesByUser, { userId }),
+      convex.query(api.noteQueries.getUserNotes, { userId, numItems: 1000 }), // Get up to 1000 notes
       convex.query(api.youtubeQueries.listUserYouTubeVideos, { userId, limit: 100 }),
       convex.query(api.instagramQueries.getAllInstagramPosts, { userId }),
       convex.query(api.gmailQueries.getGmailThreadsByUserEmail, { userId, limit: 100 }),
@@ -145,7 +145,7 @@ export async function resolveAllLinkContent(
         switch (prefix) {
           case 'note':
             if (notes.status === 'fulfilled') {
-              foundContent = notes.value.find((note: any) => String(note._id) === id);
+              foundContent = notes.value.page.find((note: any) => String(note._id) === id);
               if (foundContent) {
                 resolvedContent.push({
                   type: 'note',

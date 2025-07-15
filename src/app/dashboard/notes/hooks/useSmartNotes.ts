@@ -19,14 +19,14 @@ interface SmartNotesHook {
 
 export function useSmartNotes(userId: string | undefined): SmartNotesHook {
   // Fetch notes using Convex useQuery
-  const notesFromConvex = useQuery(api.notes.getNotesByUser, userId ? { userId } : "skip");
+  const notesFromConvex = useQuery(api.noteQueries.getUserNotes, userId ? { userId, numItems: 1000 } : "skip");
 
   // State variables
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [activeNoteId, setActiveNoteId] = useState<string | undefined>(undefined);
 
   // Convex mutations
-  const updateNoteConvex = useMutation(api.notes.updateNote);
+  const updateNoteConvex = useMutation(api.notesMutations.updateNote);
 
   // Debounce and cancellation for metadata generation
   const metadataTimers = useRef<Record<string, NodeJS.Timeout>>({});
@@ -37,8 +37,8 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
 
   // Transform Convex notes to frontend Note format
   const notes: Note[] = useMemo(() => {
-    if (!notesFromConvex) return [];
-    return notesFromConvex.map(note => {
+    if (!notesFromConvex?.page) return [];
+    return notesFromConvex.page.map(note => {
       // Convert legacy "idea" type to "idea_bank"
       let noteType = note.type ?? 'idea_bank';
       if (noteType === 'idea') {

@@ -11,6 +11,8 @@ export interface Project {
   conversationIds?: string[];
   instagramPostIds?: string[];
   youtubeVideoIds?: string[];
+  gmailIds?: string[];
+  analysisIds?: string[];
   createdAt: number;
   updatedAt: number;
 }
@@ -84,7 +86,7 @@ export interface ProjectUpdate {
   description?: string;
 }
 
-export type ItemType = "note" | "conversation" | "instagramPost" | "youtubeVideo";
+export type ItemType = "note" | "conversation" | "instagramPost" | "youtubeVideo" | "gmail" | "analysis";
 
 export interface ProjectItem {
   id: string;
