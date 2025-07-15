@@ -38,11 +38,8 @@ import { useConvex } from 'convex/react'
 import { useContentContext, useContentContextActions, useContentContextStore } from '@/store/content-context-store'
 
 // Help system imports
-import { HelpModal } from '@/components/ui/help-modal'
-import { HelpIconButton } from '@/components/ui/help-icon-button'
 import { EnhancedHelpButton } from '@/components/ui/enhanced-help-button'
 import { InteractiveTooltip } from '@/components/ui/interactive-tooltip'
-import { chatHelp } from '@/helpContent'
 import { interactiveTours } from '@/helpContent/interactiveTours'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -109,8 +106,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   // Context search state - enable by default when no context, keep enabled for YouTube videos without analysis
   const [useContextSearch, setUseContextSearch] = useState(!hasContext)
   
-  // Help modal state
-  const [helpOpen, setHelpOpen] = useState(false)
+  // Interactive tour state
   const [interactiveTourOpen, setInteractiveTourOpen] = useState(false)
   const [quickStartOpen, setQuickStartOpen] = useState(false)
   const [fullAppTourOpen, setFullAppTourOpen] = useState(false)
@@ -119,7 +115,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setHelpOpen(false)
         setInteractiveTourOpen(false)
         setQuickStartOpen(false)
         setFullAppTourOpen(false)
@@ -133,7 +128,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     }
 
     // Reset body styles when any modal closes
-    if (!helpOpen && !interactiveTourOpen && !quickStartOpen && !fullAppTourOpen) {
+    if (!interactiveTourOpen && !quickStartOpen && !fullAppTourOpen) {
       resetBodyStyles()
     }
 
@@ -142,18 +137,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       document.removeEventListener('keydown', handleEscape)
       resetBodyStyles()
     }
-  }, [helpOpen, interactiveTourOpen, quickStartOpen, fullAppTourOpen])
+  }, [interactiveTourOpen, quickStartOpen, fullAppTourOpen])
 
   // Enhanced close handlers with cleanup
-  const handleCloseHelp = () => {
-    setHelpOpen(false)
-    // Ensure no lingering overlay issues
-    setTimeout(() => {
-      document.body.style.pointerEvents = ''
-      document.body.style.overflow = ''
-    }, 100)
-  }
-
   const handleCloseInteractiveTour = () => {
     setInteractiveTourOpen(false)
     // Ensure no lingering overlay issues
@@ -839,12 +825,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         availableNotes={availableNotes}
       />
       
-      {/* Help Modal */}
-      <HelpModal 
-        open={helpOpen} 
-        onClose={handleCloseHelp} 
-        pages={chatHelp}
-      />
+
 
       {/* Interactive Tour */}
       <InteractiveTooltip

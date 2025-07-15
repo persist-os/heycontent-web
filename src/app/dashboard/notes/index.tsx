@@ -15,11 +15,8 @@ import { InsightCard } from '../ai-insights/_components/InsightCard';
 import { InsightOverlay } from '@/components/content/overlays/InsightOverlay';
 
 // Help system imports
-import { HelpModal } from '@/components/ui/help-modal';
-import { HelpIconButton } from '@/components/ui/help-icon-button';
 import { EnhancedHelpButton } from '@/components/ui/enhanced-help-button';
 import { InteractiveTooltip } from '@/components/ui/interactive-tooltip';
-import { notesHelp } from '@/helpContent';
 import { interactiveTours } from '@/helpContent/interactiveTours';
 import { buildNoteUpdate, validateNoteUpdate } from './NoteArea';
 
@@ -59,7 +56,7 @@ export default function SmartNotes() {
   const [selectedInsightId, setSelectedInsightId] = useState<string | null>(null);
   
   // Help modal state
-  const [helpOpen, setHelpOpen] = useState(false);
+
   const [interactiveTourOpen, setInteractiveTourOpen] = useState(false);
   const [quickStartOpen, setQuickStartOpen] = useState(false);
   const noteAreaFlushRef = useRef<() => Promise<void>>();
@@ -349,12 +346,7 @@ export default function SmartNotes() {
           />
         }
       />
-      {/* Help Modal */}
-      <HelpModal 
-        open={helpOpen} 
-        onClose={() => setHelpOpen(false)} 
-        pages={notesHelp}
-      />
+
 
       {/* Interactive Tour */}
       <InteractiveTooltip

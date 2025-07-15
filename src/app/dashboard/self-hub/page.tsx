@@ -8,15 +8,12 @@ import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 // Help system imports
-import { HelpModal } from '@/components/ui/help-modal'
 import { EnhancedHelpButton } from '@/components/ui/enhanced-help-button'
 import { InteractiveTooltip } from '@/components/ui/interactive-tooltip'
-import { selfHubHelp } from '@/helpContent'
 import { interactiveTours } from '@/helpContent/interactiveTours'
 
 export default function SelfHubPage() {
   const [userId, setUserId] = useState<string | undefined>();
-  const [helpOpen, setHelpOpen] = useState(false);
   const [interactiveTourOpen, setInteractiveTourOpen] = useState(false);
 
   useEffect(() => {
@@ -83,12 +80,7 @@ export default function SelfHubPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Help Modal */}
-      <HelpModal 
-        open={helpOpen} 
-        onClose={() => setHelpOpen(false)} 
-        pages={selfHubHelp}
-      />
+
 
       {/* Interactive Tour */}
       <InteractiveTooltip

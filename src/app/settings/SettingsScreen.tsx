@@ -16,10 +16,7 @@ import { getFirebaseAuth } from '@/app/lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { PlaygroundPasswordModal, isPlaygroundUnlocked, setPlaygroundUnlocked } from '@/app/prompt-playground/_components/PlaygroundPasswordModal'
 
-// Help system imports
-import { HelpModal } from '@/components/ui/help-modal'
-import { HelpIconButton } from '@/components/ui/help-icon-button'
-import { settingsHelp } from '@/helpContent'
+// Help system imports (removed old modal system)
 
 const SettingsScreen = () => {
   const router = useRouter()
@@ -41,7 +38,7 @@ const SettingsScreen = () => {
   const [userId, setUserId] = useState<string | undefined>()
   const [userEmail, setUserEmail] = useState<string | undefined>()
   const [showPlaygroundModal, setShowPlaygroundModal] = useState(false)
-  const [helpOpen, setHelpOpen] = useState(false)
+
 
   useEffect(() => {
     setIsFirstTimeSetup(window.location.search.includes('newUser=true'))
@@ -126,7 +123,6 @@ const SettingsScreen = () => {
             </div>
           </div>
           <div className="w-[100px] sm:w-auto flex justify-end items-center gap-2">
-            <HelpIconButton onClick={() => setHelpOpen(true)} />
             <Button
               onClick={() => handleSignOut(router)}
               variant="ghost"
@@ -176,12 +172,6 @@ const SettingsScreen = () => {
         </Tabs>
       </div>
       
-      {/* Help Modal */}
-      <HelpModal 
-        open={helpOpen} 
-        onClose={() => setHelpOpen(false)} 
-        pages={settingsHelp}
-      />
     </div>
   )
 }

@@ -33,7 +33,6 @@ import { PartnershipProgressiveThinking } from './PartnershipProgressiveThinking
 import { getPartnershipColors } from '../utils/emailCategorization';
 
 // Help system imports
-import { HelpModal } from '@/components/ui/help-modal';
 import { EnhancedHelpButton } from '@/components/ui/enhanced-help-button';
 import { InteractiveTooltip } from '@/components/ui/interactive-tooltip';
 import { interactiveTours } from '@/helpContent/interactiveTours';
@@ -58,7 +57,7 @@ export function PartnershipHub() {
   });
 
   // Help system state
-  const [helpOpen, setHelpOpen] = useState(false);
+
   const [interactiveTourOpen, setInteractiveTourOpen] = useState(false);
 
   // Use Gmail analytics to get real Gmail data
@@ -466,12 +465,7 @@ export function PartnershipHub() {
           )}
         </div>
         
-        {/* Help Modal */}
-        <HelpModal 
-          open={helpOpen} 
-          onClose={() => setHelpOpen(false)} 
-          pages={[]} // TODO: Add partnership hub help pages
-        />
+
 
         {/* Interactive Tour */}
         <InteractiveTooltip
