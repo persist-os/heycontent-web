@@ -81,33 +81,69 @@ export function processInstagramData(result: PromiseSettledResult<any[]>): Unifi
     console.log('📸 [CONTENT PROCESSORS] processInstagramData: Processing', result.value.length, 'posts');
   }
 
-  const processed = result.value.map(post => ({
-    id: `instagram:${post.postId}`,
-    title: post.data?.caption?.substring(0, 100) || 'Instagram Post',
-    type: 'instagram' as const,
-    contentType: post.mediaType?.toLowerCase() || 'image',
-    platform: 'instagram',
-    createdAt: post.data?.timestamp || post.createdAt || Date.now(),
-    updatedAt: post.updatedAt || post.createdAt || Date.now(),
-    important: false,
-    tags: [],
-    analysis: post.analysis,
-    content: post.data?.caption || '',
-    mediaUrl: post.data?.media_url,
-    thumbnailUrl: post.data?.thumbnail_url,
-    insights: post.data?.insights,
-    statistics: {
-      likes: post.data?.insights?.likes || post.data?.like_count || 0,
-      comments: post.data?.insights?.comments || post.data?.comments_count || 0,
-      reach: post.data?.insights?.reach || 0,
-      impressions: post.data?.insights?.impressions || 0,
-      saved: post.data?.insights?.saved || 0,
-      shares: post.data?.insights?.shares || 0,
-    },
-  }));
+  const processed = result.value.map(post => {
+    // Extract comprehensive insights data
+    const postInsights = post.data?.insights || {};
+    const statistics = {
+      likes: postInsights?.likes || post.data?.like_count || 0,
+      comments: postInsights?.comments || post.data?.comments_count || 0,
+      reach: postInsights?.reach || 0,
+      impressions: postInsights?.impressions || 0,
+      saved: postInsights?.saved || 0,
+      shares: postInsights?.shares || 0,
+      total_interactions: postInsights?.total_interactions || 0,
+      profile_visits: postInsights?.profile_visits || 0,
+      profile_activity: postInsights?.profile_activity || 0,
+      views: postInsights?.views || 0,
+      follows: postInsights?.follows || 0,
+      ig_reels_avg_watch_time: postInsights?.ig_reels_avg_watch_time || 0,
+      ig_reels_video_view_total_time: postInsights?.ig_reels_video_view_total_time || 0,
+    };
+
+    return {
+      id: `instagram:${post.postId}`,
+      title: post.data?.caption?.substring(0, 100) || 'Instagram Post',
+      type: 'instagram' as const,
+      contentType: post.mediaType?.toLowerCase() || 'image',
+      platform: 'instagram',
+      createdAt: post.data?.timestamp || post.createdAt || Date.now(),
+      updatedAt: post.updatedAt || post.createdAt || Date.now(),
+      important: false,
+      tags: [],
+      analysis: post.analysis,
+      analysisMarkdown: post.analysisMarkdown, // Preserve markdown analysis
+      content: post.data?.caption || '',
+      mediaUrl: post.data?.media_url,
+      thumbnailUrl: post.data?.thumbnail_url,
+      permalink: post.data?.permalink, // Add permalink
+      insights: postInsights, // Full insights object
+      statistics, // Comprehensive statistics
+      mediaType: post.mediaType, // Preserve original media type
+      // Include raw Convex data for complete access
+      convexData: post,
+      // Include comments if available
+      comments: post.data?.comments || [],
+      // Include children for carousel posts
+      children: post.data?.children || [],
+    };
+  });
 
   if (process.env.NODE_ENV === 'development') {
     console.log('📸 [CONTENT PROCESSORS] processInstagramData: Processed', processed.length, 'posts successfully');
+    // Log sample of processed data for debugging
+    if (processed.length > 0) {
+      console.log('📸 [CONTENT PROCESSORS] Sample processed post:', {
+        id: processed[0].id,
+        title: processed[0].title,
+        hasStatistics: !!processed[0].statistics,
+        statisticsKeys: Object.keys(processed[0].statistics || {}),
+        hasInsights: !!processed[0].insights,
+        insightsKeys: Object.keys(processed[0].insights || {}),
+        hasAnalysis: !!processed[0].analysis,
+        hasAnalysisMarkdown: !!processed[0].analysisMarkdown,
+        hasConvexData: !!processed[0].convexData,
+      });
+    }
   }
 
   return processed;

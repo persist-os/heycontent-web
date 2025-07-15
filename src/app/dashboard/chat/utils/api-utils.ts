@@ -1577,7 +1577,14 @@ export async function sendChatMessage(
       if (resolvedLinkContent.length > 0) {
         console.log('🔗 [LINK RESOLUTION] Resolved link content:', {
           count: resolvedLinkContent.length,
-          types: resolvedLinkContent.map((item: any) => item.type)
+          types: resolvedLinkContent.map((item: any) => item.type),
+          contentLengths: resolvedLinkContent.map((item: any) => item.content?.length || 0),
+          firstItemPreview: resolvedLinkContent[0] ? {
+            type: resolvedLinkContent[0].type,
+            title: resolvedLinkContent[0].title,
+            contentLength: resolvedLinkContent[0].content?.length || 0,
+            contentPreview: resolvedLinkContent[0].content?.substring(0, 200) + '...'
+          } : null
         });
         
         // Add resolved link content to request body

@@ -429,22 +429,6 @@ export const useContentStore = create<ContentStoreState>()(
             break;
         }
         
-        // Debug logging
-        console.log('[ContentStore] getContentByTab:', {
-          currentTab,
-          tabLower,
-          resultCount: result.length,
-          contentCounts: {
-            notes: state.content.notes.items.length,
-            youtube: state.content.youtube.items.length,
-            instagram: state.content.instagram.items.length,
-            gmail: state.content.gmail.items.length,
-            insights: state.content.insights.items.length,
-            allContent: state.allContent.length
-          },
-          sampleResult: result.slice(0, 3).map(item => ({ id: item.id, title: item.title, platform: item.platform }))
-        });
-        
         return result;
       },
 
