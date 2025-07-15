@@ -32,52 +32,24 @@ jobs:
       
       - name: Type checking
         id: typecheck
-        run: |
-          echo "Running TypeScript type checking..."
-          if npx tsc --noEmit 2>&1 | tee typecheck.log; then
-            echo "TypeScript check passed"
-          else
-            echo "TYPECHECK_FAILED=true" >> $GITHUB_ENV
-            echo "TypeScript errors found"
-          fi
+        run: npx tsc --noEmit
         continue-on-error: true
       
       - name: Lint code
         id: lint
-        run: |
-          echo "Running ESLint..."
-          if npm run lint 2>&1 | tee lint.log; then
-            echo "Linting passed"
-          else
-            echo "LINT_FAILED=true" >> $GITHUB_ENV
-            echo "Linting errors found"
-          fi
+        run: npm run lint
         continue-on-error: true
       
       - name: Run tests
         id: tests
-        run: |
-          echo "Running tests..."
-          if npm run test -- --passWithNoTests --watchAll=false 2>&1 | tee test.log; then
-            echo "Tests passed"
-          else
-            echo "TESTS_FAILED=true" >> $GITHUB_ENV
-            echo "Tests failed"
-          fi
+        run: npm run test -- --passWithNoTests --watchAll=false
         env:
           CI: true
         continue-on-error: true
       
       - name: Build verification
         id: build
-        run: |
-          echo "Running build..."
-          if npm run build 2>&1 | tee build.log; then
-            echo "Build passed"
-          else
-            echo "BUILD_FAILED=true" >> $GITHUB_ENV
-            echo "Build failed"
-          fi
+        run: npm run build
         env:
           NEXT_PUBLIC_BACKEND_URL: "http://127.0.0.1:8000"
           NEXT_PUBLIC_APP_URL: "http://localhost:3000"
@@ -98,79 +70,26 @@ jobs:
         id: security
         run: |
           echo "Running security audit..."
-          npm audit --audit-level high --production 2>&1 | tee security.log
-          if npm audit --audit-level high --production >/dev/null 2>&1; then
+          if npm audit --audit-level high --production; then
             echo "SECURITY_STATUS=passed" >> $GITHUB_ENV
           else
             echo "SECURITY_STATUS=failed" >> $GITHUB_ENV
-            echo "SECURITY_FAILED=true" >> $GITHUB_ENV
           fi
         continue-on-error: true
       
-      - name: Capture error details
-        if: always()
+      - name: Determine overall status
+        id: status
         run: |
-          echo "=== CAPTURING ERROR DETAILS ===" 
+          TYPECHECK_STATUS="${{ steps.typecheck.outcome }}"
+          LINT_STATUS="${{ steps.lint.outcome }}"
+          TESTS_STATUS="${{ steps.tests.outcome }}"
+          BUILD_STATUS="${{ steps.build.outcome }}"
           
-          # Capture TypeScript errors
-          if [ "${{ env.TYPECHECK_FAILED }}" = "true" ] && [ -f typecheck.log ]; then
-            echo "TYPECHECK_ERRORS<<EOF" >> $GITHUB_ENV
-            head -20 typecheck.log >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
-          fi
-          
-          # Capture lint errors  
-          if [ "${{ env.LINT_FAILED }}" = "true" ] && [ -f lint.log ]; then
-            echo "LINT_ERRORS<<EOF" >> $GITHUB_ENV
-            head -20 lint.log >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
-          fi
-          
-          # Capture test errors
-          if [ "${{ env.TESTS_FAILED }}" = "true" ] && [ -f test.log ]; then
-            echo "TEST_ERRORS<<EOF" >> $GITHUB_ENV
-            tail -20 test.log >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
-          fi
-          
-          # Capture build errors
-          if [ "${{ env.BUILD_FAILED }}" = "true" ] && [ -f build.log ]; then
-            echo "BUILD_ERRORS<<EOF" >> $GITHUB_ENV
-            tail -20 build.log >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
-          fi
-          
-          # Capture security issues
-          if [ "${{ env.SECURITY_FAILED }}" = "true" ] && [ -f security.log ]; then
-            echo "SECURITY_ERRORS<<EOF" >> $GITHUB_ENV
-            cat security.log >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
-          fi
-      
-      - name: Determine overall status and fail if needed
-        run: |
-          echo "=== FINAL STATUS CHECK ==="
-          
-          TYPECHECK_FAILED="${{ env.TYPECHECK_FAILED }}"
-          LINT_FAILED="${{ env.LINT_FAILED }}"
-          TESTS_FAILED="${{ env.TESTS_FAILED }}"
-          BUILD_FAILED="${{ env.BUILD_FAILED }}"
-          SECURITY_FAILED="${{ env.SECURITY_FAILED }}"
-          
-          echo "TypeScript Failed: $TYPECHECK_FAILED"
-          echo "Lint Failed: $LINT_FAILED"
-          echo "Tests Failed: $TESTS_FAILED"
-          echo "Build Failed: $BUILD_FAILED"
-          echo "Security Failed: $SECURITY_FAILED"
-          
-          # If ANY check failed, set overall failure and exit with error
-          if [[ "$TYPECHECK_FAILED" == "true" || "$LINT_FAILED" == "true" || "$TESTS_FAILED" == "true" || "$BUILD_FAILED" == "true" || "$SECURITY_FAILED" == "true" ]]; then
-            echo "OVERALL_STATUS=failed" >> $GITHUB_ENV
-            echo "❌ Quality checks failed - issues found"
-            exit 1
-          else
+          if [[ "$TYPECHECK_STATUS" == "success" && "$LINT_STATUS" == "success" && "$TESTS_STATUS" == "success" && "$BUILD_STATUS" == "success" ]]; then
             echo "OVERALL_STATUS=success" >> $GITHUB_ENV
-            echo "✅ All quality checks passed"
+          else
+            echo "OVERALL_STATUS=failure" >> $GITHUB_ENV
+            exit 1
           fi
 
   quality-assessment:
@@ -194,34 +113,15 @@ jobs:
               return;
             }
             
-            // Check if any quality issues exist using environment variables
-            const hasQualityIssues = '${{ env.TYPECHECK_FAILED }}' === 'true' || 
-                                   '${{ env.LINT_FAILED }}' === 'true' || 
-                                   '${{ env.TESTS_FAILED }}' === 'true' || 
-                                   '${{ env.BUILD_FAILED }}' === 'true';
-            
-            const hasSecurityIssues = '${{ env.SECURITY_FAILED }}' === 'true';
-            
-            // Get detailed status for display
-            const typecheckStatus = '${{ env.TYPECHECK_FAILED }}' === 'true' ? 'failed' : 'success';
-            const lintStatus = '${{ env.LINT_FAILED }}' === 'true' ? 'failed' : 'success';
-            const testsStatus = '${{ env.TESTS_FAILED }}' === 'true' ? 'failed' : 'success';
-            const buildStatus = '${{ env.BUILD_FAILED }}' === 'true' ? 'failed' : 'success';
-            const securityStatus = '${{ env.SECURITY_FAILED }}' === 'true' ? 'failed' : 'passed';
-            
-            const overallReady = !hasQualityIssues && !hasSecurityIssues;
-            
-            console.log('Quality Issues:', hasQualityIssues);
-            console.log('Security Issues:', hasSecurityIssues);
-            console.log('Overall Ready:', overallReady);
-            console.log('TypeCheck:', typecheckStatus);
-            console.log('Lint:', lintStatus);
-            console.log('Tests:', testsStatus);
-            console.log('Build:', buildStatus);
-            console.log('Security:', securityStatus);
+            // Get step outcomes directly from the job
+            const typecheckStatus = '${{ steps.typecheck.outcome }}' || 'unknown';
+            const lintStatus = '${{ steps.lint.outcome }}' || 'unknown';
+            const testsStatus = '${{ steps.tests.outcome }}' || 'unknown';
+            const buildStatus = '${{ steps.build.outcome }}' || 'unknown';
+            const securityStatus = '${{ env.SECURITY_STATUS }}' || 'unknown';
             
             let message = '## 🔍 Frontend Quality Assessment\n\n';
-            message += `**Overall Status**: ${overallReady ? '✅ READY' : '❌ BLOCKED'}\n\n`;
+            message += `**Overall Status**: ${frontendResult === 'success' ? '✅ READY' : '❌ BLOCKED'}\n\n`;
             message += '**Detailed Results:**\n';
             message += `- TypeScript: ${typecheckStatus === 'success' ? '✅' : '❌'}\n`;
             message += `- Linting: ${lintStatus === 'success' ? '✅' : '❌'}\n`;
@@ -229,7 +129,7 @@ jobs:
             message += `- Build: ${buildStatus === 'success' ? '✅' : '❌'}\n`;
             message += `- Security: ${securityStatus === 'passed' ? '✅' : '❌'}\n\n`;
             
-            if (overallReady) {
+            if (frontendResult === 'success') {
               message += '🚀 **READY FOR DEV** - All quality gates passed. @MyatPyaePaingPie ready for your review.';
             } else {
               message += '⚠️ **BLOCKED** - Quality issues must be resolved before merging to dev.\n\n';
@@ -250,7 +150,7 @@ jobs:
             }
 
       - name: Create quality failure issue
-        if: env.TYPECHECK_FAILED == 'true' || env.LINT_FAILED == 'true' || env.TESTS_FAILED == 'true' || env.BUILD_FAILED == 'true'
+        if: needs.frontend-quality.result == 'failure'
         uses: actions/github-script@v7
         with:
           retries: 3
@@ -288,46 +188,17 @@ jobs:
               console.log('Error checking existing issues:', error);
             }
             
-            // Get failure details with actual errors
-            const typecheckFailed = '${{ env.TYPECHECK_FAILED }}' === 'true';
-            const lintFailed = '${{ env.LINT_FAILED }}' === 'true';
-            const testsFailed = '${{ env.TESTS_FAILED }}' === 'true';
-            const buildFailed = '${{ env.BUILD_FAILED }}' === 'true';
+            // Get failure details
+            const typecheckStatus = '${{ steps.typecheck.outcome }}' || 'unknown';
+            const lintStatus = '${{ steps.lint.outcome }}' || 'unknown';  
+            const testsStatus = '${{ steps.tests.outcome }}' || 'unknown';
+            const buildStatus = '${{ steps.build.outcome }}' || 'unknown';
             
             let failedChecks = [];
-            let errorDetails = '';
-            
-            if (typecheckFailed) {
-              failedChecks.push('TypeScript compilation');
-              const typecheckErrors = `${{ env.TYPECHECK_ERRORS }}`;
-              if (typecheckErrors && typecheckErrors !== '') {
-                errorDetails += '### 🔴 TypeScript Errors:\n```\n' + typecheckErrors + '\n```\n\n';
-              }
-            }
-            
-            if (lintFailed) {
-              failedChecks.push('Code linting');
-              const lintErrors = `${{ env.LINT_ERRORS }}`;
-              if (lintErrors && lintErrors !== '') {
-                errorDetails += '### 🔴 Linting Errors:\n```\n' + lintErrors + '\n```\n\n';
-              }
-            }
-            
-            if (testsFailed) {
-              failedChecks.push('Unit tests');
-              const testErrors = `${{ env.TEST_ERRORS }}`;
-              if (testErrors && testErrors !== '') {
-                errorDetails += '### 🔴 Test Failures:\n```\n' + testErrors + '\n```\n\n';
-              }
-            }
-            
-            if (buildFailed) {
-              failedChecks.push('Build process');
-              const buildErrors = `${{ env.BUILD_ERRORS }}`;
-              if (buildErrors && buildErrors !== '') {
-                errorDetails += '### 🔴 Build Errors:\n```\n' + buildErrors + '\n```\n\n';
-              }
-            }
+            if (typecheckStatus === 'failure') failedChecks.push('TypeScript compilation');
+            if (lintStatus === 'failure') failedChecks.push('Code linting');
+            if (testsStatus === 'failure') failedChecks.push('Unit tests');
+            if (buildStatus === 'failure') failedChecks.push('Build process');
             
             const issueBody = `## ❌ Quality Gate Failure
             
@@ -338,33 +209,27 @@ jobs:
             
             **Failed Checks**: ${failedChecks.length > 0 ? failedChecks.join(', ') : 'See workflow logs for details'}
             
-            ${errorDetails}
-            
             **Actions Required:**
             ${failedChecks.map(check => `- [ ] Fix ${check} issues`).join('\n') || '- [ ] Review workflow logs and fix identified issues'}
             
-            **Quick Fix Commands:**
-            \`\`\`bash
-            # Fix common issues
-            npm run lint -- --fix        # Auto-fix linting issues
-            npx tsc --noEmit             # Check TypeScript errors
-            npm test                     # Run tests locally
-            npm run build                # Test build process
-            \`\`\`
-            
             **Investigation Steps:**
-            1. Review the error details above
-            2. Check the [full workflow run](${context.payload.repository.html_url}/actions/runs/${context.runId}) if needed
-            3. Fix the identified issues locally
-            4. Commit and push your fixes
-            5. Quality checks will re-run automatically
+            1. Check the [workflow run](${context.payload.repository.html_url}/actions/runs/${context.runId}) for detailed logs
+            2. Run checks locally:
+               \`\`\`bash
+               npm run lint          # Fix linting issues
+               npx tsc --noEmit      # Check TypeScript errors
+               npm test              # Run tests
+               npm run build         # Test build
+               \`\`\`
+            3. Fix identified issues and push updates
+            4. Re-run quality checks
             
             **Ownership:**
             - **Developer**: @${author} (fix issues)
             - **Review**: @MyatPyaePaingPie (after fixes completed)
             
             ---
-            *Auto-generated from failed quality gate - will close when issues are resolved*`;
+            *Auto-generated from failed quality gate - closes automatically when issues resolved*`;
             
             try {
               const issue = await github.rest.issues.create({
@@ -382,7 +247,7 @@ jobs:
             }
 
       - name: Create security issue
-        if: env.SECURITY_FAILED == 'true'
+        if: env.SECURITY_STATUS == 'failed'
         uses: actions/github-script@v7
         with:
           script: |
@@ -407,11 +272,6 @@ jobs:
             
             **Security Alert**: High or critical vulnerabilities found in dependencies
             
-            ### 🔴 Security Issues Found:
-            \`\`\`
-            ${{ env.SECURITY_ERRORS }}
-            \`\`\`
-            
             **Immediate Actions Required:**
             1. **Investigate**: \`npm audit --audit-level high\`
             2. **Fix automatically**: \`npm audit fix\`
@@ -419,18 +279,15 @@ jobs:
             4. **Test**: \`npm test && npm run build\`
             5. **Commit fixes**: Update package-lock.json and push
             
-            **Security Fix Commands:**
+            **Security Commands:**
             \`\`\`bash
-            # Check all vulnerabilities
-            npm audit
-            
-            # Check high/critical only
+            # Check vulnerabilities
             npm audit --audit-level high
             
-            # Auto-fix when possible (safe)
+            # Auto-fix when possible
             npm audit fix
             
-            # Force fix breaking changes (REVIEW CAREFULLY!)
+            # Force fix (review changes!)
             npm audit fix --force
             
             # Verify everything still works
