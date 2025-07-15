@@ -27,24 +27,48 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
       
-      - name: Sync dev branch with main
+      - name: Sync dev branch with main using GitHub API
         id: sync-dev
-        run: |
-          echo "🔄 Syncing dev branch with main..."
-          
-          # Delete the remote dev branch
-          git push origin --delete dev || echo "Dev branch may not exist remotely"
-          
-          # Create and checkout new dev branch from main
-          git checkout main
-          git checkout -b dev
-          
-          # Push the new dev branch
-          git push origin dev
-          
-          echo "✅ Dev branch successfully synced with main"
-          echo "SYNC_STATUS=success" >> $GITHUB_ENV
-        continue-on-error: false
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log("🔄 Syncing dev branch with main using GitHub API...");
+            
+            try {
+              // Get the current commit SHA of main branch
+              const { data: mainRef } = await github.rest.git.getRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: 'heads/main'
+              });
+              
+              const mainSha = mainRef.object.sha;
+              console.log(`Main branch SHA: ${mainSha}`);
+              
+              // Update dev branch to point to the same commit as main
+              await github.rest.git.updateRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: 'heads/dev',
+                sha: mainSha,
+                force: true
+              });
+              
+              console.log("✅ Dev branch successfully synced with main");
+              core.exportVariable('SYNC_STATUS', 'success');
+              
+            } catch (error) {
+              console.error("❌ Failed to sync dev branch:", error);
+              core.exportVariable('SYNC_STATUS', 'failed');
+              throw error;
+            }
+      
+      - name: Checkout updated dev branch
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 1
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
