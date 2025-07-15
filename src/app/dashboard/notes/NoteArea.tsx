@@ -31,6 +31,8 @@ interface NoteAreaProps {
   flushRef?: React.MutableRefObject<() => Promise<void> | undefined>;
   // fromChat prop retained for back button logic
   fromChat?: boolean;
+  // fromProject prop for project back navigation
+  fromProject?: boolean;
   forcePreview?: boolean;
 }
 
@@ -196,6 +198,7 @@ export function NoteArea({
   onLinkContent,
   flushRef,
   fromChat = false,
+  fromProject = false,
   forcePreview = false,
 }: NoteAreaProps) {
   // Get all notes from context for tag suggestions

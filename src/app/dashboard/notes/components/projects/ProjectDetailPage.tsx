@@ -75,9 +75,12 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
         const success = await addItemToProject(projectId, 'note', newNoteId);
         
         if (success) {
-          // Set the note as active so it opens in the editor
+          // Set the note as active and navigate to notes page with project context
           setActiveNoteId(newNoteId);
           toast.success('Note created and added to project');
+          
+          // Navigate to the notes page with project context for proper back navigation
+          router.push(`/dashboard/notes?noteId=${newNoteId}&fromProject=true&projectId=${projectId}`);
         }
       }
     } catch (error) {

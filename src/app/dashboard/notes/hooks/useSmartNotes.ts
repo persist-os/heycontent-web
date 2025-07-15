@@ -26,7 +26,8 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
   const [activeNoteId, setActiveNoteId] = useState<string | undefined>(undefined);
 
   // Convex mutations
-  const updateNoteConvex = useMutation(api.notesMutations.updateNote);
+  const createNoteConvex = useMutation(api.noteMutations.createNote);
+  const updateNoteConvex = useMutation(api.noteMutations.updateNote);
 
   // Debounce and cancellation for metadata generation
   const metadataTimers = useRef<Record<string, NodeJS.Timeout>>({});
@@ -131,9 +132,13 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
     
     setIsSaving(true);
     try {
-      const newNote = await updateNoteConvex({
+      const newNote = await createNoteConvex({
         userId,
-        updates: noteData,
+        title: noteData.title,
+        content: noteData.content,
+        type: noteData.type,
+        tags: noteData.tags,
+        platform: noteData.platform,
       });
       return newNote as Note;
     } catch (error) {
@@ -143,7 +148,7 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
     } finally {
       setIsSaving(false);
     }
-  }, [userId, updateNoteConvex]);
+  }, [userId, createNoteConvex]);
 
   // Update existing note
   const updateNote = useCallback(async (

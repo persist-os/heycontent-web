@@ -177,8 +177,7 @@ jobs:
             **Failure Impact**: 🔴 **CRITICAL** - Production deployment verification failed
             
             **Immediate Response Team:**
-            - **Primary**: @MyatPyaePaingPie (Quality Lead)
-            - **Secondary**: @Shreyboiii (Technical Lead)
+            - **Immediate**: @Shreyboiii (Technical Lead)
             - **Escalation**: @ariaxhan (if needed)
             
             **Emergency Response Checklist:**
@@ -305,7 +304,7 @@ jobs:
             - ✅ All smoke tests successful
             
             **Team Achievement:**
-            - **Quality Assurance**: @MyatPyaePaingPie ✅ Review completed
+            - **Quality Assurance**: @ariaxhan ✅ Review completed
             - **Production Approval**: @Shreyboiii ✅ Approved for deployment
             - **Development**: @ariaxhan 📢 New features live
             - **Deployment**: github-actions[bot] ✅ Automated deployment successful
@@ -347,7 +346,7 @@ jobs:
             **Production URL**: https://heycontent-web-divertissement-ai.vercel.app
             
             **Deployment Summary:**
-            - **Quality Gates**: Passed by @MyatPyaePaingPie ✅
+            - **Quality Gates**: Passed by @ariaxhan ✅
             - **Production Approval**: Approved by @Shreyboiii ✅
             - **Deployment**: Successful and verified ✅
             - **Dev Sync**: Completed ✅
@@ -395,7 +394,7 @@ jobs:
             - Future development may have conflicts
             
             **Manual Sync Required:**
-            @MyatPyaePaingPie - Please manually sync the dev branch:
+            @ariaxhan - Please manually sync the dev branch:
             
             \`\`\`bash
             # Manual sync commands
