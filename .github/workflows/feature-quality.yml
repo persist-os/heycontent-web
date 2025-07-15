@@ -16,6 +16,14 @@ jobs:
     name: Frontend Quality Check
     runs-on: ubuntu-latest
     
+    outputs:
+      typecheck-result: ${{ steps.typecheck.outcome }}
+      lint-result: ${{ steps.lint.outcome }}
+      tests-result: ${{ steps.tests.outcome }}
+      build-result: ${{ steps.build.outcome }}
+      security-result: ${{ env.SECURITY_STATUS }}
+      overall-result: ${{ env.OVERALL_STATUS }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -80,11 +88,11 @@ jobs:
       - name: Determine overall status
         id: status
         run: |
-          TYPECHECK_STATUS="${{ steps.typecheck.outcome }}"
-          LINT_STATUS="${{ steps.lint.outcome }}"
-          TESTS_STATUS="${{ steps.tests.outcome }}"
-          BUILD_STATUS="${{ steps.build.outcome }}"
-          
+          const typecheckStatus = '${{ needs.frontend-quality.outputs.typecheck-result }}' || 'unknown';
+          const lintStatus = '${{ needs.frontend-quality.outputs.lint-result }}' || 'unknown';
+          const testsStatus = '${{ needs.frontend-quality.outputs.tests-result }}' || 'unknown';
+          const buildStatus = '${{ needs.frontend-quality.outputs.build-result }}' || 'unknown';
+          const securityStatus = '${{ needs.frontend-quality.outputs.security-result }}' || 'unknown';
           if [[ "$TYPECHECK_STATUS" == "success" && "$LINT_STATUS" == "success" && "$TESTS_STATUS" == "success" && "$BUILD_STATUS" == "success" ]]; then
             echo "OVERALL_STATUS=success" >> $GITHUB_ENV
           else
@@ -114,11 +122,10 @@ jobs:
             }
             
             // Get step outcomes directly from the job
-            const typecheckStatus = '${{ steps.typecheck.outcome }}' || 'unknown';
-            const lintStatus = '${{ steps.lint.outcome }}' || 'unknown';
-            const testsStatus = '${{ steps.tests.outcome }}' || 'unknown';
-            const buildStatus = '${{ steps.build.outcome }}' || 'unknown';
-            const securityStatus = '${{ env.SECURITY_STATUS }}' || 'unknown';
+            const typecheckStatus = '${{ needs.frontend-quality.outputs.typecheck-result }}' || 'unknown';
+            const lintStatus = '${{ needs.frontend-quality.outputs.lint-result }}' || 'unknown';  
+            const testsStatus = '${{ needs.frontend-quality.outputs.tests-result }}' || 'unknown';
+            const buildStatus = '${{ needs.frontend-quality.outputs.build-result }}' || 'unknown';
             
             let message = '## 🔍 Frontend Quality Assessment\n\n';
             message += `**Overall Status**: ${frontendResult === 'success' ? '✅ READY' : '❌ BLOCKED'}\n\n`;
@@ -247,7 +254,8 @@ jobs:
             }
 
       - name: Create security issue
-        if: env.SECURITY_STATUS == 'failed'
+        if: needs.frontend-quality.outputs.security-result == 'failed'
+        
         uses: actions/github-script@v7
         with:
           script: |
@@ -316,5 +324,5 @@ jobs:
               
               console.log(`Created security issue: #${issue.data.number}`);
             } catch (error) {
-              console.log('Error creating security issue:', error);
+              console.log('Error creating security issue: ', error);
             }
