@@ -1,6 +1,7 @@
 import { useConvex } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { useContentStore, UnifiedContent, PlatformContentData } from '@/store/content-store';
+import { UnifiedContent, PlatformContentData } from '@/types/content';
+import { useContentStore } from '@/store/content-store';
 import { useEffect, useMemo } from 'react';
 
 // Content resolution utility that replaces getAllLinkableContent
