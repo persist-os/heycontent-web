@@ -88,7 +88,7 @@ export const TourContent = {
           <li>• <strong>Growth Strategy:</strong> Personalized advice for your niche</li>
         </ul>
         <div className="bg-purple-50 dark:bg-purple-950/30 p-2 rounded text-xs text-gray-800 dark:text-gray-200">
-          <strong>Evolution tip:</strong> Update your persona every 2-3 weeks as you grow and your content evolves!
+          <strong>Evolution tip:</strong> Update your persona every 2 weeks as you grow and your content evolves!
         </div>
       </div>
     </div>

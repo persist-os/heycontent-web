@@ -33,9 +33,6 @@ export const SelfHubContent = {
             <li>• Growth strategies are personalized to your niche</li>
           </ul>
         </div>
-        <div className="bg-green-50 dark:bg-green-950/30 p-2 rounded text-xs text-gray-800 dark:text-gray-200">
-          <strong>Growth tip:</strong> Update your persona every 2-3 weeks as you evolve. Your content journey is dynamic!
-        </div>
       </div>
     </div>
   ),
@@ -198,7 +195,7 @@ export const selfHubInteractiveTour: InteractiveStep[] = [
             <li>• <strong>Goal Evolution:</strong> Your changing aspirations and focus</li>
           </ul>
           <div className="bg-orange-50 dark:bg-orange-950/30 p-2 rounded text-xs text-gray-800 dark:text-gray-200">
-            <strong>Insight:</strong> Successful creators update their persona every 2-3 weeks as they learn and grow!
+            <strong>Insight:</strong> Every two weeks, you'll refresh your persona to reflect your ongoing growth and self-discovery!
           </div>
         </div>
       </div>
@@ -237,7 +234,7 @@ export const selfHubInteractiveTour: InteractiveStep[] = [
   {
     id: 'timeline-filters',
     title: 'Timeline Filters: Find What Matters',
-    description: 'Once you\'re on the Timeline tab, use powerful filters to find specific content types, time periods, or themes in your timeline.',
+    description: 'On the Timeline tab, use the available filters—yearly, monthly, or weekly—to view your persona history over time. The timeline lets you see how your personas have evolved, helping you reflect on your content journey and track meaningful changes.',
     target: '[data-timeline-filters]',
     position: 'center',
     delay: 300,
@@ -246,19 +243,17 @@ export const selfHubInteractiveTour: InteractiveStep[] = [
       <div className="space-y-3">
         <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
           <FileText className="w-4 h-4" />
-          <span className="font-medium">Smart Filtering</span>
+          <span className="font-medium">Timeline Filters</span>
         </div>
         <div className="text-sm space-y-2">
-          <p className="text-gray-900 dark:text-gray-100"><strong>When you click Timeline, you'll see filters to search by:</strong></p>
+          <p className="text-gray-900 dark:text-gray-100"><strong>Use the filters above the timeline to switch between yearly, monthly, or weekly views.</strong></p>
           <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-            <li>• <strong>Content Type:</strong> Notes, chats, posts, insights</li>
-            <li>• <strong>Platform:</strong> Instagram, YouTube, email, etc.</li>
-            <li>• <strong>Time Period:</strong> Last week, month, or custom ranges</li>
-            <li>• <strong>Topics/Tags:</strong> Specific themes or subjects</li>
-            <li>• <strong>Performance:</strong> High-engagement content only</li>
+            <li>• <strong>Yearly, Monthly, Weekly:</strong> See your persona changes and updates at different time scales</li>
+            <li>• <strong>Persona History:</strong> Track how your content identity has evolved over time</li>
+            <li>• <strong>Reflection:</strong> Review past personas and understand your growth</li>
           </ul>
           <div className="bg-blue-50 dark:bg-blue-950/30 p-2 rounded text-xs text-gray-800 dark:text-gray-200">
-            <strong>Power move:</strong> Filter by high-performing content to identify your winning formulas!
+            <strong>Tip:</strong> Use the timeline to revisit previous versions of your persona and see your creative journey unfold.
           </div>
         </div>
       </div>
@@ -267,19 +262,17 @@ export const selfHubInteractiveTour: InteractiveStep[] = [
       <div className="space-y-3">
         <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
           <FileText className="w-4 h-4" />
-          <span className="font-medium">Smart Filtering</span>
+          <span className="font-medium">Timeline Filters</span>
         </div>
         <div className="text-sm space-y-2">
-          <p className="text-gray-900 dark:text-gray-100"><strong>When you click Timeline, you'll see filters to search by:</strong></p>
+          <p className="text-gray-900 dark:text-gray-100"><strong>Use the filters above the timeline to switch between yearly, monthly, or weekly views.</strong></p>
           <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-            <li>• <strong>Content Type:</strong> Notes, chats, posts, insights</li>
-            <li>• <strong>Platform:</strong> Instagram, YouTube, email, etc.</li>
-            <li>• <strong>Time Period:</strong> Last week, month, or custom ranges</li>
-            <li>• <strong>Topics/Tags:</strong> Specific themes or subjects</li>
-            <li>• <strong>Performance:</strong> High-engagement content only</li>
+            <li>• <strong>Yearly, Monthly, Weekly:</strong> See your persona changes and updates at different time scales</li>
+            <li>• <strong>Persona History:</strong> Track how your content identity has evolved over time</li>
+            <li>• <strong>Reflection:</strong> Review past personas and understand your growth</li>
           </ul>
           <div className="bg-blue-50 dark:bg-blue-950/30 p-2 rounded text-xs text-gray-800 dark:text-gray-200">
-            <strong>Power move:</strong> Filter by high-performing content to identify your winning formulas!
+            <strong>Tip:</strong> Use the timeline to revisit previous versions of your persona and see your creative journey unfold.
           </div>
         </div>
       </div>
@@ -316,193 +309,6 @@ export const selfHubInteractiveTour: InteractiveStep[] = [
     )
   },
   {
-    id: 'productivity-insights',
-    title: 'Productivity Insights: Optimize Your Workflow',
-    description: 'Once you\'re on the Activity tab, see AI-powered recommendations to optimize your content creation workflow based on your patterns.',
-    target: '[data-productivity-insights]',
-    position: 'center',
-    delay: 400,
-    action: 'none',
-    fallbackContent: (
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
-          <Sparkles className="w-4 h-4" />
-          <span className="font-medium">AI Optimization</span>
-        </div>
-        <div className="text-sm space-y-2">
-          <p className="text-gray-900 dark:text-gray-100"><strong>When you're on Activity, you'll see:</strong></p>
-          <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-            <li>• <strong>Peak Hours:</strong> When you're most creative</li>
-            <li>• <strong>Tool Patterns:</strong> Your most effective workflows</li>
-            <li>• <strong>Content Gaps:</strong> Opportunities to improve</li>
-            <li>• <strong>AI Recommendations:</strong> Personalized productivity tips</li>
-          </ul>
-          <div className="bg-orange-50 dark:bg-orange-950/30 p-2 rounded text-xs text-gray-800 dark:text-gray-200">
-            <strong>Pro tip:</strong> AI analyzes your patterns to suggest when and how to create for maximum impact!
-          </div>
-        </div>
-      </div>
-    ),
-    content: (
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-          <Lightbulb className="w-4 h-4" />
-          <span className="font-medium">AI Optimization</span>
-        </div>
-        <div className="text-sm space-y-2">
-          <p className="text-gray-900 dark:text-gray-100"><strong>Get personalized recommendations for:</strong></p>
-          <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-            <li>• <strong>Optimal Posting Times:</strong> When your audience is most active</li>
-            <li>• <strong>Content Batching:</strong> How to group similar tasks</li>
-            <li>• <strong>Peak Productivity:</strong> Your best creation windows</li>
-            <li>• <strong>Platform Scheduling:</strong> Which platforms to prioritize when</li>
-            <li>• <strong>Break Recommendations:</strong> When to rest for sustained creativity</li>
-          </ul>
-          <div className="bg-green-50 dark:bg-green-950/30 p-2 rounded text-xs text-gray-800 dark:text-gray-200">
-            <strong>Success secret:</strong> The most successful creators optimize their workflow based on data, not just intuition!
-          </div>
-        </div>
-      </div>
-    )
-  },
-  {
-    id: 'goals-milestones',
-    title: 'Goals & Milestones: Track Your Growth',
-    description: 'In the Activity tab, you can set content creation goals, track milestones, and celebrate your achievements along the way.',
-    target: '[data-goals-section]',
-    position: 'center',
-    delay: 300,
-    action: 'none',
-    fallbackContent: (
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
-          <Target className="w-4 h-4" />
-          <span className="font-medium">Goal Setting</span>
-        </div>
-        <div className="text-sm space-y-2">
-          <p className="text-gray-900 dark:text-gray-100"><strong>In Activity, you'll find goal tracking for:</strong></p>
-          <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-            <li>• <strong>Content Volume:</strong> Posts per week/month targets</li>
-            <li>• <strong>Engagement Goals:</strong> Likes, comments, shares milestones</li>
-            <li>• <strong>Platform Growth:</strong> Follower and subscriber targets</li>
-            <li>• <strong>Revenue Milestones:</strong> Monetization achievements</li>
-            <li>• <strong>Consistency Streaks:</strong> Daily/weekly posting goals</li>
-          </ul>
-          <div className="bg-blue-50 dark:bg-blue-950/30 p-2 rounded text-xs text-gray-800 dark:text-gray-200">
-            <strong>Growth mindset:</strong> Celebrate small wins - they compound into major achievements!
-          </div>
-        </div>
-      </div>
-    ),
-    content: (
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
-          <Target className="w-4 h-4" />
-          <span className="font-medium">Goal Setting</span>
-        </div>
-        <div className="text-sm space-y-2">
-          <p className="text-gray-900 dark:text-gray-100"><strong>In Activity, you'll find goal tracking for:</strong></p>
-          <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-            <li>• <strong>Content Volume:</strong> Posts per week/month targets</li>
-            <li>• <strong>Engagement Goals:</strong> Likes, comments, shares milestones</li>
-            <li>• <strong>Platform Growth:</strong> Follower and subscriber targets</li>
-            <li>• <strong>Revenue Milestones:</strong> Monetization achievements</li>
-            <li>• <strong>Consistency Streaks:</strong> Daily/weekly posting goals</li>
-          </ul>
-          <div className="bg-blue-50 dark:bg-blue-950/30 p-2 rounded text-xs text-gray-800 dark:text-gray-200">
-            <strong>Growth mindset:</strong> Celebrate small wins - they compound into major achievements!
-          </div>
-        </div>
-      </div>
-    )
-  },
-  {
-    id: 'performance-trends',
-    title: 'Performance Trends: See Your Growth',
-    description: 'In the Activity tab, track your content performance trends across all platforms and see what\'s driving your growth.',
-    target: '[data-performance-trends]',
-    position: 'center',
-    delay: 400,
-    action: 'none',
-    fallbackContent: (
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
-          <TrendingUp className="w-4 h-4" />
-          <span className="font-medium">Growth Analytics</span>
-        </div>
-        <div className="text-sm space-y-2">
-          <p className="text-gray-900 dark:text-gray-100"><strong>In Activity, visualize your growth trends:</strong></p>
-          <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-            <li>• <strong>Engagement Trends:</strong> Likes, comments, shares over time</li>
-            <li>• <strong>Follower Growth:</strong> Audience expansion patterns</li>
-            <li>• <strong>Content Performance:</strong> Which posts performed best</li>
-            <li>• <strong>Platform Comparison:</strong> Cross-platform analytics</li>
-            <li>• <strong>Growth Velocity:</strong> Rate of audience increase</li>
-          </ul>
-          <div className="bg-purple-50 dark:bg-purple-950/30 p-2 rounded text-xs text-gray-800 dark:text-gray-200">
-            <strong>Data insight:</strong> Trends reveal opportunities - focus on what's working and double down!
-          </div>
-        </div>
-      </div>
-    ),
-    content: (
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
-          <TrendingUp className="w-4 h-4" />
-          <span className="font-medium">Growth Analytics</span>
-        </div>
-        <div className="text-sm space-y-2">
-          <p className="text-gray-900 dark:text-gray-100"><strong>Track your success metrics:</strong></p>
-          <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-            <li>• <strong>Follower Growth:</strong> Daily/weekly/monthly increases</li>
-            <li>• <strong>Engagement Rates:</strong> Likes, comments, shares trends</li>
-            <li>• <strong>Content Performance:</strong> Best and worst performing posts</li>
-            <li>• <strong>Platform Comparison:</strong> Where you're growing fastest</li>
-            <li>• <strong>Revenue Tracking:</strong> Monetization and partnership income</li>
-          </ul>
-          <div className="bg-purple-50 dark:bg-purple-950/30 p-2 rounded text-xs text-gray-800 dark:text-gray-200">
-            <strong>Growth hack:</strong> Focus on the metrics that truly matter for your specific goals, not vanity numbers!
-          </div>
-        </div>
-      </div>
-    )
-  },
-  {
-    id: 'creator-insights',
-    title: 'Creator Insights: AI-Powered Recommendations',
-    description: 'Get personalized insights and recommendations to accelerate your content creator journey.',
-    position: 'center',
-    delay: 500,
-    content: (
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
-          <Sparkles className="w-4 h-4" />
-          <span className="font-medium">AI Creator Coach</span>
-        </div>
-        <div className="text-sm space-y-2">
-          <p className="text-gray-900 dark:text-gray-100"><strong>Your personal AI coach analyzes your data to provide:</strong></p>
-          <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/30 p-3 rounded-lg">
-            <p className="font-medium mb-2 text-indigo-800 dark:text-indigo-200">🧠 Intelligent Recommendations:</p>
-            <ul className="text-xs space-y-1 text-gray-700 dark:text-gray-300">
-              <li>• <strong>Content Strategy:</strong> What to create next based on performance</li>
-              <li>• <strong>Audience Insights:</strong> Who your content resonates with most</li>
-              <li>• <strong>Growth Opportunities:</strong> Untapped platforms or content types</li>
-              <li>• <strong>Collaboration Suggestions:</strong> Potential partnerships and sponsors</li>
-              <li>• <strong>Skill Development:</strong> Areas to improve for bigger impact</li>
-            </ul>
-          </div>
-          <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800/30 p-3 rounded-lg">
-            <p className="font-medium mb-2 text-yellow-800 dark:text-yellow-200">⚡ Weekly Action Items:</p>
-            <p className="text-xs text-gray-700 dark:text-gray-300">Every week, get 3-5 specific actions to take your content to the next level, personalized to your goals and performance data.</p>
-          </div>
-          <div className="bg-indigo-100 dark:bg-indigo-950/40 p-2 rounded text-xs text-gray-800 dark:text-gray-200">
-            <strong>The secret:</strong> Successful creators combine creativity with data-driven decision making. Your AI coach helps you do both!
-          </div>
-        </div>
-      </div>
-    )
-  },
-  {
     id: 'self-hub-conclusion',
     title: 'You\'re Now a Data-Driven Creator! 📊',
     description: 'You\'ve mastered your Self Hub - time to use these insights to accelerate your growth.',
@@ -519,19 +325,18 @@ export const selfHubInteractiveTour: InteractiveStep[] = [
             <p className="font-medium mb-2 text-green-800 dark:text-green-200">🚀 Your Self-Optimization Workflow:</p>
             <ol className="text-xs space-y-1 text-gray-700 dark:text-gray-300">
               <li><strong>1.</strong> Check your timeline weekly to reflect on progress</li>
-              <li><strong>2.</strong> Review activity heatmap to optimize your schedule</li>
-              <li><strong>3.</strong> Update your persona every 2-3 weeks as you grow</li>
-              <li><strong>4.</strong> Set and track meaningful goals, not just vanity metrics</li>
-              <li><strong>5.</strong> Act on AI insights to accelerate your growth</li>
+              <li><strong>2.</strong> Review your persona history to understand your evolution</li>
+              <li><strong>3.</strong> Update your persona every 2 weeks as you grow</li>
+              <li><strong>4.</strong> Let your persona changes guide your content direction</li>
             </ol>
           </div>
           <div className="bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800/30 p-3 rounded-lg">
             <p className="font-medium mb-2 text-purple-800 dark:text-purple-200">💡 Pro Creator Habits:</p>
             <ul className="text-xs space-y-1 text-gray-700 dark:text-gray-300">
-              <li>• Schedule weekly "data dates" to review your analytics</li>
-              <li>• Use productivity insights to batch similar content tasks</li>
-              <li>• Celebrate milestones - they fuel long-term motivation</li>
-              <li>• Let your persona evolve - growth requires adaptation</li>
+              <li>• Schedule regular reviews of your persona timeline</li>
+              <li>• Use your persona history to inspire new content directions</li>
+              <li>• Celebrate milestones in your creative journey</li>
+              <li>• Let your persona evolve—growth requires adaptation</li>
             </ul>
           </div>
           <p className="text-xs text-center font-medium text-purple-600 dark:text-purple-400">
