@@ -58,15 +58,15 @@ export const getServerSession = async () => {
     if (tokenValue.startsWith('hc-')) {
       const apiKeyDetails = await validateApiKey(tokenValue);
       if (!apiKeyDetails.isValid) {
-        return {
-          isAuthenticated: false,
-          error: 'Invalid API key',
-        };
+        return null;
       }
       return {
-        isAuthenticated: true,
-        userId: apiKeyDetails.userId,
-        apiKey: tokenValue,
+        user: {
+          id: apiKeyDetails.userId,
+          email: null,
+          name: null,
+          image: null
+        }
       };
     }
 
@@ -74,22 +74,18 @@ export const getServerSession = async () => {
     try {
       const decodedToken = await adminAuth.verifyIdToken(tokenValue);
       return {
-        isAuthenticated: true,
-        userId: decodedToken.uid,
-        token: tokenValue,
-        decodedToken,
+        user: {
+          id: decodedToken.uid,
+          email: decodedToken.email || null,
+          name: decodedToken.name || null,
+          image: decodedToken.picture || null
+        }
       };
     } catch (error) {
-      return {
-        isAuthenticated: false,
-        error: 'Token verification failed',
-      };
+      return null;
     }
   } catch (error) {
-    return {
-      isAuthenticated: false,
-      error: 'An unexpected error occurred during authentication',
-    };
+    return null;
   }
 };
 

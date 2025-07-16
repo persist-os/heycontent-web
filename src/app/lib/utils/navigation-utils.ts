@@ -1,8 +1,11 @@
-import { useRouter } from 'next/navigation';
-import { useContentContextActions } from '@/store/content-context-store';
+import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
+
+interface ContentContextActions {
+  setAIInsightsContext: (context: any) => void;
+}
 
 /**
- * Navigate to chat with AI insights context using Zustand store
+ * Navigate to chat with AI insights context using provided store actions and router
  */
 export function navigateToChatWithInsight(
   insight: {
@@ -15,10 +18,11 @@ export function navigateToChatWithInsight(
     relatedItems?: Array<{ label: string; value: string }>;
   },
   originalPlatform: 'youtube' | 'instagram' | 'gmail',
+  contextActions: ContentContextActions,
+  router: AppRouterInstance,
   source: string = 'AI Insights Dashboard'
 ) {
-  const { setAIInsightsContext } = useContentContextActions();
-  const router = useRouter();
+  const { setAIInsightsContext } = contextActions;
   
   const cleanImpact = insight.impact.replace(/^Impact:\s*/i, '');
   
@@ -60,16 +64,17 @@ ${insight.relatedItems && insight.relatedItems.length > 0 ? `### Related Items\n
 }
 
 /**
- * Navigate to chat with action step context using Zustand store
+ * Navigate to chat with action step context using provided store actions and router
  */
 export function navigateToChatWithActionStep(
   actionStep: string,
   insightTitle: string,
   platform: 'youtube' | 'instagram' | 'gmail',
+  contextActions: ContentContextActions,
+  router: AppRouterInstance,
   additionalContext?: string
 ) {
-  const { setAIInsightsContext } = useContentContextActions();
-  const router = useRouter();
+  const { setAIInsightsContext } = contextActions;
   
   const context = {
     platform: 'ai-insights',
@@ -87,14 +92,15 @@ export function navigateToChatWithActionStep(
 }
 
 /**
- * Navigate to chat with content hub insight context using Zustand store
+ * Navigate to chat with content hub insight context using provided store actions and router
  */
 export function navigateToChatWithContentHubInsight(
   content: string,
-  title: string
+  title: string,
+  contextActions: ContentContextActions,
+  router: AppRouterInstance
 ) {
-  const { setAIInsightsContext } = useContentContextActions();
-  const router = useRouter();
+  const { setAIInsightsContext } = contextActions;
   
   const context = {
     title: title,
