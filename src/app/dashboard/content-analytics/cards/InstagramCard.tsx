@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import { Instagram, Users, RefreshCw, MessageSquare, Heart, Forward, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -148,9 +149,10 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
                       : 'opacity-0 translate-x-full scale-95'
                 }`}
               >
-                <img
+                <Image
                   src={child.media_type === 'VIDEO' ? child.thumbnail_url || child.media_url : child.media_url}
                   alt={content.text || `Instagram Carousel Item ${idx + 1}`}
+                  fill
                   className="w-full h-full object-cover"
                   style={{ aspectRatio: '16/9', objectFit: 'cover' }}
                   onError={handleImgError}
@@ -182,9 +184,10 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
             </div>
           </div>
         ) : (
-          <img
+          <Image
             src={content.mediaType === 'VIDEO' || content.mediaType === 'REELS' ? content.thumbnailUrl : content.mediaUrl || content.thumbnailUrl || fallbackImg}
             alt={content.text || 'Instagram Post'}
+            fill
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             style={{ aspectRatio: '16/9', objectFit: 'cover' }}
             onError={handleImgError}

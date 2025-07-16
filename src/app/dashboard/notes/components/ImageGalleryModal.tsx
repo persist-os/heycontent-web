@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
+import Image from 'next/image';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ImageData } from '../types';
@@ -218,11 +219,12 @@ export function ImageGalleryModal({ isOpen, noteId, images, onClose }: ImageGall
                   key={image.filename}
                   className="relative group border border-border rounded-lg overflow-hidden bg-muted"
                 >
-                  <div className="aspect-square">
-                    <img
+                  <div className="aspect-square relative">
+                    <Image
                       src={image.url}
-                      alt={image.originalFilename || image.filename}
-                      className="w-full h-full object-cover"
+                      alt={image.originalFilename || image.filename || 'Uploaded image'}
+                      fill
+                      className="object-cover"
                       loading="lazy"
                     />
                   </div>

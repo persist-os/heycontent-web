@@ -28,11 +28,11 @@ export default function InsightAnalysisPage() {
     const analysis = insightData.analysis || {};
     
     // Parse the insight ID to determine platform
-    const parseInsightPlatform = (id: string): 'youtube' | 'instagram' | 'gmail' | 'content-hub' => {
+    const parseInsightPlatform = (id: string): 'youtube' | 'instagram' | 'gmail' => {
       if (id.includes('youtube')) return 'youtube';
       if (id.includes('instagram')) return 'instagram';
       if (id.includes('gmail')) return 'gmail';
-      return 'content-hub';
+      return 'gmail'; // Default to gmail for content-hub and other unknown platforms
     };
 
     const platform = parseInsightPlatform(decodedInsightId);
@@ -48,7 +48,6 @@ export default function InsightAnalysisPage() {
         sourceDetails={analysis.sourceDetails || []}
         relatedItems={analysis.relatedItems || []}
         expanded={true}
-        showAnalysis={true}
         onDiscuss={(content: string, title: string) => {
           // Navigate to chat with insight context
           const context = {
