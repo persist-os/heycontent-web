@@ -5,6 +5,7 @@ import { MessageCircle, BarChart3, Zap, Globe, Brain, ArrowRight, Play, Pause, I
 import { useRouter } from 'next/navigation'
 import { YouTubeBrandIcon } from '@/lib/YoutubeBrandIcon'
 import Tilt from 'react-parallax-tilt'
+import { PlatformCard } from './platform-card'
 
 const mockChatMessages = [
   {
@@ -14,11 +15,11 @@ const mockChatMessages = [
   },
   {
     type: 'system',
-    message: "🔍 Cross-referencing YouTube video with Instagram audience patterns...",
+    message: "Cross-referencing YouTube video with Instagram audience patterns...",
     timestamp: '2:34 PM',
     loading: true
   },
-  {
+    {
     type: 'agent',
     message: "Perfect cross-platform opportunity! Your YouTube video had 15 key editing techniques. I found that your Instagram audience engages 340% more with carousel posts about tutorials. I've created 3 carousel concepts: '5 Quick Edit Tricks', 'Before/After Transformations', and 'Tools Every Creator Needs'.",
     timestamp: '2:34 PM',
@@ -37,7 +38,7 @@ const mockChatMessages = [
   },
   {
     type: 'system',
-    message: "🧠 Analyzing performance data + Gmail partnership patterns...",
+    message: "Analyzing performance data + Gmail partnership patterns...",
     timestamp: '2:35 PM',
     loading: true
   },
@@ -58,44 +59,44 @@ const mockChatMessages = [
 const connectedPlatforms = [
   {
     title: "Instagram",
-    description: "Deep engagement analysis across posts, stories & reels",
+    description: "Deep analysis of your posts, stories, reels & engagement patterns",
     icon: Instagram,
-    iconProps: { className: "w-6 h-6 text-white" },
+    iconProps: { className: "w-10 h-10 text-white" },
     color: "from-purple-500 to-pink-500",
     status: "connected",
-          insights: [
-        "🧠 1,247 posts analyzed for audience emotion & viral prediction patterns",
-        "🔥 Cross-platform AI turns your YouTube hits into Instagram gold",
-        "🎯 Engagement forecasting predicts which posts will break 100K+",
-        "💡 Smart memory identifies your content DNA across every post"
-      ]
+    insights: [
+      "Analyzes every post for engagement patterns and content themes",
+      "Identifies what content formats work best for your audience",
+      "Tracks carousel vs reel performance to guide your strategy",
+      "Suggests specific improvements based on your actual data"
+    ]
   },
   {
     title: "YouTube",
-    description: "Advanced video performance & audience insights",
+    description: "Video performance analysis & audience insights from your channel",
     icon: YouTubeBrandIcon,
-    iconProps: { className: "w-6 h-6" },
+    iconProps: { className: "w-10 h-10" },
     color: "from-red-500 to-red-600",
     status: "connected",
-          insights: [
-        "📈 847 videos analyzed to decode your creator success formula",
-        "🎬 AI maps exact moments where audience attention peaks & drops",
-        "🚀 Cross-platform intelligence spots which videos drive Instagram viral moments",
-        "💰 Performance AI predicts partnership value before you even reach out"
-      ]
+    insights: [
+      "Analyzes all your videos for performance patterns",
+      "Extracts captions and identifies key content themes",
+      "Suggests cross-platform content ideas from your best videos",
+      "Helps identify partnership-ready content and growth opportunities"
+    ]
   },
   {
     title: "Gmail",
-    description: "Partnership & business communication insights",
+    description: "Partnership & business email organization and insights",
     icon: "gmail-image",
-    iconProps: { className: "w-6 h-6" },
+    iconProps: { className: "w-10 h-10" },
     color: "from-blue-500 to-blue-600",
     status: "connected",
     insights: [
-      "🤝 342 partnership emails analyzed - AI finds hidden $50K+ opportunities",
-      "💰 Brand deal prediction engine scores your partnership potential in real-time",
-      "📊 Success pattern AI learns from every creator deal to optimize your outreach",
-      "🎯 Strategic timing AI maximizes response rates based on partnership data"
+      "Automatically categorizes partnership and business emails",
+      "Surfaces collaboration opportunities you might have missed",
+      "Helps draft professional responses to brand inquiries",
+      "Identifies patterns in successful partnership communications"
     ]
   }
 ];
@@ -165,7 +166,7 @@ export function AgentsShowcase() {
           </h2>
           <p className="text-xl sm:text-2xl text-muted-foreground leading-relaxed max-w-4xl mx-auto">
             HeyContent connects all your platforms and tools with deep AI insights. 
-            We build a smart memory of your content, analyze patterns across millions of creators, and give you the exact strategies that work.
+            We build a smart memory of your content, analyze patterns across your data, and give you the exact strategies that work.
           </p>
         </div>
 
@@ -229,61 +230,51 @@ export function AgentsShowcase() {
                             <div className="mt-3 p-3 bg-background/20 rounded-lg text-xs space-y-2">
                               {msg.data.source_platform && (
                                 <div className="flex items-center gap-2">
-                                  <span className="text-blue-400">📹</span>
                                   <span>{msg.data.source_platform}</span>
                                 </div>
                               )}
                               {msg.data.target_platform && (
                                 <div className="flex items-center gap-2">
-                                  <span className="text-pink-400">📸</span>
                                   <span>{msg.data.target_platform}</span>
                                 </div>
                               )}
                               {msg.data.engagement_boost && (
                                 <div className="flex items-center gap-2">
-                                  <span className="text-green-400">📈</span>
                                   <span>{msg.data.engagement_boost}</span>
                                 </div>
                               )}
                               {msg.data.content_created && (
                                 <div className="flex items-center gap-2">
-                                  <span className="text-purple-400">✨</span>
                                   <span>{msg.data.content_created}</span>
                                 </div>
                               )}
                               {msg.data.audience_insight && (
                                 <div className="flex items-center gap-2">
-                                  <span className="text-cyan-400">🎯</span>
                                   <span>{msg.data.audience_insight}</span>
                                 </div>
                               )}
                               {msg.data.growth_trend && (
                                 <div className="flex items-center gap-2">
-                                  <span className="text-green-400">📊</span>
                                   <span>{msg.data.growth_trend}</span>
                                 </div>
                               )}
                               {msg.data.brand_matches && (
                                 <div className="flex items-center gap-2">
-                                  <span className="text-blue-400">🏢</span>
                                   <span>{msg.data.brand_matches}</span>
                                 </div>
                               )}
                               {msg.data.top_targets && (
                                 <div className="flex items-center gap-2">
-                                  <span className="text-orange-400">🎯</span>
                                   <span>{msg.data.top_targets}</span>
                                 </div>
                               )}
                               {msg.data.pitch_ready && (
                                 <div className="flex items-center gap-2">
-                                  <span className="text-purple-400">📧</span>
                                   <span>{msg.data.pitch_ready}</span>
                                 </div>
                               )}
                               {msg.data.success_probability && (
                                 <div className="flex items-center gap-2">
-                                  <span className="text-emerald-400">🎪</span>
                                   <span>{msg.data.success_probability}</span>
                                 </div>
                               )}
@@ -317,12 +308,12 @@ export function AgentsShowcase() {
               <div className="absolute -inset-4 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 rounded-2xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
               <div className="relative bg-background/60 backdrop-blur-sm rounded-xl border border-border p-6">
                 <div className="flex items-center gap-3 mb-3">
-                  <Database className="w-6 h-6 text-blue-500" />
-                  <h3 className="text-xl font-bold text-foreground">Your content, smart memory</h3>
+                  <MessageCircle className="w-6 h-6 text-blue-500" />
+                  <h3 className="text-xl font-bold text-foreground">Chat with your content</h3>
                 </div>
                 <p className="text-muted-foreground">
-                  We don't just connect your platforms - we build a smart memory of every piece of content. 
-                  This means we understand what works, why it works, and how to replicate your success.
+                  Ask questions about your posts, get content suggestions, analyze your engagement patterns, 
+                  and understand what works best for your audience - all through natural conversation.
                 </p>
               </div>
             </div>
@@ -331,12 +322,12 @@ export function AgentsShowcase() {
               <div className="absolute -inset-4 bg-gradient-to-r from-green-400 via-blue-400 to-purple-400 rounded-2xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
               <div className="relative bg-background/60 backdrop-blur-sm rounded-xl border border-border p-6">
                 <div className="flex items-center gap-3 mb-3">
-                  <Brain className="w-6 h-6 text-purple-500" />
-                  <h3 className="text-xl font-bold text-foreground">Deep insights, not surface metrics</h3>
+                  <BarChart3 className="w-6 h-6 text-purple-500" />
+                  <h3 className="text-xl font-bold text-foreground">Real insights from your data</h3>
                 </div>
                 <p className="text-muted-foreground">
-                  Beyond likes and views - we analyze content themes, audience sentiment, engagement patterns, 
-                  and compare against millions of creators to find your unique growth opportunities.
+                  Get personalized recommendations based on your actual content performance, engagement patterns, 
+                  and audience behavior - not generic advice that doesn't fit your niche.
                 </p>
               </div>
             </div>
@@ -345,12 +336,12 @@ export function AgentsShowcase() {
               <div className="absolute -inset-4 bg-gradient-to-r from-orange-400 via-red-400 to-pink-400 rounded-2xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
               <div className="relative bg-background/60 backdrop-blur-sm rounded-xl border border-border p-6">
                 <div className="flex items-center gap-3 mb-3">
-                  <Zap className="w-6 h-6 text-orange-500" />
-                  <h3 className="text-xl font-bold text-foreground">The creator OS you've been waiting for</h3>
+                  <Mail className="w-6 h-6 text-orange-500" />
+                  <h3 className="text-xl font-bold text-foreground">Partnership intelligence</h3>
                 </div>
                 <p className="text-muted-foreground">
-                  One layer that connects Instagram, YouTube, Gmail, and all your tools. Chat with your content, 
-                  get AI recommendations, and watch your creator business transform into a data-driven operation.
+                  Automatically organize partnership emails, identify collaboration opportunities, 
+                  and get help crafting professional responses to brands and fellow creators.
                 </p>
               </div>
             </div>
@@ -360,57 +351,25 @@ export function AgentsShowcase() {
         {/* Connected Platforms */}
         <div className="mb-16">
           <h3 className="text-3xl font-bold text-center mb-4 text-foreground">
-            Currently Connected
+            Connect Your Platforms
           </h3>
           <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
-            Deep analysis powered by your actual content and audience data
+            Deep analysis powered by your actual content and communications
           </p>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
             {connectedPlatforms.map((platform, index) => (
-              <Tilt
+              <PlatformCard
                 key={index}
-                tiltMaxAngleX={10}
-                tiltMaxAngleY={10}
-                perspective={1000}
-                scale={1.05}
-                transitionSpeed={1000}
-              >
-                <div
-                  className={`relative group cursor-pointer transition-all duration-300 ${
-                    selectedIntegration === index ? 'scale-105' : ''
-                  }`}
-                  onClick={() => setSelectedIntegration(index)}
-                >
-                  <div className={`absolute -inset-1 bg-gradient-to-r ${platform.color} rounded-2xl blur opacity-20 group-hover:opacity-40 transition-opacity`}></div>
-                  <div className="relative bg-background/80 backdrop-blur-sm rounded-xl border border-border p-6 h-full">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className={`p-3 ${platform.title === 'YouTube' || platform.title === 'Gmail' ? 'bg-white' : `bg-gradient-to-r ${platform.color}`} rounded-xl flex items-center justify-center`}>
-                        {platform.icon === 'gmail-image' ? (
-                          <img src="/icons8-gmail-240.png" alt="Gmail" className="w-6 h-6" />
-                        ) : typeof platform.icon === 'string' ? (
-                          <span className="text-xl">{platform.icon}</span>
-                        ) : React.createElement(platform.icon, platform.iconProps || {})}
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-bold text-foreground text-lg">{platform.title}</h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span className="text-xs text-green-600 dark:text-green-400 font-medium">Connected</span>
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-4 leading-relaxed">{platform.description}</p>
-                    <div className="space-y-2">
-                      {platform.insights.map((insight, insightIndex) => (
-                        <div key={insightIndex} className="flex items-start gap-2 text-sm">
-                          <span className="text-sm opacity-80">{insight}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </Tilt>
+                title={platform.title}
+                description={platform.description}
+                icon={platform.icon}
+                iconProps={platform.iconProps}
+                color={platform.color}
+                insights={platform.insights}
+                isSelected={selectedIntegration === index}
+                onClick={() => setSelectedIntegration(index)}
+              />
             ))}
           </div>
 
@@ -464,12 +423,12 @@ export function AgentsShowcase() {
             onClick={() => router.push('/auth/register')}
             className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full text-white font-bold text-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-300 cursor-pointer group shadow-xl hover:shadow-2xl transform hover:scale-105"
           >
-            <span>Connect your first platform</span>
+            <span>Start chatting with your content</span>
             <ArrowRight className="w-5 h-5 ml-3 group-hover:translate-x-1 transition-transform" />
           </div>
-          <p className="text-sm text-muted-foreground mt-4">Join countless creators building the future with HeyContent</p>
+         <p className="text-sm text-muted-foreground mt-4">Join countless creators building the future with HeyContent</p>
         </div>
       </div>
     </section>
   )
-} 
+}
