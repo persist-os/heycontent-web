@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
+import Image from 'next/image';
 
 type TimelineClip = {
   id: string;
@@ -172,7 +173,7 @@ export const Timeline: React.FC<TimelineProps> = ({ clips, setClips }) => {
         {clip.type === 'video' && (
           <>
             {clip.thumbnail ? (
-              <img src={clip.thumbnail} alt="thumb" className="h-5 w-8 object-cover rounded mr-1" />
+              <Image src={clip.thumbnail} alt="thumb" width={32} height={20} className="h-5 w-8 object-cover rounded mr-1" />
             ) : (
               <span className="h-5 w-8 bg-black/10 rounded mr-1 flex items-center justify-center text-xs">🎬</span>
             )}

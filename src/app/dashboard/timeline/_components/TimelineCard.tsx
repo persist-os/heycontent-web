@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import { TimelineEvent } from './useTimelineStore';
 import { cn } from '@/lib/utils';
 
@@ -39,11 +38,9 @@ export const TimelineCard: React.FC<TimelineCardProps> = ({
     const folderSrc = folderMap[color as keyof typeof folderMap] || '/folders/folder_chat.svg';
     
     return (
-      <Image
+      <img
         src={folderSrc}
-        alt={`${color} folder icon`}
-        width={size === 'sm' ? 16 : size === 'md' ? 20 : 24}
-        height={size === 'sm' ? 16 : size === 'md' ? 20 : 24}
+        alt={`${color} folder`}
         className={cn(sizeClasses[size], 'object-contain')}
       />
     );

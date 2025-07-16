@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import { MessageSquare, ThumbsUp, PlayCircle, Eye, Clock, BarChart3, RefreshCw } from 'lucide-react';
 import { useYouTubeRefresh } from '@/app/hooks/useYouTubeRefresh';
@@ -159,12 +158,11 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ item, onDiscussContent
         <div className="relative aspect-video bg-gray-100 dark:bg-gray-800 overflow-hidden">
           {thumbnailUrl ? (
             <>
-              <Image
+              <img
                 src={thumbnailUrl}
                 alt={content?.title || 'YouTube Video'}
-                fill
                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                priority
+                loading="eager"
                 onError={(e) => {
                   console.error('Error loading YouTube thumbnail:', thumbnailUrl);
                   e.currentTarget.onerror = null; // Prevent infinite loop

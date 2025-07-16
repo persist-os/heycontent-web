@@ -39,19 +39,8 @@ const nextConfig = {
       'convex.domains',
       'heycontent-web-216038426364.us-central1.run.app',
       'i.ytimg.com',
-      'i1.ytimg.com',
-      'i2.ytimg.com',
-      'i3.ytimg.com',
-      'i4.ytimg.com',
-      'i5.ytimg.com',
-      'i6.ytimg.com',
-      'i7.ytimg.com',
-      'i8.ytimg.com',
-      'i9.ytimg.com',
       'img.youtube.com',
       'scontent-ord5-2.cdninstagram.com', // Instagram CDN
-      'scontent.cdninstagram.com', // Instagram CDN base
-      '*.cdninstagram.com', // Instagram CDN wildcard
     ],
     remotePatterns: [
       {
@@ -88,51 +77,11 @@ const nextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'i1.ytimg.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'i2.ytimg.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'i3.ytimg.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'i4.ytimg.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'i5.ytimg.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'i6.ytimg.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'i7.ytimg.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'i8.ytimg.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'i9.ytimg.com',
-      },
-      {
-        protocol: 'https',
         hostname: 'img.youtube.com',
       },
       {
         protocol: 'https',
         hostname: 'scontent-ord5-2.cdninstagram.com', // Instagram CDN
-      },
-      {
-        protocol: 'https',
-        hostname: '**.cdninstagram.com', // Instagram CDN wildcard
       },
     ],
   },

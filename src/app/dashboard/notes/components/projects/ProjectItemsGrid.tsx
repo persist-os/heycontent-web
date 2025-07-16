@@ -253,11 +253,10 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
         {/* Thumbnail Preview */}
         {thumbnailUrl ? (
           <div className="relative aspect-video bg-muted">
-            <Image
+            <img
               src={thumbnailUrl}
-              alt={title || 'YouTube video thumbnail'}
-              fill
-              className="object-cover"
+              alt={title}
+              className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               <div className="bg-red-600 rounded-full p-3">

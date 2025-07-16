@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -166,9 +167,11 @@ export function HelpModal({ open, onClose, pages }: HelpModalProps) {
               
               {currentPage.image && (
                 <div className="flex justify-center my-6">
-                  <img
+                  <Image
                     src={currentPage.image}
                     alt={currentPage.title}
+                    width={800}
+                    height={600}
                     className="max-w-full h-auto rounded-lg border border-border shadow-sm"
                   />
                 </div>

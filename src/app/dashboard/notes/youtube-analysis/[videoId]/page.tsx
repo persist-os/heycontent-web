@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
@@ -167,11 +166,10 @@ export default function YouTubeAnalysisPage() {
             <div className="relative aspect-video bg-muted rounded-lg overflow-hidden cursor-pointer group">
               {videoData.snippet?.thumbnails?.high || videoData.snippet?.thumbnails?.medium ? (
                 <>
-                  <Image
+                  <img
                     src={videoData.snippet.thumbnails.high || videoData.snippet.thumbnails.medium}
-                    alt={videoData.snippet?.title || 'YouTube Video thumbnail'}
-                    fill
-                    className="object-cover"
+                    alt={videoData.snippet?.title || 'YouTube Video'}
+                    className="w-full h-full object-cover"
                   />
                   {/* Play overlay */}
                   <div 

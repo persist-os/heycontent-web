@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 
 type YouTubeBrandIconProps = {
   /**
@@ -35,9 +36,11 @@ export const YouTubeBrandIcon: React.FC<YouTubeBrandIconProps> = ({
       style={{ display: 'inline-block', lineHeight: 0 }}
       className={`min-w-[20px] min-h-[20px] ${className}`}
     >
-      <img
+      <Image
         src="/youtube-logo.svg"
         alt="YouTube"
+        width={80}
+        height={56}
         className="w-full h-full"
         style={{ display: 'block' }}
         role="img"

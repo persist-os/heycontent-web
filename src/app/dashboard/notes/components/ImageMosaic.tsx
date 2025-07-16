@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
 import { ImageData } from '../types';
 import { cn } from '@/lib/utils';
 
@@ -26,11 +25,9 @@ interface QuadImageProps {
 
 // Layout Components
 const SingleImageLayout: React.FC<SingleImageProps> = ({ image }) => (
-  <Image
+  <img
     src={image.url}
     alt={image.originalFilename || image.filename || 'Note image'}
-    width={400}
-    height={192}
     loading="lazy"
     className="w-full max-h-48 object-scale-down rounded-lg bg-muted"
   />
@@ -39,12 +36,10 @@ const SingleImageLayout: React.FC<SingleImageProps> = ({ image }) => (
 const DualImageLayout: React.FC<MultiImageProps> = ({ images }) => (
   <div className="grid grid-cols-2 gap-1">
     {images.map((img, i) => (
-      <Image
+      <img
         key={img.filename || i}
         src={img.url}
         alt={img.originalFilename || img.filename || `Note image ${i + 1}`}
-        width={200}
-        height={128}
         loading="lazy"
         className="w-full max-h-32 object-scale-down bg-muted"
       />
@@ -55,12 +50,10 @@ const DualImageLayout: React.FC<MultiImageProps> = ({ images }) => (
 const TrioImageLayout: React.FC<MultiImageProps> = ({ images }) => (
   <div className="grid grid-cols-3 gap-1">
     {images.map((img, i) => (
-      <Image
+      <img
         key={img.filename || i}
         src={img.url}
         alt={img.originalFilename || img.filename || `Note image ${i + 1}`}
-        width={133}
-        height={96}
         loading="lazy"
         className="w-full max-h-24 object-scale-down bg-muted"
       />
@@ -71,22 +64,18 @@ const TrioImageLayout: React.FC<MultiImageProps> = ({ images }) => (
 const QuadImageLayout: React.FC<QuadImageProps> = ({ images, remainingCount }) => (
   <div className="grid grid-cols-2 gap-1">
     {images.slice(0, 3).map((img, i) => (
-      <Image
+      <img
         key={img.filename || i}
         src={img.url}
         alt={img.originalFilename || img.filename || `Note image ${i + 1}`}
-        width={200}
-        height={96}
         loading="lazy"
         className="w-full max-h-24 object-scale-down bg-muted"
       />
     ))}
     <div className="relative bg-muted">
-      <Image
+      <img
         src={images[3].url}
         alt={images[3].originalFilename || images[3].filename || 'Note image 4'}
-        width={200}
-        height={96}
         loading="lazy"
         className="w-full max-h-24 object-scale-down"
       />

@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import Image from 'next/image'
 import Tilt from 'react-parallax-tilt'
 
 interface PlatformCardProps {
@@ -47,7 +48,7 @@ export function PlatformCard({
           <div className="flex items-center gap-3 mb-4">
             <div className={`p-3 ${title === 'YouTube' || title === 'Gmail' ? 'bg-white' : `bg-gradient-to-r ${color}`} rounded-xl flex items-center justify-center`}>
               {icon === 'gmail-image' ? (
-                <img src="/icons8-gmail-240.png" alt="Gmail" className="w-10 h-10" />
+                <Image src="/icons8-gmail-240.png" alt="Gmail" width={40} height={40} className="w-10 h-10" />
               ) : typeof icon === 'string' ? (
                 <span className="text-xl">{icon}</span>
               ) : React.createElement(icon, iconProps || {})}

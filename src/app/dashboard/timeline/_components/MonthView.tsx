@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import Image from 'next/image';
 import { useTimelineStore } from './useTimelineStore';
 import { TimelineCard } from './TimelineCard';
 
@@ -452,7 +451,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                       items: getFolderItems(persona._id, 'blue')
                                     });
                                   }}>
-                                    <Image src="/folders/folder_chat.svg" alt="Chat folder icon" width={16} height={16} className="folder-bar-icon" />
+                                    <img src="/folders/folder_chat.svg" alt="Chat" className="folder-bar-icon" />
                                     <span className="folder-bar-text">{counts.blue} Conversations</span>
                                   </div>
                                   <div className="folder-bar purple" style={{ width: '100%' }} onClick={(e) => {
@@ -463,7 +462,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                       items: getFolderItems(persona._id, 'purple')
                                     });
                                   }}>
-                                    <Image src="/folders/folder_smartnotes.svg" alt="Smart notes folder icon" width={16} height={16} className="folder-bar-icon" />
+                                    <img src="/folders/folder_smartnotes.svg" alt="Notes" className="folder-bar-icon" />
                                     <span className="folder-bar-text">{counts.purple} SmartNotes</span>
                                   </div>
                                   <div className="folder-bar orange" style={{ width: '100%' }} onClick={(e) => {
@@ -474,7 +473,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                       items: getFolderItems(persona._id, 'orange')
                                     });
                                   }}>
-                                    <Image src="/folders/Folder_content.svg" alt="Content folder icon" width={16} height={16} className="folder-bar-icon" />
+                                    <img src="/folders/Folder_content.svg" alt="Content" className="folder-bar-icon" />
                                     <span className="folder-bar-text">{counts.orange} Contents</span>
                                   </div>
                                   <div className="folder-bar yellow" style={{ width: '100%' }} onClick={(e) => {
@@ -485,7 +484,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                       items: getFolderItems(persona._id, 'yellow')
                                     });
                                   }}>
-                                    <Image src="/folders/folder_analytics.svg" alt="Analytics folder icon" width={16} height={16} className="folder-bar-icon" />
+                                    <img src="/folders/folder_analytics.svg" alt="Analytics" className="folder-bar-icon" />
                                     <span className="folder-bar-text">{counts.yellow} Analysis</span>
                                   </div>
                                 </>
