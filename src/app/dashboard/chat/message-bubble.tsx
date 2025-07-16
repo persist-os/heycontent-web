@@ -373,6 +373,7 @@ export function MessageBubble({
               {onReference && showReferenceButton && (
                 <button
                   onClick={() => onReference(message)}
+                  data-reference-button
                   className="p-1 rounded-full bg-background/70 backdrop-blur-sm border text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all"
                   title="Reply"
                 >

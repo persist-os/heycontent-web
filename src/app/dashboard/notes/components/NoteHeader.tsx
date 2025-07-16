@@ -146,7 +146,7 @@ export function NoteHeader({
               <Star 
                 size={16} 
                 className={
-                  note.important 
+                  note.important
                     ? '!text-white group-hover:!text-white dark:!text-black dark:group-hover:!text-black dark:group-hover:stroke-black'
                     : 'text-black dark:text-white group-hover:!text-white dark:group-hover:!text-white dark:group-hover:stroke-black'
                 }

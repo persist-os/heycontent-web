@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Calendar, Clock, BarChart3, RefreshCw, Instagram, Settings, Users } from 'lucide-react';
+import { Calendar, Clock, BarChart3, RefreshCw, Instagram, Settings } from 'lucide-react';
 import { InstagramCard } from '../cards/InstagramCard';
 import { InstagramModal } from '../modals/InstagramModal';
 import { PlatformEmbeddingStatus } from '../components/PlatformEmbeddingStatus';
@@ -65,9 +65,10 @@ export function InstagramPlatform({
 }: InstagramPlatformProps) {
   const router = useRouter();
   const [selectedContent, setSelectedContent] = useState<InstagramContentItem | null>(null);
-  const [showDemographics, setShowDemographics] = useState(false);
   const observerRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef<HTMLDivElement>(null);
+  
+
   
   // Memoized pie chart data calculation
   const mediaDistributionData = useMemo(() => {
@@ -216,20 +217,18 @@ export function InstagramPlatform({
         </div>
       )}
     
-      {/* Platform Embedding Status */}
-      <PlatformEmbeddingStatus 
-        platform="instagram" 
-        contentCount={displayItems.length} 
-        userId={userId} 
-      />
+        {/* Platform Embedding Status */}
+        <PlatformEmbeddingStatus 
+          platform="instagram" 
+          contentCount={displayItems.length} 
+          userId={userId} 
+        />
 
-      {/* Instagram Analytics Section */}
-      <div className="space-y-6 mb-8">
+  {/* Instagram Analytics Section */}
+  <div className="space-y-6 mb-8">
         {/* Header with Refresh Tracker Button */}
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-4">
-            {/* Demographics Toggle Button */}
-            
           </div>
           <div className="flex gap-3">
             {/*
@@ -246,12 +245,7 @@ export function InstagramPlatform({
           </div>
         </div>
 
-        {refreshTrackerSuccess && (
-          <div className="text-green-500 text-sm mb-2 text-center">Instagram tracker analysis refreshed successfully!</div>
-        )}
 
-        {/* Demographics Section */}
-        
 
         {/* Analytics Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">

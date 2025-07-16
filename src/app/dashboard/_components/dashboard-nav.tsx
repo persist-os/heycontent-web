@@ -18,24 +18,28 @@ const navItems = [
     label: 'Chat with Content',
     icon: BarChart3,
     href: '/dashboard/chat',
+    dataAttr: 'data-chat-link',
   },
   {
     id: 'content-hub',
     label: 'Content Hub',
     icon: BarChart3,
     href: '/dashboard/content-hub',
+    dataAttr: 'data-content-hub-link',
   },
   {
     id: 'notes',
     label: 'Smart Notes',
     icon: FileText,
     href: '/dashboard/notes',
+    dataAttr: 'data-smart-notes-link',
   },
   {
     id: 'partnerships',
     label: 'Partnership Hub',
     icon: Handshake,
     href: '/dashboard/partnerships',
+    dataAttr: 'data-partnerships-link',
   },
 ]
 
@@ -276,6 +280,7 @@ export const DashboardNav = memo(function DashboardNav() {
                   ? 'bg-primary text-primary-foreground'
                   : 'hover:bg-muted/80'
               }`}
+              {...{[item.dataAttr]: true}}
             >
               <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center">
                 {item.id === 'chat' ? (

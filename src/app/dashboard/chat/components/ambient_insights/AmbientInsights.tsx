@@ -210,7 +210,7 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
   }
 
   return (
-    <div className="space-y-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0 pt-2">
+    <div className="space-y-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0 pt-2" data-ambient-insights>
       {insights.map((insight) => (
         <div
           key={insight.id}
