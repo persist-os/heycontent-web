@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Share2, Twitter, Dice6, Linkedin, MessageCircle, Instagram } from 'lucide-react';
 import Tilt from 'react-parallax-tilt';
@@ -288,9 +289,11 @@ export const CreatorCard = ({
                     }}
                   ></div>
                   <div className="relative w-full h-full flex items-center justify-center">
-                    <img 
+                    <Image 
                       src="/images/hey-content-logo.svg"
                       alt="HeyContent Logo"
+                      width={200}
+                      height={200}
                       className="w-[85%] h-[85%] object-contain"
                       style={{ filter: 'drop-shadow(0 0 32px ' + currentScheme.gradient.glow + ')' }}
                     />

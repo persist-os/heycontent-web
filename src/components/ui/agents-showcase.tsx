@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { MessageCircle, BarChart3, Zap, Globe, Brain, ArrowRight, Play, Pause, Instagram, Mail, Database, Search } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { YouTubeBrandIcon } from '@/lib/YoutubeBrandIcon'
@@ -392,7 +393,7 @@ export function AgentsShowcase() {
                   <div className="flex items-center gap-3 mb-2">
                     <div className={`p-2 ${platform.title === 'TikTok' || platform.title === 'Google Calendar' ? 'bg-white' : `bg-gradient-to-r ${platform.color}`} rounded-lg flex items-center justify-center`}>
                       {platform.icon === 'tiktok-image' && (
-                        <img src="/icons8-tiktok-500.png" alt="TikTok" className="w-6 h-6" />
+                        <Image src="/icons8-tiktok-500.png" alt="TikTok" width={24} height={24} className="w-6 h-6" />
                       )}
                       {platform.icon === 'twitter' && (
                         <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
@@ -400,7 +401,7 @@ export function AgentsShowcase() {
                         </svg>
                       )}
                       {platform.icon === 'google-calendar-image' && (
-                        <img src="/icons8-google-calendar-240.png" alt="Google Calendar" className="w-6 h-6" />
+                        <Image src="/icons8-google-calendar-240.png" alt="Google Calendar" width={24} height={24} className="w-6 h-6" />
                       )}
                       {platform.icon === 'notion' && (
                         <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">

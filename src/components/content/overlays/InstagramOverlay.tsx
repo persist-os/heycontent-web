@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useState } from 'react';
+import Image from 'next/image';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
@@ -269,9 +270,11 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
         {/* Media Section */}
         <div className="relative rounded-xl overflow-hidden group">
           <div className="aspect-square lg:aspect-auto lg:min-h-[400px]">
-            <img
+            <Image
               src={thumbnailUrl || mediaUrl}
               alt={normalizedPostData.title}
+              width={1080}
+              height={1080}
               className="w-full h-full object-cover cursor-pointer"
               onClick={() => window.open(permalink, '_blank')}
             />

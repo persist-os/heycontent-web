@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import Image from 'next/image';
 import { 
   Play,
   Eye,
@@ -278,9 +279,11 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
       <div className="relative aspect-video bg-muted rounded-lg overflow-hidden cursor-pointer group">
         {videoData.snippet?.thumbnails?.high || videoData.snippet?.thumbnails?.medium ? (
           <>
-            <img
+            <Image
               src={videoData.snippet.thumbnails.high || videoData.snippet.thumbnails.medium}
               alt={videoData.snippet?.title || 'YouTube Video'}
+              width={1280}
+              height={720}
               className="w-full h-full object-cover"
               onClick={() => window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank')}
             />
@@ -425,9 +428,11 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
                 <div key={comment.id || index} className="flex gap-3 p-3 bg-muted/20 rounded-lg">
                   <div className="flex-shrink-0">
                     {comment.author?.profile_image ? (
-                      <img 
+                      <Image 
                         src={comment.author.profile_image} 
                         alt={comment.author.display_name || 'User'}
+                        width={32}
+                        height={32}
                         className="w-8 h-8 rounded-full"
                       />
                     ) : (
