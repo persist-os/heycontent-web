@@ -103,8 +103,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   const { context: currentContext, hasContext } = useContentContext()
   const { clearContentContext } = useContentContextActions()
 
-  // Context search state - enable by default when no context, keep enabled for YouTube videos without analysis
-  const [useContextSearch, setUseContextSearch] = useState(!hasContext)
+  // Context search state - always enable by default to ensure smart search is available
+  const [useContextSearch, setUseContextSearch] = useState(true)
   
   // Interactive tour state
   const [interactiveTourOpen, setInteractiveTourOpen] = useState(false)
@@ -167,16 +167,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     }, 100)
   }
 
-  // Auto-disable context search when content context is available, unless it's YouTube without analysis
-  useEffect(() => {
-    if (hasContext && useContextSearch) {
-      // Keep context search enabled for YouTube videos without analysis to help AI understand the content better
-      const isYouTubeWithoutAnalysis = currentContext?.platform === 'youtube' && !currentContext?.analysis;
-      if (!isYouTubeWithoutAnalysis) {
-        setUseContextSearch(false);
-      }
-    }
-  }, [hasContext, useContextSearch, currentContext]);
+  // Smart search should always be available - removed auto-disable logic
+  // Users should have full control over when to use smart search regardless of context
+  // This ensures smart search is never automatically deactivated when ContextBox or InsightCard are present
 
   // Get convex client for persona operations
   const convex = useConvex()

@@ -292,7 +292,7 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
         searchStatus.includes('filtered')) {
       
       setSteps(prev => {
-        let gradingStepIndex = prev.findIndex(step => step.stage === 'grading')
+        const gradingStepIndex = prev.findIndex(step => step.stage === 'grading')
         
         if (gradingStepIndex === -1) {
           const gradingStep: ThinkingStep = {

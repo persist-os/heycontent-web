@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Message } from '@/app/types/chat'
+import { ContentContext } from '@/app/dashboard/chat/types'
 
 export type ChatStateReturnType = {
   messages: Message[];
@@ -14,6 +15,8 @@ export type ChatStateReturnType = {
   setIsFirstMessage: React.Dispatch<React.SetStateAction<boolean>>;
   includeAnalysisInQuery: boolean;
   setIncludeAnalysisInQuery: React.Dispatch<React.SetStateAction<boolean>>;
+  contentContext: ContentContext | null;
+  setContentContext: React.Dispatch<React.SetStateAction<ContentContext | null>>;
 }
 
 export const useChatState = (): ChatStateReturnType => {
@@ -23,6 +26,7 @@ export const useChatState = (): ChatStateReturnType => {
   const [error, setError] = useState<string | null>(null)
   const [isFirstMessage, setIsFirstMessage] = useState(true) // Initialize to true for new chats
   const [includeAnalysisInQuery, setIncludeAnalysisInQuery] = useState(true) // Default to true
+  const [contentContext, setContentContext] = useState<ContentContext | null>(null)
 
   return {
     messages,
@@ -36,6 +40,8 @@ export const useChatState = (): ChatStateReturnType => {
     isFirstMessage,
     setIsFirstMessage,
     includeAnalysisInQuery,
-    setIncludeAnalysisInQuery
+    setIncludeAnalysisInQuery,
+    contentContext,
+    setContentContext
     }
 } 

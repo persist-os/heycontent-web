@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import { Instagram, Mail, X, ExternalLink, Brain, Sparkles, ToggleLeft, ToggleRight, MessageSquare, ChevronDown, ChevronRight } from 'lucide-react';
 import { YouTubeBrandIcon } from '../../../../../lib/YoutubeBrandIcon';
@@ -138,7 +139,7 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
                   <div className="flex gap-4 mt-2">
                     {/* Thumbnail */}
                     {thumbnail && (
-                      <img src={thumbnail} alt="Video thumbnail" className="w-40 h-30 object-cover rounded border border-[#B3D4FC] flex-shrink-0" />
+                      <Image src={thumbnail} alt="Video thumbnail" width={160} height={120} className="w-40 h-30 object-cover rounded border border-[#B3D4FC] flex-shrink-0" />
                     )}
                     {/* Basic Stats */}
                     <div className="flex flex-col gap-2 text-sm text-blue-100 dark:text-blue-100">
@@ -282,9 +283,11 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
                   <div className="flex gap-4 mt-2">
                     {/* Thumbnail */}
                     {(mediaUrl || thumbnailUrl) && (
-                      <img 
+                      <Image 
                         src={mediaUrl || thumbnailUrl} 
                         alt="Instagram thumbnail" 
+                        width={192}
+                        height={192}
                         className="w-48 h-48 object-cover rounded border border-[#B3D4FC] flex-shrink-0" 
                       />
                     )}
@@ -652,9 +655,11 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
             {/* Centered, larger image */}
             {context.thumbnailUrl && (
               <div className="flex justify-center mb-3">
-                <img
+                <Image
                   src={context.thumbnailUrl}
                   alt="Instagram content"
+                  width={192}
+                  height={192}
                   className="w-48 h-48 object-cover rounded-lg border border-[#D0ECFF] shadow-sm"
                 />
               </div>
@@ -674,9 +679,11 @@ export const ContextBox: React.FC<ContextBoxProps> = ({
         {/* Show thumbnail for non-Instagram content */}
         {context.platform !== 'instagram' && context.thumbnailUrl && (
           <div className="mb-2">
-            <img
+            <Image
               src={context.thumbnailUrl}
               alt="Content thumbnail"
+              width={112}
+              height={80}
               className="w-28 h-20 object-cover rounded-lg border border-[#D0ECFF]"
             />
           </div>

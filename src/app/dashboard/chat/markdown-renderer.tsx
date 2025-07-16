@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
 import rehypeRaw from 'rehype-raw'
+import NextImage from 'next/image'
 import { ExternalLink, Play, Image, FileText, Youtube, Instagram, Lightbulb } from 'lucide-react'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
@@ -50,10 +51,12 @@ function LinkEmbed({ href, children }: { href: string; children: React.ReactNode
     
     if (isImage) {
       return (
-        <div className="my-4 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-          <img
+        <div className="my-4 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 relative">
+          <NextImage
             src={href}
             alt="Embedded image"
+            width={600}
+            height={400}
             className="w-full h-auto max-h-96 object-cover"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none'

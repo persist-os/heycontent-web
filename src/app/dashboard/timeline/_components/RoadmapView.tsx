@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
+import Image from 'next/image';
 import { useTimelineStore } from './useTimelineStore';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { useRouter } from 'next/navigation';
@@ -341,9 +342,11 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
                                           });
                                         }}
                                       >
-                                        <img
+                                        <Image
                                           src={folder.src}
-                                          alt={`${folder.color} folder`}
+                                          alt={`${folder.color} folder icon`}
+                                          width={24}
+                                          height={24}
                                           className="w-6 h-6 object-contain"
                                         />
                                         {folder.count > 0 && (

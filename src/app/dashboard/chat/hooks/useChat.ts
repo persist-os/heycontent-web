@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation'
 import { AuthenticationError } from '@/app/lib/errors'
 
 import { v4 as uuidv4 } from 'uuid';
+import { Id } from '@/convex/_generated/dataModel';
 
 export const useChat = (
   chatState: ChatStateReturnType,
@@ -190,7 +191,7 @@ export const useChat = (
         } else {
           await addMessageToConversationMutation({
             userId: userId || '',
-            conversationId: sessionId,
+            conversationId: sessionId as unknown as Id<'conversations'>,
             message: {
               content: trimmedContent,
               role: 'user',
@@ -275,24 +276,37 @@ export const useChat = (
       // Update messages with the response
       setMessages(prev => {
         // Transform the typing message into the final response message
-        const updatedMessages = prev.map(msg => 
-          msg.status === 'typing' 
-            ? { 
-                ...msg, 
-                status: 'sent', // Change status to completed
-                content: data.chat_response, // Replace the "..." with actual content
-                chat_response: data.chat_response, // Set the chat response
-                searchStatus: '✅ Analysis complete - response ready',
-                // Preserve all the progressive thinking data
-                statusHistory: msg.statusHistory || [],
-                vectorSearchMetadata: data.vector_search_metadata,
-                // Add the response metadata
-                sessionId: data.session_id || sessionId,
-                metadata: data.metadata,
-                suggestions: data.suggestions || []
-              }
-            : msg
-        );
+        const updatedMessages = prev.map(msg => {
+          if (msg.status === 'typing') {
+            // Construct a new Message object, only including allowed fields
+            const newMsg: Message = {
+              id: msg.id,
+              content: data.chat_response,
+              role: msg.role || 'assistant',
+              timestamp: msg.timestamp || new Date().toISOString(),
+              status: 'sent',
+              chat_response: data.chat_response,
+              sessionId: data.session_id || sessionId,
+              // Optional fields, only include if present
+              ...(msg.referencedMessage ? { referencedMessage: msg.referencedMessage } : {}),
+              searchStatus: '✅ Analysis complete - response ready',
+              statusHistory: msg.statusHistory || [],
+              ...(data.vector_search_metadata ? { 
+                vectorSearchMetadata: {
+                  foundRelevantContent: data.vector_search_metadata.foundRelevantContent,
+                  relevantItemsCount: data.vector_search_metadata.relevantItemsCount,
+                  relevantContent: data.vector_search_metadata.relevantContent || []
+                }
+              } : {}),
+              metadata: data.metadata,
+              suggestions: data.suggestions || [],
+              ...(msg.relatedInsights ? { relatedInsights: msg.relatedInsights } : {}),
+              ...(msg.followUpQuestions ? { followUpQuestions: msg.followUpQuestions } : {}),
+            };
+            return newMsg;
+          }
+          return msg;
+        });
         
         // Add useful logging from main
         console.log('🔗 useChat: Messages after assistant response:', {
