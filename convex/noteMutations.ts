@@ -50,6 +50,18 @@ export const updateNote = mutation({
       important: v.optional(v.boolean()),
       titleGenerated: v.optional(v.boolean()),
       typeGenerated: v.optional(v.boolean()),
+      images: v.optional(
+        v.array(
+          v.object({
+            filename: v.string(),
+            mimeType: v.string(),
+            originalFilename: v.string(),
+            size: v.number(),
+            uploadedAt: v.number(),
+            url: v.string(),
+          })
+        )
+      ),
     }),
   },
   handler: async (ctx, { noteId, userId, updates }) => {
