@@ -554,14 +554,14 @@ export default defineSchema({
         v.object({ metric: v.string(), values: v.any() })
       )
     ),
-    createdAt: v.number(),
+    createdAt: v.optional(v.number()),
     diffs: v.optional(
       v.array(
         v.object({
           changeType: v.optional(v.string()),
-          changedAt: v.number(),
-          changedFields: v.array(v.string()),
-          current: v.any(),
+          changedAt: v.optional(v.number()),
+          changedFields: v.optional(v.array(v.string())),
+          current: v.optional(v.any()),
         })
       )
     ),
@@ -576,7 +576,7 @@ export default defineSchema({
       )
     ),
     insights: v.optional(v.any()),
-    instagramAccountId: v.string(),
+    instagramAccountId: v.optional(v.string()),
     media_product_type_breakdown: v.optional(
       v.array(
         v.object({ metric: v.string(), values: v.any() })
@@ -584,77 +584,67 @@ export default defineSchema({
     ),
     pagination: v.optional(
       v.object({
-        hasMorePosts: v.boolean(),
-        lastFetchedAt: v.number(),
+        hasMorePosts: v.optional(v.boolean()),
+        lastFetchedAt: v.optional(v.number()),
         nextUrl: v.optional(v.union(v.string(), v.null())),
-        totalPostsFetched: v.number(),
+        totalPostsFetched: v.optional(v.number()),
       })
     ),
-    profileData: v.object({
-      account_type: v.any(),
+    profileData: v.optional(v.object({
+      account_type: v.optional(v.any()),
       biography: v.optional(v.string()),
-      followers_count: v.any(),
-      follows_count: v.any(),
-      id: v.string(),
-      media_count: v.any(),
+      followers_count: v.optional(v.any()),
+      follows_count: v.optional(v.any()),
+      id: v.optional(v.string()),
+      media_count: v.optional(v.any()),
       name: v.optional(v.string()),
       profile_picture_url: v.optional(v.any()),
-      username: v.string(),
+      username: v.optional(v.string()),
       website: v.optional(v.string()),
-    }),
-    profileInsights: v.optional(
-      v.object({
-        follower_count: v.optional(v.union(v.float64(), v.number())),
-        lastUpdated: v.optional(v.union(v.float64(), v.number())),
-        period: v.optional(v.string()),
-        profile_views: v.optional(v.union(v.float64(), v.number())),
-        reach: v.optional(v.union(v.float64(), v.number())),
-        website_clicks: v.optional(v.union(v.float64(), v.number())),
-      })
-    ),
+    })),
     token: v.optional(
       v.object({
-        accessToken: v.string(),
-        expiryDate: v.number(),
-        lastRefreshed: v.number(),
-        scope: v.string(),
+        accessToken: v.optional(v.string()),
+        expiryDate: v.optional(v.number()),
+        lastRefreshed: v.optional(v.number()),
+        scope: v.optional(v.string()),
       })
     ),
-    updatedAt: v.number(),
-    userId: v.string(),
-    username: v.string(),
+    updatedAt: v.optional(v.number()),
+    userId: v.optional(v.string()),
+    username: v.optional(v.string()),
   })
     .index("by_instagramAccountId", ["instagramAccountId"])
     .index("by_userId", ["userId"])
     .index("by_username", ["username"]),
   // Unified Instagram Posts Table - Handles all media types (IMAGE, VIDEO, CAROUSEL_ALBUM, REELS)
   instagramPosts: defineTable({
-    userId: v.string(),
-    instagramAccountId: v.string(),
-    postId: v.string(),
-    mediaType: v.union(
+    userId: v.optional(v.string()),
+    instagramAccountId: v.optional(v.string()),
+    postId: v.optional(v.string()),
+    mediaType: v.optional(v.union(
       v.literal("IMAGE"),
       v.literal("VIDEO"), 
       v.literal("CAROUSEL_ALBUM"),
       v.literal("REELS")
-    ),
-    data: v.object({
+    )),
+    data: v.optional(v.object({
       // Core fields (common to all types)
-      id: v.string(),
-      caption: v.string(),
-      media_url: v.string(),
-      permalink: v.string(),
-      timestamp: v.number(),
-      username: v.string(),
+      id: v.optional(v.string()),
+      caption: v.optional(v.string()),
+      media_url: v.optional(v.string()),
+      permalink: v.optional(v.string()),
+      timestamp: v.optional(v.number()),
+      username: v.optional(v.string()),
       like_count: v.optional(v.number()),
       comments_count: v.optional(v.number()),
       
       // Type-specific fields (made optional since different media types have different fields)
       thumbnail_url: v.optional(v.union(v.string(), v.null())), // For videos/reels only
       children: v.optional(v.union(v.array(v.object({
-        id: v.string(),
-        media_url: v.string(),
-        media_type: v.string(),
+        id: v.optional(v.string()),
+        media_url: v.optional(v.string()),
+        media_type: v.optional(v.string()),
         thumbnail_url: v.optional(v.union(v.string(), v.null()))
       })), v.null())), // For carousels only
       
@@ -680,31 +670,31 @@ export default defineSchema({
       
       // Embedded comments (for recent/important ones)
       comments: v.optional(v.array(v.object({
-        id: v.string(),
-        text: v.string(),
-        timestamp: v.number(),
-        username: v.string(),
+        id: v.optional(v.string()),
+        text: v.optional(v.string()),
+        timestamp: v.optional(v.number()),
+        username: v.optional(v.string()),
         like_count: v.optional(v.union(v.number(), v.null())),
         replies: v.optional(v.array(v.object({
-          id: v.string(),
-          text: v.string(),
-          timestamp: v.number(),
+          id: v.optional(v.string()),
+          text: v.optional(v.string()),
+          timestamp: v.optional(v.number()),
           username: v.optional(v.string()),
           like_count: v.optional(v.union(v.number(), v.null()))
         })))
       })))
-    }),
+    })),
     
     // Analysis fields
     analysis: v.optional(v.any()),
     analysisMarkdown: v.optional(v.string()),
     
-    createdAt: v.number(),
-    updatedAt: v.number(),
+    createdAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
     diffs: v.optional(v.array(v.object({
-      changedAt: v.number(),
-      changedFields: v.array(v.string()),
-      current: v.any(),
+      changedAt: v.optional(v.number()),
+      changedFields: v.optional(v.array(v.string())),
+      current: v.optional(v.any()),
       changeType: v.optional(v.string()),
     })))
   })
@@ -890,35 +880,33 @@ export default defineSchema({
 
   // Instagram Posts Queue - Staging table for lazy loading
   instagramPostsQueue: defineTable({
-    userId: v.string(),
-    instagramAccountId: v.string(),
-    postId: v.string(),
-    mediaType: v.union(
+    userId: v.optional(v.string()),
+    instagramAccountId: v.optional(v.string()),
+    postId: v.optional(v.string()),
+    mediaType: v.optional(v.union(
       v.literal("IMAGE"),
       v.literal("VIDEO"), 
       v.literal("CAROUSEL_ALBUM"),
       v.literal("REELS")
-    ),
-    data: v.object({
+    )),
+    data: v.optional(v.object({
       // Core fields (common to all types)
-      id: v.string(),
-      caption: v.string(),
-      media_url: v.string(),
-      permalink: v.string(),
-      timestamp: v.number(),
-      username: v.string(),
+      id: v.optional(v.string()),
+      caption: v.optional(v.string()),
+      media_url: v.optional(v.string()),
+      permalink: v.optional(v.string()),
+      timestamp: v.optional(v.number()),
+      username: v.optional(v.string()),
       like_count: v.optional(v.number()),
       comments_count: v.optional(v.number()),
-      
       // Type-specific fields (made optional since different media types have different fields)
       thumbnail_url: v.optional(v.union(v.string(), v.null())), // For videos/reels only
       children: v.optional(v.union(v.array(v.object({
-        id: v.string(),
-        media_url: v.string(),
-        media_type: v.string(),
+        id: v.optional(v.string()),
+        media_url: v.optional(v.string()),
+        media_type: v.optional(v.string()),
         thumbnail_url: v.optional(v.union(v.string(), v.null()))
       })), v.null())), // For carousels only
-      
       // Embedded insights (flattened for easy access)
       insights: v.optional(v.object({
         impressions: v.optional(v.number()),
@@ -938,30 +926,27 @@ export default defineSchema({
         period: v.optional(v.string()),
         timestamp: v.optional(v.number())
       })),
-      
       // Embedded comments (for recent/important ones)
       comments: v.optional(v.array(v.object({
-        id: v.string(),
-        text: v.string(),
-        timestamp: v.number(),
-        username: v.string(),
+        id: v.optional(v.string()),
+        text: v.optional(v.string()),
+        timestamp: v.optional(v.number()),
+        username: v.optional(v.string()),
         like_count: v.optional(v.union(v.number(), v.null())),
         replies: v.optional(v.array(v.object({
-          id: v.string(),
-          text: v.string(),
-          timestamp: v.number(),
+          id: v.optional(v.string()),
+          text: v.optional(v.string()),
+          timestamp: v.optional(v.number()),
           username: v.optional(v.string()),
           like_count: v.optional(v.union(v.number(), v.null()))
         })))
       })))
-    }),
-    
+    })),
     // Analysis fields
     analysis: v.optional(v.any()),
     analysisMarkdown: v.optional(v.string()),
-    
-    createdAt: v.number(),
-    updatedAt: v.number(),
+    createdAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
   })
   .index("by_userId", ["userId"])
   .index("by_instagramAccountId", ["instagramAccountId"])

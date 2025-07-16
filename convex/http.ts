@@ -1149,6 +1149,41 @@ app.post("/api/users/:id/instagram/profile", async (c) => {
   }
 });
 
+// Patch Instagram profile data (for background tasks)
+app.post("/api/users/:id/instagram/profile/patch", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { instagramAccountId, updateFields } = await c.req.json();
+  
+  console.log("[HTTP] Instagram profile patch endpoint called for user:", userId);
+  console.log("[HTTP] Instagram Account ID:", instagramAccountId);
+  console.log("[HTTP] Update fields:", Object.keys(updateFields || {}));
+
+  if (!instagramAccountId || !updateFields) {
+    return c.json({ success: false, error: "instagramAccountId and updateFields are required" }, 400);
+  }
+
+  try {
+    const result = await ctx.runMutation(api.instagramMutations.patchInstagramAccountFields, {
+      userId,
+      instagramAccountId,
+      updateFields,
+    });
+    
+    console.log("[HTTP] Patch mutation result:", result);
+    return c.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error("[HTTP] Failed to patch Instagram profile data:", error);
+    return c.json({
+      success: false,
+      error: `Failed to patch Instagram profile data: ${error instanceof Error ? error.message : 'Unknown error'}`
+    }, 500);
+  }
+});
+
 // Get Instagram profile insights
 app.get("/api/users/:id/instagram/profile/insights", async (c) => {
 const ctx = c.env;
@@ -2467,6 +2502,44 @@ app.post("/api/social/instagram/load-more", async (c) => {
   } catch (error) {
     console.error("Failed to load more Instagram posts:", error);
     return c.json({ success: false, error: "Failed to load more posts" }, 500);
+  }
+});
+
+// Patch Instagram post data (for background tasks)
+app.post("/api/users/:id/instagram/post/:postId/patch", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const postId = c.req.param("postId");
+  const { instagramAccountId, updateFields } = await c.req.json();
+  
+  console.log("[HTTP] Instagram post patch endpoint called for user:", userId);
+  console.log("[HTTP] Post ID:", postId);
+  console.log("[HTTP] Instagram Account ID:", instagramAccountId);
+  console.log("[HTTP] Update fields:", Object.keys(updateFields || {}));
+
+  if (!instagramAccountId || !updateFields) {
+    return c.json({ success: false, error: "instagramAccountId and updateFields are required" }, 400);
+  }
+
+  try {
+    const result = await ctx.runMutation(api.instagramMutations.patchInstagramPostFields, {
+      userId,
+      instagramAccountId,
+      postId,
+      updateFields,
+    });
+    
+    console.log("[HTTP] Post patch mutation result:", result);
+    return c.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error("[HTTP] Failed to patch Instagram post data:", error);
+    return c.json({
+      success: false,
+      error: `Failed to patch Instagram post data: ${error instanceof Error ? error.message : 'Unknown error'}`
+    }, 500);
   }
 });
 
