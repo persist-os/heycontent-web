@@ -19,7 +19,8 @@ import {
   MessageSquare,
   Clock,
   Users,
-  X
+  X,
+  ArrowRight
 } from 'lucide-react';
 
 // Help system imports
@@ -284,7 +285,9 @@ export function PartnershipHubSkeleton({
       <TooltipProvider>
         <div className="min-h-screen flex flex-col bg-background relative">
           {/* Use exact same structure as PartnershipHub.tsx */}
-          <div className="opacity-80">
+          <div className={
+            `opacity-80 transition-all duration-300 ${!isOverlayDismissed ? 'blur-sm pointer-events-none select-none' : ''}`
+          }>
             {/* Header */}
             <div className="border-b border-border p-6">
               <div className="flex flex-col space-y-4">
@@ -544,9 +547,14 @@ export function PartnershipHubSkeleton({
                   <Mail className="w-4 h-4 mr-2" />
                   Connect Gmail & Find Opportunities
                 </Button>
-                <p className="text-xs text-muted-foreground">
+                <Button
+                  variant="outline"
+                  className="w-full text-xs pointer-events-auto flex items-center justify-center gap-2"
+                  onClick={() => setIsOverlayDismissed(true)}
+                >
                   Here's a sneak peek of what's coming your way
-                </p>
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
               </Card>
             </div>
           )}
