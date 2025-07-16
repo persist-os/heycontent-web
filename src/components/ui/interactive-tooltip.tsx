@@ -533,7 +533,7 @@ export function InteractiveTooltip({
       {/* Overlay */}
       <div
         ref={overlayRef}
-        className="fixed inset-0 bg-black/10 backdrop-blur-[0.5px] z-[999998] pointer-events-auto"
+        className="fixed inset-0 z-[999998] pointer-events-auto"
         onClick={onClose}
       />
 
@@ -575,6 +575,7 @@ export function InteractiveTooltip({
         >
           {/* Close button */}
           <button
+            title="Close"
             onClick={onClose}
             className="absolute top-2 right-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >

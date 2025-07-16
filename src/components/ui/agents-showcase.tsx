@@ -209,7 +209,7 @@ export function AgentsShowcase() {
                         <div
                           className={`max-w-[80%] rounded-xl p-3 ${
                             msg.type === 'user'
-                              ? 'bg-blue-500 text-white'
+                              ? 'bg-primary text-primary-foreground dark:text-black'
                               : msg.type === 'system'
                               ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200 border border-orange-200 dark:border-orange-800'
                               : 'bg-muted text-foreground'

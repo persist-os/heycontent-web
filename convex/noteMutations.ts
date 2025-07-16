@@ -48,6 +48,8 @@ export const updateNote = mutation({
       type: v.optional(noteType),
       tags: v.optional(v.array(v.string())),
       important: v.optional(v.boolean()),
+      titleGenerated: v.optional(v.boolean()),
+      typeGenerated: v.optional(v.boolean()),
     }),
   },
   handler: async (ctx, { noteId, userId, updates }) => {
