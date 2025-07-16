@@ -1,11 +1,5 @@
-// Export all help content for easy importing
-export { contentHubHelp } from './contentHubHelp';
-export { notesHelp } from './notesHelp';
-export { selfHubHelp } from './selfHubHelp';
-export { settingsHelp } from './settingsHelp';
-export { chatHelp } from './chatHelp';
-
-// All help content is now casual, impactful, and TikTok-brain friendly!
+// OLD HELP CONTENT REMOVED - Now using interactive tours system
+// See /helpContent/interactiveTours.tsx for the new tour system
 
 // Re-export types for convenience
 export type { HelpPage } from '@/components/ui/help-modal';
@@ -18,31 +12,33 @@ HELP CONTENT MANAGEMENT GUIDE:
    - Export it in this index.ts file
    - Import and use it in your page component
 
-2. UPDATING EXISTING HELP:
-   - Edit the specific help file (e.g., contentHubHelp.ts)
-   - No changes needed to this index.ts unless adding new files
+2. NEW INTERACTIVE TOUR SYSTEM:
+   - All help content now uses interactive tours instead of modals
+   - Edit tours in /helpContent/interactiveTours.tsx or specific tour files
+   - Tours provide step-by-step guidance with contextual positioning
 
-3. HELP CONTENT STRUCTURE:
-   Each help file should export an array of HelpPage objects:
+3. INTERACTIVE TOUR STRUCTURE:
+   Each tour consists of InteractiveStep objects:
    {
-     title: string;        // Page title
-     description: string;  // Main content (supports \n\n for paragraphs)
-     image?: string;       // Optional image path
-     content?: ReactNode;  // For complex JSX content
+     target: string;       // CSS selector for element to highlight
+     title: string;        // Step title
+     content: string;      // Step description
+     placement?: string;   // Tooltip placement (top, bottom, left, right)
+     action?: () => void;  // Optional action to perform
    }
 
-4. USAGE PATTERN:
-   import { HelpModal, HelpIconButton } from '@/components/ui/help-modal';
-   import { contentHubHelp } from '@/helpContent';
+4. USAGE PATTERN (NEW INTERACTIVE TOUR SYSTEM):
+   import { InteractiveTooltip } from '@/components/ui/interactive-tooltip';
+   import { interactiveTours } from '@/helpContent/interactiveTours';
    
    // In your component:
-   const [helpOpen, setHelpOpen] = useState(false);
+   const [tourOpen, setTourOpen] = useState(false);
    
-   <HelpIconButton onClick={() => setHelpOpen(true)} />
-   <HelpModal 
-     open={helpOpen} 
-     onClose={() => setHelpOpen(false)} 
-     pages={contentHubHelp}
-     title="Content Hub Help"
+   <InteractiveTooltip
+     isOpen={tourOpen}
+     onClose={() => setTourOpen(false)}
+     steps={interactiveTours.notes}
+     title="Notes Tour"
+     autoPlay={false}
    />
 */ 

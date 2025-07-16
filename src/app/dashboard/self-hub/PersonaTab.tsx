@@ -216,7 +216,7 @@ export const PersonaTab = React.memo(() => {
     console.log('[PERSONA TAB] Showing loading state at:', new Date().toISOString(), 'render time so far:', Math.round(skeletonStartTime - renderStartTime), 'ms');
     
     return (
-      <div className="flex justify-center items-start min-h-[400px] px-4 py-8">
+      <div className="flex justify-center items-start min-h-[400px] px-4 py-8" data-persona-history>
         <PersonaTabSkeleton />
       </div>
     );
@@ -232,7 +232,7 @@ export const PersonaTab = React.memo(() => {
 
   if (eligibility?.mustUpdate) {
     return (
-      <>
+      <div data-persona-history>
         <Dialog open={modalOpen} onOpenChange={setModalOpen}>
           <DialogContent className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-w-md w-full mx-4 z-50">
             <DialogHeader>
@@ -276,12 +276,12 @@ export const PersonaTab = React.memo(() => {
             </Suspense>
           </div>
         )}
-      </>
+      </div>
     );
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full" data-persona-history>
       <Suspense fallback={<PersonaTabSkeleton />}>
         <PersonaUpdateManager 
           userId={firebaseUser?.uid} 

@@ -586,6 +586,7 @@ export function ChatInput({
                 onKeyDown={handleKeyDown}
                 onSelect={handleTextareaSelect}
                 maxLength={maxLength}
+                data-chat-input
               />
             </div>
 
@@ -611,6 +612,7 @@ export function ChatInput({
                       }`}
                       aria-label="Toggle Smart Search"
                       title={useContextSearch ? 'Smart Search: ON' : 'Smart Search: OFF'}
+                      data-context-toggle
                     >
                       <Brain className="w-4 h-4" />
                     </button>
@@ -652,6 +654,7 @@ export function ChatInput({
                     onClick={openNotepad}
                     aria-label="Open markdown notepad"
                     title="Open markdown notepad"
+                    data-notepad-button
                     className="w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200 text-muted-foreground hover:text-foreground hover:bg-muted"
                   >
                     <FileText className="w-3.5 h-3.5" />

@@ -251,6 +251,7 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
               handleDiscussContent();
             }}
             disabled={loading}
+            data-discuss-button
           >
             {loading ? (
               <span className="flex items-center justify-center">

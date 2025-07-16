@@ -56,8 +56,8 @@ export function AnalysisDepthPicker({
               title="Toggle analysis depth"
             >
               <h3 className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-heycontent-yellow transition-colors">
-                Analysis Depth
-              </h3>
+              Analysis Depth
+            </h3>
               <ChevronDown className={`w-4 h-4 text-gray-500 group-hover:text-heycontent-yellow transition-all duration-200 ${!isCollapsed ? 'transform rotate-180' : ''}`} />
             </button>
           </div>

@@ -77,7 +77,7 @@ export const PersonaTip: React.FC<PersonaTipProps> = ({ onTipClick }) => {
   };
 
   return (
-    <div className="fixed right-4 bottom-24 z-10 flex flex-col items-end">
+    <div className="fixed right-4 bottom-24 z-10 flex flex-col items-end" data-persona-tip>
       {/* Floating friendly tip */}
       {showFloatingTip && !isExpanded && (
         <div className="mb-2 relative animate-in fade-in-20 slide-in-from-bottom-2 duration-300">

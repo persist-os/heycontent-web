@@ -134,26 +134,48 @@ export function InstagramPlatform({ userId: propUserId, currentQuote, loading }:
 
   return (
     <div className="space-y-6">
-      {/* Demographics Controls: Top Right */}
-      <div className="flex justify-end items-center gap-3">
-        <button
-          onClick={handleRefreshDemographics}
-          className="px-4 py-2 rounded-lg bg-pink-600 hover:bg-pink-700 text-white font-medium transition-colors disabled:opacity-60"
-          disabled={refreshingDemographics || !userId}
-        >
-          {refreshingDemographics ? 'Refreshing...' : 'Refresh Demographics'}
-        </button>
-        {hasAnyDemographicData && (
-          <button
-            onClick={() => setBreakdownCollapsed((prev) => !prev)}
-            className="px-3 py-2 rounded-lg border border-border hover:bg-muted/50 text-muted-foreground text-sm font-medium transition-colors"
-            aria-label={breakdownCollapsed ? 'Show demographics' : 'Hide demographics'}
-          >
-            {breakdownCollapsed ? 'Show Demographics' : 'Hide Demographics'}
-          </button>
-        )}
-      </div>
-      {/* Only show demographics if data exists and not collapsed */}
+      {!refreshing && (
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-6">
+          <div className="flex-1">
+        <AnalysisDepthPicker
+          platform="Instagram"
+          isRefreshing={refreshing}
+          error={error}
+          onRefresh={handleRefreshOrConnect}
+          disabled={!userId}
+          postLimit={postLimit}
+          setPostLimit={setPostLimit}
+          customPostLimit={customPostLimit}
+          setCustomPostLimit={setCustomPostLimit}
+          showCustomInput={showCustomInput}
+          setShowCustomInput={setShowCustomInput}
+          handleCustomSubmit={handleCustomSubmit}
+        />
+          </div>
+          
+          {/* Demographics Controls */}
+          <div className="flex gap-3 items-center">
+            <button
+              onClick={handleRefreshDemographics}
+              className="px-4 py-2 rounded-lg bg-pink-600 hover:bg-pink-700 text-white font-medium transition-colors disabled:opacity-60"
+              disabled={refreshingDemographics || !userId}
+            >
+              {refreshingDemographics ? 'Refreshing...' : 'Refresh Demographics'}
+            </button>
+            {hasAnyDemographicData && (
+              <button
+                onClick={() => setBreakdownCollapsed((prev) => !prev)}
+                className="px-3 py-2 rounded-lg border border-border hover:bg-muted/50 text-muted-foreground text-sm font-medium transition-colors"
+                aria-label={breakdownCollapsed ? 'Show demographics' : 'Hide demographics'}
+              >
+                {breakdownCollapsed ? 'Show Demographics' : 'Hide Demographics'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Demographics Section */}
       {hasAnyDemographicData && !breakdownCollapsed && (
         <InstagramDemographics demographicsData={transformedDemographicsData} />
       )}
@@ -162,28 +184,6 @@ export function InstagramPlatform({ userId: propUserId, currentQuote, loading }:
       {breakdowns && !hasAnyDemographicData && (
         <div className="text-center text-muted-foreground py-8">
           No breakdown data available yet. Keep growing your audience!
-        </div>
-      )}
-
-      {/* Analysis Depth Picker and Insights remain unchanged */}
-      {!refreshing && (
-        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-6">
-          <div className="flex-1">
-            <AnalysisDepthPicker
-              platform="Instagram"
-              isRefreshing={refreshing}
-              error={error}
-              onRefresh={handleRefreshOrConnect}
-              disabled={!userId}
-              postLimit={postLimit}
-              setPostLimit={setPostLimit}
-              customPostLimit={customPostLimit}
-              setCustomPostLimit={setCustomPostLimit}
-              showCustomInput={showCustomInput}
-              setShowCustomInput={setShowCustomInput}
-              handleCustomSubmit={handleCustomSubmit}
-            />
-          </div>
         </div>
       )}
 

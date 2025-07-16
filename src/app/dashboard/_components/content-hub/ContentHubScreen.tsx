@@ -15,9 +15,9 @@ import { useYouTubeRefresh } from '@/app/hooks/useYouTubeRefresh'
 import { toast } from 'react-hot-toast'
 
 // Help system imports
-import { HelpModal } from '@/components/ui/help-modal'
-import { HelpIconButton } from '@/components/ui/help-icon-button'
-import { contentHubHelp } from '@/helpContent'
+import { EnhancedHelpButton } from '@/components/ui/enhanced-help-button'
+import { InteractiveTooltip } from '@/components/ui/interactive-tooltip'
+import { interactiveTours } from '@/helpContent/interactiveTours'
 
 // Analytics components and hooks
 import { YouTubePlatform as YouTubeAnalyticsPlatform } from '../../content-analytics/platforms/YouTubePlatform'
@@ -81,7 +81,10 @@ export function ContentHubScreen() {
   const [currentQuote, setCurrentQuote] = useState<string>('')
   const [expandedInsight, setExpandedInsight] = useState<number | null>(null);
   const [expandHubInsight, setExpandHubInsight] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
+
+  const [interactiveTourOpen, setInteractiveTourOpen] = useState(false);
+  const [quickStartOpen, setQuickStartOpen] = useState(false);
+  const [fullAppTourOpen, setFullAppTourOpen] = useState(false);
   const { refreshAll: refreshAllYouTube, loading: refreshingYouTube, error: refreshYouTubeError, success: refreshYouTubeSuccess } = useYouTubeRefresh();
   
   const { firebaseUser, authLoading } = useAuth()
@@ -417,14 +420,28 @@ export function ContentHubScreen() {
             </div>
           </div>
           <div className="w-[100px] sm:w-auto flex justify-end">
-            <HelpIconButton onClick={() => setHelpOpen(true)} />
+            <EnhancedHelpButton 
+              onInteractiveTour={() => setInteractiveTourOpen(true)}
+            />
+            {/* Integration Links - Placeholder for tour */}
+            <div data-integration-links className="absolute opacity-0 pointer-events-none -z-10 w-1 h-1">
+              <p className="text-sm text-muted-foreground">Integration with Chat & Notes</p>
+            </div>
+            {/* Discuss Button - Placeholder for tour */}
+            <div data-discuss-button className="absolute opacity-0 pointer-events-none -z-10 w-1 h-1">
+              <p className="text-sm text-muted-foreground">Discuss content with AI</p>
+            </div>
+            {/* Save Button - Placeholder for tour */}
+            <div data-save-button className="absolute opacity-0 pointer-events-none -z-10 w-1 h-1">
+              <p className="text-sm text-muted-foreground">Save insights to Notes</p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Refresh Notification Banner */}
       {isAnyPlatformRefreshing && (
-        <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-b border-purple-200 dark:border-purple-800">
+        <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-b border-purple-200 dark:border-purple-800" data-refresh-controls>
           <div className="px-6 py-3">
             <div className="flex items-center justify-center gap-3 text-sm">
               <RefreshCw className="w-4 h-4 text-purple-600 dark:text-purple-400 animate-spin" />
@@ -436,6 +453,13 @@ export function ContentHubScreen() {
               </span>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Hidden placeholder for refresh controls when not refreshing */}
+      {!isAnyPlatformRefreshing && (
+        <div data-refresh-controls className="absolute opacity-0 pointer-events-none -z-10 w-1 h-1">
+          <p className="text-sm text-muted-foreground">Refresh and sync controls</p>
         </div>
       )}
 
@@ -473,9 +497,14 @@ export function ContentHubScreen() {
               </div>
 
               {/* Desktop Tabs */}
-              <TabsList className="hidden sm:grid w-full grid-cols-4 mb-0">
+              <TabsList className="hidden sm:grid w-full grid-cols-4 mb-0" data-platform-tabs>
                 {platformOptions.map(option => (
-                  <TabsTrigger key={option.value} value={option.value} className="flex items-center gap-2">
+                  <TabsTrigger 
+                    key={option.value} 
+                    value={option.value} 
+                    className="flex items-center gap-2"
+                    data-hub-insights-tab={option.value === 'hub-insights' ? '' : undefined}
+                  >
                     {/* Only show icon for hub-insights and all, otherwise just label */}
                     {option.icon && option.icon}
                     {option.label}
@@ -484,7 +513,7 @@ export function ContentHubScreen() {
               </TabsList>
 
               {/* Content Hub Insights - Home Screen */}
-              <TabsContent value="hub-insights" className="space-y-6">
+              <TabsContent value="hub-insights" className="space-y-6" data-hub-insights-tab>
                 {/* Use the old ContentHubInsights card/component for this tab only */}
                 <ContentHubInsights userId={safeUserId} forceExpand={expandHubInsight} />
               </TabsContent>
@@ -494,7 +523,7 @@ export function ContentHubScreen() {
                 <div className="space-y-0">
                   <Tabs value={selectedDataType} onValueChange={(value) => setSelectedDataType(value as DataType)} className="w-full">
                     <TabsList className="mb-6 flex w-full flex-row sm:grid sm:grid-cols-2">
-                      <TabsTrigger value="posts" className="flex flex-1 items-center justify-center gap-2 sm:flex-initial">
+                      <TabsTrigger value="posts" className="flex flex-1 items-center justify-center gap-2 sm:flex-initial" data-posts-tab>
                         <BarChart3 className="w-4 h-4" />
                         Posts ({
                           selectedView === 'all' ? allDisplayItems.length :
@@ -502,7 +531,7 @@ export function ContentHubScreen() {
                           instagramAnalytics.items.length
                         })
                       </TabsTrigger>
-                      <TabsTrigger value="ai-insights" className="flex flex-1 items-center justify-center gap-2 sm:flex-initial">
+                      <TabsTrigger value="ai-insights" className="flex flex-1 items-center justify-center gap-2 sm:flex-initial" data-ai-insights-tab>
                         <Brain className="w-4 h-4" />
                         AI Insights ({
                           selectedView === 'all' ? allInsights.length :
@@ -513,7 +542,7 @@ export function ContentHubScreen() {
                     </TabsList>
 
                     {/* Posts Screen */}
-                    <TabsContent value="posts" className="space-y-6">
+                    <TabsContent value="posts" className="space-y-6" data-content-analytics>
                       {selectedView === 'all' && renderAllPlatformsAnalytics()}
                       {selectedView === 'youtube' && selectedDataType === 'posts' && (
                         <>
@@ -543,7 +572,7 @@ export function ContentHubScreen() {
                     </TabsContent>
 
                     {/* AI Insights Screen */}
-                    <TabsContent value="ai-insights" className="space-y-6">
+                    <TabsContent value="ai-insights" className="space-y-6" data-platform-insights>
                       {selectedView === 'all' && renderAllPlatformsInsights()}
                       {selectedView === 'youtube' && (
                         <>
@@ -620,11 +649,33 @@ export function ContentHubScreen() {
         </>
       )}
 
-      {/* Help Modal */}
-      <HelpModal 
-        open={helpOpen} 
-        onClose={() => setHelpOpen(false)} 
-        pages={contentHubHelp} 
+
+
+      {/* Interactive Tour */}
+      <InteractiveTooltip
+        isOpen={interactiveTourOpen}
+        onClose={() => setInteractiveTourOpen(false)}
+        steps={interactiveTours.contentHub}
+        title="Content Hub Tour"
+        autoPlay={false}
+      />
+
+      {/* Quick Start Tour */}
+      <InteractiveTooltip
+        isOpen={quickStartOpen}
+        onClose={() => setQuickStartOpen(false)}
+        steps={interactiveTours.quickStart}
+        title="Quick Start Guide"
+        autoPlay={true}
+      />
+
+      {/* Full App Tour */}
+      <InteractiveTooltip
+        isOpen={fullAppTourOpen}
+        onClose={() => setFullAppTourOpen(false)}
+        steps={interactiveTours.fullAppTour}
+        title="Complete App Tour"
+        autoPlay={false}
       />
     </div>
   )

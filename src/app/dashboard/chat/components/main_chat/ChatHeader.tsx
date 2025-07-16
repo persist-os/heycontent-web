@@ -3,16 +3,19 @@ import { MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/ui/logo';
 import { HelpIconButton } from '@/components/ui/help-icon-button';
+import { EnhancedHelpButton } from '@/components/ui/enhanced-help-button';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 interface ChatHeaderProps {
   onNewChat?: () => void;
   onShowHelp?: () => void;
+  onInteractiveTour?: () => void;
 }
 
 const ChatHeader: React.FC<ChatHeaderProps> = ({ 
   onNewChat, 
-  onShowHelp
+  onShowHelp,
+  onInteractiveTour
 }) => {
   return (
     <div className="flex-shrink-0 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -39,7 +42,11 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
           
           <ThemeToggle />
           
-          {onShowHelp && <HelpIconButton onClick={onShowHelp} />}
+          {onInteractiveTour ? (
+            <EnhancedHelpButton onInteractiveTour={onInteractiveTour} />
+          ) : (
+            onShowHelp && <HelpIconButton onClick={onShowHelp} />
+          )}
         </div>
       </div>
     </div>

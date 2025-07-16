@@ -7,6 +7,7 @@ import { ArrowRight, Brain, Target, ChartBar, ChevronLeft, ChevronRight, Clock }
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { HeroSection } from '../components/ui/hero-section'
+import { AgentsShowcase } from '../components/ui/agents-showcase'
 import Link from 'next/link'
 import Tilt from 'react-parallax-tilt'
 import Footer from '../components/ui/Footer'
@@ -136,6 +137,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      
+      {/* AI Agents Showcase Section */}
+      <AgentsShowcase />
       
       <section className="flex-1 flex flex-col justify-center bg-gradient-to-r from-background/80 via-muted/20 to-background/80">
         {/* Featured Influencers */}
