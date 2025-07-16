@@ -182,7 +182,7 @@ export async function resolveAllLinkContent(
               foundContent = instagramPosts.value.find((post: any) => post.postId === id);
               if (foundContent) {
                 // Build comprehensive content including caption, insights, statistics, analysis, etc.
-                let contentParts = [];
+                const contentParts = [];
 
                 // Add caption
                 if (foundContent.data?.caption) {

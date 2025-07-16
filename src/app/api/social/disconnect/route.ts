@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   try {
     // Try session-based authentication first
     const session = await getServerSession();
-    let userId: string | null = session?.userId || null;
+    let userId: string | null = session?.user?.id || null;
 
     // If no session, try to extract and verify the token directly
     if (!userId) {

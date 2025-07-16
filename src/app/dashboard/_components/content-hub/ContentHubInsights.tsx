@@ -10,7 +10,7 @@ import { YouTubeBrandIcon } from '@/lib/YoutubeBrandIcon'
 import { useContentHubInsights } from './hooks/useContentHubInsights'
 import { useRouter } from 'next/navigation'
 import { ContentHubInsight } from '@/convex/contentHub'
-import { useContentContextActions } from '@/store/content-context-store'
+import { useNavigationUtils } from '@/app/lib/utils/navigation-hooks'
 
 interface ContentHubInsightsProps {
   userId: string
@@ -19,7 +19,7 @@ interface ContentHubInsightsProps {
 
 export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsProps) {
   const router = useRouter()
-  const { setAIInsightsContext } = useContentContextActions()
+  const { navigateToChatWithContentHubInsight } = useNavigationUtils()
   const {
     latestInsight,
     refreshing,
@@ -37,24 +37,8 @@ export function ContentHubInsights({ userId, forceExpand }: ContentHubInsightsPr
   }
 
   const discussInsight = (content: string, title: string) => {
-    // Set the AI insights context in the store
-    const insightContext = {
-      title: title,
-      content: content,
-      insight: content, // Also set as insight for backwards compatibility
-      source: 'Content Hub Insights',
-      timestamp: Date.now(),
-      type: 'content-hub-insight'
-    }
-    
-    console.log('🔍 [CONTENT HUB] Setting AI insights context:', insightContext);
-    setAIInsightsContext(insightContext)
-    
-    // Small delay to ensure context is set before navigation
-    setTimeout(() => {
-      console.log('🔍 [CONTENT HUB] Navigating to chat');
-      router.push('/dashboard/chat')
-    }, 100);
+    console.log('🔍 [CONTENT HUB] Navigating to chat with content hub insight:', { content, title });
+    navigateToChatWithContentHubInsight(content, title);
   }
 
   // Show skeleton while data is loading

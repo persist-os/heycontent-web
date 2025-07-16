@@ -47,7 +47,7 @@ export interface InsightCardProps {
     snippet: string;
     date: string;
   }>;
-  onDiscuss?: () => void;
+  onDiscuss?: (content: string, title: string) => void;
   // Updated to pass both action step and full insight data
   onActionStepClick?: (actionStep: string, insight: InsightData) => void;
   expanded?: boolean;
@@ -402,7 +402,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
                 variant="outline"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onDiscuss();
+                  onDiscuss(actionSteps.join('\n'), title);
                 }}
                 className="flex-1"
               >
