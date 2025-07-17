@@ -1214,7 +1214,7 @@ export const patchInstagramAccountFields = mutation({
   },
   handler: async (ctx, args) => {
     const { userId, instagramAccountId, updateFields } = args;
-    if (!updateFields || typeof updateFields !== "object" || Object.keys(updateFields).length === 0) {
+    if (!updateFields || Object.prototype.toString.call(updateFields) !== "[object Object]" || Object.keys(updateFields).length === 0) {
       return { success: false, error: "No update fields provided or invalid format" };
     }
     // Find the instagramAccounts document
@@ -1240,7 +1240,7 @@ export const patchInstagramPostFields = mutation({
   },
   handler: async (ctx, args) => {
     const { userId, instagramAccountId, postId, updateFields } = args;
-    if (!updateFields || typeof updateFields !== "object" || Object.keys(updateFields).length === 0) {
+    if (!updateFields || Object.prototype.toString.call(updateFields) !== "[object Object]" || Object.keys(updateFields).length === 0) {
       return { success: false, error: "No update fields provided or invalid format" };
     }
     

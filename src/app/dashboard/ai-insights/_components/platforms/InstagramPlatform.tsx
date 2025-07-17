@@ -152,7 +152,7 @@ export function InstagramPlatform({ userId: propUserId, currentQuote, loading }:
                 className="px-3 py-2 rounded-lg border border-border hover:bg-muted/50 text-muted-foreground text-sm font-medium transition-colors"
                 aria-label={breakdownCollapsed ? 'Show demographics' : 'Hide demographics'}
               >
-                {breakdownCollapsed ? 'Hide Demographics' : 'Show Demographics'}
+                {breakdownCollapsed ? 'Show Demographics' : 'Hide Demographics'}
               </button>
             )}
           </div>
