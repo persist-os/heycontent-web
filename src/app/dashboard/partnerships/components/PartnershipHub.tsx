@@ -190,7 +190,7 @@ export function PartnershipHub() {
     return (
       <PartnershipHubSkeleton 
         showPreview={true} 
-        onConnectGmail={() => window.location.href = '/settings?tab=platform-connect'}
+        onConnectGmail={() => window.location.href = '/settings?tab=integrations'}
       />
     );
   }

@@ -133,27 +133,11 @@ export function InstagramPlatform({ userId: propUserId, currentQuote, loading }:
   }
 
   return (
-    <div className="space-y-6">
-      {!refreshing && (
-        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-6">
-          <div className="flex-1">
-        <AnalysisDepthPicker
-          platform="Instagram"
-          isRefreshing={refreshing}
-          error={error}
-          onRefresh={handleRefreshOrConnect}
-          disabled={!userId}
-          postLimit={postLimit}
-          setPostLimit={setPostLimit}
-          customPostLimit={customPostLimit}
-          setCustomPostLimit={setCustomPostLimit}
-          showCustomInput={showCustomInput}
-          setShowCustomInput={setShowCustomInput}
-          handleCustomSubmit={handleCustomSubmit}
-        />
-          </div>
-          
-          {/* Demographics Controls */}
+    <div className="space-y-8">
+      {/* DEMOGRAPHICS SECTION */}
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-semibold">Audience Demographics</h2>
           <div className="flex gap-3 items-center">
             <button
               onClick={handleRefreshDemographics}
@@ -173,74 +157,100 @@ export function InstagramPlatform({ userId: propUserId, currentQuote, loading }:
             )}
           </div>
         </div>
-      )}
 
-      {/* Demographics Section */}
-      {hasAnyDemographicData && !breakdownCollapsed && (
-        <InstagramDemographics demographicsData={transformedDemographicsData} />
-      )}
+        {/* Demographics Data */}
+        {hasAnyDemographicData && !breakdownCollapsed && (
+          <InstagramDemographics demographicsData={transformedDemographicsData} />
+        )}
 
-      {/* No data message */}
-      {breakdowns && !hasAnyDemographicData && (
-        <div className="text-center text-muted-foreground py-8">
-          No breakdown data available yet. Keep growing your audience!
+        {/* No demographics data message */}
+        {breakdowns && !hasAnyDemographicData && (
+          <div className="text-center text-muted-foreground py-8 border-2 border-dashed border-muted-foreground/20 rounded-lg">
+            <p className="text-lg font-medium mb-2">Your audience insights are brewing! ☕</p>
+            <p>We're working hard to fetch your demographic data—it might take a moment, or may not be available for newer accounts. Keep building that amazing community, and your audience insights will follow! 🌟</p>
+            <p className="text-sm mt-3 font-medium">✨ <strong>Creator tip:</strong> The best demographics come from consistent, authentic content that resonates with your tribe!</p>
+          </div>
+        )}
+      </div>
+
+      {/* ANALYSIS SECTION */}
+      <div className="space-y-4">
+        <div className="border-t border-border pt-6">
+          <h2 className="text-xl font-semibold mb-4">Content Analysis & Insights</h2>
+          {!refreshing && (
+            <AnalysisDepthPicker
+              platform="Instagram"
+              isRefreshing={refreshing}
+              error={error}
+              onRefresh={handleRefreshOrConnect}
+              disabled={!userId}
+              postLimit={postLimit}
+              setPostLimit={setPostLimit}
+              customPostLimit={customPostLimit}
+              setCustomPostLimit={setCustomPostLimit}
+              showCustomInput={showCustomInput}
+              setShowCustomInput={setShowCustomInput}
+              handleCustomSubmit={handleCustomSubmit}
+            />
+          )}
         </div>
-      )}
 
-      {/* Insights and loading states remain unchanged */}
-      {!refreshing && (
-        loading ? (
-          <div className="grid gap-6">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <div key={index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 flex flex-col space-y-4">
-                <Skeleton className="h-5 w-3/4" />
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-5/6" />
+        {/* Analysis Results */}
+        {!refreshing && (
+          loading ? (
+            <div className="grid gap-6">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 flex flex-col space-y-4">
+                  <Skeleton className="h-5 w-3/4" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-5/6" />
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid gap-6">
-            {(insights || []).length === 0 && !error && (
-              <div className="text-center text-gray-400">
-                Looks like you're blazing a new trail—no Instagram insights here yet, but that just means you're ahead of the curve! Keep creating amazing content! 🚀
-              </div>
-            )}
-            {(insights || []).map((insight, idx) => (
-              <InsightCard
-                key={idx}
-                title={insight.title}
-                platform="instagram"
-                impact={insight.impact}
-                whyNow={insight.whyNow}
-                actionSteps={insight.actionSteps}
-                expectedOutcome={insight.expectedOutcome}
-                sourceDetails={insight.sourceDetails}
-                relatedItems={insight.relatedItems}
-                expanded={expandedInsight === idx}
-                onExpand={() => setExpandedInsight(expandedInsight === idx ? null : idx)}
-                onActionStepClick={(actionStep, insightData) => {
-                  console.log('🔍 [INSTAGRAM PLATFORM] Action step clicked:', actionStep);
-                  console.log('🔍 [INSTAGRAM PLATFORM] Full insight data:', insightData);
-                  // Create additional context for the action step
-                  const additionalContext = [
-                    `Platform: INSTAGRAM`,
-                    `Insight: ${insightData.title}`,
-                    `Impact: ${insightData.impact}`,
-                    `Why Now: ${insightData.whyNow.join(', ')}`,
-                    `Expected Outcome: ${insightData.expectedOutcome}`,
-                    `Source: Instagram Insights Dashboard`
-                  ].join('\n');
-                  // Use the default action step discussion
-                  discussActionStep(actionStep, insightData, 'instagram', additionalContext);
-                }}
-              />
-            ))}
-          </div>
-        )
-      )}
-    </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid gap-6">
+              {(insights || []).length === 0 && !error && (
+                <div className="text-center text-muted-foreground py-8 border-2 border-dashed border-muted-foreground/20 rounded-lg">
+                  <p className="text-lg font-medium mb-2">No analysis insights available</p>
+                  <p>Run an analysis above to get AI-powered insights about your content performance! 📊</p>
+                </div>
+              )}
+              {(insights || []).map((insight, idx) => (
+                <InsightCard
+                  key={idx}
+                  title={insight.title}
+                  platform="instagram"
+                  impact={insight.impact}
+                  whyNow={insight.whyNow}
+                  actionSteps={insight.actionSteps}
+                  expectedOutcome={insight.expectedOutcome}
+                  sourceDetails={insight.sourceDetails}
+                  relatedItems={insight.relatedItems}
+                  expanded={expandedInsight === idx}
+                  onExpand={() => setExpandedInsight(expandedInsight === idx ? null : idx)}
+                  onActionStepClick={(actionStep, insightData) => {
+                    console.log('🔍 [INSTAGRAM PLATFORM] Action step clicked:', actionStep);
+                    console.log('🔍 [INSTAGRAM PLATFORM] Full insight data:', insightData);
+                    // Create additional context for the action step
+                    const additionalContext = [
+                      `Platform: INSTAGRAM`,
+                      `Insight: ${insightData.title}`,
+                      `Impact: ${insightData.impact}`,
+                      `Why Now: ${insightData.whyNow.join(', ')}`,
+                      `Expected Outcome: ${insightData.expectedOutcome}`,
+                      `Source: Instagram Insights Dashboard`
+                    ].join('\n');
+                    // Use the default action step discussion
+                    discussActionStep(actionStep, insightData, 'instagram', additionalContext);
+                  }}
+                />
+              ))}
+            </div>
+          )
+        )}
+        </div>
+      </div>
   )
 } 

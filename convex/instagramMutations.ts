@@ -1115,11 +1115,11 @@ export const moveQueuePostsToMain = mutation({
       .collect();
     
     if (queuedPosts.length === 0) {
-      return { success: true, movedCount: 0 };
+      return { success: true, movedCount: 0, movedPosts: [] };
     }
     
     const now = Date.now();
-    const movedIds = [];
+    const movedPosts = [];
     
     // Move each queued post to main table
     for (const queuedPost of queuedPosts) {
@@ -1142,14 +1142,24 @@ export const moveQueuePostsToMain = mutation({
           createdAt: queuedPost.createdAt,
           updatedAt: now,
         });
-        movedIds.push(mainId);
+        
+        // Add to moved posts array with the data needed for insights tasks
+        movedPosts.push({
+          postId: queuedPost.postId,
+          id: queuedPost.postId, // Alias for compatibility
+          internalId: mainId,
+        });
       }
       
       // Delete from queue
       await ctx.db.delete(queuedPost._id);
     }
     
-    return { success: true, movedCount: movedIds.length };
+    return { 
+      success: true, 
+      movedCount: movedPosts.length,
+      movedPosts: movedPosts
+    };
   },
 });
 
@@ -1196,3 +1206,83 @@ export const updateAccountPagination = mutation({
   },
 });
 
+export const patchInstagramAccountFields = mutation({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+    updateFields: v.any(), // Accept any object for patching
+  },
+  handler: async (ctx, args) => {
+    const { userId, instagramAccountId, updateFields } = args;
+    if (!updateFields || Object.prototype.toString.call(updateFields) !== "[object Object]" || Object.keys(updateFields).length === 0) {
+      return { success: false, error: "No update fields provided or invalid format" };
+    }
+    // Find the instagramAccounts document
+    const account = await ctx.db
+      .query("instagramAccounts")
+      .withIndex("by_userId", q => q.eq("userId", userId))
+      .filter(q => q.eq(q.field("instagramAccountId"), instagramAccountId))
+      .unique();
+    if (!account) {
+      return { success: false, error: "Instagram account not found" };
+    }
+    await ctx.db.patch(account._id, updateFields);
+    return { success: true, patchedFields: Object.keys(updateFields) };
+  },
+});
+
+export const patchInstagramPostFields = mutation({
+  args: {
+    userId: v.string(),
+    instagramAccountId: v.string(),
+    postId: v.string(),
+    updateFields: v.any(), // Accept any object for patching
+  },
+  handler: async (ctx, args) => {
+    const { userId, instagramAccountId, postId, updateFields } = args;
+    if (!updateFields || Object.prototype.toString.call(updateFields) !== "[object Object]" || Object.keys(updateFields).length === 0) {
+      return { success: false, error: "No update fields provided or invalid format" };
+    }
+    
+    // Find the instagramPosts document
+    const post = await ctx.db
+      .query("instagramPosts")
+      .withIndex("by_postId", q => q.eq("postId", postId))
+      .filter(q => q.eq(q.field("userId"), userId))
+      .filter(q => q.eq(q.field("instagramAccountId"), instagramAccountId))
+      .unique();
+    
+    if (!post) {
+      return { success: false, error: "Instagram post not found" };
+    }
+
+    // Handle special fields that need to be nested under 'data'
+    const patchData: any = { updatedAt: Date.now() };
+    const dataFields = ["insights", "comments"];
+    const topLevelDataFields: any = {};
+    const regularFields: any = {};
+    
+    // Separate fields that go into data vs top-level
+    for (const [key, value] of Object.entries(updateFields)) {
+      if (dataFields.includes(key)) {
+        topLevelDataFields[key] = value;
+      } else {
+        regularFields[key] = value;
+      }
+    }
+    
+    // If we have data fields to update, merge them into the existing data object
+    if (Object.keys(topLevelDataFields).length > 0) {
+      patchData.data = {
+        ...post.data,
+        ...topLevelDataFields
+      };
+    }
+    
+    // Add any regular fields
+    Object.assign(patchData, regularFields);
+    
+    await ctx.db.patch(post._id, patchData);
+    return { success: true, patchedFields: Object.keys(updateFields) };
+  },
+});

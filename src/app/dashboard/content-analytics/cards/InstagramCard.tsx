@@ -107,6 +107,17 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
     );
   };
 
+  // Helper functions to get metrics with fallbacks
+  const getLikesValue = () => {
+    // Prioritize insights data, fall back to basic post data
+    return metrics?.likes !== undefined ? metrics.likes : metrics?.like_count;
+  };
+
+  const getCommentsValue = () => {
+    // Prioritize insights data, fall back to basic post data
+    return metrics?.comments !== undefined ? metrics.comments : metrics?.comments_count;
+  };
+
   // Handle discuss content with Zustand store
   const handleDiscussContent = async () => {
     setLoading(true);
@@ -216,20 +227,27 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
         
         {/* Metrics Grid */}
         <div className="grid grid-cols-2 gap-4 mb-6">
-          {metrics && (
-            <>
-              {metrics.reach !== undefined && renderStat('Reach', metrics.reach, <Users className="w-4 h-4 text-heycontent-purple" />, 'bg-heycontent-light-purple')}
-              {metrics.likes !== undefined && renderStat('Likes', metrics.likes, <Heart className="w-4 h-4 text-red-500" />, 'bg-red-100 dark:bg-red-900/30')}
-              {metrics.saved !== undefined && renderStat('Saves', metrics.saved, <Forward className="w-4 h-4 text-blue-600" />, 'bg-blue-100 dark:bg-blue-900/30')}
-              {metrics.comments !== undefined && renderStat('Comments', metrics.comments, <MessageSquare className="w-4 h-4 text-heycontent-green" />, 'bg-heycontent-light-green')}
-            </>
-          )}
+          {/* Show reach only if available from insights */}
+          {metrics?.reach !== undefined && renderStat('Reach', metrics.reach, <Users className="w-4 h-4 text-heycontent-purple" />, 'bg-heycontent-light-purple')}
+          
+          {/* Always show likes (with fallback to basic data) */}
+          {renderStat('Likes', getLikesValue(), <Heart className="w-4 h-4 text-red-500" />, 'bg-red-100 dark:bg-red-900/30')}
+          
+          {/* Show saves only if available from insights */}
+          {metrics?.saved !== undefined && renderStat('Saves', metrics.saved, <Forward className="w-4 h-4 text-blue-600" />, 'bg-blue-100 dark:bg-blue-900/30')}
+          
+          {/* Always show comments (with fallback to basic data) */}
+          {renderStat('Comments', getCommentsValue(), <MessageSquare className="w-4 h-4 text-heycontent-green" />, 'bg-heycontent-light-green')}
           {/* Date - always last, takes full width if odd number of items */}
           {publishedAt && (
             <div className={`flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg ${
-              [metrics?.reach, metrics?.likes, metrics?.saved, metrics?.comments].filter(m => m !== undefined).length % 2 === 0 
-                ? 'col-span-1' 
-                : 'col-span-2'
+              // Count visible metrics: 2 always shown (likes, comments) + conditional ones (reach, saved)
+              (() => {
+                let count = 2; // likes and comments always shown
+                if (metrics?.reach !== undefined) count++;
+                if (metrics?.saved !== undefined) count++;
+                return count % 2 === 0 ? 'col-span-1' : 'col-span-2';
+              })()
             }`}>
               <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700">
                 <Calendar className="w-4 h-4 text-gray-600" />

@@ -33,8 +33,6 @@ export function useChatContainer(chatId: string | undefined, contentContext: any
     setMessages,
     error,
     isLoading,
-    contentContext: currentContext,
-    setContentContext,
     includeAnalysisInQuery,
     setIncludeAnalysisInQuery
   } = chatState
@@ -194,7 +192,7 @@ export function useChatContainer(chatId: string | undefined, contentContext: any
     
     // Computed
     hasPersona,
-    hasMessagesOrContext: currentContext || messages.length > 0,
+    hasMessagesOrContext: contentContext || messages.length > 0,
     
     // Handlers
     appendToInput,

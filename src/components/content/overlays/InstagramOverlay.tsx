@@ -174,6 +174,11 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
   const likeCount = postData.like_count || 0;
   const commentsCount = postData.comments_count || 0;
   
+  // Check if we have insights data
+  const hasInsights = insights && Object.keys(insights).length > 0 && (
+    insights.reach !== undefined || insights.impressions !== undefined || insights.saved !== undefined
+  );
+
   // Create statistics object with safe property access
   const statistics = {
     likes: insights.likes ?? likeCount,
@@ -294,38 +299,99 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
         </div>
 
         {/* Statistics Section - Compact Row */}
-        <div className="rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-sm mt-4 mb-2 px-4 py-2 flex flex-wrap items-center justify-between gap-2 bg-background/80">
-          {Object.entries(statistics).map(([key, value]) => (
-            <div key={key} className="flex flex-col items-center min-w-[70px]">
-              <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg mb-1 bg-muted">
-                {key === 'likes' && <Heart className="w-4 h-4 text-red-500" />}
-                {key === 'comments' && <MessageCircle className="w-4 h-4 text-blue-500" />}
-                {key === 'impressions' && <Eye className="w-4 h-4 text-green-500" />}
-                {key === 'reach' && <Users className="w-4 h-4 text-purple-500" />}
-                {key === 'saved' && <Bookmark className="w-4 h-4 text-yellow-500" />}
-                {key === 'shares' && <Share2 className="w-4 h-4 text-indigo-500" />}
+        {hasInsights ? (
+          // Full statistics when insights are available
+          <div className="rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-sm mt-4 mb-2 px-4 py-2 flex flex-wrap items-center justify-between gap-2 bg-background/80">
+            {Object.entries(statistics).map(([key, value]) => (
+              <div key={key} className="flex flex-col items-center min-w-[70px]">
+                <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg mb-1 bg-muted">
+                  {key === 'likes' && <Heart className="w-4 h-4 text-red-500" />}
+                  {key === 'comments' && <MessageCircle className="w-4 h-4 text-blue-500" />}
+                  {key === 'impressions' && <Eye className="w-4 h-4 text-green-500" />}
+                  {key === 'reach' && <Users className="w-4 h-4 text-purple-500" />}
+                  {key === 'saved' && <Bookmark className="w-4 h-4 text-yellow-500" />}
+                  {key === 'shares' && <Share2 className="w-4 h-4 text-indigo-500" />}
+                </div>
+                <div className="text-base font-semibold text-gray-900 dark:text-white">
+                  {value === null || value === undefined ? 'N/A' : value.toLocaleString()}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {key.charAt(0).toUpperCase() + key.slice(1)}
+                </div>
               </div>
-              <div className="text-base font-semibold text-gray-900 dark:text-white">
-                {value === null || value === undefined ? 'N/A' : value.toLocaleString()}
+            ))}
+            {/* Date at the end */}
+            {createdAt && (
+              <div className="flex flex-col items-center min-w-[90px]">
+                <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg mb-1 bg-orange-100 dark:bg-orange-900/30">
+                  <Calendar className="w-4 h-4 text-orange-500" />
+                </div>
+                <div className="text-base font-semibold text-gray-900 dark:text-white">
+                  {new Date(createdAt).toLocaleDateString()}
+                </div>
+                <div className="text-xs text-muted-foreground">Published</div>
               </div>
-              <div className="text-xs text-muted-foreground">
-                {key.charAt(0).toUpperCase() + key.slice(1)}
+            )}
+          </div>
+        ) : (
+          // Fallback when insights are not available
+          <div className="rounded-xl border-2 border-amber-200 dark:border-amber-700 shadow-sm mt-4 mb-2 px-4 py-3 bg-amber-50/50 dark:bg-amber-900/20">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="flex-shrink-0 mt-0.5">
+                <Info className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-1">
+                  🔍 Detailed insights are loading...
+                </h4>
+                <p className="text-xs text-amber-700 dark:text-amber-300 mb-2">
+                  We're fetching detailed analytics for this post. This might take a moment, or insights may be unavailable for older posts. Check back later for reach, impressions, and saves data!
+                </p>
+                <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                  ✨ Good news: You can still generate AI analysis with the data we have!
+                </p>
               </div>
             </div>
-          ))}
-          {/* Date at the end */}
-          {createdAt && (
-            <div className="flex flex-col items-center min-w-[90px]">
-              <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg mb-1 bg-orange-100 dark:bg-orange-900/30">
-                <Calendar className="w-4 h-4 text-orange-500" />
+            
+            {/* Show basic metrics that are available */}
+            <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-amber-200 dark:border-amber-700">
+              {/* Likes */}
+              <div className="flex flex-col items-center min-w-[70px]">
+                <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg mb-1 bg-red-100 dark:bg-red-900/30">
+                  <Heart className="w-4 h-4 text-red-500" />
+                </div>
+                <div className="text-base font-semibold text-gray-900 dark:text-white">
+                  {likeCount.toLocaleString()}
+                </div>
+                <div className="text-xs text-muted-foreground">Likes</div>
               </div>
-              <div className="text-base font-semibold text-gray-900 dark:text-white">
-                {new Date(createdAt).toLocaleDateString()}
+              
+              {/* Comments */}
+              <div className="flex flex-col items-center min-w-[70px]">
+                <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg mb-1 bg-blue-100 dark:bg-blue-900/30">
+                  <MessageCircle className="w-4 h-4 text-blue-500" />
+                </div>
+                <div className="text-base font-semibold text-gray-900 dark:text-white">
+                  {commentsCount.toLocaleString()}
+                </div>
+                <div className="text-xs text-muted-foreground">Comments</div>
               </div>
-              <div className="text-xs text-muted-foreground">Published</div>
+              
+              {/* Date */}
+              {createdAt && (
+                <div className="flex flex-col items-center min-w-[90px]">
+                  <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg mb-1 bg-orange-100 dark:bg-orange-900/30">
+                    <Calendar className="w-4 h-4 text-orange-500" />
+                  </div>
+                  <div className="text-base font-semibold text-gray-900 dark:text-white">
+                    {new Date(createdAt).toLocaleDateString()}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Published</div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Comments Section */}
         {comments.length > 0 && (
