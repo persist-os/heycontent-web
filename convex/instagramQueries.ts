@@ -988,16 +988,34 @@ export const getAccountPagination = query({
     instagramAccountId: v.string(),
   },
   handler: async (ctx, args) => {
+    console.log(`[getAccountPagination] Searching for userId: ${args.userId}, instagramAccountId: ${args.instagramAccountId}`);
+    
+    // Use the same pattern as working queries - just get by userId first
     const account = await ctx.db
       .query("instagramAccounts")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .filter((q) => q.eq(q.field("instagramAccountId"), args.instagramAccountId))
       .first();
     
+    console.log(`[getAccountPagination] Found account:`, account ? {
+      userId: account.userId,
+      instagramAccountId: account.instagramAccountId,
+      hasPagination: !!account.pagination,
+      paginationKeys: account.pagination ? Object.keys(account.pagination) : null,
+      accountIdMatch: account.instagramAccountId === args.instagramAccountId
+    } : 'null');
+    
     if (!account) {
+      console.log(`[getAccountPagination] No account found for user ${args.userId}`);
       return null;
     }
     
+    // Verify the instagramAccountId matches (for safety)
+    if (account.instagramAccountId !== args.instagramAccountId) {
+      console.log(`[getAccountPagination] InstagramAccountId mismatch: expected ${args.instagramAccountId}, found ${account.instagramAccountId}`);
+      return null;
+    }
+    
+    console.log(`[getAccountPagination] Returning pagination:`, account.pagination);
     return account.pagination || null;
   },
 });

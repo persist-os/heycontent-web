@@ -2470,6 +2470,43 @@ app.get("/api/instagram/pagination/:userId/:instagramAccountId", async (c) => {
   }
 });
 
+// Get Instagram account pagination (POST endpoint for backend compatibility)
+app.post("/api/instagram/pagination/get", async (c) => {
+  const ctx = c.env;
+  const { userId, instagramAccountId } = await c.req.json();
+  
+  console.log(`[HTTP] Pagination GET request - userId: ${userId}, instagramAccountId: ${instagramAccountId}`);
+  
+  if (!userId || !instagramAccountId) {
+    return c.json({ success: false, error: "Missing required fields: userId, instagramAccountId" }, 400);
+  }
+  
+  try {
+    const pagination = await ctx.runQuery(api.instagramQueries.getAccountPagination, {
+      userId,
+      instagramAccountId,
+    });
+    
+    console.log(`[HTTP] Raw pagination result:`, pagination);
+    
+    const responseData = {
+      nextUrl: pagination?.nextUrl || null,
+      hasMorePosts: pagination?.hasMorePosts || false,
+      totalPostsFetched: pagination?.totalPostsFetched || 0
+    };
+    
+    console.log(`[HTTP] Returning pagination data:`, responseData);
+    
+    return c.json({ 
+      success: true, 
+      data: responseData
+    });
+  } catch (error) {
+    console.error("Failed to get Instagram pagination:", error);
+    return c.json({ success: false, error: "Failed to get pagination" }, 500);
+  }
+});
+
 // Load more Instagram posts
 app.post("/api/social/instagram/load-more", async (c) => {
   const ctx = c.env;

@@ -335,13 +335,15 @@ export function NotesGrid({
     >
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="text-center mb-6 relative">
-          <h1 className="text-base font-medium text-purple-600 dark:text-accent">Smart Notes</h1>
-          <p className="text-muted-foreground text-sm">
-            Your intelligent note-taking workspace
-          </p>
+        <div className="flex items-center justify-between mb-6">
+          <div className="text-center ml-12 md:ml-0">
+            <h1 className="text-base font-medium text-purple-600 dark:text-accent">Smart Notes</h1>
+            <p className="text-muted-foreground text-sm">
+              Your intelligent note-taking workspace
+            </p>
+          </div>
           {helpButton && (
-            <div className="absolute top-0 right-0">
+            <div>
               {helpButton}
             </div>
           )}
