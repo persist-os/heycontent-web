@@ -419,11 +419,8 @@ async function checkPlatformConnections(ctx: any, userId: string) {
   try {
     // Check YouTube connection
     try {
-      const youtubeToken = await ctx.db
-        .query("youtubeTokens")
-        .withIndex("by_userId", (q: any) => q.eq("userId", userId))
-        .first();
-      connections.youtube = !!youtubeToken;
+      const youtubeTokens = await ctx.runQuery(api.youtubeQueries.getYouTubeTokens, { userId });
+      connections.youtube = !!(youtubeTokens && youtubeTokens.length > 0);
       console.log('🔀 [PLATFORM CHECK] YouTube connected:', connections.youtube);
     } catch (error) {
       console.error("Error checking YouTube connection:", error);
@@ -432,10 +429,7 @@ async function checkPlatformConnections(ctx: any, userId: string) {
     
     // Check Instagram connection
     try {
-      const instagramAccount = await ctx.db
-        .query("instagramAccounts")
-        .withIndex("by_userId", (q: any) => q.eq("userId", userId))
-        .first();
+      const instagramAccount = await ctx.runQuery(api.instagramQueries.getInstagramAccount, { userId });
       connections.instagram = !!instagramAccount;
       console.log('🔀 [PLATFORM CHECK] Instagram connected:', connections.instagram);
     } catch (error) {
@@ -445,11 +439,8 @@ async function checkPlatformConnections(ctx: any, userId: string) {
     
     // Check Gmail connection
     try {
-      const gmailToken = await ctx.db
-        .query("gmailTokens")
-        .withIndex("by_userId", (q: any) => q.eq("userId", userId))
-        .first();
-      connections.gmail = !!gmailToken;
+      const gmailAccounts = await ctx.runQuery(api.gmailQueries.getGmailAccounts, { userId });
+      connections.gmail = !!(gmailAccounts && gmailAccounts.length > 0);
       console.log('🔀 [PLATFORM CHECK] Gmail connected:', connections.gmail);
     } catch (error) {
       console.error("Error checking Gmail connection:", error);
