@@ -204,7 +204,7 @@ export function PartnershipHub() {
             {/* Title */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <div>
+                <div className="ml-12 md:ml-0">
                   <h1 className="text-2xl font-bold text-foreground">Partnership Hub</h1>
                   <p className="text-sm text-muted-foreground">
                     Your command center for discovering collaborations, managing partnerships, and growing your creator business

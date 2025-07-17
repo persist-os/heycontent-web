@@ -75,7 +75,7 @@ export function NoteHeader({
     <div className="border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-10">
       <div className="px-4 py-3 flex items-center">
         {/* Left side with back button */}
-        <div className="flex-1 flex justify-start">
+        <div className="flex-1 flex justify-start ml-12 md:ml-0">
           {/* Enhanced back button with smart navigation context */}
           {(isMobile || fromChat || canNavigateBack) && (
             <button

@@ -402,16 +402,14 @@ export function ContentHubScreen() {
     <div className="relative bg-background">
       {/* Fixed Header */}
       <div className="shrink-0 px-6 py-4 bg-background border-b border-border">
-        <div className="flex justify-between items-center">
-          <div className="w-[100px] sm:w-[24px] flex items-center">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center ml-12 md:ml-0">
             {fromChat && (
-              <Button variant="ghost" onClick={() => router.push(chatId ? `/dashboard/chat?id=${chatId}` : '/dashboard/chat')} className="p-2">
+              <Button variant="ghost" onClick={() => router.push(chatId ? `/dashboard/chat?id=${chatId}` : '/dashboard/chat')} className="p-2 mr-4">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Chat
               </Button>
             )}
-          </div>
-          <div className="flex-1 flex justify-center">
             <div className="text-center">
               <h1 className="text-base font-medium text-purple-600 dark:text-accent">Content Hub</h1>
               <p className="text-muted-foreground">
@@ -419,7 +417,7 @@ export function ContentHubScreen() {
               </p>
             </div>
           </div>
-          <div className="w-[100px] sm:w-auto flex justify-end">
+          <div className="flex items-center gap-2">
             <EnhancedHelpButton 
               onInteractiveTour={() => setInteractiveTourOpen(true)}
             />

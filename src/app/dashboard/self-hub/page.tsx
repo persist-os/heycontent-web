@@ -26,14 +26,16 @@ export default function SelfHubPage() {
       <Tabs defaultValue="persona" className="h-full flex flex-col">
         {/* Header with tabs */}
         <div className="px-6 py-4 border-b bg-background">
-          <div className="mb-4 text-center relative">
-            <h1 className="text-base font-medium text-purple-600 dark:text-accent">
-              Self
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              Manage your persona and activity.
-            </p>
-            <div className="absolute top-0 right-0">
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-center ml-12 md:ml-0">
+              <h1 className="text-base font-medium text-purple-600 dark:text-accent">
+                Self
+              </h1>
+              <p className="text-muted-foreground text-sm">
+                Manage your persona and activity.
+              </p>
+            </div>
+            <div>
               <EnhancedHelpButton 
                 onInteractiveTour={() => setInteractiveTourOpen(true)}
               />
