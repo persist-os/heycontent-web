@@ -13,9 +13,10 @@ interface CreateNoteButtonProps {
   onNoteCreate?: () => void;
   title?: string;
   className?: string;
+  disabled?: boolean;
 }
 
-export const CreateNoteButton = ({ content, onNoteCreate, title, className }: CreateNoteButtonProps) => {
+export const CreateNoteButton = ({ content, onNoteCreate, title, className, disabled = false }: CreateNoteButtonProps) => {
   const { createNote, isCreating } = useCreateNote();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -38,14 +39,17 @@ export const CreateNoteButton = ({ content, onNoteCreate, title, className }: Cr
 
   return (
     <TooltipProvider delayDuration={300}>
-      <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+      <DropdownMenu 
+        open={disabled ? false : isOpen} 
+        onOpenChange={disabled ? () => {} : setIsOpen}
+      >
         <Tooltip>
           <TooltipTrigger asChild>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
-                disabled={isCreating}
+                disabled={isCreating || disabled}
                 className={cn(
                   "group relative h-8 px-3 text-xs font-medium",
                   "bg-muted/50 border border-border/50 hover:bg-primary hover:text-white focus:bg-primary focus:text-white active:bg-primary active:text-white dark:hover:bg-primary dark:hover:text-black dark:focus:bg-primary dark:focus:text-black dark:active:bg-primary dark:active:text-black hover:border-primary focus:border-primary active:border-primary dark:hover:border-primary dark:focus:border-primary dark:active:border-primary",
@@ -78,14 +82,14 @@ export const CreateNoteButton = ({ content, onNoteCreate, title, className }: Cr
           sideOffset={4}
         >
           <DropdownMenuItem 
-            onClick={() => handleCreateNote(false)}
+            onClick={() => !disabled && handleCreateNote(false)}
             className="text-xs h-8 cursor-pointer focus:bg-primary focus:text-black active:bg-primary active:text-black dark:focus:bg-primary dark:focus:text-black dark:active:bg-primary dark:active:text-black"
           >
             <Plus className="mr-2 h-3.5 w-3.5" />
             <span>Add to Notes</span>
           </DropdownMenuItem>
           <DropdownMenuItem 
-            onClick={() => handleCreateNote(true)}
+            onClick={() => !disabled && handleCreateNote(true)}
             className="text-xs h-8 cursor-pointer focus:bg-primary focus:text-black active:bg-primary active:text-black dark:focus:bg-primary dark:focus:text-black dark:active:bg-primary dark:active:text-black"
           >
             <ExternalLink className="mr-2 h-3.5 w-3.5" />
