@@ -21,7 +21,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
     <div className="flex-shrink-0 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex items-center justify-between px-4 py-3">
         {/* Left side - Logo */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 ml-12 md:ml-0">
           <Logo disableLink />
           <h1 className="text-lg font-semibold text-foreground">Chat</h1>
         </div>
