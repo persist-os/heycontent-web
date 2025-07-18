@@ -10,7 +10,11 @@ import {
   InstagramContentItem, 
   YouTubeContentItem, 
   GmailContentItem, 
-  GmailContentDetails 
+  GmailContentDetails,
+  InstagramMediaType,
+  InstagramTimeRange,
+  InstagramSortOption,
+  InstagramFilters
 } from './types';
 
 // Platform icon utility
@@ -514,3 +518,148 @@ export const getMockGmailItems = (count: number): GmailContentItem[] => {
   }
   return items;
 };
+
+// Instagram-specific search, filter, and sort functions
+export function searchInstagramContent(
+  items: InstagramContentItem[],
+  searchQuery: string
+): InstagramContentItem[] {
+  if (!searchQuery.trim()) return items;
+  
+  const query = searchQuery.toLowerCase().trim();
+  
+  return items.filter(item => {
+    // Search in caption/text
+    const caption = item.content.text?.toLowerCase() || '';
+    if (caption.includes(query)) return true;
+    
+    // Search in analysis content
+    const analysis = item.analysisMarkdown?.toLowerCase() || '';
+    if (analysis.includes(query)) return true;
+    
+    // Search in comments
+    const comments = item.content.comments || [];
+    const commentText = comments
+      .map(comment => comment.text?.toLowerCase() || '')
+      .join(' ');
+    if (commentText.includes(query)) return true;
+    
+    return false;
+  });
+}
+
+export function filterInstagramContent(
+  items: InstagramContentItem[],
+  mediaType: InstagramMediaType,
+  timeRange: InstagramTimeRange
+): InstagramContentItem[] {
+  let filteredItems = items;
+  
+  // Filter by media type
+  if (mediaType !== 'all') {
+    filteredItems = filteredItems.filter(item => 
+      item.content.mediaType === mediaType
+    );
+  }
+  
+  // Filter by time range
+  if (timeRange !== 'all') {
+    const now = new Date();
+    let cutoffDate: Date;
+    
+    switch (timeRange) {
+      case '7d':
+        cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case '30d':
+        cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case '90d':
+        cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        return filteredItems;
+    }
+    
+    filteredItems = filteredItems.filter(item => {
+      const itemDate = new Date(item.publishedAt);
+      return itemDate >= cutoffDate;
+    });
+  }
+  
+  return filteredItems;
+}
+
+export function sortInstagramContent(
+  items: InstagramContentItem[],
+  sortBy: InstagramSortOption
+): InstagramContentItem[] {
+  return [...items].sort((a, b) => {
+    switch (sortBy) {
+      case 'date':
+        return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
+      
+      case 'likes':
+        const likesA = a.metrics.likes ?? a.metrics.like_count ?? 0;
+        const likesB = b.metrics.likes ?? b.metrics.like_count ?? 0;
+        return likesB - likesA;
+      
+      case 'comments':
+        const commentsA = a.metrics.comments ?? a.metrics.comments_count ?? 0;
+        const commentsB = b.metrics.comments ?? b.metrics.comments_count ?? 0;
+        return commentsB - commentsA;
+      
+      case 'reach':
+        const reachA = a.metrics.reach ?? 0;
+        const reachB = b.metrics.reach ?? 0;
+        return reachB - reachA;
+      
+      case 'impressions':
+        const impressionsA = a.metrics.impressions ?? 0;
+        const impressionsB = b.metrics.impressions ?? 0;
+        return impressionsB - impressionsA;
+      
+      case 'saved':
+        const savedA = a.metrics.saved ?? 0;
+        const savedB = b.metrics.saved ?? 0;
+        return savedB - savedA;
+      
+      case 'shares':
+        const sharesA = a.metrics.shares ?? 0;
+        const sharesB = b.metrics.shares ?? 0;
+        return sharesB - sharesA;
+      
+      default:
+        return 0;
+    }
+  });
+}
+
+export function searchFilterAndSortInstagramContent(
+  items: InstagramContentItem[],
+  filters: InstagramFilters
+): InstagramContentItem[] {
+  let result = items;
+  
+  // Apply search
+  result = searchInstagramContent(result, filters.searchQuery);
+  
+  // Apply filters
+  result = filterInstagramContent(result, filters.mediaType, filters.timeRange);
+  
+  // Apply sorting
+  result = sortInstagramContent(result, filters.sortBy);
+  
+  return result;
+}
+
+// Helper function to get available media types from items
+export function getAvailableInstagramMediaTypes(items: InstagramContentItem[]): InstagramMediaType[] {
+  const mediaTypes = new Set<InstagramMediaType>(['all']);
+  items.forEach(item => {
+    if (item.content.mediaType) {
+      mediaTypes.add(item.content.mediaType);
+    }
+  });
+  return Array.from(mediaTypes);
+}
