@@ -75,7 +75,8 @@ export function InstagramPlatform({
     searchQuery: '',
     mediaType: 'all',
     timeRange: 'all',
-    sortBy: 'date'
+    sortBy: 'date',
+    customDateRange: undefined
   });
   
 

@@ -14,7 +14,8 @@ import {
   InstagramMediaType,
   InstagramTimeRange,
   InstagramSortOption,
-  InstagramFilters
+  InstagramFilters,
+  CustomDateRange
 } from './types';
 
 // Platform icon utility
@@ -551,7 +552,8 @@ export function searchInstagramContent(
 export function filterInstagramContent(
   items: InstagramContentItem[],
   mediaType: InstagramMediaType,
-  timeRange: InstagramTimeRange
+  timeRange: InstagramTimeRange,
+  customDateRange?: CustomDateRange
 ): InstagramContentItem[] {
   let filteredItems = items;
   
@@ -565,17 +567,26 @@ export function filterInstagramContent(
   // Filter by time range
   if (timeRange !== 'all') {
     const now = new Date();
-    let cutoffDate: Date;
+    let startDate: Date;
+    let endDate: Date = now;
     
     switch (timeRange) {
       case '7d':
-        cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         break;
       case '30d':
-        cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         break;
       case '90d':
-        cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        break;
+      case 'custom':
+        if (customDateRange) {
+          startDate = customDateRange.startDate;
+          endDate = customDateRange.endDate;
+        } else {
+          return filteredItems; // No custom range provided, return all
+        }
         break;
       default:
         return filteredItems;
@@ -583,7 +594,7 @@ export function filterInstagramContent(
     
     filteredItems = filteredItems.filter(item => {
       const itemDate = new Date(item.publishedAt);
-      return itemDate >= cutoffDate;
+      return itemDate >= startDate && itemDate <= endDate;
     });
   }
   
@@ -645,7 +656,7 @@ export function searchFilterAndSortInstagramContent(
   result = searchInstagramContent(result, filters.searchQuery);
   
   // Apply filters
-  result = filterInstagramContent(result, filters.mediaType, filters.timeRange);
+  result = filterInstagramContent(result, filters.mediaType, filters.timeRange, filters.customDateRange);
   
   // Apply sorting
   result = sortInstagramContent(result, filters.sortBy);

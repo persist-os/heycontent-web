@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Search, Filter, Calendar, BarChart3, X } from 'lucide-react';
+import { Search, Filter, Calendar, BarChart3, X, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { InstagramFilters as InstagramFiltersType, InstagramMediaType, InstagramTimeRange, InstagramSortOption } from '../types';
+import { InstagramFilters as InstagramFiltersType, InstagramMediaType, InstagramTimeRange, InstagramSortOption, CustomDateRange } from '../types';
 
 interface InstagramFiltersProps {
   filters: InstagramFiltersType;
@@ -23,6 +23,7 @@ export const InstagramFilters: React.FC<InstagramFiltersProps> = ({
   filteredPosts
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showCustomDateRange, setShowCustomDateRange] = useState(false);
 
   const handleSearchChange = (searchQuery: string) => {
     onFiltersChange({ ...filters, searchQuery });
@@ -33,7 +34,42 @@ export const InstagramFilters: React.FC<InstagramFiltersProps> = ({
   };
 
   const handleTimeRangeChange = (timeRange: InstagramTimeRange) => {
-    onFiltersChange({ ...filters, timeRange });
+    if (timeRange === 'custom') {
+      setShowCustomDateRange(true);
+      // Set default custom range to last 30 days if no custom range exists
+      if (!filters.customDateRange) {
+        const endDate = new Date();
+        const startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+        onFiltersChange({ 
+          ...filters, 
+          timeRange, 
+          customDateRange: { startDate, endDate }
+        });
+      } else {
+        onFiltersChange({ ...filters, timeRange });
+      }
+    } else {
+      setShowCustomDateRange(false);
+      onFiltersChange({ ...filters, timeRange, customDateRange: undefined });
+    }
+  };
+
+  const handleCustomDateChange = (field: 'startDate' | 'endDate', value: string) => {
+    const date = new Date(value);
+    const customDateRange: CustomDateRange = {
+      startDate: field === 'startDate' ? date : (filters.customDateRange?.startDate || new Date()),
+      endDate: field === 'endDate' ? date : (filters.customDateRange?.endDate || new Date())
+    };
+    
+    // Validate that start date is before end date
+    if (customDateRange.startDate > customDateRange.endDate) {
+      // Swap the dates if they're in wrong order
+      const temp = customDateRange.startDate;
+      customDateRange.startDate = customDateRange.endDate;
+      customDateRange.endDate = temp;
+    }
+    
+    onFiltersChange({ ...filters, customDateRange });
   };
 
   const handleSortChange = (sortBy: InstagramSortOption) => {
@@ -47,9 +83,22 @@ export const InstagramFilters: React.FC<InstagramFiltersProps> = ({
       timeRange: 'all',
       sortBy: 'date'
     });
+    setShowCustomDateRange(false);
   };
 
   const hasActiveFilters = filters.searchQuery || filters.mediaType !== 'all' || filters.timeRange !== 'all';
+
+  const formatDateForInput = (date: Date) => {
+    return date.toISOString().split('T')[0];
+  };
+
+  const formatDateForDisplay = (date: Date) => {
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -141,6 +190,7 @@ export const InstagramFilters: React.FC<InstagramFiltersProps> = ({
                   <SelectItem value="7d">Last 7 days</SelectItem>
                   <SelectItem value="30d">Last 30 days</SelectItem>
                   <SelectItem value="90d">Last 90 days</SelectItem>
+                  <SelectItem value="custom">Custom Range</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -164,6 +214,41 @@ export const InstagramFilters: React.FC<InstagramFiltersProps> = ({
               </Select>
             </div>
           </div>
+
+          {/* Custom Date Range Inputs */}
+          {showCustomDateRange && (
+            <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                    <CalendarDays className="w-3 h-3" />
+                    Start Date
+                  </label>
+                  <Input
+                    type="date"
+                    value={filters.customDateRange ? formatDateForInput(filters.customDateRange.startDate) : ''}
+                    onChange={(e) => handleCustomDateChange('startDate', e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                    <CalendarDays className="w-3 h-3" />
+                    End Date
+                  </label>
+                  <Input
+                    type="date"
+                    value={filters.customDateRange ? formatDateForInput(filters.customDateRange.endDate) : ''}
+                    onChange={(e) => handleCustomDateChange('endDate', e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                💡 Select a date range to filter posts published between these dates
+              </div>
+            </div>
+          )}
 
           {/* Active Filters Display */}
           {hasActiveFilters && (
@@ -192,7 +277,12 @@ export const InstagramFilters: React.FC<InstagramFiltersProps> = ({
               )}
               {filters.timeRange !== 'all' && (
                 <div className="flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-xs">
-                  <span>Time: {filters.timeRange}</span>
+                  <span>
+                    Time: {filters.timeRange === 'custom' && filters.customDateRange 
+                      ? `${formatDateForDisplay(filters.customDateRange.startDate)} - ${formatDateForDisplay(filters.customDateRange.endDate)}`
+                      : filters.timeRange
+                    }
+                  </span>
                   <button
                     onClick={() => handleTimeRangeChange('all')}
                     className="ml-1 hover:text-green-600"
