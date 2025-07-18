@@ -391,7 +391,7 @@ const InstagramDemographics: React.FC<InstagramDemographicsProps> = ({ demograph
       <div className="w-full h-full bg-background relative overflow-hidden">
         <div className="p-6">
           <div className="text-center">
-            <p className="text-muted-foreground">No demographics data available</p>
+            <p className="text-muted-foreground">Looks like you’re blazing a new trail—no demographics here yet, but that just means you’re ahead of the curve! Keep sharing your story—your audience is waiting to discover you!</p>
           </div>
         </div>
       </div>

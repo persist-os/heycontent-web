@@ -429,9 +429,9 @@ export function InstagramPlatform({
         ) : (
           <div className="col-span-full text-center py-10 text-text-gray dark:text-gray-400">
             <div className="space-y-2">
-              <p className="text-lg font-medium">No Instagram content found</p>
+              <p className="text-lg font-medium">No Instagram posts here yet—your creative story is just beginning!</p>
               <p className="text-sm">
-                Connect your Instagram account to see tracker and insights.
+                Start sharing your journey and unlock inspiring insights. Every post is a new adventure—let’s make something amazing together!
               </p>
             </div>
           </div>
