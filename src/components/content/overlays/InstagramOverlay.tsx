@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { formatNumber, formatDate } from '@/lib/content-utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface InstagramOverlayProps {
   postId: string;
@@ -194,11 +195,43 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
     return <ErrorState onClose={onClose} error="Post contains no viewable content" />;
   }
 
-  // Get comments from post data
+  // Get comments from post data - improved to match YouTube pattern
   const comments = postData.comments || [];
   const displayComments = comments.slice(0, visibleCommentsCount);
   const hasMoreComments = comments.length > visibleCommentsCount;
   const commentsToLoad = Math.min(10, comments.length - visibleCommentsCount);
+
+  // Debug logging for comments structure (similar to YouTube)
+  React.useEffect(() => {
+    console.log(`[InstagramOverlay] Comments processing:`, {
+      totalComments: comments.length,
+      visibleComments: visibleCommentsCount,
+      hasMoreComments: hasMoreComments,
+      commentsToLoad: commentsToLoad,
+      firstComment: comments[0],
+      postDataExists: !!postData,
+      commentsFieldExists: !!postData.comments,
+      commentsArrayExists: Array.isArray(postData.comments),
+      postId: postId
+    });
+    
+    if (comments.length > 0) {
+      console.log(`[InstagramOverlay] Comments structure:`, {
+        totalComments: comments.length,
+        visibleComments: visibleCommentsCount,
+        hasMoreComments: hasMoreComments,
+        commentsToLoad: commentsToLoad,
+        firstComment: comments[0]
+      });
+    } else {
+      console.log(`[InstagramOverlay] No comments found - checking data path:`, {
+        postDataExists: !!postData,
+        commentsFieldExists: !!postData.comments,
+        commentsArrayExists: Array.isArray(postData.comments),
+        fullCommentsField: postData.comments
+      });
+    }
+  }, [comments.length, visibleCommentsCount, hasMoreComments, commentsToLoad, postId, postData]);
 
   // Prepare normalized post data with proper null safety
   const normalizedPostData = {
@@ -393,96 +426,104 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
           </div>
         )}
 
-        {/* Comments Section */}
+        {/* Comments Section - Updated to match YouTube pattern */}
         {comments.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <MessageCircle className="w-5 h-5 text-blue-500" />
-              <h3 className="text-lg font-semibold">Comments ({comments.length})</h3>
-              <TooltipProvider>
-                <Popover open={infoOpen} onOpenChange={setInfoOpen}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <PopoverTrigger asChild>
-                        <button
-                          type="button"
-                          tabIndex={0}
-                          className="focus:outline-none"
-                          onClick={() => setInfoOpen((v) => !v)}
-                          aria-label="Comments info"
-                        >
-                          <Info className="w-4 h-4 text-muted-foreground cursor-help" />
-                        </button>
-                      </PopoverTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="text-xs">Some usernames may be hidden due to Meta's privacy policy.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <PopoverContent side="right" align="start" className="p-2 text-xs max-w-xs min-w-[180px]">
-                    <div className="flex items-center justify-between gap-2">
-                      <span>Some usernames may be hidden due to Meta's privacy policy.</span>
-                      <button onClick={() => setInfoOpen(false)} className="ml-2 text-muted-foreground hover:text-foreground text-xs font-bold">✕</button>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <MessageCircle className="w-5 h-5" />
+                  Comments ({comments.length})
+                </CardTitle>
+                <TooltipProvider>
+                  <Popover open={infoOpen} onOpenChange={setInfoOpen}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            tabIndex={0}
+                            className="focus:outline-none"
+                            onClick={() => setInfoOpen((v) => !v)}
+                            aria-label="Comments info"
+                          >
+                            <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                          </button>
+                        </PopoverTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Some usernames may be hidden due to Meta's privacy policy.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <PopoverContent side="right" align="start" className="p-2 text-xs max-w-xs min-w-[180px]">
+                      <div className="flex items-center justify-between gap-2">
+                        <span>Some usernames may be hidden due to Meta's privacy policy.</span>
+                        <button onClick={() => setInfoOpen(false)} className="ml-2 text-muted-foreground hover:text-foreground text-xs font-bold">✕</button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </TooltipProvider>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {displayComments.map((comment: any, index: number) => (
+                  <div key={comment.id || index} className="flex gap-3 p-3 bg-muted/20 rounded-lg">
+                    <div className="flex-shrink-0">
+                      <User className="w-8 h-8 text-muted-foreground bg-muted rounded-full p-1" />
                     </div>
-                  </PopoverContent>
-                </Popover>
-              </TooltipProvider>
-            </div>
-            <div className="space-y-3">
-              {displayComments.map((comment: any, index: number) => (
-                <div key={comment.id || index} className="flex gap-3 p-3 bg-muted/20 rounded-lg">
-                  <div className="flex-shrink-0">
-                    <User className="w-8 h-8 text-muted-foreground bg-muted rounded-full p-1" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-sm">
-                        {comment.username}
-                      </span>
-                      {comment.timestamp && (
-                        <span className="text-xs text-muted-foreground">
-                          {formatDate(comment.timestamp)}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-sm">
+                          {comment.username || 'Anonymous'}
                         </span>
+                        {comment.timestamp && (
+                          <span className="text-xs text-muted-foreground">
+                            {formatDate(comment.timestamp)}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm">{comment.text}</p>
+                      {comment.like_count > 0 && (
+                        <div className="flex items-center gap-1 mt-2">
+                          <Heart className="w-3 h-3 text-red-500" />
+                          <span className="text-xs text-muted-foreground">
+                            {formatNumber(comment.like_count)}
+                          </span>
+                        </div>
                       )}
                     </div>
-                    <p className="text-sm">{comment.text}</p>
-                    {comment.like_count > 0 && (
-                      <div className="flex items-center gap-1 mt-2">
-                        <Heart className="w-3 h-3 text-red-500" />
-                        <span className="text-xs text-muted-foreground">
-                          {formatNumber(comment.like_count)}
-                        </span>
-                      </div>
-                    )}
                   </div>
-                </div>
-              ))}
-              {hasMoreComments && (
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => {
-                    setVisibleCommentsCount(prev => prev + 10);
-                  }}
-                  className="w-full bg-muted/30 hover:bg-muted/50"
-                >
-                  Load More Comments ({commentsToLoad} of {comments.length - visibleCommentsCount} remaining)
-                </Button>
-              )}
-              {visibleCommentsCount > 5 && (
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => {
-                    setVisibleCommentsCount(5);
-                  }}
-                  className="w-full mt-2"
-                >
-                  Show Less Comments
-                </Button>
-              )}
-            </div>
-          </div>
+                ))}
+                {hasMoreComments && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => {
+                      console.log(`[InstagramOverlay] Loading more comments. Current: ${visibleCommentsCount}, Total: ${comments.length}`);
+                      setVisibleCommentsCount(prev => prev + 10);
+                    }}
+                    className="w-full bg-muted/30 hover:bg-muted/50"
+                  >
+                    Load More Comments ({commentsToLoad} of {comments.length - visibleCommentsCount} remaining)
+                  </Button>
+                )}
+                {visibleCommentsCount > 5 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => {
+                      console.log(`[InstagramOverlay] Showing less comments. Resetting to 5`);
+                      setVisibleCommentsCount(5);
+                    }}
+                    className="w-full mt-2"
+                  >
+                    Show Less Comments
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Analysis Section */}
