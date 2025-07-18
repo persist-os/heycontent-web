@@ -384,12 +384,11 @@ export function InstagramPlatform({
         </div>
       </div>
 
-      {/* Refresh Posts Button moved below analytics section and above posts grid */}
       {refreshPostsSuccess && (
         <div className="text-green-500 text-sm mb-2 text-center">Instagram posts refreshed successfully!</div>
       )}
       <div className="w-full flex justify-end mb-6">
-        {/*
+        
         <Button 
           size="sm" 
           onClick={refreshPosts}
@@ -397,9 +396,9 @@ export function InstagramPlatform({
           className="bg-white/80 hover:bg-white border border-gray-200 text-gray-700 hover:text-gray-900 backdrop-blur-sm"
         >
           <RefreshCw className="w-4 h-4 mr-2" />
-          {refreshingPosts ? 'Refreshing Posts...' : 'Refresh Posts'}
+          {refreshingPosts ? 'Refreshing Posts...' : 'Get New Posts'}
         </Button>
-        */}
+        
       </div>
 
       {/* Content Grid */}

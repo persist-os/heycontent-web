@@ -1,3 +1,3 @@
 export { useYouTubeAnalytics } from './useYouTubeAnalytics';
-export { useInstagramAnalytics } from './useInstagramAnalytics';
+export { useInstagramGetPosts } from './useInstagramGetPosts';
 export { useGmailAnalytics } from './useGmailAnalytics'; 
