@@ -23,7 +23,7 @@ import { interactiveTours } from '@/helpContent/interactiveTours'
 import { YouTubePlatform as YouTubeAnalyticsPlatform } from '../../content-analytics/platforms/YouTubePlatform'
 import { InstagramPlatform as InstagramAnalyticsPlatform } from '../../content-analytics/platforms/InstagramPlatform'
 import { useYouTubeAnalytics } from '../../content-analytics/hooks/useYouTubeAnalytics'
-import { useInstagramAnalytics } from '../../content-analytics/hooks/useInstagramAnalytics'
+import { useInstagramGetPosts } from '../../content-analytics/hooks/useInstagramGetPosts'
 import { YouTubeCard } from '../../content-analytics/cards/YouTubeCard'
 import { InstagramCard } from '../../content-analytics/cards/InstagramCard'
 import { InstagramModal } from '../../content-analytics/modals/InstagramModal'
@@ -93,7 +93,7 @@ export function ContentHubScreen() {
 
   // Analytics hooks
   const youtubeAnalytics = useYouTubeAnalytics(userId)
-  const instagramAnalytics = useInstagramAnalytics(userId)
+  const instagramAnalytics = useInstagramGetPosts(userId)
 
   // Insights hooks
   const youtubeInsights = useYouTubeInsights(userId)

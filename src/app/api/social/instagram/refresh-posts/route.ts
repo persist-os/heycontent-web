@@ -1,130 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { extractAuthInfo } from '@/app/lib/api-helpers-server';
 
-export async function POST(request: NextRequest) {
-  const requestId = Math.random().toString(36).substring(7);
-  const startTime = Date.now();
-
+export async function POST(req: NextRequest) {
   try {
-    const { user_id, instagram_account_id } = await request.json();
-
-    if (!user_id) {
+    const { user_id, instagram_account_id } = await req.json();
+    if (!user_id || !instagram_account_id) {
       return NextResponse.json({ 
-        error: 'user_id is required' 
-      }, { 
-        status: 400 
-      });
+        success: false, 
+        error: 'Missing user_id or instagram_account_id.' 
+      }, { status: 400 });
     }
 
-    if (!instagram_account_id) {
+    // Extract API key and user ID from Authorization header
+    const authHeader = req.headers.get('Authorization');
+    const { apiKey, userId: extractedUserId } = extractAuthInfo(authHeader);
+
+    if (!apiKey || !extractedUserId) {
       return NextResponse.json({ 
-        error: 'instagram_account_id is required' 
-      }, { 
-        status: 400 
-      });
+        success: false, 
+        error: 'Authentication required.' 
+      }, { status: 401 });
     }
 
-    console.log(`[${requestId}] Starting Instagram posts refresh for user ${user_id}, account ${instagram_account_id}`);
-
-    // Get the authorization header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    if (user_id !== extractedUserId) {
       return NextResponse.json({ 
-        error: 'Authorization header is required' 
-      }, { 
-        status: 401 
-      });
+        success: false, 
+        error: 'User ID mismatch.' 
+      }, { status: 401 });
     }
 
-    const backendUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/v1/instagram/refresh-posts`;
-    
-    const requestBody = {
-      user_id,
-      token_data: {
-        instagram_account_id
-      }
-    };
-
-    console.log(`[${requestId}] Calling backend refresh-posts endpoint`);
-
-    // Call the backend refresh-posts endpoint
-    try {
-      const response = await fetch(backendUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': authHeader
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      // Handle backend errors
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error(`[${requestId}] Backend API error:`, {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorData
-        });
-
-        return NextResponse.json({ 
-          error: `Error refreshing Instagram posts: ${response.statusText}`,
-          details: errorData
-        }, { 
-          status: response.status 
-        });
-      }
-
-      const data = await response.json();
-      console.log(`[${requestId}] Instagram posts refresh successful`, {
-        responseTime: Date.now() - startTime,
-        status: data.status,
-        posts_refreshed: data.posts_refreshed
-      });
-
-      // Trigger automatic embedding creation for new Instagram posts
-      try {
-        const convexUrl = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api/autoCreateEmbeddingsForNewPlatformContent`;
-        const convexResponse = await fetch(convexUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': authHeader
-          },
-          body: JSON.stringify({
-            userId: user_id,
-            platform: 'instagram',
-            triggerType: 'platform_connection'
-          })
-        });
-
-        if (convexResponse.ok) {
-          console.log(`[${requestId}] Automatic embedding creation triggered for Instagram posts`);
-        } else {
-          console.error(`[${requestId}] Failed to trigger automatic embedding creation:`, convexResponse.status);
-        }
-      } catch (embeddingError) {
-        console.error(`[${requestId}] Error triggering automatic embedding creation:`, embeddingError);
-        // Don't fail the main request if embedding creation fails
-      }
-
-      // Return the backend response
-      return NextResponse.json(data);
-    } catch (fetchError) {
-      console.error(`[${requestId}] Backend connection error:`, fetchError);
-      return NextResponse.json({
-        error: 'Failed to connect to backend service',
-        details: fetchError instanceof Error ? fetchError.message : 'Unknown error'
-      }, {
-        status: 503
-      });
-    }
-  } catch (error) {
-    console.error(`[${requestId}] Error processing Instagram posts refresh:`, error);
-    return NextResponse.json({ 
-      error: `An error occurred: ${error instanceof Error ? error.message : 'Unknown error'}` 
-    }, { 
-      status: 500 
+    // Forward to backend
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://backend.hicontent.co';
+    const response = await fetch(`${backendUrl}/api/v1/instagram/refresh-posts-new`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ user_id, instagram_account_id }),
     });
+
+    const data = await response.json();
+    return NextResponse.json(data, { status: response.status });
+  } catch (error) {
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Internal server error.' 
+    }, { status: 500 });
   }
 } 
