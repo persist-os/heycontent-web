@@ -125,7 +125,7 @@ export function InstagramPlatform({ userId: propUserId, currentQuote, loading }:
             <Instagram className="w-full h-full text-pink-500" />
           </div>
         }
-        description="Connect your Instagram account to view detailed analytics, track post performance, and get insights on your content strategy."
+        description="Connect your Instagram account to unlock a world of insights, celebrate your creative journey, and discover new ways to shine. Your next big idea is just a connection away—let’s make magic together!"
         buttonColor="bg-pink-600"
         buttonHoverColor="hover:bg-pink-700"
       />
@@ -213,8 +213,8 @@ export function InstagramPlatform({ userId: propUserId, currentQuote, loading }:
             <div className="grid gap-6">
               {(insights || []).length === 0 && !error && (
                 <div className="text-center text-muted-foreground py-8 border-2 border-dashed border-muted-foreground/20 rounded-lg">
-                  <p className="text-lg font-medium mb-2">No analysis insights available</p>
-                  <p>Run an analysis above to get AI-powered insights about your content performance! 📊</p>
+                  <p className="text-lg font-medium mb-2">No insights here yet—your creative journey is just getting started!</p>
+                  <p>When you run an analysis, you’ll unlock fresh ideas and new ways to shine. Keep creating—your next breakthrough is just around the corner! 🌟</p>
                 </div>
               )}
               {(insights || []).map((insight, idx) => (
