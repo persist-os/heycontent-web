@@ -156,3 +156,23 @@ export type SortOption = 'date' | 'views' | 'likes' | 'comments' | 'replies' | '
 // FilterType removed - Use PlatformFilterType and EmailTypeFilter
 export type PlatformFilterType = 'all' | PlatformType; // Renamed for clarity
 export type EmailTypeFilter = 'all' | 'newsletter' | 'partnership' | 'individual' | 'other'; // Renamed for clarity & added 'other'
+
+// Instagram-specific filter and sort types
+export type InstagramMediaType = 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM' | 'REELS' | 'all';
+export type InstagramSortOption = 'date' | 'likes' | 'comments' | 'reach' | 'impressions' | 'saved' | 'shares';
+export type InstagramTimeRange = '7d' | '30d' | '90d' | 'custom' | 'all';
+
+// Custom date range interface
+export interface CustomDateRange {
+  startDate: Date;
+  endDate: Date;
+}
+
+// Instagram search and filter interface
+export interface InstagramFilters {
+  searchQuery: string;
+  mediaType: InstagramMediaType;
+  timeRange: InstagramTimeRange;
+  customDateRange?: CustomDateRange;
+  sortBy: InstagramSortOption;
+}
