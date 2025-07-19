@@ -8,6 +8,7 @@ import { useActionStepDiscussion } from '../hooks/useActionStepDiscussion'
 import { RefreshState } from '@/components/ui/refresh-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AnalysisDepthPicker } from '../AnalysisDepthPicker'
+import { PostSelectionGrid } from '../PostSelectionGrid'
 import { Instagram } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PlatformConnectionPrompt } from '../../../_components/content-hub/PlatformConnectionPrompt'
@@ -15,6 +16,8 @@ import { useInstagramBreakdowns } from '../hooks/useInstagramBreakdowns'
 import InstagramDemographics from '../../../content-analytics/components/InstagramDemographics'
 import { toast } from 'sonner';
 import { getApiKey, getCurrentUserId, fetchWithApiKey } from '@/app/lib/api-helpers';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 
 
 interface InstagramPlatformProps {
@@ -30,6 +33,11 @@ export function InstagramPlatform({ userId: propUserId, currentQuote, loading }:
   const { navigateWithInsight } = useInsightNavigation()
   const { discussActionStep } = useActionStepDiscussion()
   const [refreshingDemographics, setRefreshingDemographics] = useState(false);
+
+  // Post selection state
+  const [selectionMode, setSelectionMode] = useState<'auto' | 'manual'>('auto')
+  const [selectedPostIds, setSelectedPostIds] = useState<string[]>([])
+  const [showPostSelection, setShowPostSelection] = useState(false)
 
   const {
     insights,
@@ -47,6 +55,12 @@ export function InstagramPlatform({ userId: propUserId, currentQuote, loading }:
   } = useInstagramInsights(userId);
 
   const breakdowns = useInstagramBreakdowns(userId);
+
+  // Fetch available Instagram posts for selection
+  const availablePosts = useQuery(
+    api.instagramQueries.getAllInstagramPosts,
+    userId ? { userId } : "skip"
+  );
 
   // Transform AI Insights breakdowns data to match InstagramDemographics component format
   const transformedDemographicsData = React.useMemo(() => {
@@ -90,7 +104,17 @@ export function InstagramPlatform({ userId: propUserId, currentQuote, loading }:
     if (!isConnected) {
       window.location.href = '/settings?tab=integrations';
     } else {
-      refresh();
+      // Enhanced refresh function that handles both auto and manual modes
+      if (selectionMode === 'auto') {
+        refresh();
+      } else {
+        // For manual mode, pass selected post IDs
+        if (selectedPostIds.length === 0) {
+          toast.error('Please select at least one post for analysis! 🎯');
+          return;
+        }
+        refresh('manual', selectedPostIds);
+      }
     }
   };
 
@@ -125,7 +149,7 @@ export function InstagramPlatform({ userId: propUserId, currentQuote, loading }:
             <Instagram className="w-full h-full text-pink-500" />
           </div>
         }
-        description="Connect your Instagram account to unlock a world of insights, celebrate your creative journey, and discover new ways to shine. Your next big idea is just a connection away—let’s make magic together!"
+        description="Connect your Instagram account to unlock a world of insights, celebrate your creative journey, and discover new ways to shine. Your next big idea is just a connection away—let's make magic together!"
         buttonColor="bg-pink-600"
         buttonHoverColor="hover:bg-pink-700"
       />
@@ -191,9 +215,35 @@ export function InstagramPlatform({ userId: propUserId, currentQuote, loading }:
               showCustomInput={showCustomInput}
               setShowCustomInput={setShowCustomInput}
               handleCustomSubmit={handleCustomSubmit}
+              // New props for manual selection
+              selectionMode={selectionMode}
+              onSelectionModeChange={setSelectionMode}
+              selectedPostIds={selectedPostIds}
+              onSelectedPostsChange={setSelectedPostIds}
+              availablePosts={availablePosts || []}
+              showPostSelection={showPostSelection}
+              onShowPostSelectionChange={setShowPostSelection}
             />
           )}
         </div>
+
+        {/* Post Selection Grid */}
+        {selectionMode === 'manual' && showPostSelection && availablePosts && (
+          <div className="border-t border-border pt-6">
+            <h3 className="text-lg font-semibold mb-4">Select Posts for Analysis</h3>
+            <PostSelectionGrid
+              posts={availablePosts.map(post => ({
+                postId: post.postId || post._id,
+                data: post.data || {},
+                analysis: post.analysis
+              }))}
+              selectedPosts={selectedPostIds}
+              onSelectionChange={setSelectedPostIds}
+              maxSelection={20}
+              loading={!availablePosts}
+            />
+          </div>
+        )}
 
         {/* Analysis Results */}
         {!refreshing && (
@@ -214,7 +264,7 @@ export function InstagramPlatform({ userId: propUserId, currentQuote, loading }:
               {(insights || []).length === 0 && !error && (
                 <div className="text-center text-muted-foreground py-8 border-2 border-dashed border-muted-foreground/20 rounded-lg">
                   <p className="text-lg font-medium mb-2">No insights here yet—your creative journey is just getting started!</p>
-                  <p>When you run an analysis, you’ll unlock fresh ideas and new ways to shine. Keep creating—your next breakthrough is just around the corner! 🌟</p>
+                  <p>When you run an analysis, you'll unlock fresh ideas and new ways to shine. Keep creating—your next breakthrough is just around the corner! 🌟</p>
                 </div>
               )}
               {(insights || []).map((insight, idx) => (

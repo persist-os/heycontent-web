@@ -55,7 +55,7 @@ export interface BatchAnalysisHookReturn {
   refreshing: boolean;
   error: string | null;
   isConnected: boolean;
-  refresh: () => void;
+  refresh: (selectionMode?: 'auto' | 'manual', selectedPostIds?: string[]) => void;
   // Platform-specific controls
   postLimit?: number | 'all';
   setPostLimit?: (limit: number | 'all') => void;

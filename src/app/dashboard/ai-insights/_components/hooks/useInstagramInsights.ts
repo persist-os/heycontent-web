@@ -109,7 +109,7 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
     }
   }, [isRefreshing, databaseStatus]);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (selectionMode?: 'auto' | 'manual', selectedPostIds?: string[]) => {
     if (!userId || !instagramAccount?.instagramAccountId) {
       setError('Your Instagram account isn\'t connected yet. No worries—let\'s get you set up so you can unlock those amazing insights! 🚀');
       return;
@@ -131,20 +131,33 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
 
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
       
+      // Prepare request body based on selection mode
+      const requestBody: any = {
+        user_id: userId,
+        instagram_account_id: instagramAccount.instagramAccountId,
+        include_stories: true,
+        include_comments: true,
+        force_refresh: false // Don't force refresh to avoid unnecessary API calls
+      };
+
+      if (selectionMode === 'manual' && selectedPostIds && selectedPostIds.length > 0) {
+        // Manual selection mode
+        requestBody.selection_mode = 'manual';
+        requestBody.selected_post_ids = selectedPostIds;
+        // For manual mode, we don't use max_posts since we're selecting specific posts
+      } else {
+        // Auto selection mode
+        requestBody.selection_mode = 'auto';
+        requestBody.max_posts = typeof postLimit === 'number' ? Math.min(postLimit, 20) : 5; // Enforce hard limit of 20
+      }
+      
       const response = await fetch(`${backendUrl}/api/v1/instagram/account-insights`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`
         },
-        body: JSON.stringify({
-          user_id: userId,
-          instagram_account_id: instagramAccount.instagramAccountId,
-          max_posts: typeof postLimit === 'number' ? Math.min(postLimit, 20) : 5, // Enforce hard limit of 20
-          include_stories: true,
-          include_comments: true,
-          force_refresh: false // Don't force refresh to avoid unnecessary API calls
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
