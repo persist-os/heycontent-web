@@ -10,11 +10,13 @@ import { InstagramCard } from '../cards/InstagramCard';
 import { InstagramModal } from '../modals/InstagramModal';
 import { PlatformEmbeddingStatus } from '../components/PlatformEmbeddingStatus';
 import { InstagramContentItem, AnyContentItem } from '../types';
-import { sortContent } from '../utils';
+import { sortContent, searchFilterAndSortInstagramContent, getAvailableInstagramMediaTypes } from '../utils';
 import CardSkeleton from './components/CardSkeleton';
 import PieChartSkeleton from './components/PieChartSkeleton';
 import InstagramCardSkeleton from './components/InstagramCardSkeleton';
 import { PlatformConnectionPrompt } from '../../_components/content-hub/PlatformConnectionPrompt';
+import { InstagramFilters } from '../filters/InstagramFilters';
+import { InstagramFilters as InstagramFiltersType } from '../types';
 
 interface InstagramPlatformProps {
   userId: string;
@@ -68,6 +70,15 @@ export function InstagramPlatform({
   const observerRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef<HTMLDivElement>(null);
   
+  // Filter state
+  const [filters, setFilters] = useState<InstagramFiltersType>({
+    searchQuery: '',
+    mediaType: 'all',
+    timeRange: 'all',
+    sortBy: 'date',
+    customDateRange: undefined
+  });
+  
 
   
   // Memoized pie chart data calculation
@@ -116,7 +127,7 @@ export function InstagramPlatform({
         observer.unobserve(observerRef.current);
       }
     };
-  }, [handleIntersection]);
+  }, [handleIntersection, hasMorePosts, loadingMore, loading]);
 
   // Handle Instagram not connected state
   if (!isConnected) {
@@ -135,8 +146,11 @@ export function InstagramPlatform({
     );
   }
 
-  // Sort items by date
-  const displayItems = sortContent(items, 'date');
+  // Get available media types for filter options
+  const availableMediaTypes = getAvailableInstagramMediaTypes(items);
+  
+  // Apply search, filter, and sort
+  const filteredAndSortedItems = searchFilterAndSortInstagramContent(items, filters);
 
   const discussContent = async (item: AnyContentItem) => {
     try {
@@ -220,7 +234,7 @@ export function InstagramPlatform({
         {/* Platform Embedding Status */}
         <PlatformEmbeddingStatus 
           platform="instagram" 
-          contentCount={displayItems.length} 
+          contentCount={filteredAndSortedItems.length} 
           userId={userId} 
         />
 
@@ -384,6 +398,15 @@ export function InstagramPlatform({
         </div>
       </div>
 
+      {/* Instagram Filters */}
+      <InstagramFilters
+        filters={filters}
+        onFiltersChange={setFilters}
+        availableMediaTypes={availableMediaTypes}
+        totalPosts={items.length}
+        filteredPosts={filteredAndSortedItems.length}
+      />
+
       {refreshPostsSuccess && (
         <div className="text-green-500 text-sm mb-2 text-center">Instagram posts refreshed successfully!</div>
       )}
@@ -403,9 +426,9 @@ export function InstagramPlatform({
 
       {/* Content Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
-        {displayItems.length > 0 ? (
+        {filteredAndSortedItems.length > 0 ? (
           <>
-            {displayItems.map((item, index) => {
+            {filteredAndSortedItems.map((item, index) => {
               return (
                 <InstagramCard
                   key={item.id}
@@ -439,7 +462,7 @@ export function InstagramPlatform({
       </div>
 
       {/* Infinite Scroll Trigger Element */}
-      {(hasMorePosts || queueCount > 0) && displayItems.length > 0 && (
+      {(hasMorePosts || queueCount > 0) && filteredAndSortedItems.length > 0 && (
         <div 
           ref={observerRef}
           className="h-4 w-full"
