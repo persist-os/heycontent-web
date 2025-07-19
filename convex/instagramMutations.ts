@@ -436,7 +436,8 @@ export const disconnectInstagram = mutation({
         accountsDeleted: 0,
         postsDeleted: 0,
         trackerAnalysesDeleted: 0,
-        batchAnalysesDeleted: 0
+        batchAnalysesDeleted: 0,
+        queuePostsDeleted: 0
       };
 
       // Instagram tokens are now part of instagramAccounts, so no separate deletion needed
@@ -460,6 +461,16 @@ export const disconnectInstagram = mutation({
       for (const post of posts) {
         await ctx.db.delete(post._id);
         results.postsDeleted++;
+      }
+
+      // Delete Instagram posts queue
+      const queuePosts = await ctx.db
+        .query("instagramPostsQueue")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .collect();
+      for (const queuePost of queuePosts) {
+        await ctx.db.delete(queuePost._id);
+        results.queuePostsDeleted++;
       }
 
       // Delete Instagram tracker analysis
