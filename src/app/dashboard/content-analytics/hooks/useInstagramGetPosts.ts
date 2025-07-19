@@ -8,6 +8,8 @@ export function useInstagramGetPosts(userId?: string) {
   const [refreshingPosts, setRefreshingPosts] = useState(false);
   const [refreshPostsSuccess, setRefreshPostsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   
   // Refs to track if component is mounted
   const isMountedRef = useRef(true);
@@ -22,6 +24,15 @@ export function useInstagramGetPosts(userId?: string) {
   const instagramPosts = useQuery(
     api.instagramQueries.getAllInstagramPosts,
     userId ? { userId } : "skip"
+  );
+
+  // Get pagination info for load more functionality
+  const paginationInfo = useQuery(
+    api.instagramQueries.getAccountPagination,
+    userId && instagramAccount?.instagramAccountId ? { 
+      userId, 
+      instagramAccountId: instagramAccount.instagramAccountId 
+    } : "skip"
   );
 
   // Map Instagram items for compatibility
@@ -92,6 +103,56 @@ export function useInstagramGetPosts(userId?: string) {
     };
   }, []);
 
+  // Load more function that calls the API route
+  const loadMore = useCallback(async () => {
+    if (!userId || !instagramAccount?.instagramAccountId) return;
+
+    setLoadingMore(true);
+    setLoadMoreError(null);
+
+    try {
+      const apiKey = await getApiKey();
+      if (!apiKey) {
+        throw new Error('Authentication required. Please log in again.');
+      }
+
+      const response = await fetch(`${window.location.origin}/api/social/instagram/load-more`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          userId,
+          instagramAccountId: instagramAccount.instagramAccountId
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          // Success - the backend will have updated the Convex data
+          // The component will re-render with new data from the queries
+          console.log('✅ Instagram: Load more successful');
+        } else {
+          throw new Error(data.error || 'Failed to load more posts');
+        }
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (err) {
+      console.error('❌ Instagram: Load more failed:', err);
+      if (isMountedRef.current) {
+        setLoadMoreError(err instanceof Error ? err.message : 'Unknown error occurred');
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setLoadingMore(false);
+      }
+    }
+  }, [userId, instagramAccount?.instagramAccountId]);
+
   // Refresh posts function
   const refreshPosts = useCallback(async () => {
     if (!userId || !instagramAccount?.instagramAccountId) return;
@@ -142,14 +203,15 @@ export function useInstagramGetPosts(userId?: string) {
     }
   }, [userId, instagramAccount?.instagramAccountId]);
 
-  // Dummy functions for compatibility with old interface
+  // Dummy function for compatibility with old interface
   const refreshTracker = useCallback(async () => {
     // Not implemented in new version - posts only
   }, []);
 
-  const loadMore = useCallback(async () => {
-    // Not implemented in new version - posts only
-  }, []);
+  // Extract pagination info for load more functionality
+  const hasMorePosts = paginationInfo?.hasMorePosts || false;
+  const queueCount = paginationInfo?.totalPostsFetched || 0;
+  const totalPostsFetched = mappedInstagramItems.length;
 
   return {
     // Main data - compatible with old interface
@@ -160,13 +222,13 @@ export function useInstagramGetPosts(userId?: string) {
     isConnected: !!instagramAccount,
     instagramAccount,
     
-    // Load more functionality - compatibility stubs
+    // Load more functionality - now properly implemented
     loadMore,
-    loadingMore: false,
-    loadMoreError: null,
-    hasMorePosts: false,
-    queueCount: 0,
-    totalPostsFetched: mappedInstagramItems.length,
+    loadingMore,
+    loadMoreError,
+    hasMorePosts,
+    queueCount,
+    totalPostsFetched,
     
     // Refresh functionality - only refreshPosts is implemented
     refreshPosts,
