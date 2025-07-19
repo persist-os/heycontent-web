@@ -92,6 +92,18 @@ export const storeUnifiedPostData = mutation({
           .withIndex("by_postId", q => q.eq("postId", post.id))
           .first();
 
+        // Process comments to handle Instagram API format for replies
+        const processedComments = post.comments ? post.comments.map((comment: any) => {
+          const processedComment = { ...comment };
+          
+          // Handle replies - extract data array from Instagram API format
+          if (comment.replies && typeof comment.replies === 'object' && comment.replies.data) {
+            processedComment.replies = comment.replies.data;
+          }
+          
+          return processedComment;
+        }) : post.comments;
+
         const processedData = {
           id: post.id,
           caption: post.caption,
@@ -104,7 +116,7 @@ export const storeUnifiedPostData = mutation({
           thumbnail_url: post.thumbnail_url,
           children: post.children,
           insights: post.insights,
-          comments: post.comments
+          comments: processedComments
         };
 
         if (existingPost) {
@@ -179,6 +191,18 @@ export const storePostData = mutation({
       // Convert to unified format
       const mediaType = (postData.media_type || "IMAGE") as "IMAGE" | "VIDEO" | "CAROUSEL_ALBUM" | "REELS";
       
+      // Process comments to handle Instagram API format for replies
+      const processedComments = postData.comments ? postData.comments.map((comment: any) => {
+        const processedComment = { ...comment };
+        
+        // Handle replies - extract data array from Instagram API format
+        if (comment.replies && typeof comment.replies === 'object' && comment.replies.data) {
+          processedComment.replies = comment.replies.data;
+        }
+        
+        return processedComment;
+      }) : postData.comments;
+
       const processedData = {
         id: postData.id || postId,
         caption: postData.caption || "",
@@ -191,7 +215,7 @@ export const storePostData = mutation({
         thumbnail_url: postData.thumbnail_url,
         children: postData.children?.data || postData.children,
         insights: postData.insights,
-        comments: postData.comments
+        comments: processedComments
       };
 
       // Check if post already exists
@@ -1276,7 +1300,22 @@ export const patchInstagramPostFields = mutation({
     // Separate fields that go into data vs top-level
     for (const [key, value] of Object.entries(updateFields)) {
       if (dataFields.includes(key)) {
-        topLevelDataFields[key] = value;
+        // Process comments to handle Instagram API format for replies
+        if (key === "comments" && Array.isArray(value)) {
+          const processedComments = value.map((comment: any) => {
+            const processedComment = { ...comment };
+            
+            // Handle replies - extract data array from Instagram API format
+            if (comment.replies && typeof comment.replies === 'object' && comment.replies.data) {
+              processedComment.replies = comment.replies.data;
+            }
+            
+            return processedComment;
+          });
+          topLevelDataFields[key] = processedComments;
+        } else {
+          topLevelDataFields[key] = value;
+        }
       } else {
         regularFields[key] = value;
       }
