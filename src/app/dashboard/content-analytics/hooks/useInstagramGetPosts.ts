@@ -35,6 +35,15 @@ export function useInstagramGetPosts(userId?: string) {
     } : "skip"
   );
 
+  // Get queue status to check for posts in queue
+  const queueStatus = useQuery(
+    api.instagramQueries.getQueueStatus,
+    userId && instagramAccount?.instagramAccountId ? { 
+      userId, 
+      instagramAccountId: instagramAccount.instagramAccountId 
+    } : "skip"
+  );
+
   // Map Instagram items for compatibility
   const mappedInstagramItems = useMemo(() => {
     if (Array.isArray(instagramPosts)) {
@@ -132,7 +141,7 @@ export function useInstagramGetPosts(userId?: string) {
         const data = await response.json();
         if (data.success) {
           // Success - the backend will have updated the Convex data
-          // The component will re-render with new data from the queries
+          // The component will re-render with new data from the updated queries
           console.log('✅ Instagram: Load more successful');
         } else {
           throw new Error(data.error || 'Failed to load more posts');
@@ -209,8 +218,9 @@ export function useInstagramGetPosts(userId?: string) {
   }, []);
 
   // Extract pagination info for load more functionality
-  const hasMorePosts = paginationInfo?.hasMorePosts || false;
-  const queueCount = paginationInfo?.totalPostsFetched || 0;
+  // Check both pagination state AND queue status
+  const hasMorePosts = (paginationInfo?.hasMorePosts || false) || (queueStatus?.queueCount || 0) > 0;
+  const queueCount = queueStatus?.queueCount || 0;
   const totalPostsFetched = mappedInstagramItems.length;
 
   return {
