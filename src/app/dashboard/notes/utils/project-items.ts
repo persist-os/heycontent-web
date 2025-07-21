@@ -1,5 +1,6 @@
 import { ItemType } from '../types/project';
 import { FileText, MessageSquare, Instagram, Youtube, Mail, BarChart3 } from 'lucide-react';
+import { normalizePrefixedId } from '@/lib/content-utils';
 
 // Types
 export interface AttachableItem {
@@ -149,17 +150,20 @@ export function convertToAttachableItems(
 
   // Add analysis content
   (analysisContent || []).forEach(analysis => {
-    // For analysis items, we use the full insight ID (e.g., "insight:youtube:abc123:0")
+    // For analysis items, we use the full insight ID (e.g., "insight:abc123:0")
     // not the extracted raw ID, since these are synthetic IDs
-    const fullId = String(analysis.id);
+    const rawId = String(analysis.id);
+    const normalizedId = normalizePrefixedId(rawId);
+    
     items.push({
-      id: fullId,
+      id: normalizedId,
       type: 'analysis',
       title: analysis.title || 'Analysis Report',
       preview: analysis.summary?.substring(0, 100) || analysis.content?.substring(0, 100),
       date: analysis.createdAt || 0,
       data: analysis,
-      isAttached: project?.analysisIds?.includes(fullId) || false,
+      // Check both normalized and original ID for attachment status (to handle legacy stored IDs)
+      isAttached: project?.analysisIds?.includes(normalizedId) || project?.analysisIds?.includes(rawId) || false,
     });
   });
   

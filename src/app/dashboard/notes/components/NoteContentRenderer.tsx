@@ -55,11 +55,31 @@ export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
       // Extract the content ID
       const contentId = afterLinkStart.substring(0, linkEndIndex).trim();
       
+      // Validate contentId is not empty
+      if (!contentId || contentId === '') {
+        // Skip empty content IDs and treat as regular text
+        parts.push(remainingContent.substring(linkStartIndex, linkStartIndex + 2 + linkEndIndex + 2));
+        remainingContent = afterLinkStart.substring(linkEndIndex + 2);
+        partIndex++;
+        continue;
+      }
+      
       // Check if it's a prefixed ID (youtube, instagram, note, insight, etc.)
       if (contentId.includes(':')) {
         const [contentType, id] = contentId.split(':', 2);
         
-        if (contentType === 'note') {
+        // Validate both contentType and id exist
+        if (!contentType || !id || contentType.trim() === '' || id.trim() === '') {
+          // Skip malformed prefixed IDs
+          parts.push(
+            <span
+              key={`malformed-link-${partIndex}-${linkStartIndex}`}
+              className="text-red-500 italic"
+            >
+              [Malformed Link]
+            </span>
+          );
+        } else if (contentType === 'note') {
           // Handle note linking (existing functionality)
           const linkedNote = availableNotes.find(note => 
             String(note._id) === String(id) || note._id === id

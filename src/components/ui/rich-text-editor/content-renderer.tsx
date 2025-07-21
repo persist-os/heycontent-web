@@ -5,6 +5,7 @@ import { MarkdownRenderer } from '@/app/dashboard/chat/markdown-renderer'
 import { LinkedContentRenderer } from '@/app/dashboard/notes/components/LinkedContentRenderer'
 import { NoteLinkCard } from './note-link-card'
 import { NoteLink } from './rich-text-editor.types'
+import { normalizePrefixedId } from '@/lib/content-utils'
 
 interface ContentRendererProps {
   content: string
@@ -107,9 +108,9 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
             )
           }
         } else if (contentType === 'insight') {
-          // Handle insight linking - ID format is insight:analysisId:index
-          const fullInsightId = contentId // Keep the full ID including the index
-          const insight = allLinkableContent?.find(n => n.id === fullInsightId)
+          // Handle insight linking - normalize ID first
+          const normalizedInsightId = normalizePrefixedId(contentId)
+          const insight = allLinkableContent?.find(n => n.id === normalizedInsightId)
           const insightTitle = insight?.title || '[Insight: Unknown]'
           
           parts.push(
@@ -117,8 +118,8 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
               key={`insight-link-${partIndex}-${linkStartIndex}`}
               onClick={(e) => {
                 e.preventDefault()
-                // Always pass the full insight ID, not just the analysis ID
-                if (onLinkContent) onLinkContent(fullInsightId)
+                // Always pass the normalized insight ID
+                if (onLinkContent) onLinkContent(normalizedInsightId)
               }}
               className="inline-flex items-center px-4 py-2 mx-1 my-1 rounded-lg border border-yellow-200 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 text-lg font-semibold cursor-pointer align-middle min-h-[2.8em] hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors"
               style={{ whiteSpace: 'normal', lineHeight: '1.4' }}

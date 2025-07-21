@@ -3,7 +3,8 @@
 import React from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { useAuth } from '@/app/context/auth-context';
+import { getCurrentUserId } from '@/app/lib/api-helpers';
+import { normalizePrefixedId, validatePrefixedId } from '@/lib/content-utils';
 import { 
   Youtube, 
   Instagram, 
@@ -19,7 +20,8 @@ import {
   Calendar,
   User,
   Lightbulb,
-  Target
+  Target,
+  AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -32,68 +34,184 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
   prefixedId,
   onLinkContent
 }) => {
-  const { firebaseUser } = useAuth();
-  const userId = firebaseUser?.uid;
+  // Get userId with proper error handling - never allow empty string
+  const userId = getCurrentUserId();
+  
+  // Flag for completely invalid inputs
+  const isInvalid = prefixedId === null || prefixedId === undefined;
+  
+  // Flag for empty prefixedId
+  const isEmpty = !prefixedId || prefixedId.trim() === '';
+  
+  // Debug logging in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[LinkedContentRenderer] Initializing with:', {
+      prefixedId,
+      userId: userId ? `${userId.substring(0, 8)}...` : 'null',
+      hasOnLinkContent: !!onLinkContent,
+      isEmpty,
+      isInvalid
+    });
+  }
 
-  // Fetch content data
-  const contentData = useQuery(api.notes.getContentByPrefixedId, {
-    prefixedId,
-    userId: userId || ''
-  });
+  // Normalize and validate prefixedId (skip if empty or invalid)
+  let normalizedPrefixedId = '';
+  let isValidPrefixedId = false;
+  let validationError: string | null = null;
 
-  if (!contentData) {
-    // Extract content ID from prefixed ID for fallback
-    const [contentType, contentId] = prefixedId.split(':', 2);
-    
-    if (contentType === 'youtube') {
-      return (
-        <div className="inline-flex items-center gap-2 px-3 py-2 mx-1 my-1 rounded-lg border border-border bg-muted/50 text-sm">
-          <Youtube className="w-4 h-4 text-red-500" />
-          <span className="text-muted-foreground">YouTube Video</span>
-        </div>
-      );
+  if (!isEmpty && !isInvalid) {
+    try {
+      // Normalize the prefixed ID (handles legacy 4-part insight format)
+      normalizedPrefixedId = normalizePrefixedId(prefixedId);
+      
+      // Validate the normalized ID
+      const validation = validatePrefixedId(normalizedPrefixedId);
+      if (!validation.isValid) {
+        throw new Error(validation.error || 'Invalid prefixed ID');
+      }
+      
+      isValidPrefixedId = true;
+    } catch (error) {
+      validationError = error instanceof Error ? error.message : 'Unknown error';
+      
+      if (process.env.NODE_ENV === 'development' && prefixedId && validationError) {
+        console.error('[LinkedContentRenderer] PrefixedId validation failed:', {
+          original: prefixedId,
+          normalized: normalizedPrefixedId,
+          error: validationError
+        });
+      }
+    }
+  }
+
+  // Extract content type from normalized prefixed ID for fallback displays
+  const contentType = normalizedPrefixedId ? normalizedPrefixedId.split(':', 1)[0] : '';
+
+  // Fetch content data - only when we have valid inputs
+  // Use "skip" to prevent the query when conditions aren't met
+  const contentData = useQuery(
+    api.notes.getContentByPrefixedId, 
+    userId && isValidPrefixedId && !isEmpty && !isInvalid ? {
+      prefixedId: normalizedPrefixedId,
+      userId
+    } : "skip"
+  );
+
+  // Early return for invalid prefixedId after hooks
+  if (isInvalid) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[LinkedContentRenderer] Received null/undefined prefixedId, skipping render');
+    }
+    return null;
+  }
+
+  // Early return for empty prefixedId after hooks
+  if (isEmpty) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[LinkedContentRenderer] Empty prefixedId provided, skipping render');
+    }
+    return null;
+  }
+
+  // Early return if no userId - don't make queries with empty userId
+  if (!userId) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[LinkedContentRenderer] No userId available, rendering auth prompt');
     }
     
-    if (contentType === 'instagram') {
-      return (
-        <div className="inline-flex items-center gap-2 px-3 py-2 mx-1 my-1 rounded-lg border border-border bg-muted/50 text-sm">
-          <Instagram className="w-4 h-4 text-pink-500" />
-          <span className="text-muted-foreground">Instagram Post</span>
-        </div>
-      );
-    }
-    
-    if (contentType === 'gmail') {
-      return (
-        <div className="inline-flex items-center gap-2 px-3 py-2 mx-1 my-1 rounded-lg border border-border bg-muted/50 text-sm">
-          <Mail className="w-4 h-4 text-red-500" />
-          <span className="text-muted-foreground">Gmail Thread</span>
-        </div>
-      );
-    }
-    
-    if (contentType === 'insight') {
-      return (
-        <div className="inline-flex items-center gap-2 px-3 py-2 mx-1 my-1 rounded-lg border border-border bg-muted/50 text-sm">
-          <Lightbulb className="w-4 h-4 text-yellow-500" />
-          <span className="text-muted-foreground">Insight</span>
-        </div>
-      );
-    }
-    
-    if (contentType === 'note') {
-      return (
-        <div className="inline-flex items-center gap-2 px-3 py-2 mx-1 my-1 rounded-lg border border-border bg-muted/50 text-sm">
-          <ImageIcon className="w-4 h-4" />
-          <span className="text-muted-foreground">Note</span>
-        </div>
-      );
+    return (
+      <div className="inline-flex items-center gap-2 px-3 py-2 mx-1 my-1 rounded-lg border border-orange-200 bg-orange-50 text-sm">
+        <AlertTriangle className="w-4 h-4 text-orange-500" />
+        <span className="text-orange-700">Please sign in to view linked content</span>
+      </div>
+    );
+  }
+
+  // Handle validation errors
+  if (validationError) {
+    return (
+      <div className="inline-flex items-center gap-2 px-3 py-2 mx-1 my-1 rounded-lg border border-red-200 bg-red-50 text-sm">
+        <AlertTriangle className="w-4 h-4 text-red-500" />
+        <span className="text-red-700">Invalid content reference</span>
+      </div>
+    );
+  }
+
+  // Handle loading state with proper fallback
+  if (contentData === undefined) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[LinkedContentRenderer] Loading content data for:', prefixedId);
     }
     
     return (
       <div className="inline-flex items-center gap-2 px-3 py-2 mx-1 my-1 rounded-lg border border-border bg-muted/50 text-sm">
         <div className="w-4 h-4 bg-muted rounded animate-pulse" />
         <span className="text-muted-foreground">Loading...</span>
+      </div>
+    );
+  }
+
+  // Handle explicit null return (content not found or access denied)
+  if (contentData === null) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[LinkedContentRenderer] Content not found or access denied for:', prefixedId);
+    }
+    
+    // Provide fallback based on content type
+    const getFallbackIcon = (type: string) => {
+      switch (type) {
+        case 'youtube': return <Youtube className="w-4 h-4 text-red-500" />;
+        case 'instagram': return <Instagram className="w-4 h-4 text-pink-500" />;
+        case 'gmail': return <Mail className="w-4 h-4 text-red-500" />;
+        case 'insight': return <Lightbulb className="w-4 h-4 text-yellow-500" />;
+        case 'note': return <ImageIcon className="w-4 h-4" />;
+        default: return <AlertTriangle className="w-4 h-4 text-muted-foreground" />;
+      }
+    };
+    
+    const getFallbackLabel = (type: string) => {
+      switch (type) {
+        case 'youtube': return 'YouTube Video (Unavailable)';
+        case 'instagram': return 'Instagram Post (Unavailable)';
+        case 'gmail': return 'Gmail Thread (Unavailable)';
+        case 'insight': return 'Insight (Unavailable)';
+        case 'note': return 'Note (Unavailable)';
+        default: return 'Content (Unavailable)';
+      }
+    };
+    
+    return (
+      <div className="inline-flex items-center gap-2 px-3 py-2 mx-1 my-1 rounded-lg border border-muted bg-muted/30 text-sm opacity-60">
+        {getFallbackIcon(contentType)}
+        <span className="text-muted-foreground">{getFallbackLabel(contentType)}</span>
+      </div>
+    );
+  }
+
+  // Handle query errors (if Convex returns an error object)
+  if (typeof contentData === 'object' && 'error' in contentData) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[LinkedContentRenderer] Query error:', contentData.error);
+    }
+    
+    return (
+      <div className="inline-flex items-center gap-2 px-3 py-2 mx-1 my-1 rounded-lg border border-red-200 bg-red-50 text-sm">
+        <AlertTriangle className="w-4 h-4 text-red-500" />
+        <span className="text-red-700">Failed to load content</span>
+      </div>
+    );
+  }
+
+  // Validate content data structure
+  if (!contentData || typeof contentData !== 'object' || !contentData.type) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[LinkedContentRenderer] Invalid content data structure:', contentData);
+    }
+    
+    return (
+      <div className="inline-flex items-center gap-2 px-3 py-2 mx-1 my-1 rounded-lg border border-red-200 bg-red-50 text-sm">
+        <AlertTriangle className="w-4 h-4 text-red-500" />
+        <span className="text-red-700">Invalid content data</span>
       </div>
     );
   }

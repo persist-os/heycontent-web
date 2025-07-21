@@ -205,7 +205,7 @@ export function processAllInsightsData(results: {
       ytAnalyses.forEach((video: any, index: number) => {
         if (video.analysis || video.analysisMarkdown) {
           allInsights.push({
-            id: `insight:youtube:${video.id}:${index}`,
+            id: `insight:${video.id}:${index}`,
             title: `${video.title} - Analysis`,
             type: 'insight' as const,
             contentType: 'youtube_analysis',
@@ -239,7 +239,7 @@ export function processAllInsightsData(results: {
     if (insightArray.length > 0) {
       insightArray.forEach((insight: any, index: number) => {
         allInsights.push({
-          id: `insight:instagram:${igAnalysis._id}:${index}`,
+          id: `insight:${igAnalysis._id}:${index}`,
           title: insight.title || insight.heading || 'Instagram Insight',
           type: 'insight' as const,
           contentType: 'instagram_analysis',
@@ -255,7 +255,7 @@ export function processAllInsightsData(results: {
     } else {
       // If no structured insights, create a single insight from the batch analysis
       allInsights.push({
-        id: `insight:instagram:${igAnalysis._id}:batch`,
+        id: `insight:${igAnalysis._id}:batch`,
         title: 'Instagram Batch Analysis',
         type: 'insight' as const,
         contentType: 'instagram_analysis',
@@ -276,7 +276,7 @@ export function processAllInsightsData(results: {
     if (gmailAnalysis.insights.insights && Array.isArray(gmailAnalysis.insights.insights)) {
       gmailAnalysis.insights.insights.forEach((insight: any, index: number) => {
         allInsights.push({
-          id: `insight:gmail:${gmailAnalysis._id}:${index}`,
+          id: `insight:${gmailAnalysis._id}:${index}`,
           title: insight.title || 'Gmail Insight',
           type: 'insight' as const,
           contentType: 'gmail_insight',
@@ -345,7 +345,7 @@ export function processInsightsData(result: PromiseSettledResult<any>): UnifiedC
   }
 
   const processed = insightArray.map((insight: any, index: number) => ({
-    id: `insight:${insight.id || index}`,
+    id: `insight:${insight.id || `analysis-${index}`}:${index}`,
     title: insight.title || 'Content Insight',
     type: 'insight' as const,
     contentType: 'analysis',

@@ -5,6 +5,7 @@ import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useAuth } from '@/app/context/auth-context';
 import { useContentResolver } from '@/lib/content-resolver';
+import { normalizePrefixedId, validatePrefixedId } from '@/lib/content-utils';
 import { 
   FileText, 
   Youtube, 
@@ -169,12 +170,26 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
             return false;
           }
           
-          // Filter out malformed insight IDs
+          // Handle legacy insight IDs - convert to correct format instead of filtering out
           if (content.type === 'insight') {
-            // Should match insight:platform:id:index patterns like:
-            // insight:youtube:videoId:0, insight:instagram:id:0, insight:gmail:id:0
-            if (!/^insight:[^:]+:[^:]+:[0-9]+$/.test(content.id)) {
-              console.warn('Filtering out malformed insight ID:', content.id);
+            const normalizedId = normalizePrefixedId(content.id);
+            const validation = validatePrefixedId(normalizedId);
+            
+            if (validation.isValid) {
+              // Update the content item with the normalized ID
+              content = {
+                ...content,
+                id: normalizedId
+              };
+            } else {
+              // Filter out truly malformed IDs
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('Filtering out malformed insight ID:', {
+                  original: content.id,
+                  normalized: normalizedId,
+                  error: validation.error
+                });
+              }
               return false;
             }
           }

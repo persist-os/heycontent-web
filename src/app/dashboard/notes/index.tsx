@@ -5,6 +5,7 @@ import { NotesGrid } from './components/NotesGrid';
 import { NoteArea } from './NoteArea';
 import { useAuth } from '@/app/context/auth-context';
 import type { Id } from '@/convex/_generated/dataModel';
+import { normalizePrefixedId } from '@/lib/content-utils';
 import { useNotes } from '@/app/context/notes-context';
 import { Note } from './types';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -223,7 +224,8 @@ export default function SmartNotes() {
     
     // Special handling for insight links which have format insight:analysisId:index
     if (prefixedId.startsWith('insight:')) {
-      setSelectedInsightId(prefixedId);
+      const normalizedInsightId = normalizePrefixedId(prefixedId);
+      setSelectedInsightId(normalizedInsightId);
       return;
     }
     

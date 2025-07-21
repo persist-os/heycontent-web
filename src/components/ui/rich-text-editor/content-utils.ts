@@ -1,4 +1,5 @@
 import { NoteLink } from './rich-text-editor.types'
+import { normalizePrefixedId, validatePrefixedId } from '@/lib/content-utils'
 
 export const extractPrefixedIds = (content: string, userId?: string): string[] => {
   if (!content || !userId) return []
@@ -9,9 +10,57 @@ export const extractPrefixedIds = (content: string, userId?: string): string[] =
   
   while ((match = linkRegex.exec(content)) !== null) {
     const id = match[1].trim()
+    
+    // Only process IDs that contain a colon and are not note IDs
     if (id.includes(':') && !id.startsWith('note:')) {
-      prefixedIds.push(id)
+      // Validate the prefixed ID format
+      const [contentType, contentId] = id.split(':', 2)
+      
+      // Ensure both contentType and contentId exist and are not empty
+      if (contentType && contentId && contentType.trim() !== '' && contentId.trim() !== '') {
+        // Validate contentType is a known type
+        const validContentTypes = ['youtube', 'instagram', 'gmail', 'insight']
+        if (validContentTypes.includes(contentType)) {
+          // Additional validation for specific content types
+          if (contentType === 'insight') {
+            // Normalize and validate insight IDs (handles legacy 4-part format)
+            const normalizedId = normalizePrefixedId(id)
+            const validation = validatePrefixedId(normalizedId)
+            
+            if (validation.isValid) {
+              prefixedIds.push(normalizedId)
+            } else if (process.env.NODE_ENV === 'development') {
+              console.warn('[extractPrefixedIds] Invalid insight ID:', { 
+                original: id, 
+                normalized: normalizedId, 
+                error: validation.error 
+              })
+            }
+          } else {
+            // For other content types, ensure contentId is not too short
+            if (contentId.length >= 3) {
+              prefixedIds.push(id)
+            } else {
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('[extractPrefixedIds] Content ID too short:', { id, contentType, contentId, length: contentId.length })
+              }
+            }
+          }
+        } else {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('[extractPrefixedIds] Unknown content type:', { id, contentType, validTypes: validContentTypes })
+          }
+        }
+      } else {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[extractPrefixedIds] Invalid prefixed ID format:', { id, contentType, contentId })
+        }
+      }
     }
+  }
+  
+  if (process.env.NODE_ENV === 'development' && prefixedIds.length > 0) {
+    console.log('[extractPrefixedIds] Extracted valid prefixed IDs:', prefixedIds)
   }
   
   return prefixedIds
@@ -92,16 +141,16 @@ export const getDisplayContent = (
         displayContent = displayContent.replace(`@[note:${linkedNote._id}]@`, `@[Smart Note: ${linkedNote.title}]@`)
       }
     }
-    
+
+    // If we reach here, it's a note link that needs to be converted to display format
     if (linkedNote) {
-      // Replace @[note:id]@ with @[Smart Note: Title]@ for display
       displayContent = displayContent.replace(match[0], `@[Smart Note: ${linkedNote.title}]@`)
     } else {
-      // Show [Missing Note] for unknown IDs
-      displayContent = displayContent.replace(match[0], `@[Missing Note]@`)
+      // Note not found, show missing note
+      displayContent = displayContent.replace(match[0], `@[Missing Note: ${noteId}]@`)
     }
   }
-  
+
   return displayContent
 }
 
