@@ -7,7 +7,7 @@ import { useAuth } from '@/app/context/auth-context';
 import type { Id } from '@/convex/_generated/dataModel';
 import { useNotes } from '@/app/context/notes-context';
 import { Note } from './types';
-import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { YouTubeVideoCard } from './components/YouTubeVideoCard';
 import { InstagramPostCard } from './components/InstagramPostCard';
 import { GmailThreadCard } from './components/GmailThreadCard';
@@ -30,7 +30,6 @@ export default function SmartNotes() {
   const fromProject = searchParams.get('fromProject') === 'true';
   const projectId = searchParams.get('projectId');
   const router = useRouter();
-  const pathname = usePathname();
 
   const {
     notes,
@@ -82,17 +81,6 @@ export default function SmartNotes() {
       }
     }
   }, [noteIdParam, notes, setActiveNoteId]);
-
-  // Clear activeNoteId when navigating away from notes route (defensive cleanup)
-  React.useEffect(() => {
-    return () => {
-      // Cleanup on unmount - ensure no note is active when leaving the component
-      if (activeNoteId) {
-        console.log('🧹 Notes component unmounting, clearing active note');
-        setActiveNoteId(undefined);
-      }
-    };
-  }, []);
 
   // Helper to clear noteId from URL
   const clearNoteIdFromUrl = React.useCallback(() => {
