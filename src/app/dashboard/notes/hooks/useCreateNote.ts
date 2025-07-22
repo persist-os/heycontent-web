@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useNotes } from '@/app/context/notes-context';
 import { getApiKey } from '@/app/lib/api-helpers';
@@ -13,7 +13,7 @@ export const useCreateNote = () => {
   const [error, setError] = useState<string | null>(null);
   const pendingRef = useRef(metadataPending);
   // Keep ref in sync
-  useCallback(() => { pendingRef.current = metadataPending; }, [metadataPending]);
+  useEffect(() => { pendingRef.current = metadataPending; }, [metadataPending]);
 
   const generateMetadata = useCallback(async (
     noteId: string,
@@ -68,7 +68,7 @@ export const useCreateNote = () => {
     setIsCreating(true);
     setError(null);
     try {
-      let noteUpdate: any = { content, title: customTitle };
+      const noteUpdate: any = { content, title: customTitle };
       if (customType && ['idea_bank','content_script','collaboration_note','analytics_insight','reflection_journal','task_checklist'].includes(customType)) {
         noteUpdate.type = customType;
       }
@@ -77,9 +77,32 @@ export const useCreateNote = () => {
       const noteId = noteObj?._id;
       if (success && noteId) {
         // Block duplicate metadata generation for this note
+        console.log('🔍 [DEBUG] useCreateNote checking pending state:', {
+          noteId,
+          isPending: !!pendingRef.current[noteId],
+          hasContent: !!content?.trim()
+        });
+        
         if (!pendingRef.current[noteId]) {
-          setMetadataPending(prev => ({ ...prev, [noteId]: true }));
-          if (content && content.trim()) {
+          console.log('🚀 [DEBUG] Checking metadata generation conditions in useCreateNote');
+          
+          // CRITICAL FIX: Only generate metadata if BOTH flags are false (first time only)
+          const shouldGenerateMetadata = content && 
+            content.trim() && 
+            !noteObj?.titleGenerated && 
+            !noteObj?.typeGenerated;
+            
+          console.log('🔍 [DEBUG] useCreateNote metadata conditions:', {
+            noteId,
+            hasContent: !!content?.trim(),
+            titleGenerated: noteObj?.titleGenerated,
+            typeGenerated: noteObj?.typeGenerated,
+            willGenerate: shouldGenerateMetadata
+          });
+          
+          if (shouldGenerateMetadata) {
+            console.log('🚀 [DEBUG] Triggering metadata generation from useCreateNote');
+            setMetadataPending(prev => ({ ...prev, [noteId]: true }));
             const metaResult = await generateMetadata(noteId.toString(), content);
             if (!metaResult.success) {
               // Error already set by generateMetadata
@@ -91,6 +114,8 @@ export const useCreateNote = () => {
             } else {
               // Wait for Convex to confirm in the main notes hook (not here)
             }
+          } else {
+            console.log('🚫 [DEBUG] Skipping metadata generation - conditions not met');
           }
         }
         if (redirect) {

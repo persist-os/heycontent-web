@@ -1,4 +1,4 @@
-import { Idea } from '../components/IdeaCard';
+import { Idea } from '../components/cards/IdeaCard';
 
 export function normalizeSmartNoteIdeas(rawIdeas: any[]): Idea[] {
   function extractIdea(obj: any): Idea {

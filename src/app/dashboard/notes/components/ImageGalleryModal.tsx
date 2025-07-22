@@ -25,13 +25,7 @@ export function ImageGalleryModal({ isOpen, noteId, images, onClose }: ImageGall
   const { updateNote } = useNotes();
   const { firebaseUser } = useAuth();
 
-  // DEBUG: Check authentication
-  console.log('🔍 [ImageGalleryModal] Authentication check:', {
-    hasFirebaseUser: !!firebaseUser,
-    userId: firebaseUser?.uid,
-    noteId,
-    noteIdType: typeof noteId
-  });
+
 
   const handleAddImages = useCallback(async (newImages: ImageData[]) => {
     if (newImages.length === 0) return;
@@ -45,27 +39,8 @@ export function ImageGalleryModal({ isOpen, noteId, images, onClose }: ImageGall
 
     try {
       const updatedImages = [...images, ...newImages];
-      // Validate each image object structure
-      updatedImages.forEach((img, index) => {
-        console.log(`Image ${index} validation:`, {
-          hasUrl: typeof img.url === 'string',
-          hasFilename: typeof img.filename === 'string',
-          hasOriginalFilename: img.originalFilename === undefined || typeof img.originalFilename === 'string',
-          hasUploadedAt: typeof img.uploadedAt === 'number',
-          hasSize: img.size === undefined || typeof img.size === 'number',
-          hasMimeType: img.mimeType === undefined || typeof img.mimeType === 'string',
-          hasWidth: img.width === undefined || typeof img.width === 'number',
-          hasHeight: img.height === undefined || typeof img.height === 'number',
-        });
-      });
 
-      // TEST: First try a simple update to see if the noteId works
-      console.log('🧪 [ImageGalleryModal] TEST - Trying simple update first...');
-      await updateNote(noteId, { title: "Test update" });
-      console.log('✅ [ImageGalleryModal] TEST - Simple update worked!');
-      
-      // Now try the images update
-      console.log('🖼️ [ImageGalleryModal] Now trying images update...');
+
       await updateNote(noteId, { images: updatedImages });
       
       toast.success(`${newImages.length} image${newImages.length > 1 ? 's' : ''} uploaded successfully`);
