@@ -1182,6 +1182,7 @@ export const moveQueuePostsToMain = mutation({
         movedPosts.push({
           postId: queuedPost.postId,
           id: queuedPost.postId, // Alias for compatibility
+          mediaType: queuedPost.mediaType, // Include media type for optimized insights
           internalId: mainId,
         });
       }
