@@ -27,11 +27,11 @@ export default function SelfHubPage() {
         {/* Header with tabs */}
         <div className="px-6 py-4 border-b bg-background">
           <div className="flex items-center justify-between mb-4">
-            <div className="text-center ml-12 md:ml-0">
-              <h1 className="text-base font-medium text-purple-600 dark:text-accent">
+            <div className="ml-12 md:ml-0">
+              <h1 className="text-2xl font-bold text-foreground">
                 Self
               </h1>
-              <p className="text-muted-foreground text-sm">
+              <p className="text-sm text-muted-foreground">
                 Manage your persona and activity.
               </p>
             </div>
