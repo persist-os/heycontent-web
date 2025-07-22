@@ -108,18 +108,10 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
       // Get all content from the current tab
       const baseContent = tabSpecificContent || [];
       
-      console.log('🔍 [EnhancedContentSelector] Debug info:', {
-        currentTab,
-        selectedPlatform,
-        baseContentCount: baseContent.length,
-        baseContentSample: baseContent.slice(0, 3).map(c => ({ id: c.id, title: c.title, type: c.type, platform: c.platform })),
-        hasErrors,
-        contentLoading
-      });
+
       
       // Apply internal platform filter
       if (selectedPlatform === 'all') {
-        console.log('🔍 [EnhancedContentSelector] Returning all content:', baseContent.length, 'items');
         return baseContent;
       }
       
@@ -135,20 +127,13 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
           case 'gmail':
             return content.platform === 'gmail' || content.type === 'gmail';
           case 'insights':
-            const isInsight = content.platform === 'insights' || content.type === 'insight';
-            if (isInsight) {
-              console.log('🔍 [EnhancedContentSelector] Found insight item:', { id: content.id, title: content.title, type: content.type, platform: content.platform });
-            }
-            return isInsight;
+            return content.platform === 'insights' || content.type === 'insight';
           default:
             return true;
         }
       });
       
-      console.log('🔍 [EnhancedContentSelector] Filtered content for platform', selectedPlatform, ':', filtered.length, 'items');
-      if (selectedPlatform === 'insights') {
-        console.log('🔍 [EnhancedContentSelector] Insights content:', filtered.map(c => ({ id: c.id, title: c.title, type: c.type, platform: c.platform })));
-      }
+
       
       return filtered;
     } catch (error) {

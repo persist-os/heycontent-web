@@ -121,19 +121,31 @@ export function InstagramPlatform({ userId: propUserId, currentQuote, loading }:
   const handleRefreshDemographics = async () => {
     setRefreshingDemographics(true);
     try {
-      const res = await fetchWithApiKey('/api/social/instagram/refresh-demographics', {
+      const apiKey = await getApiKey();
+      if (!apiKey) {
+        throw new Error('Authentication required. Please log in again.');
+      }
+      const response = await fetch(`${window.location.origin}/api/social/instagram/refresh-demographics`, {
         method: 'POST',
-        body: JSON.stringify({}), // Optionally add expires_at, scope if needed
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(userId ? { user_id: userId } : {}),
       });
-      const data = await res.json();
-      if (res.ok && (data.success || data.profile_stored)) {
-        toast.success('Demographics refreshed!');
-        // Optionally, trigger a refetch of breakdowns here if your hook supports it
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success || data.profile_stored) {
+          toast.success('Demographics refreshed!');
+        } else {
+          throw new Error(data.error || 'Failed to refresh demographics');
+        }
       } else {
-        toast.error(data.error || 'Failed to refresh demographics');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (err) {
-      toast.error('Failed to refresh demographics');
+      toast.error(err instanceof Error ? err.message : 'Failed to refresh demographics');
     } finally {
       setRefreshingDemographics(false);
     }

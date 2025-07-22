@@ -1,73 +1,31 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Bot, Brain, Lightbulb, Loader2, X, Sparkles, ArrowRight, FileText, Users, BarChart3, BookOpen, CheckSquare, List, Heading1, Heading2, Heading3, Link, ExternalLink, Table } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { motion } from "framer-motion";
+import { Loader2, ArrowRight } from 'lucide-react';
 import { useNotes } from '@/app/context/notes-context';
 import { 
   getCommandsForNoteType, 
-  getPromptsForNoteType, 
-  NoteType,
-  CommandOption 
+  NoteType
 } from '../utils/command-configs';
-
-interface InlineCommandPaletteProps {
-  isOpen: boolean;
-  onClose: () => void;
-  position: { top: number; left: number };
-  onAskAI: (prompt: string) => Promise<void>;
-  onRequestAnalysis: (noteType: string) => Promise<void>;
-  onRequestIdeas: () => Promise<void>;
-  onLinkNote?: (noteId: string) => void;
-  onInsertBulletList: () => void;
-  onInsertNumberedList: () => void;
-  onInsertHeading: (level: number) => void;
-  onInsertLink?: (url: string, text: string) => void;
-  onInsertLinkEmbed?: (url: string) => void;
-  onInsertTable?: (rows: number, cols: number) => void;
-  onGenerateTableFromContent?: () => Promise<void>;
-  noteType?: string;
-  availableNotes?: Array<{ _id: string; title: string; type: string }>;
-  currentNoteId?: string;
-  showNoteLinks?: boolean;
-}
-
-interface NoteOption {
-  id: string;
-  title: string;
-  type: string;
-  icon: React.ReactNode;
-  action: () => void;
-}
-
-// Unified interface for display
-interface DisplayOption {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  action: () => void;
-  category?: string;
-}
-
-const NOTE_TYPES = [
-  { value: 'idea_bank', label: 'Idea Bank', description: 'Spark fresh concepts and brainstorm your next viral idea' },
-  { value: 'content_script', label: 'Content Script', description: 'Structure your content like a pro creator' },
-  { value: 'analytics_insight', label: 'Analytics Insight', description: 'Turn your data into growth strategies' },
-  { value: 'collaboration_note', label: 'Collaboration Note', description: 'Organize your brand partnerships and team projects' },
-  { value: 'reflection_journal', label: 'Reflection Journal', description: 'Document your creative journey and insights' },
-  { value: 'task_checklist', label: 'Task Checklist', description: 'Stay organized and hit every deadline' },
-  { value: 'email_draft', label: 'Email Draft', description: 'Write emails that get opened and get results' },
-];
-
-// Note type icons mapping
-const NOTE_TYPE_ICONS: Record<string, React.ReactNode> = {
-  idea_bank: <Lightbulb className="w-4 h-4" />,
-  content_script: <FileText className="w-4 h-4" />,
-  analytics_insight: <BarChart3 className="w-4 h-4" />,
-  collaboration_note: <Users className="w-4 h-4" />,
-  reflection_journal: <BookOpen className="w-4 h-4" />,
-  task_checklist: <CheckSquare className="w-4 h-4" />,
-  email_draft: <FileText className="w-4 h-4" />,
-};
+import {
+  getRefinementCommandsForNoteType,
+  getRefinementsForNoteTypes,
+  NoteType as RefinementNoteType
+} from '../utils/refinement-configs';
+import { TextRefinementPreview } from './TextRefinementPreview';
+import { CommandPaletteHeader } from './CommandPaletteHeader';
+import { CommandPaletteFooter } from './CommandPaletteFooter';
+import { 
+  InlineCommandPaletteProps, 
+  DisplayOption
+} from './InlineCommandPalette.types';
+import { 
+  NOTE_TYPE_ICONS, 
+  PALETTE_CONFIG 
+} from './InlineCommandPalette.constants';
+import { useInlineCommandPalette } from '../hooks/useInlineCommandPalette';
+import { calculatePalettePosition } from '../utils/position-calculator';
 
 export function InlineCommandPalette({
   isOpen,
@@ -87,404 +45,292 @@ export function InlineCommandPalette({
   noteType = 'idea_bank',
   availableNotes = [],
   currentNoteId,
-  showNoteLinks = false
+  showNoteLinks = false,
+  selectedText = '',
+  refinementMode = false,
+  onRefineText,
+  showRefinementPreview = false,
+  refinedTextPreview = null,
+  onAcceptRefinement,
+  onRejectRefinement,
+  onRetryRefinement
 }: InlineCommandPaletteProps) {
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [loadingCommand, setLoadingCommand] = useState<string | null>(null);
-  const [showAIPrompt, setShowAIPrompt] = useState(false);
-  const [showAnalysisTypes, setShowAnalysisTypes] = useState(false);
-  const [showLinkInput, setShowLinkInput] = useState(false);
-  const [showLinkEmbedInput, setShowLinkEmbedInput] = useState(false);
-  const [showTableInput, setShowTableInput] = useState(false);
-  const [showPromptSuggestions, setShowPromptSuggestions] = useState(false);
-  const [aiPrompt, setAIPrompt] = useState('');
-  const [noteSearchTerm, setNoteSearchTerm] = useState('');
-  const [linkUrl, setLinkUrl] = useState('');
-  const [linkText, setLinkText] = useState('');
-  const [tableRows, setTableRows] = useState(3);
-  const [tableCols, setTableCols] = useState(3);
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
-  const mainInputRef = useRef<HTMLInputElement>(null);
+  
   const menuRef = useRef<HTMLDivElement>(null);
   const { setActiveNoteId } = useNotes();
 
-  // Get dynamic commands based on note type
-  const { typeSpecificCommands, universalCommands, defaultPrompts } = getCommandsForNoteType(noteType as NoteType);
+  // User input state for the header input
+  const [userInput, setUserInput] = useState('');
 
-  // Create handlers for type-specific commands
-  const createTypeSpecificHandler = (commandId: string) => {
-    // Since handleTypeSpecificAI already looks up commands dynamically,
-    // we can simply return a handler for any command ID
-    return () => handleTypeSpecificAI(commandId);
-  };
-
-  const handleTypeSpecificAI = async (commandId: string) => {
-    // Get the relevant prompt based on command ID and note type
-    const commandConfig = [...typeSpecificCommands, ...universalCommands].find(cmd => cmd.id === commandId);
-    
-    if (commandConfig) {
-      // Use the command's description as the AI prompt and auto-send it
-      const prompt = commandConfig.description || commandConfig.label;
-      setLoadingCommand(commandId);
-      try {
-        await onAskAI(prompt);
-        onClose();
-      } catch (error) {
-        console.error('Failed to ask AI:', error);
-      } finally {
-        setLoadingCommand(null);
-      }
-    }
-  };
-
-  const handleAskAI = async () => {
-    setShowPromptSuggestions(true);
-    setShowAIPrompt(true);
-    setSelectedIndex(0);
-    setTimeout(() => inputRef.current?.focus(), 100);
-  };
-
-  const handlePromptSuggestionSelect = async (prompt: string) => {
-    setAIPrompt(prompt);
-    setShowPromptSuggestions(false);
-    
-    // Auto-send the selected prompt
-    setLoadingCommand('ask-ai');
-    try {
-      await onAskAI(prompt);
-      onClose();
-    } catch (error) {
-      console.error('Failed to ask AI:', error);
-    } finally {
-      setLoadingCommand(null);
-    }
-  };
-
-  const handleRequestAnalysis = async () => {
-    setShowAnalysisTypes(true);
-    setSelectedIndex(0);
-  };
-
-  const handleRequestIdeas = async () => {
-    setLoadingCommand('ideas');
-    try {
-      await onRequestIdeas();
-      onClose();
-    } catch (error) {
-      console.error('Failed to request ideas:', error);
-    } finally {
-      setLoadingCommand(null);
-    }
-  };
-
-  const handleSubmitAIPrompt = async () => {
-    if (!aiPrompt.trim()) return;
-    
-    setLoadingCommand('ask-ai');
-    try {
-      await onAskAI(aiPrompt);
-      onClose();
-    } catch (error) {
-      console.error('Failed to ask AI:', error);
-    } finally {
-      setLoadingCommand(null);
-    }
-  };
-
-  const handleAnalysisTypeSelect = async (selectedType: string) => {
-    setLoadingCommand(selectedType);
-    try {
-      await onRequestAnalysis(selectedType);
-      onClose();
-    } catch (error) {
-      console.error('Failed to request analysis:', error);
-    } finally {
-      setLoadingCommand(null);
-    }
-  };
-
-  const handleNoteLinkSelect = (noteId: string) => {
-    if (onLinkNote) {
-      onLinkNote(noteId);
-    } else {
-      setActiveNoteId(noteId);
-    }
-    onClose();
-  };
-
-  const handleInsertLink = () => {
-    setShowLinkInput(true);
-    setSelectedIndex(0);
-    setTimeout(() => inputRef.current?.focus(), 100);
-  };
-
-  const handleInsertLinkEmbed = () => {
-    setShowLinkEmbedInput(true);
-    setSelectedIndex(0);
-    setTimeout(() => inputRef.current?.focus(), 100);
-  };
-
-  const handleSubmitLink = () => {
-    if (!linkUrl.trim()) return;
-    
-    if (onInsertLink) {
-      onInsertLink(linkUrl, linkText || linkUrl);
-    }
-    onClose();
-  };
-
-  const handleSubmitLinkEmbed = () => {
-    if (!linkUrl.trim()) return;
-    
-    if (onInsertLinkEmbed) {
-      onInsertLinkEmbed(linkUrl);
-    }
-    onClose();
-  };
-
-  const handleInsertTable = () => {
-    setShowTableInput(true);
-    setSelectedIndex(0);
-  };
-
-  const handleSubmitTable = () => {
-    if (onInsertTable) {
-      onInsertTable(tableRows, tableCols);
-    }
-    onClose();
-  };
-
-  const handleGenerateTableFromContent = async () => {
-    setLoadingCommand('generate-table');
-    try {
-      if (onGenerateTableFromContent) {
-        await onGenerateTableFromContent();
-      }
-      onClose();
-    } catch (error) {
-      console.error('Failed to generate table from content:', error);
-    } finally {
-      setLoadingCommand(null);
-    }
-  };
-
-  // Create complete command list by merging type-specific and universal commands
-  const createCompleteCommands = (): CommandOption[] => {
-    const commands: CommandOption[] = [];
-
-    // Add type-specific commands with handlers
-    typeSpecificCommands.forEach(cmd => {
-      commands.push({
-        ...cmd,
-        action: createTypeSpecificHandler(cmd.id)
-      });
-    });
-
-    // Add universal commands with existing handlers
-    universalCommands.forEach(cmd => {
-      let action: () => void;
-      
-      switch (cmd.id) {
-        case 'ideas':
-          action = handleRequestIdeas;
-          break;
-        case 'analysis':
-          action = handleRequestAnalysis;
-          break;
-        case 'action-items':
-          action = createTypeSpecificHandler(cmd.id);
-          break;
-        case 'bullet-list':
-          action = () => { onInsertBulletList(); onClose(); };
-          break;
-        case 'numbered-list':
-          action = () => { onInsertNumberedList(); onClose(); };
-          break;
-        case 'heading-1':
-          action = () => { onInsertHeading(1); onClose(); };
-          break;
-        case 'heading-2':
-          action = () => { onInsertHeading(2); onClose(); };
-          break;
-        case 'heading-3':
-          action = () => { onInsertHeading(3); onClose(); };
-          break;
-        case 'table':
-          action = handleInsertTable;
-          break;
-        case 'summary':
-          action = createTypeSpecificHandler(cmd.id);
-          break;
-        default:
-          action = () => console.log(`Universal command not implemented: ${cmd.id}`);
-      }
-
-      commands.push({
-        ...cmd,
-        action
-      });
-    });
-
-    return commands;
-  };
-
-  const mainCommands = createCompleteCommands();
-
-  const analysisCommands: CommandOption[] = NOTE_TYPES.map(type => ({
-    id: type.value,
-    label: type.label,
-    description: type.description,
-    icon: <Brain className="w-4 h-4" />,
-    action: () => handleAnalysisTypeSelect(type.value),
-    category: 'Analysis'
-  }));
-
-  // Filter notes based on search term and exclude current note
-  const filteredNotes = availableNotes
-    .filter(note => 
-      String(note._id) !== currentNoteId && 
-      note.title.toLowerCase().includes(noteSearchTerm.toLowerCase())
-    );
-
-  const noteCommands: NoteOption[] = filteredNotes.map(note => ({
-    id: String(note._id),
-    title: note.title,
-    type: note.type,
-    icon: NOTE_TYPE_ICONS[note.type] || <Link className="w-4 h-4" />,
-    action: () => handleNoteLinkSelect(String(note._id)),
-  }));
-
-  const currentOptions = showAnalysisTypes ? analysisCommands : showNoteLinks ? noteCommands : mainCommands;
-
-  // Convert to display options for rendering
-  const displayOptions: DisplayOption[] = currentOptions.map(option => {
-    if ('label' in option) {
-      // CommandOption
-      return {
-        id: option.id,
-        label: option.label,
-        icon: option.icon,
-        action: option.action,
-        category: option.category
-      };
-    } else {
-      // NoteOption
-      return {
-        id: option.id,
-        label: option.title,
-        icon: option.icon,
-        action: option.action,
-        category: 'Notes'
-      };
-    }
+  // Use the main hook
+  const {
+    state,
+    setState,
+    selectedNoteTypeForCommands,
+    setSelectedNoteTypeForCommands,
+    operationState,
+    refinementState,
+    handleRefinementSelect,
+    handleGenerationCommandWithNoteType,
+    handleGenerationCommand,
+    handleUniversalCommand,
+    handleInternalPreviewAccept,
+    handleInternalPreviewRetry,
+    handleInternalPreviewReject,
+    handleCustomGeneration
+  } = useInlineCommandPalette({
+    isOpen,
+    noteType,
+    selectedText,
+    onClose,
+    onRefineText,
+    onAskAI,
+    onRequestIdeas,
+    onRequestAnalysis,
+    onInsertBulletList,
+    onInsertNumberedList,
+    onInsertHeading,
+    onAcceptRefinement,
+    onRejectRefinement,
+    onRetryRefinement
   });
 
-  // Calculate position to prevent cutoff
-  const calculatePosition = () => {
-    const menuWidth = 600;
-    const menuHeight = 400;
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const margin = 20;
-    
-    let finalLeft = position.left;
-    let finalTop = position.top;
-    
-    if (finalLeft + menuWidth > viewportWidth - margin) {
-      finalLeft = Math.max(margin, viewportWidth - menuWidth - margin);
+  // Reset input and selection when mode changes
+  useEffect(() => {
+    setUserInput('');
+    setState(prev => ({ ...prev, selectedIndex: 0 }));
+  }, [refinementMode, selectedNoteTypeForCommands, setState]);
+
+  // Get all available commands
+  const getAllCommands = (): DisplayOption[] => {
+    if (refinementMode) {
+      // Refinement mode - get refinement commands
+      if (selectedNoteTypeForCommands === 'all') {
+        const allNoteTypes = Object.keys(NOTE_TYPE_ICONS) as RefinementNoteType[];
+        const { coreRefinements, noteSpecificRefinements, advancedRefinements } = 
+          getRefinementsForNoteTypes(allNoteTypes);
+        
+        return [
+          ...coreRefinements,
+          ...noteSpecificRefinements,
+          ...advancedRefinements
+        ].map(cmd => ({
+          id: cmd.id,
+          label: cmd.label,
+          icon: cmd.icon,
+          action: () => handleRefinementSelect(cmd.id),
+          category: cmd.category
+        }));
+      } else {
+        const { allRefinements } = getRefinementCommandsForNoteType(selectedNoteTypeForCommands);
+        return allRefinements.map(cmd => ({
+          id: cmd.id,
+          label: cmd.label,
+          icon: cmd.icon,
+          action: () => handleRefinementSelect(cmd.id),
+          category: cmd.category
+        }));
+      }
+    } else {
+      // Generation mode - respect selectedNoteTypeForCommands
+      if (selectedNoteTypeForCommands === 'all') {
+        // Get commands from all note types
+        const allNoteTypes = Object.keys(NOTE_TYPE_ICONS) as NoteType[];
+        const allCommands: DisplayOption[] = [];
+        
+        // Collect universal commands (only once)
+        const { universalCommands } = getCommandsForNoteType(noteType as NoteType);
+        allCommands.push(...universalCommands.map(cmd => ({
+          id: cmd.id,
+          label: cmd.label,
+          icon: cmd.icon,
+          action: () => handleUniversalCommand(cmd.id),
+          category: cmd.category
+        })));
+        
+        // Collect type-specific commands from all types
+        const NOTE_TYPE_CONFIG: Record<NoteType, { label: string }> = {
+          idea_bank: { label: 'Idea Bank' },
+          content_script: { label: 'Content Script' },
+          analytics_insight: { label: 'Analytics Insight' },
+          collaboration_note: { label: 'Collaboration Note' },
+          reflection_journal: { label: 'Reflection Journal' },
+          task_checklist: { label: 'Task Checklist' },
+          email_draft: { label: 'Email Draft' }
+        };
+        
+        for (const nt of allNoteTypes) {
+          const { typeSpecificCommands } = getCommandsForNoteType(nt);
+          allCommands.push(...typeSpecificCommands.map(cmd => ({
+            id: `${nt}-${cmd.id}`,
+            label: `${NOTE_TYPE_CONFIG[nt].label}: ${cmd.label}`,
+            icon: cmd.icon,
+            action: () => handleGenerationCommandWithNoteType(nt, cmd.id, cmd.description),
+            category: `${NOTE_TYPE_CONFIG[nt].label} Commands`
+          })));
+        }
+        
+        return allCommands;
+      } else {
+        // Get commands for specific note type
+        const { typeSpecificCommands, universalCommands } = getCommandsForNoteType(selectedNoteTypeForCommands as NoteType);
+        
+        return [
+          ...typeSpecificCommands.map(cmd => ({
+            id: cmd.id,
+            label: cmd.label,
+            icon: cmd.icon,
+            action: () => handleGenerationCommandWithNoteType(selectedNoteTypeForCommands as NoteType, cmd.id, cmd.description),
+            category: cmd.category
+          })),
+          ...universalCommands.map(cmd => ({
+            id: cmd.id,
+            label: cmd.label,
+            icon: cmd.icon,
+            action: () => handleUniversalCommand(cmd.id),
+            category: cmd.category
+          }))
+        ];
+      }
     }
-    if (finalLeft < margin) {
-      finalLeft = margin;
-    }
-    
-    if (finalTop + menuHeight > viewportHeight - margin) {
-      finalTop = Math.max(margin, viewportHeight - menuHeight - margin);
-    }
-    if (finalTop < margin) {
-      finalTop = margin;
-    }
-    
-    return { left: finalLeft, top: finalTop };
   };
 
-  // Handle keyboard navigation
+  // Filter commands based on user input
+  const getFilteredCommands = (): DisplayOption[] => {
+    const allCommands = getAllCommands();
+    
+    if (!userInput.trim()) {
+      return allCommands;
+    }
+    
+    const searchTerm = userInput.toLowerCase();
+    return allCommands.filter(cmd => 
+      cmd.label.toLowerCase().includes(searchTerm) ||
+      cmd.category?.toLowerCase().includes(searchTerm)
+    );
+  };
+
+  // Handle custom user input execution from header
+  const handleCustomInputExecute = async (input: string) => {
+    if (!input.trim()) return;
+    
+    if (refinementMode) {
+      // Send custom input to refinement
+      if (onRefineText && selectedText) {
+        await handleRefinementSelect(`custom:${input}`);
+      }
+    } else {
+      // Send custom input to generation with proper loading state
+      await handleCustomGeneration(input);
+    }
+  };
+
+  // Enhanced keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return;
 
+      // Handle internal refinement preview shortcuts
+      if (refinementState.showInternalPreview) {
+        switch (e.key) {
+          case 'Enter':
+            e.preventDefault();
+            handleInternalPreviewAccept();
+            break;
+          case 'r':
+          case 'R':
+            e.preventDefault();
+            handleInternalPreviewRetry();
+            break;
+          case 'Escape':
+            e.preventDefault();
+            if (refinementState.previewTransition === 'completing') {
+              onClose(); // Force close during completion
+            } else {
+              // Go back to command list
+              setSelectedNoteTypeForCommands('all');
+            }
+            break;
+          case 'Backspace':
+            e.preventDefault();
+            // Go back to command list
+            setSelectedNoteTypeForCommands('all');
+            break;
+        }
+        return;
+      }
+
+      // Handle external refinement preview shortcuts (fallback)
+      // 🎯 FIX: Only handle external refinement when palette is OPEN and showing preview
+      // This prevents competing ESC handlers from resetting refinement state during transitions
+      if (showRefinementPreview && isOpen && !refinementState.showInternalPreview) {
+        switch (e.key) {
+          case 'Enter':
+            e.preventDefault();
+            onAcceptRefinement?.();
+            break;
+          case 'r':
+          case 'R':
+            e.preventDefault();
+            onRetryRefinement?.();
+            break;
+          case 'Escape':
+            e.preventDefault();
+            onRejectRefinement?.();
+            break;
+        }
+        return;
+      }
+
+      // Disable navigation during operations
+      if (operationState.isOperationInProgress || refinementState.isProcessingRefinement) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          onClose();
+        }
+        return;
+      }
+
+      // Normal command palette navigation with filtering
+      const filteredCommands = getFilteredCommands();
+      
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
-          e.stopPropagation();
-          if (showPromptSuggestions) {
-            // Handle prompt suggestions navigation
-            return;
-          }
-          setSelectedIndex(prev => 
-            showAIPrompt ? prev : (prev + 1) % displayOptions.length
-          );
+          setState(prev => ({ 
+            ...prev, 
+            selectedIndex: (prev.selectedIndex + 1) % Math.max(1, filteredCommands.length)
+          }));
           break;
         case 'ArrowUp':
           e.preventDefault();
-          e.stopPropagation();
-          if (showPromptSuggestions) {
-            // Handle prompt suggestions navigation
-            return;
-          }
-          setSelectedIndex(prev => 
-            showAIPrompt ? prev : (prev - 1 + displayOptions.length) % displayOptions.length
-          );
+          setState(prev => ({ 
+            ...prev, 
+            selectedIndex: (prev.selectedIndex - 1 + Math.max(1, filteredCommands.length)) % Math.max(1, filteredCommands.length)
+          }));
           break;
         case 'Enter':
           e.preventDefault();
-          e.stopPropagation();
-          if (showAIPrompt) {
-            handleSubmitAIPrompt();
-          } else if (showLinkInput) {
-            handleSubmitLink();
-          } else if (showLinkEmbedInput) {
-            handleSubmitLinkEmbed();
-          } else if (showTableInput) {
-            handleSubmitTable();
-          } else {
-            displayOptions[selectedIndex]?.action();
+          if (filteredCommands.length > 0 && state.selectedIndex < filteredCommands.length) {
+            // Execute selected preset command
+            filteredCommands[state.selectedIndex]?.action();
+          } else if (userInput.trim()) {
+            // Execute custom user input
+            handleCustomInputExecute(userInput.trim());
           }
           break;
         case 'Escape':
           e.preventDefault();
-          e.stopPropagation();
-          if (showAIPrompt || showAnalysisTypes || showNoteLinks || showLinkInput || showLinkEmbedInput || showTableInput || showPromptSuggestions) {
-            setShowAIPrompt(false);
-            setShowAnalysisTypes(false);
-            setShowLinkInput(false);
-            setShowLinkEmbedInput(false);
-            setShowTableInput(false);
-            setShowPromptSuggestions(false);
-            setAIPrompt('');
-            setNoteSearchTerm('');
-            setLinkUrl('');
-            setLinkText('');
-            setTableRows(3);
-            setTableCols(3);
-            setSelectedIndex(0);
-          } else {
-            onClose();
-          }
-          break;
-        case 'k':
-          if (e.metaKey || e.ctrlKey) {
-            e.preventDefault();
-            e.stopPropagation();
-          }
+          onClose();
           break;
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, selectedIndex, showAIPrompt, showAnalysisTypes, showNoteLinks, showLinkInput, showLinkEmbedInput, showTableInput, showPromptSuggestions, aiPrompt, linkUrl, tableRows, tableCols, displayOptions]);
+  }, [isOpen, state.selectedIndex, userInput, showRefinementPreview, operationState.isOperationInProgress, refinementState, onAcceptRefinement, onRejectRefinement, onRetryRefinement]);
 
-  // Handle click outside
+  // Click outside handler
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -492,45 +338,22 @@ export function InlineCommandPalette({
       }
     };
 
-    if (isOpen) {
+    if (isOpen && !operationState.isOperationInProgress && !refinementState.isProcessingRefinement) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen, onClose]);
-
-  // Reset state when opening
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedIndex(0);
-      setShowAIPrompt(false);
-      setShowAnalysisTypes(false);
-      setShowLinkInput(false);
-      setShowLinkEmbedInput(false);
-      setShowTableInput(false);
-      setShowPromptSuggestions(false);
-      setAIPrompt('');
-      setNoteSearchTerm('');
-      setLinkUrl('');
-      setLinkText('');
-      setTableRows(3);
-      setTableCols(3);
-      setLoadingCommand(null);
-      // Focus the main input if not in a special input mode
-      setTimeout(() => {
-        if (!showAIPrompt && !showNoteLinks && !showLinkInput && !showLinkEmbedInput && !showTableInput) {
-          mainInputRef.current?.focus();
-        }
-      }, 50);
-    }
-  }, [isOpen]);
+  }, [isOpen, operationState.isOperationInProgress, refinementState.isProcessingRefinement, onClose]);
 
   if (!isOpen) return null;
 
-  const finalPosition = calculatePosition();
+
+
+  const finalPosition = calculatePalettePosition(position);
+  const filteredCommands = getFilteredCommands();
 
   // Group commands by category
-  const groupedCommands = displayOptions.reduce((acc, command) => {
+  const groupedCommands = filteredCommands.reduce((acc, command) => {
     const category = command.category || 'Other';
     if (!acc[category]) acc[category] = [];
     acc[category].push(command);
@@ -538,333 +361,147 @@ export function InlineCommandPalette({
   }, {} as Record<string, DisplayOption[]>);
 
   return (
-    <div
+    <motion.div
       ref={menuRef}
-      className="fixed z-[200] bg-background border border-border rounded-lg shadow-2xl overflow-hidden backdrop-blur-sm"
+      drag
+      dragMomentum={false}
+      whileDrag={{ cursor: "grabbing" }}
+      className="fixed z-[200] bg-background border border-border rounded-lg shadow-2xl overflow-hidden backdrop-blur-sm cursor-grab"
       style={{
         top: finalPosition.top + 'px',
         left: finalPosition.left + 'px',
-        width: '600px',
-        maxHeight: '400px',
+        width: `${PALETTE_CONFIG.width}px`,
+        maxHeight: `${PALETTE_CONFIG.maxHeight}px`,
         maxWidth: 'calc(100vw - 40px)'
       }}
     >
-      {/* Search Input */}
-      <div className="p-3 border-b border-border">
-        {showLinkInput ? (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Link className="w-4 h-4 text-muted-foreground" />
-              <input
-                type="url"
-                placeholder="Enter URL (e.g., https://www.example.com/page)"
-                className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
-                value={linkUrl}
-                onChange={(e) => setLinkUrl(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && linkUrl.trim()) {
-                    if (!linkText) {
-                      document.getElementById('link-text-input')?.focus();
-                    } else {
-                      handleSubmitLink();
-                    }
-                  }
-                  if (e.key === 'Tab' && linkUrl.trim()) {
-                    e.preventDefault();
-                    document.getElementById('link-text-input')?.focus();
-                  }
-                }}
-                autoFocus
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4" />
-              <input
-                id="link-text-input"
-                type="text"
-                placeholder="Display text (e.g., 'Ancient History Timeline')"
-                className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
-                value={linkText}
-                onChange={(e) => setLinkText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && linkUrl.trim()) {
-                    handleSubmitLink();
-                  }
-                }}
-              />
-            </div>
-            {(linkUrl.trim() || linkText.trim()) && (
-              <div className="flex items-center gap-2 px-2 py-1 bg-muted/30 rounded text-xs text-muted-foreground">
-                <span className="font-mono">Preview:</span>
-                <span className="font-mono text-blue-600 dark:text-blue-400">
-                  [{linkText || linkUrl}]({linkUrl})
-                </span>
-              </div>
-            )}
-          </div>
-        ) : showLinkEmbedInput ? (
-          <div className="flex items-center gap-2">
-            <ExternalLink className="w-4 h-4 text-muted-foreground" />
-            <input
-              type="url"
-              placeholder="Enter URL to embed (YouTube, images, etc.)"
-              className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
-              value={linkUrl}
-              onChange={(e) => setLinkUrl(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && linkUrl.trim()) {
-                  handleSubmitLinkEmbed();
-                }
-              }}
-              autoFocus
-            />
-          </div>
-        ) : showTableInput ? (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Table className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Table size:</span>
-            </div>
-            <div className="flex items-center gap-4 pl-6">
-              <div className="flex items-center gap-2">
-                <label htmlFor="table-rows-input" className="text-xs text-muted-foreground">Rows:</label>
-                <input
-                  id="table-rows-input"
-                  type="number"
-                  min="2"
-                  max="10"
-                  value={tableRows}
-                  onChange={(e) => setTableRows(Math.max(2, Math.min(10, parseInt(e.target.value) || 2)))}
-                  className="w-16 bg-transparent text-sm text-center border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary/30"
-                  autoFocus
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <label htmlFor="table-cols-input" className="text-xs text-muted-foreground">Cols:</label>
-                <input
-                  id="table-cols-input"
-                  type="number"
-                  min="2"
-                  max="8"
-                  value={tableCols}
-                  onChange={(e) => setTableCols(Math.max(2, Math.min(8, parseInt(e.target.value) || 2)))}
-                  className="w-16 bg-transparent text-sm text-center border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary/30"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleSubmitTable();
-                    }
-                  }}
-                />
-              </div>
-            </div>
-            <div className="flex items-center gap-2 px-2 py-1 bg-muted/30 rounded text-xs text-muted-foreground">
-              <span className="font-mono">Preview:</span>
-              <span className="font-mono text-blue-600 dark:text-blue-400">
-                {tableRows}×{tableCols} table with headers
-              </span>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-muted-foreground" />
-            <input
-              ref={mainInputRef}
-              type="text"
-              placeholder={showNoteLinks ? "Find notes to link..." : "What would you like to create?"}
-              className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
-              value={showAIPrompt ? aiPrompt : showNoteLinks ? noteSearchTerm : ''}
-              onChange={(e) => {
-                if (showAIPrompt) {
-                  setAIPrompt(e.target.value);
-                } else if (showNoteLinks) {
-                  setNoteSearchTerm(e.target.value);
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && showAIPrompt && aiPrompt.trim()) {
-                  handleSubmitAIPrompt();
-                }
-              }}
-              onFocus={() => {
-                if (!showAIPrompt && !showNoteLinks) {
-                  setShowAIPrompt(true);
-                }
-              }}
-            />
-          </div>
-        )}
-      </div>
+      <CommandPaletteHeader
+        operationState={operationState}
+        refinementState={refinementState}
+        refinementMode={refinementMode}
+        selectedText={selectedText}
+        noteType={noteType}
+        selectedNoteTypeForCommands={selectedNoteTypeForCommands}
+        onNoteTypeSelect={setSelectedNoteTypeForCommands}
+        userInput={userInput}
+        onUserInputChange={setUserInput}
+        onCustomInputExecute={handleCustomInputExecute}
+        isOpen={isOpen}
+      />
 
       {/* Content */}
       <div className="max-h-80 overflow-y-auto">
-        {showLinkInput && linkUrl.trim() ? (
-          <div className="p-3">
-            <button
-              onClick={handleSubmitLink}
-              className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-muted/50 rounded-md transition-colors"
-            >
-              <Link className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <div className="flex-1 text-left">
-                <div className="text-sm font-medium">Insert link</div>
-                <div className="text-xs text-muted-foreground truncate">
-                  Will insert: [{linkText || linkUrl}]({linkUrl})
+        {refinementState.showInternalPreview ? (
+          <div className={`transition-all duration-300 ${
+            refinementState.previewTransition === 'showing' ? 'opacity-100 translate-y-0' : 
+            refinementState.previewTransition === 'loading' ? 'opacity-50 translate-y-2' :
+            'opacity-0 translate-y-4'
+          }`}>
+            {(refinementState.internalRefinedText || refinedTextPreview) ? (
+              <TextRefinementPreview
+                originalText={selectedText}
+                refinedText={refinementState.internalRefinedText || refinedTextPreview || ''}
+                onAccept={handleInternalPreviewAccept}
+                onReject={handleInternalPreviewReject}
+                onRetry={handleInternalPreviewRetry}
+                isProcessing={refinementState.previewTransition === 'completing'}
+              />
+            ) : (
+              <div className="p-4 flex items-center justify-center">
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <Loader2 className="w-5 h-5 animate-spin text-purple-600 dark:text-yellow-400" />
+                  <span>Waiting for refined text...</span>
                 </div>
               </div>
-            </button>
+            )}
           </div>
-        ) : showLinkEmbedInput && linkUrl.trim() ? (
-          <div className="p-3">
-            <button
-              onClick={handleSubmitLinkEmbed}
-              className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-muted/50 rounded-md transition-colors"
-            >
-              <ExternalLink className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              <div className="flex-1 text-left">
-                <div className="text-sm font-medium">Embed link</div>
-                <div className="text-xs text-muted-foreground truncate">{linkUrl}</div>
-              </div>
-            </button>
-          </div>
-        ) : showTableInput ? (
-          <div className="p-3">
-            <button
-              onClick={handleSubmitTable}
-              className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-muted/50 rounded-md transition-colors"
-            >
-              <Table className="w-4 h-4 text-green-600 dark:text-green-400" />
-              <div className="flex-1 text-left">
-                <div className="text-sm font-medium">Create table</div>
-                <div className="text-xs text-muted-foreground">
-                  {tableRows} rows × {tableCols} columns with headers
-                </div>
-              </div>
-            </button>
-          </div>
-        ) : showAIPrompt && showPromptSuggestions && defaultPrompts.length > 0 ? (
-          <div className="py-2">
-            <div className="px-3 py-1">
-              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Quick Ideas for {noteType.replace('_', ' ')} ✨
-              </h3>
+        ) : refinementState.previewTransition === 'loading' ? (
+          <div className="p-4 flex items-center justify-center">
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <Loader2 className="w-5 h-5 animate-spin text-purple-600 dark:text-yellow-400" />
+              <span>Refining your text...</span>
             </div>
-            <div className="space-y-0.5">
-              {defaultPrompts.slice(0, 5).map((prompt, index) => (
-                <button
-                  key={index}
-                  onClick={() => handlePromptSuggestionSelect(prompt)}
-                  className="w-full flex items-start gap-3 px-3 py-2 text-left hover:bg-muted/50 rounded-md transition-colors"
-                >
-                  <Lightbulb className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">{prompt}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : showAIPrompt && aiPrompt.trim() ? (
-          <div className="p-3">
-            <button
-              onClick={handleSubmitAIPrompt}
-              disabled={loadingCommand === 'ask-ai'}
-              className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-muted/50 rounded-md transition-colors"
-            >
-              <Bot className="w-4 h-4 text-purple-500 dark:text-yellow-500" />
-              <span className="text-sm">Create: "{aiPrompt}"</span>
-              {loadingCommand === 'ask-ai' && <Loader2 className="w-4 h-4 animate-spin ml-auto" />}
-            </button>
           </div>
         ) : (
           <div className="py-2">
-            {Object.entries(groupedCommands).map(([category, commands]) => (
-              <div key={category} className="mb-3 last:mb-0">
-                <div className="px-3 py-1">
-                  <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    {category}
-                  </h3>
-                </div>
-                <div className="space-y-0.5">
-                  {commands.map((option, index) => {
-                    const globalIndex = displayOptions.indexOf(option);
-                    const isOptionLoading = loadingCommand === option.id;
-                    const isSelected = selectedIndex === globalIndex;
-                    
-                    return (
-                      <button
-                        key={option.id}
-                        onClick={option.action}
-                        disabled={isOptionLoading}
-                        className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
-                          isSelected 
-                            ? 'bg-purple-500/10 dark:bg-yellow-500/10 text-purple-600 dark:text-yellow-400' 
-                            : 'hover:bg-muted/50 text-foreground'
-                        } ${isOptionLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                      >
-                        <div className="flex-shrink-0">
-                          {isOptionLoading ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <div className={isSelected ? 'text-purple-600 dark:text-yellow-400' : 'text-muted-foreground'}>
-                              {option.icon}
-                            </div>
-                          )}
-                        </div>
-                        <span className="text-sm font-medium">{option.label}</span>
-                        {isSelected && (
-                          <ArrowRight className="w-3 h-3 ml-auto text-purple-600 dark:text-yellow-400" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+            {filteredCommands.length === 0 && userInput.trim() ? (
+              <div className="p-4 text-center">
+                <p className="text-sm text-muted-foreground mb-2">No preset commands found for "{userInput}"</p>
+                <p className="text-xs text-muted-foreground">The input field above will execute your custom {refinementMode ? 'refinement' : 'prompt'}</p>
               </div>
-            ))}
+            ) : (
+              Object.entries(groupedCommands).map(([category, commands]) => (
+                <div key={category} className="mb-3 last:mb-0">
+                  <div className="px-3 py-1">
+                    <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      {category}
+                    </h3>
+                  </div>
+                  <div className="space-y-0.5">
+                    {commands.map((option, index) => {
+                      const globalIndex = filteredCommands.indexOf(option);
+                      const isOptionLoading = operationState.loadingCommandId === option.id;
+                      const isOptionCompleted = operationState.completedCommandId === option.id;
+                      const isSelected = state.selectedIndex === globalIndex;
+                      const isDisabled = operationState.isOperationInProgress || operationState.completedCommandId !== null;
+                      
+                      return (
+                        <button
+                          key={option.id}
+                          onClick={option.action}
+                          disabled={isDisabled}
+                          className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-all duration-200 ${
+                            isOptionCompleted
+                              ? 'bg-green-500/10 text-green-600 dark:text-green-400 ring-2 ring-green-500/20'
+                              : isOptionLoading
+                              ? 'bg-purple-500/20 dark:bg-yellow-500/20 text-purple-600 dark:text-yellow-400 ring-2 ring-purple-500/30 dark:ring-yellow-500/30'
+                              : isSelected && !isDisabled
+                              ? 'bg-purple-500/10 dark:bg-yellow-500/10 text-purple-600 dark:text-yellow-400' 
+                              : isDisabled
+                              ? 'opacity-50 text-muted-foreground'
+                              : 'hover:bg-muted/50 text-foreground'
+                          } ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                        >
+                          <div className="flex-shrink-0">
+                            {isOptionCompleted ? (
+                              <Loader2 className="w-4 h-4 text-green-500 animate-pulse" />
+                            ) : isOptionLoading ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-purple-600 dark:text-yellow-400" />
+                            ) : (
+                              <div className={
+                                isSelected && !isDisabled 
+                                  ? 'text-purple-600 dark:text-yellow-400' 
+                                  : isDisabled 
+                                  ? 'text-muted-foreground/50' 
+                                  : 'text-muted-foreground'
+                              }>
+                                {option.icon}
+                              </div>
+                            )}
+                          </div>
+                          <span className={`text-sm font-medium ${
+                            isOptionCompleted ? 'font-semibold' : ''
+                          }`}>
+                            {option.label}
+                          </span>
+                          {isSelected && !isDisabled && !isOptionLoading && !isOptionCompleted && (
+                            <ArrowRight className="w-3 h-3 ml-auto text-purple-600 dark:text-yellow-400" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
       </div>
 
-      {/* Footer */}
-      <div className="px-3 py-2 border-t border-border bg-muted/5">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <div className="flex items-center gap-3">
-            {showLinkInput ? (
-              <>
-                <span className="flex items-center gap-1">
-                  <kbd className="px-1 py-0.5 bg-muted rounded text-xs">Tab</kbd>
-                  to next field
-                </span>
-                <span className="flex items-center gap-1">
-                  <kbd className="px-1 py-0.5 bg-muted rounded text-xs">↵</kbd>
-                  to insert
-                </span>
-              </>
-            ) : showTableInput ? (
-              <>
-                <span className="flex items-center gap-1">
-                  <kbd className="px-1 py-0.5 bg-muted rounded text-xs">↵</kbd>
-                  to create table
-                </span>
-                <span className="flex items-center gap-1">
-                  Min 2×2, Max 10×8
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="flex items-center gap-1">
-                  <kbd className="px-1 py-0.5 bg-muted rounded text-xs">↑↓</kbd>
-                  to navigate
-                </span>
-                <span className="flex items-center gap-1">
-                  <kbd className="px-1 py-0.5 bg-muted rounded text-xs">↵</kbd>
-                  to select
-                </span>
-              </>
-            )}
-          </div>
-          <span className="flex items-center gap-1">
-            <kbd className="px-1 py-0.5 bg-muted rounded text-xs">esc</kbd>
-            to close
-          </span>
-        </div>
-      </div>
-    </div>
+      <CommandPaletteFooter
+        operationState={operationState}
+        refinementState={refinementState}
+      />
+    </motion.div>
   );
 } 

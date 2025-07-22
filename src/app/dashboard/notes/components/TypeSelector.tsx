@@ -38,16 +38,7 @@ export function TypeSelector({ noteId, userId, currentType, typeGenerated, onTyp
   // Convex mutation
   const updateNoteMutation = useMutation(api.notes.updateNote);
 
-  // Debug logging
-  useEffect(() => {
-    console.log('[TypeSelector] Props changed:', { 
-      noteId, 
-      currentType, 
-      optimisticType, 
-      hasOptimisticUpdate,
-      isSyncing 
-    });
-  }, [noteId, currentType, optimisticType, hasOptimisticUpdate, isSyncing]);
+
 
   // Only update optimistic type from props if we don't have a pending optimistic update
   // OR if the prop matches our optimistic value (sync completed)
@@ -61,29 +52,19 @@ export function TypeSelector({ noteId, userId, currentType, typeGenerated, onTyp
   }, [currentType, optimisticType, hasOptimisticUpdate]);
 
   const handleTypeSelect = async (newType: NoteType) => {
-    console.log('[TypeSelector] ===== Type selection started =====');
-    console.log('[TypeSelector] Selected type:', newType);
-    console.log('[TypeSelector] Current optimistic type:', optimisticType);
-    console.log('[TypeSelector] Current prop type:', currentType);
-    
     if (newType !== optimisticType) {
-      console.log('[TypeSelector] Types are different, proceeding with selection...');
-      
       // 1. INSTANTLY update the UI (optimistic update)
-      console.log('[TypeSelector] Setting optimistic type to:', newType);
       setOptimisticType(newType);
       setHasOptimisticUpdate(true);
       setIsOpen(false);
       
       // 2. Call the optional callback immediately for UI consistency
-      console.log('[TypeSelector] Calling onTypeChange callback...');
       onTypeChange?.(newType);
       
       // 3. Call the mutation in the background
-      console.log('[TypeSelector] Starting Convex mutation...');
       setIsSyncing(true);
       try {
-        const result = await updateNoteMutation({
+        await updateNoteMutation({
           noteId: noteId as Id<"notes">,
           userId,
           updates: {
@@ -91,8 +72,6 @@ export function TypeSelector({ noteId, userId, currentType, typeGenerated, onTyp
             typeGenerated: false // Clear the AI-generated flag when user manually changes type
           }
         });
-        console.log('[TypeSelector] Mutation successful, result:', result);
-        console.log('[TypeSelector] Successfully synced note type to:', newType);
         // Don't reset hasOptimisticUpdate here - let the useEffect handle it when props update
       } catch (error) {
         console.error('[TypeSelector] Mutation failed:', error);
@@ -102,17 +81,13 @@ export function TypeSelector({ noteId, userId, currentType, typeGenerated, onTyp
         onTypeChange?.(currentType);
       } finally {
         setIsSyncing(false);
-        console.log('[TypeSelector] ===== Type selection completed =====');
       }
     } else {
-      console.log('[TypeSelector] Types are the same, just closing dropdown');
       setIsOpen(false);
     }
   };
 
   const handleToggle = () => {
-    console.log('[TypeSelector] Toggle clicked, current isOpen:', isOpen);
-    
     if (!isOpen && buttonRef.current) {
       // Calculate position when opening
       const rect = buttonRef.current.getBoundingClientRect();
@@ -132,11 +107,7 @@ export function TypeSelector({ noteId, userId, currentType, typeGenerated, onTyp
       const isInsideButton = buttonRef.current?.contains(target);
       const isInsideDropdown = dropdownRef.current?.contains(target);
       
-      console.log('[TypeSelector] Click detected:', {
-        isInsideButton,
-        isInsideDropdown,
-        target: (target as Element)?.tagName
-      });
+
       
       // Only close if clicking outside both button and dropdown
       if (!isInsideButton && !isInsideDropdown) {
