@@ -10,12 +10,12 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor/rich-text-edito
 import { NoteMeta } from './components/NoteMeta';
 import { TypeSelector } from './components/TypeSelector';
 import { ImageGalleryModal } from './components/ImageGalleryModal';
-import { Image } from 'lucide-react';
+import { Image, Wand2, Loader2 } from 'lucide-react';
 import type { Id } from "@/convex/_generated/dataModel";
 import { useNotes } from '@/app/context/notes-context';
-import { useAuth } from '@/app/context/auth-context';
 import { NoteContentRenderer } from './components/NoteContentRenderer';
 import { useContentResolver } from '@/lib/content-resolver';
+import { getCurrentUserId } from '@/app/lib/api-helpers';
 
 interface NoteAreaProps {
   note: Note;
@@ -202,7 +202,7 @@ export function NoteArea({
   forcePreview = false,
 }: NoteAreaProps) {
   // Get all notes from context for tag suggestions
-  const { notes, canNavigateBack, navigationStack } = useNotes();
+  const { notes, canNavigateBack, navigationStack, generateMetadataManually, isGeneratingMetadata } = useNotes();
   // Use the live query conditionally with "skip" parameter to avoid conditional hook call
   const liveNoteData = useQuery(
     api.notes.getNote, 
@@ -289,6 +289,27 @@ export function NoteArea({
     onSave(content, note.title);
   };
 
+  // Smart Title + Tags button logic
+  const shouldShowSmartButton = useMemo(() => {
+    // Show button if content has ≥10 characters
+    const hasEnoughContent = content.trim().length >= 10;
+    
+    // Always show if content is sufficient - let user decide if they want to regenerate
+    return hasEnoughContent && !note.isTemporary;
+  }, [content, note.isTemporary]);
+
+  const handleGenerateMetadata = useCallback(async () => {
+    if (!shouldShowSmartButton || isGeneratingMetadata) return;
+    
+    await flush(); // Save current content first
+    const success = await generateMetadataManually(String(note._id), content.trim());
+    
+    if (success) {
+      // The API will update the note automatically, and the UI will reflect the changes
+      // due to the live query updating the note data
+    }
+  }, [shouldShowSmartButton, isGeneratingMetadata, flush, generateMetadataManually, note._id, content]);
+
   // AI handlers that return values for RichTextEditor
   const handleAskAI = useCallback(async (prompt: string) => {
     try {
@@ -334,8 +355,7 @@ export function NoteArea({
     onBack(content);
   };
 
-  const { firebaseUser } = useAuth();
-  const userId = firebaseUser?.uid;
+  const userId = getCurrentUserId();
   const { allContent: allLinkableContent } = useContentResolver(userId);
 
   React.useEffect(() => {
@@ -388,13 +408,37 @@ export function NoteArea({
           noteTagData={noteTagData}
         />
         
-        <TypeSelector
-          noteId={note._id}
-          userId={note.userId}
-          currentType={note.type || 'idea_bank'}
-          typeGenerated={note.typeGenerated}
-          onTypeChange={handleTypeChange}
-        />
+        {/* Smart Title + Tags Button */}
+        <div className="flex items-center gap-3">
+          {shouldShowSmartButton && (
+            <button
+              onClick={handleGenerateMetadata}
+              disabled={isGeneratingMetadata}
+              className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium bg-background hover:bg-muted text-foreground border border-border rounded-md transition-all duration-200 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Generate smart title and tags using AI"
+            >
+              {isGeneratingMetadata ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  <span>Generating...</span>
+                </>
+              ) : (
+                <>
+                  <Wand2 size={14} />
+                  <span>Smart Title + Tags</span>
+                </>
+              )}
+            </button>
+          )}
+          
+          <TypeSelector
+            noteId={note._id}
+            userId={note.userId}
+            currentType={note.type || 'idea_bank'}
+            typeGenerated={note.typeGenerated}
+            onTypeChange={handleTypeChange}
+          />
+        </div>
       </div>
       
       {/* Main editor area */}

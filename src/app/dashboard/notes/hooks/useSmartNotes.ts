@@ -15,6 +15,9 @@ interface SmartNotesHook {
   updateNote: (noteId: string | Id<"notes">, updateFields: NoteUpdate, force?: boolean) => Promise<Note | null>;
   activeNoteId: string | undefined;
   setActiveNoteId: (id: string | undefined) => void;
+  // Manual metadata generation functions
+  generateMetadataManually: (noteId: string, noteContent: string) => Promise<boolean>;
+  isGeneratingMetadata: boolean;
 }
 
 export function useSmartNotes(userId: string | undefined): SmartNotesHook {
@@ -24,6 +27,7 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
   // State variables
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [activeNoteId, setActiveNoteId] = useState<string | undefined>(undefined);
+  const [isGeneratingMetadata, setIsGeneratingMetadata] = useState<boolean>(false);
 
   // Convex mutations
   const createNoteConvex = useMutation(api.noteMutations.createNote);
@@ -60,17 +64,18 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
     });
   }, [notesFromConvex]);
 
-  // Debounced metadata generation
-  const generateMetadata = useCallback(
-    (noteId: string, noteContent: string) => {
-
-      
+  // Manual metadata generation function
+  const generateMetadataManually = useCallback(
+    async (noteId: string, noteContent: string): Promise<boolean> => {
       // Skip if content is too short
-      if (!noteContent || noteContent.trim().length < 10) return;
+      if (!noteContent || noteContent.trim().length < 10) {
+        toast.error("Need at least 10 characters to generate smart title and tags.");
+        return false;
+      }
       
       // PREVENT DUPLICATES
       if (metadataPending.current[noteId]) {
-        return;
+        return false;
       }
       
       // Cancel any existing request for this note
@@ -84,52 +89,56 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
         clearTimeout(metadataTimers.current[noteId]);
       }
       
-      // Set up new debounced request
-      metadataTimers.current[noteId] = setTimeout(async () => {
-        const controller = new AbortController();
-        abortControllers.current[noteId] = controller;
-        metadataPending.current[noteId] = true;
-        
-        try {
-          const apiKey = await getApiKey();
-          if (!apiKey) {
-            toast.error("Please sign in again to generate metadata.");
-            return;
-          }
-
-          const response = await fetch('/api/smart-notes/generate-metadata', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({ noteId, noteContent }),
-            signal: controller.signal,
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            const friendlyError = errorData.message?.includes('rate limit')
-              ? "We're getting lots of love from creators right now! Please take a quick break and try again in a moment. 🎨✨"
-              : errorData.message || "We hit a creative block while generating insights. Your work is safe - please try again!";
-            toast.error(friendlyError);
-          }
-        } catch (error) {
-          if (error instanceof Error && error.name === 'AbortError') {
-            // Request was cancelled, ignore
-            return;
-          }
-          
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          const friendlyError = errorMessage.includes('rate limit')
-            ? "We're getting lots of love from creators right now! Please take a quick break and try again in a moment. 🎨✨"
-            : `We hit a creative block: ${errorMessage}. Your work is safe - please try again!`;
-          toast.error(friendlyError);
-        } finally {
-          delete abortControllers.current[noteId];
-          delete metadataPending.current[noteId];
+      setIsGeneratingMetadata(true);
+      const controller = new AbortController();
+      abortControllers.current[noteId] = controller;
+      metadataPending.current[noteId] = true;
+      
+      try {
+        const apiKey = await getApiKey();
+        if (!apiKey) {
+          toast.error("Please sign in again to generate metadata.");
+          return false;
         }
-      }, 500); // 500ms debounce
+
+        const response = await fetch('/api/smart-notes/generate-metadata', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({ noteId, noteContent }),
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          const friendlyError = errorData.message?.includes('rate limit')
+            ? "We're getting lots of love from creators right now! Please take a quick break and try again in a moment. 🎨✨"
+            : errorData.message || "We hit a creative block while generating insights. Your work is safe - please try again!";
+          toast.error(friendlyError);
+          return false;
+        }
+
+        toast.success("✨ Smart title and tags generated!");
+        return true;
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          // Request was cancelled, ignore
+          return false;
+        }
+        
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const friendlyError = errorMessage.includes('rate limit')
+          ? "We're getting lots of love from creators right now! Please take a quick break and try again in a moment. 🎨✨"
+          : `We hit a creative block: ${errorMessage}. Your work is safe - please try again!`;
+        toast.error(friendlyError);
+        return false;
+      } finally {
+        delete abortControllers.current[noteId];
+        delete metadataPending.current[noteId];
+        setIsGeneratingMetadata(false);
+      }
     },
     []
   );
@@ -160,7 +169,7 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
     }
   }, [userId, createNoteConvex]);
 
-  // Update existing note
+  // Update existing note (auto-triggering logic removed)
   const updateNote = useCallback(async (
     noteId: string | Id<"notes">,
     updateFields: NoteUpdate,
@@ -189,23 +198,7 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
         updates: cleanedUpdateFields,
       });
 
-      // 🎯 PERFECT METADATA LOGIC: Only generate when both flags are false (first time only)
-      // This prevents regeneration while allowing first-time generation for existing notes
-      const isManualTitleChange = !!updateFields.title;
-      const isManualTypeChange = !!updateFields.type;
-      const isContentOnlyUpdate = updateFields.content && !isManualTitleChange && !isManualTypeChange;
-      
-      const shouldGenerateMetadata = !force && 
-        isContentOnlyUpdate && 
-        updateFields.content.trim().length >= 10 && 
-        !updatedNote?.titleGenerated && 
-        !updatedNote?.typeGenerated; // CRITICAL: Both must be false (AND logic)
-      
-
-      
-      if (shouldGenerateMetadata) {
-        generateMetadata(String(noteId), updateFields.content.trim());
-      }
+      // AUTO-TRIGGERING LOGIC REMOVED - Now only manual generation via button
 
       return updatedNote as Note;
     } catch (error) {
@@ -215,7 +208,7 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
     } finally {
       setIsSaving(false);
     }
-  }, [userId, updateNoteConvex, generateMetadata]);
+  }, [userId, updateNoteConvex]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -234,5 +227,7 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
     updateNote,
     activeNoteId,
     setActiveNoteId,
+    generateMetadataManually,
+    isGeneratingMetadata,
   };
 }

@@ -30,6 +30,9 @@ interface NotesContextType {
   navigationStack: NavigationEntry[];
   canNavigateBack: boolean;
   clearNavigationStack: () => void;
+  // Manual metadata generation functions
+  generateMetadataManually: (noteId: string, noteContent: string) => Promise<boolean>;
+  isGeneratingMetadata: boolean;
 }
 
 const NotesContext = createContext<NotesContextType | undefined>(undefined);
@@ -45,6 +48,8 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     updateNote,
     activeNoteId,
     setActiveNoteId,
+    generateMetadataManually,
+    isGeneratingMetadata,
   } = useSmartNotes(userId);
 
   // Navigation stack state
@@ -178,6 +183,8 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     navigationStack,
     canNavigateBack,
     clearNavigationStack,
+    generateMetadataManually,
+    isGeneratingMetadata,
   };
 
   return (
