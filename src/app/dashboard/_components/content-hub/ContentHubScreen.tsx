@@ -410,9 +410,9 @@ export function ContentHubScreen() {
                 Back to Chat
               </Button>
             )}
-            <div className="text-center">
-              <h1 className="text-base font-medium text-purple-600 dark:text-accent">Content Hub</h1>
-              <p className="text-muted-foreground">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Content Hub</h1>
+              <p className="text-sm text-muted-foreground">
                 <span className="hidden sm:inline">Your unified content analytics and AI insights dashboard</span>
               </p>
             </div>
