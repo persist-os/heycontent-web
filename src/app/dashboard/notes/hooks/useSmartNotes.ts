@@ -32,6 +32,7 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
   // Debounce and cancellation for metadata generation
   const metadataTimers = useRef<Record<string, NodeJS.Timeout>>({});
   const abortControllers = useRef<Record<string, AbortController>>({});
+  const metadataPending = useRef<Record<string, boolean>>({});
 
   // Loading state
   const isLoading = notesFromConvex === undefined && userId !== undefined;
@@ -62,8 +63,15 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
   // Debounced metadata generation
   const generateMetadata = useCallback(
     (noteId: string, noteContent: string) => {
+
+      
       // Skip if content is too short
       if (!noteContent || noteContent.trim().length < 10) return;
+      
+      // PREVENT DUPLICATES
+      if (metadataPending.current[noteId]) {
+        return;
+      }
       
       // Cancel any existing request for this note
       if (abortControllers.current[noteId]) {
@@ -80,6 +88,7 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
       metadataTimers.current[noteId] = setTimeout(async () => {
         const controller = new AbortController();
         abortControllers.current[noteId] = controller;
+        metadataPending.current[noteId] = true;
         
         try {
           const apiKey = await getApiKey();
@@ -118,6 +127,7 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
           toast.error(friendlyError);
         } finally {
           delete abortControllers.current[noteId];
+          delete metadataPending.current[noteId];
         }
       }, 500); // 500ms debounce
     },
@@ -161,17 +171,15 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
     setIsSaving(true);
     try {
       // Clean image objects to match schema
-      const cleanedUpdateFields = { ...updateFields };
-      if (cleanedUpdateFields.images) {
-        cleanedUpdateFields.images = cleanedUpdateFields.images.map(img => ({
+      const cleanedUpdateFields: any = { ...updateFields };
+      if (updateFields.images) {
+        cleanedUpdateFields.images = updateFields.images.map(img => ({
           url: img.url,
           filename: img.filename,
-          ...(img.originalFilename !== undefined && { originalFilename: img.originalFilename }),
+          originalFilename: img.originalFilename || img.filename,
           uploadedAt: img.uploadedAt,
-          ...(img.size !== undefined && { size: img.size }),
-          ...(img.mimeType !== undefined && { mimeType: img.mimeType }),
-          ...(img.width !== undefined && { width: img.width }),
-          ...(img.height !== undefined && { height: img.height }),
+          size: img.size || 0,
+          mimeType: img.mimeType || 'application/octet-stream',
         }));
       }
 
@@ -181,13 +189,21 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
         updates: cleanedUpdateFields,
       });
 
-      // Generate metadata if content changed and not forced
-      if (
-        !force &&
-        updateFields.content &&
-        updateFields.content.trim().length >= 10 &&
-        (!updatedNote?.titleGenerated || !updatedNote?.typeGenerated)
-      ) {
+      // 🎯 PERFECT METADATA LOGIC: Only generate when both flags are false (first time only)
+      // This prevents regeneration while allowing first-time generation for existing notes
+      const isManualTitleChange = !!updateFields.title;
+      const isManualTypeChange = !!updateFields.type;
+      const isContentOnlyUpdate = updateFields.content && !isManualTitleChange && !isManualTypeChange;
+      
+      const shouldGenerateMetadata = !force && 
+        isContentOnlyUpdate && 
+        updateFields.content.trim().length >= 10 && 
+        !updatedNote?.titleGenerated && 
+        !updatedNote?.typeGenerated; // CRITICAL: Both must be false (AND logic)
+      
+
+      
+      if (shouldGenerateMetadata) {
         generateMetadata(String(noteId), updateFields.content.trim());
       }
 

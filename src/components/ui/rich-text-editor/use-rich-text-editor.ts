@@ -24,6 +24,7 @@ import {
   getCursorCoordinates
 } from './formatting-utils'
 import { AIHandlers, createAIHandlers } from './ai-utils'
+import { NoteType } from '@/app/dashboard/notes/types'
 
 type UseRichTextEditorProps = Pick<RichTextEditorProps, 
   'content' | 'onContentChange' | 'showPreview' | 'onShowPreviewChange' | 
@@ -51,7 +52,10 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
     containerRef
   } = props
 
-  // State
+  // Convert string noteType to proper NoteType
+  const normalizedNoteType: NoteType = (noteType as NoteType) || 'idea_bank'
+
+  // Existing state
   const [localShowPreview, setLocalShowPreview] = useState(true)
   const [showCommandPalette, setShowCommandPalette] = useState(false)
   const [showEnhancedContentSelector, setShowEnhancedContentSelector] = useState(false)
@@ -60,6 +64,14 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
   const [cursorPosition, setCursorPosition] = useState(0)
   const [contentSearchTerm, setContentSearchTerm] = useState('')
   const [fetchedContentTitles, setFetchedContentTitles] = useState<Record<string, string>>({})
+  
+  // New refinement mode state
+  const [selectedText, setSelectedText] = useState<string>('')
+  const [refinementMode, setRefinementMode] = useState<boolean>(false)
+  const [showRefinementPreview, setShowRefinementPreview] = useState<boolean>(false)
+  const [refinedTextPreview, setRefinedTextPreview] = useState<string | null>(null)
+  const [selectedNoteTypeForCommands, setSelectedNoteTypeForCommands] = useState<NoteType>(normalizedNoteType)
+  const [currentRefinementType, setCurrentRefinementType] = useState<string>('')
   
   const textAreaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -101,10 +113,202 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
     onRequestIdeas
   }
 
-  const { handleAskAI, handleRequestAnalysis, handleRequestIdeas, handleGenerateTableFromContent } = createAIHandlers(
+  const { handleAskAI, handleRequestAnalysis, handleRequestIdeas, handleGenerateTableFromContent, handleRefineText } = createAIHandlers(
     { content, textAreaRef, onContentChange },
     aiHandlers
   )
+
+  // New refinement handlers
+  const handleRefinementRequest = useCallback(async (refinementType: string, textToRefine: string) => {
+    console.log('🎯 REFINEMENT START:', { refinementType, textToRefine: textToRefine.substring(0, 50) });
+    
+    if (!textToRefine.trim()) {
+      console.warn('🎯 Empty text, aborting refinement');
+      return;
+    }
+
+    const textarea = textAreaRef.current;
+    if (!textarea) {
+      console.warn('🎯 No textarea ref, aborting refinement');
+      return;
+    }
+
+    try {
+      console.log('🎯 Setting initial states...');
+      setCurrentRefinementType(refinementType);
+      setShowRefinementPreview(true);
+      setRefinedTextPreview(null); // Clear previous preview
+      
+      console.log('🎯 States set, keeping command palette open for preview...');
+      // KEEP palette open - preview will replace its content
+      
+      console.log('🎯 Processing refinement type...');
+      
+      // Handle custom refinements (with "custom:" prefix)
+      if (refinementType.startsWith('custom:')) {
+        console.log('🎯 Processing custom refinement...');
+        const customPrompt = refinementType.replace('custom:', '');
+        console.log(`🎯 Custom prompt extracted: "${customPrompt}"`);
+        
+        // For custom refinements, use the generic writing API instead of refinement API
+        if (onAskAI) {
+          console.log('🎯 onAskAI available, calling with enhanced prompt...');
+          const enhancedPrompt = `Please refine the following text: "${textToRefine}"\n\nInstructions: ${customPrompt}`;
+          
+          console.log('🎯 About to call onAskAI...');
+          const result = await onAskAI(enhancedPrompt);
+          console.log('🎯 onAskAI result received:', { hasResult: !!result, length: result?.length });
+          
+          // ALWAYS show preview, never auto-apply - user must explicitly accept
+          console.log('🎯 Setting refined text preview...');
+          setRefinedTextPreview(result);
+          console.log('🎯 Custom refinement complete');
+        } else {
+          throw new Error('AI writing function not available');
+        }
+      } else {
+        // Handle preset refinements using the specialized refinement API
+        console.log(`🎯 Processing preset refinement: "${refinementType}"`);
+        
+        // Get selection positions from textarea
+        console.log('🎯 Getting selection positions...');
+        const selectionStart = textarea.selectionStart;
+        const selectionEnd = textarea.selectionEnd;
+        console.log('🎯 Selection positions:', { selectionStart, selectionEnd });
+        
+        console.log('🎯 Getting display content...');
+        const displayContent = getDisplayContentMemo(content);
+        console.log('🎯 Display content length:', displayContent?.length);
+        
+        console.log('🎯 About to call handleRefineText...');
+        console.log('🎯 Parameters check:', {
+          refinementType: !!refinementType,
+          textToRefine: !!textToRefine,
+          normalizedNoteType: !!normalizedNoteType,
+          displayContent: !!displayContent,
+          selectionStart: typeof selectionStart,
+          selectionEnd: typeof selectionEnd,
+          handleRefineTextExists: !!handleRefineText
+        });
+        
+        // Call the enhanced refinement handler from ai-utils
+        const refinementResponse = await handleRefineText(
+          refinementType,
+          textToRefine,
+          normalizedNoteType,
+          displayContent,
+          selectionStart,
+          selectionEnd,
+          undefined // Note title - could be passed from props if available
+        );
+        
+        console.log('🎯 Refinement response received:', {
+          hasRefinedText: !!refinementResponse?.refined_text,
+          confidence: refinementResponse?.confidence_score,
+          responseType: typeof refinementResponse
+        });
+        
+        // ALWAYS show preview, never auto-apply - user must explicitly accept
+        console.log('🎯 Setting refined text preview...');
+        setRefinedTextPreview(refinementResponse.refined_text);
+        
+        // Store additional metadata for potential use in TextRefinementPreview
+        console.log('🎯 Refinement metadata:', {
+          confidence_score: refinementResponse.confidence_score,
+          changes_summary: refinementResponse.changes_summary,
+          change_count: refinementResponse.change_count,
+          preservation_notes: refinementResponse.preservation_notes,
+        });
+        
+        console.log('🎯 Preset refinement complete');
+      }
+      
+      console.log('🎯 REFINEMENT SUCCESS - preview state updated');
+      
+    } catch (error: any) {
+      console.error('🚨 REFINEMENT ERROR:', {
+        message: error.message,
+        stack: error.stack,
+        type: typeof error,
+        name: error.name,
+        refinementType,
+        textToRefineLength: textToRefine?.length
+      });
+      
+      // Reset states on error
+      console.log('🎯 Resetting states due to error...');
+      setShowRefinementPreview(false);
+      setRefinedTextPreview(null);
+      setShowCommandPalette(true); // Reopen palette so user can try again
+      
+      // Show user-friendly error message
+      const errorMsg = error.message || 'Failed to refine text. Please try again.';
+      console.error('🚨 Showing error to user:', errorMsg);
+      alert(`Refinement failed: ${errorMsg}`);
+    }
+  }, [normalizedNoteType, content, getDisplayContentMemo, handleRefineText, onAskAI])
+
+  const handleAcceptRefinement = useCallback(async () => {
+    if (!refinedTextPreview || !textAreaRef.current) return
+
+    const textarea = textAreaRef.current
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const displayContent = getDisplayContentMemo(content)
+    
+    // Replace selected text with refined text
+    const beforeSelection = displayContent.substring(0, start)
+    const afterSelection = displayContent.substring(end)
+    const newDisplayContent = beforeSelection + refinedTextPreview + afterSelection
+    
+    // Convert back to storage format and save
+    const newStorageContent = getStorageContentMemo(newDisplayContent)
+    onContentChange(newStorageContent)
+    
+    // Reset refinement state
+    setShowRefinementPreview(false)
+    setRefinedTextPreview(null)
+    setSelectedText('')
+    setRefinementMode(false)
+    
+    // Set cursor position after the refined text
+    const newCursorPos = start + refinedTextPreview.length
+    setTimeout(() => {
+      textarea.setSelectionRange(newCursorPos, newCursorPos)
+      textarea.focus()
+    }, 0)
+  }, [refinedTextPreview, content, onContentChange, getDisplayContentMemo, getStorageContentMemo])
+
+  const handleRejectRefinement = useCallback(async () => {
+    // Reset refinement state and return to command palette
+    setShowRefinementPreview(false)
+    setRefinedTextPreview(null)
+    
+    // Optionally reopen command palette to allow different refinement selection
+    setShowCommandPalette(true)
+  }, [])
+
+  const handleRetryRefinement = useCallback(async () => {
+    if (!currentRefinementType || !selectedText) return
+    
+    // Clear current preview and regenerate with same refinement type
+    setRefinedTextPreview(null)
+    await handleRefinementRequest(currentRefinementType, selectedText)
+  }, [currentRefinementType, selectedText, handleRefinementRequest])
+
+  const handleCancelRefinement = useCallback(() => {
+    // Completely cancel refinement mode
+    setShowRefinementPreview(false)
+    setRefinedTextPreview(null)
+    setSelectedText('')
+    setRefinementMode(false)
+    setShowCommandPalette(false)
+    
+    // Return focus to textarea
+    if (textAreaRef.current) {
+      textAreaRef.current.focus()
+    }
+  }, [])
 
   // Formatting handlers
   const handleInsertBulletList = useCallback(() => {
@@ -270,19 +474,72 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
     }
   }, [content, onContentChange, getDisplayContentMemo, getStorageContentMemo])
 
-  // Handle keyboard shortcuts
+  // Handle keyboard shortcuts - Modified to support refinement mode
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Cmd/Ctrl + K to open inline command palette
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
       e.preventDefault()
       e.stopPropagation()
+      
       // Small delay to ensure textarea is focused and cursor position is accurate
       setTimeout(() => {
+        const textarea = textAreaRef.current
+        if (!textarea) return
+        
+        const start = textarea.selectionStart
+        const end = textarea.selectionEnd
+        const hasSelection = start !== end
+        
+        if (hasSelection) {
+          // Refinement mode - text is selected
+          const displayContent = getDisplayContentMemo(content)
+          const selectedText = displayContent.substring(start, end)
+          
+          setSelectedText(selectedText)
+          setRefinementMode(true)
+          setSelectedNoteTypeForCommands(normalizedNoteType) // Default to current note type
+        } else {
+          // Generation mode - no text selected
+          setSelectedText('')
+          setRefinementMode(false)
+        }
+        
         const coords = getCursorCoordinates(textAreaRef, containerRef)
         setPalettePosition(coords)
         setPaletteMode('commands')
         setShowCommandPalette(true)
       }, 0)
+      return
+    }
+
+    // Handle ESC to close refinement preview or command palette
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      e.stopPropagation()
+      
+      if (showRefinementPreview) {
+        handleCancelRefinement()
+      } else if (showCommandPalette) {
+        setShowCommandPalette(false)
+        setRefinementMode(false)
+        setSelectedText('')
+      }
+      return
+    }
+
+    // Handle Enter to accept refinement when preview is shown
+    if (e.key === 'Enter' && showRefinementPreview && refinedTextPreview) {
+      e.preventDefault()
+      e.stopPropagation()
+      handleAcceptRefinement()
+      return
+    }
+
+    // Handle 'r' to retry refinement when preview is shown
+    if (e.key === 'r' && showRefinementPreview) {
+      e.preventDefault()
+      e.stopPropagation()
+      handleRetryRefinement()
       return
     }
 
@@ -317,6 +574,8 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
         e.preventDefault()
         e.stopPropagation()
         setTimeout(() => {
+          setRefinementMode(false) // Always generation mode for '/' trigger
+          setSelectedText('')
           const coords = getCursorCoordinates(textAreaRef, containerRef)
           setPalettePosition(coords)
           setPaletteMode('commands')
@@ -339,15 +598,7 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
       }, 10) // Slightly longer delay to ensure @ is typed and cursor updated
       return
     }
-
-    // Handle ESC to close command palette
-    if (e.key === 'Escape' && showCommandPalette) {
-      e.preventDefault()
-      e.stopPropagation()
-      setShowCommandPalette(false)
-      return
-    }
-  }, [content, showCommandPalette, onContentChange, containerRef])
+  }, [content, showCommandPalette, showRefinementPreview, refinedTextPreview, onContentChange, containerRef, normalizedNoteType, getDisplayContentMemo, handleAcceptRefinement, handleRetryRefinement, handleCancelRefinement])
 
   // Handle content changes from typing
   const handleContentChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -378,7 +629,7 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
   }, [currentShowPreview, setCurrentShowPreview])
 
   return {
-    // State
+    // Existing state
     currentShowPreview,
     showCommandPalette,
     showEnhancedContentSelector,
@@ -387,10 +638,17 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
     contentSearchTerm,
     textAreaRef,
     
+    // New refinement state
+    selectedText,
+    refinementMode,
+    showRefinementPreview,
+    refinedTextPreview,
+    selectedNoteTypeForCommands,
+    
     // Content functions
     getDisplayContent: getDisplayContentMemo,
     
-    // Handlers
+    // Existing handlers
     handleKeyDown,
     handleContentChange,
     togglePreview,
@@ -407,10 +665,20 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
     handleLinkNote,
     handleLinkContent,
     
-    // Setters
+    // New refinement handlers
+    handleRefineText: handleRefinementRequest,
+    handleAcceptRefinement,
+    handleRejectRefinement,
+    handleRetryRefinement,
+    handleCancelRefinement,
+    
+    // Existing setters
     setShowCommandPalette,
     setShowEnhancedContentSelector,
     setContentSearchTerm,
+    
+    // New refinement setters
+    setSelectedNoteTypeForCommands,
     
     // Props pass-through
     noteType,

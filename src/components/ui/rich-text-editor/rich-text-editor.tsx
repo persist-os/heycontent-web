@@ -41,6 +41,12 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
     paletteMode,
     contentSearchTerm,
     textAreaRef,
+    // New refinement state
+    selectedText,
+    refinementMode,
+    showRefinementPreview,
+    refinedTextPreview,
+    selectedNoteTypeForCommands,
     getDisplayContent,
     handleKeyDown,
     handleContentChange,
@@ -57,9 +63,17 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
     handleInsertTable,
     handleLinkNote,
     handleLinkContent,
+    // New refinement handlers
+    handleRefineText,
+    handleAcceptRefinement,
+    handleRejectRefinement,
+    handleRetryRefinement,
+    handleCancelRefinement,
     setShowCommandPalette,
     setShowEnhancedContentSelector,
-    setContentSearchTerm
+    setContentSearchTerm,
+    // New refinement setters
+    setSelectedNoteTypeForCommands
   } = useRichTextEditor({
     content,
     onContentChange,
@@ -126,19 +140,34 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
         </div>
       ) : (
         /* Text Editor */
-        <textarea
-          ref={textAreaRef}
-          value={getDisplayContent(content)}
-          onChange={handleContentChange}
-          onKeyDown={handleKeyDown}
-          className="w-full h-full min-h-[300px] resize-none p-4 text-base leading-relaxed bg-background text-foreground placeholder:text-muted-foreground/50 border-0 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 transition-all duration-200 rounded-md transform-gpu will-change-contents"
-          placeholder={`${placeholder}
+        <div className="relative w-full h-full">
+          <textarea
+            ref={textAreaRef}
+            value={getDisplayContent(content)}
+            onChange={handleContentChange}
+            onKeyDown={handleKeyDown}
+            className={`w-full h-full min-h-[300px] resize-none p-4 text-base leading-relaxed bg-background text-foreground placeholder:text-muted-foreground/50 border-0 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 transition-all duration-200 rounded-md transform-gpu will-change-contents ${
+              selectedText && refinementMode 
+                ? 'ring-2 ring-purple-500/30 dark:ring-yellow-500/30' 
+                : ''
+            }`}
+            placeholder={`${placeholder}
 
-⌘K or / for AI assistant • ⌘B bold • ⌘I italic • ⌘U underline • Click Preview to see rich text`}
-          disabled={disabled}
-          spellCheck={true}
-          autoFocus={!disabled}
-        />
+⌘K or / for AI assistant • ⌘B bold • ⌘I italic • ⌘U underline • Click Preview to see rich text${selectedText ? ' • Text selected - ⌘K to refine' : ''}`}
+            disabled={disabled}
+            spellCheck={true}
+            autoFocus={!disabled}
+          />
+          
+          {/* Refinement Mode Indicator */}
+          {selectedText && !showCommandPalette && (
+            <div className="absolute bottom-2 right-2 flex items-center gap-1 px-2 py-1 bg-purple-500/10 dark:bg-yellow-500/10 border border-purple-200 dark:border-yellow-200 rounded-md text-xs font-medium text-purple-600 dark:text-yellow-600 backdrop-blur-sm">
+              <span>Text selected</span>
+              <kbd className="px-1 py-0.5 bg-purple-500/20 dark:bg-yellow-500/20 rounded text-xs">⌘K</kbd>
+              <span>to refine</span>
+            </div>
+          )}
+        </div>
       )}
       
       {/* Inline Command Palette */}
@@ -161,6 +190,15 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
         availableNotes={availableNotes}
         currentNoteId={noteId}
         showNoteLinks={paletteMode === 'notes'}
+        // New refinement mode props
+        selectedText={selectedText}
+        refinementMode={refinementMode}
+        onRefineText={handleRefineText}
+        showRefinementPreview={showRefinementPreview}
+        refinedTextPreview={refinedTextPreview}
+        onAcceptRefinement={handleAcceptRefinement}
+        onRejectRefinement={handleRejectRefinement}
+        onRetryRefinement={handleRetryRefinement}
       />
 
       {/* Enhanced Content Selector */}

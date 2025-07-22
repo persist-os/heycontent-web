@@ -13,12 +13,9 @@ import {
   Heading1,
   Heading2,
   Heading3,
-  Link,
-  ExternalLink,
   Clock,
   Target,
   Zap,
-  PenTool,
   Hash,
   Megaphone,
   TrendingUp,
@@ -33,21 +30,15 @@ import {
   Star,
   AlertTriangle,
   CheckCircle,
-  RotateCcw,
   Palette,
   Volume2,
-  Image,
-  Camera,
-  X,
   DollarSign,
   Shield,
   Scissors,
   Copy,
   RefreshCw,
   ArrowUp,
-  Bookmark,
   Search,
-  Filter,
   Layers,
   UserCheck,
   MessageCircle,
@@ -58,11 +49,12 @@ import {
   Percent,
   Award,
   Briefcase,
-  FileSignature,
-  Settings
+  Settings,
+  Camera,
+  X
 } from 'lucide-react';
 
-// Re-export existing types from InlineCommandPalette for consistency
+// Re-export existing types for consistency
 export interface CommandOption {
   id: string;
   label: string;
@@ -92,570 +84,473 @@ export type NoteType =
 const createIcon = (IconComponent: React.ComponentType<{ className?: string }>) => 
   React.createElement(IconComponent, { className: "w-4 h-4" });
 
-// Configuration for each note type based on real creator workflow research
+// GENERATION COMMANDS - Create new content from scratch
 export const NOTE_TYPE_CONFIGS: Record<NoteType, TypeSpecificConfig> = {
-  // Idea Bank - Eliminate 70% of creative blocks with systematic ideation
+  // Idea Bank - Turn blank page into content goldmine
   idea_bank: {
     quickCommands: [
-              {
-          id: 'trend-mining',
-          label: 'Mine trending topics',
-          description: 'Research what\'s trending in my niche and turn it into 15+ content ideas in 10 minutes',
-          icon: createIcon(TrendingUp),
-          category: 'Research'
-        },
+      {
+        id: 'trend-mining',
+        label: 'Mine trending topics for content',
+        description: 'Research what\'s hot in your niche and spin it into 15+ unique angles',
+        icon: createIcon(TrendingUp),
+        category: 'Research'
+      },
       {
         id: 'audience-question-harvest',
-        label: 'Harvest audience questions',
-        description: 'Turn my comments, DMs, and community feedback into a content goldmine',
+        label: 'Turn audience questions into content',
+        description: 'Mine your comments, DMs, and community for viral content ideas',
         icon: createIcon(MessageCircle),
         category: 'Research'
       },
       {
-        id: 'competitor-gap-analysis',
-        label: 'Find content gaps',
-        description: 'Identify what successful creators in my space aren\'t covering yet',
+        id: 'competitor-gap-finder',
+        label: 'Find gaps competitors missed',
+        description: 'Spot content opportunities others in your space aren\'t covering',
         icon: createIcon(Search),
         category: 'Research'
       },
       {
-        id: 'viral-concept-generator',
-        label: 'Generate viral concepts',
-        description: 'Create content ideas designed for maximum shareability and engagement',
+        id: 'viral-concept-builder',
+        label: 'Build viral content concepts',
+        description: 'Create ideas designed for maximum shares and saves',
         icon: createIcon(Zap),
-        category: 'Ideate'
+        category: 'Generate'
       },
       {
-        id: 'series-multiplication',
-        label: 'Turn 1 idea into 10',
-        description: 'Expand this single concept into a multi-part content series',
+        id: 'series-multiplier',
+        label: 'Turn 1 idea into 10 videos',
+        description: 'Expand this concept into a multi-part series with unique hooks',
         icon: createIcon(Layers),
-        category: 'Expand'
+        category: 'Generate'
       },
       {
-        id: 'seasonal-calendar-builder',
-        label: 'Build seasonal calendar',
-        description: 'Create a 3-month content calendar around holidays, events, and seasonal trends',
+        id: 'seasonal-calendar',
+        label: 'Build 3-month content calendar',
+        description: 'Map out seasonal trends, holidays, and viral moments to plan ahead',
         icon: createIcon(Calendar),
         category: 'Plan'
+      },
+      {
+        id: 'pain-point-miner',
+        label: 'Mine audience pain points',
+        description: 'Extract content from your followers\' biggest struggles and frustrations',
+        icon: createIcon(AlertTriangle),
+        category: 'Research'
       }
     ],
     defaultPrompts: [
-      'Research what\'s trending in [my niche] right now and generate 15 unique content angles I can cover',
-      'Analyze my last 50 comments and DMs - what questions could I turn into viral content?',
-      'Find 5 content gaps that top creators in my space aren\'t covering that I could own',
-      'Take this basic idea and create a viral concept with maximum shareability potential',
-      'Turn this single concept into a 10-part content series with unique angles for each piece',
-      'Build me a seasonal content calendar for the next 3 months with holiday and trending angles'
+      'Research trending topics in [my niche] and create 15 unique content angles I can own',
+      'Analyze my last 100 comments - what questions keep coming up that I could turn into viral content?',
+      'Find 5 content gaps in my space that successful creators aren\'t covering yet',
+      'Take this basic idea and build it into a viral concept with maximum shareability',
+      'Transform this single concept into a 10-part series with different hooks for each video',
+      'Create a 3-month content calendar around upcoming trends, holidays, and seasonal moments'
     ],
-    categories: ['Research', 'Ideate', 'Strategy']
+    categories: ['Research', 'Generate', 'Plan']
   },
 
-  // Content Script - Eliminate the 2-4 hour script bottleneck
+  // Content Script - From concept to scroll-stopping content
   content_script: {
     quickCommands: [
       {
-        id: 'hook-multiplier',
-        label: 'Generate 10 hook variations',
-        description: 'Create multiple scroll-stopping openings to test which performs best',
-        icon: createIcon(Megaphone),
-        category: 'Creation'
+        id: 'full-script-creator',
+        label: 'Write complete script from concept',
+        description: 'Turn your idea into a full, engaging script with natural flow',
+        icon: createIcon(FileText),
+        category: 'Create'
       },
       {
-        id: 'retention-maximizer',
-        label: 'Maximize watch time',
-        description: 'Restructure script with pattern interrupts and curiosity loops to prevent drop-offs',
+        id: 'hook-generator',
+        label: 'Generate 10 scroll-stopping hooks',
+        description: 'Create multiple opening lines to test which grabs attention best',
+        icon: createIcon(Megaphone),
+        category: 'Create'
+      },
+      {
+        id: 'retention-booster',
+        label: 'Add retention tactics',
+        description: 'Insert curiosity gaps and pattern interrupts to prevent drop-offs',
         icon: createIcon(Activity),
-        category: 'Optimization'
+        category: 'Optimize'
       },
       {
         id: 'platform-adapter',
-        label: 'Adapt for all platforms',
-        description: 'Convert this script for TikTok (60s), Instagram (90s), YouTube (varies), Twitter thread',
+        label: 'Adapt for TikTok/IG/YouTube',
+        description: 'Reformat this script for different platform requirements and audiences',
         icon: createIcon(RefreshCw),
-        category: 'Distribution'
+        category: 'Adapt'
       },
       {
         id: 'hashtag-researcher',
-        label: 'Research viral hashtags',
-        description: 'Find 20 hashtags my audience actually follows (not just high-volume ones)',
+        label: 'Research audience-focused hashtags',
+        description: 'Find 20 hashtags your followers actually use, not just trending ones',
         icon: createIcon(Hash),
-        category: 'Distribution'
+        category: 'Optimize'
       },
       {
         id: 'cta-psychology',
-        label: 'Psychology-driven CTAs',
-        description: 'Create calls-to-action that actually drive comments, shares, and follows',
+        label: 'Write psychology-driven CTAs',
+        description: 'Create calls-to-action that actually get comments, shares, and follows',
         icon: createIcon(Target),
-        category: 'Optimization'
+        category: 'Optimize'
       },
       {
         id: 'thumbnail-concepts',
         label: 'Design thumbnail concepts',
-        description: 'Generate 5 scroll-stopping thumbnail ideas that increase click-through rates',
+        description: 'Generate 5 click-worthy thumbnail ideas that stop the scroll',
         icon: createIcon(Camera),
-        category: 'Creation'
-      },
-      {
-        id: 'voice-consistency',
-        label: 'Match my voice',
-        description: 'Rewrite this script to sound authentically like me talking to my best friend',
-        icon: createIcon(Palette),
-        category: 'Creation'
+        category: 'Create'
       }
     ],
     defaultPrompts: [
-      'Write 10 different hook variations for this content and rank them by scroll-stopping potential',
-      'Restructure this script to maximize retention - add pattern interrupts every 15-20 seconds',
-      'Adapt this script for: TikTok (60s), Instagram Reel (90s), YouTube Short (60s), Twitter thread',
-      'Research 20 hashtags my target audience actively follows, not just high-volume trending ones',
-      'Create 3 different CTAs using psychology principles that will actually drive engagement',
-      'Generate 5 thumbnail concepts that would make someone stop mid-scroll and click immediately',
-      'Rewrite this script to sound like my authentic voice - conversational, relatable, and naturally me'
+      'Write a complete script from this concept with natural flow and compelling storytelling',
+      'Create 10 different hook variations and rank them by scroll-stopping potential',
+      'Add retention tactics - curiosity gaps every 15 seconds to prevent drop-offs',
+      'Adapt this script for TikTok (60s), Instagram (90s), and YouTube Short formats',
+      'Research 20 hashtags my specific audience actually follows and engages with',
+      'Write 3 CTAs using psychology that will drive the engagement I want',
+      'Generate 5 thumbnail concepts that would make someone stop mid-scroll'
     ],
-    categories: ['Creation', 'Optimization', 'Distribution']
+    categories: ['Create', 'Optimize', 'Adapt']
   },
 
-  // Collaboration Note - Reduce 40-60% administrative overhead
+  // Collaboration Note - Protect your brand and get paid fairly
   collaboration_note: {
     quickCommands: [
       {
-        id: 'scope-protector',
+        id: 'scope-definer',
         label: 'Define bulletproof scope',
         description: 'Break down deliverables with specific metrics to prevent scope creep',
         icon: createIcon(Shield),
-        category: 'Legal'
+        category: 'Protect'
       },
       {
         id: 'rate-calculator',
-        label: 'Calculate fair rates',
-        description: 'Price this collaboration based on my metrics and industry standards',
+        label: 'Calculate your worth',
+        description: 'Price this deal based on your metrics and industry standards',
         icon: createIcon(DollarSign),
-        category: 'Business'
+        category: 'Money'
       },
       {
-        id: 'contract-negotiator',
-        label: 'Identify negotiation points',
-        description: 'Spot contract terms I need to negotiate to protect my interests',
-        icon: createIcon(FileSignature),
-        category: 'Legal'
+        id: 'contract-reviewer',
+        label: 'Review contract red flags',
+        description: 'Spot terms you need to negotiate to protect your interests',
+        icon: createIcon(Eye),
+        category: 'Protect'
       },
       {
-        id: 'timeline-realist',
+        id: 'timeline-setter',
         label: 'Set realistic timelines',
-        description: 'Create achievable deadlines that account for revisions and brand approval cycles',
+        description: 'Create deadlines that account for revisions and approval cycles',
         icon: createIcon(Clock),
-        category: 'Strategy'
-      },
-      {
-        id: 'stakeholder-mapper',
-        label: 'Map decision makers',
-        description: 'Identify who makes decisions and who I need approval from at each stage',
-        icon: createIcon(Users),
-        category: 'Strategy'
-      },
-      {
-        id: 'revision-controller',
-        label: 'Control revision cycles',
-        description: 'Set up systems to track feedback and prevent endless revision loops',
-        icon: createIcon(RotateCcw),
-        category: 'Strategy'
+        category: 'Plan'
       },
       {
         id: 'payment-securer',
         label: 'Secure payment terms',
-        description: 'Establish milestone payments and protect against late payment',
+        description: 'Structure milestone payments to protect against late payment',
         icon: createIcon(CheckCircle),
-        category: 'Business'
+        category: 'Money'
+      },
+      {
+        id: 'brand-alignment-checker',
+        label: 'Check brand alignment',
+        description: 'Evaluate if this partnership fits your values and audience',
+        icon: createIcon(UserCheck),
+        category: 'Strategy'
       }
     ],
     defaultPrompts: [
-      'Break this collaboration into specific deliverables with measurable success criteria to prevent scope creep',
-      'Calculate fair pricing: I have [X] followers, [Y]% engagement rate in [niche] - what should I charge?',
-      'Review this contract and identify key terms I should negotiate to protect my brand and payment',
-      'Create a realistic timeline that includes buffer time for 2-3 revision rounds and brand approvals',
-      'Map out the decision-making hierarchy at this brand - who approves what at each stage?',
-      'Design a revision tracking system that limits feedback loops to 3 rounds maximum',
-      'Structure payment milestones: 50% upfront, 25% at draft delivery, 25% final approval'
+      'Break this collaboration into specific deliverables to prevent scope creep',
+      'Calculate fair pricing: I have [X] followers, [Y]% engagement - what should I charge?',
+      'Review this contract and flag terms I should negotiate to protect myself',
+      'Create realistic timeline with buffer for 2-3 revision rounds and approvals',
+      'Structure payment: 50% upfront, 25% at draft, 25% final with late fees',
+      'Analyze if this brand aligns with my values and audience expectations'
     ],
-    categories: ['Business', 'Legal', 'Strategy']
+    categories: ['Protect', 'Money', 'Strategy', 'Plan']
   },
 
-  // Analytics Insight - Turn data overwhelm into revenue-driving decisions
+  // Analytics Insight - Turn data into revenue decisions
   analytics_insight: {
     quickCommands: [
       {
-        id: 'revenue-tracker',
-        label: 'Connect content to revenue',
-        description: 'Identify which content directly led to brand deals, affiliate sales, or monetization',
+        id: 'revenue-connector',
+        label: 'Connect metrics to money',
+        description: 'Identify which content led to brand deals, sales, or monetization',
         icon: createIcon(DollarSign),
-        category: 'Business'
+        category: 'Money'
       },
       {
-        id: 'retention-analyzer',
-        label: 'Find drop-off points',
-        description: 'Identify exact timestamps where viewers leave and why they\'re dropping off',
+        id: 'drop-off-analyzer',
+        label: 'Find where viewers leave',
+        description: 'Pinpoint exact moments and reasons for audience drop-offs',
         icon: createIcon(BarChart),
         category: 'Performance'
       },
       {
         id: 'audience-profiler',
-        label: 'Profile engaged audience',
-        description: 'Understand who my most valuable followers are and what content they love',
+        label: 'Profile your best followers',
+        description: 'Understand who engages most and what content they love',
         icon: createIcon(UserCheck),
-        category: 'Performance'
+        category: 'Audience'
       },
       {
         id: 'competitor-benchmarker',
         label: 'Benchmark vs competitors',
-        description: 'Compare my metrics to similar creators and identify improvement opportunities',
+        description: 'Compare your performance to similar creators in your niche',
         icon: createIcon(BarChart3),
         category: 'Strategy'
       },
       {
         id: 'roi-calculator',
         label: 'Calculate content ROI',
-        description: 'Determine which content types give the best return on time invested',
+        description: 'Find which content types give best return on time invested',
         icon: createIcon(Percent),
-        category: 'Business'
+        category: 'Money'
       },
       {
         id: 'growth-forecaster',
         label: 'Predict growth trajectory',
-        description: 'Forecast where my metrics are heading based on current performance patterns',
+        description: 'Forecast where your metrics are heading based on trends',
         icon: createIcon(TrendingUp),
-        category: 'Strategy'
-      },
-      {
-        id: 'actionable-insights',
-        label: 'Extract action items',
-        description: 'Turn this data into specific changes I should make to my content strategy',
-        icon: createIcon(Target),
         category: 'Strategy'
       }
     ],
     defaultPrompts: [
-      'Analyze which of my content pieces directly led to revenue opportunities in the last 90 days',
-      'Identify exact drop-off points in my videos and suggest specific reasons why viewers are leaving',
-      'Profile my most engaged followers - demographics, content preferences, and engagement patterns',
-      'Compare my engagement rate, growth, and reach to successful creators in my niche',
-      'Calculate ROI for different content types: time to create vs performance metrics',
-      'Based on current trends, predict my follower growth and revenue potential for next 6 months',
-      'Give me 5 specific actions I should take based on this data to improve my content performance'
+      'Show me which content directly led to revenue opportunities in the last 90 days',
+      'Analyze drop-off points and explain why viewers are leaving at those moments',
+      'Profile my most engaged followers - who are they and what do they want?',
+      'Compare my metrics to successful creators in my niche - where do I stand?',
+      'Calculate ROI: which content types give the best return on time invested?',
+      'Based on current patterns, predict my growth and revenue potential'
     ],
-    categories: ['Business', 'Performance', 'Strategy']
+    categories: ['Money', 'Performance', 'Audience', 'Strategy']
   },
 
-  // Reflection Journal - Systematic growth tracking for sustainable success
+  // Reflection Journal - Learn from wins and setbacks
   reflection_journal: {
     quickCommands: [
       {
-        id: 'win-celebrator',
-        label: 'Celebrate hidden wins',
-        description: 'Identify progress and growth that\'s easy to overlook in the daily hustle',
+        id: 'win-highlighter',
+        label: 'Celebrate hidden progress',
+        description: 'Surface wins and growth you might be overlooking',
         icon: createIcon(Award),
-        category: 'Personal'
+        category: 'Growth'
       },
       {
-        id: 'failure-learner',
-        label: 'Extract valuable lessons',
-        description: 'Turn setbacks into actionable insights that improve my future strategy',
+        id: 'lesson-extractor',
+        label: 'Extract lessons from setbacks',
+        description: 'Turn failures into actionable insights for future success',
         icon: createIcon(Lightbulb),
-        category: 'Personal'
+        category: 'Learning'
       },
       {
-        id: 'creativity-optimizer',
-        label: 'Optimize creative flow',
-        description: 'Understand when and how my best creative ideas emerge',
-        icon: createIcon(Brain),
-        category: 'Personal'
+        id: 'pattern-spotter',
+        label: 'Spot patterns in your work',
+        description: 'Identify cycles in creativity, productivity, and energy',
+        icon: createIcon(Activity),
+        category: 'Insight'
       },
       {
         id: 'burnout-detector',
-        label: 'Detect burnout signals',
-        description: 'Spot early warning signs before they impact my content quality',
+        label: 'Check for burnout signals',
+        description: 'Spot early warning signs before they hurt your content',
         icon: createIcon(AlertTriangle),
-        category: 'Personal'
+        category: 'Wellness'
       },
       {
         id: 'goal-realigner',
-        label: 'Realign my objectives',
-        description: 'Adjust goals based on what I\'ve learned about myself and my audience',
+        label: 'Realign your goals',
+        description: 'Adjust objectives based on what you\'ve learned about yourself',
         icon: createIcon(Target),
         category: 'Strategy'
       },
       {
-        id: 'audience-connector',
-        label: 'Deepen audience bonds',
-        description: 'Reflect on how to create more meaningful connections with my community',
-        icon: createIcon(MessageSquare),
-        category: 'Strategy'
-      },
-      {
-        id: 'revenue-tracker',
-        label: 'Track income growth',
-        description: 'Analyze my creator economy earnings and identify revenue optimization opportunities',
-        icon: createIcon(DollarSign),
-        category: 'Business'
+        id: 'confidence-tracker',
+        label: 'Track confidence patterns',
+        description: 'Understand what builds or kills your creative confidence',
+        icon: createIcon(TrendingUp),
+        category: 'Growth'
       }
     ],
     defaultPrompts: [
-      'What progress have I made this month that I might be undervaluing? Help me celebrate the wins',
-      'Analyze what went wrong with [specific situation] and extract 3 actionable lessons for next time',
-      'When do my best creative ideas come? What patterns can I identify in my creative process?',
-      'Am I showing early signs of burnout? What should I change to protect my creative energy?',
-      'Based on recent learnings about myself and my audience, how should I adjust my goals?',
-      'How can I create deeper connections with my audience based on recent community interactions?',
-      'Analyze my revenue streams from the past quarter - where should I focus for growth?'
+      'What progress have I made this month that I might be undervaluing?',
+      'Analyze what went wrong with [situation] and extract lessons for next time',
+      'What patterns do I see in my creative process and productivity cycles?',
+      'Am I showing early burnout signs? What should I change to protect my energy?',
+      'Based on recent learnings, how should I adjust my goals and priorities?',
+      'What consistently builds vs undermines my creative confidence?'
     ],
-    categories: ['Personal', 'Business', 'Strategy']
+    categories: ['Growth', 'Learning', 'Insight', 'Wellness', 'Strategy']
   },
 
-  // Task Checklist - Eliminate 40-60% time waste on admin tasks
+  // Task Checklist - Stop drowning in busywork
   task_checklist: {
     quickCommands: [
       {
         id: 'revenue-prioritizer',
-        label: 'Prioritize money-makers',
-        description: 'Reorder tasks based on direct revenue impact - money-makers first',
+        label: 'Prioritize money-making tasks',
+        description: 'Reorder by direct revenue impact - money tasks first',
         icon: createIcon(DollarSign),
-        category: 'Business'
+        category: 'Priority'
       },
       {
-        id: 'batch-processor',
+        id: 'batch-optimizer',
         label: 'Batch similar tasks',
-        description: 'Group similar tasks for focused work sessions and maximum efficiency',
+        description: 'Group related tasks for focused work sessions',
         icon: createIcon(Layers),
-        category: 'Organization'
+        category: 'Efficiency'
       },
       {
-        id: 'delegation-identifier',
-        label: 'Identify what to outsource',
-        description: 'Determine which tasks to delegate, automate, or stop doing entirely',
+        id: 'delegation-spotter',
+        label: 'Spot what to outsource',
+        description: 'Identify tasks to delegate, automate, or eliminate',
         icon: createIcon(Users),
         category: 'Strategy'
       },
       {
         id: 'content-scheduler',
-        label: 'Build content calendar',
-        description: 'Transform tasks into a strategic content production and publishing schedule',
+        label: 'Build content production schedule',
+        description: 'Turn tasks into strategic content calendar',
         icon: createIcon(Calendar),
-        category: 'Strategy'
+        category: 'Plan'
       },
       {
         id: 'energy-matcher',
-        label: 'Match tasks to energy',
-        description: 'Schedule creative work for peak hours, admin tasks for low-energy times',
+        label: 'Match tasks to energy levels',
+        description: 'Schedule creative work for peak hours, admin for low energy',
         icon: createIcon(Gauge),
-        category: 'Organization'
+        category: 'Efficiency'
       },
       {
         id: 'milestone-creator',
-        label: 'Create motivating milestones',
-        description: 'Break big goals into celebration-worthy checkpoints that maintain momentum',
+        label: 'Create celebration checkpoints',
+        description: 'Break big goals into motivating mini-wins',
         icon: createIcon(CheckCircle),
-        category: 'Organization'
-      },
-      {
-        id: 'time-estimator',
-        label: 'Estimate realistic time',
-        description: 'Calculate how long tasks actually take to prevent schedule overruns',
-        icon: createIcon(Clock),
-        category: 'Organization'
+        category: 'Motivation'
       }
     ],
     defaultPrompts: [
-      'Reorder these tasks by direct revenue impact - what makes money gets done first',
-      'Group these tasks into batches I can complete in focused 2-3 hour work sessions',
-      'Which of these tasks should I delegate to team members, automate, or eliminate entirely?',
-      'Turn this task list into a strategic content calendar with optimal posting times',
-      'Organize tasks by energy level: creative work for peak hours, admin for low-energy times',
-      'Break down big goals into weekly milestones that feel achievable and worth celebrating',
-      'Estimate realistic time requirements for each task to prevent overpacking my schedule'
+      'Reorder these tasks by direct revenue impact - money-makers first',
+      'Group similar tasks into 2-3 hour focused work batches',
+      'Which tasks should I delegate, automate, or stop doing entirely?',
+      'Turn this task list into a strategic content production calendar',
+      'Organize by energy: creative work for peak hours, admin for low energy',
+      'Break big goals into weekly milestones worth celebrating'
     ],
-    categories: ['Organization', 'Business', 'Strategy']
+    categories: ['Priority', 'Efficiency', 'Strategy', 'Plan', 'Motivation']
   },
 
-  // Email Draft - Save 2-3 hours daily with professional templates
+  // Email Draft - Professional communication that protects your interests
   email_draft: {
     quickCommands: [
-      // Quick Actions - Simple responses for common scenarios
       {
-        id: 'draft-reply',
-        label: 'Draft professional reply',
-        description: 'Create a professional response that maintains my brand voice',
+        id: 'brand-inquiry-responder',
+        label: 'Respond to brand inquiry',
+        description: 'Professional response that shows interest while protecting your rates',
         icon: createIcon(Mail),
-        category: 'Quick Actions'
+        category: 'Response'
       },
-      {
-        id: 'accept-offer',
-        label: 'Accept collaboration',
-        description: 'Enthusiastically accept while confirming key details',
-        icon: createIcon(CheckCircle),
-        category: 'Quick Actions'
-      },
-      {
-        id: 'reject-offer',
-        label: 'Decline politely',
-        description: 'Say no while keeping doors open for future opportunities',
-        icon: createIcon(X),
-        category: 'Quick Actions'
-      },
-      {
-        id: 'request-details',
-        label: 'Ask for more info',
-        description: 'Request missing details about timeline, budget, and deliverables',
-        icon: createIcon(MessageSquare),
-        category: 'Quick Actions'
-      },
-      
-      // Negotiation - Advanced rate and terms discussions
       {
         id: 'rate-negotiator',
-        label: 'Negotiate rates confidently',
-        description: 'Counter lowball offers with data-backed justifications and market rates',
+        label: 'Counter lowball offers',
+        description: 'Professionally negotiate higher rates with data-backed justification',
         icon: createIcon(DollarSign),
-        category: 'Negotiation'
+        category: 'Negotiate'
+      },
+      {
+        id: 'polite-decliner',
+        label: 'Decline while keeping doors open',
+        description: 'Say no professionally while maintaining future opportunities',
+        icon: createIcon(X),
+        category: 'Response'
       },
       {
         id: 'scope-clarifier',
         label: 'Clarify project scope',
-        description: 'Ask strategic questions to prevent misunderstandings and scope creep',
+        description: 'Ask strategic questions to prevent misunderstandings',
         icon: createIcon(FileCheck),
-        category: 'Negotiation'
-      },
-      {
-        id: 'timeline-negotiator',
-        label: 'Negotiate realistic timelines',
-        description: 'Professionally explain why I need adequate time for quality deliverables',
-        icon: createIcon(Clock),
-        category: 'Negotiation'
-      },
-      {
-        id: 'usage-protector',
-        label: 'Protect content usage',
-        description: 'Negotiate how long and where brands can use my content',
-        icon: createIcon(Shield),
-        category: 'Negotiation'
-      },
-      
-      // Strategy - Brand evaluation and relationship building
-      {
-        id: 'brand-evaluator',
-        label: 'Evaluate brand alignment',
-        description: 'Assess if this brand matches my values and audience without being rude',
-        icon: createIcon(Shield),
-        category: 'Strategy'
+        category: 'Protect'
       },
       {
         id: 'follow-up-strategist',
-        label: 'Strategic follow-ups',
-        description: 'Follow up on opportunities without appearing desperate or pushy',
+        label: 'Follow up without seeming desperate',
+        description: 'Professional follow-ups that show interest, not desperation',
         icon: createIcon(Send),
         category: 'Strategy'
       },
       {
         id: 'payment-securer',
         label: 'Secure payment terms',
-        description: 'Ensure timely payment with clear milestones and penalties',
-        icon: createIcon(Briefcase),
-        category: 'Strategy'
+        description: 'Lock in milestone payments and late fees',
+        icon: createIcon(Shield),
+        category: 'Protect'
       }
     ],
     defaultPrompts: [
-      'Draft a professional reply that maintains my brand voice and sets the right tone',
-      'Accept this collaboration enthusiastically while confirming all the important details',
-      'Politely decline this opportunity while keeping the door open for future collaborations',
-      'Ask for missing details about timeline, budget, deliverables, and usage rights',
-      'Help me counter this rate offer professionally: I have [X] followers, [Y]% engagement in [niche]',
-      'Ask clarifying questions about: deliverables, timeline, usage rights, approval process, and payment',
-      'Professionally explain why I need [X] weeks for this project to deliver quality work',
-      'Draft a polite response checking if this brand aligns with my values without offending them',
-      'Write a follow-up for this opportunity that shows interest without appearing desperate',
-      'Secure payment terms: 50% upfront, 50% on delivery, with late payment penalties'
+      'Draft professional response to this brand inquiry while protecting my rates',
+      'Counter this lowball offer: I have [X] followers, [Y]% engagement in [niche]',
+      'Politely decline this opportunity while keeping doors open for future work',
+      'Ask clarifying questions about deliverables, timeline, usage rights, and budget',
+      'Write follow-up that shows interest without appearing desperate or pushy',
+      'Secure payment terms: 50% upfront, 50% on delivery with late payment fees'
     ],
-    categories: ['Quick Actions', 'Negotiation', 'Strategy', 'Professional']
+    categories: ['Response', 'Negotiate', 'Protect', 'Strategy']
   }
 };
 
-// Universal commands that appear across all note types
+// Universal commands for formatting and organization
 export const UNIVERSAL_COMMANDS: Omit<CommandOption, 'action'>[] = [
-  // Content Generation
-  {
-    id: 'ideas',
-    label: 'Brainstorm ideas',
-    description: 'Generate fresh, innovative content concepts',
-    icon: createIcon(Lightbulb),
-    category: 'Create'
-  },
-  {
-    id: 'analysis',
-    label: 'Deep analysis',
-    description: 'Break down complex information into actionable insights',
-    icon: createIcon(Brain),
-    category: 'Analyze'
-  },
-  {
-    id: 'action-items',
-    label: 'Extract action items',
-    description: 'Turn information into specific, actionable next steps',
-    icon: createIcon(CheckCircle),
-    category: 'Organize'
-  },
-  
-  // Formatting
+  // Quick formatting
   {
     id: 'bullet-list',
-    label: 'Bullet points',
-    description: 'Convert to scannable bullet points for clarity',
+    label: 'Convert to bullet points',
+    description: 'Make content scannable with clean bullet points',
     icon: createIcon(List),
     category: 'Format'
   },
   {
     id: 'numbered-list',
-    label: 'Numbered steps',
-    description: 'Create sequential, easy-to-follow instructions',
+    label: 'Number the steps',
+    description: 'Turn into sequential, easy-to-follow instructions',
     icon: createIcon(List),
     category: 'Format'
   },
   {
-    id: 'heading-1',
-    label: 'Main heading',
-    description: 'Add attention-grabbing primary headers',
-    icon: createIcon(Heading1),
-    category: 'Format'
-  },
-  {
-    id: 'heading-2',
-    label: 'Section header',
-    description: 'Organize content with clear subsections',
+    id: 'add-headers',
+    label: 'Add section headers',
+    description: 'Break up long content with clear headings',
     icon: createIcon(Heading2),
     category: 'Format'
   },
   {
-    id: 'heading-3',
-    label: 'Sub-header',
-    description: 'Add structure with detailed breakdowns',
-    icon: createIcon(Heading3),
+    id: 'table',
+    label: 'Organize into table',
+    description: 'Structure data in rows and columns',
+    icon: createIcon(Table),
     category: 'Format'
   },
+  
+  // Content enhancement
   {
-    id: 'table',
-    label: 'Data table',
-    description: 'Organize information in rows and columns',
-    icon: createIcon(Table),
-    category: 'Data'
+    id: 'action-items',
+    label: 'Pull out action items',
+    description: 'Turn ideas into specific next steps',
+    icon: createIcon(CheckCircle),
+    category: 'Action'
   },
   {
     id: 'summary',
-    label: 'Create summary',
-    description: 'Condense key points into digestible highlights',
+    label: 'Summarize key points',
+    description: 'Create digestible highlights from long content',
     icon: createIcon(FileText),
-    category: 'Organize'
+    category: 'Summarize'
   }
 ];
 
-// Helper function to get commands for a specific note type
+// Helper functions
 export function getCommandsForNoteType(noteType: NoteType): {
   typeSpecificCommands: Omit<CommandOption, 'action'>[];
   universalCommands: Omit<CommandOption, 'action'>[];
@@ -672,16 +567,14 @@ export function getCommandsForNoteType(noteType: NoteType): {
   };
 }
 
-// Helper function to get prompt suggestions for a note type
 export function getPromptsForNoteType(noteType: NoteType): string[] {
   const config = NOTE_TYPE_CONFIGS[noteType] || NOTE_TYPE_CONFIGS.idea_bank;
   return config.defaultPrompts;
 }
 
-// Helper function to check if a command exists for a note type
 export function hasTypeSpecificCommand(noteType: NoteType, commandId: string): boolean {
   const config = NOTE_TYPE_CONFIGS[noteType];
   if (!config) return false;
   
   return config.quickCommands.some(cmd => cmd.id === commandId);
-} 
+}
