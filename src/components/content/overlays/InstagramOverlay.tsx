@@ -18,8 +18,6 @@ interface InstagramOverlayProps {
   postId: string;
   onClose: () => void;
   showAnalysis?: boolean;
-  // Optional pre-fetched data to avoid Convex query
-  preFetchedData?: any;
   hideDiscussButton?: boolean;
 }
 
@@ -38,12 +36,6 @@ const InstagramSkeletonLoader = ({ onClose }: { onClose: () => void }) => (
             <span className="w-2 h-2 bg-pink-500 rounded-full" />
             <Skeleton className="h-4 w-12" />
           </span>
-        </div>
-        {/* Content Themes skeleton */}
-        <div className="flex flex-wrap gap-1">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-5 w-16 rounded" />
-          ))}
         </div>
       </div>
     }
@@ -111,17 +103,10 @@ const ErrorState = ({ onClose, error }: { onClose: () => void; error?: string })
   </div>
 );
 
-// Helper function to parse structured analysis data for themes
-const parseAnalysisThemes = (analysis: any): string[] => {
-  if (!analysis || typeof analysis !== 'object') return [];
-  return analysis.content_themes || [];
-};
-
 export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
   postId,
   onClose,
   showAnalysis = true,
-  preFetchedData,
   hideDiscussButton = false
 }) => {
   const userId = getCurrentUserId();
@@ -129,23 +114,15 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
   const [visibleCommentsCount, setVisibleCommentsCount] = useState(5);
   const [infoOpen, setInfoOpen] = useState(false);
 
-  // Always call the hook, but only use the result if no pre-fetched data
-  const queryResult = useQuery(api.instagramQueries.getInstagramPost, 
-    userId && postId ? {
-      postId,
-      userId: userId
-    } : "skip"
+  // Always use Convex query for the post and its analysis
+  const post = useQuery(api.instagramQueries.getInstagramPost, 
+    userId && postId ? { postId, userId } : "skip"
   );
-  
-  // Use pre-fetched data if available, otherwise use query result
-  const post = preFetchedData || queryResult;
 
-  // Callback to handle analysis generation - this will trigger a refetch
+  // Callback to handle analysis generation - this will trigger a re-render if needed
   const handleAnalysisGenerated = useCallback(() => {
-    // Force a re-render by updating the key
     setTimeout(() => {
       setRefreshKey(prev => prev + 1);
-      console.log('Analysis generated, triggering component refresh');
     }, 2000);
   }, []);
 
@@ -161,26 +138,18 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
 
   // Extract and validate core data with proper null safety
   const postData = post.data || {};
-  
-  // Core properties with single null checks
   const caption = postData.caption || '';
   const mediaUrl = postData.media_url || '';
   const thumbnailUrl = postData.thumbnail_url || '';
   const permalink = postData.permalink || `https://www.instagram.com/p/${postId}`;
   const createdAt = postData.timestamp || post.createdAt || Date.now();
   const mediaType = post.mediaType || 'image';
-  
-  // Safely extract insights with proper null checks
   const insights = postData.insights || {};
   const likeCount = postData.like_count || 0;
   const commentsCount = postData.comments_count || 0;
-  
-  // Check if we have insights data
   const hasInsights = insights && Object.keys(insights).length > 0 && (
     insights.reach !== undefined || insights.impressions !== undefined || insights.saved !== undefined
   );
-
-  // Create statistics object with safe property access
   const statistics = {
     likes: insights.likes ?? likeCount,
     comments: insights.comments ?? commentsCount,
@@ -189,51 +158,13 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
     saved: insights.saved ?? 0,
     shares: insights.shares ?? 0
   };
-
-  // Validate that we have meaningful data
   if (!caption && !mediaUrl && !thumbnailUrl) {
     return <ErrorState onClose={onClose} error="Post contains no viewable content" />;
   }
-
-  // Get comments from post data - improved to match YouTube pattern
   const comments = postData.comments || [];
   const displayComments = comments.slice(0, visibleCommentsCount);
   const hasMoreComments = comments.length > visibleCommentsCount;
   const commentsToLoad = Math.min(10, comments.length - visibleCommentsCount);
-
-  // Debug logging for comments structure (similar to YouTube)
-  React.useEffect(() => {
-    console.log(`[InstagramOverlay] Comments processing:`, {
-      totalComments: comments.length,
-      visibleComments: visibleCommentsCount,
-      hasMoreComments: hasMoreComments,
-      commentsToLoad: commentsToLoad,
-      firstComment: comments[0],
-      postDataExists: !!postData,
-      commentsFieldExists: !!postData.comments,
-      commentsArrayExists: Array.isArray(postData.comments),
-      postId: postId
-    });
-    
-    if (comments.length > 0) {
-      console.log(`[InstagramOverlay] Comments structure:`, {
-        totalComments: comments.length,
-        visibleComments: visibleCommentsCount,
-        hasMoreComments: hasMoreComments,
-        commentsToLoad: commentsToLoad,
-        firstComment: comments[0]
-      });
-    } else {
-      console.log(`[InstagramOverlay] No comments found - checking data path:`, {
-        postDataExists: !!postData,
-        commentsFieldExists: !!postData.comments,
-        commentsArrayExists: Array.isArray(postData.comments),
-        fullCommentsField: postData.comments
-      });
-    }
-  }, [comments.length, visibleCommentsCount, hasMoreComments, commentsToLoad, postId, postData]);
-
-  // Prepare normalized post data with proper null safety
   const normalizedPostData = {
     id: `instagram:${postId}`,
     title: caption.length > 80 ? caption.substring(0, 80) + '...' : caption || 'Instagram Post',
@@ -249,7 +180,6 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
     thumbnailUrl,
     insights,
     statistics,
-    // Add the raw data structure that InstagramContent expects
     data: {
       media_url: mediaUrl,
       thumbnail_url: thumbnailUrl,
@@ -258,17 +188,11 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
       like_count: likeCount,
       comments_count: commentsCount,
       permalink,
-      comments: comments // Add comments to the data structure
+      comments: comments
     },
     mediaType,
-    // Add permalink at the top level for easy access
     permalink
   };
-
-  // Extract content themes from analysis with null safety
-  const contentThemes = normalizedPostData.analysis ? parseAnalysisThemes(normalizedPostData.analysis) : [];
-
-  // --- Layout: Media, Stats, Comments, Analysis ---
   return (
     <ContentOverlay
       onClose={onClose}
@@ -286,19 +210,6 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
               </span>
             )}
           </div>
-          {/* Content Themes in header */}
-          {contentThemes.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {contentThemes.map((theme, index) => (
-                <span 
-                  key={index} 
-                  className="inline-block bg-muted/60 text-muted-foreground px-1.5 py-0.5 rounded text-xs border border-border/40"
-                >
-                  #{theme}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
       }
       icon={<Instagram className="w-8 h-8 text-pink-500" />}
@@ -426,7 +337,7 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
           </div>
         )}
 
-        {/* Comments Section - Updated to match YouTube pattern */}
+        {/* Comments Section */}
         {comments.length > 0 && (
           <Card>
             <CardHeader>
@@ -499,10 +410,7 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
                   <Button 
                     variant="ghost" 
                     size="sm"
-                    onClick={() => {
-                      console.log(`[InstagramOverlay] Loading more comments. Current: ${visibleCommentsCount}, Total: ${comments.length}`);
-                      setVisibleCommentsCount(prev => prev + 10);
-                    }}
+                    onClick={() => setVisibleCommentsCount(prev => prev + 10)}
                     className="w-full bg-muted/30 hover:bg-muted/50"
                   >
                     Load More Comments ({commentsToLoad} of {comments.length - visibleCommentsCount} remaining)
@@ -512,10 +420,7 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
                   <Button 
                     variant="ghost" 
                     size="sm"
-                    onClick={() => {
-                      console.log(`[InstagramOverlay] Showing less comments. Resetting to 5`);
-                      setVisibleCommentsCount(5);
-                    }}
+                    onClick={() => setVisibleCommentsCount(5)}
                     className="w-full mt-2"
                   >
                     Show Less Comments
@@ -528,7 +433,7 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
 
         {/* Analysis Section */}
         <InstagramContent
-          key={refreshKey} // Force re-render when analysis is generated
+          key={refreshKey}
           postData={normalizedPostData}
           postId={postId}
           showAnalysis={showAnalysis}
