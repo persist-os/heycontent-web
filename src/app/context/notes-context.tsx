@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useCallback, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useSmartNotes } from '@/app/dashboard/notes/hooks/useSmartNotes';
 import { Note, NoteUpdate } from '@/app/dashboard/notes/types';
 import type { Id } from '@/convex/_generated/dataModel';
@@ -40,6 +41,7 @@ const NotesContext = createContext<NotesContextType | undefined>(undefined);
 export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid;
+  const pathname = usePathname();
   const {
     notes,
     isLoading,
@@ -56,6 +58,15 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [navigationStack, setNavigationStack] = useState<NavigationEntry[]>([]);
 
   const convexDeleteNote = useMutation(api.notes.deleteNote);
+
+  // Clear activeNoteId when navigating away from notes route
+  React.useEffect(() => {
+    if (pathname && !pathname.startsWith('/dashboard/notes') && activeNoteId) {
+      console.log('🔄 Route changed away from notes, clearing active note:', { from: pathname, activeNoteId });
+      setActiveNoteId(undefined);
+      setNavigationStack([]); // Also clear navigation stack
+    }
+  }, [pathname, activeNoteId, setActiveNoteId]);
 
   // Delete note: just call Convex, let reactivity update notes
   const deleteNote = useCallback(async (noteId: Id<'notes'> | string): Promise<boolean> => {
