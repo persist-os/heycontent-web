@@ -148,16 +148,24 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
   const likeCount = postData.like_count || 0;
   const commentsCount = postData.comments_count || 0;
   const hasInsights = insights && Object.keys(insights).length > 0 && (
-    insights.reach !== undefined || insights.impressions !== undefined || insights.saved !== undefined
+    insights.reach !== undefined || insights.views !== undefined || insights.saved !== undefined
   );
-  const statistics = {
+  // Build statistics object based on available metrics
+  const statistics: Record<string, number> = {
     likes: insights.likes ?? likeCount,
     comments: insights.comments ?? commentsCount,
     reach: insights.reach ?? 0,
-    impressions: insights.impressions ?? 0,
     saved: insights.saved ?? 0,
-    shares: insights.shares ?? 0
+    shares: insights.shares ?? 0,
   };
+  // Add 'views' if present (for videos/reels)
+  if (typeof insights.views === 'number' && insights.views > 0) {
+    statistics.views = insights.views;
+  }
+  // Add 'impressions' only if present and nonzero (legacy/edge case)
+  if (typeof insights.impressions === 'number' && insights.impressions > 0) {
+    statistics.impressions = insights.impressions;
+  }
   if (!caption && !mediaUrl && !thumbnailUrl) {
     return <ErrorState onClose={onClose} error="Post contains no viewable content" />;
   }
@@ -252,6 +260,7 @@ export const InstagramOverlay: React.FC<InstagramOverlayProps> = ({
                   {key === 'likes' && <Heart className="w-4 h-4 text-red-500" />}
                   {key === 'comments' && <MessageCircle className="w-4 h-4 text-blue-500" />}
                   {key === 'impressions' && <Eye className="w-4 h-4 text-green-500" />}
+                  {key === 'views' && <Eye className="w-4 h-4 text-green-500" />}
                   {key === 'reach' && <Users className="w-4 h-4 text-purple-500" />}
                   {key === 'saved' && <Bookmark className="w-4 h-4 text-yellow-500" />}
                   {key === 'shares' && <Share2 className="w-4 h-4 text-indigo-500" />}
