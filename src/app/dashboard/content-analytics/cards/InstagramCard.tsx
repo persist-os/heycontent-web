@@ -229,7 +229,10 @@ export const InstagramCard: React.FC<InstagramCardProps> = ({ item, userId, onDi
         <div className="grid grid-cols-2 gap-4 mb-6">
           {/* Show reach only if available from insights */}
           {metrics?.reach !== undefined && renderStat('Reach', metrics.reach, <Users className="w-4 h-4 text-heycontent-purple" />, 'bg-heycontent-light-purple')}
-          
+
+          {/* Show views if available (for videos/reels) */}
+          {metrics?.views !== undefined && metrics.views > 0 && renderStat('Views', metrics.views, <Instagram className="w-4 h-4 text-green-600" />, 'bg-green-100 dark:bg-green-900/30')}
+
           {/* Always show likes (with fallback to basic data) */}
           {renderStat('Likes', getLikesValue(), <Heart className="w-4 h-4 text-red-500" />, 'bg-red-100 dark:bg-red-900/30')}
           
