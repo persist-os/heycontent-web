@@ -10,6 +10,9 @@ export async function POST(request: Request) {
   const startTime = Date.now();
   const requestId = Math.random().toString(36).substring(7);
 
+  // 🚨 STACK TRACE DEBUG - FIND WHERE THIS IS CALLED FROM
+  console.error('🚨 METADATA API CALLED FROM:', new Error().stack);
+
   console.log(`[${requestId}] Smart note metadata generation request started`, {
     timestamp: new Date().toISOString(),
     method: request.method,
@@ -42,6 +45,14 @@ export async function POST(request: Request) {
     
     const { noteId, noteContent } = body;
     debug('Parsed request data:', { noteId, noteContent: noteContent?.length });
+    
+    // DUPLICATE DETECTION LOG
+    console.log(`🔍 [DUPLICATE CHECK] ${requestId}:`, {
+      noteId,
+      contentLength: noteContent?.length,
+      contentHash: noteContent ? noteContent.substring(0, 50) + '...' : 'empty',
+      timestamp: Date.now()
+    });
     
     if (!noteId || !noteContent) {
       console.warn(`[${requestId}] Invalid request: Missing required fields`);
