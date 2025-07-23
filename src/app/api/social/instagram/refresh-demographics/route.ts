@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   const { expires_at, scope } = body;
 
   // Backend API URL (adjust if needed)
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
   const endpoint = `${backendUrl}/api/v1/instagram/refresh-demographics`;
 
   try {
