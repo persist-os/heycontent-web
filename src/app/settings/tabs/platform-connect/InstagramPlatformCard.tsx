@@ -9,9 +9,6 @@ interface InstagramPlatformCardProps {
   account: ConnectedAccount | undefined;
   connecting: boolean;
   disconnecting: boolean;
-  showInstagramOptions: boolean;
-  setShowInstagramOptions: (show: boolean) => void;
-  handleConnect: (options?: { useFacebook?: boolean }) => void;
   handleDisconnect: () => void;
 }
 
@@ -20,8 +17,6 @@ export function InstagramPlatformCard({
   account,
   connecting,
   disconnecting,
-  showInstagramOptions,
-  setShowInstagramOptions,
   handleDisconnect,
 }: InstagramPlatformCardProps) {
   const isLoading = connecting || disconnecting;
@@ -43,12 +38,6 @@ export function InstagramPlatformCard({
       alert('Error connecting to Instagram.');
     }
   };
-
-
-  // Facebook Business Connect (if needed, can also be routed through backend for consistency)
-  // const handleFacebookConnect = () => {
-  //   alert('Facebook Business connect coming soon!');
-  // };
 
   return (
     <Card className="p-6 relative">
@@ -86,53 +75,31 @@ export function InstagramPlatformCard({
       <div className="text-sm text-gray-600 mb-2">
         Connect to analyze engagement and find opportunities, and more
       </div>
-      {/* Instagram connect options */}
-      {!account && (
-        <div className="space-y-2">
-          {showInstagramOptions ? (
-            <>
-              <div className="space-y-4 mb-4 p-4 bg-gray-50 rounded-lg">
-                {/* Placeholder connect options for Instagram */}
-                <button
-                  type="button"
-                  onClick={handleInstagramConnect}
-                  className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50"
-                  style={{ background: 'linear-gradient(to right, rgb(168, 85, 247), rgb(236, 72, 153))' }}
-                  disabled={isLoading}
-                >
-                  Connect Instagram
-                </button>
-                {/* <button
-                  type="button"
-                  onClick={handleFacebookConnect}
-                  className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50"
-                  style={{ background: 'linear-gradient(to right, rgb(168, 85, 247), rgb(236, 72, 153))' }}
-                  disabled={isLoading}
-                >
-                  Connect via Facebook Business
-                </button> */}
-                <button
-                  type="button"
-                  onClick={() => setShowInstagramOptions(false)}
-                  className="w-full py-2 px-4 rounded-lg text-gray-600 bg-gray-200 hover:bg-gray-300 transition-all duration-200"
-                >
-                  Cancel
-                </button>
-              </div>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowInstagramOptions(true)}
-              disabled={isLoading}
-              className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50"
-              style={{ background: 'linear-gradient(to right, rgb(168, 85, 247), rgb(236, 72, 153))' }}
-            >
-              {isLoading ? 'Connecting...' : 'Connect'}
-            </button>
-          )}
-        </div>
-      )}
+      
+      <div className="mt-4">
+        {account ? (
+          <button
+            type="button"
+            onClick={handleDisconnect}
+            disabled={isLoading}
+            className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50"
+            style={{ background: '#94A3B8' }}
+          >
+            {isLoading ? 'Disconnecting...' : 'Disconnect'}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleInstagramConnect}
+            disabled={isLoading}
+            className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50"
+            style={{ background: 'linear-gradient(to right, rgb(168, 85, 247), rgb(236, 72, 153))' }}
+          >
+            {isLoading ? 'Connecting...' : 'Connect Instagram'}
+          </button>
+        )}
+      </div>
+      
       {/* Instagram metrics placeholder */}
       {account && account.metadata && (
         <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
@@ -140,21 +107,11 @@ export function InstagramPlatformCard({
           <div>Posts: {account.metadata.posts ?? 0}</div>
         </div>
       )}
+      
       {account && (
-        <>
-          <button
-            type="button"
-            onClick={handleDisconnect}
-            disabled={isLoading}
-            className="w-full py-2 px-4 rounded-lg text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50 mt-4"
-            style={{ background: '#94A3B8' }}
-          >
-            {isLoading ? 'Disconnecting...' : 'Disconnect'}
-          </button>
-          <div className="mt-2 text-xs text-gray-400">
-            Updated {account.updatedAt ? new Date(account.updatedAt).toLocaleString() : ''}
-          </div>
-        </>
+        <div className="mt-2 text-xs text-gray-400">
+          Updated {account.updatedAt ? new Date(account.updatedAt).toLocaleString() : ''}
+        </div>
       )}
     </Card>
   );
