@@ -80,63 +80,63 @@ const createIcon = (IconComponent: React.ComponentType<{ className?: string }>) 
 export const CORE_REFINEMENTS: RefinementCommand[] = [
   {
     id: 'boost-clarity',
-    label: 'Boost clarity',
-    description: 'Make complex ideas instantly understandable without losing depth',
+    label: 'Can you make this clearer?',
+    description: 'Make complex ideas instantly understandable',
     icon: createIcon(Eye),
     category: 'Core',
     usageFrequency: 'high'
   },
   {
     id: 'make-concise',
-    label: 'Cut the fluff',
-    description: 'Eliminate unnecessary words while keeping all the impact',
+    label: 'Can you cut the fluff?',
+    description: 'Remove unnecessary words while keeping the impact',
     icon: createIcon(Scissors),
     category: 'Core',
     usageFrequency: 'high'
   },
   {
     id: 'improve-flow',
-    label: 'Improve flow',
-    description: 'Create smooth transitions that keep readers engaged from start to finish',
+    label: 'Can you improve the flow?',
+    description: 'Create smooth transitions that keep readers engaged',
     icon: createIcon(Activity),
     category: 'Core',
     usageFrequency: 'high'
   },
   {
     id: 'add-detail',
-    label: 'Add strategic detail',
-    description: 'Expand with specific examples and concrete details that add value',
+    label: 'Can you add more detail?',
+    description: 'Expand with specific examples and concrete details',
     icon: createIcon(Layers),
     category: 'Core',
     usageFrequency: 'high'
   },
   {
     id: 'professional-tone',
-    label: 'Professional tone',
-    description: 'Upgrade language to sound polished and credible in business contexts',
+    label: 'Can you make this more professional?',
+    description: 'Upgrade language to sound polished and credible',
     icon: createIcon(Briefcase),
     category: 'Core',
     usageFrequency: 'medium'
   },
   {
     id: 'boost-engagement',
-    label: 'Boost engagement',
-    description: 'Add hooks, questions, and active voice to captivate your audience',
+    label: 'Can you make this more engaging?',
+    description: 'Add hooks, questions, and active voice to captivate readers',
     icon: createIcon(Megaphone),
     category: 'Core',
     usageFrequency: 'medium'
   },
   {
     id: 'fix-grammar',
-    label: 'Fix grammar',
-    description: 'Correct grammar and spelling while maintaining your natural voice',
+    label: 'Can you fix the grammar?',
+    description: 'Correct grammar and spelling while maintaining your voice',
     icon: createIcon(CheckCircle),
     category: 'Core',
     usageFrequency: 'medium'
   },
   {
     id: 'casual-tone',
-    label: 'Casual tone',
+    label: 'Can you make this more casual?',
     description: 'Make content more conversational and approachable',
     icon: createIcon(MessageCircle),
     category: 'Core',
@@ -152,7 +152,7 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
     noteSpecificRefinements: [
       {
         id: 'professional-elevation',
-        label: 'Elevate professionalism',
+        label: 'Can you make this sound more professional?',
         description: 'Upgrade tone to sound polished and credible while staying authentic',
         icon: createIcon(Briefcase),
         category: 'Note-Specific',
@@ -161,8 +161,8 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
       },
       {
         id: 'confidence-injection',
-        label: 'Inject confidence',
-        description: 'Remove weak language and hesitation - make every statement strong and decisive',
+        label: 'Can you make me sound more confident?',
+        description: 'Remove weak language and hesitation for stronger statements',
         icon: createIcon(Zap),
         category: 'Note-Specific',
         usageFrequency: 'high',
@@ -170,8 +170,8 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
       },
       {
         id: 'negotiation-sharpening',
-        label: 'Sharpen negotiation language',
-        description: 'Add protective clauses and rate justifications that secure better deals',
+        label: 'Can you help me negotiate better?',
+        description: 'Add protective clauses and rate justifications',
         icon: createIcon(Shield),
         category: 'Note-Specific',
         usageFrequency: 'medium',
@@ -179,8 +179,8 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
       },
       {
         id: 'urgency-optimizer',
-        label: 'Optimize urgency level',
-        description: 'Match the energy and urgency of the incoming email perfectly',
+        label: 'Can you match their energy level?',
+        description: 'Adjust urgency and energy to match the incoming email',
         icon: createIcon(Timer),
         category: 'Note-Specific',
         usageFrequency: 'medium',
@@ -190,7 +190,7 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
     advancedRefinements: [
       {
         id: 'cultural-adaptation',
-        label: 'Adapt for culture/region',
+        label: 'Can you adapt this for different cultures?',
         description: 'Adjust communication style for different cultural business norms',
         icon: createIcon(Users),
         category: 'Advanced',
@@ -207,8 +207,8 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
     noteSpecificRefinements: [
       {
         id: 'hook-amplification',
-        label: 'Amplify hook power',
-        description: 'Strengthen the opening 10-15 seconds to stop scrollers dead in their tracks',
+        label: 'Can you make the hook stronger?',
+        description: 'Strengthen the opening to stop scrollers immediately',
         icon: createIcon(Megaphone),
         category: 'Note-Specific',
         usageFrequency: 'high',
@@ -216,8 +216,8 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
       },
       {
         id: 'retention-engineering',
-        label: 'Engineer retention',
-        description: 'Add curiosity gaps and pattern interrupts to prevent viewer drop-offs',
+        label: 'How can I keep people watching?',
+        description: 'Add curiosity gaps and pattern interrupts to prevent drop-offs',
         icon: createIcon(Activity),
         category: 'Note-Specific',
         usageFrequency: 'high',
@@ -225,8 +225,8 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
       },
       {
         id: 'platform-optimize',
-        label: 'Optimize for platform',
-        description: 'Adapt script length and style for TikTok, Instagram, YouTube, or Twitter',
+        label: 'Can you optimize this for [platform]?',
+        description: 'Adapt script length and style for specific platforms',
         icon: createIcon(RefreshCw),
         category: 'Note-Specific',
         usageFrequency: 'medium',
@@ -234,8 +234,8 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
       },
       {
         id: 'match-voice',
-        label: 'Match authentic voice',
-        description: 'Rewrite to sound like you talking naturally to your best friend',
+        label: 'Can you make this sound like me?',
+        description: 'Rewrite to sound like you talking naturally',
         icon: createIcon(Volume2),
         category: 'Note-Specific',
         usageFrequency: 'medium',
@@ -243,8 +243,8 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
       },
       {
         id: 'voice-consistency',
-        label: 'Match my voice',
-        description: 'Rewrite this script to sound authentically like me talking to my best friend',
+        label: 'Does this match my voice?',
+        description: 'Ensure authentic voice consistency throughout',
         icon: createIcon(Palette),
         category: 'Note-Specific',
         usageFrequency: 'medium',
@@ -254,7 +254,7 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
     advancedRefinements: [
       {
         id: 'viral-psychology',
-        label: 'Apply viral psychology',
+        label: 'Can you make this more shareable?',
         description: 'Use psychological triggers that make content inherently shareable',
         icon: createIcon(Brain),
         category: 'Advanced',
@@ -263,7 +263,7 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
       },
       {
         id: 'algorithm-optimization',
-        label: 'Optimize for algorithm',
+        label: 'Can you optimize this for the algorithm?',
         description: 'Structure content to trigger platform algorithm preferences',
         icon: createIcon(Settings),
         category: 'Advanced',
@@ -280,8 +280,8 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
     noteSpecificRefinements: [
       {
         id: 'scope-crystallization',
-        label: 'Crystallize scope',
-        description: 'Make deliverables bulletproof against scope creep with precise definitions',
+        label: 'Can you make the scope crystal clear?',
+        description: 'Make deliverables bulletproof against scope creep',
         icon: createIcon(Target),
         category: 'Note-Specific',
         usageFrequency: 'high',
@@ -289,8 +289,8 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
       },
       {
         id: 'set-boundaries',
-        label: 'Fortify boundaries',
-        description: 'Add protective language that maintains creative control and prevents overreach',
+        label: 'Can you help me set stronger boundaries?',
+        description: 'Add protective language that maintains creative control',
         icon: createIcon(Shield),
         category: 'Note-Specific',
         usageFrequency: 'high',
@@ -298,8 +298,8 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
       },
       {
         id: 'timeline-realism',
-        label: 'Set realistic timelines',
-        description: 'Build in buffer time for revisions and approval cycles that actually work',
+        label: 'Can you make the timeline more realistic?',
+        description: 'Build in buffer time for revisions and approval cycles',
         icon: createIcon(Clock),
         category: 'Note-Specific',
         usageFrequency: 'medium',
@@ -307,8 +307,8 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
       },
       {
         id: 'value-communication',
-        label: 'Communicate value clearly',
-        description: 'Articulate your worth and expertise without underselling yourself',
+        label: 'Can you help me communicate my value?',
+        description: 'Articulate your worth and expertise without underselling',
         icon: createIcon(DollarSign),
         category: 'Note-Specific',
         usageFrequency: 'medium',
@@ -318,7 +318,7 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
     advancedRefinements: [
       {
         id: 'legal-protection',
-        label: 'Add legal protection',
+        label: 'Can you add legal protection?',
         description: 'Include clauses that protect against payment delays and rights issues',
         icon: createIcon(FileSignature),
         category: 'Advanced',
@@ -335,8 +335,8 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
     noteSpecificRefinements: [
       {
         id: 'actionability-focus',
-        label: 'Focus on actionable insights',
-        description: 'Transform raw data into specific, implementable next steps that drive results',
+        label: 'What should I actually do with this data?',
+        description: 'Transform raw data into specific, implementable next steps',
         icon: createIcon(Target),
         category: 'Note-Specific',
         usageFrequency: 'high',
@@ -344,17 +344,16 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
       },
       {
         id: 'revenue-connection',
-        label: 'Connect to revenue',
+        label: 'How does this connect to money?',
         description: 'Link every metric to monetization opportunities and income potential',
         icon: createIcon(DollarSign),
         category: 'Note-Specific',
         usageFrequency: 'high',
         noteTypes: ['analytics_insight']
       },
-
       {
         id: 'competitive-positioning',
-        label: 'Frame competitive position',
+        label: 'How do I compare to competitors?',
         description: 'Position insights against market benchmarks and competitor performance',
         icon: createIcon(BarChart3),
         category: 'Note-Specific',
@@ -363,8 +362,8 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
       },
       {
         id: 'actionable-insights',
-        label: 'Extract action items',
-        description: 'Turn this data into specific changes I should make to my content strategy',
+        label: 'What changes should I make?',
+        description: 'Turn this data into specific changes for your content strategy',
         icon: createIcon(Target),
         category: 'Note-Specific',
         usageFrequency: 'high',
@@ -374,7 +373,7 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
     advancedRefinements: [
       {
         id: 'data-clarity',
-        label: 'Clarify data presentation',
+        label: 'Can you make this data clearer?',
         description: 'Make complex metrics more understandable and actionable',
         icon: createIcon(Eye),
         category: 'Advanced',
@@ -391,8 +390,8 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
     noteSpecificRefinements: [
       {
         id: 'audience-resonance',
-        label: 'Align with audience',
-        description: 'Refine ideas to perfectly match your community\'s interests and pain points',
+        label: 'Will this resonate with my audience?',
+        description: 'Refine ideas to match your community\'s interests and pain points',
         icon: createIcon(UserCheck),
         category: 'Note-Specific',
         usageFrequency: 'high',
@@ -400,7 +399,7 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
       },
       {
         id: 'viral-factor-enhancement',
-        label: 'Enhance viral factors',
+        label: 'Can you make this more viral?',
         description: 'Strengthen shareability elements like hooks, emotions, and relatability',
         icon: createIcon(Zap),
         category: 'Note-Specific',
@@ -409,7 +408,7 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
       },
       {
         id: 'concept-clarification',
-        label: 'Clarify core concept',
+        label: 'Can you make the core idea clearer?',
         description: 'Make the central idea more focused and compelling',
         icon: createIcon(Target),
         category: 'Note-Specific',
@@ -418,7 +417,7 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
       },
       {
         id: 'tone-adjustment',
-        label: 'Adjust tone for platform',
+        label: 'Can you adjust the tone for [platform]?',
         description: 'Refine voice and style to match specific platform audiences',
         icon: createIcon(Palette),
         category: 'Note-Specific',
@@ -429,7 +428,7 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
     advancedRefinements: [
       {
         id: 'psychological-triggers',
-        label: 'Add psychological hooks',
+        label: 'Can you add psychological hooks?',
         description: 'Incorporate proven psychological triggers that drive engagement',
         icon: createIcon(Brain),
         category: 'Advanced',
@@ -446,7 +445,7 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
     noteSpecificRefinements: [
       {
         id: 'priority-reordering',
-        label: 'Reorder by revenue impact',
+        label: 'Can you prioritize by revenue impact?',
         description: 'Sequence tasks by their direct impact on income and business growth',
         icon: createIcon(ArrowUp),
         category: 'Note-Specific',
@@ -455,8 +454,8 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
       },
       {
         id: 'batch-optimization',
-        label: 'Optimize batching',
-        description: 'Group similar tasks together for maximum efficiency and flow state',
+        label: 'Can you group similar tasks together?',
+        description: 'Group similar tasks together for maximum efficiency',
         icon: createIcon(Layers),
         category: 'Note-Specific',
         usageFrequency: 'high',
@@ -464,8 +463,8 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
       },
       {
         id: 'delegation-identification',
-        label: 'Identify delegation opportunities',
-        description: 'Flag tasks that should be outsourced, automated, or eliminated entirely',
+        label: 'What should I delegate or outsource?',
+        description: 'Flag tasks that should be outsourced, automated, or eliminated',
         icon: createIcon(Users),
         category: 'Note-Specific',
         usageFrequency: 'medium',
@@ -473,7 +472,7 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
       },
       {
         id: 'milestone-creation',
-        label: 'Create celebration milestones',
+        label: 'Can you break this into smaller wins?',
         description: 'Break large goals into achievement points that maintain motivation',
         icon: createIcon(Award),
         category: 'Note-Specific',
@@ -484,8 +483,8 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
     advancedRefinements: [
       {
         id: 'energy-optimization',
-        label: 'Optimize for energy levels',
-        description: 'Match task complexity to your natural energy patterns throughout the day',
+        label: 'Can you match tasks to my energy levels?',
+        description: 'Match task complexity to your natural energy patterns',
         icon: createIcon(Gauge),
         category: 'Advanced',
         usageFrequency: 'low',
@@ -501,8 +500,8 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
     noteSpecificRefinements: [
       {
         id: 'growth-highlighting',
-        label: 'Highlight hidden growth',
-        description: 'Surface progress and wins that are easy to overlook in the daily hustle',
+        label: 'What growth am I missing?',
+        description: 'Surface progress and wins that are easy to overlook',
         icon: createIcon(TrendingUp),
         category: 'Note-Specific',
         usageFrequency: 'high',
@@ -510,7 +509,7 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
       },
       {
         id: 'pattern-recognition',
-        label: 'Recognize patterns',
+        label: 'What patterns do you see?',
         description: 'Identify cycles in creativity, productivity, and personal energy levels',
         icon: createIcon(Activity),
         category: 'Note-Specific',
@@ -519,8 +518,8 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
       },
       {
         id: 'lesson-extraction',
-        label: 'Extract valuable lessons',
-        description: 'Turn setbacks and challenges into actionable insights for future success',
+        label: 'What can I learn from this?',
+        description: 'Turn setbacks and challenges into actionable insights',
         icon: createIcon(Lightbulb),
         category: 'Note-Specific',
         usageFrequency: 'medium',
@@ -528,7 +527,7 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
       },
       {
         id: 'goal-realignment',
-        label: 'Realign goals',
+        label: 'Should I adjust my goals?',
         description: 'Adjust objectives based on new self-knowledge and changing priorities',
         icon: createIcon(Target),
         category: 'Note-Specific',
@@ -539,7 +538,7 @@ export const NOTE_TYPE_REFINEMENT_CONFIGS: Record<NoteType, RefinementConfig> = 
     advancedRefinements: [
       {
         id: 'psychological-insights',
-        label: 'Extract psychological insights',
+        label: 'What psychological patterns do you see?',
         description: 'Understand deeper motivations and behavioral patterns affecting your work',
         icon: createIcon(Brain),
         category: 'Advanced',
