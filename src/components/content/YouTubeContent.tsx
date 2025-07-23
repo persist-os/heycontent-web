@@ -16,8 +16,6 @@ import {
   Subtitles
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { MarkdownRenderer } from '@/app/dashboard/chat/markdown-renderer';
-import { processContentIfNeeded } from '@/app/dashboard/content-analytics/utils/markdown-processor';
 import { 
   formatNumber, 
   formatDate, 
@@ -27,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { getApiKey, getCurrentUserId } from '@/app/lib/api-helpers';
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { YouTubeAnalysisCards } from './YouTubeAnalysisCards';
 
 interface YouTubeContentProps {
   videoData: any;
@@ -43,55 +42,7 @@ interface CaptionEntry {
   text: string;
 }
 
-// Add YouTube loading messages (can be YouTube/creator themed)
-const LOADING_MESSAGES = [
-  "Analyzing your YouTube magic... even AI needs to understand your channel's vibe!",
-  "Teaching our AI about your video style... it's learning, we promise!",
-  "Processing your YouTube genius... this is like speed-watching your playlist",
-  "Decoding your YouTube algorithm... because we're nosy about what makes your videos pop",
-  "AI is getting to know your brand... it's like a first date, but with data",
-  "Fetching your YouTube insights... this might take a moment, but good things come to those who wait",
-  "Crunching numbers and analyzing engagement... we're doing the heavy lifting so you don't have to",
-  "Deep-diving into your content strategy... because surface-level insights are so 2020",
-  "Processing your video brilliance... we're basically your personal content detective",
-  "Mining your YouTube gold... because every video has a story to tell",
-  "Analyzing your creative genius... because every upload is a masterpiece in the making",
-  "Decoding your YouTube success... we're basically your personal video therapist",
-  "Unpacking your content strategy... it's like reading your diary, but with analytics",
-  "Mapping your audience connection... because engagement is just friendship with data",
-  "Processing your YouTube personality... we're getting to know the real you (digitally)",
-  "YouTube analysis in progress... even AI needs to understand your thumbnail game",
-  "Decoding your YouTube story... we're basically your personal content whisperer",
-  "Mining your channel gold... every like, comment, and share tells a story",
-  "Analyzing your storytelling... because a video is worth a thousand insights",
-  "Processing your YouTube algorithm... we're basically your personal video fortune teller",
-  "Preparing your content insights... because every creator deserves to understand their impact",
-  "Unlocking your YouTube potential... we're here to help you shine brighter",
-  "Mapping your audience connection... because your content deserves to be seen",
-  "Analyzing your creative journey... every upload is a step toward your goals",
-  "Processing your growth story... because your YouTube journey is worth celebrating",
-  "Running YouTube analysis protocols... our AI is having a moment with your content",
-  "Processing your channel DNA... we're basically your personal content scientist",
-  "Syncing with YouTube's algorithm... because we speak fluent creator",
-  "Compiling your content insights... this is like speed-watching your YouTube autobiography",
-  "Optimizing your content analysis... because efficiency is our love language",
-  "AI is thinking about your videos... it's like having a really smart friend analyze your uploads",
-  "Processing your YouTube personality... we're basically your personal video bestie",
-  "Analyzing your creative fingerprint... because every creator has a unique style",
-  "Decoding your content strategy... we're like your personal YouTube therapist",
-  "Unpacking your channel magic... because every video has a story worth telling"
-];
 
-// Helper to get a random index, avoiding the previous one
-function getRandomIndex(arrayLength: number, prevIndex: number | null): number {
-  if (arrayLength <= 1) return 0;
-  let idx = Math.floor(Math.random() * arrayLength);
-  // Avoid repeating the previous index
-  while (idx === prevIndex) {
-    idx = Math.floor(Math.random() * arrayLength);
-  }
-  return idx;
-}
 
 // SRT time format regex pattern
 const SRT_TIME_REGEX = /(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})/;
@@ -140,8 +91,6 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
 }) => {
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = React.useState(false);
   const [analysisError, setAnalysisError] = React.useState<string | null>(null);
-  const [currentMessageIndex, setCurrentMessageIndex] = React.useState(() => getRandomIndex(LOADING_MESSAGES.length, null));
-  const [prevMessageIndex, setPrevMessageIndex] = React.useState<number | null>(null);
   const [visibleCommentsCount, setVisibleCommentsCount] = React.useState(5);
   const [showCaptions, setShowCaptions] = React.useState(false);
 
@@ -166,22 +115,7 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [onClose]);
 
-  // Cycling loading message effect (random order, no repeats)
-  React.useEffect(() => {
-    if (!isGeneratingAnalysis) {
-      setCurrentMessageIndex(getRandomIndex(LOADING_MESSAGES.length, null));
-      setPrevMessageIndex(null);
-      return;
-    }
-    const interval = setInterval(() => {
-      setCurrentMessageIndex(prevIdx => {
-        const nextIdx = getRandomIndex(LOADING_MESSAGES.length, prevIdx);
-        setPrevMessageIndex(prevIdx);
-        return nextIdx;
-      });
-    }, 3000); // Faster cycling for better UX
-    return () => clearInterval(interval);
-  }, [isGeneratingAnalysis]);
+
 
   // Handle YouTube analysis generation
   const handleGenerateAnalysis = async () => {
@@ -303,7 +237,7 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
       {/* Stats grid */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {videoData.statistics?.views !== undefined && (
-          <div className="text-center p-4 bg-muted/20 rounded-lg">
+          <div className="text-center p-4 bg-muted/20 rounded-lg hover:bg-muted/30 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 cursor-pointer border border-border/30 hover:border-border">
             <Eye className="w-5 h-5 text-blue-500 mx-auto mb-2" />
             <div className="text-lg font-semibold">{formatNumber(videoData.statistics.views)}</div>
             <div className="text-xs text-muted-foreground">Views</div>
@@ -311,7 +245,7 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
         )}
         
         {videoData.statistics?.likes !== undefined && (
-          <div className="text-center p-4 bg-muted/20 rounded-lg">
+          <div className="text-center p-4 bg-muted/20 rounded-lg hover:bg-muted/30 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 cursor-pointer border border-border/30 hover:border-border">
             <Heart className="w-5 h-5 text-red-500 mx-auto mb-2" />
             <div className="text-lg font-semibold">{formatNumber(videoData.statistics.likes)}</div>
             <div className="text-xs text-muted-foreground">Likes</div>
@@ -319,7 +253,7 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
         )}
         
         {videoData.statistics?.comments !== undefined && (
-          <div className="text-center p-4 bg-muted/20 rounded-lg">
+          <div className="text-center p-4 bg-muted/20 rounded-lg hover:bg-muted/30 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 cursor-pointer border border-border/30 hover:border-border">
             <MessageCircle className="w-5 h-5 text-green-500 mx-auto mb-2" />
             <div className="text-lg font-semibold">{formatNumber(videoData.statistics.comments)}</div>
             <div className="text-xs text-muted-foreground">Comments</div>
@@ -327,7 +261,7 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
         )}
         
         {videoData.content_details?.duration && (
-          <div className="text-center p-4 bg-muted/20 rounded-lg">
+          <div className="text-center p-4 bg-muted/20 rounded-lg hover:bg-muted/30 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 cursor-pointer border border-border/30 hover:border-border">
             <Clock className="w-5 h-5 text-purple-500 mx-auto mb-2" />
             <div className="text-lg font-semibold">{formatDuration(videoData.content_details.duration)}</div>
             <div className="text-xs text-muted-foreground">Duration</div>
@@ -335,7 +269,7 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
         )}
         
         {videoData.snippet?.published_at && (
-          <div className="text-center p-4 bg-muted/20 rounded-lg">
+          <div className="text-center p-4 bg-muted/20 rounded-lg hover:bg-muted/30 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 cursor-pointer border border-border/30 hover:border-border">
             <Calendar className="w-5 h-5 text-orange-500 mx-auto mb-2" />
             <div className="text-lg font-semibold">{formatDate(new Date(videoData.snippet.published_at).getTime())}</div>
             <div className="text-xs text-muted-foreground">Published</div>
@@ -345,7 +279,7 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
 
       {/* Captions Section */}
       {captions.length > 0 && (
-        <Card>
+        <Card className="group hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 border border-border/50 hover:border-border">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -412,7 +346,7 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
 
       {/* Comments Section */}
       {comments.length > 0 && (
-        <Card>
+        <Card className="group hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 border border-border/50 hover:border-border">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MessageCircle className="w-5 h-5" />
@@ -486,9 +420,9 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
 
       {/* Analysis Section */}
       {showAnalysis && (
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow duration-200">
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <CardTitle>Performance Analysis</CardTitle>
                 <CardDescription>AI insights for your content</CardDescription>
@@ -496,7 +430,7 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
               <Button
                 onClick={handleGenerateAnalysis}
                 disabled={isGeneratingAnalysis}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white w-full sm:w-auto"
               >
                 <Sparkles className="w-4 h-4 mr-2" />
                 {isGeneratingAnalysis ? 'Analyzing...' : 'Generate Analysis'}
@@ -510,24 +444,11 @@ export const YouTubeContent: React.FC<YouTubeContentProps> = ({
               </div>
             )}
             
-            {isGeneratingAnalysis ? (
-              <div className="flex flex-col items-center justify-center py-8">
-                <div className="relative w-32 h-2 mx-auto mb-4">
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 opacity-60 animate-pulse"></div>
-                </div>
-                <p className="text-muted-foreground text-center">
-                  {LOADING_MESSAGES[currentMessageIndex]}
-                </p>
-              </div>
-            ) : (
-              videoData.analysisMarkdown ? (
-                <MarkdownRenderer content={processContentIfNeeded(videoData.analysisMarkdown)} />
-              ) : (
-                <div className="text-sm text-muted-foreground text-center py-8">
-                  Generate AI insights to understand your video's performance and audience engagement.
-                </div>
-              )
-            )}
+            <YouTubeAnalysisCards 
+              videoData={videoData}
+              isGeneratingAnalysis={isGeneratingAnalysis}
+              analysisError={analysisError}
+            />
           </CardContent>
         </Card>
       )}
