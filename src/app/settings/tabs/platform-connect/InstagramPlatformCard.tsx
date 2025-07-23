@@ -9,7 +9,6 @@ interface InstagramPlatformCardProps {
   account: ConnectedAccount | undefined;
   connecting: boolean;
   disconnecting: boolean;
-  handleConnect: (options?: { useFacebook?: boolean }) => void;
   handleDisconnect: () => void;
 }
 
