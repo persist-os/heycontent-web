@@ -62,6 +62,15 @@ export function GmailPlatformCard({
           <Loader2 className="w-5 h-5 animate-spin" />
         </div>
       )}
+      
+      {!account && (
+        <div className="mb-3 px-3 py-2 bg-muted rounded-md border">
+          <p className="text-xs text-muted-foreground">
+            <span className="font-medium">Quick note:</span> Press "Advanced" then "Go to heycontent-web" to connect your Gmail.
+          </p>
+        </div>
+      )}
+      
       <div className="flex items-center gap-3 mb-2">
         <div className="w-12 h-12 rounded-lg bg-red-500 flex items-center justify-center">
           <Mail className="w-6 h-6 text-white" />

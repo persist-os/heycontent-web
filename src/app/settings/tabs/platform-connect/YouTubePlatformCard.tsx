@@ -61,6 +61,15 @@ export function YouTubePlatformCard({
           <Loader2 className="w-5 h-5 animate-spin" />
         </div>
       )}
+      
+      {!account && (
+        <div className="mb-3 px-3 py-2 bg-muted rounded-md border">
+          <p className="text-xs text-muted-foreground text-center">
+            Thanks to our growing community, YouTube connections are currently limited. Keep creating! We're working to expand access!
+          </p>
+        </div>
+      )}
+      
       <div className="flex items-center gap-3 mb-2">
         <div className="w-12 h-12 rounded-lg flex items-center justify-center">
           <YouTubeBrandIcon href="https://youtube.com/" className="w-8 h-8 text-white" />
