@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +15,12 @@ import {
   DollarSign,
   Tag,
   Trash2,
-  ChevronDown
+  ChevronDown,
+  Brain,
+  TrendingUp,
+  AlertCircle,
+  RefreshCw,
+  Play
 } from 'lucide-react';
 import { Partnership } from '../types';
 import { MarkdownNotepad } from '../../chat/components/notepad/MarkdownNotepad';
@@ -36,6 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { getApiKey } from '@/app/lib/api-helpers';
 
 interface PartnershipDetailPanelProps {
   partnership: Partnership | null;
@@ -60,8 +66,172 @@ export function PartnershipDetailPanel({
   const notepadRef = useRef<any>(null);
   const router = useRouter();
   
+
+  
   // Get notes from context
   const { notes, setActiveNoteId } = useNotes();
+  
+  // Batch Analysis Data Gathering
+  const userId = getCurrentUserId();
+  
+  // Get Gmail account for batch analysis
+  const gmailAccounts = useQuery(
+    api.gmailQueries.getGmailAccounts,
+    userId ? { userId } : "skip"
+  );
+  const gmailAccountId = gmailAccounts && gmailAccounts.length > 0 ? gmailAccounts[0].email : undefined;
+  
+  // Get batch analysis insights with refresh trigger
+  const batchAnalysis = useQuery(
+    api.gmailQueries.getGmailBatchAnalysis,
+    userId && gmailAccountId ? { userId, gmailAccountId } : "skip"
+  );
+  
+  // Get Gmail threads for this partnership
+  const gmailThreads = useQuery(
+    api.gmailQueries.getGmailThreadsByUserEmail,
+    userId && userEmail ? { userId, email: userEmail, limit: 50 } : "skip"
+  );
+  
+  // Helper function to parse raw_response JSON
+  const parseRawResponse = (rawResponse: string) => {
+    try {
+      // Clean the raw_response by removing markdown code blocks
+      let cleanedResponse = rawResponse;
+      
+      // Remove markdown code block markers
+      cleanedResponse = cleanedResponse.replace(/```json\s*/g, '');
+      cleanedResponse = cleanedResponse.replace(/```\s*$/g, '');
+      
+      // Parse the cleaned JSON
+      const parsed = JSON.parse(cleanedResponse);
+      return Array.isArray(parsed) ? parsed : [parsed];
+    } catch (error) {
+      console.error('[PARTNERSHIP DETAIL] Failed to parse raw_response:', error);
+      console.error('[PARTNERSHIP DETAIL] Raw response content:', rawResponse?.substring(0, 200) + '...');
+      return [];
+    }
+  };
+
+  // Find matching batch analysis insight for this partnership
+  const matchingBatchInsight = useMemo(() => {
+    if (!partnership || !batchAnalysis?.insights) return null;
+    
+    console.log('[PARTNERSHIP DETAIL] Looking for matching insight:', {
+      partnershipThreadId: partnership.emailThreadId,
+      batchAnalysisKeys: batchAnalysis ? Object.keys(batchAnalysis) : 'None',
+      insightsKeys: batchAnalysis?.insights ? Object.keys(batchAnalysis.insights) : 'None'
+    });
+    
+    const insights = batchAnalysis.insights;
+    
+    // Handle different possible structures and parse raw_response
+    let rawInsights: any[] = [];
+    
+    if (Array.isArray(insights)) {
+      // Direct array of insights - check for raw_response
+      rawInsights = insights.flatMap((insight: any) => {
+        if (insight.raw_response) {
+          return parseRawResponse(insight.raw_response);
+        }
+        return [insight];
+      });
+    } else if (insights && typeof insights === 'object') {
+      // Object with insights property
+      if (Array.isArray(insights.insights)) {
+        rawInsights = insights.insights.flatMap((insight: any) => {
+          if (insight.raw_response) {
+            return parseRawResponse(insight.raw_response);
+          }
+          return [insight];
+        });
+      } else if (Array.isArray(insights.data)) {
+        rawInsights = insights.data.flatMap((insight: any) => {
+          if (insight.raw_response) {
+            return parseRawResponse(insight.raw_response);
+          }
+          return [insight];
+        });
+      }
+    }
+    
+    console.log('[PARTNERSHIP DETAIL] Raw insights structure:', {
+      isArray: Array.isArray(rawInsights),
+      length: rawInsights.length,
+      firstInsight: rawInsights[0] ? Object.keys(rawInsights[0]) : 'None',
+      hasRawResponse: batchAnalysis?.insights && Array.isArray(batchAnalysis.insights) && batchAnalysis.insights[0]?.raw_response ? 'Yes' : 'No',
+      availableThreadIds: rawInsights.map((insight: any) => {
+        const insightObj = Array.isArray(insight) ? insight[0] : insight;
+        return insightObj?.threadDetails?.[0]?.threadId || 'No threadId';
+      })
+    });
+    
+    if (!Array.isArray(rawInsights) || rawInsights.length === 0) {
+      console.log('[PARTNERSHIP DETAIL] No valid insights array found');
+      return null;
+    }
+    
+    // Try to match by threadId from partnership
+    const matchingInsight = rawInsights.find((insight: any) => {
+      // Handle case where insight might be an array instead of an object
+      const insightObj = Array.isArray(insight) ? insight[0] : insight;
+      
+      console.log('[PARTNERSHIP DETAIL] Checking insight:', {
+        insightTitle: insightObj?.title,
+        hasThreadDetails: !!insightObj?.threadDetails,
+        threadDetailsType: typeof insightObj?.threadDetails,
+        threadDetailsLength: Array.isArray(insightObj?.threadDetails) ? insightObj.threadDetails.length : 'Not array',
+        isArray: Array.isArray(insight),
+        insightType: typeof insight
+      });
+      
+      if (!insightObj || !insightObj.threadDetails || !Array.isArray(insightObj.threadDetails)) {
+        return false;
+      }
+      
+      const hasMatchingThread = insightObj.threadDetails.some((thread: any) => {
+        const matches = thread.threadId === partnership.emailThreadId;
+        console.log('[PARTNERSHIP DETAIL] Thread comparison:', {
+          threadThreadId: thread.threadId,
+          partnershipThreadId: partnership.emailThreadId,
+          matches
+        });
+        return matches;
+      });
+      
+      return hasMatchingThread;
+    });
+    
+    console.log('[PARTNERSHIP DETAIL] Matching insight result:', matchingInsight ? 'Found' : 'Not found');
+    
+    // Return the correct insight object (handle array case)
+    if (matchingInsight) {
+      return Array.isArray(matchingInsight) ? matchingInsight[0] : matchingInsight;
+    }
+    
+    return null;
+  }, [partnership, batchAnalysis]);
+  
+  // Find matching Gmail thread data
+  const matchingGmailThread = useMemo(() => {
+    if (!partnership || !gmailThreads) return null;
+    
+    console.log('[PARTNERSHIP DETAIL] Looking for matching Gmail thread:', {
+      partnershipThreadId: partnership.emailThreadId,
+      availableGmailThreadIds: gmailThreads?.map((thread: any) => thread.threadId) || [],
+      totalGmailThreads: gmailThreads?.length || 0
+    });
+    
+    return gmailThreads.find((thread: any) => 
+      thread.threadId === partnership.emailThreadId
+    );
+  }, [partnership, gmailThreads]);
+
+
+
+
+
+
   
   // Filter notes based on partnership's smartNoteIds
   const associatedNotes = useMemo(() => {
@@ -525,6 +695,31 @@ ${message.body}
             </div>
           </div>
         </Card>
+
+        {/* Recommended Actions - Only show if matching insight exists */}
+        {matchingBatchInsight && matchingBatchInsight.actionSteps && matchingBatchInsight.actionSteps.length > 0 && (
+          <Card className="p-3 md:p-4 rounded-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <Brain className="w-5 h-5 text-primary" />
+              <h3 className="font-medium text-foreground text-sm md:text-base">
+                Recommended Actions
+              </h3>
+            </div>
+            
+            <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+              <ol className="space-y-3 text-sm text-green-700 dark:text-green-300">
+                {matchingBatchInsight.actionSteps.map((step: string, index: number) => (
+                  <li key={index} className="flex items-start gap-3">
+                    <span className="bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200 text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      {index + 1}
+                    </span>
+                    <span className="flex-1">{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </Card>
+        )}
 
 
       </div>
