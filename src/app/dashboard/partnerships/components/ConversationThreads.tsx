@@ -41,6 +41,19 @@ export function ConversationThreads({
 }: ConversationThreadsProps) {
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
 
+  // Auto-expand the most recent message when messages change
+  React.useEffect(() => {
+    if (messages.length > 0) {
+      // Find the most recent message (highest timestamp)
+      const mostRecentMessage = messages.reduce((latest, current) => 
+        current.timestamp > latest.timestamp ? current : latest
+      );
+      
+      // Expand the most recent message by default
+      setExpandedMessages(new Set([mostRecentMessage.id]));
+    }
+  }, [messages]);
+
   const toggleMessageExpansion = (messageId: string) => {
     const newExpanded = new Set(expandedMessages);
     if (newExpanded.has(messageId)) {
