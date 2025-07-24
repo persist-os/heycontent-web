@@ -389,13 +389,16 @@ export const InstagramContent: React.FC<InstagramContentProps> = ({
                                   <div className="text-sm text-gray-600 dark:text-gray-400">Share Rate</div>
                                 </div>
                               )}
-                              {enhancedAnalysis.performance_metrics.viral_potential && (
-                                <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                                  <div className="text-lg font-bold text-purple-600 capitalize">{enhancedAnalysis.performance_metrics.viral_potential}</div>
-                                  <div className="text-sm text-gray-600 dark:text-gray-400">Viral Potential</div>
-                                </div>
-                              )}
                             </div>
+                            {/* Viral Potential full-width row */}
+                            {enhancedAnalysis.performance_metrics.viral_potential && (
+                              <div className="mt-4 w-full">
+                                <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg flex flex-col items-start">
+                                  <div className="text-sm font-semibold text-purple-600 mb-1">Viral Potential</div>
+                                  <div className="text-base text-purple-800 dark:text-purple-200 whitespace-pre-line break-words w-full">{enhancedAnalysis.performance_metrics.viral_potential}</div>
+                                </div>
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                       )}
