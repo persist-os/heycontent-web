@@ -217,14 +217,14 @@ export function PartnershipHub() {
     <TooltipProvider>
       <div className="min-h-screen flex flex-col bg-background">
         {/* Header */}
-        <div className="border-b border-border p-6">
+        <div className="border-b border-border p-6 pt-16 pb-3">
           <div className="flex flex-col space-y-4">
             {/* Title */}
-            <div className="space-y-1">
+            <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="ml-12 md:ml-0">
-                  <h1 className="text-2xl font-bold text-foreground">Partnership Hub</h1>
-                  <p className="text-sm text-muted-foreground">
+                  <h1 className="text-4xl md:text-5xl font-medium text-foreground font-serif mb-4">Partnership Hub</h1>
+                  <p className="text-lg md:text-xl text-muted-foreground mt-6 mb-2">
                     Your command center for discovering collaborations, managing partnerships, and growing your creator business
                   </p>
                 </div>
@@ -267,130 +267,135 @@ export function PartnershipHub() {
             )}
 
             {/* Metrics and Button Row */}
-            <div className="flex items-center justify-between w-full">
-              {/* Left side - 4 metric boxes */}
-              <div className="flex items-center gap-4">
-                {/* Metric Cards */}
-                <div className="flex items-center gap-3">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div 
-                        className={`flex items-center gap-2 px-4 py-3 border rounded-lg backdrop-blur-sm cursor-pointer transition-all duration-200 ${
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between w-full gap-2">
+              {/* Left side - Filter buttons and refresh button */}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Filter buttons in pairs */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {/* First pair of filter buttons */}
+                  <div className="flex items-center gap-1.5">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                                              <div 
+                        className={`flex flex-col items-start gap-1 px-4 py-3 border rounded-3xl backdrop-blur-sm cursor-pointer transition-all duration-200 w-48 shrink-0 ${
                           activeFilter === 'all' 
                             ? 'bg-primary/10 border-primary/30 ring-2 ring-primary/30 shadow-lg' 
-                            : 'bg-card border-border hover:bg-muted'
+                            : 'bg-secondary border-border hover:bg-muted hover:border-primary/50'
                         }`}
                         onClick={() => setActiveFilter('all')}
                       >
-                        <Mail className="w-5 h-5 text-muted-foreground" />
-                        <div>
-                          <div className="text-xl font-bold text-foreground">{partnerships.length}</div>
-                          <div className="text-xs text-muted-foreground">Total Emails</div>
+                          <div className="flex items-center gap-2">
+                            <Mail className="w-5 h-5 text-muted-foreground" />
+                            <div className="text-xl font-bold text-foreground">{partnerships.length}</div>
+                          </div>
+                          <div className="text-xs text-muted-foreground text-left">Total Emails</div>
                         </div>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="max-w-xs text-sm">Total partnership opportunities found</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div 
-                        className={`flex items-center gap-2 px-4 py-3 border rounded-lg backdrop-blur-sm cursor-pointer transition-all duration-200 ${
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-xs text-sm">Total partnership opportunities found</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                                              <div 
+                        className={`flex flex-col items-start gap-1 px-4 py-3 border rounded-3xl backdrop-blur-sm cursor-pointer transition-all duration-200 w-48 shrink-0 ${
                           activeFilter === 'active' 
                             ? 'bg-primary/10 border-primary/30 ring-2 ring-primary/30 shadow-lg' 
-                            : 'bg-card border-border hover:bg-muted'
+                            : 'bg-secondary border-border hover:bg-muted hover:border-primary/50'
                         }`}
                         onClick={() => setActiveFilter('active')}
                       >
-                        <MessageSquare className="w-5 h-5 text-muted-foreground" />
-                        <div>
-                          <div className="text-xl font-bold text-foreground">{partnershipMetrics.activePartnerships}</div>
-                          <div className="text-xs text-muted-foreground">Active Discussions</div>
+                          <div className="flex items-center gap-2">
+                            <MessageSquare className="w-5 h-5 text-muted-foreground" />
+                            <div className="text-xl font-bold text-foreground">{partnershipMetrics.activePartnerships}</div>
+                          </div>
+                          <div className="text-xs text-muted-foreground text-left">Active Discussions</div>
                         </div>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="max-w-xs text-sm">Ongoing conversations and deals</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div 
-                        className={`flex items-center gap-2 px-4 py-3 border rounded-lg backdrop-blur-sm cursor-pointer transition-all duration-200 ${
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-xs text-sm">Ongoing conversations and deals</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+
+                  {/* Second pair of filter buttons */}
+                  <div className="flex items-center gap-1.5">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                                              <div 
+                        className={`flex flex-col items-start gap-1 px-4 py-3 border rounded-3xl backdrop-blur-sm cursor-pointer transition-all duration-200 w-48 shrink-0 ${
                           activeFilter === 'pending' 
                             ? 'bg-primary/10 border-primary/30 ring-2 ring-primary/30 shadow-lg' 
-                            : 'bg-card border-border hover:bg-muted'
+                            : 'bg-secondary border-border hover:bg-muted hover:border-primary/50'
                         }`}
                         onClick={() => setActiveFilter('pending')}
                       >
-                        <Clock className="w-5 h-5 text-muted-foreground" />
-                        <div>
-                          <div className="text-xl font-bold text-foreground">{partnershipMetrics.pendingResponses}</div>
-                          <div className="text-xs text-muted-foreground">Needs Response</div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-5 h-5 text-muted-foreground" />
+                            <div className="text-xl font-bold text-foreground">{partnershipMetrics.pendingResponses}</div>
+                          </div>
+                          <div className="text-xs text-muted-foreground text-left">Needs Response</div>
                         </div>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="max-w-xs text-sm">Opportunities waiting for your reply</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div 
-                        className={`flex items-center gap-2 px-4 py-3 border rounded-lg backdrop-blur-sm cursor-pointer transition-all duration-200 ${
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-xs text-sm">Opportunities waiting for your reply</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                                              <div 
+                        className={`flex flex-col items-start gap-1 px-4 py-3 border rounded-3xl backdrop-blur-sm cursor-pointer transition-all duration-200 w-48 shrink-0 ${
                           activeFilter === 'brand-deals' 
                             ? 'bg-primary/10 border-primary/30 ring-2 ring-primary/30 shadow-lg' 
-                            : 'bg-card border-border hover:bg-muted'
+                            : 'bg-secondary border-border hover:bg-muted hover:border-primary/50'
                         }`}
                         onClick={() => setActiveFilter('brand-deals')}
                       >
-                        <Users className="w-5 h-5 text-muted-foreground" />
-                        <div>
-                          <div className="text-xl font-bold text-foreground">{brandDealsCount}</div>
-                          <div className="text-xs text-muted-foreground">Brand Deals</div>
+                          <div className="flex items-center gap-2">
+                            <Users className="w-5 h-5 text-muted-foreground" />
+                            <div className="text-xl font-bold text-foreground">{brandDealsCount}</div>
+                          </div>
+                          <div className="text-xs text-muted-foreground text-left">Brand Deals</div>
                         </div>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="max-w-xs text-sm">High-value partnerships and serious negotiations</p>
-                    </TooltipContent>
-                  </Tooltip>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-xs text-sm">High-value partnerships and serious negotiations</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                 </div>
 
-                {/* Find New Opportunities Button */}
+                {/* Find New Opportunities Button - Next to buttons when space allows, below when not */}
                 <Button 
                   variant="outline" 
                   onClick={handleRefresh}
                   disabled={refreshing}
-                  className="flex items-center gap-2 justify-center shrink-0 rounded-full border-2 border-border bg-background hover:bg-muted focus:border-primary/50 focus:ring-1 focus:ring-primary/20 text-foreground font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 justify-center shrink-0 relative rounded-3xl border border-border bg-secondary hover:bg-muted hover:border-primary/50 text-foreground font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                   data-find-opportunities-button
                   style={{
                     width: '219px',
                     height: '43px',
                   }}
                 >
-                  <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                  Find New Opportunities
+                  <div className="absolute left-[9px] w-6 h-6 rounded-full bg-muted-foreground flex items-center justify-center">
+                    <RefreshCw className={`w-3 h-3 text-background ${refreshing ? 'animate-spin' : ''}`} />
+                  </div>
+                  <span className="ml-8">Find New Opportunities</span>
                 </Button>
               </div>
 
               {/* Right side - Deal Value */}
               <div 
-                className="flex items-center gap-2 px-4 py-3 shrink-0"
+                className="flex items-center gap-2 px-4 py-3 shrink-0 ml-auto border border-border rounded-3xl bg-secondary hover:bg-muted transition-colors"
                 style={{
-                  borderRadius: '15px',
-                  background: 'rgba(245, 246, 98, 0.13)',
                   width: '209px',
-                  height: '64px',
                   flexShrink: 0
                 }}
               >
-                <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
-                  <span className="text-black font-bold text-sm">$</span>
+                <div className="w-10 h-10 bg-primary/20 border-2 border-primary rounded-full flex items-center justify-center">
+                  <span className="text-black dark:text-white font-bold text-xl">$</span>
                 </div>
                 <div>
                   <div className="text-xl font-bold text-foreground">
@@ -413,8 +418,8 @@ export function PartnershipHub() {
           ) : (
             <>
               {/* Left Column - Category-Grouped Emails */}
-              <div className="w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r border-border overflow-y-auto">
-                <div className="p-4">
+              <div className="w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r border-border overflow-y-auto">
+                <div className="p-2">
                   <div className="mb-4">
                     <div className="flex items-center justify-between mb-2">
                       <h2 className="text-lg font-semibold text-foreground">
