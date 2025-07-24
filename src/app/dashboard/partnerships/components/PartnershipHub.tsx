@@ -199,14 +199,14 @@ export function PartnershipHub() {
     <TooltipProvider>
       <div className="min-h-screen flex flex-col bg-background">
         {/* Header */}
-        <div className="border-b border-border p-6">
+        <div className="border-b border-border p-6 py-16">
           <div className="flex flex-col space-y-4">
             {/* Title */}
-            <div className="space-y-1">
+            <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="ml-12 md:ml-0">
-                  <h1 className="text-2xl font-bold text-foreground">Partnership Hub</h1>
-                  <p className="text-sm text-muted-foreground">
+                  <h1 className="text-4xl md:text-5xl font-medium text-foreground font-serif mb-4">Partnership Hub</h1>
+                  <p className="text-lg md:text-xl text-muted-foreground mt-6 mb-2">
                     Your command center for discovering collaborations, managing partnerships, and growing your creator business
                   </p>
                 </div>
