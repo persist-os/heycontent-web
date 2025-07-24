@@ -1,36 +1,27 @@
 'use client'
 
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
   Mail, 
-  Edit3, 
   Clock, 
-  User, 
   FileText,
   MessageSquare,
-  Calendar,
   DollarSign,
   Tag,
   Trash2,
-  ChevronDown,
-  Brain,
-  TrendingUp,
-  AlertCircle,
-  RefreshCw,
-  Play
+  Brain
 } from 'lucide-react';
 import { Partnership } from '../types';
 import { MarkdownNotepad } from '../../chat/components/notepad/MarkdownNotepad';
 import { useNotes } from '@/app/context/notes-context';
 import { useRouter } from 'next/navigation';
-import { categoryConfig, getPartnershipColors } from '../utils/emailCategorization';
+import { getPartnershipColors } from '../utils/emailCategorization';
 import { api } from '@/convex/_generated/api';
 import { useMutation, useQuery } from 'convex/react';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
-import { PartnershipControls } from './PartnershipControls';
 import { usePartnershipOperations } from '../hooks/usePartnershipOperations';
 import { ConversationThreads } from './ConversationThreads';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -46,7 +37,6 @@ import { getApiKey } from '@/app/lib/api-helpers';
 interface PartnershipDetailPanelProps {
   partnership: Partnership | null;
   onUpdatePartnership: (partnershipId: string, updates: Partial<Partnership>) => void;
-  onCategoryChanged?: () => void;
   onPartnershipDeleted?: () => void;
   gmailData?: any; // Full Gmail thread data for displaying email content
   userEmail?: string | null;
@@ -55,7 +45,6 @@ interface PartnershipDetailPanelProps {
 export function PartnershipDetailPanel({ 
   partnership, 
   onUpdatePartnership,
-  onCategoryChanged,
   onPartnershipDeleted,
   gmailData,
   userEmail
@@ -87,11 +76,7 @@ export function PartnershipDetailPanel({
     userId && gmailAccountId ? { userId, gmailAccountId } : "skip"
   );
   
-  // Get Gmail threads for this partnership
-  const gmailThreads = useQuery(
-    api.gmailQueries.getGmailThreadsByUserEmail,
-    userId && userEmail ? { userId, email: userEmail, limit: 50 } : "skip"
-  );
+
   
   // Helper function to parse raw_response JSON
   const parseRawResponse = (rawResponse: string) => {
@@ -117,11 +102,7 @@ export function PartnershipDetailPanel({
   const matchingBatchInsight = useMemo(() => {
     if (!partnership || !batchAnalysis?.insights) return null;
     
-    console.log('[PARTNERSHIP DETAIL] Looking for matching insight:', {
-      partnershipThreadId: partnership.emailThreadId,
-      batchAnalysisKeys: batchAnalysis ? Object.keys(batchAnalysis) : 'None',
-      insightsKeys: batchAnalysis?.insights ? Object.keys(batchAnalysis.insights) : 'None'
-    });
+
     
     const insights = batchAnalysis.insights;
     
@@ -155,19 +136,9 @@ export function PartnershipDetailPanel({
       }
     }
     
-    console.log('[PARTNERSHIP DETAIL] Raw insights structure:', {
-      isArray: Array.isArray(rawInsights),
-      length: rawInsights.length,
-      firstInsight: rawInsights[0] ? Object.keys(rawInsights[0]) : 'None',
-      hasRawResponse: batchAnalysis?.insights && Array.isArray(batchAnalysis.insights) && batchAnalysis.insights[0]?.raw_response ? 'Yes' : 'No',
-      availableThreadIds: rawInsights.map((insight: any) => {
-        const insightObj = Array.isArray(insight) ? insight[0] : insight;
-        return insightObj?.threadDetails?.[0]?.threadId || 'No threadId';
-      })
-    });
+
     
     if (!Array.isArray(rawInsights) || rawInsights.length === 0) {
-      console.log('[PARTNERSHIP DETAIL] No valid insights array found');
       return null;
     }
     
@@ -176,33 +147,20 @@ export function PartnershipDetailPanel({
       // Handle case where insight might be an array instead of an object
       const insightObj = Array.isArray(insight) ? insight[0] : insight;
       
-      console.log('[PARTNERSHIP DETAIL] Checking insight:', {
-        insightTitle: insightObj?.title,
-        hasThreadDetails: !!insightObj?.threadDetails,
-        threadDetailsType: typeof insightObj?.threadDetails,
-        threadDetailsLength: Array.isArray(insightObj?.threadDetails) ? insightObj.threadDetails.length : 'Not array',
-        isArray: Array.isArray(insight),
-        insightType: typeof insight
-      });
+
       
       if (!insightObj || !insightObj.threadDetails || !Array.isArray(insightObj.threadDetails)) {
         return false;
       }
       
       const hasMatchingThread = insightObj.threadDetails.some((thread: any) => {
-        const matches = thread.threadId === partnership.emailThreadId;
-        console.log('[PARTNERSHIP DETAIL] Thread comparison:', {
-          threadThreadId: thread.threadId,
-          partnershipThreadId: partnership.emailThreadId,
-          matches
-        });
-        return matches;
+        return thread.threadId === partnership.emailThreadId;
       });
       
       return hasMatchingThread;
     });
     
-    console.log('[PARTNERSHIP DETAIL] Matching insight result:', matchingInsight ? 'Found' : 'Not found');
+
     
     // Return the correct insight object (handle array case)
     if (matchingInsight) {
@@ -212,20 +170,7 @@ export function PartnershipDetailPanel({
     return null;
   }, [partnership, batchAnalysis]);
   
-  // Find matching Gmail thread data
-  const matchingGmailThread = useMemo(() => {
-    if (!partnership || !gmailThreads) return null;
-    
-    console.log('[PARTNERSHIP DETAIL] Looking for matching Gmail thread:', {
-      partnershipThreadId: partnership.emailThreadId,
-      availableGmailThreadIds: gmailThreads?.map((thread: any) => thread.threadId) || [],
-      totalGmailThreads: gmailThreads?.length || 0
-    });
-    
-    return gmailThreads.find((thread: any) => 
-      thread.threadId === partnership.emailThreadId
-    );
-  }, [partnership, gmailThreads]);
+
 
 
 
@@ -441,10 +386,7 @@ ${message.body}
     handleDeletePartnership,
     handleUpdateStatus,
     handleUpdateCategory,
-    statusLoading,
-    deleteLoading,
-    categoryLoading,
-    categoryError
+    deleteLoading
   } = usePartnershipOperations();
 
   // Partnership operation handlers
@@ -594,7 +536,6 @@ ${message.body}
                 <Select value={partnership.category || 'partnership'} onValueChange={handleCategoryChange}>
                   <SelectTrigger className="w-32 h-8 bg-primary/10 border-primary/30 text-foreground hover:bg-primary/20">
                     <SelectValue />
-                    <ChevronDown className="w-3 h-3 ml-1" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="partnership">Partnership</SelectItem>
@@ -612,7 +553,6 @@ ${message.body}
                 <Select value={partnership.status} onValueChange={handleStatusChange}>
                   <SelectTrigger className="w-32 h-8 bg-primary/10 border-primary/30 text-foreground hover:bg-primary/20">
                     <SelectValue />
-                    <ChevronDown className="w-3 h-3 ml-1" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="opportunity">Opportunity</SelectItem>
