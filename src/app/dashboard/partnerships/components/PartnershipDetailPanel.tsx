@@ -82,7 +82,7 @@ export function PartnershipDetailPanel({
     if (!partnership) return '';
     
     // Get the full conversation thread
-    const messages = getEmailThread();
+    const messages = getEmailThreadForConversation();
     
     let context = `**Email Thread Context:**
 Brand: ${partnership.brandName}
@@ -388,74 +388,25 @@ ${message.body}
     return `$${value}`;
   };
 
-  // Get email thread messages from gmailData
-  const getEmailThread = () => {
+  // Get email thread messages from gmailData for ConversationThreads
+  const getEmailThreadForConversation = () => {
     if (!gmailData || !gmailData.data) return [];
     
     const messages = gmailData.data.messages || [];
     return messages.map((message: any, index: number) => ({
       id: message.id || `msg-${index}`,
       from: message.from || gmailData.data.from || 'Unknown',
+      email: message.email || gmailData.data.from || 'unknown@example.com',
       subject: message.subject || gmailData.data.subject || 'No Subject',
       body: message.body || message.snippet || 'No content available',
       timestamp: message.timestamp || gmailData.createdAt || new Date().getTime(),
-      isReply: index > 0
+      isReply: index > 0,
+      isFromUser: message.from === userEmail || message.email === userEmail
     })).sort((a: any, b: any) => a.timestamp - b.timestamp);
   };
 
-  const renderEmailThread = () => {
-    const messages = getEmailThread();
-    
-    if (messages.length === 0) {
-      return (
-        <div className="p-4 text-center text-muted-foreground">
-          <Mail className="w-6 h-6 md:w-8 md:h-8 text-muted-foreground mx-auto mb-2" />
-          <p className="text-sm">No email content available</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-3 md:space-y-4">
-        {messages.map((message: any, index: number) => (
-          <div key={message.id} className={`p-3 md:p-4 rounded-lg border transition-colors ${
-            message.isReply 
-              ? 'bg-primary/5 border-primary/20' 
-              : 'bg-muted/50 border-border'
-          }`}>
-            <div className="flex items-start justify-between mb-2 md:mb-3 gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-medium text-foreground text-sm truncate">
-                    {message.from}
-                  </span>
-                  {message.isReply && (
-                    <Badge variant="outline" className="text-xs flex-shrink-0">
-                      Reply
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {new Date(message.timestamp).toLocaleDateString()} {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </p>
-              </div>
-            </div>
-            
-            {message.subject !== (messages[0]?.subject || '') && (
-              <p className="text-sm font-medium text-foreground mb-2 line-clamp-1">
-                Re: {message.subject}
-              </p>
-            )}
-            
-            <div className="prose prose-sm max-w-none text-foreground">
-              <div className="text-sm leading-relaxed break-words overflow-wrap-anywhere">
-                {message.body}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
+  const handleMessageSelect = (messageId: string) => {
+    setSelectedMessageId(messageId);
   };
 
   return (
@@ -625,17 +576,16 @@ ${message.body}
         </Card>
       </div>
 
-      {/* Email Thread Conversation - Scrollable */}
+      {/* Conversation Threads - New Design */}
       <div className="flex-1 overflow-hidden">
         <Card className="mx-3 md:mx-4 mb-3 md:mb-4 h-full flex flex-col rounded-xl">
-          <div className="p-2 md:p-3 border-b border-border">
-            <h3 className="font-medium text-foreground flex items-center text-sm md:text-base">
-              <MessageSquare className="w-4 h-4 mr-2 flex-shrink-0" />
-              Conversation Thread
-            </h3>
-          </div>
-          <div className="flex-1 overflow-y-auto p-2 md:p-3">
-            {renderEmailThread()}
+          <div className="flex-1 overflow-y-auto p-3 md:p-4">
+            <ConversationThreads
+              messages={getEmailThreadForConversation()}
+              userEmail={userEmail}
+              onMessageSelect={handleMessageSelect}
+              selectedMessageId={selectedMessageId}
+            />
           </div>
         </Card>
       </div>
