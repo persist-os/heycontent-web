@@ -421,7 +421,7 @@ ${message.body}
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Type:</span>
                 <Select value={partnership.category || 'partnership'} onValueChange={handleCategoryChange}>
-                  <SelectTrigger className="w-32 h-8 bg-primary/10 border-primary/30 text-primary-foreground hover:bg-primary/20">
+                  <SelectTrigger className="w-32 h-8 bg-primary/10 border-primary/30 text-foreground hover:bg-primary/20">
                     <SelectValue />
                     <ChevronDown className="w-3 h-3 ml-1" />
                   </SelectTrigger>
@@ -439,7 +439,7 @@ ${message.body}
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Status:</span>
                 <Select value={partnership.status} onValueChange={handleStatusChange}>
-                  <SelectTrigger className="w-32 h-8 bg-primary/10 border-primary/30 text-primary-foreground hover:bg-primary/20">
+                  <SelectTrigger className="w-32 h-8 bg-primary/10 border-primary/30 text-foreground hover:bg-primary/20">
                     <SelectValue />
                     <ChevronDown className="w-3 h-3 ml-1" />
                   </SelectTrigger>
