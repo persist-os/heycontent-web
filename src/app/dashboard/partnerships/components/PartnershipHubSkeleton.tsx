@@ -407,20 +407,11 @@ export function PartnershipHubSkeleton({
                     <Button 
                       variant="outline" 
                       disabled
-                      className="flex items-center gap-2 justify-center shrink-0"
+                      className="flex items-center gap-2 justify-center shrink-0 rounded-full border-2 border-border bg-background hover:bg-muted focus:border-primary/50 focus:ring-1 focus:ring-primary/20 text-foreground font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                       data-find-opportunities-button
                       style={{
-                        borderRadius: '25px',
-                        border: '1px solid var(--Neutral_600, #747474)',
-                        background: 'var(--neutral_950, #2B2B2B)',
                         width: '219px',
                         height: '43px',
-                        flexShrink: 0,
-                        color: 'var(--Neutral_400, #BCBCBC)',
-                        fontSize: '14px',
-                        fontStyle: 'normal',
-                        fontWeight: 500,
-                        lineHeight: 'normal'
                       }}
                     >
                       <RefreshCw className="w-4 h-4" />
