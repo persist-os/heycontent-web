@@ -372,7 +372,7 @@ export function PartnershipHub() {
                   variant="outline" 
                   onClick={handleRefresh}
                   disabled={refreshing}
-                  className="flex items-center gap-2 justify-center shrink-0 relative rounded-full border-2 border-border bg-background hover:bg-muted focus:border-primary/50 focus:ring-1 focus:ring-primary/20 text-foreground font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 justify-center shrink-0 relative rounded-3xl border border-border bg-secondary hover:bg-muted hover:border-primary/50 text-foreground font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                   data-find-opportunities-button
                   style={{
                     width: '219px',
