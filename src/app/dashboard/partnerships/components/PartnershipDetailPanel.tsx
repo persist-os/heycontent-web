@@ -511,46 +511,29 @@ ${message.body}
 
         {/* Email Thread Summary */}
         <Card className="p-2 md:p-3 rounded-xl">
-          <div className="space-y-2 md:space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-medium text-foreground flex items-center text-sm md:text-base">
-                <Mail className="w-4 h-4 mr-2 flex-shrink-0" />
-                Thread Summary
-              </h3>
-              <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                <ExternalLink className="w-3 h-3" />
-              </Button>
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium text-foreground text-sm md:text-base">
+              Summary
+            </h3>
+            <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+              <ExternalLink className="w-3 h-3" />
+            </Button>
+          </div>
+          
+          <div className="flex items-center gap-4 text-sm mt-2">
+            <div className="flex items-center">
+              <MessageSquare className="w-4 h-4 mr-1 text-muted-foreground" />
+              <span className="text-foreground">Messages: {partnership.messageCount}</span>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Messages:</span>
-                <span className="text-foreground flex items-center">
-                  <MessageSquare className="w-3 h-3 mr-1" />
-                  {partnership.messageCount}
-                </span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Last Activity:</span>
-                <span className="text-foreground flex items-center text-xs md:text-sm">
-                  <Clock className="w-3 h-3 mr-1" />
-                  {formatTimeAgo(partnership.lastActivity)}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Est. Value:</span>
-                <span className="text-foreground flex items-center font-medium">
-                  <DollarSign className="w-3 h-3 mr-1" />
-                  {formatValue(partnership.estimatedValue)}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">From:</span>
-                <span className="text-foreground truncate text-xs md:text-sm">{partnership.from || 'Unknown'}</span>
-              </div>
+            
+            <div className="flex items-center">
+              <Clock className="w-4 h-4 mr-1 text-muted-foreground" />
+              <span className="text-foreground">Last Activity: {formatTimeAgo(partnership.lastActivity)}</span>
+            </div>
+            
+            <div className="flex items-center">
+              <DollarSign className="w-4 h-4 mr-1 text-muted-foreground" />
+              <span className="text-foreground font-medium">Estimated Value: {formatValue(partnership.estimatedValue)}</span>
             </div>
           </div>
         </Card>
@@ -559,9 +542,9 @@ ${message.body}
       </div>
 
       {/* Conversation Threads - New Design */}
-      <div className="flex-1 overflow-hidden">
-        <Card className="mx-3 md:mx-4 mb-3 md:mb-4 h-full flex flex-col rounded-xl">
-          <div className="flex-1 overflow-y-auto p-3 md:p-4">
+      <div className="mx-3 md:mx-4 mb-3 md:mb-4">
+        <Card className="rounded-xl">
+          <div className="p-3 md:p-4">
             <ConversationThreads
               messages={getEmailThreadForConversation()}
               userEmail={userEmail}
