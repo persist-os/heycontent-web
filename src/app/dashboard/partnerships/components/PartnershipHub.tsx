@@ -366,20 +366,11 @@ export function PartnershipHub() {
                   variant="outline" 
                   onClick={handleRefresh}
                   disabled={refreshing}
-                  className="flex items-center gap-2 justify-center shrink-0"
+                  className="flex items-center gap-2 justify-center shrink-0 rounded-full border-2 border-border bg-background hover:bg-muted focus:border-primary/50 focus:ring-1 focus:ring-primary/20 text-foreground font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   data-find-opportunities-button
                   style={{
-                    borderRadius: '25px',
-                    border: '1px solid var(--Neutral_600, #747474)',
-                    background: 'var(--neutral_950, #2B2B2B)',
                     width: '219px',
                     height: '43px',
-                    flexShrink: 0,
-                    color: 'var(--Neutral_400, #BCBCBC)',
-                    fontSize: '14px',
-                    fontStyle: 'normal',
-                    fontWeight: 500,
-                    lineHeight: 'normal'
                   }}
                 >
                   <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -462,16 +453,16 @@ export function PartnershipHub() {
                   <div className="mb-4">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                       <div className="flex items-center gap-2 w-full sm:flex-1">
-                        <div className="w-6 h-6 text-white">
+                        <div className="w-6 h-6 text-foreground">
                           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                             <path d="M3 4C3 3.44772 3.44772 3 4 3H20C20.5523 3 21 3.44772 21 4V6.58579C21 6.851 20.8946 7.10536 20.7071 7.29289L14.2929 13.7071C14.1054 13.8946 14 14.149 14 14.4142V17L10 21V14.4142C10 14.149 9.89464 13.8946 9.70711 13.7071L3.29289 7.29289C3.10536 7.10536 3 6.851 3 6.58579V4Z"/>
                           </svg>
                         </div>
-                        <span className="text-sm font-medium text-white whitespace-nowrap">Filters:</span>
-                        <span className="text-sm font-medium text-white whitespace-nowrap">Type</span>
+                        <span className="text-sm font-medium text-foreground whitespace-nowrap">Filters:</span>
+                        <span className="text-sm font-medium text-foreground whitespace-nowrap">Type</span>
                         <div className="flex-1 min-w-32">
                           <Select value={activeFilter} onValueChange={(value) => setActiveFilter(value as MetricFilter)}>
-                            <SelectTrigger className="w-full h-8 rounded-full border-2 border-white/50 bg-transparent focus:border-white/70 focus:ring-1 focus:ring-white/30 text-center">
+                            <SelectTrigger className="w-full h-8 rounded-full border-2 border-border bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/20 text-center">
                               <SelectValue placeholder="All" />
                             </SelectTrigger>
                             <SelectContent>
@@ -485,10 +476,10 @@ export function PartnershipHub() {
                       </div>
                       
                       <div className="flex items-center gap-2 w-full sm:flex-1">
-                        <span className="text-sm font-medium text-white whitespace-nowrap">Status</span>
+                        <span className="text-sm font-medium text-foreground whitespace-nowrap">Status</span>
                         <div className="flex-1 min-w-32">
                           <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger className="w-full h-8 rounded-full border-2 border-white/50 bg-transparent focus:border-white/70 focus:ring-1 focus:ring-white/30 text-center">
+                            <SelectTrigger className="w-full h-8 rounded-full border-2 border-border bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/20 text-center">
                               <SelectValue placeholder="All" />
                             </SelectTrigger>
                             <SelectContent>
