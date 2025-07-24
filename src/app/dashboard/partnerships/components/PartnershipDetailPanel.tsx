@@ -15,7 +15,10 @@ import {
   Calendar,
   DollarSign,
   Tag,
-  Star
+  Star,
+  Trash2,
+  ChevronDown,
+  Maximize2
 } from 'lucide-react';
 import { Partnership } from '../types';
 import { MarkdownNotepad } from '../../chat/components/notepad/MarkdownNotepad';
@@ -27,6 +30,15 @@ import { useMutation, useQuery } from 'convex/react';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { PartnershipControls } from './PartnershipControls';
 import { usePartnershipOperations } from '../hooks/usePartnershipOperations';
+import { ConversationThreads } from './ConversationThreads';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface PartnershipDetailPanelProps {
   partnership: Partnership | null;
@@ -47,6 +59,7 @@ export function PartnershipDetailPanel({
 }: PartnershipDetailPanelProps) {
   const [isDraftingReply, setIsDraftingReply] = useState(false);
   const [notepadWidth, setNotepadWidth] = useState(400);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | undefined>();
   const notepadRef = useRef<any>(null);
   const router = useRouter();
   
@@ -448,26 +461,97 @@ ${message.body}
   return (
     <div className="flex flex-col h-full">
       <div className="p-3 md:p-4 space-y-4 md:space-y-6">
-        {/* Header */}
-        <div className="space-y-3 md:space-y-4">
-          <div className="flex items-start justify-between">
-            <div className="flex-1 min-w-0">
-              <h2 className="text-base md:text-lg font-semibold text-foreground truncate">{partnership.brandName}</h2>
-              <p className="text-sm text-muted-foreground line-clamp-2">{partnership.subject}</p>
+        {/* New Header Design - Matching Image */}
+        <div className="space-y-4">
+          {/* Top Control Bar */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-4">
+              {/* Type Selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Type:</span>
+                <Select value={partnership.category || 'partnership'} onValueChange={handleCategoryChange}>
+                  <SelectTrigger className="w-32 h-8 bg-primary/10 border-primary/30 text-primary-foreground hover:bg-primary/20">
+                    <SelectValue />
+                    <ChevronDown className="w-3 h-3 ml-1" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="partnership">Partnership</SelectItem>
+                    <SelectItem value="media">Media</SelectItem>
+                    <SelectItem value="business">Business</SelectItem>
+                    <SelectItem value="community">Community</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Status Selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Status:</span>
+                <Select value={partnership.status} onValueChange={handleStatusChange}>
+                  <SelectTrigger className="w-32 h-8 bg-primary/10 border-primary/30 text-primary-foreground hover:bg-primary/20">
+                    <SelectValue />
+                    <ChevronDown className="w-3 h-3 ml-1" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="opportunity">Opportunity</SelectItem>
+                    <SelectItem value="inquiry">Inquiry</SelectItem>
+                    <SelectItem value="negotiating">Negotiating</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Auto-track Checkbox */}
+              <div className="flex items-center gap-2">
+                <Checkbox id="auto-track" className="border-primary/30" />
+                <label htmlFor="auto-track" className="text-sm text-muted-foreground">
+                  Auto-track this partnership status
+                </label>
+              </div>
+            </div>
+
+            {/* Expand Icon */}
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground">
+              <Maximize2 className="w-4 h-4" />
+            </Button>
+          </div>
+
+          {/* Partnership Details Section */}
+          <div className="space-y-3">
+            {/* Title and Action Icons */}
+            <div className="flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                <h2 className="text-xl md:text-2xl font-bold text-foreground">
+                  Partnership Opportunity with {partnership.brandName}
+                </h2>
+              </div>
+              <div className="flex items-center gap-2 ml-4">
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground">
+                  <Star className="w-4 h-4" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                  onClick={handleDelete}
+                  disabled={deleteLoading}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Company Info */}
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white text-xs font-bold">
+                {partnership.brandName.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 4)}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                From: {partnership.brandName}
+              </div>
             </div>
           </div>
-          
-          {/* Partnership Controls */}
-          <PartnershipControls
-            partnership={partnership}
-            onUpdateStatus={handleStatusChange}
-            onUpdateCategory={handleCategoryChange}
-            onDelete={handleDelete}
-            statusLoading={statusLoading}
-            categoryLoading={categoryLoading}
-            deleteLoading={deleteLoading}
-            categoryError={categoryError}
-          />
         </div>
 
         {/* Email Thread Summary */}
