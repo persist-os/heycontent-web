@@ -9,7 +9,8 @@ import {
   ChevronDown, 
   Mail,
   User,
-  Clock
+  Clock,
+  Reply
 } from 'lucide-react';
 
 interface EmailMessage {
@@ -28,13 +29,15 @@ interface ConversationThreadsProps {
   userEmail?: string | null;
   onMessageSelect?: (messageId: string) => void;
   selectedMessageId?: string;
+  onStartDraft?: () => void;
 }
 
 export function ConversationThreads({ 
   messages, 
   userEmail, 
   onMessageSelect,
-  selectedMessageId 
+  selectedMessageId,
+  onStartDraft
 }: ConversationThreadsProps) {
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
 
@@ -189,6 +192,23 @@ export function ConversationThreads({
                         )}
                       </div>
                     </div>
+                    
+                    {/* Draft Reply Button */}
+                    {onStartDraft && (
+                      <div className="mt-4 flex justify-start">
+                        <Button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onStartDraft();
+                          }}
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                          size="sm"
+                        >
+                          <Reply className="w-4 h-4 mr-2" />
+                          Draft Reply
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -551,29 +551,7 @@ ${message.body}
           </div>
         </Card>
 
-        {/* Draft Reply Section - Moved up */}
-        <Card className="p-2 md:p-3 rounded-xl">
-          <div className="space-y-2 md:space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-medium text-foreground flex items-center text-sm md:text-base">
-                <Edit3 className="w-4 h-4 mr-2 flex-shrink-0" />
-                Draft Reply
-              </h3>
-              {!isDraftingReply && (
-                <Button onClick={handleStartDraft} size="sm">
-                  <Edit3 className="w-3 h-3 mr-2" />
-                  Start Draft
-                </Button>
-              )}
-            </div>
 
-            {!isDraftingReply && (
-              <p className="text-sm text-muted-foreground">
-                Ready to craft the perfect response? Start drafting and our AI will help you create compelling partnership replies that get results
-              </p>
-            )}
-          </div>
-        </Card>
       </div>
 
       {/* Conversation Threads - New Design */}
@@ -585,6 +563,7 @@ ${message.body}
               userEmail={userEmail}
               onMessageSelect={handleMessageSelect}
               selectedMessageId={selectedMessageId}
+              onStartDraft={handleStartDraft}
             />
           </div>
         </Card>
