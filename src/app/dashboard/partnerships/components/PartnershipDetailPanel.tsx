@@ -9,16 +9,13 @@ import {
   Edit3, 
   Clock, 
   User, 
-  ExternalLink,
   FileText,
   MessageSquare,
   Calendar,
   DollarSign,
   Tag,
-  Star,
   Trash2,
-  ChevronDown,
-  Maximize2
+  ChevronDown
 } from 'lucide-react';
 import { Partnership } from '../types';
 import { MarkdownNotepad } from '../../chat/components/notepad/MarkdownNotepad';
@@ -466,10 +463,7 @@ ${message.body}
               </div>
             </div>
 
-            {/* Expand Icon */}
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground">
-              <Maximize2 className="w-4 h-4" />
-            </Button>
+
           </div>
 
           {/* Partnership Details Section */}
@@ -482,9 +476,6 @@ ${message.body}
                 </h2>
               </div>
               <div className="flex items-center gap-2 ml-4">
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground">
-                  <Star className="w-4 h-4" />
-                </Button>
                 <Button 
                   variant="ghost" 
                   size="sm" 
@@ -515,9 +506,6 @@ ${message.body}
             <h3 className="font-medium text-foreground text-sm md:text-base">
               Summary
             </h3>
-            <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-              <ExternalLink className="w-3 h-3" />
-            </Button>
           </div>
           
           <div className="flex items-center gap-4 text-sm mt-2">
