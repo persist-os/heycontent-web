@@ -262,11 +262,8 @@ export function PartnershipHub() {
                         className={`flex flex-col items-start gap-1 px-4 py-3 border rounded-3xl backdrop-blur-sm cursor-pointer transition-all duration-200 w-48 shrink-0 ${
                           activeFilter === 'all' 
                             ? 'bg-primary/10 border-primary/30 ring-2 ring-primary/30 shadow-lg' 
-                            : 'border-[#747474] hover:bg-[#1a1a1a]'
+                            : 'bg-secondary border-border hover:bg-muted hover:border-primary/50'
                         }`}
-                        style={{
-                          background: activeFilter === 'all' ? undefined : 'var(--neutral_950, #2B2B2B)'
-                        }}
                         onClick={() => setActiveFilter('all')}
                       >
                           <div className="flex items-center gap-2">
@@ -287,11 +284,8 @@ export function PartnershipHub() {
                         className={`flex flex-col items-start gap-1 px-4 py-3 border rounded-3xl backdrop-blur-sm cursor-pointer transition-all duration-200 w-48 shrink-0 ${
                           activeFilter === 'active' 
                             ? 'bg-primary/10 border-primary/30 ring-2 ring-primary/30 shadow-lg' 
-                            : 'border-[#747474] hover:bg-[#1a1a1a]'
+                            : 'bg-secondary border-border hover:bg-muted hover:border-primary/50'
                         }`}
-                        style={{
-                          background: activeFilter === 'active' ? undefined : 'var(--neutral_950, #2B2B2B)'
-                        }}
                         onClick={() => setActiveFilter('active')}
                       >
                           <div className="flex items-center gap-2">
@@ -315,11 +309,8 @@ export function PartnershipHub() {
                         className={`flex flex-col items-start gap-1 px-4 py-3 border rounded-3xl backdrop-blur-sm cursor-pointer transition-all duration-200 w-48 shrink-0 ${
                           activeFilter === 'pending' 
                             ? 'bg-primary/10 border-primary/30 ring-2 ring-primary/30 shadow-lg' 
-                            : 'border-[#747474] hover:bg-[#1a1a1a]'
+                            : 'bg-secondary border-border hover:bg-muted hover:border-primary/50'
                         }`}
-                        style={{
-                          background: activeFilter === 'pending' ? undefined : 'var(--neutral_950, #2B2B2B)'
-                        }}
                         onClick={() => setActiveFilter('pending')}
                       >
                           <div className="flex items-center gap-2">
@@ -340,11 +331,8 @@ export function PartnershipHub() {
                         className={`flex flex-col items-start gap-1 px-4 py-3 border rounded-3xl backdrop-blur-sm cursor-pointer transition-all duration-200 w-48 shrink-0 ${
                           activeFilter === 'brand-deals' 
                             ? 'bg-primary/10 border-primary/30 ring-2 ring-primary/30 shadow-lg' 
-                            : 'border-[#747474] hover:bg-[#1a1a1a]'
+                            : 'bg-secondary border-border hover:bg-muted hover:border-primary/50'
                         }`}
-                        style={{
-                          background: activeFilter === 'brand-deals' ? undefined : 'var(--neutral_950, #2B2B2B)'
-                        }}
                         onClick={() => setActiveFilter('brand-deals')}
                       >
                           <div className="flex items-center gap-2">
@@ -366,24 +354,20 @@ export function PartnershipHub() {
                   variant="outline" 
                   onClick={handleRefresh}
                   disabled={refreshing}
-                  className="flex items-center gap-2 justify-center shrink-0 relative"
+                  className="flex items-center gap-2 justify-center shrink-0 relative bg-secondary border-border hover:bg-muted hover:border-primary/50 text-foreground rounded-3xl"
                   data-find-opportunities-button
                   style={{
-                    borderRadius: '25px',
-                    border: '1px solid var(--Neutral_600, #747474)',
-                    background: 'var(--neutral_950, #2B2B2B)',
                     width: '219px',
                     height: '43px',
                     flexShrink: 0,
-                    color: 'var(--Neutral_400, #BCBCBC)',
                     fontSize: '14px',
                     fontStyle: 'normal',
                     fontWeight: 500,
                     lineHeight: 'normal'
                   }}
                 >
-                  <div className="absolute left-[9px] w-6 h-6 rounded-full bg-neutral-400 dark:bg-neutral-400 flex items-center justify-center">
-                    <RefreshCw className={`w-3 h-3 text-black ${refreshing ? 'animate-spin' : ''}`} />
+                  <div className="absolute left-[9px] w-6 h-6 rounded-full bg-muted-foreground flex items-center justify-center">
+                    <RefreshCw className={`w-3 h-3 text-background ${refreshing ? 'animate-spin' : ''}`} />
                   </div>
                   <span className="ml-8">Find New Opportunities</span>
                 </Button>
@@ -391,16 +375,14 @@ export function PartnershipHub() {
 
               {/* Right side - Deal Value */}
               <div 
-                className="flex items-center gap-2 px-4 py-3 shrink-0 ml-auto border border-[#747474] rounded-3xl"
+                className="flex items-center gap-2 px-4 py-3 shrink-0 ml-auto border border-border rounded-3xl bg-secondary hover:bg-muted transition-colors"
                 style={{
-                  background: 'var(--neutral_950, #2B2B2B)',
                   width: '209px',
-                  height: '64px',
                   flexShrink: 0
                 }}
               >
-                <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
-                  <span className="text-black font-bold text-sm">$</span>
+                <div className="w-10 h-10 bg-primary/20 border-2 border-primary rounded-full flex items-center justify-center">
+                  <span className="text-black dark:text-white font-bold text-xl">$</span>
                 </div>
                 <div>
                   <div className="text-xl font-bold text-foreground">
