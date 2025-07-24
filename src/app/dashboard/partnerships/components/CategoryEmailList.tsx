@@ -127,7 +127,7 @@ export const CategoryEmailList: React.FC<CategoryEmailListProps> = ({
   }
 
   return (
-    <div className="space-y-0 rounded-lg">
+    <div className="space-y-4 rounded-lg">
       {Object.entries(groupedEmails).map(([category, categoryEmails]) => {
         const emails = categoryEmails as any[];
         if (emails.length === 0) return null;
@@ -137,7 +137,7 @@ export const CategoryEmailList: React.FC<CategoryEmailListProps> = ({
         const isExpanded = expandedCategories[category];
         
         return (
-          <div key={category} className="border-b border-border last:border-b-0">
+          <div key={category} className="border border-border rounded-lg">
             {/* Category Header with 11% transparency */}
             <div 
               className={`px-4 py-3 cursor-pointer rounded-lg ${colors ? `${colors.headerBg}` : 'bg-muted/50'}`}

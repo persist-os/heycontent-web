@@ -20,6 +20,13 @@ import {
   Clock,
   Users
 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { useGmailAnalytics } from '../../content-analytics/hooks/useGmailAnalytics';
 import { useGmailBatchRefresh } from '@/app/hooks/useGmailBatchRefresh';
@@ -47,6 +54,7 @@ export function PartnershipHub() {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshCount, setRefreshCount] = useState(0);
   const [activeFilter, setActiveFilter] = useState<MetricFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const [isClient, setIsClient] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState({
@@ -87,25 +95,35 @@ export function PartnershipHub() {
     partnership.messageCount > 5
   ).length;
 
-  // Filter partnerships based on active filter
+  // Filter partnerships based on active filter and status filter
   const filteredPartnerships = partnerships.filter(partnership => {
+    // Active filter logic
+    let matchesActiveFilter = true;
     switch (activeFilter) {
       case 'active':
         // Active partnerships: active status or high-value opportunities or multiple messages
-        return partnership.status === 'active' || partnership.status === 'negotiating' || 
+        matchesActiveFilter = partnership.status === 'active' || partnership.status === 'negotiating' || 
                partnership.estimatedValue > 1000 || partnership.messageCount > 3;
+        break;
       case 'pending':
         // Pending partnerships: opportunities and inquiries that need response
-        return partnership.status === 'opportunity' || partnership.status === 'inquiry';
+        matchesActiveFilter = partnership.status === 'opportunity' || partnership.status === 'inquiry';
+        break;
       case 'brand-deals':
         // Brand deals: high-value partnerships and serious negotiations
-        return partnership.estimatedValue > 500 || 
+        matchesActiveFilter = partnership.estimatedValue > 500 || 
                partnership.status === 'negotiating' || 
                partnership.messageCount > 5;
+        break;
       case 'all':
       default:
-        return true;
+        matchesActiveFilter = true;
     }
+
+    // Status filter logic
+    const matchesStatusFilter = statusFilter === 'all' || partnership.status === statusFilter;
+
+    return matchesActiveFilter && matchesStatusFilter;
   });
 
   // Update grouped emails to use filtered partnerships
@@ -426,16 +444,65 @@ export function PartnershipHub() {
                     </p>
                   </div>
 
-                  {/* Search above email list */}
+                  {/* Search Bar */}
                   <div className="mb-4">
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input
                         placeholder="Search partnerships or opportunities..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10"
+                        className="pr-10 rounded-full border-2 border-gray-400/50 bg-transparent focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
                       />
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground">
+                        <Search className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Filters Section */}
+                  <div className="mb-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                      <div className="flex items-center gap-2 w-full sm:flex-1">
+                        <div className="w-6 h-6 text-white">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M3 4C3 3.44772 3.44772 3 4 3H20C20.5523 3 21 3.44772 21 4V6.58579C21 6.851 20.8946 7.10536 20.7071 7.29289L14.2929 13.7071C14.1054 13.8946 14 14.149 14 14.4142V17L10 21V14.4142C10 14.149 9.89464 13.8946 9.70711 13.7071L3.29289 7.29289C3.10536 7.10536 3 6.851 3 6.58579V4Z"/>
+                          </svg>
+                        </div>
+                        <span className="text-sm font-medium text-white whitespace-nowrap">Filters:</span>
+                        <span className="text-sm font-medium text-white whitespace-nowrap">Type</span>
+                        <div className="flex-1 min-w-32">
+                          <Select value={activeFilter} onValueChange={(value) => setActiveFilter(value as MetricFilter)}>
+                            <SelectTrigger className="w-full h-8 rounded-full border-2 border-white/50 bg-transparent focus:border-white/70 focus:ring-1 focus:ring-white/30 text-center">
+                              <SelectValue placeholder="All" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All</SelectItem>
+                              <SelectItem value="active">Active</SelectItem>
+                              <SelectItem value="pending">Pending</SelectItem>
+                              <SelectItem value="brand-deals">Brand Deals</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 w-full sm:flex-1">
+                        <span className="text-sm font-medium text-white whitespace-nowrap">Status</span>
+                        <div className="flex-1 min-w-32">
+                          <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger className="w-full h-8 rounded-full border-2 border-white/50 bg-transparent focus:border-white/70 focus:ring-1 focus:ring-white/30 text-center">
+                              <SelectValue placeholder="All" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All</SelectItem>
+                              <SelectItem value="opportunity">Opportunity</SelectItem>
+                              <SelectItem value="inquiry">Inquiry</SelectItem>
+                              <SelectItem value="negotiating">Negotiating</SelectItem>
+                              <SelectItem value="active">Active</SelectItem>
+                              <SelectItem value="completed">Completed</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -452,7 +519,7 @@ export function PartnershipHub() {
               </div>
 
               {/* Right Column - Partnership Detail Panel */}
-              <div className="w-full lg:w-1/2 overflow-y-auto">
+              <div className="w-full lg:w-2/3 overflow-y-auto">
                 <PartnershipDetailPanel 
                   partnership={selectedPartnership}
                   onUpdatePartnership={handleUpdatePartnership}
