@@ -1,6 +1,7 @@
 import { mutation, action } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
+import { internal } from "./_generated/api";
 
 export const createConversation = mutation({
     args: {
@@ -22,21 +23,18 @@ export const createConversation = mutation({
         starred: false,
       });
 
-      // Automatically create embedding for the new conversation
+      // Queue for automatic embedding creation
       try {
-        const searchableContent = `${args.title}\n\n${args.messages.map((m: any) => `${m.role}: ${m.content}`).join('\n')}`;
-        
-        await ctx.scheduler.runAfter(0, api.vectorSearch.autoCreateEmbedding, {
+        await ctx.runMutation(internal.automaticEmbeddingSystem.queueContentForEmbedding, {
           userId: args.userId,
-          contentId: conversationId,
-          contentType: "conversation" as const,
-          title: args.title,
-          content: searchableContent,
-          triggerType: "content_update" as const,
-          platform: "conversations" as const,
+          contentId: `conversations:${conversationId}`,
+          platform: 'conversations',
+          changeType: 'created',
+          priority: 'normal',
+          metadata: { source: 'conversation_creation' }
         });
       } catch (error) {
-        console.error('❌ [AUTO EMBEDDING] Failed to schedule conversation embedding:', error);
+        console.error('❌ [AUTO EMBEDDING] Failed to queue conversation for embedding:', error);
       }
 
       return conversationId;
@@ -66,21 +64,18 @@ handler: async (ctx, args) => {
       updatedAt: Date.now(),
     });
 
-    // Automatically update embedding for the conversation with new message
+    // Queue for automatic embedding update
     try {
-      const searchableContent = `${conversation.title}\n\n${updatedMessages.map((m: any) => `${m.role}: ${m.content}`).join('\n')}`;
-      
-      await ctx.scheduler.runAfter(0, api.vectorSearch.autoCreateEmbedding, {
+      await ctx.runMutation(internal.automaticEmbeddingSystem.queueContentForEmbedding, {
         userId: args.userId,
-        contentId: args.conversationId,
-        contentType: "conversation" as const,
-        title: conversation.title,
-        content: searchableContent,
-        triggerType: "content_update" as const,
-        platform: "conversations" as const,
+        contentId: `conversations:${args.conversationId}`,
+        platform: 'conversations',
+        changeType: 'updated',
+        priority: 'normal',
+        metadata: { source: 'message_added' }
       });
     } catch (error) {
-      console.error('❌ [AUTO EMBEDDING] Failed to schedule conversation embedding update:', error);
+      console.error('❌ [AUTO EMBEDDING] Failed to queue conversation update for embedding:', error);
     }
 
     return args.conversationId;

@@ -3,6 +3,7 @@ import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { api } from "./_generated/api";
 import { error } from "console";
+import { internal } from "./_generated/api";
 
 // Type definition for note types and reference types
 const noteType = v.union(
@@ -99,21 +100,18 @@ export const updateNote = mutation({
       const newNoteId = await ctx.db.insert("notes", newNoteData);
       console.log('✅ [Convex updateNote] New note created successfully:', newNoteId);
 
-      // Automatically create embedding for the new note
+      // Queue for automatic embedding creation
       try {
-        const searchableContent = `${updates.title || ""}\n\n${updates.content || ""}`;
-        
-        await ctx.scheduler.runAfter(0, api.vectorSearch.autoCreateEmbedding, {
+        await ctx.runMutation(internal.automaticEmbeddingSystem.queueContentForEmbedding, {
           userId,
-          contentId: newNoteId,
-          contentType: "note" as const,
-          title: updates.title || "Untitled Note",
-          content: searchableContent,
-          triggerType: "content_update" as const,
-          platform: "notes" as const,
+          contentId: `notes:${newNoteId}`,
+          platform: 'notes',
+          changeType: 'created',
+          priority: 'normal',
+          metadata: { source: 'note_creation' }
         });
       } catch (error) {
-        console.error('❌ [AUTO EMBEDDING] Failed to schedule note embedding:', error);
+        console.error('❌ [AUTO EMBEDDING] Failed to queue note for embedding:', error);
       }
 
       return await ctx.db.get(newNoteId);
@@ -136,40 +134,31 @@ export const updateNote = mutation({
       updatedAt: Date.now(),
     };
 
-    // Add each field if it's provided in the updates
+    // Only update fields that are provided
     if (updates.title !== undefined) updateData.title = updates.title;
     if (updates.content !== undefined) updateData.content = updates.content;
+    if (updates.platform !== undefined) updateData.platform = updates.platform;
     if (updates.type !== undefined) updateData.type = updates.type;
     if (updates.important !== undefined) updateData.important = updates.important;
     if (updates.tags !== undefined) updateData.tags = updates.tags;
-    if (updates.platform !== undefined) updateData.platform = updates.platform;
-    if (updates.analysis !== undefined) updateData.analysis = updates.analysis;
-    if (updates.images !== undefined) updateData.images = updates.images;
     if (updates.titleGenerated !== undefined) updateData.titleGenerated = updates.titleGenerated;
     if (updates.typeGenerated !== undefined) updateData.typeGenerated = updates.typeGenerated;
 
-    // Apply the update
+    // Apply the updates
     await ctx.db.patch(noteId, updateData);
-    console.log('✅ [Convex updateNote] Note updated successfully');
 
-    // Automatically update embedding for the note
+    // Queue for automatic embedding update
     try {
-      const updatedNote = await ctx.db.get(noteId);
-      if (updatedNote) {
-        const searchableContent = `${updatedNote.title}\n\n${updatedNote.content || ""}`;
-        
-        await ctx.scheduler.runAfter(0, api.vectorSearch.autoCreateEmbedding, {
-          userId,
-          contentId: noteId,
-          contentType: "note" as const,
-          title: updatedNote.title,
-          content: searchableContent,
-          triggerType: "content_update" as const,
-          platform: "notes" as const,
-        });
-      }
+      await ctx.runMutation(internal.automaticEmbeddingSystem.queueContentForEmbedding, {
+        userId,
+        contentId: `notes:${noteId}`,
+        platform: 'notes',
+        changeType: 'updated',
+        priority: 'normal',
+        metadata: { source: 'note_update' }
+      });
     } catch (error) {
-      console.error('❌ [AUTO EMBEDDING] Failed to schedule note embedding update:', error);
+      console.error('❌ [AUTO EMBEDDING] Failed to queue note update for embedding:', error);
     }
 
     return await ctx.db.get(noteId);
@@ -200,6 +189,20 @@ export const deleteNote = mutation({
 
     // 4. Delete the note
     await ctx.db.delete(args.noteId);
+
+    // 5. Queue for embedding deletion
+    try {
+      await ctx.runMutation(internal.automaticEmbeddingSystem.queueContentForEmbedding, {
+        userId: args.userId,
+        contentId: `notes:${args.noteId}`,
+        platform: 'notes',
+        changeType: 'deleted',
+        priority: 'normal',
+        metadata: { source: 'note_deletion' }
+      });
+    } catch (error) {
+      console.error('❌ [AUTO EMBEDDING] Failed to queue note deletion for embedding cleanup:', error);
+    }
 
     return { success: true };
   },

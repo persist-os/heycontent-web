@@ -1,12 +1,10 @@
 'use client'
 
-import React, { useEffect, forwardRef } from 'react'
-import { InlineCommandPalette } from '@/app/dashboard/notes/components/InlineCommandPalette'
-import { EnhancedContentSelector } from '@/app/dashboard/notes/components/EnhancedContentSelector'
-import { Eye, Edit } from 'lucide-react'
-import { RichTextEditorProps } from './rich-text-editor.types'
-import { ContentRenderer } from './content-renderer'
-import { useRichTextEditor } from './use-rich-text-editor'
+import React, { forwardRef } from 'react'
+import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/ui/button'
+import { UnifiedContentSelector } from '@/components/ui/UnifiedContentSelector'
+import { useRichTextEditor, RichTextEditorProps } from './use-rich-text-editor'
 
 export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProps>(({
   content,
@@ -202,14 +200,15 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
       />
 
       {/* Enhanced Content Selector */}
-      <EnhancedContentSelector
+      <UnifiedContentSelector
+        mode="link"
         isOpen={showEnhancedContentSelector}
         onClose={() => setShowEnhancedContentSelector(false)}
         onSelect={handleLinkContent}
         position={palettePosition}
         searchTerm={contentSearchTerm}
         onSearchChange={setContentSearchTerm}
-        excludeContentId={noteId ? `note:${noteId}` : undefined}
+        excludeContentId={noteId ? `notes:${noteId}` : undefined}
       />
     </div>
   )

@@ -11,7 +11,7 @@ import { Id } from '@/convex/_generated/dataModel';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, Trash2, Plus } from 'lucide-react';
-import { AttachmentPanel } from './AttachmentPanel';
+import { UnifiedContentSelector } from '@/components/ui/UnifiedContentSelector';
 import { ProjectItemsGrid } from './ProjectItemsGrid';
 import { EditProjectModal } from './EditProjectModal';
 import toast from 'react-hot-toast';
@@ -23,13 +23,76 @@ interface ProjectDetailPageProps {
 export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
   const router = useRouter();
   const userId = getCurrentUserId();
-  const { project, isLoading } = useProjectDetails(projectId);
-  const { deleteProject, updateProject, addItemToProject, isUpdating } = useProjects(userId);
-  const { createNote, isCreating: isCreatingNote } = useCreateNote();
-  const { setActiveNoteId } = useNotes();
+  const { project, isLoading, error } = useProjectDetails(projectId, userId);
+  const { updateProject, deleteProject, addItemToProject, removeItemFromProject } = useProjects(userId);
+  const { createNote } = useCreateNote();
   
   const [showAttachmentPanel, setShowAttachmentPanel] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Create attached items set for the unified selector
+  const attachedItems = React.useMemo(() => {
+    if (!project?.items) return new Set<string>();
+    
+    return new Set(project.items.map(item => {
+      // Convert project item to standardized content ID format
+      switch (item.type) {
+        case 'note':
+          return `notes:${item.id}`;
+        case 'conversation':
+          return `conversations:${item.id}`;
+        case 'instagramPost':
+          return `instagram:${item.id}`;
+        case 'youtubeVideo':
+          return `youtube:${item.id}`;
+        case 'gmail':
+          return `gmail:${item.id}`;
+        case 'analysis':
+          return `insights:${item.id}`;
+        default:
+          return item.id;
+      }
+    }));
+  }, [project?.items]);
+
+  // Handle attachment toggle
+  const handleToggleAttachment = async (contentId: string, isAttached: boolean) => {
+    if (!project) return;
+
+    try {
+      // Parse the standardized content ID
+      const [platform, actualId] = contentId.split(':', 2);
+      
+      // Map platform to item type
+      const itemTypeMap: Record<string, any> = {
+        'notes': 'note',
+        'conversations': 'conversation',
+        'instagram': 'instagramPost',
+        'youtube': 'youtubeVideo',
+        'gmail': 'gmail',
+        'insights': 'analysis'
+      };
+
+      const itemType = itemTypeMap[platform];
+      if (!itemType) {
+        console.error('Unknown platform for content ID:', contentId);
+        return;
+      }
+
+      if (isAttached) {
+        await removeItemFromProject(projectId, itemType, actualId);
+        toast.success('Item removed from project');
+      } else {
+        await addItemToProject(projectId, itemType, actualId);
+        toast.success('Item added to project');
+      }
+    } catch (error) {
+      console.error('Error toggling attachment:', error);
+      toast.error('Failed to update project');
+    }
+  };
 
   const handleBack = () => {
     router.push('/dashboard/notes');
@@ -220,11 +283,14 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
 
       {/* Attachment Panel */}
       {showAttachmentPanel && (
-        <AttachmentPanel
-          projectId={projectId}
-          project={project}
+        <UnifiedContentSelector
+          mode="attach"
           isOpen={showAttachmentPanel}
           onClose={() => setShowAttachmentPanel(false)}
+          attachedItems={attachedItems}
+          onToggleAttachment={handleToggleAttachment}
+          showAttachedSection={true}
+          userId={userId}
         />
       )}
 

@@ -799,7 +799,8 @@ export default defineSchema({
       v.literal("instagram_post"),
       v.literal("youtube_video"),
       v.literal("gmail_thread"),
-      v.literal("note")
+      v.literal("note"),
+      v.literal("insight")
     ),
     title: v.string(),
     content: v.string(),
@@ -969,6 +970,7 @@ export default defineSchema({
       v.literal("gmail"),
       v.literal("conversations"),
       v.literal("notes"),
+      v.literal("insights"),
       v.literal("all")
     )),
     contentType: v.optional(v.union(
@@ -976,7 +978,8 @@ export default defineSchema({
       v.literal("instagram_post"),
       v.literal("youtube_video"),
       v.literal("gmail_thread"),
-      v.literal("note")
+      v.literal("note"),
+      v.literal("insight")
     )),
     contentId: v.optional(v.string()),
     itemsProcessed: v.optional(v.number()),
@@ -987,4 +990,76 @@ export default defineSchema({
   .index("by_updatedAt", ["updatedAt"])
   .index("by_type", ["type"])
   .index("by_user_type", ["userId", "type"]),
+
+  // Automatic embedding queue for reliable processing
+  embeddingQueue: defineTable({
+    userId: v.string(),
+    contentId: v.string(), // Standardized format: platform:actualId
+    platform: v.union(
+      v.literal("youtube"),
+      v.literal("instagram"),
+      v.literal("gmail"),
+      v.literal("notes"),
+      v.literal("conversations"),
+      v.literal("insights")
+    ),
+    changeType: v.union(
+      v.literal("created"),
+      v.literal("updated"),
+      v.literal("deleted")
+    ),
+    priority: v.union(
+      v.literal("high"),    // User-triggered actions
+      v.literal("normal"),  // Regular content changes
+      v.literal("low")      // Batch operations
+    ),
+    retryCount: v.optional(v.number()), // Made optional temporarily for migration
+    maxRetries: v.optional(v.number()), // Made optional temporarily for migration
+    createdAt: v.number(),
+    lastAttemptAt: v.optional(v.number()),
+    processedAt: v.optional(v.number()),
+    errorMessage: v.optional(v.string()),
+    metadata: v.optional(v.any()),
+    // Legacy fields for migration compatibility
+    attempts: v.optional(v.number()),
+    lastError: v.optional(v.string()),
+    scheduledAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number())
+  })
+  .index("by_userId", ["userId"])
+  .index("by_platform", ["platform"])
+  .index("by_priority", ["priority"])
+  .index("by_createdAt", ["createdAt"])
+  .index("by_processedAt", ["processedAt"])
+  .index("by_user_platform", ["userId", "platform"]),
+
+  // Embedding sync tracking for self-healing
+  embeddingSyncs: defineTable({
+    userId: v.string(),
+    syncType: v.optional(v.union(
+      v.literal("login"),
+      v.literal("manual"),
+      v.literal("scheduled")
+    )),
+    status: v.optional(v.union(
+      v.literal("running"),
+      v.literal("completed"),
+      v.literal("failed")
+    )),
+    startedAt: v.optional(v.number()),
+    completedAt: v.optional(v.number()),
+    platformsProcessed: v.optional(v.array(v.string())),
+    itemsQueued: v.optional(v.number()), // Added back - needed by the sync logic
+    errorMessage: v.optional(v.string()),
+    metadata: v.optional(v.any()),
+    // Legacy fields for migration compatibility
+    createdAt: v.optional(v.number()),
+    syncedAt: v.optional(v.number()),
+    results: v.optional(v.any())
+  })
+  .index("by_userId", ["userId"])
+  .index("by_syncType", ["syncType"])
+  .index("by_status", ["status"])
+  .index("by_startedAt", ["startedAt"])
+  .index("by_user_status", ["userId", "status"]),
 });
