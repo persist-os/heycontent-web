@@ -5,6 +5,7 @@ import { Providers } from './providers'
 import { headers } from 'next/headers'
 import { Toaster } from 'react-hot-toast'
 import { CommandPaletteProvider } from './context/CommandPaletteProvider'
+import { InlineReplyProvider } from './context/inline-reply-context'
 import { Analytics } from "@vercel/analytics/next"
 
 export const metadata: Metadata = {
@@ -33,10 +34,12 @@ export default async function RootLayout({
       </head>
       <body className="font-sans min-h-screen">
         <Providers>
-          <CommandPaletteProvider>
-            <Toaster position="top-center" />
-            {children}
-          </CommandPaletteProvider>
+          <InlineReplyProvider>
+            <CommandPaletteProvider>
+              <Toaster position="top-center" />
+              {children}
+            </CommandPaletteProvider>
+          </InlineReplyProvider>
         </Providers>
         <Analytics />
       </body>

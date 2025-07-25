@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +15,7 @@ import {
   Brain
 } from 'lucide-react';
 import { Partnership } from '../types';
-import { MarkdownNotepad } from '../../chat/components/notepad/MarkdownNotepad';
+import { InlineEmailReply } from './InlineEmailReply';
 import { useNotes } from '@/app/context/notes-context';
 import { useRouter } from 'next/navigation';
 import { getPartnershipColors } from '../utils/emailCategorization';
@@ -50,9 +50,7 @@ export function PartnershipDetailPanel({
   userEmail
 }: PartnershipDetailPanelProps) {
   const [isDraftingReply, setIsDraftingReply] = useState(false);
-  const [notepadWidth, setNotepadWidth] = useState(400);
   const [selectedMessageId, setSelectedMessageId] = useState<string | undefined>();
-  const notepadRef = useRef<any>(null);
   const router = useRouter();
   
 
@@ -189,62 +187,101 @@ export function PartnershipDetailPanel({
     );
   }, [notes, partnership?.smartNoteIds]);
 
-  // Format full email thread for MarkdownNotepad
-  const getEmailContext = () => {
-    if (!partnership) return '';
-    
-    // Get the full conversation thread
-    const messages = getEmailThreadForConversation();
-    
-    let context = `**Email Thread Context:**
-Brand: ${partnership.brandName}
-Subject: ${partnership.subject}
-From: ${partnership.from || 'Unknown'}
-Messages: ${partnership.messageCount}
-Status: ${partnership.status}
+  // Get email thread messages from gmailData for ConversationThreads
+  const getEmailThreadForConversation = useCallback(() => {
+    console.log('🔍 [DEBUG] Getting email thread data:', {
+      hasGmailData: !!gmailData,
+      gmailDataKeys: gmailData ? Object.keys(gmailData) : [],
+      partnershipSnippet: partnership?.snippet?.substring(0, 100) + '...',
+      partnershipSubject: partnership?.subject,
+      partnershipFrom: partnership?.from
+    });
 
----
-
-**Full Conversation Thread:**
-
-`;
-
-    // Add all messages from the thread
-    if (messages.length > 0) {
-      messages.forEach((message: any, index: number) => {
-        context += `**Message ${index + 1}** - ${message.from}
-*${new Date(message.timestamp).toISOString().replace('T', ' ').substring(0, 19)}*
-
-${message.body}
-
----
-
-`;
-      });
-    } else {
-      context += `${partnership.snippet || 'No conversation content available'}
-
----
-
-`;
+    if (!gmailData || !gmailData.data) {
+      // Fallback to partnership data if no gmailData
+      if (partnership) {
+        return [{
+          id: partnership.id,
+          from: partnership.from || 'Unknown',
+          email: partnership.from || 'unknown@example.com',
+          subject: partnership.subject || 'No Subject',
+          body: partnership.snippet || 'No content available',
+          timestamp: partnership.lastActivity || new Date().getTime(),
+          isReply: false,
+          isFromUser: false
+        }];
+      }
+      return [];
     }
+    
+    const messages = gmailData.data.messages || [];
+    console.log('📧 [DEBUG] Gmail messages found:', {
+      messageCount: messages.length,
+      firstMessageKeys: messages[0] ? Object.keys(messages[0]) : [],
+      firstMessageBody: messages[0]?.body?.substring(0, 100) + '...' || 'No body'
+    });
 
-    context += `**Reply Draft:**
-`;
+    return messages.map((message: any, index: number) => ({
+      id: message.id || `msg-${index}`,
+      from: message.from || gmailData.data.from || 'Unknown',
+      email: message.email || gmailData.data.from || 'unknown@example.com',
+      subject: message.subject || gmailData.data.subject || 'No Subject',
+      body: message.body || message.snippet || partnership?.snippet || 'No content available',
+      timestamp: message.timestamp || gmailData.createdAt || new Date().getTime(),
+      isReply: index > 0,
+      isFromUser: message.from === userEmail || message.email === userEmail
+    })).sort((a: any, b: any) => a.timestamp - b.timestamp);
+  }, [gmailData, partnership, userEmail]);
 
-    return context;
-  };
+  // Prepare email thread data for AI context
+  const emailThreadData = useMemo(() => {
+    console.log('🔄 [DEBUG] emailThreadData useMemo running:', {
+      hasPartnership: !!partnership,
+      partnershipId: partnership?.id,
+      partnershipSubject: partnership?.subject,
+      partnershipBrand: partnership?.brandName,
+      partnershipFrom: partnership?.from
+    });
+
+    if (!partnership) {
+      console.log('❌ [DEBUG] No partnership data for emailThreadData');
+      return undefined;
+    }
+    
+    try {
+      // Use the partnership data directly since we have the email content
+      const threadData = {
+        messages: [{
+          from: partnership.from || 'Unknown',
+          body: partnership.snippet || 'No content available',
+          timestamp: partnership.lastActivity || Date.now()
+        }],
+        subject: partnership.subject || 'No Subject',
+        brandName: partnership.brandName || 'Unknown Brand',
+        recipientEmail: partnership.from || 'unknown@example.com'
+      };
+
+      console.log('✅ [DEBUG] Email thread data for AI prepared successfully:', {
+        messageCount: threadData.messages.length,
+        hasRealContent: threadData.messages.some(m => m.body && m.body !== 'No content available'),
+        firstMessageBody: threadData.messages[0]?.body?.substring(0, 150) + '...',
+        subject: threadData.subject,
+        brandName: threadData.brandName,
+        recipientEmail: threadData.recipientEmail
+      });
+
+      return threadData;
+    } catch (error) {
+      console.error('❌ [DEBUG] Error preparing email thread data:', error);
+      return undefined;
+    }
+  }, [partnership?.id, partnership?.subject, partnership?.brandName, partnership?.from, partnership?.snippet, partnership?.lastActivity]);
 
   const handleStartDraft = () => {
     setIsDraftingReply(true);
   };
 
   const handleCloseDraft = () => {
-    // Check if there's unsaved content
-    if (notepadRef.current?.hasUnsavedContent?.()) {
-      const confirmed = window.confirm('You have unsaved changes. Are you sure you want to close?');
-      if (!confirmed) return;
-    }
     setIsDraftingReply(false);
   };
 
@@ -501,23 +538,6 @@ ${message.body}
     return `$${value}`;
   };
 
-  // Get email thread messages from gmailData for ConversationThreads
-  const getEmailThreadForConversation = () => {
-    if (!gmailData || !gmailData.data) return [];
-    
-    const messages = gmailData.data.messages || [];
-    return messages.map((message: any, index: number) => ({
-      id: message.id || `msg-${index}`,
-      from: message.from || gmailData.data.from || 'Unknown',
-      email: message.email || gmailData.data.from || 'unknown@example.com',
-      subject: message.subject || gmailData.data.subject || 'No Subject',
-      body: message.body || message.snippet || 'No content available',
-      timestamp: message.timestamp || gmailData.createdAt || new Date().getTime(),
-      isReply: index > 0,
-      isFromUser: message.from === userEmail || message.email === userEmail
-    })).sort((a: any, b: any) => a.timestamp - b.timestamp);
-  };
-
   const handleMessageSelect = (messageId: string) => {
     setSelectedMessageId(messageId);
   };
@@ -675,6 +695,23 @@ ${message.body}
               selectedMessageId={selectedMessageId}
               onStartDraft={handleStartDraft}
             />
+            
+            {/* Inline Email Reply */}
+            {isDraftingReply && (
+              <div className="mt-4 border-t border-border pt-4">
+                <InlineEmailReply
+                  isOpen={isDraftingReply}
+                  onClose={handleCloseDraft}
+                  onSend={handleSendReply}
+                  onSaveDraft={handleSaveDraft}
+                  emailThreadData={emailThreadData}
+                  recipientEmail={partnership?.from}
+                  subject={partnership?.subject}
+                  brandName={partnership?.brandName}
+                  className="w-full"
+                />
+              </div>
+            )}
           </div>
         </Card>
       </div>
@@ -750,28 +787,7 @@ ${message.body}
         </Card>
       </div>
 
-      {/* MarkdownNotepad for Email Drafting */}
-      <MarkdownNotepad
-        ref={notepadRef}
-        isOpen={isDraftingReply}
-        onClose={handleCloseDraft}
-        onSendToChat={handleSendReply}
-        quotedContent={isDraftingReply ? getEmailContext() : undefined}
-        onClearQuoted={() => {}} // Context is pre-loaded, not quoted
-        width={notepadWidth}
-        onWidthChange={setNotepadWidth}
-        style={{ 
-          position: 'fixed',
-          top: 0,
-          right: 0,
-          zIndex: 50
-        }}
-        availableNotes={[]} // TODO: Load related partnership notes
-        onLinkNote={(noteId) => {
-          // TODO: Handle note linking for partnership context
-          console.log('Linking note:', noteId);
-        }}
-      />
+
     </div>
   );
 } 
