@@ -44,31 +44,53 @@ export function useEmailAI({
 
   // Helper to format email thread context for AI
   const getEmailThreadContext = (): string => {
-    if (!emailThreadData) {
-      return '';
+    if (emailThreadData) {
+      // Reply mode - use existing thread data
+      const { messages, subject, brandName: threadBrandName, recipientEmail: threadRecipientEmail } = emailThreadData;
+      
+      let context = `\n\nEMAIL REPLY CONTEXT:\n`;
+      context += `You are drafting an EMAIL REPLY to: ${threadRecipientEmail || recipientEmail}\n`;
+      context += `Their company/brand: ${threadBrandName || brandName}\n`;
+      context += `Email subject: ${subject || emailSubject}\n`;
+      context += `\nOriginal Email Content:\n`;
+      
+      messages.forEach((msg, index) => {
+        const date = new Date(msg.timestamp).toLocaleDateString();
+        context += `\n--- Email from ${msg.from} (${date}) ---\n${msg.body}\n`;
+      });
+      
+      context += `\n--- END OF EMAIL THREAD ---\n\n`;
+      context += `IMPORTANT INSTRUCTIONS:\n`;
+      context += `- Write a direct, professional email reply that addresses their specific message\n`;
+      context += `- Respond to what they actually said, don't ask generic partnership questions\n`;
+      context += `- Be contextual and specific to their email content\n`;
+      context += `- Return ONLY the email content to be inserted, no extra formatting\n\n`;
+      
+      return context;
+    } else if (recipientEmail || emailSubject) {
+      // Compose mode - use manual inputs
+      let context = `\n\nEMAIL COMPOSE CONTEXT:\n`;
+      context += `You are composing a NEW EMAIL to: ${recipientEmail || '[Recipient]'}\n`;
+      if (brandName) {
+        context += `Their company/brand: ${brandName}\n`;
+      }
+      if (emailSubject) {
+        context += `Email subject: ${emailSubject}\n`;
+      }
+      context += `\nIMPORTANT INSTRUCTIONS:\n`;
+      context += `- Write a professional, engaging email that serves the user's purpose\n`;
+      context += `- Be clear, concise, and action-oriented\n`;
+      context += `- Use an appropriate tone for a business/partnership context\n`;
+      if (emailSubject) {
+        context += `- Make sure your content aligns with the subject line: "${emailSubject}"\n`;
+      }
+      context += `- Return ONLY the email content to be inserted, no extra formatting\n\n`;
+      
+      return context;
     }
     
-    const { messages, subject, brandName: threadBrandName, recipientEmail: threadRecipientEmail } = emailThreadData;
-    
-    let context = `\n\nEMAIL REPLY CONTEXT:\n`;
-    context += `You are drafting an EMAIL REPLY to: ${threadRecipientEmail || recipientEmail}\n`;
-    context += `Their company/brand: ${threadBrandName || brandName}\n`;
-    context += `Email subject: ${subject || emailSubject}\n`;
-    context += `\nOriginal Email Content:\n`;
-    
-    messages.forEach((msg, index) => {
-      const date = new Date(msg.timestamp).toLocaleDateString();
-      context += `\n--- Email from ${msg.from} (${date}) ---\n${msg.body}\n`;
-    });
-    
-    context += `\n--- END OF EMAIL THREAD ---\n\n`;
-    context += `IMPORTANT INSTRUCTIONS:\n`;
-    context += `- Write a direct, professional email reply that addresses their specific message\n`;
-    context += `- Respond to what they actually said, don't ask generic partnership questions\n`;
-    context += `- Be contextual and specific to their email content\n`;
-    context += `- Return ONLY the email content to be inserted, no extra formatting\n\n`;
-    
-    return context;
+    // No context available
+    return '';
   };
 
   // Insert text into the editor at cursor position
@@ -109,12 +131,17 @@ export function useEmailAI({
       }
 
       const emailContext = getEmailThreadContext();
-      const contextualContent = `EMAIL REPLY CONTEXT: The user is writing a direct email response.${emailContext}`;
+      const contextualContent = emailThreadData 
+        ? `EMAIL REPLY CONTEXT: The user is writing a direct email response.${emailContext}`
+        : `EMAIL COMPOSE CONTEXT: The user is composing a new email.${emailContext}`;
 
       console.log('📧 [useEmailAI] Processing email AI request:', {
         userPrompt: userPrompt.substring(0, 50) + '...',
         contextLength: contextualContent.length,
-        hasEmailContext: !!emailThreadData
+        hasEmailContext: !!emailThreadData,
+        isComposeMode: !emailThreadData,
+        recipientEmail,
+        emailSubject
       });
 
       const response = await fetch(`${API_BASE}/generic-writing`, {
@@ -179,12 +206,17 @@ export function useEmailAI({
       }
 
       const emailContext = getEmailThreadContext();
-      const contextualContent = `EMAIL REPLY CONTEXT: The user is writing a direct email response.${emailContext}`;
+      const contextualContent = emailThreadData 
+        ? `EMAIL REPLY CONTEXT: The user is writing a direct email response.${emailContext}`
+        : `EMAIL COMPOSE CONTEXT: The user is composing a new email.${emailContext}`;
 
       console.log('🔧 [useEmailAI] Processing text refinement:', {
         selectedTextLength: selectedText.length,
         refinementPrompt: refinementPrompt.substring(0, 50) + '...',
-        hasEmailContext: !!emailThreadData
+        hasEmailContext: !!emailThreadData,
+        isComposeMode: !emailThreadData,
+        recipientEmail,
+        emailSubject
       });
 
       const fullPrompt = `Please refine this email text: "${selectedText}"\n\nRefinement request: ${refinementPrompt}\n\nReturn ONLY the refined text, nothing else.`;

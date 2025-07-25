@@ -18,7 +18,8 @@ import {
   RefreshCw,
   MessageSquare,
   Clock,
-  Users
+  Users,
+  PenSquare
 } from 'lucide-react';
 import {
   Select,
@@ -38,6 +39,7 @@ import { Partnership } from '../types';
 import { usePartnershipData } from '../hooks/usePartnershipData';
 import { PartnershipProgressiveThinking } from './PartnershipProgressiveThinking';
 import { getPartnershipColors } from '../utils/emailCategorization';
+import { EmailComposerModal } from './EmailComposerModal';
 
 // Help system imports
 import { EnhancedHelpButton } from '@/components/ui/enhanced-help-button';
@@ -67,6 +69,9 @@ export function PartnershipHub() {
   // Help system state
 
   const [interactiveTourOpen, setInteractiveTourOpen] = useState(false);
+
+  // New Email Modal state
+  const [isNewEmailModalOpen, setIsNewEmailModalOpen] = useState(false);
 
   // Use Gmail analytics to get real Gmail data
   const { gmailItems, loading: gmailLoading, hasConnectedAccounts } = useGmailAnalytics(userId, refreshCount);
@@ -153,6 +158,15 @@ export function PartnershipHub() {
     // Update the partnership status locally and trigger refresh
     console.log('Updating partnership status:', partnershipId, status);
     setRefreshCount(c => c + 1);
+  };
+
+  // New Email Modal handlers
+  const handleOpenNewEmailModal = () => {
+    setIsNewEmailModalOpen(true);
+  };
+
+  const handleCloseNewEmailModal = () => {
+    setIsNewEmailModalOpen(false);
   };
 
   const handleUpdatePartnership = (partnershipId: string, updates: Partial<Partnership>) => {
@@ -366,7 +380,7 @@ export function PartnershipHub() {
                   variant="outline" 
                   onClick={handleRefresh}
                   disabled={refreshing}
-                  className="flex items-center gap-2 justify-center shrink-0 rounded-full border-2 border-border bg-background hover:bg-muted focus:border-primary/50 focus:ring-1 focus:ring-primary/20 text-foreground font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 justify-center shrink-0 rounded-full border-2 border-border bg-background hover:bg-purple-100 hover:text-purple-900 dark:hover:bg-yellow-500/20 dark:hover:text-yellow-300 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 text-foreground font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   data-find-opportunities-button
                   style={{
                     width: '219px',
@@ -376,21 +390,40 @@ export function PartnershipHub() {
                   <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
                   Find New Opportunities
                 </Button>
+
+                {/* New Email Button */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      onClick={handleOpenNewEmailModal}
+                      className="flex items-center gap-2 justify-center shrink-0 rounded-full border-2 border-border bg-background hover:bg-purple-100 hover:text-purple-900 dark:hover:bg-yellow-500/20 dark:hover:text-yellow-300 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 text-foreground font-medium text-sm transition-colors"
+                      style={{
+                        width: '160px',
+                        height: '43px',
+                      }}
+                    >
+                      <PenSquare className="w-4 h-4" />
+                      New Email
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="max-w-xs text-sm">Compose a new email to anyone</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
 
               {/* Right side - Deal Value */}
               <div 
-                className="flex items-center gap-2 px-4 py-3 shrink-0"
+                className="flex items-center gap-2 px-4 py-3 shrink-0 rounded-[15px] bg-purple-100 dark:bg-purple-950/30"
                 style={{
-                  borderRadius: '15px',
-                  background: 'rgba(245, 246, 98, 0.13)',
                   width: '209px',
                   height: '64px',
                   flexShrink: 0
                 }}
               >
-                <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
-                  <span className="text-black font-bold text-sm">$</span>
+                <div className="w-8 h-8 bg-purple-500 dark:bg-purple-400 rounded-full flex items-center justify-center">
+                  <span className="text-white dark:text-purple-900 font-bold text-sm">$</span>
                 </div>
                 <div>
                   <div className="text-xl font-bold text-foreground">
@@ -514,7 +547,6 @@ export function PartnershipHub() {
                   partnership={selectedPartnership}
                   onUpdatePartnership={handleUpdatePartnership}
                   gmailData={selectedPartnership ? gmailItems.find(item => item.id === selectedPartnership.id)?.convexData : undefined}
-                  onCategoryChanged={handleRefresh}
                   onPartnershipDeleted={handlePartnershipDeleted}
                   userEmail={userEmail}
                 />
@@ -532,6 +564,12 @@ export function PartnershipHub() {
           steps={interactiveTours.partnershipHub}
           title="Partnership Hub Features Tour"
           autoPlay={false}
+        />
+
+        {/* Email Composer Modal */}
+        <EmailComposerModal
+          isOpen={isNewEmailModalOpen}
+          onClose={handleCloseNewEmailModal}
         />
       </div>
     </TooltipProvider>
