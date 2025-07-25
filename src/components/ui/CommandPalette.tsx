@@ -6,6 +6,7 @@ import { Command } from 'cmdk';
 import { useRouter, usePathname } from 'next/navigation';
 import { Search, Send, Clock, History } from 'lucide-react';
 import { useCommandPaletteState } from '../../app/hooks/useCommandPalette';
+import { useInlineReply } from '../../app/context/inline-reply-context';
 import { commandGroups, parseSearchQuery, createQuickAskCommand } from '../../app/lib/commands';
 import { Command as CommandType, NavigationCommand } from '../../app/types/command';
 import { SearchResult } from '../../app/lib/commands';
@@ -17,6 +18,7 @@ import { CommandHistory } from './command-palette/types';
 
 export function CommandPalette() {
   const pathname = usePathname();
+  const { isInlineReplyActive } = useInlineReply();
   const {
     isOpen,
     setIsOpen,
@@ -43,10 +45,11 @@ export function CommandPalette() {
     }
   }, [isOpen]);
   
-  // Don't render command palette on landing page and auth screens
+  // Don't render command palette on landing page and auth screens, or when inline reply is active
   const isCommandPaletteDisabled = pathname === '/' || 
                                    pathname.startsWith('/auth/') || 
-                                   pathname.startsWith('/waitlist');
+                                   pathname.startsWith('/waitlist') ||
+                                   isInlineReplyActive;
   
   if (isCommandPaletteDisabled) {
     return null;
