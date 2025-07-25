@@ -223,7 +223,7 @@ export const UnifiedContentSelector: React.FC<UnifiedContentSelectorProps> = ({
 
   // Calculate position for link mode
   const finalPosition = React.useMemo(() => {
-    if (mode === 'link' && position) {
+    if (mode === 'link' && position && typeof window !== 'undefined') {
       const selectorWidth = 600;
       const selectorHeight = 400;
       const margin = 20;
