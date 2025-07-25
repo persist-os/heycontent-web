@@ -9,7 +9,12 @@ import {
   Italic, 
   Underline,
   Sparkles,
-  AtSign
+  AtSign,
+  Save,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { EmailCommandPalette } from './EmailCommandPalette';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
@@ -38,6 +43,16 @@ interface InlineEmailReplyProps {
   };
 }
 
+// Operation status types
+type OperationStatus = 'idle' | 'loading' | 'success' | 'error';
+
+interface OperationState {
+  send: OperationStatus;
+  draft: OperationStatus;
+  message: string;
+  error: string | null;
+}
+
 export function InlineEmailReply({
   isOpen,
   onClose,
@@ -57,8 +72,33 @@ export function InlineEmailReply({
   const [isInitialized, setIsInitialized] = useState(false);
   const [pendingRefinedText, setPendingRefinedText] = useState<string | null>(null);
   const [lastSelection, setLastSelection] = useState<Range | null>(null);
+  
+  // Operation states
+  const [operationState, setOperationState] = useState<OperationState>({
+    send: 'idle',
+    draft: 'idle',
+    message: '',
+    error: null
+  });
+
   const editorRef = useRef<HTMLDivElement>(null);
   const { setIsInlineReplyActive } = useInlineReply();
+
+  // Clear status after delay
+  useEffect(() => {
+    if (operationState.send === 'success' || operationState.draft === 'success') {
+      const timer = setTimeout(() => {
+        setOperationState(prev => ({
+          ...prev,
+          send: prev.send === 'success' ? 'idle' : prev.send,
+          draft: prev.draft === 'success' ? 'idle' : prev.draft,
+          message: '',
+          error: null
+        }));
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [operationState.send, operationState.draft]);
 
   // Initialize the email AI hook with direct insertion
   const { processEmailAI, refineEmailText, isProcessing } = useEmailAI({
@@ -265,46 +305,67 @@ ${emailThreadData.messages.map(msg => `From ${msg.from}: ${msg.body}`).join('\n\
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return;
 
-      // Cmd/Ctrl + K for AI palette
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        handleOpenCommandPalette();
+      // Disable shortcuts during operations
+      const isOperating = operationState.send === 'loading' || operationState.draft === 'loading';
+      if (isOperating) return;
+
+      // Check if command palette is open - prevent other shortcuts when it is
+      if (showCommandPalette && e.key !== 'Escape') {
+        return;
       }
 
-      // Cmd/Ctrl + Enter to send
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault();
-        handleSend();
-      }
-
-      // Escape to close
-      if (e.key === 'Escape' && !showCommandPalette) {
-        e.preventDefault();
-        onClose();
-      }
-
-      // Text formatting shortcuts
-      if (e.metaKey || e.ctrlKey) {
-        switch (e.key) {
+      // Handle specific key combinations with exact matching
+      const isMetaOrCtrl = e.metaKey || e.ctrlKey;
+      
+      if (isMetaOrCtrl) {
+        switch (e.key.toLowerCase()) {
+          case 'k':
+            // Only trigger if it's exactly Cmd/Ctrl+K (no other modifiers)
+            if (!e.shiftKey && !e.altKey) {
+              e.preventDefault();
+              e.stopPropagation();
+              handleOpenCommandPalette();
+            }
+            break;
+          case 'enter':
+            // Cmd/Ctrl + Enter to send
+            e.preventDefault();
+            e.stopPropagation();
+            handleSend();
+            break;
+          case 's':
+            // Cmd/Ctrl + S to save as draft
+            e.preventDefault();
+            e.stopPropagation();
+            handleSaveAsDraft();
+            break;
           case 'b':
+            // Bold formatting
             e.preventDefault();
             execCommand('bold');
             break;
           case 'i':
+            // Italic formatting
             e.preventDefault();
             execCommand('italic');
             break;
           case 'u':
+            // Underline formatting
             e.preventDefault();
             execCommand('underline');
             break;
         }
+      } else if (e.key === 'Escape' && !showCommandPalette) {
+        // Escape to close (only when command palette is not open)
+        e.preventDefault();
+        onClose();
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, showCommandPalette, content]);
+    // Use capture phase to ensure we handle events before other components
+    document.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => document.removeEventListener('keydown', handleKeyDown, { capture: true });
+  }, [isOpen, showCommandPalette, content, operationState]);
 
   const execCommand = (command: string, value?: string) => {
     if (editorRef.current) {
@@ -319,6 +380,19 @@ ${emailThreadData.messages.map(msg => `From ${msg.from}: ${msg.body}`).join('\n\
       const newContent = editorRef.current.innerHTML;
       setContent(newContent);
     }
+  };
+
+  // Helper function to check if content is truly empty (ignoring HTML tags)
+  const isContentEmpty = () => {
+    if (!content) return true;
+    
+    // Create a temporary div to extract text content
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = content;
+    const textContent = tempDiv.textContent || tempDiv.innerText || '';
+    
+    // Check if there's any actual text (ignoring whitespace)
+    return textContent.trim().length === 0;
   };
 
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
@@ -377,27 +451,200 @@ ${emailThreadData.messages.map(msg => `From ${msg.from}: ${msg.body}`).join('\n\
     }
   }, [processEmailAI]);
 
-  const handleSend = () => {
-    if (!content.trim()) return;
+  const handleSend = async () => {
+    if (isContentEmpty() || operationState.send === 'loading') return;
     
-    // Convert HTML to plain text for email MIME
+    setOperationState(prev => ({
+      ...prev,
+      send: 'loading',
+      error: null,
+      message: 'Sending email...'
+    }));
+
+    // Preserve HTML content for rich email formatting
+    const htmlContent = content;
+    
+    // Also create plain text version for the parent handler
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = content;
     const plainTextContent = tempDiv.textContent || tempDiv.innerText || '';
     
-    onSend(plainTextContent);
-    setContent('');
-    onClose();
+    try {
+      // Get API key for authentication
+      const { getApiKey } = await import('@/app/lib/api-helpers');
+      const key = await getApiKey();
+      
+      if (!key) {
+        throw new Error('Authentication required. Please log in again.');
+      }
+
+      // Send email via Gmail API with HTML content
+      const response = await fetch('/api/social/gmail/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`,
+        },
+        body: JSON.stringify({
+          to: recipientEmail,
+          subject: `Re: ${subject || 'Partnership Opportunity'}`,
+          body: htmlContent,
+          is_html: true
+          // Note: Omitting thread_id since we don't have access to the actual Gmail thread ID
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Email sent successfully:', data);
+      
+      setOperationState(prev => ({
+        ...prev,
+        send: 'success',
+        message: 'Email sent successfully!'
+      }));
+      
+      // Call the parent's onSend handler for any additional processing (using plain text for compatibility)
+      onSend(plainTextContent);
+      
+      // Keep content like draft functionality - don't clear or close
+      
+    } catch (error) {
+      console.error('❌ Failed to send email:', error);
+      setOperationState(prev => ({
+        ...prev,
+        send: 'error',
+        error: error instanceof Error ? error.message : 'Failed to send email',
+        message: ''
+      }));
+    }
+  };
+
+  const handleSaveAsDraft = async () => {
+    if (isContentEmpty() || operationState.draft === 'loading') return;
+    
+    setOperationState(prev => ({
+      ...prev,
+      draft: 'loading',
+      error: null,
+      message: 'Saving draft...'
+    }));
+
+    // Preserve HTML content for rich email formatting
+    const htmlContent = content;
+    
+    // Also create plain text version for the parent handler
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = content;
+    const plainTextContent = tempDiv.textContent || tempDiv.innerText || '';
+    
+    try {
+      // Get API key for authentication
+      const { getApiKey } = await import('@/app/lib/api-helpers');
+      const key = await getApiKey();
+      
+      if (!key) {
+        throw new Error('Authentication required. Please log in again.');
+      }
+
+      // Save email as draft via Gmail API with HTML content
+      const response = await fetch('/api/social/gmail/drafts/create-with-note', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`,
+        },
+        body: JSON.stringify({
+          to: recipientEmail,
+          subject: `Re: ${subject || 'Partnership Opportunity'}`,
+          body: htmlContent,
+          is_html: true,
+          // Note: Omitting thread_id since we don't have access to the actual Gmail thread ID
+          partnership_context: {
+            brandName: brandName,
+            recipientEmail: recipientEmail,
+            originalSubject: subject,
+            threadData: emailThreadData
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Email draft saved successfully:', data);
+      
+      setOperationState(prev => ({
+        ...prev,
+        draft: 'success',
+        message: 'Draft saved successfully!'
+      }));
+      
+      // Call the parent's onSaveDraft handler for any additional processing (using plain text for compatibility)
+      onSaveDraft(plainTextContent);
+      
+    } catch (error) {
+      console.error('❌ Failed to save email draft:', error);
+      setOperationState(prev => ({
+        ...prev,
+        draft: 'error',
+        error: error instanceof Error ? error.message : 'Failed to save draft',
+        message: ''
+      }));
+    }
   };
 
   const handleCancel = () => {
-    if (content.trim()) {
+    // Don't allow canceling during operations
+    if (operationState.send === 'loading' || operationState.draft === 'loading') {
+      return;
+    }
+    
+    if (!isContentEmpty()) {
       const confirmClose = window.confirm('You have unsaved changes. Are you sure you want to close?');
       if (!confirmClose) return;
     }
     setContent('');
+    setOperationState({
+      send: 'idle',
+      draft: 'idle',
+      message: '',
+      error: null
+    });
     onClose();
   };
+
+  const handleRetryOperation = (operation: 'send' | 'draft') => {
+    if (operation === 'send') {
+      handleSend();
+    } else {
+      handleSaveAsDraft();
+    }
+  };
+
+  // Helper to get status icon
+  const getStatusIcon = (status: OperationStatus) => {
+    switch (status) {
+      case 'loading':
+        return <Loader2 className="w-4 h-4 animate-spin" />;
+      case 'success':
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'error':
+        return <AlertCircle className="w-4 h-4 text-red-500" />;
+      default:
+        return null;
+    }
+  };
+
+  // Determine if any operation is in progress
+  const isOperating = operationState.send === 'loading' || operationState.draft === 'loading';
 
   if (!isOpen) return null;
 
@@ -412,6 +659,7 @@ ${emailThreadData.messages.map(msg => `From ${msg.from}: ${msg.body}`).join('\n\
               size="sm"
               onClick={handleCancel}
               className="h-8 w-8 p-0"
+              disabled={isOperating}
             >
               <X className="w-4 h-4" />
             </Button>
@@ -428,6 +676,36 @@ ${emailThreadData.messages.map(msg => `From ${msg.from}: ${msg.body}`).join('\n\
               <span className="text-foreground">Re: {subject || 'Partnership Opportunity'}</span>
             </div>
           </div>
+
+          {/* Status Messages */}
+          {(operationState.message || operationState.error) && (
+            <div className="mt-3 p-3 rounded-md border">
+              {operationState.error ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-red-700">
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="text-sm font-medium">Error: {operationState.error}</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRetryOperation(operationState.send === 'error' ? 'send' : 'draft')}
+                    className="h-7 px-2"
+                  >
+                    <RefreshCw className="w-3 h-3 mr-1" />
+                    Retry
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-blue-700">
+                  {isOperating && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {operationState.send === 'success' && <CheckCircle className="w-4 h-4 text-green-500" />}
+                  {operationState.draft === 'success' && <CheckCircle className="w-4 h-4 text-green-500" />}
+                  <span className="text-sm font-medium">{operationState.message}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div>
@@ -439,6 +717,7 @@ ${emailThreadData.messages.map(msg => `From ${msg.from}: ${msg.body}`).join('\n\
               onClick={() => execCommand('bold')}
               className="h-8 px-2"
               title="Bold (⌘B)"
+              disabled={isOperating}
             >
               <Bold className="w-4 h-4" />
             </Button>
@@ -448,6 +727,7 @@ ${emailThreadData.messages.map(msg => `From ${msg.from}: ${msg.body}`).join('\n\
               onClick={() => execCommand('italic')}
               className="h-8 px-2"
               title="Italic (⌘I)"
+              disabled={isOperating}
             >
               <Italic className="w-4 h-4" />
             </Button>
@@ -457,6 +737,7 @@ ${emailThreadData.messages.map(msg => `From ${msg.from}: ${msg.body}`).join('\n\
               onClick={() => execCommand('underline')}
               className="h-8 px-2"
               title="Underline (⌘U)"
+              disabled={isOperating}
             >
               <Underline className="w-4 h-4" />
             </Button>
@@ -467,19 +748,28 @@ ${emailThreadData.messages.map(msg => `From ${msg.from}: ${msg.body}`).join('\n\
               onClick={handleOpenCommandPalette}
               className="h-8 px-2 text-primary"
               title="AI Assistant (⌘K)"
+              disabled={isOperating}
             >
-              <Sparkles className="w-4 h-4" />
+              {isProcessing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
             </Button>
           </div>
 
           {/* Content Editor */}
           <div
             ref={editorRef}
-            contentEditable
-            className="min-h-[200px] p-3 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 bg-background text-foreground relative"
+            contentEditable={!isOperating}
+            className={`min-h-[200px] p-3 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 bg-background relative transition-opacity ${
+              isOperating ? 'opacity-60 cursor-not-allowed' : ''
+            }`}
             style={{ 
               lineHeight: '1.6',
-              fontSize: '14px'
+              fontSize: '14px',
+              color: 'hsl(var(--foreground))',
+              caretColor: 'hsl(var(--foreground))'
             }}
             onInput={handleInput}
             onPaste={handlePaste}
@@ -487,10 +777,14 @@ ${emailThreadData.messages.map(msg => `From ${msg.from}: ${msg.body}`).join('\n\
             suppressContentEditableWarning={true}
           >
             {/* Placeholder when empty */}
-            {!content && (
+            {isContentEmpty() && (
               <div 
-                className="absolute top-3 left-3 text-muted-foreground/50 pointer-events-none"
-                style={{ fontSize: '14px' }}
+                className="absolute top-3 left-3 text-muted-foreground/40 pointer-events-none select-none"
+                style={{ 
+                  fontSize: '14px',
+                  lineHeight: '1.6',
+                  zIndex: 1
+                }}
               >
                 Type your reply here... Press ⌘K for AI assistance
               </div>
@@ -500,22 +794,46 @@ ${emailThreadData.messages.map(msg => `From ${msg.from}: ${msg.body}`).join('\n\
           {/* Action Buttons */}
           <div className="flex items-center justify-between mt-4">
             <div className="text-xs text-muted-foreground">
-              Press ⌘K for AI • ⌘Enter to send
+              Press ⌘K for AI • ⌘S to save draft • ⌘Enter to send
             </div>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 onClick={handleCancel}
                 className="px-4"
+                disabled={isOperating}
               >
                 Cancel
               </Button>
               <Button
+                variant="outline"
+                onClick={handleSaveAsDraft}
+                disabled={isContentEmpty() || isOperating}
+                className="px-4"
+              >
+                {operationState.draft === 'loading' ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <>
+                    {getStatusIcon(operationState.draft)}
+                    <Save className="w-4 h-4 mr-2" />
+                  </>
+                )}
+                Save as Draft
+              </Button>
+              <Button
                 onClick={handleSend}
-                disabled={!content.trim()}
+                disabled={isContentEmpty() || isOperating}
                 className="px-6 bg-primary hover:bg-primary/90"
               >
-                <Send className="w-4 h-4 mr-2" />
+                {operationState.send === 'loading' ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <>
+                    {getStatusIcon(operationState.send)}
+                    <Send className="w-4 h-4 mr-2" />
+                  </>
+                )}
                 Send Reply
               </Button>
             </div>

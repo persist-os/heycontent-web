@@ -330,8 +330,8 @@ export function PartnershipDetailPanel({
 
       console.log('✅ Email marked as sent and saved');
       
-      // Close the draft
-      setIsDraftingReply(false);
+      // Keep the draft open after sending (like save draft behavior)
+      // setIsDraftingReply(false); // Commented out to match draft behavior
       
       // Update partnership status to indicate reply sent
       onUpdatePartnership(partnership.id, {
