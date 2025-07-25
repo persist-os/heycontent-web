@@ -257,6 +257,7 @@ export const InstagramFilters: React.FC<InstagramFiltersProps> = ({
                 <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
                   <span>Search: "{filters.searchQuery}"</span>
                   <button
+                    title="Clear search"
                     onClick={() => handleSearchChange('')}
                     className="ml-1 hover:text-blue-600"
                   >
@@ -268,6 +269,7 @@ export const InstagramFilters: React.FC<InstagramFiltersProps> = ({
                 <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full text-xs">
                   <span>Type: {filters.mediaType.replace('_', ' ')}</span>
                   <button
+                    title="Clear media type"
                     onClick={() => handleMediaTypeChange('all')}
                     className="ml-1 hover:text-purple-600"
                   >
@@ -284,6 +286,7 @@ export const InstagramFilters: React.FC<InstagramFiltersProps> = ({
                     }
                   </span>
                   <button
+                    title="Clear time range"
                     onClick={() => handleTimeRangeChange('all')}
                     className="ml-1 hover:text-green-600"
                   >
