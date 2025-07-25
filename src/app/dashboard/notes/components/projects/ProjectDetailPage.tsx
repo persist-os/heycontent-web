@@ -23,39 +23,55 @@ interface ProjectDetailPageProps {
 export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
   const router = useRouter();
   const userId = getCurrentUserId();
-  const { project, isLoading, error } = useProjectDetails(projectId, userId);
+  const { project, isLoading } = useProjectDetails(projectId, userId);
   const { updateProject, deleteProject, addItemToProject, removeItemFromProject } = useProjects(userId);
   const { createNote } = useCreateNote();
+  const { setActiveNoteId } = useNotes();
   
   const [showAttachmentPanel, setShowAttachmentPanel] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCreatingNote, setIsCreatingNote] = useState(false);
 
   // Create attached items set for the unified selector
   const attachedItems = React.useMemo(() => {
-    if (!project?.items) return new Set<string>();
+    if (!project) return new Set<string>();
     
-    return new Set(project.items.map(item => {
-      // Convert project item to standardized content ID format
-      switch (item.type) {
-        case 'note':
-          return `notes:${item.id}`;
-        case 'conversation':
-          return `conversations:${item.id}`;
-        case 'instagramPost':
-          return `instagram:${item.id}`;
-        case 'youtubeVideo':
-          return `youtube:${item.id}`;
-        case 'gmail':
-          return `gmail:${item.id}`;
-        case 'analysis':
-          return `insights:${item.id}`;
-        default:
-          return item.id;
-      }
-    }));
-  }, [project?.items]);
+    const items: string[] = [];
+    
+    // Add notes
+    if (project.noteIds) {
+      items.push(...project.noteIds.map(id => `notes:${id}`));
+    }
+    
+    // Add conversations  
+    if (project.conversationIds) {
+      items.push(...project.conversationIds.map(id => `conversations:${id}`));
+    }
+    
+    // Add Instagram posts
+    if (project.instagramPostIds) {
+      items.push(...project.instagramPostIds.map(id => `instagram:${id}`));
+    }
+    
+    // Add YouTube videos
+    if (project.youtubeVideoIds) {
+      items.push(...project.youtubeVideoIds.map(id => `youtube:${id}`));
+    }
+    
+    // Add Gmail items
+    if (project.gmailIds) {
+      items.push(...project.gmailIds.map(id => `gmail:${id}`));
+    }
+    
+    // Add analysis items
+    if (project.analysisIds) {
+      items.push(...project.analysisIds.map(id => `insights:${id}`));
+    }
+    
+    return new Set(items);
+  }, [project]);
 
   // Handle attachment toggle
   const handleToggleAttachment = async (contentId: string, isAttached: boolean) => {
@@ -126,6 +142,7 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
   };
 
   const handleCreateNote = async () => {
+    setIsCreatingNote(true);
     try {
       // Create a new note
       const newNoteId = await createNote('', {
@@ -149,6 +166,8 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
     } catch (error) {
       console.error('Failed to create note for project:', error);
       toast.error('Failed to create note');
+    } finally {
+      setIsCreatingNote(false);
     }
   };
 

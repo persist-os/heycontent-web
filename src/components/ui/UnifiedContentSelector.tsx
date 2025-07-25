@@ -221,24 +221,28 @@ export const UnifiedContentSelector: React.FC<UnifiedContentSelectorProps> = ({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, availableItems, onClose, onSelect, mode]);
 
-  if (!isOpen) return null;
-
   // Calculate position for link mode
-  let finalPosition = { top: 100, left: 100 };
-  if (mode === 'link' && position) {
-    const selectorWidth = 600;
-    const selectorHeight = 400;
-    const margin = 20;
-    
-    finalPosition.top = Math.max(margin, Math.min(
-      position.top,
-      window.innerHeight - selectorHeight - margin
-    ));
-    finalPosition.left = Math.max(margin, Math.min(
-      position.left,
-      window.innerWidth - selectorWidth - margin
-    ));
-  }
+  const finalPosition = React.useMemo(() => {
+    if (mode === 'link' && position) {
+      const selectorWidth = 600;
+      const selectorHeight = 400;
+      const margin = 20;
+      
+      return {
+        top: Math.max(margin, Math.min(
+          position.top,
+          window.innerHeight - selectorHeight - margin
+        )),
+        left: Math.max(margin, Math.min(
+          position.left,
+          window.innerWidth - selectorWidth - margin
+        ))
+      };
+    }
+    return { top: 100, left: 100 };
+  }, [mode, position]);
+
+  if (!isOpen) return null;
 
   const renderContentItem = (item: UnifiedContentItem, isAttached = false) => {
     const platformConfig = PLATFORM_CONFIGS[item.platform];
@@ -339,6 +343,7 @@ export const UnifiedContentSelector: React.FC<UnifiedContentSelectorProps> = ({
           {mode === 'link' ? 'Link Content' : 'Manage Content'}
         </h3>
         <button
+          title="Close"
           onClick={onClose}
           className="p-1 hover:bg-muted rounded transition-colors"
         >
@@ -493,6 +498,11 @@ export const UnifiedContentSelector: React.FC<UnifiedContentSelectorProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-7xl max-h-[90vh] flex flex-col w-[95vw]">
+        <DialogHeader>
+          <DialogTitle>
+            Manage Content
+          </DialogTitle>
+        </DialogHeader>
         {SelectorContent}
       </DialogContent>
     </Dialog>

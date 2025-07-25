@@ -18,7 +18,6 @@ import type * as apiKeys from "../apiKeys.js";
 import type * as apiKeysMutations from "../apiKeysMutations.js";
 import type * as apiKeysQueries from "../apiKeysQueries.js";
 import type * as automaticEmbeddingSystem from "../automaticEmbeddingSystem.js";
-import type * as backfillInstagramTokenUsernames from "../backfillInstagramTokenUsernames.js";
 import type * as chatMutations from "../chatMutations.js";
 import type * as chatQueries from "../chatQueries.js";
 import type * as contentHub from "../contentHub.js";
@@ -66,7 +65,6 @@ declare const fullApi: ApiFromModules<{
   apiKeysMutations: typeof apiKeysMutations;
   apiKeysQueries: typeof apiKeysQueries;
   automaticEmbeddingSystem: typeof automaticEmbeddingSystem;
-  backfillInstagramTokenUsernames: typeof backfillInstagramTokenUsernames;
   chatMutations: typeof chatMutations;
   chatQueries: typeof chatQueries;
   contentHub: typeof contentHub;

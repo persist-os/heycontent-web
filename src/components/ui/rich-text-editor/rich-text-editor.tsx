@@ -1,10 +1,14 @@
 'use client'
 
-import React, { forwardRef } from 'react'
+import React, { forwardRef, useEffect } from 'react'
+import { Edit, Eye } from 'lucide-react'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { UnifiedContentSelector } from '@/components/ui/UnifiedContentSelector'
-import { useRichTextEditor, RichTextEditorProps } from './use-rich-text-editor'
+import { useRichTextEditor } from './use-rich-text-editor'
+import { RichTextEditorProps } from './rich-text-editor.types'
+import { ContentRenderer } from './content-renderer'
+import { InlineCommandPalette } from '@/app/dashboard/notes/components/InlineCommandPalette'
 
 export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProps>(({
   content,
