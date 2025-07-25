@@ -23,6 +23,7 @@ interface EmailCommandPaletteProps {
   onAcceptRefinement?: () => Promise<void>;
   onRejectRefinement?: () => Promise<void>;
   onRetryRefinement?: () => Promise<string>;
+  emailContext?: 'compose' | 'reply'; // New prop for context awareness
 }
 
 interface DisplayOption {
@@ -50,7 +51,8 @@ export function EmailCommandPalette({
   onRefineText,
   onAcceptRefinement,
   onRejectRefinement,
-  onRetryRefinement
+  onRetryRefinement,
+  emailContext = 'reply' // Default to reply mode for backward compatibility
 }: EmailCommandPaletteProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -110,6 +112,9 @@ export function EmailCommandPalette({
 
   // Get email-specific commands
   const getEmailCommands = (): DisplayOption[] => {
+    // Debug logging to verify context detection
+    console.log('[EmailCommandPalette] Email context:', emailContext, 'Refinement mode:', refinementMode);
+    
     if (refinementMode) {
       // Get refinement commands for email drafts
       const { allRefinements } = getRefinementCommandsForNoteType('email_draft');
@@ -129,62 +134,172 @@ export function EmailCommandPalette({
         ['bullet-list', 'numbered-list', 'action-items', 'summary'].includes(cmd.id)
       );
 
-      // Add additional email-specific commands
-      const additionalEmailCommands = [
-        {
-          id: 'subject-line-optimizer',
-          label: 'Can you write a compelling subject line?',
-          icon: UNIVERSAL_COMMANDS.find(cmd => cmd.id === 'summary')?.icon || '📧',
-          action: () => handleGenerationCommand('subject-line-optimizer', 'Write 3-5 compelling, professional subject line options for this email that will increase open rates'),
-          category: 'Email Structure'
-        },
-        {
-          id: 'call-to-action-creator',
-          label: 'What\'s the best call-to-action here?',
-          icon: UNIVERSAL_COMMANDS.find(cmd => cmd.id === 'action-items')?.icon || '👆',
-          action: () => handleGenerationCommand('call-to-action-creator', 'Create a clear, compelling call-to-action that tells the recipient exactly what to do next'),
-          category: 'Email Structure'
-        },
-        {
-          id: 'email-tone-matcher',
-          label: 'How do I match their communication style?',
-          icon: UNIVERSAL_COMMANDS.find(cmd => cmd.id === 'summary')?.icon || '🎯',
-          action: () => handleGenerationCommand('email-tone-matcher', 'Analyze their previous emails and match their communication style and tone in my response'),
-          category: 'Response Strategy'
-        },
-        {
-          id: 'value-proposition-highlighter',
-          label: 'How do I highlight my value clearly?',
-          icon: UNIVERSAL_COMMANDS.find(cmd => cmd.id === 'summary')?.icon || '⭐',
-          action: () => handleGenerationCommand('value-proposition-highlighter', 'Clearly articulate my unique value proposition and what sets me apart from other creators'),
-          category: 'Pitch Enhancement'
-        },
-        {
-          id: 'timeline-communicator',
-          label: 'How do I communicate realistic timelines?',
-          icon: UNIVERSAL_COMMANDS.find(cmd => cmd.id === 'action-items')?.icon || '📅',
-          action: () => handleGenerationCommand('timeline-communicator', 'Set clear, professional expectations about timelines, deliverables, and project milestones'),
-          category: 'Project Management'
+      // Add additional email-specific commands based on context
+      const getContextSpecificCommands = () => {
+        if (emailContext === 'compose') {
+          // Commands specific to composing fresh emails - direct, one-shot prompts
+          return [
+            {
+              id: 'write-cold-outreach',
+              label: 'Write a professional outreach email',
+              icon: UNIVERSAL_COMMANDS.find(cmd => cmd.id === 'summary')?.icon || '✍️',
+              action: () => handleGenerationCommand('write-cold-outreach', 'Write a complete professional outreach email that introduces me, explains my value, and includes a clear call-to-action. Make it personalized and compelling.'),
+              category: 'Complete Email'
+            },
+            {
+              id: 'write-partnership-pitch',
+              label: 'Write a partnership proposal email',
+              icon: UNIVERSAL_COMMANDS.find(cmd => cmd.id === 'summary')?.icon || '🤝',
+              action: () => handleGenerationCommand('write-partnership-pitch', 'Write a complete partnership proposal email that presents a collaboration opportunity, highlights mutual benefits, and proposes next steps.'),
+              category: 'Complete Email'
+            },
+            {
+              id: 'write-follow-up',
+              label: 'Write a follow-up email',
+              icon: UNIVERSAL_COMMANDS.find(cmd => cmd.id === 'summary')?.icon || '📧',
+              action: () => handleGenerationCommand('write-follow-up', 'Write a polite follow-up email that references our previous conversation, adds value, and gently reminds them to respond.'),
+              category: 'Complete Email'
+            },
+            {
+              id: 'compelling-subject-line',
+              label: 'Create compelling subject lines',
+              icon: UNIVERSAL_COMMANDS.find(cmd => cmd.id === 'summary')?.icon || '🎯',
+              action: () => handleGenerationCommand('compelling-subject-line', 'Generate 3-5 compelling subject line options that will increase open rates and clearly communicate the email\'s purpose.'),
+              category: 'Email Elements'
+            },
+            {
+              id: 'strong-opening',
+              label: 'Write an engaging opening line',
+              icon: UNIVERSAL_COMMANDS.find(cmd => cmd.id === 'summary')?.icon || '✨',
+              action: () => handleGenerationCommand('strong-opening', 'Write an engaging opening line that immediately captures attention and makes the recipient want to read more.'),
+              category: 'Email Elements'
+            },
+            {
+              id: 'value-proposition',
+              label: 'Articulate my unique value',
+              icon: UNIVERSAL_COMMANDS.find(cmd => cmd.id === 'summary')?.icon || '⭐',
+              action: () => handleGenerationCommand('value-proposition', 'Clearly articulate what makes me unique and valuable as a creator/professional, focusing on specific benefits I can provide.'),
+              category: 'Email Elements'
+            },
+            {
+              id: 'clear-call-to-action',
+              label: 'Create a clear call-to-action',
+              icon: UNIVERSAL_COMMANDS.find(cmd => cmd.id === 'action-items')?.icon || '👆',
+              action: () => handleGenerationCommand('clear-call-to-action', 'Write a clear, specific call-to-action that tells the recipient exactly what to do next and makes it easy for them to respond.'),
+              category: 'Email Elements'
+            },
+            {
+              id: 'professional-intro',
+              label: 'Introduce myself professionally',
+              icon: UNIVERSAL_COMMANDS.find(cmd => cmd.id === 'summary')?.icon || '👋',
+              action: () => handleGenerationCommand('professional-intro', 'Write a concise professional introduction that establishes credibility and explains who I am and why I\'m reaching out.'),
+              category: 'Email Elements'
+            }
+          ];
+        } else {
+          // Commands specific to replying to existing emails - response-focused prompts
+          return [
+            {
+              id: 'craft-thoughtful-reply',
+              label: 'Craft a complete thoughtful reply',
+              icon: UNIVERSAL_COMMANDS.find(cmd => cmd.id === 'summary')?.icon || '💭',
+              action: () => handleGenerationCommand('craft-thoughtful-reply', 'Write a complete, thoughtful reply that addresses their points, demonstrates understanding, and moves the conversation forward professionally.'),
+              category: 'Complete Reply'
+            },
+            {
+              id: 'respond-to-opportunity',
+              label: 'Respond to this opportunity',
+              icon: UNIVERSAL_COMMANDS.find(cmd => cmd.id === 'summary')?.icon || '🚀',
+              action: () => handleGenerationCommand('respond-to-opportunity', 'Write a professional response expressing interest, highlighting relevant qualifications, and suggesting next steps for this opportunity.'),
+              category: 'Complete Reply'
+            },
+            {
+              id: 'decline-professionally',
+              label: 'Decline politely but keep doors open',
+              icon: UNIVERSAL_COMMANDS.find(cmd => cmd.id === 'summary')?.icon || '🙏',
+              action: () => handleGenerationCommand('decline-professionally', 'Write a polite decline that maintains the relationship, explains why this isn\'t a fit right now, and leaves the door open for future opportunities.'),
+              category: 'Complete Reply'
+            },
+            {
+              id: 'match-their-tone',
+              label: 'Match their communication style',
+              icon: UNIVERSAL_COMMANDS.find(cmd => cmd.id === 'summary')?.icon || '🎯',
+              action: () => handleGenerationCommand('match-their-tone', 'Analyze their email tone and communication style, then help me respond in a way that matches their level of formality and energy.'),
+              category: 'Response Strategy'
+            },
+            {
+              id: 'address-concerns',
+              label: 'Address their questions/concerns',
+              icon: UNIVERSAL_COMMANDS.find(cmd => cmd.id === 'summary')?.icon || '💡',
+              action: () => handleGenerationCommand('address-concerns', 'Identify and thoughtfully address any questions, concerns, or objections they raised while maintaining a positive, solution-focused approach.'),
+              category: 'Response Strategy'
+            },
+            {
+              id: 'communicate-timeline',
+              label: 'Set clear expectations and timelines',
+              icon: UNIVERSAL_COMMANDS.find(cmd => cmd.id === 'action-items')?.icon || '📅',
+              action: () => handleGenerationCommand('communicate-timeline', 'Clearly communicate realistic timelines, deliverables, and expectations based on their request while keeping commitments achievable.'),
+              category: 'Response Strategy'
+            },
+            {
+              id: 'show-expertise',
+              label: 'Demonstrate relevant expertise',
+              icon: UNIVERSAL_COMMANDS.find(cmd => cmd.id === 'summary')?.icon || '🎓',
+              action: () => handleGenerationCommand('show-expertise', 'Highlight relevant experience and expertise that directly relates to their needs without being boastful.'),
+              category: 'Response Strategy'
+            },
+            {
+              id: 'next-steps-reply',
+              label: 'Propose clear next steps',
+              icon: UNIVERSAL_COMMANDS.find(cmd => cmd.id === 'action-items')?.icon || '➡️',
+              action: () => handleGenerationCommand('next-steps-reply', 'Suggest specific, actionable next steps that move this conversation forward and make it easy for them to proceed.'),
+              category: 'Response Strategy'
+            }
+          ];
         }
-      ];
+      };
+
+      const additionalEmailCommands = getContextSpecificCommands();
       
-      return [
-        ...typeSpecificCommands.map(cmd => ({
-          id: cmd.id,
-          label: cmd.label,
-          icon: cmd.icon,
-          action: () => handleGenerationCommand(cmd.id, cmd.description || cmd.label),
-          category: cmd.category
-        })),
-        ...emailRelevantUniversalCommands.map(cmd => ({
-          id: cmd.id,
-          label: cmd.label,
-          icon: cmd.icon,
-          action: () => handleGenerationCommand(cmd.id, cmd.description || cmd.label),
-          category: cmd.category
-        })),
-        ...additionalEmailCommands
-      ];
+      // In compose mode, prioritize context-specific commands
+      if (emailContext === 'compose') {
+        return [
+          ...additionalEmailCommands,
+          ...typeSpecificCommands.map(cmd => ({
+            id: cmd.id,
+            label: cmd.label,
+            icon: cmd.icon,
+            action: () => handleGenerationCommand(cmd.id, cmd.description || cmd.label),
+            category: cmd.category
+          })),
+          ...emailRelevantUniversalCommands.map(cmd => ({
+            id: cmd.id,
+            label: cmd.label,
+            icon: cmd.icon,
+            action: () => handleGenerationCommand(cmd.id, cmd.description || cmd.label),
+            category: cmd.category
+          }))
+        ];
+      } else {
+        // In reply mode, show type-specific commands first, then context commands
+        return [
+          ...typeSpecificCommands.map(cmd => ({
+            id: cmd.id,
+            label: cmd.label,
+            icon: cmd.icon,
+            action: () => handleGenerationCommand(cmd.id, cmd.description || cmd.label),
+            category: cmd.category
+          })),
+          ...additionalEmailCommands,
+          ...emailRelevantUniversalCommands.map(cmd => ({
+            id: cmd.id,
+            label: cmd.label,
+            icon: cmd.icon,
+            action: () => handleGenerationCommand(cmd.id, cmd.description || cmd.label),
+            category: cmd.category
+          }))
+        ];
+      }
     }
   };
 
@@ -471,7 +586,12 @@ export function EmailCommandPalette({
           <div className="flex items-center gap-2">
             <Send className="w-4 h-4 text-primary" />
             <span className="text-sm font-medium">
-              {refinementMode ? 'Refine Selected Text' : 'Email AI Assistant'}
+              {refinementMode 
+                ? 'Refine Selected Text' 
+                : emailContext === 'compose' 
+                  ? 'Email Compose Assistant' 
+                  : 'Email Reply Assistant'
+              }
             </span>
           </div>
           <Button
@@ -499,7 +619,12 @@ export function EmailCommandPalette({
                 }
               }
             }}
-            placeholder={refinementMode ? "How should I refine this text?" : "Ask AI to help with your email..."}
+            placeholder={refinementMode 
+              ? "How should I refine this text?" 
+              : emailContext === 'compose' 
+                ? "Ask AI to help compose your email..." 
+                : "Ask AI to help with your reply..."
+            }
             className="w-full px-3 py-2 text-sm bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary/50"
             disabled={isProcessing || refinementState.isProcessingRefinement}
           />
@@ -621,7 +746,8 @@ export function EmailCommandPalette({
       <div className="p-2 border-t border-border bg-muted/10">
         <div className="text-xs text-muted-foreground text-center">
           {refinementState.showPreview ? 'Review refinement • ↵ accept • r retry • esc reject' : 
-           refinementMode ? 'Refining selected text' : 'Email AI assistance'} • Press ↵ to execute
+           refinementMode ? 'Refining selected text' : 
+           emailContext === 'compose' ? 'Email compose assistance' : 'Email reply assistance'} • Press ↵ to execute
         </div>
       </div>
     </motion.div>

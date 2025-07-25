@@ -31,6 +31,8 @@ interface InlineEmailReplyProps {
   subject?: string;
   className?: string;
   brandName?: string;
+  composeMode?: boolean; // New prop to distinguish between reply and compose modes
+  emailContext?: 'compose' | 'reply'; // New prop for context-aware command palette
   emailThreadData?: {
     messages: Array<{
       from: string;
@@ -63,6 +65,8 @@ export function InlineEmailReply({
   subject,
   className = '',
   brandName,
+  composeMode = false, // Default to reply mode for backward compatibility
+  emailContext,
   emailThreadData
 }: InlineEmailReplyProps) {
   const [content, setContent] = useState('');
@@ -113,14 +117,19 @@ export function InlineEmailReply({
 
   // Debug: Log the emailThreadData being passed
   useEffect(() => {
-    console.log('📧 [DEBUG] InlineEmailReply emailThreadData:', {
+    console.log('📧 [DEBUG] InlineEmailReply context:', {
+      composeMode,
       hasEmailThreadData: !!emailThreadData,
       messageCount: emailThreadData?.messages?.length || 0,
       firstMessage: emailThreadData?.messages?.[0]?.body?.substring(0, 150) + '...',
-      subject: emailThreadData?.subject,
-      brandName: emailThreadData?.brandName
+      threadSubject: emailThreadData?.subject,
+      threadBrandName: emailThreadData?.brandName,
+      manualSubject: subject,
+      recipientEmail,
+      brandName,
+      contextType: emailThreadData ? 'Reply (has thread data)' : 'Compose (manual inputs)'
     });
-  }, [emailThreadData]);
+  }, [emailThreadData, composeMode, recipientEmail, subject, brandName]);
 
   // Set inline reply as active when component mounts
   useEffect(() => {
@@ -144,33 +153,86 @@ export function InlineEmailReply({
     }
   }, [isOpen, isInitialized]);
 
-  // Helper to save the current selection
+  // Helper to save the current selection with more robust handling
   const saveCurrentSelection = () => {
     const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
-      setLastSelection(selection.getRangeAt(0).cloneRange());
-    }
-  };
-
-  // Helper to restore selection
-  const restoreSelection = () => {
-    if (lastSelection) {
-      const selection = window.getSelection();
-      if (selection) {
-        selection.removeAllRanges();
-        selection.addRange(lastSelection);
+    if (selection && selection.rangeCount > 0 && editorRef.current) {
+      const range = selection.getRangeAt(0);
+      // Ensure the range is within our editor
+      if (editorRef.current.contains(range.commonAncestorContainer)) {
+        setLastSelection(range.cloneRange());
+        console.log('💾 [InlineEmailReply] Selection saved:', {
+          startOffset: range.startOffset,
+          endOffset: range.endOffset,
+          selectedText: range.toString()
+        });
       }
     }
   };
 
-  // Helper to replace text at a specific range
+  // Helper to restore selection with validation
+  const restoreSelection = () => {
+    if (lastSelection && editorRef.current) {
+      try {
+        const selection = window.getSelection();
+        if (selection) {
+          // Ensure editor is focused first
+          editorRef.current.focus();
+          selection.removeAllRanges();
+          selection.addRange(lastSelection);
+          console.log('🔄 [InlineEmailReply] Selection restored');
+          return true;
+        }
+      } catch (error) {
+        console.warn('⚠️ [InlineEmailReply] Failed to restore selection:', error);
+        return false;
+      }
+    }
+    return false;
+  };
+
+  // Helper to replace text at a specific range with better error handling
   const replaceTextAtRange = (range: Range, newText: string) => {
-    range.deleteContents();
-    range.insertNode(document.createTextNode(newText));
-    range.collapse(false);
-    
-    // Update the content state
-    updateContentFromEditor();
+    try {
+      if (!editorRef.current) {
+        throw new Error('Editor ref not available');
+      }
+
+      // Ensure editor is focused
+      editorRef.current.focus();
+      
+      // Delete the selected content
+      range.deleteContents();
+      
+      // Insert the new text as a text node
+      const textNode = document.createTextNode(newText);
+      range.insertNode(textNode);
+      
+      // Position cursor at the end of inserted text
+      range.setStartAfter(textNode);
+      range.setEndAfter(textNode);
+      range.collapse(false);
+      
+      // Update selection to new position
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      
+      // Update the content state
+      updateContentFromEditor();
+      
+      console.log('✅ [InlineEmailReply] Text replaced successfully');
+    } catch (error) {
+      console.error('❌ [InlineEmailReply] Text replacement failed:', error);
+      // Fallback: try to insert at current cursor position
+      if (editorRef.current) {
+        editorRef.current.focus();
+        document.execCommand('insertText', false, newText);
+        updateContentFromEditor();
+      }
+    }
   };
 
   // New refinement handler that returns refined text for preview
@@ -181,7 +243,8 @@ export function InlineEmailReply({
       
       console.log('🔧 [InlineEmailReply] Starting refinement for preview:', {
         prompt: refinementPrompt,
-        textLength: text.length
+        textLength: text.length,
+        hasSelection: !!lastSelection
       });
 
       // Call the backend to get refined text (modified to return string instead of applying directly)
@@ -189,7 +252,8 @@ export function InlineEmailReply({
       
       console.log('✨ [InlineEmailReply] Refinement preview ready:', {
         originalLength: text.length,
-        refinedLength: refinedText.length
+        refinedLength: refinedText.length,
+        selectionSaved: !!lastSelection
       });
 
       // Store the refined text for later application
@@ -198,9 +262,12 @@ export function InlineEmailReply({
       return refinedText;
     } catch (error) {
       console.error('❌ [InlineEmailReply] Refinement preview failed:', error);
+      // Clean up on error
+      setPendingRefinedText(null);
+      setLastSelection(null);
       throw error;
     }
-  }, []);
+  }, [lastSelection]);
 
   // Helper function to call the refinement API and return the text
   const getRefinedTextFromAPI = async (refinementPrompt: string, text: string): Promise<string> => {
@@ -255,16 +322,34 @@ ${emailThreadData.messages.map(msg => `From ${msg.from}: ${msg.body}`).join('\n\
 
   // Accept refinement handler
   const handleAcceptRefinement = useCallback(async () => {
-    if (!pendingRefinedText || !lastSelection) return;
+    if (!pendingRefinedText || !lastSelection) {
+      console.warn('⚠️ [InlineEmailReply] Cannot accept refinement - missing data:', {
+        hasPendingText: !!pendingRefinedText,
+        hasLastSelection: !!lastSelection
+      });
+      return;
+    }
 
     try {
-      console.log('✅ [InlineEmailReply] Accepting refinement');
+      console.log('✅ [InlineEmailReply] Accepting refinement:', {
+        textLength: pendingRefinedText.length,
+        selectionValid: !!lastSelection
+      });
       
-      // Restore selection and replace the text
-      restoreSelection();
+      // Try to restore selection first
+      const selectionRestored = restoreSelection();
       
-      if (lastSelection) {
+      if (selectionRestored && lastSelection) {
+        // Use the restored selection
         replaceTextAtRange(lastSelection, pendingRefinedText);
+      } else {
+        // Fallback: insert at current cursor position
+        console.log('🔄 [InlineEmailReply] Using fallback insertion method');
+        if (editorRef.current) {
+          editorRef.current.focus();
+          document.execCommand('insertText', false, pendingRefinedText);
+          updateContentFromEditor();
+        }
       }
       
       // Clean up
@@ -274,7 +359,9 @@ ${emailThreadData.messages.map(msg => `From ${msg.from}: ${msg.body}`).join('\n\
       console.log('🎉 [InlineEmailReply] Refinement accepted and applied');
     } catch (error) {
       console.error('❌ [InlineEmailReply] Failed to accept refinement:', error);
-      throw error;
+      // Don't throw - just clean up
+      setPendingRefinedText(null);
+      setLastSelection(null);
     }
   }, [pendingRefinedText, lastSelection]);
 
@@ -321,7 +408,8 @@ ${emailThreadData.messages.map(msg => `From ${msg.from}: ${msg.body}`).join('\n\
         switch (e.key.toLowerCase()) {
           case 'k':
             // Only trigger if it's exactly Cmd/Ctrl+K (no other modifiers)
-            if (!e.shiftKey && !e.altKey) {
+            // AND if the editor is focused (to prevent multiple instances responding)
+            if (!e.shiftKey && !e.altKey && document.activeElement === editorRef.current) {
               e.preventDefault();
               e.stopPropagation();
               handleOpenCommandPalette();
@@ -407,9 +495,28 @@ ${emailThreadData.messages.map(msg => `From ${msg.from}: ${msg.body}`).join('\n\
   };
 
   const handleOpenCommandPalette = () => {
+    console.log('🚀 [InlineEmailReply] Opening command palette', { composeMode, emailContext });
+    
+    // Prevent opening if already open
+    if (showCommandPalette) {
+      console.log('⚠️ [InlineEmailReply] Command palette already open, ignoring');
+      return;
+    }
+
+    // Ensure editor is focused first
+    if (editorRef.current) {
+      editorRef.current.focus();
+    }
+
     const selection = window.getSelection();
     const selectedText = selection?.toString() || '';
     setSelectedText(selectedText);
+
+    console.log('📝 [InlineEmailReply] Selected text for refinement:', {
+      hasSelection: !!selectedText,
+      textLength: selectedText.length,
+      preview: selectedText.substring(0, 50) + (selectedText.length > 50 ? '...' : '')
+    });
 
     // Save the current selection for later use
     saveCurrentSelection();
@@ -653,7 +760,9 @@ ${emailThreadData.messages.map(msg => `From ${msg.from}: ${msg.body}`).join('\n\
       <div className={`bg-background ${className}`}>
         <div className="border-b border-border pb-4 mb-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-semibold text-foreground">Reply</h3>
+            <h3 className="text-lg font-semibold text-foreground">
+              {composeMode ? 'Compose' : 'Reply'}
+            </h3>
             <Button
               variant="ghost"
               size="sm"
@@ -673,7 +782,12 @@ ${emailThreadData.messages.map(msg => `From ${msg.from}: ${msg.body}`).join('\n\
             </div>
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground w-12">Subject:</span>
-              <span className="text-foreground">Re: {subject || 'Partnership Opportunity'}</span>
+              <span className="text-foreground">
+                {composeMode 
+                  ? (subject || 'New Email') 
+                  : `Re: ${subject || 'Partnership Opportunity'}`
+                }
+              </span>
             </div>
           </div>
 
@@ -786,7 +900,10 @@ ${emailThreadData.messages.map(msg => `From ${msg.from}: ${msg.body}`).join('\n\
                   zIndex: 1
                 }}
               >
-                Type your reply here... Press ⌘K for AI assistance
+                {composeMode 
+                  ? 'Type your email here... Press ⌘K for AI assistance'
+                  : 'Type your reply here... Press ⌘K for AI assistance'
+                }
               </div>
             )}
           </div>
@@ -834,7 +951,7 @@ ${emailThreadData.messages.map(msg => `From ${msg.from}: ${msg.body}`).join('\n\
                     <Send className="w-4 h-4 mr-2" />
                   </>
                 )}
-                Send Reply
+                {composeMode ? 'Send Email' : 'Send Reply'}
               </Button>
             </div>
           </div>
@@ -852,6 +969,7 @@ ${emailThreadData.messages.map(msg => `From ${msg.from}: ${msg.body}`).join('\n\
         onAcceptRefinement={handleAcceptRefinement}
         onRejectRefinement={handleRejectRefinement}
         onRetryRefinement={handleRetryRefinement}
+        emailContext={emailContext || (composeMode ? 'compose' : 'reply')}
       />
     </>
   );
