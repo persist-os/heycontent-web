@@ -584,13 +584,15 @@ export function PartnershipDetailPanel({
                 </Select>
               </div>
 
-              {/* Auto-track Checkbox */}
+              {/* Auto-track Checkbox - Temporarily commented out */}
+              {/*
               <div className="flex items-center gap-2">
                 <Checkbox id="auto-track" className="border-primary/30" />
                 <label htmlFor="auto-track" className="text-sm text-muted-foreground">
                   Auto-track this partnership status
                 </label>
               </div>
+              */}
             </div>
 
 
@@ -716,7 +718,8 @@ export function PartnershipDetailPanel({
         </Card>
       </div>
 
-      {/* Associated Smart Notes */}
+      {/* Associated Smart Notes - Temporarily commented out */}
+      {/*
       <div className="p-3 md:p-4 pt-0">
         <Card className="p-3 md:p-4">
           <div className="space-y-3 md:space-y-4">
@@ -786,6 +789,7 @@ export function PartnershipDetailPanel({
           </div>
         </Card>
       </div>
+      */}
 
 
     </div>
