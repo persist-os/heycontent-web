@@ -24,17 +24,26 @@ function extractRawId(unifiedId: string): string {
 
 // Helper to validate project ownership
 async function validateProjectOwnership(ctx: any, projectId: Id<"projects">, userId?: string) {
-  const project = await ctx.db.get(projectId);
-  if (!project) {
-    throw new Error("Project not found");
-  }
+  console.log("validateProjectOwnership called with projectId:", projectId, "userId:", userId);
   
-  // Optional: Validate ownership if userId is provided
-  if (userId && project.userId !== userId) {
-    throw new Error("Access denied: You don't own this project");
+  try {
+    const project = await ctx.db.get(projectId);
+    console.log("Project from database:", project);
+    
+    if (!project) {
+      throw new Error("Project not found");
+    }
+    
+    // Optional: Validate ownership if userId is provided
+    if (userId && project.userId !== userId) {
+      throw new Error("Access denied: You don't own this project");
+    }
+    
+    return project;
+  } catch (error) {
+    console.error("Error in validateProjectOwnership:", error);
+    throw error;
   }
-  
-  return project;
 }
 
 // Create a new project
@@ -176,47 +185,72 @@ export const addItemToProject = mutation({
   },
   returns: v.id("projects"),
   handler: async (ctx, args) => {
-    const project = await validateProjectOwnership(ctx, args.projectId, args.userId);
-
-    // Use the item ID exactly as provided by the frontend
-    const rawId = args.itemId;
-
-    const updates: any = {
-      updatedAt: Date.now(),
-    };
-
+    console.log("addItemToProject called with args:", args);
+    
     try {
+      const project = await validateProjectOwnership(ctx, args.projectId, args.userId);
+      console.log("Project found:", project);
+
+      const rawId = args.itemId;
+      console.log("Raw ID:", rawId);
+
+      const updates: any = {
+        updatedAt: Date.now(),
+      };
+      
+      console.log("Processing itemType:", args.itemType);
+      
+      // Check if this is an analysis item that was incorrectly stored as an Instagram post
+      if (args.itemType === "instagramPost" && rawId.includes(':')) {
+        const parts = rawId.split(':');
+        if (parts.length === 3) {
+          const [platform, analysisId, indexStr] = parts;
+          const index = parseInt(indexStr, 10);
+          
+          // If this looks like an analysis item (has platform:analysisId:index format)
+          if (!isNaN(index) && ['instagram', 'youtube', 'gmail'].includes(platform)) {
+            console.log("Detected analysis item incorrectly stored as Instagram post:", rawId);
+            
+            // Move it to the analysis array instead
+            const analysisIds = project.analysisIds || [];
+            if (!analysisIds.includes(rawId)) {
+              updates.analysisIds = [...analysisIds, rawId];
+            }
+            
+            // Remove it from Instagram posts if it exists there
+            const instagramPostIds = project.instagramPostIds || [];
+            const filteredInstagramIds = instagramPostIds.filter(id => id !== rawId);
+            if (filteredInstagramIds.length !== instagramPostIds.length) {
+              updates.instagramPostIds = filteredInstagramIds;
+            }
+            
+            console.log("Moved analysis item to correct array");
+            
+            // Only update if there are actual changes
+            if (Object.keys(updates).length > 1) { // More than just updatedAt
+              await ctx.db.patch(args.projectId, updates);
+              console.log("Successfully patched project");
+            }
+            
+            return args.projectId;
+          }
+        }
+      }
+      
+      // Regular logic for other item types
       switch (args.itemType) {
         case "note": {
+          console.log("Processing note case");
           const noteIds = project.noteIds || [];
           if (!noteIds.includes(rawId)) {
-            // Verify the note exists and belongs to the user (if userId provided)
-            if (args.userId) {
-              const note = await ctx.db.get(rawId as Id<"notes">);
-              if (!note) {
-                throw new Error("Note not found");
-              }
-              if (note.userId !== args.userId) {
-                throw new Error("Access denied: You don't own this note");
-              }
-            }
             updates.noteIds = [...noteIds, rawId];
           }
           break;
         }
         case "conversation": {
+          console.log("Processing conversation case");
           const conversationIds = project.conversationIds || [];
           if (!conversationIds.includes(rawId)) {
-            // Verify the conversation exists and belongs to the user
-            if (args.userId) {
-              const conversation = await ctx.db.get(rawId as Id<"conversations">);
-              if (!conversation) {
-                throw new Error("Conversation not found");
-              }
-              if (conversation.userId !== args.userId) {
-                throw new Error("Access denied: You don't own this conversation");
-              }
-            }
             updates.conversationIds = [...conversationIds, rawId];
           }
           break;
@@ -224,20 +258,6 @@ export const addItemToProject = mutation({
         case "instagramPost": {
           const instagramPostIds = project.instagramPostIds || [];
           if (!instagramPostIds.includes(rawId)) {
-            // Verify the post exists and belongs to the user
-            if (args.userId) {
-              // For Instagram items, rawId is the postId, not a Convex document ID
-              // Search for the post by postId
-              const post = await ctx.db
-                .query("instagramPosts")
-                .withIndex("by_postId", (q) => q.eq("postId", rawId))
-                .filter((q) => q.eq(q.field("userId"), args.userId))
-                .first();
-              
-              if (!post) {
-                throw new Error("Instagram post not found");
-              }
-            }
             updates.instagramPostIds = [...instagramPostIds, rawId];
           }
           break;
@@ -245,20 +265,6 @@ export const addItemToProject = mutation({
         case "youtubeVideo": {
           const youtubeVideoIds = project.youtubeVideoIds || [];
           if (!youtubeVideoIds.includes(rawId)) {
-            // Verify the video exists and belongs to the user
-            if (args.userId) {
-              // For YouTube items, rawId is the videoId, not a Convex document ID
-              // Search for the video by videoId
-              const video = await ctx.db
-                .query("youtubeVideos")
-                .withIndex("by_videoId", (q) => q.eq("videoId", rawId))
-                .filter((q) => q.eq(q.field("userId"), args.userId))
-                .first();
-              
-              if (!video) {
-                throw new Error("YouTube video not found");
-              }
-            }
             updates.youtubeVideoIds = [...youtubeVideoIds, rawId];
           }
           break;
@@ -266,35 +272,15 @@ export const addItemToProject = mutation({
         case "gmail": {
           const gmailIds = project.gmailIds || [];
           if (!gmailIds.includes(rawId)) {
-            // Verify the gmail item exists and belongs to the user
-            if (args.userId) {
-              // For Gmail items, rawId is the threadId, not a Convex document ID
-              // Search for the thread by threadId
-              const gmailThread = await ctx.db
-                .query("gmailThreads")
-                .withIndex("by_threadId", (q) => q.eq("threadId", rawId))
-                .filter((q) => q.eq(q.field("userId"), args.userId))
-                .first();
-              
-              if (!gmailThread) {
-                throw new Error("Gmail item not found");
-              }
-            }
             updates.gmailIds = [...gmailIds, rawId];
           }
           break;
         }
         case "analysis": {
+          console.log("Processing analysis case");
           const analysisIds = project.analysisIds || [];
           if (!analysisIds.includes(rawId)) {
-            // For analysis items, we store the full synthetic ID (e.g., "insight:youtube:abc123:0")
-            // rather than trying to validate it as a database document ID
-            if (args.userId) {
-              // The rawId for analysis items is the full insight ID
-              // We don't validate against database since insights are computed content
-              // The user ownership is validated by the underlying content when insights are generated
-              console.log(`Adding analysis item to project: ${rawId}`);
-            }
+            console.log(`Adding analysis item to project: ${rawId}`);
             updates.analysisIds = [...analysisIds, rawId];
           }
           break;
@@ -304,7 +290,16 @@ export const addItemToProject = mutation({
         }
       }
 
-      await ctx.db.patch(args.projectId, updates);
+      console.log("About to patch project with updates:", updates);
+      
+      // Only update if there are actual changes
+      if (Object.keys(updates).length > 1) { // More than just updatedAt
+        await ctx.db.patch(args.projectId, updates);
+        console.log("Successfully patched project");
+      } else {
+        console.log("No changes needed - item already exists in project");
+      }
+      
       return args.projectId;
     } catch (error) {
       console.error("Failed to add item to project:", error);
@@ -312,6 +307,136 @@ export const addItemToProject = mutation({
         throw error; // Re-throw validation errors as-is
       }
       throw new Error("Failed to add item to project. Please try again.");
+    }
+  },
+});
+
+// Migration function to fix analysis items stored in wrong arrays
+export const migrateAnalysisItems = mutation({
+  args: {
+    projectId: v.id("projects"),
+    userId: v.optional(v.string()),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    console.log("migrateAnalysisItems called for project:", args.projectId);
+    
+    try {
+      const project = await validateProjectOwnership(ctx, args.projectId, args.userId);
+      console.log("Project found:", project);
+
+      const updates: any = {
+        updatedAt: Date.now(),
+      };
+      
+      let hasChanges = false;
+      
+      // Check Instagram posts for analysis items
+      const instagramPostIds = project.instagramPostIds || [];
+      const analysisIds = project.analysisIds || [];
+      const newAnalysisIds = [...analysisIds];
+      const newInstagramPostIds = [];
+      
+      for (const id of instagramPostIds) {
+        if (id.includes(':')) {
+          const parts = id.split(':');
+          if (parts.length === 3) {
+            const [platform, analysisId, indexStr] = parts;
+            const index = parseInt(indexStr, 10);
+            
+            // If this looks like an analysis item
+            if (!isNaN(index) && ['instagram', 'youtube', 'gmail'].includes(platform)) {
+              console.log("Found analysis item in Instagram posts:", id);
+              if (!newAnalysisIds.includes(id)) {
+                newAnalysisIds.push(id);
+                hasChanges = true;
+              }
+            } else {
+              newInstagramPostIds.push(id);
+            }
+          } else {
+            newInstagramPostIds.push(id);
+          }
+        } else {
+          newInstagramPostIds.push(id);
+        }
+      }
+      
+      // Check YouTube videos for analysis items
+      const youtubeVideoIds = project.youtubeVideoIds || [];
+      const newYoutubeVideoIds = [];
+      
+      for (const id of youtubeVideoIds) {
+        if (id.includes(':')) {
+          const parts = id.split(':');
+          if (parts.length === 3) {
+            const [platform, analysisId, indexStr] = parts;
+            const index = parseInt(indexStr, 10);
+            
+            // If this looks like an analysis item
+            if (!isNaN(index) && ['instagram', 'youtube', 'gmail'].includes(platform)) {
+              console.log("Found analysis item in YouTube videos:", id);
+              if (!newAnalysisIds.includes(id)) {
+                newAnalysisIds.push(id);
+                hasChanges = true;
+              }
+            } else {
+              newYoutubeVideoIds.push(id);
+            }
+          } else {
+            newYoutubeVideoIds.push(id);
+          }
+        } else {
+          newYoutubeVideoIds.push(id);
+        }
+      }
+      
+      // Check Gmail items for analysis items
+      const gmailIds = project.gmailIds || [];
+      const newGmailIds = [];
+      
+      for (const id of gmailIds) {
+        if (id.includes(':')) {
+          const parts = id.split(':');
+          if (parts.length === 3) {
+            const [platform, analysisId, indexStr] = parts;
+            const index = parseInt(indexStr, 10);
+            
+            // If this looks like an analysis item
+            if (!isNaN(index) && ['instagram', 'youtube', 'gmail'].includes(platform)) {
+              console.log("Found analysis item in Gmail items:", id);
+              if (!newAnalysisIds.includes(id)) {
+                newAnalysisIds.push(id);
+                hasChanges = true;
+              }
+            } else {
+              newGmailIds.push(id);
+            }
+          } else {
+            newGmailIds.push(id);
+          }
+        } else {
+          newGmailIds.push(id);
+        }
+      }
+      
+      if (hasChanges) {
+        updates.instagramPostIds = newInstagramPostIds;
+        updates.youtubeVideoIds = newYoutubeVideoIds;
+        updates.gmailIds = newGmailIds;
+        updates.analysisIds = newAnalysisIds;
+        
+        await ctx.db.patch(args.projectId, updates);
+        console.log("Successfully migrated analysis items");
+        return true;
+      } else {
+        console.log("No analysis items found to migrate");
+        return false;
+      }
+      
+    } catch (error) {
+      console.error("Failed to migrate analysis items:", error);
+      throw new Error("Failed to migrate analysis items. Please try again.");
     }
   },
 });
@@ -333,7 +458,10 @@ export const removeItemFromProject = mutation({
   },
   returns: v.id("projects"),
   handler: async (ctx, args) => {
+    console.log("removeItemFromProject called with args:", args);
+    
     const project = await validateProjectOwnership(ctx, args.projectId, args.userId);
+    console.log("Project found:", project);
 
     // Validate the item ID
     if (!args.itemId || typeof args.itemId !== 'string') {
@@ -345,8 +473,10 @@ export const removeItemFromProject = mutation({
     };
 
     try {
+      console.log("Processing itemType:", args.itemType);
       switch (args.itemType) {
         case "note": {
+          console.log("Processing note removal case");
           const noteIds = project.noteIds || [];
           updates.noteIds = noteIds.filter(id => id !== args.itemId);
           break;
@@ -372,8 +502,12 @@ export const removeItemFromProject = mutation({
           break;
         }
         case "analysis": {
+          console.log("Processing analysis removal case");
           const analysisIds = project.analysisIds || [];
+          console.log("Current analysisIds:", analysisIds);
+          console.log("Removing itemId:", args.itemId);
           updates.analysisIds = analysisIds.filter(id => id !== args.itemId);
+          console.log("Updated analysisIds:", updates.analysisIds);
           break;
         }
         default: {
@@ -381,7 +515,16 @@ export const removeItemFromProject = mutation({
         }
       }
 
-      await ctx.db.patch(args.projectId, updates);
+      console.log("About to patch project with updates:", updates);
+      
+      // Only update if there are actual changes
+      if (Object.keys(updates).length > 1) { // More than just updatedAt
+        await ctx.db.patch(args.projectId, updates);
+        console.log("Successfully patched project");
+      } else {
+        console.log("No changes needed - item already removed from project");
+      }
+      
       return args.projectId;
     } catch (error) {
       console.error("Failed to remove item from project:", error);

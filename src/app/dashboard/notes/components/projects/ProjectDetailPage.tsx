@@ -24,7 +24,7 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
   const router = useRouter();
   const userId = getCurrentUserId();
   const { project, isLoading } = useProjectDetails(projectId, userId);
-  const { updateProject, deleteProject, addItemToProject, removeItemFromProject } = useProjects(userId);
+  const { updateProject, deleteProject, addItemToProject, removeItemFromProject, migrateAnalysisItems } = useProjects(userId);
   const { createNote } = useCreateNote();
   const { setActiveNoteId } = useNotes();
   
@@ -79,7 +79,11 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
 
     try {
       // Parse the standardized content ID
-      const [platform, actualId] = contentId.split(':', 2);
+      const [platform, ...rest] = contentId.split(':');
+      
+      // For analysis items, we need the full ID after "insights:"
+      // For other items, we need the full ID after the platform (including any additional parts)
+      const actualId = platform === 'insights' ? rest.join(':') : rest.join(':');
       
       // Map platform to item type
       const itemTypeMap: Record<string, any> = {
@@ -96,13 +100,30 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
         console.error('Unknown platform for content ID:', contentId);
         return;
       }
+      
+      console.log('Toggle attachment debug:', {
+        contentId,
+        platform,
+        actualId,
+        itemType,
+        isAttached,
+        // Additional debugging for analysis items
+        isAnalysisItem: platform === 'insights',
+        fullContentId: contentId,
+        parsedPlatform: platform,
+        parsedActualId: actualId
+      });
 
       if (isAttached) {
-        await removeItemFromProject(projectId, itemType, actualId);
-        toast.success('Item removed from project');
+        const success = await removeItemFromProject(projectId, itemType, actualId);
+        if (success) {
+          toast.success('Item removed from project');
+        }
       } else {
-        await addItemToProject(projectId, itemType, actualId);
-        toast.success('Item added to project');
+        const success = await addItemToProject(projectId, itemType, actualId);
+        if (success) {
+          toast.success('Item added to project');
+        }
       }
     } catch (error) {
       console.error('Error toggling attachment:', error);

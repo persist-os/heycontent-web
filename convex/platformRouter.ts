@@ -41,10 +41,26 @@ export interface UnifiedPlatformContent {
  * Standardize platform IDs to consistent format: platform:actualId
  */
 export function standardizePlatformId(platform: PlatformType, actualId: string): string {
-  // If already prefixed, return as-is
+  // For insights platform, we need to ensure the ID starts with 'insights:'
+  if (platform === 'insights') {
+    // If it already starts with 'insights:', return as-is
+    if (actualId.startsWith('insights:')) {
+      return actualId;
+    }
+    // Otherwise, add the insights prefix
+    return `insights:${actualId}`;
+  }
+  
+  // For other platforms, if already prefixed with the correct platform, return as-is
+  if (actualId.startsWith(`${platform}:`)) {
+    return actualId;
+  }
+  
+  // If already prefixed with a different platform, return as-is (legacy handling)
   if (actualId.includes(':')) {
     return actualId;
   }
+  
   return `${platform}:${actualId}`;
 }
 
