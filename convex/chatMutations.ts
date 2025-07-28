@@ -23,19 +23,8 @@ export const createConversation = mutation({
         starred: false,
       });
 
-      // Queue for automatic embedding creation
-      try {
-        await ctx.runMutation(internal.automaticEmbeddingSystem.queueContentForEmbedding, {
-          userId: args.userId,
-          contentId: `conversations:${conversationId}`,
-          platform: 'conversations',
-          changeType: 'created',
-          priority: 'normal',
-          metadata: { source: 'conversation_creation' }
-        });
-      } catch (error) {
-        console.error('❌ [AUTO EMBEDDING] Failed to queue conversation for embedding:', error);
-      }
+      // Note: Embeddings will be created automatically on next heartbeat
+      console.log('📝 [CONVERSATION] Embedding will be created on next heartbeat sync');
 
       return conversationId;
     },
@@ -64,19 +53,8 @@ handler: async (ctx, args) => {
       updatedAt: Date.now(),
     });
 
-    // Queue for automatic embedding update
-    try {
-      await ctx.runMutation(internal.automaticEmbeddingSystem.queueContentForEmbedding, {
-        userId: args.userId,
-        contentId: `conversations:${args.conversationId}`,
-        platform: 'conversations',
-        changeType: 'updated',
-        priority: 'normal',
-        metadata: { source: 'message_added' }
-      });
-    } catch (error) {
-      console.error('❌ [AUTO EMBEDDING] Failed to queue conversation update for embedding:', error);
-    }
+    // Note: Embeddings will be updated automatically on next heartbeat
+    console.log('📝 [CONVERSATION] Embedding will be updated on next heartbeat sync');
 
     return args.conversationId;
 },

@@ -50,7 +50,7 @@ export function AutomaticEmbeddingStatus({ userId }: AutomaticEmbeddingStatusPro
   const [isLoading, setIsLoading] = useState(true);
   
   const getEmbeddingStatus = useAction(api.userActions.getEmbeddingSyncStatus);
-  const userHeartbeat = useAction(api.automaticEmbeddingSystem.userHeartbeat);
+  const userHeartbeat = useAction(api.embeddingSystem.userHeartbeat);
 
   const fetchStatus = async () => {
     try {
@@ -134,7 +134,7 @@ export function AutomaticEmbeddingStatus({ userId }: AutomaticEmbeddingStatusPro
     );
   }
 
-  const { queueStatus, recentSync, embeddingCounts } = statusData;
+  const { queueStatus, lastUpdate, embeddingCounts } = statusData;
 
   return (
     <div className="space-y-6">
@@ -164,48 +164,43 @@ export function AutomaticEmbeddingStatus({ userId }: AutomaticEmbeddingStatusPro
         <CardContent className="space-y-4">
           <div className="text-sm text-muted-foreground">
             Your content is automatically processed and stored as searchable knowledge for AI-powered insights and context. 
-            Content syncs <b>every 2 minutes</b> while you're active and <b>automatically on login</b> to keep everything up to date.
+            Content syncs automatically while you're active to keep everything up to date.
           </div>
 
-          {/* Queue Status */}
-          {(queueStatus.pending > 0 || queueStatus.failed > 0) && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span>Syncing Content</span>
-                <span className="text-muted-foreground">
-                  {queueStatus.pending} pending{queueStatus.failed > 0 && `, ${queueStatus.failed} retrying`}
-                </span>
-              </div>
-              {queueStatus.total > 0 && (
-                <Progress 
-                  value={((queueStatus.total - queueStatus.pending) / queueStatus.total) * 100} 
-                  className="h-2" 
-                />
+          {/* Simple status - no queues */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span>Content Sync</span>
+              <span className="text-muted-foreground">
+                Active
+              </span>
+            </div>
+            <Progress value={100} className="h-2" />
+          </div>
+
+          {/* Last Update Info */}
+          <div className="p-3 bg-muted rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium">Last Update</span>
+              <Badge variant="outline" className="border-green-500 text-green-700">
+                Active
+              </Badge>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {lastUpdate ? (
+                <>
+                  Last sync: {new Date(lastUpdate.timestamp).toLocaleString()}
+                  {lastUpdate.itemsProcessed > 0 && (
+                    <span className="ml-2">
+                      • {lastUpdate.itemsSucceeded} items processed
+                    </span>
+                  )}
+                </>
+              ) : (
+                'No recent sync activity'
               )}
             </div>
-          )}
-
-          {/* Recent Sync Info */}
-          {recentSync && (
-            <div className="p-3 bg-muted rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Last Update</span>
-                <Badge variant="outline" className={cn(
-                  recentSync.status === 'completed' ? 'border-green-500 text-green-700' :
-                  recentSync.status === 'running' ? 'border-blue-500 text-blue-700' :
-                  'border-red-500 text-red-700'
-                )}>
-                  {recentSync.status}
-                </Badge>
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {new Date(recentSync.startedAt).toLocaleString()}
-                {recentSync.itemsQueued > 0 && (
-                  <span className="ml-2">• {recentSync.itemsQueued} items processed</span>
-                )}
-              </div>
-            </div>
-          )}
+          </div>
 
           {/* Auto-sync info */}
           <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">

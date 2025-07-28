@@ -100,19 +100,8 @@ export const updateNote = mutation({
       const newNoteId = await ctx.db.insert("notes", newNoteData);
       console.log('✅ [Convex updateNote] New note created successfully:', newNoteId);
 
-      // Queue for automatic embedding creation
-      try {
-        await ctx.runMutation(internal.automaticEmbeddingSystem.queueContentForEmbedding, {
-          userId,
-          contentId: `notes:${newNoteId}`,
-          platform: 'notes',
-          changeType: 'created',
-          priority: 'normal',
-          metadata: { source: 'note_creation' }
-        });
-      } catch (error) {
-        console.error('❌ [AUTO EMBEDDING] Failed to queue note for embedding:', error);
-      }
+      // Note: Embeddings will be created automatically on next heartbeat
+      console.log('📝 [NOTE] Embedding will be created on next heartbeat sync');
 
       return await ctx.db.get(newNoteId);
     }
@@ -147,19 +136,8 @@ export const updateNote = mutation({
     // Apply the updates
     await ctx.db.patch(noteId, updateData);
 
-    // Queue for automatic embedding update
-    try {
-      await ctx.runMutation(internal.automaticEmbeddingSystem.queueContentForEmbedding, {
-        userId,
-        contentId: `notes:${noteId}`,
-        platform: 'notes',
-        changeType: 'updated',
-        priority: 'normal',
-        metadata: { source: 'note_update' }
-      });
-    } catch (error) {
-      console.error('❌ [AUTO EMBEDDING] Failed to queue note update for embedding:', error);
-    }
+    // Note: Embeddings will be updated automatically on next heartbeat
+    console.log('📝 [NOTE] Embedding will be updated on next heartbeat sync');
 
     return await ctx.db.get(noteId);
   },
@@ -190,19 +168,8 @@ export const deleteNote = mutation({
     // 4. Delete the note
     await ctx.db.delete(args.noteId);
 
-    // 5. Queue for embedding deletion
-    try {
-      await ctx.runMutation(internal.automaticEmbeddingSystem.queueContentForEmbedding, {
-        userId: args.userId,
-        contentId: `notes:${args.noteId}`,
-        platform: 'notes',
-        changeType: 'deleted',
-        priority: 'normal',
-        metadata: { source: 'note_deletion' }
-      });
-    } catch (error) {
-      console.error('❌ [AUTO EMBEDDING] Failed to queue note deletion for embedding cleanup:', error);
-    }
+    // Note: Embeddings will be cleaned up automatically on next heartbeat
+    console.log('📝 [NOTE] Embedding will be cleaned up on next heartbeat sync');
 
     return { success: true };
   },

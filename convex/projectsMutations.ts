@@ -178,13 +178,8 @@ export const addItemToProject = mutation({
   handler: async (ctx, args) => {
     const project = await validateProjectOwnership(ctx, args.projectId, args.userId);
 
-    // For analysis items, use the full ID; for others, extract the raw database ID
-    let rawId: string;
-    try {
-      rawId = args.itemType === 'analysis' ? args.itemId : extractRawId(args.itemId);
-    } catch (error) {
-      throw new Error(`Invalid item ID: ${error.message}`);
-    }
+    // Use the item ID exactly as provided by the frontend
+    const rawId = args.itemId;
 
     const updates: any = {
       updatedAt: Date.now(),
@@ -231,12 +226,16 @@ export const addItemToProject = mutation({
           if (!instagramPostIds.includes(rawId)) {
             // Verify the post exists and belongs to the user
             if (args.userId) {
-              const post = await ctx.db.get(rawId as Id<"instagramPosts">);
+              // For Instagram items, rawId is the postId, not a Convex document ID
+              // Search for the post by postId
+              const post = await ctx.db
+                .query("instagramPosts")
+                .withIndex("by_postId", (q) => q.eq("postId", rawId))
+                .filter((q) => q.eq(q.field("userId"), args.userId))
+                .first();
+              
               if (!post) {
                 throw new Error("Instagram post not found");
-              }
-              if (post.userId !== args.userId) {
-                throw new Error("Access denied: You don't own this Instagram post");
               }
             }
             updates.instagramPostIds = [...instagramPostIds, rawId];
@@ -248,12 +247,16 @@ export const addItemToProject = mutation({
           if (!youtubeVideoIds.includes(rawId)) {
             // Verify the video exists and belongs to the user
             if (args.userId) {
-              const video = await ctx.db.get(rawId as Id<"youtubeVideos">);
+              // For YouTube items, rawId is the videoId, not a Convex document ID
+              // Search for the video by videoId
+              const video = await ctx.db
+                .query("youtubeVideos")
+                .withIndex("by_videoId", (q) => q.eq("videoId", rawId))
+                .filter((q) => q.eq(q.field("userId"), args.userId))
+                .first();
+              
               if (!video) {
                 throw new Error("YouTube video not found");
-              }
-              if (video.userId !== args.userId) {
-                throw new Error("Access denied: You don't own this YouTube video");
               }
             }
             updates.youtubeVideoIds = [...youtubeVideoIds, rawId];
@@ -265,21 +268,16 @@ export const addItemToProject = mutation({
           if (!gmailIds.includes(rawId)) {
             // Verify the gmail item exists and belongs to the user
             if (args.userId) {
-              // Try both threads and messages
-              let gmailItem = null;
-              try {
-                gmailItem = await ctx.db.get(rawId as Id<"gmailThreads">);
-              } catch {
-                try {
-                  gmailItem = await ctx.db.get(rawId as Id<"gmailMessages">);
-                } catch {}
-              }
+              // For Gmail items, rawId is the threadId, not a Convex document ID
+              // Search for the thread by threadId
+              const gmailThread = await ctx.db
+                .query("gmailThreads")
+                .withIndex("by_threadId", (q) => q.eq("threadId", rawId))
+                .filter((q) => q.eq(q.field("userId"), args.userId))
+                .first();
               
-              if (!gmailItem) {
+              if (!gmailThread) {
                 throw new Error("Gmail item not found");
-              }
-              if (gmailItem.userId !== args.userId) {
-                throw new Error("Access denied: You don't own this Gmail item");
               }
             }
             updates.gmailIds = [...gmailIds, rawId];

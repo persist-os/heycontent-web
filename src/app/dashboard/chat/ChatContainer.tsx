@@ -56,7 +56,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   const [apiKey, setApiKey] = useState<string | null>(null);
   
   // Embedding sync heartbeat
-  const userHeartbeat = useAction(api.automaticEmbeddingSystem.userHeartbeat);
+  const userHeartbeat = useAction(api.embeddingSystem.userHeartbeat);
   
   // Derive user data from firebaseUser to avoid redundant state
   const authData = useMemo(() => ({
