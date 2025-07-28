@@ -3,7 +3,6 @@
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProjectWithItems } from '../../types/project';
-import Image from 'next/image';
 import { NoteCard } from '../cards/NoteCard';
 import { Play, Heart, Eye, Users, MessageCircle, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -181,11 +180,10 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
         {/* Media Preview */}
         {mediaUrl ? (
           <div className="relative aspect-square bg-muted">
-            <Image
+            <img
               src={mediaUrl}
               alt={caption.substring(0, 50) || 'Instagram Post'}
-              fill
-              className="object-cover"
+              className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               <div className="bg-white/90 rounded-full p-2">

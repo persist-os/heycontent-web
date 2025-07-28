@@ -337,19 +337,19 @@ export const UnifiedContentSelector: React.FC<UnifiedContentSelectorProps> = ({
 
   const SelectorContent = (
     <>
-      {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-border">
-        <h3 className="font-semibold text-sm">
-          {mode === 'link' ? 'Link Content' : 'Manage Content'}
-        </h3>
-        <button
-          title="Close"
-          onClick={onClose}
-          className="p-1 hover:bg-muted rounded transition-colors"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
+      {/* Header - only show for link mode since Dialog mode has its own header */}
+      {mode === 'link' && (
+        <div className="flex items-center justify-between p-3 border-b border-border">
+          <h3 className="font-semibold text-sm">Link Content</h3>
+          <button
+            title="Close"
+            onClick={onClose}
+            className="p-1 hover:bg-muted rounded transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Search Input */}
       <div className="p-3 border-b border-border">
@@ -412,15 +412,15 @@ export const UnifiedContentSelector: React.FC<UnifiedContentSelectorProps> = ({
           </div>
         ) : mode === 'attach' && showAttachedSection ? (
           // Two-column layout for attach mode
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-3 h-full">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-3 overflow-hidden">
             {/* Available Items */}
-            <div className="flex flex-col">
-              <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-col overflow-hidden">
+              <div className="flex items-center justify-between mb-3 flex-shrink-0">
                 <h4 className="font-semibold text-sm text-muted-foreground">
                   Available ({availableItems.length})
                 </h4>
               </div>
-              <ScrollArea className="flex-1">
+              <div className="overflow-y-auto overflow-x-hidden max-h-[400px] scrollbar-hide">
                 <div className="space-y-2 pr-2">
                   {availableItems.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground text-sm">
@@ -430,17 +430,17 @@ export const UnifiedContentSelector: React.FC<UnifiedContentSelectorProps> = ({
                     availableItems.map(item => renderContentItem(item, false))
                   )}
                 </div>
-              </ScrollArea>
+              </div>
             </div>
             
             {/* Attached Items */}
-            <div className="flex flex-col">
-              <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-col overflow-hidden">
+              <div className="flex items-center justify-between mb-3 flex-shrink-0">
                 <h4 className="font-semibold text-sm text-muted-foreground">
                   Attached ({attachedContentItems.length})
                 </h4>
               </div>
-              <ScrollArea className="flex-1">
+              <div className="overflow-y-auto overflow-x-hidden max-h-[400px] scrollbar-hide">
                 <div className="space-y-2 pr-2">
                   {attachedContentItems.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground text-sm">
@@ -450,12 +450,12 @@ export const UnifiedContentSelector: React.FC<UnifiedContentSelectorProps> = ({
                     attachedContentItems.map(item => renderContentItem(item, true))
                   )}
                 </div>
-              </ScrollArea>
+              </div>
             </div>
           </div>
         ) : (
           // Single column layout for link mode or attach without sections
-          <ScrollArea className="h-64 max-h-80">
+          <div className="overflow-y-auto overflow-x-hidden max-h-80 scrollbar-hide">
             <div className="p-3 space-y-2">
               {availableItems.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
@@ -465,7 +465,7 @@ export const UnifiedContentSelector: React.FC<UnifiedContentSelectorProps> = ({
                 availableItems.map(item => renderContentItem(item, false))
               )}
             </div>
-          </ScrollArea>
+          </div>
         )}
       </div>
 
