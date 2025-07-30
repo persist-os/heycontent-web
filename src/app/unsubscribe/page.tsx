@@ -20,28 +20,43 @@ export default function UnsubscribePage() {
   const handleUnsubscribe = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!email) {
+    // Clear previous results
+    setResult(null)
+    
+    if (!email || !email.trim()) {
+      setResult({ success: false, message: 'Please enter an email address' })
+      return
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email.trim())) {
       setResult({ success: false, message: 'Please enter a valid email address' })
       return
     }
 
-    console.log('Starting unsubscribe process for:', email)
+    const cleanEmail = email.trim().toLowerCase()
+    console.log('Starting unsubscribe process for:', cleanEmail)
     console.log('updateEmailPreferences function:', updateEmailPreferences)
 
     setIsLoading(true)
     try {
       console.log('Calling mutation...')
       const result = await updateEmailPreferences({
-        email: email.trim().toLowerCase(),
+        email: cleanEmail,
         emailUnsubscribed: true
       })
       console.log('Mutation result:', result)
       
       setResult({ 
-        success: true, 
-        message: 'You have been successfully unsubscribed from all emails.' 
+        success: result.success, 
+        message: result.message 
       })
-      setEmail('')
+      
+      // Only clear email on successful unsubscribe
+      if (result.success) {
+        setEmail('')
+      }
     } catch (error) {
       console.error('Unsubscribe error:', error)
       setResult({ 
