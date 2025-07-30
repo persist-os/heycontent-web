@@ -2580,7 +2580,131 @@ app.post("/api/users/:id/instagram/post/:postId/patch", async (c) => {
   }
 });
 
+// FEEDBACK ROUTES
 
+// Create new feedback
+app.post("/api/feedback/createFeedback", async (c) => {
+  const ctx = c.env;
+  const feedbackData = await c.req.json();
+  
+  try {
+    const feedbackId = await ctx.runMutation(api.feedback.createFeedback, feedbackData);
+    return c.json({ success: true, feedbackId });
+  } catch (error: any) {
+    console.error("Failed to create feedback:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to create feedback",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// List feedback with filters
+app.get("/api/feedback/list", async (c) => {
+  const ctx = c.env;
+  const { status, type, priority, assignedTo, limit, cursor } = c.req.query();
+  
+  try {
+    const result = await ctx.runQuery(api.feedback.listFeedback, {
+      status: status || undefined,
+      type: type || undefined,
+      priority: priority || undefined,
+      assignedTo: assignedTo || undefined,
+      limit: limit ? parseInt(limit) : undefined,
+      cursor: cursor || undefined,
+    });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Failed to list feedback:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to list feedback",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get single feedback by ID
+app.get("/api/feedback/:id", async (c) => {
+  const ctx = c.env;
+  const feedbackId = c.req.param("id") as Id<"feedback">;
+  
+  try {
+    const feedback = await ctx.runQuery(api.feedback.getFeedback, { feedbackId });
+    if (!feedback) {
+      return c.json({ success: false, error: "Feedback not found" }, 404);
+    }
+    return c.json({ success: true, data: feedback });
+  } catch (error: any) {
+    console.error("Failed to get feedback:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get feedback",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Update feedback status, priority, assignedTo, and tags
+app.patch("/api/feedback/:id", async (c) => {
+  const ctx = c.env;
+  const feedbackId = c.req.param("id") as Id<"feedback">;
+  const updateData = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.feedback.updateFeedbackStatus, {
+      feedbackId,
+      status: updateData.status,
+      priority: updateData.priority,
+      assignedTo: updateData.assignedTo,
+      tags: updateData.tags,
+    });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Failed to update feedback:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to update feedback",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get feedback statistics
+app.get("/api/feedback/stats", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    const stats = await ctx.runQuery(api.feedback.getFeedbackStats, {});
+    return c.json({ success: true, data: stats });
+  } catch (error: any) {
+    console.error("Failed to get feedback stats:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get feedback stats",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Delete feedback
+app.delete("/api/feedback/:id", async (c) => {
+  const ctx = c.env;
+  const feedbackId = c.req.param("id") as Id<"feedback">;
+  
+  try {
+    const result = await ctx.runMutation(api.feedback.deleteFeedback, { feedbackId });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Failed to delete feedback:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to delete feedback",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
 
 const router = new HttpRouterWithHono(app);
 export default router;

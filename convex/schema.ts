@@ -14,6 +14,13 @@ export default defineSchema({
     updatedAt: v.number(),
     referralCode: v.optional(v.string()),
     referredBy: v.optional(v.string()),
+    // Role-based access control
+    role: v.optional(v.union(
+      v.literal("user"),
+      v.literal("admin"),
+      v.literal("super_admin")
+    )),
+    permissions: v.optional(v.array(v.string())),
     // Stripe integration
     stripeCustomerId: v.optional(v.string()),
     stripeSubscriptionId: v.optional(v.string()),
@@ -72,7 +79,8 @@ export default defineSchema({
   .index("by_email", ["email"])
   .index("by_stripeCustomerId", ["stripeCustomerId"])
   .index("by_username", ["username"])
-  .index("by_referralCode", ["referralCode"]),
+  .index("by_referralCode", ["referralCode"])
+  .index("by_role", ["role"]),
 
   // Ambient Insights
   ambientInsights: defineTable({
@@ -987,4 +995,38 @@ export default defineSchema({
   .index("by_updatedAt", ["updatedAt"])
   .index("by_type", ["type"])
   .index("by_user_type", ["userId", "type"]),
+
+  // Feedback System
+  feedback: defineTable({
+    type: v.string(), // "bug", "feature_request", "general", "praise"
+    title: v.string(),
+    description: v.string(),
+    userEmail: v.string(),
+    userName: v.string(),
+    page: v.string(),
+    userAgent: v.string(),
+    timestamp: v.number(),
+    userId: v.optional(v.string()), // Firebase user ID
+    status: v.string(), // "new", "in_progress", "resolved", "closed"
+    priority: v.string(), // "low", "medium", "high", "urgent"
+    assignedTo: v.optional(v.string()),
+    tags: v.array(v.string()),
+    screenshots: v.array(v.object({
+      name: v.string(),
+      size: v.number(),
+      type: v.string(),
+      url: v.optional(v.string()) // If we store files in Convex storage
+    })),
+    discordMessageId: v.optional(v.string()), // To link back to Discord
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_status", ["status"])
+  .index("by_type", ["type"])
+  .index("by_user", ["userId"])
+  .index("by_created", ["createdAt"])
+  .index("by_priority", ["priority"])
+  .index("by_assigned", ["assignedTo"])
+  .index("by_user_status", ["userId", "status"])
+  .index("by_type_status", ["type", "status"]),
 });
