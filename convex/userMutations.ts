@@ -283,3 +283,31 @@ export const deleteUserAndData = mutation({
     return summary;
   },
 });
+
+// Email preferences - update email unsubscribe status
+export const updateEmailPreferences = mutation({
+  args: { 
+    email: v.string(),
+    emailUnsubscribed: v.boolean()
+  },
+  returns: v.object({
+    success: v.boolean(),
+    userId: v.id("users")
+  }),
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    await ctx.db.patch(user._id, {
+      emailUnsubscribed: args.emailUnsubscribed,
+      updatedAt: Date.now(),
+    });
+    return { success: true, userId: user._id };
+  },
+});
