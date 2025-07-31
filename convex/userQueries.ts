@@ -133,4 +133,33 @@ export const getLastGmailFetch = query({
     return user.lastGmailFetch || null;
   },
 });
+
+// Email preferences - get email subscription status by email
+export const getEmailPreferences = query({
+  args: { email: v.string() },
+  returns: v.union(
+    v.object({
+      emailUnsubscribed: v.optional(v.boolean()),
+      found: v.literal(true)
+    }),
+    v.object({
+      found: v.literal(false)
+    })
+  ),
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+    
+    if (!user) {
+      return { found: false };
+    }
+    
+    return {
+      found: true,
+      emailUnsubscribed: user.emailUnsubscribed
+    };
+  },
+});
   

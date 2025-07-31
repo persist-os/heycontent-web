@@ -284,3 +284,68 @@ export const deleteUserAndData = mutation({
     return summary;
   },
 });
+
+// Email preferences - update email unsubscribe status
+export const updateEmailPreferences = mutation({
+  args: { 
+    email: v.string(),
+    emailUnsubscribed: v.boolean()
+  },
+  returns: v.object({
+    success: v.boolean(),
+    userId: v.optional(v.id("users")),
+    message: v.string()
+  }),
+  handler: async (ctx, args) => {
+    // First check if email exists in users table
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+
+    if (user) {
+      // Update email preferences for existing user
+      await ctx.db.patch(user._id, {
+        emailUnsubscribed: args.emailUnsubscribed,
+        updatedAt: Date.now(),
+      });
+      return { 
+        success: true, 
+        userId: user._id,
+        message: args.emailUnsubscribed 
+          ? "You have been successfully unsubscribed from all emails."
+          : "Your email preferences have been updated."
+      };
+    }
+
+    // If not found in users, check waitlist table
+    const waitlistEntry = await ctx.db
+      .query("waitlist")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+
+    if (waitlistEntry) {
+      // Email exists in waitlist - for unsubscribe requests, we can still succeed
+      if (args.emailUnsubscribed) {
+        return {
+          success: true,
+          userId: undefined,
+          message: "You have been successfully unsubscribed from all emails."
+        };
+      } else {
+        return {
+          success: false,
+          userId: undefined,
+          message: "This email is on our waitlist. Email preferences can only be updated after you join."
+        };
+      }
+    }
+
+    // Email not found in either table
+    return {
+      success: false,
+      userId: undefined,
+      message: "We couldn't find this email address in our database. You may already be unsubscribed, or this email was never subscribed to our mailing list."
+    };
+  },
+});

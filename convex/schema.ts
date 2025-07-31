@@ -67,6 +67,8 @@ export default defineSchema({
     })),
     // Gmail quota optimization
     lastGmailFetch: v.optional(v.number()),
+    // Email preferences
+    emailUnsubscribed: v.optional(v.boolean()),
   })
   .index("by_userId", ["userId"])
   .index("by_email", ["email"])

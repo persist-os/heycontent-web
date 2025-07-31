@@ -54,7 +54,7 @@ export function PostSelectionGrid({
 
   // Filter and sort posts
   const filteredAndSortedPosts = useMemo(() => {
-    let filtered = posts.filter(post => {
+    const filtered = posts.filter(post => {
       const matchesSearch = !searchTerm || 
         post.data.caption?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         post.postId.toLowerCase().includes(searchTerm.toLowerCase())
@@ -197,6 +197,7 @@ export function PostSelectionGrid({
           </div>
           
           <select
+            title="Media Type"
             value={mediaTypeFilter}
             onChange={(e) => setMediaTypeFilter(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -212,6 +213,7 @@ export function PostSelectionGrid({
         {/* Sort Controls */}
         <div className="flex items-center gap-2">
           <select
+            title="Sort By"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortOption)}
             className="px-3 py-2 border border-gray-300 rounded-md text-sm"
