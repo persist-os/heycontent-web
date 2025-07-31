@@ -62,15 +62,30 @@ export async function resolveLinkContent(
  */
 async function resolveSmartNoteContent(noteId: string, userId: string, allLinkableContent: any[]): Promise<ResolvedLinkContent | null> {
   try {
-    // Remove 'note:' prefix if present
-    const actualNoteId = noteId.startsWith('note:') ? noteId.replace('note:', '') : noteId;
+    // Remove 'note:' or 'notes:' prefix if present
+    const actualNoteId = noteId.startsWith('note:') ? noteId.replace('note:', '') : 
+                        noteId.startsWith('notes:') ? noteId.replace('notes:', '') : noteId;
     
-    const note = allLinkableContent.find(item => item.id === actualNoteId || item.id === `note:${actualNoteId}`);
+
+    
+    const note = allLinkableContent.find(item => 
+      item.id === actualNoteId || 
+      item.id === `note:${actualNoteId}` || 
+      item.id === `notes:${actualNoteId}`
+    );
 
     if (!note) {
-      console.warn('🔗 [LINK RESOLVER] Smart note not found:', noteId);
+      console.warn('🔗 [LINK RESOLVER] Smart note not found:', {
+        noteId,
+        actualNoteId,
+        availableNoteIds: allLinkableContent.filter(item => item.type === 'note').map(item => item.id),
+        allLinkableContentCount: allLinkableContent.length,
+        allLinkableContentTypes: allLinkableContent.map(item => item.type)
+      });
       return null;
     }
+    
+
 
     // Build comprehensive content including full note body/content, title, statistics, analysis, etc.
     let contentParts = [];
@@ -80,10 +95,8 @@ async function resolveSmartNoteContent(noteId: string, userId: string, allLinkab
       contentParts.push(`Title: ${note.title}`);
     }
 
-    // Add main note body/content if available
-    if (note.body) {
-      contentParts.push(`Content: ${note.body}`);
-    } else if (note.content) {
+    // Add main note content if available
+    if (note.content) {
       contentParts.push(`Content: ${note.content}`);
     }
 
@@ -145,6 +158,8 @@ async function resolveSmartNoteContent(noteId: string, userId: string, allLinkab
     }
 
     const fullContent = contentParts.join('\n\n');
+    
+
     
     return {
       type: 'smart_note',
@@ -546,6 +561,7 @@ export function parseContentId(contentId: string): LinkReference | null {
     
     switch (parts[0]) {
       case 'note':
+      case 'notes':
         return {
           type: 'smart_note',
           id: parts.slice(1).join(':')

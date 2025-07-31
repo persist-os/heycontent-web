@@ -352,6 +352,7 @@ export const getContentByPrefixedId = query({
     
     switch (contentType) {
       case 'note':
+      case 'notes':
         // Get note by Convex ID
         try {
           const note = await ctx.db.get(contentId as Id<"notes">);
@@ -573,6 +574,7 @@ export const getContentTitlesByPrefixedIds = query({
           
           switch (contentType) {
             case 'note':
+            case 'notes':
               // Get note by Convex ID
               try {
                 const note = await ctx.db.get(contentId as Id<"notes">);

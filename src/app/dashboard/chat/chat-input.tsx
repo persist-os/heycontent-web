@@ -371,7 +371,9 @@ export function ChatInput({
     e.preventDefault()
     const messageToSend = shadowInput || currentInput
     if (messageToSend.trim() && !isLoading && currentInput.length <= maxLength) {
+      // Convert numeric indices to content IDs for backend processing
       const processedMessage = convertNumericIndicesToContentIds(messageToSend.trim())
+      // Send the processed message (with content IDs) for backend context resolution
       onSend(processedMessage)
       setCurrentInput('')
       setShadowInput('')
@@ -436,10 +438,9 @@ export function ChatInput({
         const messageToSend = shadowInput || currentInput
         if (!messageToSend.trim() || isLoading || characterCount >= maxLength) return
         
-        // Convert numeric indices to content IDs before sending
+        // Convert numeric indices to content IDs for backend processing
         const processedMessage = convertNumericIndicesToContentIds(messageToSend.trim())
-        
-        // Send the message with content IDs - backend will resolve them
+        // Send the processed message (with content IDs) for backend context resolution
         onSend(processedMessage)
         
         setCurrentInput('')

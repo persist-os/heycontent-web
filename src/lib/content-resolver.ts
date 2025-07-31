@@ -74,6 +74,7 @@ export async function resolveContentTitles(
       notes.value.page.forEach((note: any) => {
         titles[String(note._id)] = note.title || 'Untitled Note';
         titles[`note:${note._id}`] = note.title || 'Untitled Note';
+        titles[`notes:${note._id}`] = note.title || 'Untitled Note';
       });
     }
     
@@ -150,6 +151,7 @@ export async function resolveAllLinkContent(
         
         switch (prefix) {
           case 'note':
+          case 'notes':
             if (notes.status === 'fulfilled') {
               foundContent = notes.value.page.find((note: any) => String(note._id) === id);
               if (foundContent) {

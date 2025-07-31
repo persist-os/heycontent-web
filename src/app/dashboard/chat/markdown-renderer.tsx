@@ -144,12 +144,18 @@ function ChatContentRenderer({ content, className = '', onContentClick }: ChatCo
       
       // Find the linked content
       let linkedContent
-      if (contentType === 'note') {
+      if (contentType === 'note' || contentType === 'notes') {
         // Try to find by the actual ID (without prefix)
         linkedContent = allLinkableContent.find(item => item.id === actualContentId)
         // If not found, try with the full contentId (in case it's already prefixed)
         if (!linkedContent) {
           linkedContent = allLinkableContent.find(item => item.id === contentId)
+        }
+        // Also try with the alternative prefix format
+        if (!linkedContent) {
+          const altPrefix = contentType === 'note' ? 'notes:' : 'note:'
+          const altContentId = `${altPrefix}${actualContentId}`
+          linkedContent = allLinkableContent.find(item => item.id === altContentId)
         }
       } else {
         // For other content types, use the full contentId
@@ -183,12 +189,18 @@ function ChatContentRenderer({ content, className = '', onContentClick }: ChatCo
       
       // For smart notes, we need to handle both prefixed and non-prefixed IDs
       let linkedContent
-      if (contentType === 'note') {
+      if (contentType === 'note' || contentType === 'notes') {
         // Try to find by the actual ID (without prefix)
         linkedContent = allLinkableContent.find(item => item.id === actualContentId)
         // If not found, try with the full contentId (in case it's already prefixed)
         if (!linkedContent) {
           linkedContent = allLinkableContent.find(item => item.id === contentId)
+        }
+        // Also try with the alternative prefix format
+        if (!linkedContent) {
+          const altPrefix = contentType === 'note' ? 'notes:' : 'note:'
+          const altContentId = `${altPrefix}${actualContentId}`
+          linkedContent = allLinkableContent.find(item => item.id === altContentId)
         }
       } else {
         // For other content types, use the full contentId

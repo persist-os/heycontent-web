@@ -32,6 +32,14 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { query, is_first_message, session_id, content_context, vector_search_metadata, link_content } = body;
     
+    // Extract content IDs for context resolution
+    const contentIdPattern = /@\[([^\]]+)\]@/g;
+    const contentIds: string[] = [];
+    let match;
+    while ((match = contentIdPattern.exec(query)) !== null) {
+      contentIds.push(match[1]);
+    }
+    
     console.log(`[${requestId}] Received request body:`, {
       query_length: query?.length || 0,
       has_session_id: !!session_id,
@@ -79,6 +87,9 @@ export async function POST(request: Request) {
       is_first_message: is_first_message === true,
       session_id: is_first_message === true ? null : (session_id || null)
     };
+    
+    // Variable to store the user message with titles for chat history
+    let userMessageWithTitles = query;
 
     // Include content context if provided
     if (content_context) {
@@ -136,23 +147,26 @@ export async function POST(request: Request) {
       
       console.log(`[${requestId}] Extracted content IDs:`, contentIds);
       
-      // Create a mapping by matching content IDs to resolved content by index
-      // Since the resolved content should be in the same order as the content IDs in the message
-      for (let i = 0; i < Math.min(contentIds.length, link_content.length); i++) {
-        const contentId = contentIds[i];
-        const resolvedItem = link_content[i];
+      // Create a mapping by matching content IDs to resolved content
+      // More robust mapping: try to match by contentId first, then by index
+      for (const contentId of contentIds) {
+        // First try to find by exact contentId match
+        let resolvedItem = link_content.find(item => item.contentId === contentId);
         
-        console.log(`[${requestId}] Mapping by index:`, { 
-          index: i, 
-          contentId, 
-          resolvedItem: {
-            type: resolvedItem.type,
-            title: resolvedItem.title,
-            contentId: resolvedItem.contentId
+        if (!resolvedItem) {
+          // If not found by exact match, try to find by type and partial match
+          if (contentId.startsWith('notes:') || contentId.startsWith('note:')) {
+            const actualNoteId = contentId.replace(/^(notes?):/, '');
+            resolvedItem = link_content.find(item => 
+              item.type === 'smart_note' && 
+              (item.contentId === actualNoteId || item.contentId === contentId)
+            );
           }
-        });
+        }
         
-        contentIdToTitle.set(contentId, resolvedItem.title);
+        if (resolvedItem) {
+          contentIdToTitle.set(contentId, resolvedItem.title);
+        }
       }
       
       // Replace each link token with its title
@@ -408,11 +422,19 @@ export async function POST(request: Request) {
       suggestions: suggestions || [],
       session_id: session_id_resp,
       vector_search_metadata: vector_search_metadata,
+      user_message: userMessageWithTitles, // Use the title-replaced message for chat history
       metadata: {
         request_id: requestId,
         processing_time_ms: totalDuration
       }
     };
+
+    console.log(`[${requestId}] Sending response with user_message:`, {
+      originalQuery: query,
+      userMessageWithTitles,
+      hasUserMessage: !!userMessageWithTitles,
+      userMessageLength: userMessageWithTitles?.length
+    });
 
     return NextResponse.json(responseData);
   } catch (error) {
