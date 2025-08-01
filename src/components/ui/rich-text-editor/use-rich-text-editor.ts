@@ -75,8 +75,9 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
   
   const textAreaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Extract prefixed IDs from content
-  const prefixedIds = extractPrefixedIds(content, userId)
+  // Convert display content to storage content before extracting prefixed IDs
+  const storageContent = getStorageContent(content, availableNotes, fetchedContentTitles, allLinkableContent)
+  const prefixedIds = extractPrefixedIds(storageContent, userId)
 
   // Fetch content titles using the batch query
   const contentTitles = useQuery(
@@ -443,14 +444,18 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
       // Replace @ and any typed text with content link
       const beforeAt = displayContent.substring(0, atPosition)
       const afterCursor = displayContent.substring(cursorPos)
-      const newDisplayContent = beforeAt + linkText + afterCursor
-      const newCursorPos = atPosition + linkText.length
+      const newDisplayContent = beforeAt + linkText + '\n' + afterCursor
       
       // Convert back to storage format and save
       const newStorageContent = getStorageContentMemo(newDisplayContent)
       onContentChange(newStorageContent)
       
-      // Set cursor position after the link
+      // Find the position of the inserted link in the storage content
+      const storageLinkText = `@[${prefixedId}]@`
+      const linkStartInStorage = newStorageContent.indexOf(storageLinkText)
+      const newCursorPos = linkStartInStorage + storageLinkText.length + 1 // +1 for the newline
+      
+      // Set cursor position after the link and newline
       setTimeout(() => {
         textarea.setSelectionRange(newCursorPos, newCursorPos)
         textarea.focus()
@@ -459,14 +464,18 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
       // No @ found, just insert the content link
       const beforeCursor = displayContent.substring(0, cursorPos)
       const afterCursor = displayContent.substring(cursorPos)
-      const newDisplayContent = beforeCursor + linkText + afterCursor
-      const newCursorPos = cursorPos + linkText.length
+      const newDisplayContent = beforeCursor + linkText + '\n' + afterCursor
       
       // Convert back to storage format and save
       const newStorageContent = getStorageContentMemo(newDisplayContent)
       onContentChange(newStorageContent)
       
-      // Set cursor position after the link
+      // Find the position of the inserted link in the storage content
+      const storageLinkText = `@[${prefixedId}]@`
+      const linkStartInStorage = newStorageContent.indexOf(storageLinkText)
+      const newCursorPos = linkStartInStorage + storageLinkText.length + 1 // +1 for the newline
+      
+      // Set cursor position after the link and newline
       setTimeout(() => {
         textarea.setSelectionRange(newCursorPos, newCursorPos)
         textarea.focus()
@@ -474,8 +483,107 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
     }
   }, [content, onContentChange, getDisplayContentMemo, getStorageContentMemo])
 
+  // Handle click events to prevent cursor placement inside @[...]@ blocks
+  const handleClick = useCallback((e: React.MouseEvent<HTMLTextAreaElement>) => {
+    const textarea = e.currentTarget
+    const clickPosition = textarea.selectionStart
+    
+    // Get the display content to check for @[...]@ blocks
+    const displayContent = getDisplayContentMemo(content)
+    
+    // Find all @[...]@ blocks and their positions
+    const linkRegex = /@\[([^\]]+)\]@/g
+    let match
+    let blockPositions: Array<{ start: number; end: number }> = []
+    
+    while ((match = linkRegex.exec(displayContent)) !== null) {
+      const start = match.index
+      const end = start + match[0].length
+      blockPositions.push({ start, end })
+    }
+    
+    // Check if click position is inside any @[...]@ block
+    for (const block of blockPositions) {
+      if (clickPosition > block.start && clickPosition < block.end) {
+        // Move cursor to the end of the block
+        setTimeout(() => {
+          textarea.setSelectionRange(block.end, block.end)
+          textarea.focus()
+        }, 0)
+        return
+      }
+    }
+    }, [content, getDisplayContentMemo])
+
+  // Handle mouse down to prevent selection inside @[...]@ blocks
+  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLTextAreaElement>) => {
+    const textarea = e.currentTarget
+    
+    // Use a small delay to get the cursor position after the mouse down
+    setTimeout(() => {
+      const cursorPosition = textarea.selectionStart
+      const displayContent = getDisplayContentMemo(content)
+      
+      // Find all @[...]@ blocks and their positions
+      const linkRegex = /@\[([^\]]+)\]@/g
+      let match
+      let blockPositions: Array<{ start: number; end: number }> = []
+      
+      while ((match = linkRegex.exec(displayContent)) !== null) {
+        const start = match.index
+        const end = start + match[0].length
+        blockPositions.push({ start, end })
+      }
+      
+      // Check if cursor position is inside any @[...]@ block
+      for (const block of blockPositions) {
+        if (cursorPosition > block.start && cursorPosition < block.end) {
+          // Move cursor to the end of the block
+          textarea.setSelectionRange(block.end, block.end)
+          textarea.focus()
+          return
+        }
+      }
+    }, 10)
+  }, [content, getDisplayContentMemo])
+
   // Handle keyboard shortcuts - Modified to support refinement mode
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Handle arrow key navigation to prevent cursor inside @[...]@ blocks
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      const textarea = e.currentTarget
+      const currentPosition = textarea.selectionStart
+      const displayContent = getDisplayContentMemo(content)
+      
+      // Find all @[...]@ blocks and their positions
+      const linkRegex = /@\[([^\]]+)\]@/g
+      let match
+      let blockPositions: Array<{ start: number; end: number }> = []
+      
+      while ((match = linkRegex.exec(displayContent)) !== null) {
+        const start = match.index
+        const end = start + match[0].length
+        blockPositions.push({ start, end })
+      }
+      
+      // Check if the next position would be inside a block
+      const nextPosition = e.key === 'ArrowLeft' ? currentPosition - 1 : currentPosition + 1
+      
+      for (const block of blockPositions) {
+        if (nextPosition > block.start && nextPosition < block.end) {
+          // Prevent the default behavior and jump to the appropriate end
+          e.preventDefault()
+          const targetPosition = e.key === 'ArrowLeft' ? block.start : block.end
+          setTimeout(() => {
+            textarea.setSelectionRange(targetPosition, targetPosition)
+            textarea.focus()
+          }, 0)
+          return
+        }
+      }
+    }
+    
+    // Cmd/Ctrl + K to open inline command palette
     // Cmd/Ctrl + K to open inline command palette
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
       e.preventDefault()
@@ -600,10 +708,83 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
     }
   }, [content, showCommandPalette, showRefinementPreview, refinedTextPreview, onContentChange, containerRef, normalizedNoteType, getDisplayContentMemo, handleAcceptRefinement, handleRetryRefinement, handleCancelRefinement])
 
+  // Helper function to ensure cursor is never inside @[...]@ blocks
+  const ensureCursorOutsideBlocks = useCallback((cursorPosition: number, displayContent: string) => {
+    const linkRegex = /@\[([^\]]+)\]@/g
+    let match
+    let blockPositions: Array<{ start: number; end: number }> = []
+    
+    while ((match = linkRegex.exec(displayContent)) !== null) {
+      const start = match.index
+      const end = start + match[0].length
+      blockPositions.push({ start, end })
+    }
+    
+    // Check if cursor position is inside any @[...]@ block
+    for (const block of blockPositions) {
+      if (cursorPosition > block.start && cursorPosition < block.end) {
+        // Move cursor to the end of the block
+        return block.end
+      }
+    }
+    
+    return cursorPosition
+  }, [])
+
   // Handle content changes from typing
   const handleContentChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const displayContent = e.target.value
     const newCursorPosition = e.target.selectionStart
+    const oldContent = content
+    
+    // Check if this is a deletion that might break @[...]@ blocks
+    if (displayContent.length < oldContent.length) {
+      // Find all @[...]@ blocks in the old content
+      const linkRegex = /@\[([^\]]+)\]@/g
+      const links: Array<{ start: number; end: number; content: string }> = []
+      let match
+      
+      while ((match = linkRegex.exec(oldContent)) !== null) {
+        links.push({
+          start: match.index,
+          end: match.index + match[0].length,
+          content: match[0]
+        })
+      }
+      
+      // Check if any link was partially deleted (missing @[ or ]@)
+      for (const link of links) {
+        // Check if the link is now incomplete in the new content
+        const linkContentWithoutBrackets = link.content.substring(2, link.content.length - 2) // Remove @[ and ]@
+        
+        // Look for the link content without brackets in the new content
+        const linkStartInNew = displayContent.indexOf(linkContentWithoutBrackets)
+        
+        if (linkStartInNew !== -1) {
+          // Check if the brackets are missing
+          const hasOpeningBracket = displayContent.substring(linkStartInNew - 2, linkStartInNew) === '@['
+          const hasClosingBracket = displayContent.substring(linkStartInNew + linkContentWithoutBrackets.length, linkStartInNew + linkContentWithoutBrackets.length + 2) === ']@'
+          
+          if (!hasOpeningBracket || !hasClosingBracket) {
+            // Link was partially deleted - remove the entire link
+            const beforeLink = oldContent.substring(0, link.start)
+            const afterLink = oldContent.substring(link.end)
+            const newContent = beforeLink + afterLink
+            onContentChange(newContent)
+            
+            // Set cursor position to where the link was
+            const newCursorPos = link.start
+            setTimeout(() => {
+              if (textAreaRef.current) {
+                textAreaRef.current.setSelectionRange(newCursorPos, newCursorPos)
+                textAreaRef.current.focus()
+              }
+            }, 0)
+            return
+          }
+        }
+      }
+    }
     
     // Only convert if the content actually contains link patterns
     if (displayContent.includes('@[')) {
@@ -622,7 +803,7 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
     }
     
     setCursorPosition(newCursorPosition)
-  }, [onContentChange, getStorageContentMemo])
+  }, [onContentChange, getStorageContentMemo, content, textAreaRef])
 
   const togglePreview = useCallback(() => {
     setCurrentShowPreview(!currentShowPreview)
@@ -664,6 +845,8 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
     handleInsertTable,
     handleLinkNote,
     handleLinkContent,
+    handleClick,
+    handleMouseDown,
     
     // New refinement handlers
     handleRefineText: handleRefinementRequest,

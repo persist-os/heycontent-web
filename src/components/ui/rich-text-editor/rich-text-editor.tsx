@@ -65,6 +65,8 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
     handleInsertTable,
     handleLinkNote,
     handleLinkContent,
+    handleClick,
+    handleMouseDown,
     // New refinement handlers
     handleRefineText,
     handleAcceptRefinement,
@@ -148,6 +150,8 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
             value={getDisplayContent(content)}
             onChange={handleContentChange}
             onKeyDown={handleKeyDown}
+            onClick={handleClick}
+            onMouseDown={handleMouseDown}
             className={`w-full h-full min-h-[300px] resize-none p-4 text-base leading-relaxed bg-background text-foreground placeholder:text-muted-foreground/50 border-0 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 transition-all duration-200 rounded-md transform-gpu will-change-contents ${
               selectedText && refinementMode 
                 ? 'ring-2 ring-purple-500/30 dark:ring-yellow-500/30' 

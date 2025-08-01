@@ -472,9 +472,9 @@ async function resolveInsightContent(insightId: string, index?: number, userId?:
   try {
     console.log('🔗 [LINK RESOLVER] Resolving insight:', { insightId, index, allLinkableContentCount: allLinkableContent?.length });
     
-    // insightId is already the analysisId (parsed by parseContentId)
+    // insightId is now in format "platform:analysisId" (parsed by parseContentId)
     // index is already the parsed index
-    const analysisId = insightId;
+    const [platform, analysisId] = insightId.split(':');
     const actualIndex = index;
     
     if (actualIndex === undefined || isNaN(actualIndex)) {
@@ -483,10 +483,10 @@ async function resolveInsightContent(insightId: string, index?: number, userId?:
     }
     
     // Look for the insight in allLinkableContent
-    // The insight items have IDs in format: insight:analysisId:index
+    // The insight items have IDs in format: insights:platform:analysisId:index
     const insight = allLinkableContent?.find(item => {
       if (item.type !== 'insight') return false;
-      return item.id === `insight:${analysisId}:${actualIndex}`;
+      return item.id === `insights:${platform}:${analysisId}:${actualIndex}`;
     });
     console.log('🔗 [LINK RESOLVER] Found insight:', { insight, analysisId, actualIndex });
     
@@ -586,14 +586,16 @@ export function parseContentId(contentId: string): LinkReference | null {
         };
       
       case 'insight':
-        // Parse insight ID which has format: insight:analysisId:index
-        if (parts.length < 3) {
+      case 'insights':
+        // Parse insight ID which has format: insights:platform:analysisId:index
+        if (parts.length < 4) {
           console.warn('🔗 [LINK RESOLVER] Invalid insight format in content ID:', contentId);
           return null;
         }
         
-        const analysisId = parts[1];
-        const indexStr = parts[2];
+        const platform = parts[1]; // youtube, instagram, or gmail
+        const analysisId = parts[2];
+        const indexStr = parts[3];
         const index = parseInt(indexStr, 10);
         
         if (isNaN(index)) {
@@ -603,7 +605,7 @@ export function parseContentId(contentId: string): LinkReference | null {
         
         return {
           type: 'insight',
-          id: analysisId,
+          id: `${platform}:${analysisId}`,
           index: index
         };
       

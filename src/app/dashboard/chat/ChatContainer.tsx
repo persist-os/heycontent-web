@@ -623,6 +623,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     };
   }, []);
 
+
+
   // Computed values
   const hasMessagesOrContext = currentContext || messages.length > 0;
   const { notes } = useNotes();
