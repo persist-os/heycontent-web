@@ -159,13 +159,13 @@ export async function POST(request: Request) {
             const actualNoteId = contentId.replace(/^(notes?):/, '');
             resolvedItem = link_content.find(item => 
               item.type === 'smart_note' && 
-              (item.contentId === actualNoteId || item.contentId === contentId)
+              (item.contentId === actualNoteId || item.contentId === contentId || item.contentId === `note:${actualNoteId}` || item.contentId === `notes:${actualNoteId}`)
             );
           }
         }
         
         if (resolvedItem) {
-          contentIdToTitle.set(contentId, resolvedItem.title);
+          contentIdToTitle.set(contentId, resolvedItem.title || 'Untitled Note');
         }
       }
       
