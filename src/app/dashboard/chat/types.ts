@@ -30,6 +30,7 @@ export interface ChatResponseData {
   response?: string; // For backward compatibility
   suggestions?: string[];
   session_id: string;
+  user_message?: string; // Clean user message with titles instead of content IDs
   metadata?: {
     suggestions?: string[];
     request_id: string;

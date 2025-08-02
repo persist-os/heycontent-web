@@ -81,11 +81,20 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
       );
     }
     
-    if (contentType === 'note') {
+    if (contentType === 'note' || contentType === 'notes') {
       return (
         <div className="inline-flex items-center gap-2 px-3 py-2 mx-1 my-1 rounded-lg border border-border bg-muted/50 text-sm">
           <ImageIcon className="w-4 h-4" />
           <span className="text-muted-foreground">Note</span>
+        </div>
+      );
+    }
+    
+    if (contentType === 'conversations') {
+      return (
+        <div className="inline-flex items-center gap-2 px-3 py-2 mx-1 my-1 rounded-lg border border-border bg-muted/50 text-sm">
+          <MessageCircle className="w-4 h-4 text-blue-500" />
+          <span className="text-muted-foreground">Conversation</span>
         </div>
       );
     }
@@ -191,8 +200,8 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
   };
 
   const handleClick = () => {
-    // For YouTube videos, Gmail threads, and insights, show preview card instead of opening in new tab
-    if (contentData.type === 'youtube' || contentData.type === 'gmail' || contentData.type === 'insight') {
+    // For YouTube videos, Gmail threads, insights, and conversations, show preview card instead of opening in new tab
+    if (contentData.type === 'youtube' || contentData.type === 'gmail' || contentData.type === 'insight' || contentData.type === 'conversation') {
       // Call onLinkContent to trigger preview card
       if (onLinkContent) {
         onLinkContent(prefixedId);
@@ -231,12 +240,12 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
           <h4 className="font-medium text-sm truncate">
-            {contentData.title || 
+            {(contentData.title && contentData.title.trim()) || 
               (contentData.type === 'youtube' ? 'YouTube Video' : 
                contentData.type === 'instagram' ? 'Instagram Post' : 
                contentData.type === 'gmail' ? 'Gmail Thread' :
                contentData.type === 'insight' ? 'Insight' :
-               contentData.type === 'note' ? 'Note' :
+               contentData.type === 'note' ? 'Untitled Note' :
                'Content')}
           </h4>
           {contentData.important && (

@@ -78,6 +78,8 @@ export interface ProjectWithItems extends Project {
       createdAt: number;
       updatedAt: number;
     }>;
+    gmailItems: Array<any>;
+    analysisItems: Array<any>;
   };
 }
 

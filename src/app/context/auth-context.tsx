@@ -11,6 +11,8 @@ import { User, onAuthStateChanged } from 'firebase/auth';
 import { getFirebaseAuth } from '@/app/lib/firebase';
 import { TokenRefreshService } from '@/app/lib/token-refresh-service';
 import { getValidToken, removeFirebaseToken } from '@/app/lib/firebase-token-manager';
+import { useAction } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 
 interface AuthContextType {
   firebaseUser: User | null;
@@ -31,6 +33,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [authLoading, setAuthLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isRedirecting = useRef(false);
+  const lastUserId = useRef<string | null>(null);
+
+  // Action to trigger login sync
+  const handleUserLogin = useAction(api.userActions.handleUserLogin);
 
   useEffect(() => {
     // Skip auth state changes on server side
@@ -49,15 +55,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       unsubscribe = onAuthStateChanged(
         auth,
-        (user) => {
+        async (user) => {
           if (isRedirecting.current) return;
           if (window.__FIREBASE_DEBUG) {
             // eslint-disable-next-line no-console
             console.log('[AUTH-CONTEXT] onAuthStateChanged fired. User:', user);
           }
+          
+          const previousUserId = lastUserId.current;
+          const currentUserId = user?.uid || null;
+          
           setFirebaseUser(user);
           setAuthLoading(false);
           setError(null);
+          
+          // Trigger login sync if user logged in (not just auth state change)
+          if (user && currentUserId !== previousUserId) {
+            console.log('🔐 [AUTH-CONTEXT] New user login detected, triggering sync:', currentUserId);
+            try {
+              await handleUserLogin({ userId: currentUserId });
+            } catch (error) {
+              console.error('Failed to trigger login sync:', error);
+            }
+          }
+          
+          lastUserId.current = currentUserId;
         },
         (error) => {
           console.error('[AUTH-CONTEXT] Auth state error:', error);
@@ -77,7 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       unsubscribe();
       window.__FIREBASE_AUTH_IN_EFFECT = false;
     };
-  }, []);
+  }, [handleUserLogin]);
 
   const safeRedirect = (path: string) => {
     isRedirecting.current = true;

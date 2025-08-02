@@ -63,7 +63,10 @@ export async function resolveContentTitles(
       convex.query(api.noteQueries.getUserNotes, { userId, numItems: 1000 }), // Get up to 1000 notes
       convex.query(api.youtubeQueries.listUserYouTubeVideos, { userId, limit: 100 }),
       convex.query(api.instagramQueries.getAllInstagramPosts, { userId }),
-      convex.query(api.gmailQueries.getGmailThreadsByUserEmail, { userId, limit: 100 }),
+      convex.query(api.gmailQueries.getGmailThreadsPaginated, { 
+        userId, 
+        paginationOpts: { numItems: 100, cursor: null } 
+      }),
     ]);
     
     // Process notes
@@ -71,6 +74,7 @@ export async function resolveContentTitles(
       notes.value.page.forEach((note: any) => {
         titles[String(note._id)] = note.title || 'Untitled Note';
         titles[`note:${note._id}`] = note.title || 'Untitled Note';
+        titles[`notes:${note._id}`] = note.title || 'Untitled Note';
       });
     }
     
@@ -90,7 +94,7 @@ export async function resolveContentTitles(
     
     // Process Gmail threads
     if (gmailThreads.status === 'fulfilled') {
-      gmailThreads.value.forEach((thread: any) => {
+      gmailThreads.value.page.forEach((thread: any) => {
         titles[`gmail:${thread.threadId}`] = thread.subject || thread.data?.subject || 'No Subject';
       });
     }
@@ -132,7 +136,10 @@ export async function resolveAllLinkContent(
       convex.query(api.noteQueries.getUserNotes, { userId, numItems: 1000 }), // Get up to 1000 notes
       convex.query(api.youtubeQueries.listUserYouTubeVideos, { userId, limit: 100 }),
       convex.query(api.instagramQueries.getAllInstagramPosts, { userId }),
-      convex.query(api.gmailQueries.getGmailThreadsByUserEmail, { userId, limit: 100 }),
+      convex.query(api.gmailQueries.getGmailThreadsPaginated, { 
+        userId, 
+        paginationOpts: { numItems: 100, cursor: null } 
+      }),
     ]);
     
     for (const contentId of contentIds) {
@@ -144,6 +151,7 @@ export async function resolveAllLinkContent(
         
         switch (prefix) {
           case 'note':
+          case 'notes':
             if (notes.status === 'fulfilled') {
               foundContent = notes.value.page.find((note: any) => String(note._id) === id);
               if (foundContent) {
@@ -296,7 +304,7 @@ export async function resolveAllLinkContent(
             
           case 'gmail':
             if (gmailThreads.status === 'fulfilled') {
-              foundContent = gmailThreads.value.find((thread: any) => thread.threadId === id);
+              foundContent = gmailThreads.value.page.find((thread: any) => thread.threadId === id);
               if (foundContent) {
                 resolvedContent.push({
                   type: 'gmail',
