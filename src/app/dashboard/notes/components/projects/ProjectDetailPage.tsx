@@ -11,7 +11,7 @@ import { Id } from '@/convex/_generated/dataModel';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, Trash2, Plus } from 'lucide-react';
-import { AttachmentPanel } from './AttachmentPanel';
+import { UnifiedContentSelector } from '@/components/ui/UnifiedContentSelector';
 import { ProjectItemsGrid } from './ProjectItemsGrid';
 import { EditProjectModal } from './EditProjectModal';
 import toast from 'react-hot-toast';
@@ -23,13 +23,113 @@ interface ProjectDetailPageProps {
 export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
   const router = useRouter();
   const userId = getCurrentUserId();
-  const { project, isLoading } = useProjectDetails(projectId);
-  const { deleteProject, updateProject, addItemToProject, isUpdating } = useProjects(userId);
-  const { createNote, isCreating: isCreatingNote } = useCreateNote();
+  const { project, isLoading } = useProjectDetails(projectId, userId);
+  const { updateProject, deleteProject, addItemToProject, removeItemFromProject, migrateAnalysisItems } = useProjects(userId);
+  const { createNote } = useCreateNote();
   const { setActiveNoteId } = useNotes();
   
   const [showAttachmentPanel, setShowAttachmentPanel] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isCreatingNote, setIsCreatingNote] = useState(false);
+
+  // Create attached items set for the unified selector
+  const attachedItems = React.useMemo(() => {
+    if (!project) return new Set<string>();
+    
+    const items: string[] = [];
+    
+    // Add notes
+    if (project.noteIds) {
+      items.push(...project.noteIds.map(id => `notes:${id}`));
+    }
+    
+    // Add conversations  
+    if (project.conversationIds) {
+      items.push(...project.conversationIds.map(id => `conversations:${id}`));
+    }
+    
+    // Add Instagram posts
+    if (project.instagramPostIds) {
+      items.push(...project.instagramPostIds.map(id => `instagram:${id}`));
+    }
+    
+    // Add YouTube videos
+    if (project.youtubeVideoIds) {
+      items.push(...project.youtubeVideoIds.map(id => `youtube:${id}`));
+    }
+    
+    // Add Gmail items
+    if (project.gmailIds) {
+      items.push(...project.gmailIds.map(id => `gmail:${id}`));
+    }
+    
+    // Add analysis items
+    if (project.analysisIds) {
+      items.push(...project.analysisIds.map(id => `insights:${id}`));
+    }
+    
+    return new Set(items);
+  }, [project]);
+
+  // Handle attachment toggle
+  const handleToggleAttachment = async (contentId: string, isAttached: boolean) => {
+    if (!project) return;
+
+    try {
+      // Parse the standardized content ID
+      const [platform, ...rest] = contentId.split(':');
+      
+      // For analysis items, we need the full ID after "insights:"
+      // For other items, we need the full ID after the platform (including any additional parts)
+      const actualId = platform === 'insights' ? rest.join(':') : rest.join(':');
+      
+      // Map platform to item type
+      const itemTypeMap: Record<string, any> = {
+        'notes': 'note',
+        'conversations': 'conversation',
+        'instagram': 'instagramPost',
+        'youtube': 'youtubeVideo',
+        'gmail': 'gmail',
+        'insights': 'analysis'
+      };
+
+      const itemType = itemTypeMap[platform];
+      if (!itemType) {
+        console.error('Unknown platform for content ID:', contentId);
+        return;
+      }
+      
+      console.log('Toggle attachment debug:', {
+        contentId,
+        platform,
+        actualId,
+        itemType,
+        isAttached,
+        // Additional debugging for analysis items
+        isAnalysisItem: platform === 'insights',
+        fullContentId: contentId,
+        parsedPlatform: platform,
+        parsedActualId: actualId
+      });
+
+      if (isAttached) {
+        const success = await removeItemFromProject(projectId, itemType, actualId);
+        if (success) {
+          toast.success('Item removed from project');
+        }
+      } else {
+        const success = await addItemToProject(projectId, itemType, actualId);
+        if (success) {
+          toast.success('Item added to project');
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling attachment:', error);
+      toast.error('Failed to update project');
+    }
+  };
 
   const handleBack = () => {
     router.push('/dashboard/notes');
@@ -63,6 +163,7 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
   };
 
   const handleCreateNote = async () => {
+    setIsCreatingNote(true);
     try {
       // Create a new note
       const newNoteId = await createNote('', {
@@ -86,6 +187,8 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
     } catch (error) {
       console.error('Failed to create note for project:', error);
       toast.error('Failed to create note');
+    } finally {
+      setIsCreatingNote(false);
     }
   };
 
@@ -220,11 +323,14 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
 
       {/* Attachment Panel */}
       {showAttachmentPanel && (
-        <AttachmentPanel
-          projectId={projectId}
-          project={project}
+        <UnifiedContentSelector
+          mode="attach"
           isOpen={showAttachmentPanel}
           onClose={() => setShowAttachmentPanel(false)}
+          attachedItems={attachedItems}
+          onToggleAttachment={handleToggleAttachment}
+          showAttachedSection={true}
+          userId={userId}
         />
       )}
 

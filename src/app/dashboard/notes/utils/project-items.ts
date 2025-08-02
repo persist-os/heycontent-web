@@ -79,71 +79,71 @@ export function convertToAttachableItems(
 
   // Add notes
   notes.forEach(note => {
-    const rawId = extractRawId(String(note._id));
+    const fullId = String(note._id);
     items.push({
-      id: String(note._id),
+      id: fullId,
       type: 'note',
       title: note.title,
       preview: note.content?.substring(0, 100),
       date: note.updatedAt || note._creationTime || 0,
       data: note,
-      isAttached: project?.noteIds?.includes(rawId) || false,
+      isAttached: project?.noteIds?.includes(fullId) || false,
     });
   });
 
   // Add conversations
   (conversations || []).forEach(conversation => {
-    const rawId = extractRawId(String(conversation._id));
+    const fullId = String(conversation._id);
     items.push({
-      id: String(conversation._id),
+      id: fullId,
       type: 'conversation',
       title: conversation.title,
       preview: conversation.messages?.[conversation.messages.length - 1]?.content?.substring(0, 100),
       date: conversation.updatedAt || conversation._creationTime || 0,
       data: conversation,
-      isAttached: project?.conversationIds?.includes(rawId) || false,
+      isAttached: project?.conversationIds?.includes(fullId) || false,
     });
   });
 
   // Add Instagram posts
   (instagramPosts || []).forEach(post => {
-    const rawId = extractRawId(String(post.id));
+    const fullId = String(post.id);
     items.push({
-      id: String(post.id),
+      id: fullId,
       type: 'instagramPost',
       title: post.title || 'Instagram Post',
       preview: post.content?.substring(0, 100),
       date: post.createdAt || 0,
       data: post,
-      isAttached: project?.instagramPostIds?.includes(rawId) || false,
+      isAttached: project?.instagramPostIds?.includes(fullId) || false,
     });
   });
 
   // Add YouTube videos
   (youtubeVideos || []).forEach(video => {
-    const rawId = extractRawId(String(video.id));
+    const fullId = String(video.id);
     items.push({
-      id: String(video.id),
+      id: fullId,
       type: 'youtubeVideo',
       title: video.title || 'YouTube Video',
       preview: video.content?.substring(0, 100),
       date: video.createdAt || 0,
       data: video,
-      isAttached: project?.youtubeVideoIds?.includes(rawId) || false,
+      isAttached: project?.youtubeVideoIds?.includes(fullId) || false,
     });
   });
 
   // Add Gmail threads
   (gmailContent || []).forEach(thread => {
-    const rawId = extractRawId(String(thread.id));
+    const fullId = String(thread.id);
     items.push({
-      id: String(thread.id),
+      id: fullId,
       type: 'gmail',
       title: thread.title || 'Gmail Thread',
       preview: thread.content?.substring(0, 100),
       date: thread.createdAt || 0,
       data: thread,
-      isAttached: project?.gmailIds?.includes(rawId) || false,
+      isAttached: project?.gmailIds?.includes(fullId) || false,
     });
   });
 
@@ -164,10 +164,19 @@ export function convertToAttachableItems(
   });
   
   console.log('=== CONTENT DEBUG ===');
-console.log('instagramPosts:', instagramPosts?.slice(0, 2)); // First 2 items
-console.log('youtubeVideos:', youtubeVideos?.slice(0, 2));
-console.log('gmailContent:', gmailContent?.slice(0, 2));
-console.log('analysisContent:', analysisContent?.slice(0, 2));
+  console.log('instagramPosts:', instagramPosts?.slice(0, 2)); // First 2 items
+  console.log('youtubeVideos:', youtubeVideos?.slice(0, 2));
+  console.log('gmailContent:', gmailContent?.slice(0, 2));
+  console.log('analysisContent:', analysisContent?.slice(0, 2));
+  
+  // Debug project data
+  if (project) {
+    console.log('=== PROJECT DEBUG ===');
+    console.log('Project ID:', project._id);
+    console.log('Project noteIds:', project.noteIds);
+    console.log('Project instagramPostIds:', project.instagramPostIds);
+    console.log('Project analysisIds:', project.analysisIds);
+  }
 
   return items;
 }
@@ -179,7 +188,7 @@ export function groupItemsByType(items: AttachableItem[]) {
     conversations: items.filter(item => item.type === 'conversation'),
     instagramPosts: items.filter(item => item.type === 'instagramPost'),
     youtubeVideos: items.filter(item => item.type === 'youtubeVideo'),
-    gmailThreads: items.filter(item => item.type === 'gmail'),
+    gmail: items.filter(item => item.type === 'gmail'),
     analysis: items.filter(item => item.type === 'analysis'),
   };
 }

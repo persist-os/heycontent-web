@@ -3,6 +3,7 @@ import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { api } from "./_generated/api";
 import { error } from "console";
+import { internal } from "./_generated/api";
 
 // Type definition for note types and reference types
 const noteType = v.union(
@@ -99,22 +100,8 @@ export const updateNote = mutation({
       const newNoteId = await ctx.db.insert("notes", newNoteData);
       console.log('✅ [Convex updateNote] New note created successfully:', newNoteId);
 
-      // Automatically create embedding for the new note
-      try {
-        const searchableContent = `${updates.title || ""}\n\n${updates.content || ""}`;
-        
-        await ctx.scheduler.runAfter(0, api.vectorSearch.autoCreateEmbedding, {
-          userId,
-          contentId: newNoteId,
-          contentType: "note" as const,
-          title: updates.title || "Untitled Note",
-          content: searchableContent,
-          triggerType: "content_update" as const,
-          platform: "notes" as const,
-        });
-      } catch (error) {
-        console.error('❌ [AUTO EMBEDDING] Failed to schedule note embedding:', error);
-      }
+      // Note: Embeddings will be created automatically on next heartbeat
+      console.log('📝 [NOTE] Embedding will be created on next heartbeat sync');
 
       return await ctx.db.get(newNoteId);
     }
@@ -136,41 +123,21 @@ export const updateNote = mutation({
       updatedAt: Date.now(),
     };
 
-    // Add each field if it's provided in the updates
+    // Only update fields that are provided
     if (updates.title !== undefined) updateData.title = updates.title;
     if (updates.content !== undefined) updateData.content = updates.content;
+    if (updates.platform !== undefined) updateData.platform = updates.platform;
     if (updates.type !== undefined) updateData.type = updates.type;
     if (updates.important !== undefined) updateData.important = updates.important;
     if (updates.tags !== undefined) updateData.tags = updates.tags;
-    if (updates.platform !== undefined) updateData.platform = updates.platform;
-    if (updates.analysis !== undefined) updateData.analysis = updates.analysis;
-    if (updates.images !== undefined) updateData.images = updates.images;
     if (updates.titleGenerated !== undefined) updateData.titleGenerated = updates.titleGenerated;
     if (updates.typeGenerated !== undefined) updateData.typeGenerated = updates.typeGenerated;
 
-    // Apply the update
+    // Apply the updates
     await ctx.db.patch(noteId, updateData);
-    console.log('✅ [Convex updateNote] Note updated successfully');
 
-    // Automatically update embedding for the note
-    try {
-      const updatedNote = await ctx.db.get(noteId);
-      if (updatedNote) {
-        const searchableContent = `${updatedNote.title}\n\n${updatedNote.content || ""}`;
-        
-        await ctx.scheduler.runAfter(0, api.vectorSearch.autoCreateEmbedding, {
-          userId,
-          contentId: noteId,
-          contentType: "note" as const,
-          title: updatedNote.title,
-          content: searchableContent,
-          triggerType: "content_update" as const,
-          platform: "notes" as const,
-        });
-      }
-    } catch (error) {
-      console.error('❌ [AUTO EMBEDDING] Failed to schedule note embedding update:', error);
-    }
+    // Note: Embeddings will be updated automatically on next heartbeat
+    console.log('📝 [NOTE] Embedding will be updated on next heartbeat sync');
 
     return await ctx.db.get(noteId);
   },
@@ -200,6 +167,9 @@ export const deleteNote = mutation({
 
     // 4. Delete the note
     await ctx.db.delete(args.noteId);
+
+    // Note: Embeddings will be cleaned up automatically on next heartbeat
+    console.log('📝 [NOTE] Embedding will be cleaned up on next heartbeat sync');
 
     return { success: true };
   },
@@ -351,7 +321,7 @@ export const getContentByPrefixedId = query({
     userId: v.string(),
   },
   returns: v.union(v.null(), v.object({
-    type: v.union(v.literal("note"), v.literal("youtube"), v.literal("instagram"), v.literal("gmail"), v.literal("insight")),
+    type: v.union(v.literal("note"), v.literal("youtube"), v.literal("instagram"), v.literal("gmail"), v.literal("insight"), v.literal("conversation")),
     id: v.string(),
     title: v.string(),
     content: v.string(),
@@ -378,10 +348,14 @@ export const getContentByPrefixedId = query({
       return null;
     }
 
-    const [contentType, contentId] = prefixedId.split(':', 2);
+    const [contentType, ...rest] = prefixedId.split(':');
+    const contentId = rest.join(':');
+    console.log('🔍 getContentByPrefixedId: Original prefixedId:', prefixedId);
+    console.log('🔍 getContentByPrefixedId: Parsed contentType:', contentType, 'contentId:', contentId);
     
     switch (contentType) {
       case 'note':
+      case 'notes':
         // Get note by Convex ID
         try {
           const note = await ctx.db.get(contentId as Id<"notes">);
@@ -513,20 +487,30 @@ export const getContentByPrefixedId = query({
         }
         break;
 
-      case 'insight':
-        // Get insight by analysis ID and index
+      case 'insights':
+        // Get insight by platform, analysis ID and index - format is insights:platform:analysisId:index
         try {
+          console.log('🔍 getContentByPrefixedId: Processing insight contentId:', contentId);
+          
+          // Defensive check: ensure contentId has at least 2 colons (3 parts)
+          if ((contentId.match(/:/g) || []).length < 2) {
+            console.error('Malformed insight contentId (not enough colons):', contentId);
+            return null;
+          }
+          
           const parts = contentId.split(':');
-          if (parts.length < 2) {
+          console.log('🔍 getContentByPrefixedId: Insight parts:', parts);
+          if (parts.length < 3) {
             console.error('Invalid insight ID format:', contentId);
             return null;
           }
           
-          const analysisId = parts[0];
-          const indexStr = parts[1];
+          const platform = parts[0]; // youtube, instagram, or gmail
+          const analysisId = parts[1];
+          const indexStr = parts[2];
           
-          if (!analysisId || !indexStr) {
-            console.error('Invalid insight index:', indexStr);
+          if (!platform || !analysisId || !indexStr) {
+            console.error('Invalid insight format:', { platform, analysisId, indexStr });
             return null;
           }
           
@@ -537,7 +521,16 @@ export const getContentByPrefixedId = query({
             return null;
           }
           
-          const analysis = await ctx.db.get(analysisId as Id<"youtubeBatchAnalysis">);
+          // Get the appropriate batch analysis table based on platform
+          let analysis = null;
+          if (platform === 'youtube') {
+            analysis = await ctx.db.get(analysisId as Id<"youtubeBatchAnalysis">);
+          } else if (platform === 'instagram') {
+            analysis = await ctx.db.get(analysisId as Id<"instagramBatchAnalysis">);
+          } else if (platform === 'gmail') {
+            analysis = await ctx.db.get(analysisId as Id<"gmailBatchAnalysis">);
+          }
+          
           if (analysis && analysis.userId === userId && analysis.insights && analysis.insights.insights && Array.isArray(analysis.insights.insights)) {
             const insight = analysis.insights.insights[index];
             if (insight) {
@@ -559,6 +552,35 @@ export const getContentByPrefixedId = query({
           }
         } catch (error) {
           console.error('Error fetching insight:', error);
+        }
+        break;
+
+      case 'conversations':
+        // Get conversation by ID
+        try {
+          const conversation = await ctx.db
+            .query("conversations")
+            .withIndex("by_user", (q) => q.eq("userId", userId))
+            .filter((q) => q.eq(q.field("_id"), contentId))
+            .first();
+            
+          if (conversation) {
+            return {
+              type: 'conversation' as const,
+              id: prefixedId,
+              title: conversation.title || 'Conversation',
+              content: conversation.messages?.map(m => m.content).join('\n') || '',
+              contentType: 'conversation',
+              createdAt: conversation.createdAt || Date.now(),
+              updatedAt: conversation.updatedAt || Date.now(),
+              platform: 'conversations',
+              tags: [],
+              important: conversation.starred || false,
+              analysis: null
+            };
+          }
+        } catch (error) {
+          console.error('Error fetching conversation:', error);
         }
         break;
 
@@ -592,8 +614,11 @@ export const getContentTitlesByPrefixedIds = query({
       
       for (const prefixedId of prefixedIds) {
         try {
+          console.log('🔍 getContentTitlesByPrefixedIds: Processing prefixedId:', prefixedId);
           // Parse the prefixed ID
-          const [contentType, contentId] = prefixedId.split(':', 2);
+          const [contentType, ...rest] = prefixedId.split(':');
+          const contentId = rest.join(':');
+          console.log('🔍 Parsed contentType:', contentType, 'contentId:', contentId);
           
           if (!contentType || !contentId) {
             console.warn('getContentTitlesByPrefixedIds: Invalid prefixed ID format', { prefixedId });
@@ -601,10 +626,26 @@ export const getContentTitlesByPrefixedIds = query({
             continue;
           }
           
+          // Additional validation for malformed IDs
+          if (contentId.length < 10 || contentId.includes(' ') || contentId.includes('\n') || contentId.includes('\t')) {
+            console.warn('getContentTitlesByPrefixedIds: Malformed content ID', { prefixedId, contentId });
+            titles[prefixedId] = null;
+            continue;
+          }
+          
           switch (contentType) {
             case 'note':
+            case 'notes':
               // Get note by Convex ID
+              console.log('🔍 getContentTitlesByPrefixedIds: Processing note/notes:', { contentType, contentId, contentIdType: typeof contentId });
               try {
+                // Validate that contentId is a valid Convex ID format
+                if (!contentId || typeof contentId !== 'string' || contentId.length < 10) {
+                  console.error('Invalid contentId format:', { contentId, contentType });
+                  titles[prefixedId] = null;
+                  break;
+                }
+                
                 const note = await ctx.db.get(contentId as Id<"notes">);
                 if (note && note.userId === userId) {
                   titles[prefixedId] = note.title || 'Untitled Note';
@@ -612,7 +653,7 @@ export const getContentTitlesByPrefixedIds = query({
                   titles[prefixedId] = null;
                 }
               } catch (error) {
-                console.error('Error fetching note:', error);
+                console.error('Error fetching note:', { error, contentId, contentType });
                 titles[prefixedId] = null;
               }
               break;
@@ -683,6 +724,103 @@ export const getContentTitlesByPrefixedIds = query({
                 }
               } catch (error) {
                 console.error('Error fetching Gmail thread:', error);
+                titles[prefixedId] = null;
+              }
+              break;
+              
+            case 'conversations':
+              // Get conversation by ID
+              console.log('🔍 getContentTitlesByPrefixedIds: Processing conversation:', { contentType, contentId, contentIdType: typeof contentId });
+              try {
+                const conversation = await ctx.db
+                  .query("conversations")
+                  .withIndex("by_user", (q) => q.eq("userId", userId))
+                  .filter((q) => q.eq(q.field("_id"), contentId))
+                  .first();
+                  
+                console.log('🔍 getContentTitlesByPrefixedIds: Conversation result:', { found: !!conversation, title: conversation?.title });
+                
+                if (conversation) {
+                  // Clean the title for inline display - remove newlines and truncate if too long
+                  let cleanTitle = conversation.title || 'Conversation';
+                  cleanTitle = cleanTitle.replace(/[\r\n]+/g, ' ').trim(); // Remove newlines
+                  cleanTitle = cleanTitle.replace(/\s+/g, ' '); // Replace multiple spaces with single space
+                  
+                  // Truncate if too long for inline display
+                  if (cleanTitle.length > 50) {
+                    cleanTitle = cleanTitle.substring(0, 47) + '...';
+                  }
+                  
+                  titles[prefixedId] = cleanTitle;
+                } else {
+                  titles[prefixedId] = null;
+                }
+              } catch (error) {
+                console.error('Error fetching conversation:', error);
+                titles[prefixedId] = null;
+              }
+              break;
+              
+            case 'insights':
+              // Get insight by platform, analysis ID and index - format is insights:platform:analysisId:index
+              try {
+                console.log('🔍 Processing insight contentId:', contentId);
+                
+                // Defensive check: ensure contentId has at least 2 colons (3 parts)
+                if ((contentId.match(/:/g) || []).length < 2) {
+                  console.error('Malformed insight contentId (not enough colons):', contentId);
+                  titles[prefixedId] = null;
+                  break;
+                }
+                
+                const parts = contentId.split(':');
+                console.log('🔍 Insight parts:', parts);
+                if (parts.length < 3) {
+                  console.error('Invalid insight ID format:', contentId);
+                  titles[prefixedId] = null;
+                  break;
+                }
+                
+                const platform = parts[0]; // youtube, instagram, or gmail
+                const analysisId = parts[1];
+                const indexStr = parts[2];
+                
+                if (!platform || !analysisId || !indexStr) {
+                  console.error('Invalid insight format:', { platform, analysisId, indexStr });
+                  titles[prefixedId] = null;
+                  break;
+                }
+                
+                const index = parseInt(indexStr, 10);
+                
+                if (isNaN(index) || index < 0) {
+                  console.error('Invalid insight index:', indexStr);
+                  titles[prefixedId] = null;
+                  break;
+                }
+                
+                // Get the appropriate batch analysis table based on platform
+                let analysis = null;
+                if (platform === 'youtube') {
+                  analysis = await ctx.db.get(analysisId as Id<"youtubeBatchAnalysis">);
+                } else if (platform === 'instagram') {
+                  analysis = await ctx.db.get(analysisId as Id<"instagramBatchAnalysis">);
+                } else if (platform === 'gmail') {
+                  analysis = await ctx.db.get(analysisId as Id<"gmailBatchAnalysis">);
+                }
+                
+                if (analysis && analysis.userId === userId && analysis.insights && analysis.insights.insights && Array.isArray(analysis.insights.insights)) {
+                  const insight = analysis.insights.insights[index];
+                  if (insight) {
+                    titles[prefixedId] = insight.title || 'Insight';
+                  } else {
+                    titles[prefixedId] = null;
+                  }
+                } else {
+                  titles[prefixedId] = null;
+                }
+              } catch (error) {
+                console.error('Error fetching insight:', error);
                 titles[prefixedId] = null;
               }
               break;

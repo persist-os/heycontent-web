@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSidebar } from '@/app/context/sidebar-context'
 import { useTheme } from 'next-themes'
+import { useAction } from 'convex/react'
+import { api } from '@/convex/_generated/api'
 
 // Import types
 import { ChatScreenProps } from './types'
@@ -52,6 +54,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   // Authentication and user data (derived from firebaseUser)
   const { firebaseUser, getToken } = useAuth();
   const [apiKey, setApiKey] = useState<string | null>(null);
+  
+  // Embedding sync heartbeat
+  const userHeartbeat = useAction(api.embeddingSystem.userHeartbeat);
   
   // Derive user data from firebaseUser to avoid redundant state
   const authData = useMemo(() => ({
@@ -138,6 +143,23 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       resetBodyStyles()
     }
   }, [interactiveTourOpen, quickStartOpen, fullAppTourOpen])
+
+  // Embedding sync heartbeat for active chat users  
+  useEffect(() => {
+    if (!authData.userId) return;
+
+    // Set up heartbeat every 2 minutes when actively chatting for responsive queue processing
+    const heartbeatInterval = setInterval(async () => {
+      try {
+        console.log('💓 [CHAT HEARTBEAT] Triggering sync for active chat user');
+        await userHeartbeat({ userId: authData.userId! });
+      } catch (error) {
+        console.error('Chat heartbeat sync failed:', error);
+      }
+    }, 2 * 60 * 1000); // 2 minutes - more frequent for active users
+
+    return () => clearInterval(heartbeatInterval);
+  }, [authData.userId, userHeartbeat]);
 
   // Enhanced close handlers with cleanup
   const handleCloseInteractiveTour = () => {
@@ -600,6 +622,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       loadedConversationRef.current = null;
     };
   }, []);
+
+
 
   // Computed values
   const hasMessagesOrContext = currentContext || messages.length > 0;

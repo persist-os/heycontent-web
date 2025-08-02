@@ -1,12 +1,14 @@
 'use client'
 
-import React, { useEffect, forwardRef } from 'react'
-import { InlineCommandPalette } from '@/app/dashboard/notes/components/InlineCommandPalette'
-import { EnhancedContentSelector } from '@/app/dashboard/notes/components/EnhancedContentSelector'
-import { Eye, Edit } from 'lucide-react'
+import React, { forwardRef, useEffect } from 'react'
+import { Edit, Eye } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/ui/button'
+import { UnifiedContentSelector } from '@/components/ui/UnifiedContentSelector'
+import { useRichTextEditor } from './use-rich-text-editor'
 import { RichTextEditorProps } from './rich-text-editor.types'
 import { ContentRenderer } from './content-renderer'
-import { useRichTextEditor } from './use-rich-text-editor'
+import { InlineCommandPalette } from '@/app/dashboard/notes/components/InlineCommandPalette'
 
 export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProps>(({
   content,
@@ -63,6 +65,8 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
     handleInsertTable,
     handleLinkNote,
     handleLinkContent,
+    handleClick,
+    handleMouseDown,
     // New refinement handlers
     handleRefineText,
     handleAcceptRefinement,
@@ -146,6 +150,8 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
             value={getDisplayContent(content)}
             onChange={handleContentChange}
             onKeyDown={handleKeyDown}
+            onClick={handleClick}
+            onMouseDown={handleMouseDown}
             className={`w-full h-full min-h-[300px] resize-none p-4 text-base leading-relaxed bg-background text-foreground placeholder:text-muted-foreground/50 border-0 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 transition-all duration-200 rounded-md transform-gpu will-change-contents ${
               selectedText && refinementMode 
                 ? 'ring-2 ring-purple-500/30 dark:ring-yellow-500/30' 
@@ -202,14 +208,15 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
       />
 
       {/* Enhanced Content Selector */}
-      <EnhancedContentSelector
+      <UnifiedContentSelector
+        mode="link"
         isOpen={showEnhancedContentSelector}
         onClose={() => setShowEnhancedContentSelector(false)}
         onSelect={handleLinkContent}
         position={palettePosition}
         searchTerm={contentSearchTerm}
         onSearchChange={setContentSearchTerm}
-        excludeContentId={noteId ? `note:${noteId}` : undefined}
+        excludeContentId={noteId ? `notes:${noteId}` : undefined}
       />
     </div>
   )
