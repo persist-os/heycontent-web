@@ -70,6 +70,24 @@ function enhanceSearchQuery(query: string): string {
 async function generateEmbedding(text: string): Promise<number[]> {
   console.log('🔥 [GOOGLE API DEBUG] generateEmbedding called with text length:', text.length);
   
+  // Additional safety check for text length
+  if (!text || text.trim().length === 0) {
+    throw new Error("Cannot generate embedding for empty text");
+  }
+  
+  // For search queries, ensure they're not too long
+  const textBytes = new TextEncoder().encode(text).length;
+  if (textBytes > 30000) {
+    console.warn('⚠️ [GOOGLE API DEBUG] Search query too large, truncating');
+    // For search queries, we can be more aggressive with truncation
+    let truncatedText = text;
+    while (new TextEncoder().encode(truncatedText).length > 30000 && truncatedText.length > 100) {
+      truncatedText = truncatedText.substring(0, Math.floor(truncatedText.length * 0.9));
+    }
+    text = truncatedText + '...';
+    console.log('✅ [GOOGLE API DEBUG] Query truncated to', text.length, 'characters');
+  }
+  
   const apiKey = process.env.GOOGLE_API_KEY;
   if (!apiKey) {
     console.error('❌ [GOOGLE API DEBUG] No API key found');
@@ -88,61 +106,219 @@ async function generateEmbedding(text: string): Promise<number[]> {
     taskType: "RETRIEVAL_DOCUMENT",
   };
 
+  const requestBodyString = JSON.stringify(requestBody);
+  const requestBytes = new TextEncoder().encode(requestBodyString).length;
+  
   console.log('🔥 [GOOGLE API DEBUG] Request body structure:', {
     model: requestBody.model,
     taskType: requestBody.taskType,
     textLength: text.length,
+    textBytes: new TextEncoder().encode(text).length,
+    requestBytes: requestBytes,
     textPreview: text.substring(0, 100) + '...'
   });
+  
+  // Check if request is too large
+  if (requestBytes > 36000) {
+    console.error('❌ [GOOGLE API DEBUG] Request payload too large:', requestBytes, 'bytes (limit: 36000)');
+    throw new Error(`Request payload size (${requestBytes} bytes) exceeds Google API limit (36000 bytes)`);
+  }
 
-  try {
-    console.log('🔥 [GOOGLE API DEBUG] Making fetch request...');
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestBody),
-    });
+  // Retry logic for transient errors
+  const maxRetries = 3;
+  let lastError: any = null;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔥 [GOOGLE API DEBUG] Making fetch request (attempt ${attempt}/${maxRetries})...`);
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
 
-    console.log('🔥 [GOOGLE API DEBUG] Response status:', response.status);
-    console.log('🔥 [GOOGLE API DEBUG] Response ok:', response.ok);
-    console.log('🔥 [GOOGLE API DEBUG] Response status text:', response.statusText);
+          console.log('🔥 [GOOGLE API DEBUG] Response status:', response.status);
+      console.log('🔥 [GOOGLE API DEBUG] Response ok:', response.ok);
+      console.log('🔥 [GOOGLE API DEBUG] Response status text:', response.statusText);
 
-    if (!response.ok) {
-      let errorText = '';
-      try {
-        errorText = await response.text();
-        console.error('❌ [GOOGLE API DEBUG] Error response body:', errorText);
-      } catch (e) {
-        console.error('❌ [GOOGLE API DEBUG] Could not read error response');
+      if (!response.ok) {
+        let errorText = '';
+        try {
+          errorText = await response.text();
+          console.error('❌ [GOOGLE API DEBUG] Error response body:', errorText);
+        } catch (e) {
+          console.error('❌ [GOOGLE API DEBUG] Could not read error response');
+        }
+        
+        const error = new Error(`Failed to generate embedding: ${response.status} ${response.statusText}. ${errorText}`);
+        
+        // Check if this is a retryable error
+        if (response.status >= 500 || response.status === 429) {
+          console.log(`⚠️ [GOOGLE API DEBUG] Retryable error (${response.status}), will retry...`);
+          lastError = error;
+          if (attempt < maxRetries) {
+            // Wait before retrying (exponential backoff)
+            const delay = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+            console.log(`⏳ [GOOGLE API DEBUG] Waiting ${delay}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+        }
+        
+        throw error;
+      }
+
+      console.log('🔥 [GOOGLE API DEBUG] Parsing response JSON...');
+      const data = await response.json();
+      console.log('🔥 [GOOGLE API DEBUG] Response data structure:', {
+        hasEmbedding: !!data.embedding,
+        hasValues: !!(data.embedding && data.embedding.values),
+        valuesLength: data.embedding?.values?.length || 0
+      });
+
+      if (!data.embedding || !data.embedding.values) {
+        console.error('❌ [GOOGLE API DEBUG] Invalid response structure:', data);
+        throw new Error('Invalid embedding response structure');
+      }
+
+      console.log('✅ [GOOGLE API DEBUG] Successfully generated embedding with dimension:', data.embedding.values.length);
+      return data.embedding.values;
+
+    } catch (error: any) {
+      console.error(`❌ [GOOGLE API DEBUG] Fetch error (attempt ${attempt}):`, error);
+      console.error('❌ [GOOGLE API DEBUG] Error type:', typeof error);
+      console.error('❌ [GOOGLE API DEBUG] Error message:', error.message);
+      
+      lastError = error;
+      
+      // If this is the last attempt, throw the error
+      if (attempt === maxRetries) {
+        throw error;
       }
       
-      throw new Error(`Failed to generate embedding: ${response.status} ${response.statusText}. ${errorText}`);
+      // For other errors, wait and retry
+      const delay = Math.pow(2, attempt) * 1000;
+      console.log(`⏳ [GOOGLE API DEBUG] Waiting ${delay}ms before retry...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
-
-    console.log('🔥 [GOOGLE API DEBUG] Parsing response JSON...');
-    const data = await response.json();
-    console.log('🔥 [GOOGLE API DEBUG] Response data structure:', {
-      hasEmbedding: !!data.embedding,
-      hasValues: !!(data.embedding && data.embedding.values),
-      valuesLength: data.embedding?.values?.length || 0
-    });
-
-    if (!data.embedding || !data.embedding.values) {
-      console.error('❌ [GOOGLE API DEBUG] Invalid response structure:', data);
-      throw new Error('Invalid embedding response structure');
-    }
-
-    console.log('✅ [GOOGLE API DEBUG] Successfully generated embedding with dimension:', data.embedding.values.length);
-    return data.embedding.values;
-
-  } catch (error: any) {
-    console.error('❌ [GOOGLE API DEBUG] Fetch error:', error);
-    console.error('❌ [GOOGLE API DEBUG] Error type:', typeof error);
-    console.error('❌ [GOOGLE API DEBUG] Error message:', error.message);
-    throw error;
   }
+  
+  // If we get here, all retries failed
+  throw lastError || new Error('Failed to generate embedding after all retries');
+}
+
+/**
+ * Preprocess content for embedding generation
+ * Handles content truncation and optimization for different content types
+ */
+function preprocessContentForEmbedding(content: string, contentType: string): string {
+  console.log('🔧 [PREPROCESS] Preprocessing content for embedding');
+  console.log('🔧 [PREPROCESS] Content type:', contentType);
+  console.log('🔧 [PREPROCESS] Original length:', content.length);
+  
+  let processedContent = content;
+  
+  // Content type specific preprocessing
+  switch (contentType) {
+    case 'gmail_thread':
+      // For Gmail threads, prioritize subject and first few messages
+      if (processedContent.includes('Subject:') && processedContent.includes('Messages:')) {
+        const subjectMatch = processedContent.match(/Subject: ([^\n]+)/);
+        const messagesMatch = processedContent.match(/Messages:\n([\s\S]*)/);
+        
+        if (subjectMatch && messagesMatch) {
+          const subject = subjectMatch[1];
+          const messages = messagesMatch[1];
+          
+          // Take first 2-3 messages and truncate if needed
+          const messageLines = messages.split('\n');
+          const firstMessages = messageLines.slice(0, 20).join('\n'); // ~2-3 messages
+          
+          processedContent = `Subject: ${subject}\n\nMessages:\n${firstMessages}`;
+          console.log('🔧 [PREPROCESS] Gmail thread optimized');
+        }
+      }
+      break;
+      
+    case 'youtube_video':
+      // For YouTube videos, prioritize title and description
+      if (processedContent.includes('YouTube Video:') && processedContent.includes('Description:')) {
+        const titleMatch = processedContent.match(/YouTube Video: ([^\n]+)/);
+        const descMatch = processedContent.match(/Description: ([\s\S]*?)(?:\n\n|$)/);
+        
+        if (titleMatch && descMatch) {
+          const title = titleMatch[1];
+          const description = descMatch[1].substring(0, 1000); // Limit description
+          
+          processedContent = `YouTube Video: ${title}\n\nDescription: ${description}`;
+          console.log('🔧 [PREPROCESS] YouTube video optimized');
+        }
+      }
+      break;
+      
+    case 'instagram_post':
+      // For Instagram posts, keep caption and comments but limit
+      if (processedContent.length > 2000) {
+        processedContent = processedContent.substring(0, 2000) + '...';
+        console.log('🔧 [PREPROCESS] Instagram post truncated');
+      }
+      break;
+      
+    case 'note':
+      // For notes, keep structure but limit length
+      if (processedContent.length > 3000) {
+        processedContent = processedContent.substring(0, 3000) + '...';
+        console.log('🔧 [PREPROCESS] Note truncated');
+      }
+      break;
+      
+    case 'conversation':
+      // For conversations, keep recent messages
+      if (processedContent.length > 2500) {
+        processedContent = processedContent.substring(0, 2500) + '...';
+        console.log('🔧 [PREPROCESS] Conversation truncated');
+      }
+      break;
+  }
+  
+  // Google's API has a 36,000 byte limit for the entire request payload
+  // We need to account for JSON overhead, so we'll be conservative
+  const maxBytes = 30000; // Conservative limit to account for JSON overhead
+  
+  // Calculate the byte size of the text content
+  const textBytes = new TextEncoder().encode(processedContent).length;
+  console.log('📊 [PREPROCESS] Content byte size:', textBytes, 'bytes');
+  
+  if (textBytes > maxBytes) {
+    console.log('⚠️ [PREPROCESS] Content too large, truncating from', textBytes, 'bytes');
+    
+    // Binary search to find the right truncation point
+    let start = 0;
+    let end = processedContent.length;
+    let bestLength = 0;
+    
+    while (start <= end) {
+      const mid = Math.floor((start + end) / 2);
+      const testText = processedContent.substring(0, mid);
+      const testBytes = new TextEncoder().encode(testText).length;
+      
+      if (testBytes <= maxBytes) {
+        bestLength = mid;
+        start = mid + 1;
+      } else {
+        end = mid - 1;
+      }
+    }
+    
+    processedContent = processedContent.substring(0, bestLength) + '...';
+    const finalBytes = new TextEncoder().encode(processedContent).length;
+    console.log('✅ [PREPROCESS] Truncated to', bestLength, 'characters,', finalBytes, 'bytes');
+  }
+  
+  console.log('✅ [PREPROCESS] Final content length:', processedContent.length);
+  return processedContent;
 }
 
 /**
@@ -200,16 +376,12 @@ export const createEmbedding = action({
       }
       console.log('✅ [EMBEDDING DEBUG] Google API key found, length:', apiKey.length);
 
-      // Truncate content if it's too long for the API
-      let processedContent = args.content;
-      const maxContentLength = 60000; // Google's limit is around 60K characters
-      if (processedContent.length > maxContentLength) {
-        console.log('⚠️ [EMBEDDING DEBUG] Content too long, truncating from', processedContent.length, 'to', maxContentLength);
-        processedContent = processedContent.substring(0, maxContentLength) + '...';
-      }
+      // Preprocess content for embedding generation
+      const processedContent = preprocessContentForEmbedding(args.content, args.contentType);
 
       console.log('🚀 [EMBEDDING DEBUG] Calling Google API to generate embedding...');
       console.log('🚀 [EMBEDDING DEBUG] Content preview:', processedContent.substring(0, 200) + '...');
+      console.log('🚀 [EMBEDDING DEBUG] Final content byte size:', new TextEncoder().encode(processedContent).length, 'bytes');
       
       // Generate embedding
       const embedding = await generateEmbedding(processedContent);
