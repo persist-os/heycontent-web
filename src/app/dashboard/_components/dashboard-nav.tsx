@@ -5,12 +5,13 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Logo } from '@/components/ui/logo'
 import {
-  Users, Settings, FileText, LogOut, BarChart3, Menu, X, MessageSquare, Clock, Handshake, Trash2
+  Users, Settings, FileText, LogOut, BarChart3, Menu, X, MessageSquare, Clock, Handshake, Trash2, Shield
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { useSidebar } from '@/app/context/sidebar-context'
 import { getApiKey } from '@/app/lib/api-helpers'
 import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog'
+import { useAdminAuth } from '@/app/lib/admin-auth'
 
 const navItems = [
   {
@@ -71,6 +72,7 @@ export const DashboardNav = memo(function DashboardNav() {
   const pathname = usePathname()
   const router = useRouter()
   const { isExpanded, setIsExpanded } = useSidebar();
+  const { canAccessAdmin } = useAdminAuth();
   const [recentChats, setRecentChats] = useState<ChatHistory[]>([])
   const [apiKeyError, setApiKeyError] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -80,6 +82,19 @@ export const DashboardNav = memo(function DashboardNav() {
   // Refs for throttling
   const lastMouseMoveTime = useRef(0);
   const mouseMoveThrottleMs = 100; // Throttle to 10fps max
+
+  // Build nav items based on user permissions
+  const dynamicNavItems = [
+    ...navItems,
+    // Only show admin to users with admin access
+    ...(canAccessAdmin ? [{
+      id: 'admin',
+      label: 'Admin',
+      icon: Shield,
+      href: '/admin',
+      dataAttr: 'data-admin-link',
+    }] : []),
+  ];
 
   // Memoized fetch function to prevent recreation
   const fetchRecentChats = useCallback(async () => {
@@ -198,7 +213,7 @@ export const DashboardNav = memo(function DashboardNav() {
   }, []);
 
   // Memoize active item calculation
-  const isItemActive = useCallback((item: typeof navItems[0]) => {
+  const isItemActive = useCallback((item: typeof dynamicNavItems[0]) => {
     switch (item.id) {
       case 'content-hub':
         // This tab is active for multiple, non-nested routes
@@ -211,6 +226,7 @@ export const DashboardNav = memo(function DashboardNav() {
         return pathname.startsWith('/dashboard/partnerships');
       case 'chat':
       case 'notes':
+      case 'admin':
         // These tabs are only active on their exact pages, not sub-pages
         return pathname === item.href;
       default:
@@ -268,7 +284,7 @@ export const DashboardNav = memo(function DashboardNav() {
         </div>
 
         <div className="flex flex-col items-center gap-4 mt-8">
-          {navItems.map((item) => (
+          {dynamicNavItems.map((item) => (
             <Link
               key={item.id}
               href={item.href}

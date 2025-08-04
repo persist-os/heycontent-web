@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   Moon,
   Sun,
+  MessageCircle,
 } from 'lucide-react';
 import { 
   Command, 
@@ -294,6 +295,20 @@ const actionCommands: ActionCommand[] = [
     tags: ['new', 'chat', 'ai'],
     action: () => {
       window.location.href = '/dashboard/chat';
+    },
+  },
+  {
+    id: 'action-give-feedback',
+    type: 'action',
+    category: 'system',
+    label: 'Give Feedback',
+    description: 'Submit feedback, report bugs, or request features',
+    icon: MessageCircle,
+    shortcut: ['f'],
+    tags: ['feedback', 'bug', 'feature', 'support'],
+    action: () => {
+      // This will be handled by the command palette to open the feedback modal
+      window.dispatchEvent(new CustomEvent('open-feedback-modal'));
     },
   },
 ];
