@@ -9,7 +9,7 @@ import { PLATFORMS } from './platforms';
 import { YouTubePlatformCard } from './YouTubePlatformCard';
 import { GmailPlatformCard } from './GmailPlatformCard';
 import { InstagramPlatformCard } from './InstagramPlatformCard';
-import { EmbeddingManagement } from './EmbeddingManagement';
+import { AutomaticEmbeddingStatus } from './AutomaticEmbeddingStatus';
 import { isError, getAccountDetails, ConnectedAccount } from './platform-utils';
 import { AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 
@@ -374,7 +374,7 @@ export function PlatformConnect() {
       
       {/* AI Search Intelligence Section */}
       <div data-content-memory>
-        <EmbeddingManagement userId={firebaseUser?.uid} />
+        {firebaseUser?.uid && <AutomaticEmbeddingStatus userId={firebaseUser.uid} />}
       </div>
     </div>
   );

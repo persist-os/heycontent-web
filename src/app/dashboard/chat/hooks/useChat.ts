@@ -275,24 +275,42 @@ export const useChat = (
       // Update messages with the response
       setMessages(prev => {
         // Transform the typing message into the final response message
-        const updatedMessages = prev.map(msg => 
-          msg.status === 'typing' 
-            ? { 
-                ...msg, 
-                status: 'sent', // Change status to completed
-                content: data.chat_response, // Replace the "..." with actual content
-                chat_response: data.chat_response, // Set the chat response
-                searchStatus: '✅ Analysis complete - response ready',
-                // Preserve all the progressive thinking data
-                statusHistory: msg.statusHistory || [],
-                vectorSearchMetadata: data.vector_search_metadata,
-                // Add the response metadata
-                sessionId: data.session_id || sessionId,
-                metadata: data.metadata,
-                suggestions: data.suggestions || []
-              }
-            : msg
-        );
+        const updatedMessages = prev.map(msg => {
+          if (msg.status === 'typing') {
+            return { 
+              ...msg, 
+              status: 'sent' as const, // Change status to completed
+              content: data.chat_response, // Replace the "..." with actual content
+              chat_response: data.chat_response, // Set the chat response
+              searchStatus: '✅ Analysis complete - response ready',
+              // Preserve all the progressive thinking data
+              statusHistory: msg.statusHistory || [],
+              vectorSearchMetadata: data.vector_search_metadata ? {
+                foundRelevantContent: data.vector_search_metadata.foundRelevantContent,
+                relevantItemsCount: data.vector_search_metadata.relevantItemsCount,
+                relevantContent: data.vector_search_metadata.relevantContent || []
+              } : undefined,
+              // Add the response metadata
+              sessionId: data.session_id || sessionId,
+              metadata: data.metadata,
+              suggestions: data.suggestions || []
+            };
+          } else if (msg.role === 'user' && data.user_message && msg.content.includes('@[')) {
+            // Update the user message with the cleaned version from backend
+            console.log('🔗 useChat: Updating user message with cleaned version:', {
+              originalContent: msg.content,
+              cleanedContent: data.user_message,
+              hasUserMessage: !!data.user_message,
+              hasContentLinks: msg.content.includes('@[')
+            });
+            return {
+              ...msg,
+              content: data.user_message, // Use the cleaned user message with titles
+              chat_response: data.user_message
+            };
+          }
+          return msg;
+        });
         
         // Add useful logging from main
         console.log('🔗 useChat: Messages after assistant response:', {

@@ -59,7 +59,7 @@ export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
       if (contentId.includes(':')) {
         const [contentType, id] = contentId.split(':', 2);
         
-        if (contentType === 'note') {
+        if (contentType === 'note' || contentType === 'notes') {
           // Handle note linking (existing functionality)
           const linkedNote = availableNotes.find(note => 
             String(note._id) === String(id) || note._id === id
@@ -103,12 +103,21 @@ export const NoteContentRenderer: React.FC<NoteContentRendererProps> = ({
               </span>
             );
           }
-        } else if (contentType === 'insight') {
+        } else if (contentType === 'insights') {
           // Handle insight linking - ID format is insight:analysisId:index
           // Use LinkedContentRenderer for consistent preview style
           parts.push(
             <LinkedContentRenderer
               key={`insight-link-${partIndex}-${linkStartIndex}`}
+              prefixedId={contentId}
+              onLinkContent={onLinkContent}
+            />
+          );
+        } else if (contentType === 'conversations') {
+          // Handle conversation linking
+          parts.push(
+            <LinkedContentRenderer
+              key={`conversation-link-${partIndex}-${linkStartIndex}`}
               prefixedId={contentId}
               onLinkContent={onLinkContent}
             />

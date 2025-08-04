@@ -119,6 +119,16 @@ export const getProjectDetails = query({
         throw new Error("Access denied: You don't own this project");
       }
 
+      console.log("Project data for getProjectDetails:", {
+        projectId: project._id,
+        noteIds: project.noteIds,
+        conversationIds: project.conversationIds,
+        instagramPostIds: project.instagramPostIds,
+        youtubeVideoIds: project.youtubeVideoIds,
+        gmailIds: project.gmailIds,
+        analysisIds: project.analysisIds,
+      });
+
       // Batch fetch all attached notes with error handling
       const notes = [];
       if (project.noteIds && project.noteIds.length > 0) {
@@ -139,68 +149,146 @@ export const getProjectDetails = query({
         conversations.push(...conversationResults.filter(Boolean));
       }
 
-      // Batch fetch Instagram posts (handle both unified and raw IDs)
+      // Batch fetch Instagram posts using external IDs
       const instagramPosts = [];
       if (project.instagramPostIds && project.instagramPostIds.length > 0) {
+        console.log("Fetching Instagram posts with IDs:", project.instagramPostIds);
         const instagramPromises = project.instagramPostIds.map(async (postId) => {
-          const rawId = extractRawId(postId);
-          return await safeGet(ctx, rawId, "instagramPosts");
+          console.log("Looking for Instagram post with ID:", postId);
+          
+          // Try to find the post by postId field using the index
+          const posts = await ctx.db
+            .query("instagramPosts")
+            .withIndex("by_postId", (q) => q.eq("postId", postId))
+            .filter((q) => q.eq(q.field("userId"), project.userId))
+            .collect();
+          
+          console.log("Instagram query result:", { postId, found: posts.length > 0 });
+          return posts.length > 0 ? posts[0] : null;
         });
         const instagramResults = await Promise.all(instagramPromises);
         instagramPosts.push(...instagramResults.filter(Boolean));
+        console.log("Final Instagram posts found:", instagramPosts.length);
       }
 
-      // Batch fetch YouTube videos (handle both unified and raw IDs)
+      // Batch fetch YouTube videos using external IDs
       const youtubeVideos = [];
       if (project.youtubeVideoIds && project.youtubeVideoIds.length > 0) {
+        console.log("Fetching YouTube videos with IDs:", project.youtubeVideoIds);
         const youtubePromises = project.youtubeVideoIds.map(async (videoId) => {
-          const rawId = extractRawId(videoId);
-          return await safeGet(ctx, rawId, "youtubeVideos");
+          console.log("Looking for YouTube video with ID:", videoId);
+          
+          // Try to find the video by videoId field using the index
+          const videos = await ctx.db
+            .query("youtubeVideos")
+            .withIndex("by_videoId", (q) => q.eq("videoId", videoId))
+            .filter((q) => q.eq(q.field("userId"), project.userId))
+            .collect();
+          
+          console.log("YouTube query result:", { videoId, found: videos.length > 0 });
+          return videos.length > 0 ? videos[0] : null;
         });
         const youtubeResults = await Promise.all(youtubePromises);
         youtubeVideos.push(...youtubeResults.filter(Boolean));
+        console.log("Final YouTube videos found:", youtubeVideos.length);
       }
 
-      // Batch fetch Gmail items (handle both unified and raw IDs)
+      // Batch fetch Gmail items using external IDs
       const gmailItems = [];
       if (project.gmailIds && project.gmailIds.length > 0) {
+        console.log("Fetching Gmail items with IDs:", project.gmailIds);
         const gmailPromises = project.gmailIds.map(async (gmailId) => {
-          const rawId = extractRawId(gmailId);
-          const threadItem = await safeGet(ctx, rawId, "gmailThreads");
-          if (threadItem && typeof threadItem === 'object') {
-            return { ...threadItem, gmailType: "thread" as const };
+          console.log("Looking for Gmail thread with ID:", gmailId);
+          
+          // Try to find the thread by threadId field using the index
+          const threads = await ctx.db
+            .query("gmailThreads")
+            .withIndex("by_threadId", (q) => q.eq("threadId", gmailId))
+            .filter((q) => q.eq(q.field("userId"), project.userId))
+            .collect();
+          
+          console.log("Gmail query result:", { gmailId, found: threads.length > 0 });
+          if (threads.length > 0 && typeof threads[0] === 'object') {
+            return { ...threads[0], gmailType: "thread" as const };
           }
           return null;
         });
         const gmailResults = await Promise.all(gmailPromises);
         gmailItems.push(...gmailResults.filter(Boolean));
+        console.log("Final Gmail items found:", gmailItems.length);
       }
 
       // Batch fetch analysis items (handle both unified and raw IDs)
       const analysisItems = [];
       if (project.analysisIds && project.analysisIds.length > 0) {
+        console.log("Fetching analysis items with IDs:", project.analysisIds);
         const analysisPromises = project.analysisIds.map(async (analysisId) => {
-          const rawId = extractRawId(analysisId);
+          console.log("Processing analysis ID:", analysisId);
           
-          // Try different analysis tables systematically
-          const analysisQueries = [
-            { fn: () => safeGet(ctx, rawId, "instagramBatchAnalysis"), type: "instagram" },
-            { fn: () => safeGet(ctx, rawId, "youtubeBatchAnalysis"), type: "youtube" },
-            { fn: () => safeGet(ctx, rawId, "gmailBatchAnalysis"), type: "gmail" },
-            { fn: () => safeGet(ctx, rawId, "instagramTrackerAnalysis"), type: "instagramTracker" },
-          ];
-
-          for (const { fn, type } of analysisQueries) {
-            const analysis = await fn();
-            if (analysis && typeof analysis === 'object') {
-              return { ...analysis, analysisType: type };
-            }
+          // Analysis IDs are in format: platform:analysisId:index
+          // For example: "instagram:abc123:0" or "youtube:def456:1"
+          const parts = analysisId.split(':');
+          if (parts.length !== 3) {
+            console.log("Invalid analysis ID format:", analysisId);
+            return null;
           }
           
-          return null;
+          const [platform, analysisDocId, indexStr] = parts;
+          const index = parseInt(indexStr, 10);
+          
+          if (isNaN(index)) {
+            console.log("Invalid analysis index:", indexStr);
+            return null;
+          }
+          
+          console.log("Parsed analysis ID:", { platform, analysisDocId, index });
+          
+          // Try to get the analysis document based on platform
+          let analysis = null;
+          let analysisType = null;
+          
+          if (platform === 'instagram') {
+            analysis = await ctx.db.get(analysisDocId as Id<"instagramBatchAnalysis">);
+            analysisType = "instagram";
+          } else if (platform === 'youtube') {
+            analysis = await ctx.db.get(analysisDocId as Id<"youtubeBatchAnalysis">);
+            analysisType = "youtube";
+          } else if (platform === 'gmail') {
+            analysis = await ctx.db.get(analysisDocId as Id<"gmailBatchAnalysis">);
+            analysisType = "gmail";
+          }
+          
+          if (!analysis || analysis.userId !== project.userId) {
+            console.log("Analysis not found or access denied:", { analysisDocId, platform, found: !!analysis });
+            return null;
+          }
+          
+          // Extract the specific insight at the given index
+          const insights = analysis.insights?.insights;
+          if (!insights || !Array.isArray(insights) || !insights[index]) {
+            console.log("Insight not found at index:", { index, insightsLength: insights?.length });
+            return null;
+          }
+          
+          const insight = insights[index];
+          console.log("Found analysis insight:", { platform, analysisType, insightTitle: insight.title });
+          
+          return {
+            _id: analysisId, // Use the full analysis ID as the document ID
+            _creationTime: analysis.createdAt || Date.now(),
+            userId: project.userId,
+            platform: platform,
+            analysisType: analysisType,
+            insight: insight,
+            analysis: analysis,
+            title: insight.title || `${platform} Analysis`,
+            createdAt: analysis.createdAt || Date.now(),
+            updatedAt: analysis.updatedAt || Date.now(),
+          };
         });
         const analysisResults = await Promise.all(analysisPromises);
         analysisItems.push(...analysisResults.filter(Boolean));
+        console.log("Final analysis items found:", analysisItems.length);
       }
 
       return {

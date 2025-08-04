@@ -1,15 +1,17 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
-import { Send, Loader2, MessageSquare, Search, FileText, Brain } from 'lucide-react'
-import { Message } from '@/app/types'
-import { useTheme } from 'next-themes'
-import { EnhancedContentSelector } from '@/app/dashboard/notes/components/EnhancedContentSelector'
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { UnifiedContentSelector } from '@/components/ui/UnifiedContentSelector';
+import { useAuth } from '@/app/context/auth-context'
+import { useTheme } from 'next-themes';
+import { Brain, Send, Loader2, MessageSquare, FileText } from 'lucide-react'
+import { getCurrentUserId } from '@/app/lib/api-helpers'
+import { cn } from '@/lib/utils'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
-import { useAuth } from '@/app/context/auth-context'
-import { useContentResolver } from '@/lib/content-resolver'
-import { getCurrentUserId } from '@/app/lib/api-helpers'
+import type { Message } from '@/app/types/chat';
 
 interface ChatInputProps {
   onSend: (message: string) => void
@@ -89,12 +91,31 @@ export function ChatInput({
   // Get current user ID from API key
   const userId = getCurrentUserId()
   
-  // Fetch content using the new content resolver
-  const { getContentByTab, isLoading: isContentLoading } = useContentResolver(userId)
-  
-  // Get tab-specific content for @ linking
-  const tabSpecificContent = getContentByTab(currentTab)
-  const allLinkableContent = tabSpecificContent
+  // Fetch unified content using platformRouter (same as UnifiedContentSelector)
+  const allUnifiedContent = useQuery(
+    api.platformRouter.getAllUnifiedContent,
+    userId ? { 
+      userId,
+      platforms: currentTab !== 'all' ? [currentTab] : undefined,
+      limit: 200 
+    } : "skip"
+  );
+
+  // Transform unified content to the format expected by chat-input
+  const allLinkableContent = useMemo(() => {
+    if (!allUnifiedContent) return [];
+    
+    return allUnifiedContent.map(item => ({
+      id: item.id, // Already in standardized format: platform:actualId
+      title: item.title,
+      content: item.content,
+      type: item.platform, // 'youtube', 'instagram', 'gmail', 'notes', 'conversations', 'insights'
+      metadata: item.metadata,
+      originalDocument: item.originalDocument
+    }));
+  }, [allUnifiedContent]);
+
+  const isContentLoading = !userId || allUnifiedContent === undefined;
   
   // Theme-aware accent colors
   const isDark = theme === 'dark'
@@ -128,19 +149,9 @@ export function ChatInput({
       const index = parseInt(indexStr)
       const linkEntry = linkRegistry.find(link => link.index === index)
       if (!linkEntry) return match
-      let actualContentId = linkEntry.contentId
-      let contentType = 'note'
-      if (linkEntry.contentId.includes(':')) {
-        const [prefix, id] = linkEntry.contentId.split(':', 2)
-        contentType = prefix
-        actualContentId = id
-      }
-      let linkedContent
-      if (contentType === 'note') {
-        linkedContent = allLinkableContent.find(item => item.id === actualContentId) || allLinkableContent.find(item => item.id === linkEntry.contentId)
-      } else {
-        linkedContent = allLinkableContent.find(item => item.id === linkEntry.contentId)
-      }
+      
+      // Find content by standardized ID (platform:actualId format)
+      const linkedContent = allLinkableContent.find(item => item.id === linkEntry.contentId)
       return linkedContent ? `@${linkedContent.title}\u200B` : match
     })
   }, [allLinkableContent, linkRegistry])
@@ -360,7 +371,9 @@ export function ChatInput({
     e.preventDefault()
     const messageToSend = shadowInput || currentInput
     if (messageToSend.trim() && !isLoading && currentInput.length <= maxLength) {
+      // Convert numeric indices to content IDs for backend processing
       const processedMessage = convertNumericIndicesToContentIds(messageToSend.trim())
+      // Send the processed message (with content IDs) for backend context resolution
       onSend(processedMessage)
       setCurrentInput('')
       setShadowInput('')
@@ -387,23 +400,27 @@ export function ChatInput({
     const textBeforeCursor = textarea.value.substring(0, cursorPos)
     const atSymbolIndex = textBeforeCursor.lastIndexOf('@')
     if (atSymbolIndex === -1) return
+    
     const linkedContent = allLinkableContent?.find(item => item.id === contentId)
     if (!linkedContent) return
-    let formattedContentId = contentId
-    if (linkedContent.type === 'note' && !contentId.startsWith('note:')) {
-      formattedContentId = `note:${contentId}`
-    }
+    
+    // Content ID is already in standardized format: platform:actualId
+    const formattedContentId = contentId
     const title = linkedContent.title || 'Untitled'
     const newLinkIndex = linkRegistry.length + 1
+    
     setLinkRegistry(prev => [...prev, { index: newLinkIndex, contentId: formattedContentId }])
+    
     const textAfterCursor = textarea.value.substring(cursorPos)
     const newDisplayText = textarea.value.substring(0, atSymbolIndex) + `@${title}\u200B` + textAfterCursor
     setCurrentInput(newDisplayText)
+    
     const currentShadowText = shadowInput || textarea.value
     const shadowTextBeforeCursor = currentShadowText.substring(0, atSymbolIndex)
     const shadowTextAfterCursor = currentShadowText.substring(cursorPos)
     const newShadowText = shadowTextBeforeCursor + `@[${newLinkIndex}]@` + shadowTextAfterCursor
     setShadowInput(newShadowText)
+    
     const newCursorPos = atSymbolIndex + `@${title}\u200B`.length
     textarea.setSelectionRange(newCursorPos, newCursorPos)
     setShowEnhancedContentSelector(false)
@@ -421,10 +438,9 @@ export function ChatInput({
         const messageToSend = shadowInput || currentInput
         if (!messageToSend.trim() || isLoading || characterCount >= maxLength) return
         
-        // Convert numeric indices to content IDs before sending
+        // Convert numeric indices to content IDs for backend processing
         const processedMessage = convertNumericIndicesToContentIds(messageToSend.trim())
-        
-        // Send the message with content IDs - backend will resolve them
+        // Send the processed message (with content IDs) for backend context resolution
         onSend(processedMessage)
         
         setCurrentInput('')
@@ -691,7 +707,8 @@ export function ChatInput({
       </form>
 
       {/* Enhanced Content Selector */}
-      <EnhancedContentSelector
+      <UnifiedContentSelector
+        mode="link"
         isOpen={showEnhancedContentSelector}
         onClose={() => setShowEnhancedContentSelector(false)}
         onSelect={handleLinkContent}

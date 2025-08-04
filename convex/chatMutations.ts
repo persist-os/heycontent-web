@@ -1,6 +1,7 @@
 import { mutation, action } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
+import { internal } from "./_generated/api";
 
 export const createConversation = mutation({
     args: {
@@ -22,22 +23,8 @@ export const createConversation = mutation({
         starred: false,
       });
 
-      // Automatically create embedding for the new conversation
-      try {
-        const searchableContent = `${args.title}\n\n${args.messages.map((m: any) => `${m.role}: ${m.content}`).join('\n')}`;
-        
-        await ctx.scheduler.runAfter(0, api.vectorSearch.autoCreateEmbedding, {
-          userId: args.userId,
-          contentId: conversationId,
-          contentType: "conversation" as const,
-          title: args.title,
-          content: searchableContent,
-          triggerType: "content_update" as const,
-          platform: "conversations" as const,
-        });
-      } catch (error) {
-        console.error('❌ [AUTO EMBEDDING] Failed to schedule conversation embedding:', error);
-      }
+      // Note: Embeddings will be created automatically on next heartbeat
+      console.log('📝 [CONVERSATION] Embedding will be created on next heartbeat sync');
 
       return conversationId;
     },
@@ -66,22 +53,8 @@ handler: async (ctx, args) => {
       updatedAt: Date.now(),
     });
 
-    // Automatically update embedding for the conversation with new message
-    try {
-      const searchableContent = `${conversation.title}\n\n${updatedMessages.map((m: any) => `${m.role}: ${m.content}`).join('\n')}`;
-      
-      await ctx.scheduler.runAfter(0, api.vectorSearch.autoCreateEmbedding, {
-        userId: args.userId,
-        contentId: args.conversationId,
-        contentType: "conversation" as const,
-        title: conversation.title,
-        content: searchableContent,
-        triggerType: "content_update" as const,
-        platform: "conversations" as const,
-      });
-    } catch (error) {
-      console.error('❌ [AUTO EMBEDDING] Failed to schedule conversation embedding update:', error);
-    }
+    // Note: Embeddings will be updated automatically on next heartbeat
+    console.log('📝 [CONVERSATION] Embedding will be updated on next heartbeat sync');
 
     return args.conversationId;
 },

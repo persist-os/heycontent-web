@@ -78,7 +78,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
       if (contentId.includes(':')) {
         const [contentType, id] = contentId.split(':', 2)
         
-        if (contentType === 'note') {
+        if (contentType === 'note' || contentType === 'notes') {
           // Handle note linking
           const linkedNote = availableNotes.find(note => String(note._id) === String(id))
           

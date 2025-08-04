@@ -242,6 +242,10 @@ export default function SmartNotes() {
       case 'gmail':
         setSelectedGmailThreadId(contentId);
         break;
+      case 'conversations':
+        // Navigate to chat history with the conversation
+        router.push(`/dashboard/chat?id=${contentId}`);
+        break;
       default:
         // Unknown content type
         break;

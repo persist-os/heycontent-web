@@ -23,6 +23,7 @@ export function useProjects(userId: string | undefined) {
   const deleteProjectMutation = useMutation(api.projectsMutations.deleteProject);
   const addItemMutation = useMutation(api.projectsMutations.addItemToProject);
   const removeItemMutation = useMutation(api.projectsMutations.removeItemFromProject);
+  const migrateAnalysisItemsMutation = useMutation(api.projectsMutations.migrateAnalysisItems);
 
   // Create project
   const createProject = useCallback(async (name: string, description?: string) => {
@@ -94,7 +95,7 @@ export function useProjects(userId: string | undefined) {
     itemId: string
   ) => {
     try {
-      await addItemMutation({
+      const result = await addItemMutation({
         projectId,
         userId,
         itemType,
@@ -105,8 +106,15 @@ export function useProjects(userId: string | undefined) {
                          itemType === 'youtubeVideo' ? 'YouTube video' : 
                          itemType === 'analysis' ? 'Analysis report' :
                          itemType;
-      toast.success(`${displayName} added to project`);
-      return true;
+      
+      // Check if the operation was successful
+      if (result) {
+        toast.success(`${displayName} added to project`);
+        return true;
+      } else {
+        toast.error(`Failed to add ${displayName} to project`);
+        return false;
+      }
     } catch (error) {
       console.error('Failed to add item to project:', error);
       const displayName = itemType === 'instagramPost' ? 'Instagram post' : 
@@ -149,6 +157,27 @@ export function useProjects(userId: string | undefined) {
     }
   }, [removeItemMutation]);
 
+  // Migrate analysis items
+  const migrateAnalysisItems = useCallback(async (projectId: Id<"projects">) => {
+    try {
+      const result = await migrateAnalysisItemsMutation({
+        projectId,
+        userId,
+      });
+      
+      if (result) {
+        toast.success('Analysis items migrated successfully');
+      } else {
+        toast.info('No analysis items found to migrate');
+      }
+      return result;
+    } catch (error) {
+      console.error('Failed to migrate analysis items:', error);
+      toast.error('Failed to migrate analysis items');
+      return false;
+    }
+  }, [migrateAnalysisItemsMutation, userId]);
+
   return {
     projects: projects || [],
     isLoading: projects === undefined,
@@ -159,5 +188,6 @@ export function useProjects(userId: string | undefined) {
     deleteProject,
     addItemToProject,
     removeItemFromProject,
+    migrateAnalysisItems,
   };
 } 
