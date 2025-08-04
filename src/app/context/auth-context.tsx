@@ -44,7 +44,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setAuthLoading(false);
       return;
     }
+    
+    // Set the flag to indicate we're in a useEffect
     window.__FIREBASE_AUTH_IN_EFFECT = true;
+    
     let unsubscribe = () => {};
     try {
       const auth = getFirebaseAuth();

@@ -29,6 +29,9 @@ import {
   Lightbulb
 } from 'lucide-react';
 
+// Ensure Search component is available
+const SearchIcon = Search || (() => <span>🔍</span>);
+
 // Partnership Hub specific tour content
 const PartnershipHubContent = {
   // Welcome content
@@ -251,7 +254,7 @@ export const partnershipHubInteractiveTour: InteractiveStep[] = [
     content: (
       <div className="space-y-3">
         <div className="flex items-center gap-2 text-cyan-600 dark:text-cyan-400">
-          <Search className="w-4 h-4" />
+          <SearchIcon className="w-4 h-4" />
           <span className="font-medium">Try Partnership Search</span>
         </div>
         <div className="text-sm space-y-2">
