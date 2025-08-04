@@ -60,10 +60,17 @@ export function getFirebaseApp(): FirebaseApp {
  */
 export function getFirebaseAuth(): Auth {
   if (!isClient) throw new Error('[FIREBASE] Cannot use Firebase Auth on the server');
+  
+  // Enhanced client-side check to prevent hydration issues
+  if (typeof window === 'undefined') {
+    throw new Error('[FIREBASE] Cannot use Firebase Auth during SSR');
+  }
+  
   // Optionally warn if not in effect
-  if (typeof window !== 'undefined' && !(window.__FIREBASE_AUTH_IN_EFFECT || false)) {
+  if (!(window.__FIREBASE_AUTH_IN_EFFECT || false)) {
     console.warn('[FIREBASE] WARNING: getFirebaseAuth() called outside useEffect or without client check. This may cause hydration or auth issues.');
   }
+  
   if (!auth) {
     const firebaseApp = getFirebaseApp();
     auth = getAuth(firebaseApp);

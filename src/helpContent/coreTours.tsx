@@ -1,6 +1,9 @@
 import React from 'react';
 import { InteractiveStep } from '@/components/ui/interactive-tooltip';
 import { MessageCircle, Search, User, Brain, Sparkles, AtSign, Lightbulb, FileText, Zap, Layers, BarChart3 } from 'lucide-react';
+
+// Ensure Search component is available
+const SearchIcon = Search || (() => <span>🔍</span>);
 import { TourContent, DetailedContent } from './tourContent';
 
 // Core Chat Tour - All 13 essential steps with enhanced personality and detail

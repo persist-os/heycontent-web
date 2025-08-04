@@ -1,6 +1,9 @@
 import React from 'react';
 import { MessageCircle, Search, User, Brain, Sparkles, AtSign, Lightbulb, FileText, Zap, Layers, BarChart3 } from 'lucide-react';
 
+// Ensure Search component is available
+const SearchIcon = Search || (() => <span>🔍</span>);
+
 // Reusable content components for tours
 export const TourContent = {
   // Welcome sections
@@ -15,7 +18,7 @@ export const TourContent = {
   commandPaletteContent: (
     <div className="space-y-3">
       <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
-        <Search className="w-4 h-4" />
+        <SearchIcon className="w-4 h-4" />
         <span className="font-medium">Universal Access</span>
       </div>
       <div className="text-sm space-y-2">
@@ -163,7 +166,7 @@ export const DetailedContent = {
   smartSearchToggle: (
     <div className="space-y-3">
       <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
-        <Search className="w-4 h-4" />
+        <SearchIcon className="w-4 h-4" />
         <span className="font-medium">Context Control</span>
       </div>
       <div className="text-sm space-y-2">
