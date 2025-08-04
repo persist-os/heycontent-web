@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Command } from 'cmdk';
 import { useRouter, usePathname } from 'next/navigation';
@@ -15,10 +15,12 @@ import { SearchResultItem } from './command-palette/SearchResultItem';
 import { SearchHelp } from './command-palette/SearchHelp';
 import { ActiveFilters } from './command-palette/ActiveFilters';
 import { CommandHistory } from './command-palette/types';
+import { FeedbackModal } from './feedback-modal';
 
 export function CommandPalette() {
   const pathname = usePathname();
   const { isInlineReplyActive } = useInlineReply();
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const {
     isOpen,
     setIsOpen,
@@ -38,6 +40,19 @@ export function CommandPalette() {
   const inputRef = useRef<HTMLInputElement>(null);
   const isSlashCommand = input.startsWith('/');
   const router = useRouter();
+
+  // Listen for feedback modal events
+  useEffect(() => {
+    const handleOpenFeedbackModal = () => {
+      setIsFeedbackModalOpen(true);
+      setIsOpen(false); // Close command palette
+    };
+
+    window.addEventListener('open-feedback-modal', handleOpenFeedbackModal);
+    return () => {
+      window.removeEventListener('open-feedback-modal', handleOpenFeedbackModal);
+    };
+  }, [setIsOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -180,108 +195,116 @@ export function CommandPalette() {
   const { text, filters } = parseSearchQuery(input);
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="max-w-5xl min-h-[700px] max-h-[90vh] w-full p-0 bg-background rounded-2xl shadow-2xl border border-border flex flex-col overflow-hidden">
-        <DialogTitle className="sr-only">Command Palette</DialogTitle>
-        <div className="flex items-center px-4 pt-4 pb-2 border-b border-border">
-          <Search className="w-5 h-5 text-muted-foreground mr-2" />
-          <input
-            ref={inputRef}
-            className="flex-1 bg-transparent outline-none text-lg py-2"
-            placeholder="Type / for commands or search..."
-            value={input}
-            onChange={(e) => {
-              setInput(e.target.value);
-              setActiveIndex(0);
-            }}
-          />
-          <div className="text-sm text-muted-foreground">
-            <kbd className="px-1 py-0.5 bg-muted rounded">⌘</kbd>
-            <span className="mx-1">+</span>
-            <kbd className="px-1 py-0.5 bg-muted rounded">K</kbd>
+    <>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="max-w-5xl min-h-[700px] max-h-[90vh] w-full p-0 bg-background rounded-2xl shadow-2xl border border-border flex flex-col overflow-hidden">
+          <DialogTitle className="sr-only">Command Palette</DialogTitle>
+          <div className="flex items-center px-4 pt-4 pb-2 border-b border-border">
+            <Search className="w-5 h-5 text-muted-foreground mr-2" />
+            <input
+              ref={inputRef}
+              className="flex-1 bg-transparent outline-none text-lg py-2"
+              placeholder="Type / for commands or search..."
+              value={input}
+              onChange={(e) => {
+                setInput(e.target.value);
+                setActiveIndex(0);
+              }}
+            />
+            <div className="text-sm text-muted-foreground">
+              <kbd className="px-1 py-0.5 bg-muted rounded">⌘</kbd>
+              <span className="mx-1">+</span>
+              <kbd className="px-1 py-0.5 bg-muted rounded">K</kbd>
+            </div>
           </div>
-        </div>
 
-        <div className="flex-1 overflow-y-auto">
-          <ActiveFilters filters={filters} />
+          <div className="flex-1 overflow-y-auto">
+            <ActiveFilters filters={filters} />
 
-          {isSearching && input && (
-            <div className="px-4 py-8 text-center">
-              <div className="animate-spin w-6 h-6 border-2 border-accent border-t-transparent rounded-full mx-auto mb-2"></div>
-              <p className="text-sm text-muted-foreground">Searching your content...</p>
-            </div>
-          )}
-
-          {input && searchResults.length === 0 && !isSearching && <SearchHelp />}
-
-          {renderSlashCommandHelp()}
-
-          {!input && recentCommands.length > 0 && (
-            <div className="py-2 border-b border-border">
-              <div className="px-4 py-1 text-xs font-medium text-muted-foreground flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                Recent
+            {isSearching && input && (
+              <div className="px-4 py-8 text-center">
+                <div className="animate-spin w-6 h-6 border-2 border-accent border-t-transparent rounded-full mx-auto mb-2"></div>
+                <p className="text-sm text-muted-foreground">Searching your content...</p>
               </div>
-              {recentCommands.map((command: CommandType, index: number) => (
-                <CommandItem
-                  key={command.id}
-                  command={command}
-                  isActive={activeIndex === index}
-                  onSelect={() => executeCommand(command)}
-                />
-              ))}
-            </div>
-          )}
+            )}
 
-          {input ? (
-            renderSearchResults()
-          ) : (
-            <>
-              <div className="py-2">
-                {commandGroups.map((group) => (
-                  <div key={group.category} className="mb-4">
-                    <div className="px-4 py-1 text-xs font-medium text-muted-foreground">
-                      {group.title}
+            {input && searchResults.length === 0 && !isSearching && <SearchHelp />}
+
+            {renderSlashCommandHelp()}
+
+            {!input && recentCommands.length > 0 && (
+              <div className="py-2 border-b border-border">
+                <div className="px-4 py-1 text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  Recent
+                </div>
+                {recentCommands.map((command: CommandType, index: number) => (
+                  <CommandItem
+                    key={command.id}
+                    command={command}
+                    isActive={activeIndex === index}
+                    onSelect={() => executeCommand(command)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {input ? (
+              renderSearchResults()
+            ) : (
+              <>
+                <div className="py-2">
+                  {commandGroups.map((group) => (
+                    <div key={group.category} className="mb-4">
+                      <div className="px-4 py-1 text-xs font-medium text-muted-foreground">
+                        {group.title}
+                      </div>
+                      {group.commands.map((command: CommandType, index: number) => (
+                        <CommandItem
+                          key={command.id}
+                          command={command}
+                          isActive={activeIndex === index}
+                          onSelect={() => executeCommand(command)}
+                        />
+                      ))}
                     </div>
-                    {group.commands.map((command: CommandType, index: number) => (
+                  ))}
+                </div>
+
+                {!input && history.length > 0 && (
+                  <div className="py-2 border-t border-border">
+                    <div className="px-4 py-1 text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      <History className="w-3 h-3" />
+                      History
+                    </div>
+                    {history.slice(0, 5).map((item: CommandHistory, index: number) => (
                       <CommandItem
-                        key={command.id}
-                        command={command}
-                        isActive={activeIndex === index}
-                        onSelect={() => executeCommand(command)}
+                        key={`${item.command.id}-${item.timestamp}`}
+                        command={item.command}
+                        isActive={activeIndex === index + recentCommands.length}
+                        onSelect={() => executeCommand(item.command, item.input)}
                       />
                     ))}
                   </div>
-                ))}
-              </div>
+                )}
+              </>
+            )}
+          </div>
 
-              {!input && history.length > 0 && (
-                <div className="py-2 border-t border-border">
-                  <div className="px-4 py-1 text-xs font-medium text-muted-foreground flex items-center gap-1">
-                    <History className="w-3 h-3" />
-                    History
-                  </div>
-                  {history.slice(0, 5).map((item: CommandHistory, index: number) => (
-                    <CommandItem
-                      key={`${item.command.id}-${item.timestamp}`}
-                      command={item.command}
-                      isActive={activeIndex === index + recentCommands.length}
-                      onSelect={() => executeCommand(item.command, item.input)}
-                    />
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </div>
+          <div className="px-4 py-2 border-t border-border text-xs text-muted-foreground">
+            Type <kbd className="px-1 py-0.5 bg-muted rounded">/</kbd> for commands •{' '}
+            <kbd className="px-1 py-0.5 bg-muted rounded">↑↓</kbd> to navigate •{' '}
+            <kbd className="px-1 py-0.5 bg-muted rounded">Enter</kbd> to select •{' '}
+            <kbd className="px-1 py-0.5 bg-muted rounded">type:</kbd> to filter
+          </div>
+        </DialogContent>
+      </Dialog>
 
-        <div className="px-4 py-2 border-t border-border text-xs text-muted-foreground">
-          Type <kbd className="px-1 py-0.5 bg-muted rounded">/</kbd> for commands •{' '}
-          <kbd className="px-1 py-0.5 bg-muted rounded">↑↓</kbd> to navigate •{' '}
-          <kbd className="px-1 py-0.5 bg-muted rounded">Enter</kbd> to select •{' '}
-          <kbd className="px-1 py-0.5 bg-muted rounded">type:</kbd> to filter
-        </div>
-      </DialogContent>
-    </Dialog>
+      {/* Feedback Modal */}
+      <FeedbackModal 
+        isOpen={isFeedbackModalOpen} 
+        onClose={() => setIsFeedbackModalOpen(false)} 
+      />
+    </>
   );
 } 
