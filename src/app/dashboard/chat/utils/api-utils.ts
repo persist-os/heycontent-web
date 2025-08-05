@@ -1854,11 +1854,22 @@ export async function checkPlatformEmbeddings(
  */
 export async function checkUserEmbeddings(userId: string): Promise<{ hasEmbeddings: boolean; count: number }> {
   try {
-    const result = await convex.query(api.vectorSearch.hasUserEmbeddings, { userId });
-    return result;
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Embedding check timeout')), 5000)
+    );
+    
+    const queryPromise = convex.query(api.vectorSearch.hasUserEmbeddings, { userId });
+    const result = await Promise.race([queryPromise, timeoutPromise]);
+    
+    return result as { hasEmbeddings: boolean; count: number };
   } catch (error: any) {
-    console.error('Error checking user embeddings:', error);
-    // Don't show error to user for background checks
+    console.warn('⚠️ [EMBEDDING CHECK] Failed to check user embeddings:', {
+      userId,
+      error: error.message,
+      stack: error.stack
+    });
+    // Don't show error to user for background checks - return safe defaults
     return { hasEmbeddings: false, count: 0 };
   }
 }

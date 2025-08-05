@@ -17,25 +17,40 @@ export const handleUserLogin = action({
     
     console.log('🔐 [USER LOGIN] Handling login for user:', userId);
 
-    try {
-      // Trigger embedding sync
-      const syncResult = await ctx.runAction(api.embeddingSystem.syncEmbeddingsOnHeartbeat, {
-        userId
-      });
+    // Always return success immediately - don't let embedding sync block login
+    const loginResult = {
+      success: true,
+      syncTriggered: false,
+      message: 'Login successful'
+    };
 
-      return {
-        success: true,
-        syncTriggered: true,
-        ...syncResult
-      };
+    // Trigger embedding sync in the background (fire and forget)
+    try {
+      console.log('🔄 [USER LOGIN] Triggering background embedding sync for user:', userId);
+      
+      // Use setTimeout to make this truly asynchronous
+      setTimeout(async () => {
+        try {
+          await ctx.runAction(api.embeddingSystem.syncEmbeddingsOnHeartbeat, {
+            userId
+          });
+          console.log('✅ [USER LOGIN] Background embedding sync completed successfully for user:', userId);
+        } catch (syncError) {
+          console.error('⚠️ [USER LOGIN] Background embedding sync failed for user:', userId, syncError);
+          // Don't throw - this is background work and shouldn't affect the user
+        }
+      }, 100); // Small delay to ensure login completes first
+
+      loginResult.syncTriggered = true;
+      loginResult.message = 'Login successful, embeddings syncing in background';
+      
     } catch (error) {
-      console.error('❌ [USER LOGIN] Error handling user login:', error);
-      return {
-        success: false,
-        syncTriggered: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
+      console.error('⚠️ [USER LOGIN] Failed to trigger background embedding sync for user:', userId, error);
+      // Don't fail the login - just log the error and continue
+      loginResult.message = 'Login successful (embedding sync will retry later)';
     }
+
+    return loginResult;
   }
 });
 

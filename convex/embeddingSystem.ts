@@ -43,12 +43,20 @@ export const syncEmbeddingsOnHeartbeat = action({
         if (!existingEmbeddingIds.has(contentId)) {
           // Create new embedding
           try {
+            // Skip notes with empty content
+            const noteContent = note.content || '';
+            if (!noteContent.trim()) {
+              console.warn('⚠️ [EMBEDDING] Skipping note with empty content:', note._id);
+              results.errors.push(`Skipped note with empty content: ${note._id}`);
+              continue;
+            }
+            
             await ctx.runAction(api.vectorSearch.autoCreateEmbedding, {
               userId,
               contentId,
               contentType: 'note',
               title: note.title || 'Untitled Note',
-              content: note.content || '',
+              content: noteContent,
               triggerType: 'automatic_update',
               platform: 'notes'
             });
@@ -71,6 +79,13 @@ export const syncEmbeddingsOnHeartbeat = action({
               .join('\n');
             
             const searchableContent = `${conv.title}\n\n${messageContent}`;
+            
+            // Skip conversations with empty content
+            if (!searchableContent || !searchableContent.trim()) {
+              console.warn('⚠️ [EMBEDDING] Skipping conversation with empty content:', conv._id);
+              results.errors.push(`Skipped conversation with empty content: ${conv._id}`);
+              continue;
+            }
             
             await ctx.runAction(api.vectorSearch.autoCreateEmbedding, {
               userId,
@@ -95,6 +110,14 @@ export const syncEmbeddingsOnHeartbeat = action({
         if (!existingEmbeddingIds.has(contentId)) {
           try {
             const content = post.data?.caption || post.title || 'Instagram Post';
+            
+            // Skip Instagram posts with empty content
+            if (!content || !content.trim()) {
+              console.warn('⚠️ [EMBEDDING] Skipping Instagram post with empty content:', post._id);
+              results.errors.push(`Skipped Instagram post with empty content: ${post._id}`);
+              continue;
+            }
+            
             await ctx.runAction(api.vectorSearch.autoCreateEmbedding, {
               userId,
               contentId,
@@ -119,6 +142,14 @@ export const syncEmbeddingsOnHeartbeat = action({
         if (!existingEmbeddingIds.has(contentId)) {
           try {
             const content = (video.snippet?.title || 'YouTube Video') + '\n\n' + (video.snippet?.description || '');
+            
+            // Skip YouTube videos with empty content
+            if (!content || !content.trim()) {
+              console.warn('⚠️ [EMBEDDING] Skipping YouTube video with empty content:', video._id);
+              results.errors.push(`Skipped YouTube video with empty content: ${video._id}`);
+              continue;
+            }
+            
             await ctx.runAction(api.vectorSearch.autoCreateEmbedding, {
               userId,
               contentId,
@@ -146,6 +177,14 @@ export const syncEmbeddingsOnHeartbeat = action({
         if (!existingEmbeddingIds.has(contentId)) {
           try {
             const content = (thread.subject || thread.data?.subject || 'No Subject') + '\n\n' + (thread.snippet || thread.data?.snippet || '');
+            
+            // Skip Gmail threads with empty content
+            if (!content || !content.trim()) {
+              console.warn('⚠️ [EMBEDDING] Skipping Gmail thread with empty content:', thread._id);
+              results.errors.push(`Skipped Gmail thread with empty content: ${thread._id}`);
+              continue;
+            }
+            
             await ctx.runAction(api.vectorSearch.autoCreateEmbedding, {
               userId,
               contentId,
@@ -190,9 +229,13 @@ export const syncEmbeddingsOnHeartbeat = action({
 
     } catch (error) {
       console.error('❌ [EMBEDDING] Error during heartbeat sync:', error);
+      // Always return success: false but don't throw - this prevents the error from propagating
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        created: 0,
+        updated: 0,
+        deleted: 0,
+        errors: [`Embedding sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`]
       };
     }
   }
@@ -210,8 +253,9 @@ export const userHeartbeat = action({
     
     console.log('💓 [HEARTBEAT] User heartbeat triggered:', userId);
 
+    // Always return success - don't let embedding sync failures affect the heartbeat
     try {
-      // Run the embedding sync
+      // Run the embedding sync in the background
       const syncResult = await ctx.runAction(api.embeddingSystem.syncEmbeddingsOnHeartbeat, {
         userId
       });
@@ -222,10 +266,15 @@ export const userHeartbeat = action({
         syncResult
       };
     } catch (error) {
-      console.error('❌ [HEARTBEAT] Error during heartbeat:', error);
+      console.error('⚠️ [HEARTBEAT] Embedding sync failed during heartbeat for user:', userId, error);
+      // Return success anyway - heartbeat should never fail due to embedding issues
       return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        success: true,
+        timestamp: Date.now(),
+        syncResult: {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
       };
     }
   }
