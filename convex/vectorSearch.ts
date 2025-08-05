@@ -800,19 +800,33 @@ export const hasUserEmbeddings = query({
     userId: v.string(),
   },
   handler: async (ctx, args) => {
-    const embedding = await ctx.db
-      .query("contentEmbeddings")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .first();
+    try {
+      const embedding = await ctx.db
+        .query("contentEmbeddings")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .first();
 
-    return {
-      hasEmbeddings: !!embedding,
-      count: embedding ? await ctx.db
+      const count = embedding ? await ctx.db
         .query("contentEmbeddings")
         .withIndex("by_userId", (q) => q.eq("userId", args.userId))
         .collect()
-        .then(results => results.length) : 0
-    };
+        .then(results => results.length) : 0;
+
+      return {
+        hasEmbeddings: !!embedding,
+        count: count
+      };
+    } catch (error) {
+      console.warn('⚠️ [EMBEDDING QUERY] Failed to check user embeddings:', {
+        userId: args.userId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      // Return safe defaults instead of throwing
+      return {
+        hasEmbeddings: false,
+        count: 0
+      };
+    }
   },
 });
 
@@ -1363,6 +1377,40 @@ export const autoCreateEmbedding = action({
     });
 
     try {
+      // Check if we've already tried to process this content recently (prevent retry loops)
+      const existingEmbedding = await ctx.runQuery(api.vectorSearch.getEmbeddingByContentId, {
+        userId: args.userId,
+        contentId: args.contentId
+      });
+
+      if (existingEmbedding) {
+        console.log('ℹ️ [AUTO EMBEDDING] Embedding already exists for content:', args.contentId);
+        return { success: true, alreadyExists: true };
+      }
+
+      // Validate input content before creating embedding
+      if (!args.content || args.content.trim().length === 0) {
+        console.warn('⚠️ [AUTO EMBEDDING] Skipping empty content:', {
+          contentId: args.contentId,
+          contentType: args.contentType,
+          title: args.title,
+          contentLength: args.content?.length || 0
+        });
+        return { success: false, error: "Cannot create embedding for empty content", skipped: true };
+      }
+
+      // Additional validation for whitespace-only content
+      if (args.content.trim().length < 10) {
+        console.warn('⚠️ [AUTO EMBEDDING] Skipping content too short for embedding:', {
+          contentId: args.contentId,
+          contentType: args.contentType,
+          title: args.title,
+          contentLength: args.content.length,
+          contentPreview: args.content.substring(0, 50)
+        });
+        return { success: false, error: "Content too short for embedding (minimum 10 characters)", skipped: true };
+      }
+
       // Create the embedding
       await ctx.runAction(api.vectorSearch.createEmbedding, {
         userId: args.userId,
@@ -1387,19 +1435,29 @@ export const autoCreateEmbedding = action({
       console.log('✅ [AUTO EMBEDDING] Successfully created embedding for:', args.contentId);
       return { success: true };
     } catch (error: any) {
-      console.error('❌ [AUTO EMBEDDING] Failed to create embedding:', error);
-      
-      // Record the failed update
-      await ctx.runMutation(internal.vectorSearch.recordEmbeddingUpdate, {
-        userId: args.userId,
-        type: args.triggerType,
-        platform: args.platform,
-        contentType: args.contentType,
+      console.warn('⚠️ [AUTO EMBEDDING] Failed to create embedding:', {
         contentId: args.contentId,
-        itemsProcessed: 1,
-        itemsSucceeded: 0,
-        itemsFailed: 1,
+        contentType: args.contentType,
+        title: args.title,
+        error: error.message
       });
+      
+      // Record the failed update (but don't let this fail the whole operation)
+      try {
+        await ctx.runMutation(internal.vectorSearch.recordEmbeddingUpdate, {
+          userId: args.userId,
+          type: args.triggerType,
+          platform: args.platform,
+          contentType: args.contentType,
+          contentId: args.contentId,
+          itemsProcessed: 1,
+          itemsSucceeded: 0,
+          itemsFailed: 1,
+        });
+      } catch (recordError) {
+        console.warn('⚠️ [AUTO EMBEDDING] Failed to record embedding update:', recordError);
+        // Don't throw - this is just logging
+      }
 
       return { success: false, error: error.message };
     }
@@ -1842,4 +1900,70 @@ export const updateLastEmbeddingUpdate = mutation({
       return false;
     }
   },
+});
+
+/**
+ * Get embedding by content ID
+ */
+export const getEmbeddingByContentId = query({
+  args: {
+    userId: v.string(),
+    contentId: v.string()
+  },
+  handler: async (ctx, args) => {
+    try {
+      const embedding = await ctx.db
+        .query("contentEmbeddings")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .filter((q) => q.eq(q.field("contentId"), args.contentId))
+        .first();
+
+      return embedding;
+    } catch (error) {
+      console.warn('⚠️ [EMBEDDING QUERY] Failed to get embedding by content ID:', error);
+      return null;
+    }
+  }
+});
+
+/**
+ * Health check for embedding system (doesn't affect user experience)
+ */
+export const embeddingHealthCheck = query({
+  args: {
+    userId: v.string()
+  },
+  handler: async (ctx, args) => {
+    try {
+      // Get basic embedding stats
+      const embeddings = await ctx.db
+        .query("contentEmbeddings")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .collect();
+
+      const recentUpdates = await ctx.db
+        .query("embeddingUpdates")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .order("desc")
+        .take(5);
+
+      return {
+        success: true,
+        totalEmbeddings: embeddings.length,
+        recentUpdates: recentUpdates.length,
+        lastUpdate: recentUpdates[0]?.updatedAt || null,
+        systemStatus: 'healthy'
+      };
+    } catch (error) {
+      console.error('⚠️ [HEALTH CHECK] Embedding health check failed:', error);
+      return {
+        success: false,
+        totalEmbeddings: 0,
+        recentUpdates: 0,
+        lastUpdate: null,
+        systemStatus: 'degraded',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
 });
