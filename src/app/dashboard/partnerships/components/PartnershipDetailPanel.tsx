@@ -598,7 +598,7 @@ export function PartnershipDetailPanel({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-3 md:p-4 space-y-4 md:space-y-6">
+      <div className="p-4 space-y-4">
         {/* New Header Design - Matching Image */}
         <div className="space-y-4">
           {/* Top Control Bar */}
@@ -646,46 +646,11 @@ export function PartnershipDetailPanel({
                 </label>
               </div>
 
-              {/* Analyze Thread Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleAnalyzeThread}
-                disabled={analysisLoading}
-                className="h-8"
-              >
-                <Zap className="w-4 h-4 mr-1" />
-                {analysisLoading ? 'Analyzing...' : 'Analyze Thread'}
-              </Button>
+
             </div>
           </div>
 
-          {/* Analysis Result Display */}
-          {analysisResult && (
-            <Card className="p-3 md:p-4 rounded-xl">
-              <div className="flex items-center gap-3 mb-4">
-                <Brain className="w-5 h-5 text-primary" />
-                <h3 className="font-medium text-foreground text-sm md:text-base">
-                  Thread Analysis Result
-                </h3>
-              </div>
-              
-              {/* Debug Info */}
-              <div className="mb-3 p-2 bg-blue-50 dark:bg-blue-950/20 rounded border border-blue-200 dark:border-blue-800">
-                <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
-                  <div><strong>User ID:</strong> {userId}</div>
-                  <div><strong>Thread ID:</strong> {partnership?.emailThreadId}</div>
-                  <div><strong>Brand:</strong> {partnership?.brandName}</div>
-                </div>
-              </div>
-              
-              <div className="p-3 bg-muted rounded-lg border">
-                <pre className="text-xs text-muted-foreground whitespace-pre-wrap overflow-auto max-h-96">
-                  {JSON.stringify(analysisResult, null, 2)}
-                </pre>
-              </div>
-            </Card>
-          )}
+
 
           {/* Partnership Details Section */}
           <div className="space-y-3">
@@ -722,7 +687,7 @@ export function PartnershipDetailPanel({
         </div>
 
         {/* Email Thread Summary */}
-        <Card className="p-2 md:p-3 rounded-xl">
+        <Card className="p-4 rounded-xl shadow-none border border-purple-200 dark:border-purple-700 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20">
           <div className="flex items-center justify-between">
             <h3 className="font-medium text-foreground text-sm md:text-base">
               Summary
@@ -822,13 +787,13 @@ export function PartnershipDetailPanel({
             const summary = extractSummary(threadInsight);
             if (!summary) {
               return (
-                <div className="mt-3 p-3 bg-muted/50 rounded border text-sm text-muted-foreground">
+                <div className="mt-3 text-sm text-muted-foreground">
                   No summary found
                 </div>
               );
             }
             return (
-              <div className="mt-3 p-3 bg-muted/50 rounded border text-sm text-muted-foreground">
+              <div className="mt-3 text-sm text-muted-foreground">
                 {summary}
               </div>
             );
@@ -836,84 +801,7 @@ export function PartnershipDetailPanel({
 
         </Card>
 
-        {/* Action Items Card */}
-        <Card className="p-3 md:p-4 rounded-xl">
-          <div className="flex items-center gap-3 mb-4">
-            <Zap className="w-5 h-5 text-blue-600" />
-            <h3 className="font-medium text-foreground text-sm md:text-base">
-              Action Items
-            </h3>
-          </div>
-          
-          {(() => {
-            // Normalize thread-analysis result to an insight object
-            const getThreadInsight = (result: any) => {
-              if (!result) return null;
-              if (result.insight) return result.insight;
-              if (Array.isArray(result) && result.length > 0) return result[0];
-              // Sometimes the API might directly return the insight shape
-              return result;
-            };
 
-            const extractActionItems = (insight: any): string[] => {
-              if (!insight) return [];
-              
-              // Handle raw_response JSON parsing if present
-              if (insight.raw_response) {
-                try {
-                  // Clean the raw_response by removing markdown code blocks
-                  let cleanedResponse = insight.raw_response;
-                  cleanedResponse = cleanedResponse.replace(/```json\s*/g, '');
-                  cleanedResponse = cleanedResponse.replace(/```\s*$/g, '');
-                  
-                  // Parse the cleaned JSON
-                  const parsed = JSON.parse(cleanedResponse);
-                  const insights = Array.isArray(parsed) ? parsed : [parsed];
-                  
-                  // Extract actionSteps from the first insight
-                  if (insights.length > 0 && insights[0].actionSteps) {
-                    return Array.isArray(insights[0].actionSteps) ? insights[0].actionSteps : [];
-                  }
-                } catch (error) {
-                  console.error('Failed to parse raw_response JSON for action items:', error);
-                }
-              }
-              
-              // Direct actionSteps field
-              if (Array.isArray(insight.actionSteps)) {
-                return insight.actionSteps;
-              }
-              
-              return [];
-            };
-
-            const threadInsight = getThreadInsight(analysisResult);
-            const actionItems = extractActionItems(threadInsight);
-            
-            if (actionItems.length === 0) {
-              return (
-                <div className="p-3 bg-muted/50 rounded border text-sm text-muted-foreground">
-                  No action items found
-                </div>
-              );
-            }
-            
-            return (
-              <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded border border-blue-200 dark:border-blue-800">
-                <ol className="space-y-3 text-sm text-blue-800 dark:text-blue-200">
-                  {actionItems.map((item: string, index: number) => (
-                    <li key={index} className="flex items-start gap-3">
-                      <span className="bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        {index + 1}
-                      </span>
-                      <span className="flex-1">{item}</span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            );
-          })()}
-        </Card>
 
         {/* Recommended Actions - Use thread-analysis only */}
         {(() => {
@@ -975,10 +863,10 @@ export function PartnershipDetailPanel({
 
       </div>
 
-      {/* Conversation Threads - New Design */}
-      <div className="mx-3 md:mx-4 mb-3 md:mb-4">
-        <Card className="rounded-xl">
-          <div className="p-3 md:p-4">
+                      {/* Conversation Threads - New Design */}
+        <div className="mb-4">
+          <Card className="rounded-xl shadow-none border-0">
+            <div className="p-4">
             <ConversationThreads
               messages={getEmailThreadForConversation()}
               userEmail={userEmail}
@@ -1008,9 +896,9 @@ export function PartnershipDetailPanel({
         </Card>
       </div>
 
-      {/* Associated Smart Notes */}
-      <div className="p-3 md:p-4 pt-0">
-        <Card className="p-3 md:p-4">
+              {/* Associated Smart Notes */}
+        <div className="pt-0">
+          <Card className="p-4 shadow-none border-0">
           <div className="space-y-3 md:space-y-4">
             <h3 className="font-medium text-foreground flex items-center text-sm md:text-base">
               <FileText className="w-4 h-4 mr-2 flex-shrink-0" />
