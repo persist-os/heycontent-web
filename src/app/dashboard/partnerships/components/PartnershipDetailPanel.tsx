@@ -54,6 +54,7 @@ export function PartnershipDetailPanel({
   const [selectedMessageId, setSelectedMessageId] = useState<string | undefined>();
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [lastAnalyzedThreadId, setLastAnalyzedThreadId] = useState<string | null>(null);
   const router = useRouter();
   
 
@@ -529,6 +530,7 @@ export function PartnershipDetailPanel({
       const result = await response.json();
       console.log('🔍 [FRONTEND] Analysis result:', result);
       setAnalysisResult(result);
+      setLastAnalyzedThreadId(actualThreadId || null);
     } catch (error) {
       console.error('Error analyzing thread:', error);
       setAnalysisResult({ error: 'Failed to analyze thread' });
@@ -536,6 +538,18 @@ export function PartnershipDetailPanel({
       setAnalysisLoading(false);
     }
   };
+
+  // Auto-trigger thread analysis when a partnership is selected and we have no result yet
+  React.useEffect(() => {
+    if (!partnership || analysisLoading) return;
+    const currentThreadId = gmailData?.threadId || partnership.emailThreadId;
+    if (!currentThreadId) return;
+    const hasInsight = !!analysisResult && (analysisResult.insight || (Array.isArray(analysisResult) && analysisResult.length > 0));
+    if (!hasInsight || lastAnalyzedThreadId !== currentThreadId) {
+      handleAnalyzeThread();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [partnership?.id]);
 
   if (!partnership) {
     return (
@@ -731,11 +745,66 @@ export function PartnershipDetailPanel({
               <span className="text-foreground font-medium">Estimated Value: {formatValue(partnership.estimatedValue)}</span>
             </div>
           </div>
+
+          {/* Analysis Summary (from thread-analysis) */}
+          {(() => {
+            const threadInsight = analysisResult?.insight
+              ? analysisResult.insight
+              : Array.isArray(analysisResult) && analysisResult.length > 0
+                ? analysisResult[0]
+                : null;
+            const details: any[] | null = threadInsight?.sourceDetails || null;
+            let summary: string | null = null;
+            if (details && details.length > 0 && typeof details[0] === 'string') {
+              const first = String(details[0]);
+              const prefix = 'Thread Summary:';
+              if (first.startsWith(prefix)) {
+                summary = first.substring(prefix.length).trim();
+              }
+            }
+            if (!summary) return null;
+            return (
+              <div className="mt-3 p-3 bg-muted/50 rounded border text-sm text-muted-foreground">
+                {summary}
+              </div>
+            );
+          })()}
         </Card>
 
-        {/* Recommended Actions - Only show if matching insight exists */}
-        {matchingBatchInsight && matchingBatchInsight.actionSteps && matchingBatchInsight.actionSteps.length > 0 && (
-          <Card className="p-3 md:p-4 rounded-xl">
+        {/* Recommended Actions - Use thread-analysis only */}
+        {(() => {
+          // Normalize thread-analysis result shape
+          const threadInsight = analysisResult?.insight
+            ? analysisResult.insight
+            : Array.isArray(analysisResult) && analysisResult.length > 0
+              ? analysisResult[0]
+              : null;
+          const steps: string[] | null = threadInsight?.actionSteps || null;
+          const isLoading = analysisLoading;
+
+          if (isLoading) {
+            return (
+              <Card className="p-3 md:p-4 rounded-xl">
+                <div className="flex items-center gap-3 mb-4">
+                  <Brain className="w-5 h-5 text-primary" />
+                  <h3 className="font-medium text-foreground text-sm md:text-base">
+                    Recommended Actions
+                  </h3>
+                </div>
+                <div className="p-3 bg-muted rounded-lg border text-sm text-muted-foreground flex items-center gap-2">
+                  <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                  </svg>
+                  Analyzing thread…
+                </div>
+              </Card>
+            );
+          }
+
+          if (!steps || steps.length === 0) return null;
+          return (
+            <Card className="p-3 md:p-4 rounded-xl">
             <div className="flex items-center gap-3 mb-4">
               <Brain className="w-5 h-5 text-primary" />
               <h3 className="font-medium text-foreground text-sm md:text-base">
@@ -745,7 +814,7 @@ export function PartnershipDetailPanel({
             
             <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
               <ol className="space-y-3 text-sm text-green-700 dark:text-green-300">
-                {matchingBatchInsight.actionSteps.map((step: string, index: number) => (
+                {steps.map((step: string, index: number) => (
                   <li key={index} className="flex items-start gap-3">
                     <span className="bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200 text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5">
                       {index + 1}
@@ -755,8 +824,9 @@ export function PartnershipDetailPanel({
                 ))}
               </ol>
             </div>
-          </Card>
-        )}
+            </Card>
+          );
+        })()}
 
 
       </div>
