@@ -12,7 +12,8 @@ import {
   DollarSign,
   Tag,
   Trash2,
-  Brain
+  Brain,
+  Zap
 } from 'lucide-react';
 import { Partnership } from '../types';
 import { InlineEmailReply } from './InlineEmailReply';
@@ -21,7 +22,7 @@ import { useRouter } from 'next/navigation';
 import { getPartnershipColors } from '../utils/emailCategorization';
 import { api } from '@/convex/_generated/api';
 import { useMutation, useQuery } from 'convex/react';
-import { getCurrentUserId } from '@/app/lib/api-helpers';
+import { getCurrentUserId, fetchWithApiKey } from '@/app/lib/api-helpers';
 import { usePartnershipOperations } from '../hooks/usePartnershipOperations';
 import { ConversationThreads } from './ConversationThreads';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -51,6 +52,8 @@ export function PartnershipDetailPanel({
 }: PartnershipDetailPanelProps) {
   const [isDraftingReply, setIsDraftingReply] = useState(false);
   const [selectedMessageId, setSelectedMessageId] = useState<string | undefined>();
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
   const router = useRouter();
   
 
@@ -330,8 +333,8 @@ export function PartnershipDetailPanel({
 
       console.log('✅ Email marked as sent and saved');
       
-      // Keep the draft open after sending (like save draft behavior)
-      // setIsDraftingReply(false); // Commented out to match draft behavior
+      // Close the draft
+      setIsDraftingReply(false);
       
       // Update partnership status to indicate reply sent
       onUpdatePartnership(partnership.id, {
@@ -497,6 +500,43 @@ export function PartnershipDetailPanel({
     }
   };
 
+  const handleAnalyzeThread = async () => {
+    if (!partnership || !userId) return;
+    
+    setAnalysisLoading(true);
+    setAnalysisResult(null);
+    
+    try {
+      console.log('🔍 [FRONTEND] Analyzing thread:', {
+        userId,
+        threadId: partnership.emailThreadId,
+        brandName: partnership.brandName,
+        gmailDataThreadId: gmailData?.threadId,
+        gmailDataKeys: gmailData ? Object.keys(gmailData) : []
+      });
+      
+      // Use the thread ID from gmailData if available, otherwise fall back to partnership.emailThreadId
+      const actualThreadId = gmailData?.threadId || partnership.emailThreadId;
+      
+      const response = await fetchWithApiKey('/api/social/gmail/thread-analysis', {
+        method: 'POST',
+        body: JSON.stringify({
+          userId: userId,
+          threadId: actualThreadId
+        })
+      });
+      
+      const result = await response.json();
+      console.log('🔍 [FRONTEND] Analysis result:', result);
+      setAnalysisResult(result);
+    } catch (error) {
+      console.error('Error analyzing thread:', error);
+      setAnalysisResult({ error: 'Failed to analyze thread' });
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
+
   if (!partnership) {
     return (
       <div className="flex items-center justify-center h-full min-h-[600px] text-center px-8">
@@ -584,19 +624,54 @@ export function PartnershipDetailPanel({
                 </Select>
               </div>
 
-              {/* Auto-track Checkbox - Temporarily commented out */}
-              {/*
+              {/* Auto-track Checkbox */}
               <div className="flex items-center gap-2">
                 <Checkbox id="auto-track" className="border-primary/30" />
                 <label htmlFor="auto-track" className="text-sm text-muted-foreground">
                   Auto-track this partnership status
                 </label>
               </div>
-              */}
+
+              {/* Analyze Thread Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAnalyzeThread}
+                disabled={analysisLoading}
+                className="h-8"
+              >
+                <Zap className="w-4 h-4 mr-1" />
+                {analysisLoading ? 'Analyzing...' : 'Analyze Thread'}
+              </Button>
             </div>
-
-
           </div>
+
+          {/* Analysis Result Display */}
+          {analysisResult && (
+            <Card className="p-3 md:p-4 rounded-xl">
+              <div className="flex items-center gap-3 mb-4">
+                <Brain className="w-5 h-5 text-primary" />
+                <h3 className="font-medium text-foreground text-sm md:text-base">
+                  Thread Analysis Result
+                </h3>
+              </div>
+              
+              {/* Debug Info */}
+              <div className="mb-3 p-2 bg-blue-50 dark:bg-blue-950/20 rounded border border-blue-200 dark:border-blue-800">
+                <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                  <div><strong>User ID:</strong> {userId}</div>
+                  <div><strong>Thread ID:</strong> {partnership?.emailThreadId}</div>
+                  <div><strong>Brand:</strong> {partnership?.brandName}</div>
+                </div>
+              </div>
+              
+              <div className="p-3 bg-muted rounded-lg border">
+                <pre className="text-xs text-muted-foreground whitespace-pre-wrap overflow-auto max-h-96">
+                  {JSON.stringify(analysisResult, null, 2)}
+                </pre>
+              </div>
+            </Card>
+          )}
 
           {/* Partnership Details Section */}
           <div className="space-y-3">
@@ -696,6 +771,7 @@ export function PartnershipDetailPanel({
               onMessageSelect={handleMessageSelect}
               selectedMessageId={selectedMessageId}
               onStartDraft={handleStartDraft}
+              threadId={partnership?.emailThreadId}
             />
             
             {/* Inline Email Reply */}
@@ -718,8 +794,7 @@ export function PartnershipDetailPanel({
         </Card>
       </div>
 
-      {/* Associated Smart Notes - Temporarily commented out */}
-      {/*
+      {/* Associated Smart Notes */}
       <div className="p-3 md:p-4 pt-0">
         <Card className="p-3 md:p-4">
           <div className="space-y-3 md:space-y-4">
@@ -789,7 +864,6 @@ export function PartnershipDetailPanel({
           </div>
         </Card>
       </div>
-      */}
 
 
     </div>

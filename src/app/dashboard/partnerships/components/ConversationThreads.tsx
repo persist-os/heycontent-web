@@ -10,8 +10,10 @@ import {
   Mail,
   User,
   Clock,
-  Reply
+  Reply,
+  Brain
 } from 'lucide-react';
+import { getCurrentUserId, fetchWithApiKey } from '@/app/lib/api-helpers';
 
 interface EmailMessage {
   id: string;
@@ -30,6 +32,7 @@ interface ConversationThreadsProps {
   onMessageSelect?: (messageId: string) => void;
   selectedMessageId?: string;
   onStartDraft?: () => void;
+  threadId?: string; // Gmail thread ID for analysis
 }
 
 export function ConversationThreads({ 
@@ -37,9 +40,58 @@ export function ConversationThreads({
   userEmail, 
   onMessageSelect,
   selectedMessageId,
-  onStartDraft
+  onStartDraft,
+  threadId
 }: ConversationThreadsProps) {
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
+
+  // Analysis function
+  const handleAnalyzeThread = async () => {
+    if (!threadId) {
+      setAnalysisResult({ error: 'No thread ID available' });
+      return;
+    }
+    
+    console.log('🔍 Starting analysis for thread:', threadId);
+    setAnalysisLoading(true);
+    setAnalysisResult(null);
+    
+    try {
+      const userId = getCurrentUserId();
+      console.log('🔍 User ID:', userId);
+      // Use standard Next.js API proxy route to backend
+      const response = await fetchWithApiKey(`/api/social/gmail/thread-analysis`, {
+        method: 'POST',
+        body: JSON.stringify({
+          userId: userId,
+          threadId: threadId
+        })
+      });
+      
+      const result = await response.json();
+      
+      // Check if the response indicates an error
+      if (!response.ok || result.error) {
+        console.error('Analysis failed:', result);
+        setAnalysisResult({ 
+          error: result.error || result.message || `HTTP ${response.status}: ${response.statusText}`,
+          details: result
+        });
+      } else {
+        setAnalysisResult(result);
+      }
+    } catch (error) {
+      console.error('Error analyzing thread:', error);
+      setAnalysisResult({ 
+        error: 'Failed to analyze thread', 
+        details: error instanceof Error ? error.message : String(error)
+      });
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
 
   // Auto-expand the most recent message when messages change
   React.useEffect(() => {
@@ -229,6 +281,33 @@ export function ConversationThreads({
           );
         })}
       </div>
+
+      {/* Analysis Section */}
+      {threadId && (
+        <div className="mt-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="font-medium text-foreground">Thread Analysis</h4>
+            <Button
+              onClick={handleAnalyzeThread}
+              disabled={analysisLoading}
+              size="sm"
+              variant="outline"
+            >
+              <Brain className="w-4 h-4 mr-2" />
+              {analysisLoading ? 'Analyzing...' : 'Analyze Thread'}
+            </Button>
+          </div>
+
+          {/* Analysis Results */}
+          {analysisResult && (
+            <Card className="p-4">
+              <pre className="text-xs text-muted-foreground whitespace-pre-wrap overflow-x-auto">
+                {JSON.stringify(analysisResult, null, 2)}
+              </pre>
+            </Card>
+          )}
+        </div>
+      )}
     </div>
   );
 } 
