@@ -16,7 +16,7 @@ import {
   Zap
 } from 'lucide-react';
 import { Partnership } from '../types';
-import { InlineEmailReply } from './InlineEmailReply';
+
 import { useNotes } from '@/app/context/notes-context';
 import { useRouter } from 'next/navigation';
 import { getPartnershipColors } from '../utils/emailCategorization';
@@ -50,11 +50,7 @@ export function PartnershipDetailPanel({
   gmailData,
   userEmail
 }: PartnershipDetailPanelProps) {
-  const [isDraftingReply, setIsDraftingReply] = useState(false);
   const [selectedMessageId, setSelectedMessageId] = useState<string | undefined>();
-  const [analysisLoading, setAnalysisLoading] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<any>(null);
-  const [lastAnalyzedThreadId, setLastAnalyzedThreadId] = useState<string | null>(null);
   const router = useRouter();
   
 
@@ -62,124 +58,16 @@ export function PartnershipDetailPanel({
   // Get notes from context
   const { notes, setActiveNoteId } = useNotes();
   
-  // Batch Analysis Data Gathering
+  // Basic data gathering
   const userId = getCurrentUserId();
   
-  // Get Gmail account for batch analysis
+  // Get Gmail account for passing to ConversationThreads
   const gmailAccounts = useQuery(
     api.gmailQueries.getGmailAccounts,
     userId ? { userId } : "skip"
   );
   const gmailAccountId = gmailAccounts && gmailAccounts.length > 0 ? gmailAccounts[0].email : undefined;
-  
-  // Get batch analysis insights with refresh trigger
-  const batchAnalysis = useQuery(
-    api.gmailQueries.getGmailBatchAnalysis,
-    userId && gmailAccountId ? { userId, gmailAccountId } : "skip"
-  );
-  
 
-  
-  // Helper function to parse raw_response JSON
-  const parseRawResponse = (rawResponse: string) => {
-    try {
-      // Clean the raw_response by removing markdown code blocks
-      let cleanedResponse = rawResponse;
-      
-      // Remove markdown code block markers
-      cleanedResponse = cleanedResponse.replace(/```json\s*/g, '');
-      cleanedResponse = cleanedResponse.replace(/```\s*$/g, '');
-      
-      // Parse the cleaned JSON
-      const parsed = JSON.parse(cleanedResponse);
-      return Array.isArray(parsed) ? parsed : [parsed];
-    } catch (error) {
-      console.error('[PARTNERSHIP DETAIL] Failed to parse raw_response:', error);
-      console.error('[PARTNERSHIP DETAIL] Raw response content:', rawResponse?.substring(0, 200) + '...');
-      return [];
-    }
-  };
-
-  // Find matching batch analysis insight for this partnership
-  const matchingBatchInsight = useMemo(() => {
-    if (!partnership || !batchAnalysis?.insights) return null;
-    
-
-    
-    const insights = batchAnalysis.insights;
-    
-    // Handle different possible structures and parse raw_response
-    let rawInsights: any[] = [];
-    
-    if (Array.isArray(insights)) {
-      // Direct array of insights - check for raw_response
-      rawInsights = insights.flatMap((insight: any) => {
-        if (insight.raw_response) {
-          return parseRawResponse(insight.raw_response);
-        }
-        return [insight];
-      });
-    } else if (insights && typeof insights === 'object') {
-      // Object with insights property
-      if (Array.isArray(insights.insights)) {
-        rawInsights = insights.insights.flatMap((insight: any) => {
-          if (insight.raw_response) {
-            return parseRawResponse(insight.raw_response);
-          }
-          return [insight];
-        });
-      } else if (Array.isArray(insights.data)) {
-        rawInsights = insights.data.flatMap((insight: any) => {
-          if (insight.raw_response) {
-            return parseRawResponse(insight.raw_response);
-          }
-          return [insight];
-        });
-      }
-    }
-    
-
-    
-    if (!Array.isArray(rawInsights) || rawInsights.length === 0) {
-      return null;
-    }
-    
-    // Try to match by threadId from partnership
-    const matchingInsight = rawInsights.find((insight: any) => {
-      // Handle case where insight might be an array instead of an object
-      const insightObj = Array.isArray(insight) ? insight[0] : insight;
-      
-
-      
-      if (!insightObj || !insightObj.threadDetails || !Array.isArray(insightObj.threadDetails)) {
-        return false;
-      }
-      
-      const hasMatchingThread = insightObj.threadDetails.some((thread: any) => {
-        return thread.threadId === partnership.emailThreadId;
-      });
-      
-      return hasMatchingThread;
-    });
-    
-
-    
-    // Return the correct insight object (handle array case)
-    if (matchingInsight) {
-      return Array.isArray(matchingInsight) ? matchingInsight[0] : matchingInsight;
-    }
-    
-    return null;
-  }, [partnership, batchAnalysis]);
-  
-
-
-
-
-
-
-
-  
   // Filter notes based on partnership's smartNoteIds
   const associatedNotes = useMemo(() => {
     if (!partnership || !partnership.smartNoteIds || partnership.smartNoteIds.length === 0) {
@@ -281,13 +169,9 @@ export function PartnershipDetailPanel({
     }
   }, [partnership?.id, partnership?.subject, partnership?.brandName, partnership?.from, partnership?.snippet, partnership?.lastActivity]);
 
-  const handleStartDraft = () => {
-    setIsDraftingReply(true);
-  };
 
-  const handleCloseDraft = () => {
-    setIsDraftingReply(false);
-  };
+
+
 
   const handleSendReply = async (content: string) => {
     if (!partnership || !content.trim()) return;
@@ -334,8 +218,7 @@ export function PartnershipDetailPanel({
 
       console.log('✅ Email marked as sent and saved');
       
-      // Close the draft
-      setIsDraftingReply(false);
+      // Reply sent (draft handling now in ConversationThreads)
       
       // Update partnership status to indicate reply sent
       onUpdatePartnership(partnership.id, {
@@ -501,55 +384,7 @@ export function PartnershipDetailPanel({
     }
   };
 
-  const handleAnalyzeThread = async () => {
-    if (!partnership || !userId) return;
-    
-    setAnalysisLoading(true);
-    setAnalysisResult(null);
-    
-    try {
-      console.log('🔍 [FRONTEND] Analyzing thread:', {
-        userId,
-        threadId: partnership.emailThreadId,
-        brandName: partnership.brandName,
-        gmailDataThreadId: gmailData?.threadId,
-        gmailDataKeys: gmailData ? Object.keys(gmailData) : []
-      });
-      
-      // Use the thread ID from gmailData if available, otherwise fall back to partnership.emailThreadId
-      const actualThreadId = gmailData?.threadId || partnership.emailThreadId;
-      
-      const response = await fetchWithApiKey('/api/social/gmail/thread-analysis', {
-        method: 'POST',
-        body: JSON.stringify({
-          userId: userId,
-          threadId: actualThreadId
-        })
-      });
-      
-      const result = await response.json();
-      console.log('🔍 [FRONTEND] Analysis result:', result);
-      setAnalysisResult(result);
-      setLastAnalyzedThreadId(actualThreadId || null);
-    } catch (error) {
-      console.error('Error analyzing thread:', error);
-      setAnalysisResult({ error: 'Failed to analyze thread' });
-    } finally {
-      setAnalysisLoading(false);
-    }
-  };
 
-  // Auto-trigger thread analysis when a partnership is selected and we have no result yet
-  React.useEffect(() => {
-    if (!partnership || analysisLoading) return;
-    const currentThreadId = gmailData?.threadId || partnership.emailThreadId;
-    if (!currentThreadId) return;
-    const hasInsight = !!analysisResult && (analysisResult.insight || (Array.isArray(analysisResult) && analysisResult.length > 0));
-    if (!hasInsight || lastAnalyzedThreadId !== currentThreadId) {
-      handleAnalyzeThread();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [partnership?.id]);
 
   if (!partnership) {
     return (
@@ -686,149 +521,6 @@ export function PartnershipDetailPanel({
           </div>
         </div>
 
-        {/* Email Thread Summary */}
-        <Card className="p-4 rounded-xl shadow-none border border-purple-200 dark:border-purple-700 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20">
-          <div className="flex items-center justify-between">
-            <h3 className="font-medium text-foreground text-sm md:text-base">
-              Summary
-            </h3>
-          </div>
-          
-          <div className="flex items-center gap-4 text-sm mt-2">
-            <div className="flex items-center">
-              <MessageSquare className="w-4 h-4 mr-1 text-muted-foreground" />
-              <span className="text-foreground">Messages: {partnership.messageCount}</span>
-            </div>
-            
-            <div className="flex items-center">
-              <Clock className="w-4 h-4 mr-1 text-muted-foreground" />
-              <span className="text-foreground">Last Activity: {formatTimeAgo(partnership.lastActivity)}</span>
-            </div>
-            
-            <div className="flex items-center">
-              <DollarSign className="w-4 h-4 mr-1 text-muted-foreground" />
-              <span className="text-foreground font-medium">Estimated Value: {formatValue(partnership.estimatedValue)}</span>
-            </div>
-          </div>
-
-          {/* Analysis Summary (from thread-analysis) */}
-          {(() => {
-            // Show loading placeholder when analysis is in progress
-            if (analysisLoading) {
-              return (
-                <div className="mt-3 space-y-2 px-2">
-                  <div className="h-4 bg-muted-foreground/30 rounded w-4/5" style={{
-                    animation: 'subtle-pulse 2s ease-in-out infinite',
-                    transformOrigin: 'left'
-                  }}></div>
-                  <div className="h-4 bg-muted-foreground/30 rounded w-3/4" style={{
-                    animation: 'subtle-pulse 2s ease-in-out infinite',
-                    transformOrigin: 'left'
-                  }}></div>
-                  <div className="h-4 bg-muted-foreground/30 rounded w-1/2" style={{
-                    animation: 'subtle-pulse 2s ease-in-out infinite',
-                    transformOrigin: 'left'
-                  }}></div>
-                  <style jsx>{`
-                    @keyframes subtle-pulse {
-                      0%, 100% { opacity: 0.3; transform: scaleX(1); }
-                      50% { opacity: 0.6; transform: scaleX(1.02); }
-                    }
-                  `}</style>
-                </div>
-              );
-            }
-
-            // Normalize thread-analysis result to an insight object
-            const getThreadInsight = (result: any) => {
-              if (!result) return null;
-              if (result.insight) return result.insight;
-              if (Array.isArray(result) && result.length > 0) return result[0];
-              // Sometimes the API might directly return the insight shape
-              return result;
-            };
-
-            const extractSummary = (insight: any): string | null => {
-              if (!insight) return null;
-              
-              // Handle raw_response JSON parsing if present
-              if (insight.raw_response) {
-                try {
-                  // Clean the raw_response by removing markdown code blocks
-                  let cleanedResponse = insight.raw_response;
-                  cleanedResponse = cleanedResponse.replace(/```json\s*/g, '');
-                  cleanedResponse = cleanedResponse.replace(/```\s*$/g, '');
-                  
-                  // Parse the cleaned JSON
-                  const parsed = JSON.parse(cleanedResponse);
-                  const insights = Array.isArray(parsed) ? parsed : [parsed];
-                  
-                  // Extract summary from the first insight's sourceDetails
-                  if (insights.length > 0 && insights[0].sourceDetails) {
-                    const details = insights[0].sourceDetails;
-                    for (const item of details) {
-                      if (typeof item === 'string' && item.startsWith('Thread Summary:')) {
-                        return item.substring('Thread Summary:'.length).trim();
-                      }
-                    }
-                  }
-                } catch (error) {
-                  console.error('Failed to parse raw_response JSON:', error);
-                }
-              }
-              
-              // Direct summary fields
-              if (typeof insight.summary === 'string' && insight.summary.trim()) {
-                return insight.summary.trim();
-              }
-              if (typeof insight.threadSummary === 'string' && insight.threadSummary.trim()) {
-                return insight.threadSummary.trim();
-              }
-              
-              // Look into sourceDetails for a summary-like entry
-              const details = Array.isArray(insight.sourceDetails) ? insight.sourceDetails : [];
-              if (details.length > 0) {
-                for (const item of details) {
-                  if (typeof item === 'string') {
-                    const str = item.trim();
-                    const prefixes = ['Thread Summary:', 'Summary:', 'TL;DR:', 'TLDR:'];
-                    const match = prefixes.find(p => str.toLowerCase().startsWith(p.toLowerCase()));
-                    if (match) {
-                      const text = str.substring(match.length).trim();
-                      if (text) return text;
-                    }
-                  } else if (item && typeof item === 'object') {
-                    const label = String((item as any).label || '').toLowerCase();
-                    const value = (item as any).value;
-                    if (label === 'summary' && typeof value === 'string' && value.trim()) {
-                      return value.trim();
-                    }
-                  }
-                }
-              }
-              return null;
-            };
-
-            const threadInsight = getThreadInsight(analysisResult);
-            const summary = extractSummary(threadInsight);
-            if (!summary) {
-              return (
-                <div className="mt-3 text-sm text-muted-foreground">
-                  No summary found
-                </div>
-              );
-            }
-            return (
-              <div className="mt-3 text-sm text-muted-foreground">
-                {summary}
-              </div>
-            );
-          })()}
-
-        </Card>
-
-
-
 
 
 
@@ -843,26 +535,21 @@ export function PartnershipDetailPanel({
               userEmail={userEmail}
               onMessageSelect={handleMessageSelect}
               selectedMessageId={selectedMessageId}
-              onStartDraft={handleStartDraft}
+              onStartDraft={undefined}
               threadId={partnership?.emailThreadId}
+              userId={userId}
+              gmailAccountId={gmailAccountId}
+              partnership={partnership ? {
+                messageCount: partnership.messageCount,
+                lastActivity: partnership.lastActivity,
+                estimatedValue: partnership.estimatedValue,
+                from: partnership.from,
+                subject: partnership.subject,
+                brandName: partnership.brandName
+              } : undefined}
+              emailThreadData={emailThreadData}
             />
-            
-            {/* Inline Email Reply */}
-            {isDraftingReply && (
-              <div className="mt-4 border-t border-border pt-4">
-                <InlineEmailReply
-                  isOpen={isDraftingReply}
-                  onClose={handleCloseDraft}
-                  onSend={handleSendReply}
-                  onSaveDraft={handleSaveDraft}
-                  emailThreadData={emailThreadData}
-                  recipientEmail={partnership?.from}
-                  subject={partnership?.subject}
-                  brandName={partnership?.brandName}
-                  className="w-full"
-                />
-              </div>
-            )}
+
           </div>
         </Card>
       </div>
