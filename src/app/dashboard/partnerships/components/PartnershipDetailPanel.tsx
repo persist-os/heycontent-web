@@ -713,6 +713,32 @@ export function PartnershipDetailPanel({
 
           {/* Analysis Summary (from thread-analysis) */}
           {(() => {
+            // Show loading placeholder when analysis is in progress
+            if (analysisLoading) {
+              return (
+                <div className="mt-3 space-y-2 px-2">
+                  <div className="h-4 bg-muted-foreground/30 rounded w-4/5" style={{
+                    animation: 'subtle-pulse 2s ease-in-out infinite',
+                    transformOrigin: 'left'
+                  }}></div>
+                  <div className="h-4 bg-muted-foreground/30 rounded w-3/4" style={{
+                    animation: 'subtle-pulse 2s ease-in-out infinite',
+                    transformOrigin: 'left'
+                  }}></div>
+                  <div className="h-4 bg-muted-foreground/30 rounded w-1/2" style={{
+                    animation: 'subtle-pulse 2s ease-in-out infinite',
+                    transformOrigin: 'left'
+                  }}></div>
+                  <style jsx>{`
+                    @keyframes subtle-pulse {
+                      0%, 100% { opacity: 0.3; transform: scaleX(1); }
+                      50% { opacity: 0.6; transform: scaleX(1.02); }
+                    }
+                  `}</style>
+                </div>
+              );
+            }
+
             // Normalize thread-analysis result to an insight object
             const getThreadInsight = (result: any) => {
               if (!result) return null;
@@ -803,62 +829,7 @@ export function PartnershipDetailPanel({
 
 
 
-        {/* Recommended Actions - Use thread-analysis only */}
-        {(() => {
-          // Normalize thread-analysis result shape
-          const threadInsight = analysisResult?.insight
-            ? analysisResult.insight
-            : Array.isArray(analysisResult) && analysisResult.length > 0
-              ? analysisResult[0]
-              : null;
-          const steps: string[] | null = threadInsight?.actionSteps || null;
-          const isLoading = analysisLoading;
 
-          if (isLoading) {
-            return (
-              <Card className="p-3 md:p-4 rounded-xl">
-                <div className="flex items-center gap-3 mb-4">
-                  <Brain className="w-5 h-5 text-primary" />
-                  <h3 className="font-medium text-foreground text-sm md:text-base">
-                    Recommended Actions
-                  </h3>
-                </div>
-                <div className="p-3 bg-muted rounded-lg border text-sm text-muted-foreground flex items-center gap-2">
-                  <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                  </svg>
-                  Analyzing thread…
-                </div>
-              </Card>
-            );
-          }
-
-          if (!steps || steps.length === 0) return null;
-          return (
-            <Card className="p-3 md:p-4 rounded-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <Brain className="w-5 h-5 text-primary" />
-              <h3 className="font-medium text-foreground text-sm md:text-base">
-                Recommended Actions
-              </h3>
-            </div>
-            
-            <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-              <ol className="space-y-3 text-sm text-green-700 dark:text-green-300">
-                {steps.map((step: string, index: number) => (
-                  <li key={index} className="flex items-start gap-3">
-                    <span className="bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200 text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      {index + 1}
-                    </span>
-                    <span className="flex-1">{step}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-            </Card>
-          );
-        })()}
 
 
       </div>
