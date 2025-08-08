@@ -85,7 +85,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
       contentId: thread.threadId,
       title: thread.subject || 'Email Thread',
       source: 'AI Insights - Gmail Thread',
-      originalPlatform: 'gmail',
+      originalPlatform: 'gmail' as const,
       publishedAt: thread.date,
       content: {
         data: {
