@@ -1,9 +1,7 @@
-'use client'
+'use client';
 
-import React, { useState, useMemo } from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import React, { useState, useMemo, useCallback } from 'react';
+import { useQuery } from 'convex/react';
 import { 
   ChevronRight, 
   ChevronDown, 
@@ -15,70 +13,98 @@ import {
   MessageSquare,
   DollarSign
 } from 'lucide-react';
-import { getCurrentUserId, fetchWithApiKey } from '@/app/lib/api-helpers';
-import { useQuery } from 'convex/react';
+
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { api } from '@/convex/_generated/api';
+import { getCurrentUserId, fetchWithApiKey } from '@/app/lib/api-helpers';
 import { InlineEmailReply } from './InlineEmailReply';
 
+// Constants
+const ANIMATION_DURATION = '2s';
+const ANIMATION_TIMING = 'ease-in-out infinite';
+const LOADING_SKELETON_WIDTHS = ['w-4/5', 'w-3/4', 'w-1/2'] as const;
+const SUMMARY_PREFIXES = ['Thread Summary:', 'Summary:', 'TL;DR:', 'TLDR:'] as const;
+const MARKDOWN_CODE_BLOCK_REGEX = /```json\s*/g;
+const MARKDOWN_CODE_END_REGEX = /```\s*$/g;
+const DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+};
+const HOURS_IN_DAY = 24;
+const DAYS_IN_WEEK = 7;
+const HOURS_IN_MS = 1000 * 60 * 60;
+const MILLION = 1000000;
+const THOUSAND = 1000;
+
 interface EmailMessage {
-  id: string;
-  from: string;
-  email: string;
-  subject: string;
-  body: string;
-  timestamp: number;
-  isReply: boolean;
-  isFromUser: boolean;
+  readonly id: string;
+  readonly from: string;
+  readonly email: string;
+  readonly subject: string;
+  readonly body: string;
+  readonly timestamp: number;
+  readonly isReply: boolean;
+  readonly isFromUser: boolean;
+}
+
+interface PartnershipSummary {
+  readonly messageCount: number;
+  readonly lastActivity: number;
+  readonly estimatedValue: number;
+  readonly from?: string;
+  readonly subject?: string;
+  readonly brandName?: string;
+}
+
+interface EmailThreadData {
+  readonly threadId?: string;
+  readonly messages?: Array<{
+    readonly from: string;
+    readonly body: string;
+    readonly timestamp: number;
+  }>;
+  readonly subject?: string;
+  readonly brandName?: string;
+  readonly recipientEmail?: string;
 }
 
 interface ConversationThreadsProps {
-  messages: EmailMessage[];
-  userEmail?: string | null;
-  onMessageSelect?: (messageId: string) => void;
-  selectedMessageId?: string;
-  onStartDraft?: () => void;
-  threadId?: string; // Gmail thread ID for analysis
-  userId?: string; // User ID for Convex queries
-  gmailAccountId?: string; // Gmail account for batch analysis
-  // Partnership data for summary card
-  partnership?: {
-    messageCount: number;
-    lastActivity: number;
-    estimatedValue: number;
-    from?: string;
-    subject?: string;
-    brandName?: string;
-  };
-  // Email thread data for InlineEmailReply
-  emailThreadData?: any;
+  readonly messages: EmailMessage[];
+  readonly threadId: string; // Required - Gmail thread ID for analysis
+  readonly userId: string; // Required - User ID for Convex queries
+  readonly userEmail?: string | null;
+  readonly selectedMessageId?: string;
+  readonly partnership?: PartnershipSummary;
+  readonly emailThreadData?: EmailThreadData;
+  readonly onMessageSelect?: (messageId: string) => void;
+  readonly onStartDraft?: () => void;
 }
 
 export function ConversationThreads({ 
   messages, 
-  userEmail, 
-  onMessageSelect,
-  selectedMessageId,
-  onStartDraft,
   threadId,
   userId,
-  gmailAccountId,
+  userEmail, 
+  selectedMessageId,
   partnership,
-  emailThreadData
+  emailThreadData,
+  onMessageSelect,
+  onStartDraft
 }: ConversationThreadsProps) {
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
   const [analysisLoading, setAnalysisLoading] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [isDraftingReply, setIsDraftingReply] = useState(false);
 
   // Convex queries for analysis
   const threadAnalysis = useQuery(
     api.gmailQueries.getGmailThreadByThreadId,
-    userId && threadId ? { userId, threadId } : "skip"
-  );
-
-  const batchAnalysis = useQuery(
-    api.gmailQueries.getGmailBatchAnalysis,
-    userId && gmailAccountId ? { userId, gmailAccountId } : "skip"
+    { userId, threadId }
   );
 
   // Auto-expand the most recent message when messages change
@@ -104,130 +130,115 @@ export function ConversationThreads({
     setExpandedMessages(newExpanded);
   };
 
-  const formatTimestamp = (timestamp: number) => {
+  const formatTimestamp = useCallback((timestamp: number): string => {
     const date = new Date(timestamp);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
+    return date.toLocaleDateString('en-US', DATE_FORMAT_OPTIONS);
+  }, []);
 
-  const getSenderDisplay = (message: EmailMessage) => {
-    if (message.isFromUser) {
-      return 'Me';
-    }
-    return message.from;
-  };
+  const getSenderDisplay = useCallback((message: EmailMessage): string => {
+    return message.isFromUser ? 'Me' : message.from;
+  }, []);
 
-  const getSenderEmail = (message: EmailMessage) => {
-    if (message.isFromUser) {
-      return userEmail || 'me@example.com';
-    }
-    return message.email;
-  };
+  const getSenderEmail = useCallback((message: EmailMessage): string => {
+    return message.isFromUser ? (userEmail || 'me@example.com') : message.email;
+  }, [userEmail]);
 
-  const getMessageBackground = (message: EmailMessage, isSelected: boolean) => {
-    if (isSelected) {
-      return 'bg-primary/20 border-primary/30';
-    }
-    if (message.isFromUser) {
-      return 'bg-primary/10 border-primary/20';
-    }
+  const getMessageBackground = useCallback((message: EmailMessage, isSelected: boolean): string => {
+    if (isSelected) return 'bg-primary/20 border-primary/30';
+    if (message.isFromUser) return 'bg-primary/10 border-primary/20';
     return 'bg-muted/50 border-border';
-  };
+  }, []);
 
   // Analysis functions
-  const handleAnalyzeThread = async () => {
-    if (!threadId || !userId) return;
-    
+  const handleAnalyzeThread = useCallback(async (): Promise<void> => {
     setAnalysisLoading(true);
-    setAnalysisResult(null);
     
     try {
       const response = await fetchWithApiKey('/api/social/gmail/thread-analysis', {
         method: 'POST',
-        body: JSON.stringify({
-          userId: userId,
-          threadId: threadId
-        })
+        body: JSON.stringify({ userId, threadId })
       });
       
-      const result = await response.json();
-      setAnalysisResult(result);
+      if (!response.ok) {
+        throw new Error(`Analysis request failed: ${response.status}`);
+      }
+      
+      await response.json();
+      console.log('Analysis generated and stored in Convex for thread:', threadId);
+      // Note: The backend automatically stores the result in Convex
+      // The threadAnalysis query will automatically update due to Convex reactivity
     } catch (error) {
       console.error('Error analyzing thread:', error);
-      setAnalysisResult({ error: 'Failed to analyze thread' });
+      // TODO: Add user-facing error handling
     } finally {
       setAnalysisLoading(false);
     }
-  };
+  }, [userId, threadId]);
 
   // Auto-trigger thread analysis when thread changes and no analysis exists
   React.useEffect(() => {
-    if (!threadId || !userId || analysisLoading) return;
+    if (analysisLoading || threadAnalysis === undefined) return;
     
-    // Wait for Convex query to complete before making decisions
-    if (threadAnalysis === undefined) {
-      return;
-    }
-    
-    // Check if we have analysis from Convex first
     const hasConvexAnalysis = threadAnalysis?.analysis;
-    const hasLocalAnalysis = !!analysisResult && (analysisResult.insight || (Array.isArray(analysisResult) && analysisResult.length > 0));
     
-    // Only call backend if no analysis exists anywhere (Convex or local)
-    const shouldAnalyze = !hasConvexAnalysis && !hasLocalAnalysis;
-    
-    if (shouldAnalyze) {
+    if (!hasConvexAnalysis) {
+      console.log('No analysis found in Convex for thread:', threadId, '- generating new analysis');
       handleAnalyzeThread();
+    } else {
+      console.log('Using existing analysis from Convex for thread:', threadId);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [threadId, userId, threadAnalysis]);
+  }, [threadId, threadAnalysis, analysisLoading, handleAnalyzeThread]);
 
   // Helper function to parse raw_response JSON
-  const parseRawResponse = (rawResponse: string) => {
+  const parseRawResponse = useCallback((rawResponse: string): unknown[] => {
     try {
-      let cleanedResponse = rawResponse;
-      cleanedResponse = cleanedResponse.replace(/```json\s*/g, '');
-      cleanedResponse = cleanedResponse.replace(/```\s*$/g, '');
+      let cleanedResponse = rawResponse
+        .replace(MARKDOWN_CODE_BLOCK_REGEX, '')
+        .replace(MARKDOWN_CODE_END_REGEX, '');
+      
       const parsed = JSON.parse(cleanedResponse);
       return Array.isArray(parsed) ? parsed : [parsed];
     } catch (error) {
       console.error('Failed to parse raw_response:', error);
       return [];
     }
-  };
+  }, []);
 
   // Normalize thread-analysis result to an insight object
-  const getThreadInsight = (result: any) => {
+  const getThreadInsight = useCallback((result: unknown): unknown => {
     if (!result) return null;
-    if (result.insight) return result.insight;
+    
+    if (typeof result === 'object' && result !== null) {
+      const resultObj = result as Record<string, unknown>;
+      if (resultObj.insight) return resultObj.insight;
+    }
+    
     if (Array.isArray(result) && result.length > 0) return result[0];
     return result;
-  };
+  }, []);
 
-  const extractSummary = (insight: any): string | null => {
-    if (!insight) return null;
+  const extractSummary = useCallback((insight: unknown): string | null => {
+    if (!insight || typeof insight !== 'object') return null;
+    
+    const insightObj = insight as Record<string, unknown>;
     
     // Handle raw_response JSON parsing if present
-    if (insight.raw_response) {
+    if (typeof insightObj.raw_response === 'string') {
       try {
-        let cleanedResponse = insight.raw_response;
-        cleanedResponse = cleanedResponse.replace(/```json\s*/g, '');
-        cleanedResponse = cleanedResponse.replace(/```\s*$/g, '');
+        const cleanedResponse = insightObj.raw_response
+          .replace(MARKDOWN_CODE_BLOCK_REGEX, '')
+          .replace(MARKDOWN_CODE_END_REGEX, '');
         
         const parsed = JSON.parse(cleanedResponse);
         const insights = Array.isArray(parsed) ? parsed : [parsed];
         
-        if (insights.length > 0 && insights[0].sourceDetails) {
+        if (insights.length > 0 && insights[0]?.sourceDetails) {
           const details = insights[0].sourceDetails;
-          for (const item of details) {
-            if (typeof item === 'string' && item.startsWith('Thread Summary:')) {
-              return item.substring('Thread Summary:'.length).trim();
+          if (Array.isArray(details)) {
+            for (const item of details) {
+              if (typeof item === 'string' && item.startsWith('Thread Summary:')) {
+                return item.substring('Thread Summary:'.length).trim();
+              }
             }
           }
         }
@@ -237,82 +248,79 @@ export function ConversationThreads({
     }
     
     // Direct summary fields
-    if (typeof insight.summary === 'string' && insight.summary.trim()) {
-      return insight.summary.trim();
+    if (typeof insightObj.summary === 'string' && insightObj.summary.trim()) {
+      return insightObj.summary.trim();
     }
-    if (typeof insight.threadSummary === 'string' && insight.threadSummary.trim()) {
-      return insight.threadSummary.trim();
+    if (typeof insightObj.threadSummary === 'string' && insightObj.threadSummary.trim()) {
+      return insightObj.threadSummary.trim();
     }
     
     // Look into sourceDetails for a summary-like entry
-    const details = Array.isArray(insight.sourceDetails) ? insight.sourceDetails : [];
-    if (details.length > 0) {
-      for (const item of details) {
-        if (typeof item === 'string') {
-          const str = item.trim();
-          const prefixes = ['Thread Summary:', 'Summary:', 'TL;DR:', 'TLDR:'];
-          const match = prefixes.find(p => str.toLowerCase().startsWith(p.toLowerCase()));
-          if (match) {
-            const text = str.substring(match.length).trim();
-            if (text) return text;
-          }
-        } else if (item && typeof item === 'object') {
-          const label = String((item as any).label || '').toLowerCase();
-          const value = (item as any).value;
-          if (label === 'summary' && typeof value === 'string' && value.trim()) {
-            return value.trim();
-          }
+    const details = Array.isArray(insightObj.sourceDetails) ? insightObj.sourceDetails : [];
+    for (const item of details) {
+      if (typeof item === 'string') {
+        const str = item.trim();
+        const match = SUMMARY_PREFIXES.find(prefix => 
+          str.toLowerCase().startsWith(prefix.toLowerCase())
+        );
+        if (match) {
+          const text = str.substring(match.length).trim();
+          if (text) return text;
+        }
+      } else if (item && typeof item === 'object') {
+        const itemObj = item as Record<string, unknown>;
+        const label = String(itemObj.label || '').toLowerCase();
+        const value = itemObj.value;
+        if (label === 'summary' && typeof value === 'string' && value.trim()) {
+          return value.trim();
         }
       }
     }
+    
     return null;
-  };
+  }, []);
 
   // Helper functions for summary card
-  const formatTimeAgo = (timestamp: number) => {
+  const formatTimeAgo = useCallback((timestamp: number): string => {
     const now = Date.now();
     const diffInMs = now - timestamp;
-    const diffInHours = diffInMs / (1000 * 60 * 60);
-    const diffInDays = diffInHours / 24;
+    const diffInHours = diffInMs / HOURS_IN_MS;
+    const diffInDays = diffInHours / HOURS_IN_DAY;
     
-    if (diffInHours < 1) {
-      return 'Just now';
-    } else if (diffInHours < 24) {
-      return `${Math.floor(diffInHours)}h ago`;
-    } else if (diffInDays < 7) {
-      return `${Math.floor(diffInDays)}d ago`;
-    } else {
-      return new Date(timestamp).toLocaleDateString();
-    }
-  };
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < HOURS_IN_DAY) return `${Math.floor(diffInHours)}h ago`;
+    if (diffInDays < DAYS_IN_WEEK) return `${Math.floor(diffInDays)}d ago`;
+    
+    return new Date(timestamp).toLocaleDateString();
+  }, []);
 
-  const formatValue = (value: number) => {
+  const formatValue = useCallback((value: number): string => {
     if (value === 0) return 'Not specified';
-    if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
-    if (value >= 1000) return `$${(value / 1000).toFixed(1)}K`;
+    if (value >= MILLION) return `$${(value / MILLION).toFixed(1)}M`;
+    if (value >= THOUSAND) return `$${(value / THOUSAND).toFixed(1)}K`;
     return `$${value}`;
-  };
+  }, []);
 
   // Draft reply handlers
-  const handleStartDraft = () => {
+  const handleStartDraft = useCallback((): void => {
     setIsDraftingReply(true);
     onStartDraft?.();
-  };
+  }, [onStartDraft]);
 
-  const handleCloseDraft = () => {
+  const handleCloseDraft = useCallback((): void => {
     setIsDraftingReply(false);
-  };
+  }, []);
 
-  const handleSendReply = (replyData: any) => {
-    // Handle reply sending logic here
+  const handleSendReply = useCallback((replyData: unknown): void => {
     console.log('Sending reply:', replyData);
     setIsDraftingReply(false);
-  };
+    // TODO: Implement actual reply sending logic
+  }, []);
 
-  const handleSaveDraft = (draftData: any) => {
-    // Handle draft saving logic here
+  const handleSaveDraft = useCallback((draftData: unknown): void => {
     console.log('Saving draft:', draftData);
-  };
+    // TODO: Implement actual draft saving logic
+  }, []);
 
   if (messages.length === 0) {
     return (
@@ -359,22 +367,20 @@ export function ConversationThreads({
           {/* Thread Analysis Summary */}
           <div className="mt-3">
             {(() => {
-              // Show loading if analysis is loading and no Convex analysis exists
-              if ((analysisLoading && !threadAnalysis?.analysis) || (threadAnalysis === undefined && threadId)) {
+              // Show loading if analysis is being generated or Convex query is loading
+              if (analysisLoading || threadAnalysis === undefined) {
                 return (
                   <div className="space-y-2">
-                    <div className="h-3 bg-purple-200/50 dark:bg-purple-800/30 rounded w-4/5" style={{
-                      animation: 'subtle-pulse 2s ease-in-out infinite',
-                      transformOrigin: 'left'
-                    }}></div>
-                    <div className="h-3 bg-purple-200/50 dark:bg-purple-800/30 rounded w-3/4" style={{
-                      animation: 'subtle-pulse 2s ease-in-out infinite',
-                      transformOrigin: 'left'
-                    }}></div>
-                    <div className="h-3 bg-purple-200/50 dark:bg-purple-800/30 rounded w-1/2" style={{
-                      animation: 'subtle-pulse 2s ease-in-out infinite',
-                      transformOrigin: 'left'
-                    }}></div>
+                    {LOADING_SKELETON_WIDTHS.map((width, index) => (
+                      <div 
+                        key={index}
+                        className={`h-3 bg-purple-200/50 dark:bg-purple-800/30 rounded ${width}`} 
+                        style={{
+                          animation: `subtle-pulse ${ANIMATION_DURATION} ${ANIMATION_TIMING}`,
+                          transformOrigin: 'left'
+                        }}
+                      />
+                    ))}
                     <style jsx>{`
                       @keyframes subtle-pulse {
                         0%, 100% { opacity: 0.3; transform: scaleX(1); }
@@ -385,21 +391,17 @@ export function ConversationThreads({
                 );
               }
 
-              // Use Convex analysis first, fallback to local analysis result
-              const threadInsight = getThreadInsight(threadAnalysis?.analysis || analysisResult);
+              // Only use Convex analysis - no local state fallback
+              const threadInsight = getThreadInsight(threadAnalysis?.analysis);
               const summary = extractSummary(threadInsight);
               
-              if (!summary) {
-                return (
-                  <div className="text-xs text-muted-foreground">
-                    {threadId ? 'No analysis available' : 'Select a thread to see analysis'}
-                  </div>
-                );
-              }
-              
-              return (
+              return summary ? (
                 <div className="text-xs text-muted-foreground leading-relaxed">
                   {summary}
+                </div>
+              ) : (
+                <div className="text-xs text-muted-foreground">
+                  Generating analysis...
                 </div>
               );
             })()}
@@ -520,14 +522,19 @@ export function ConversationThreads({
       </div>
 
       {/* Inline Email Reply */}
-      {isDraftingReply && partnership && emailThreadData && (
+      {isDraftingReply && partnership && emailThreadData?.messages && (
         <div className="mt-4 border-t border-border pt-4">
           <InlineEmailReply
             isOpen={isDraftingReply}
             onClose={handleCloseDraft}
             onSend={handleSendReply}
             onSaveDraft={handleSaveDraft}
-            emailThreadData={emailThreadData}
+            emailThreadData={{
+              messages: emailThreadData.messages,
+              subject: emailThreadData.subject || partnership.subject || '',
+              brandName: emailThreadData.brandName || partnership.brandName || '',
+              recipientEmail: emailThreadData.recipientEmail || partnership.from || ''
+            }}
             recipientEmail={partnership.from}
             subject={partnership.subject}
             brandName={partnership.brandName}
@@ -535,8 +542,6 @@ export function ConversationThreads({
           />
         </div>
       )}
-
-
     </div>
   );
 } 
