@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { UnifiedContentSelector } from '@/components/ui/UnifiedContentSelector';
 import { useAuth } from '@/app/context/auth-context'
 import { useTheme } from 'next-themes';
-import { Brain, Send, Loader2, MessageSquare, FileText } from 'lucide-react'
+import { Brain, Send, Loader2, MessageSquare, FileText, Search } from 'lucide-react'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { cn } from '@/lib/utils'
 import { useQuery } from 'convex/react'

@@ -354,7 +354,11 @@ export const useContentContextStore = create<ContentContextState>()(
         console.log('Final context:', context);
         console.groupEnd();
 
-        set({ currentContext: context });
+        set({ 
+          currentContext: context,
+          isInitialized: true,
+          cacheTimestamp: Date.now()
+        });
       },
     })),
     {
@@ -373,11 +377,13 @@ export const useContentContext = () => {
   const currentContext = useContentContextStore(state => state.currentContext);
   const isLoading = useContentContextStore(state => state.isLoading);
   const error = useContentContextStore(state => state.error);
+  const isInitialized = useContentContextStore(state => state.isInitialized);
   
   return {
     context: currentContext,
     isLoading,
     isError: !!error,
+    isInitialized,
     hasContext: !!currentContext,
     platform: currentContext?.platform,
     contentId: currentContext?.contentId,
