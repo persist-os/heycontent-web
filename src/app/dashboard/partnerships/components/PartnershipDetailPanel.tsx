@@ -5,24 +5,6 @@ import React, { useState, useMemo, useCallback } from 'react';
 
 // UI Component imports
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-
-// Icon imports
-import { 
-  Mail, 
-  FileText,
-  MessageSquare,
-  Tag,
-  Trash2
-} from 'lucide-react';
 
 // Type imports
 import { Partnership } from '../types';
@@ -42,14 +24,14 @@ import { api } from '@/convex/_generated/api';
 
 // Component imports
 import { ConversationThreads } from './ConversationThreads';
+import { PartnershipControlBar } from './PartnershipControlBar';
+import { PartnershipHeader } from './PartnershipHeader';
+import { AssociatedNotes } from './AssociatedNotes';
+import { PartnershipEmptyState } from './PartnershipEmptyState';
 
 // Constants
 const HOURS_IN_MS = 1000 * 60 * 60;
 const DAYS_IN_MS = HOURS_IN_MS * 24;
-const MAX_TEXT_LENGTH = 100;
-const MAX_DISPLAYED_NOTES = 3;
-const MAX_DISPLAYED_TAGS = 2;
-const AVATAR_MAX_CHARS = 4;
 
 // Types
 interface GmailMessage {
@@ -157,7 +139,7 @@ const formatTimeAgo = (timestamp: number): string => {
   return 'Just now';
 };
 
-const truncateText = (text: string, maxLength: number = MAX_TEXT_LENGTH): string => {
+const truncateText = (text: string, maxLength: number = 100): string => {
   if (!text) return '';
   if (text.length <= maxLength) return text;
   return text.substring(0, maxLength).trim() + '...';
@@ -230,7 +212,7 @@ export function PartnershipDetailPanel({
     })).sort((a, b) => a.timestamp - b.timestamp);
   }, [gmailData, partnership, userEmail]);
 
-    // Prepare email thread data for AI context
+  // Prepare email thread data for AI context
   const emailThreadData = useMemo((): EmailThreadData | undefined => {
     if (!partnership) {
       return undefined;
@@ -238,15 +220,15 @@ export function PartnershipDetailPanel({
     
     return {
       threadId: partnership.emailThreadId,
-      messages: [{
-        from: partnership.from || 'Unknown',
-        body: partnership.snippet || 'No content available',
-        timestamp: partnership.lastActivity || Date.now()
-      }],
-      subject: partnership.subject || 'No Subject',
-      brandName: partnership.brandName || 'Unknown Brand',
-      recipientEmail: partnership.from || 'unknown@example.com'
-    };
+        messages: [{
+          from: partnership.from || 'Unknown',
+          body: partnership.snippet || 'No content available',
+          timestamp: partnership.lastActivity || Date.now()
+        }],
+        subject: partnership.subject || 'No Subject',
+        brandName: partnership.brandName || 'Unknown Brand',
+        recipientEmail: partnership.from || 'unknown@example.com'
+      };
   }, [partnership?.id, partnership?.emailThreadId, partnership?.subject, partnership?.brandName, partnership?.from, partnership?.snippet, partnership?.lastActivity]);
 
 
@@ -409,116 +391,28 @@ export function PartnershipDetailPanel({
   }, [partnership]);
 
   if (!partnership) {
-    return (
-      <div className="flex items-center justify-center h-full min-h-[600px] text-center px-8">
-        <div className="space-y-6 max-w-md">
-          <div className="mx-auto w-48 h-48 rounded-2xl bg-muted/50 flex items-center justify-center relative">
-            {/* Composite icon: Mail with chat bubble overlay */}
-            <div className="relative">
-              <Mail className="w-40 h-40 text-muted-foreground" />
-              <MessageSquare className="w-20 h-20 text-muted-foreground absolute -bottom-2 -left-2 fill-background" />
-            </div>
-          </div>
-          <div className="space-y-3">
-            <h3 className="text-xl font-semibold text-foreground">Ready to dive into your next collaboration?</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Pick a partnership from the left to explore the conversation, draft replies, and turn opportunities into collaborations
-            </p>
-          </div>
-        </div>
-      </div>
-    );
+    return <PartnershipEmptyState />;
   }
 
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 space-y-4">
-        {/* New Header Design - Matching Image */}
+        {/* Partnership Controls and Header */}
         <div className="space-y-4">
-          {/* Top Control Bar */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-4">
-              {/* Type Selector */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Type:</span>
-                <Select value={partnership.category || 'partnership'} onValueChange={handleCategoryChange}>
-                  <SelectTrigger className="w-32 h-8 bg-primary/10 border-primary/30 text-foreground hover:bg-primary/20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="partnership">Partnership</SelectItem>
-                    <SelectItem value="media">Media</SelectItem>
-                    <SelectItem value="business">Business</SelectItem>
-                    <SelectItem value="community">Community</SelectItem>
-                    <SelectItem value="none">None</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          <PartnershipControlBar
+            partnership={partnership}
+            onCategoryChange={handleCategoryChange}
+            onStatusChange={handleStatusChange}
+            themeColor="blue"
+          />
 
-              {/* Status Selector */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Status:</span>
-                <Select value={partnership.status} onValueChange={handleStatusChange}>
-                  <SelectTrigger className="w-32 h-8 bg-primary/10 border-primary/30 text-foreground hover:bg-primary/20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="opportunity">Opportunity</SelectItem>
-                    <SelectItem value="inquiry">Inquiry</SelectItem>
-                    <SelectItem value="negotiating">Negotiating</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Auto-track Checkbox */}
-              <div className="flex items-center gap-2">
-                <Checkbox id="auto-track" className="border-primary/30" />
-                <label htmlFor="auto-track" className="text-sm text-muted-foreground">
-                  Auto-track this partnership status
-                </label>
-              </div>
-
-
-            </div>
+          <PartnershipHeader
+            partnership={partnership}
+            onDelete={handleDelete}
+            deleteLoading={deleteLoading}
+            themeColor="blue"
+          />
           </div>
-
-
-
-          {/* Partnership Details Section */}
-          <div className="space-y-3">
-            {/* Title and Action Icons */}
-            <div className="flex items-start justify-between">
-              <div className="flex-1 min-w-0">
-                <h2 className="text-xl md:text-2xl font-bold text-foreground">
-                  Partnership Opportunity with {partnership.brandName}
-                </h2>
-              </div>
-              <div className="flex items-center gap-2 ml-4">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                  onClick={handleDelete}
-                  disabled={deleteLoading}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Company Info */}
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white text-xs font-bold">
-                {partnership.brandName.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, AVATAR_MAX_CHARS)}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                From: {partnership.brandName}
-              </div>
-            </div>
-          </div>
-        </div>
 
 
 
@@ -539,6 +433,7 @@ export function PartnershipDetailPanel({
               emailThreadData={emailThreadData}
               onMessageSelect={handleMessageSelect}
               onStartDraft={undefined}
+              themeColor="blue"
             />
 
           </div>
@@ -546,77 +441,10 @@ export function PartnershipDetailPanel({
       </div>
 
               {/* Associated Smart Notes */}
-        <div className="pt-0">
-          <Card className="p-4 shadow-none border-0">
-          <div className="space-y-3 md:space-y-4">
-            <h3 className="font-medium text-foreground flex items-center text-sm md:text-base">
-              <FileText className="w-4 h-4 mr-2 flex-shrink-0" />
-              Associated Notes ({associatedNotes.length})
-            </h3>
-            
-            {associatedNotes.length > 0 ? (
-              <div className="space-y-2">
-                {associatedNotes.slice(0, MAX_DISPLAYED_NOTES).map((note) => (
-                  <div key={String(note._id)} className="flex items-start justify-between p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="text-sm font-medium text-foreground truncate">
-                          {note.title || 'Untitled Note'}
-                        </p>
-                        {note.type && (
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {note.type.replace('_', ' ')}
-                          </span>
-                        )}
-                      </div>
-                      {note.content && (
-                        <p className="text-xs text-muted-foreground mb-1 line-clamp-2">
-                          {truncateText(note.content, 80)}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span>{formatTimeAgo(note.updatedAt || note._creationTime)}</span>
-                        {note.tags && note.tags.length > 0 && (
-                          <div className="flex items-center gap-1">
-                            <Tag className="w-3 h-3" />
-                            <span>{note.tags.slice(0, MAX_DISPLAYED_TAGS).join(', ')}</span>
-                            {note.tags.length > MAX_DISPLAYED_TAGS && (
-                              <span>+{note.tags.length - MAX_DISPLAYED_TAGS}</span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleViewNote(String(note._id))}
-                      className="ml-3 shrink-0"
-                    >
-                      View
-                    </Button>
-                  </div>
-                ))}
-                {associatedNotes.length > MAX_DISPLAYED_NOTES && (
-                  <div className="pt-2 border-t border-border">
-                    <p className="text-xs text-muted-foreground">
-                      +{associatedNotes.length - MAX_DISPLAYED_NOTES} more notes
-                    </p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <FileText className="w-6 h-6 md:w-8 md:h-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">Perfect canvas for your next masterpiece</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Create notes about this partnership and watch your collaboration strategy come to life right here
-                </p>
-              </div>
-            )}
-          </div>
-        </Card>
-      </div>
+      <AssociatedNotes
+        notes={associatedNotes}
+        onViewNote={handleViewNote}
+      />
 
 
     </div>
