@@ -748,21 +748,85 @@ export function PartnershipDetailPanel({
 
           {/* Analysis Summary (from thread-analysis) */}
           {(() => {
-            const threadInsight = analysisResult?.insight
-              ? analysisResult.insight
-              : Array.isArray(analysisResult) && analysisResult.length > 0
-                ? analysisResult[0]
-                : null;
-            const details: any[] | null = threadInsight?.sourceDetails || null;
-            let summary: string | null = null;
-            if (details && details.length > 0 && typeof details[0] === 'string') {
-              const first = String(details[0]);
-              const prefix = 'Thread Summary:';
-              if (first.startsWith(prefix)) {
-                summary = first.substring(prefix.length).trim();
+            // Normalize thread-analysis result to an insight object
+            const getThreadInsight = (result: any) => {
+              if (!result) return null;
+              if (result.insight) return result.insight;
+              if (Array.isArray(result) && result.length > 0) return result[0];
+              // Sometimes the API might directly return the insight shape
+              return result;
+            };
+
+            const extractSummary = (insight: any): string | null => {
+              if (!insight) return null;
+              
+              // Handle raw_response JSON parsing if present
+              if (insight.raw_response) {
+                try {
+                  // Clean the raw_response by removing markdown code blocks
+                  let cleanedResponse = insight.raw_response;
+                  cleanedResponse = cleanedResponse.replace(/```json\s*/g, '');
+                  cleanedResponse = cleanedResponse.replace(/```\s*$/g, '');
+                  
+                  // Parse the cleaned JSON
+                  const parsed = JSON.parse(cleanedResponse);
+                  const insights = Array.isArray(parsed) ? parsed : [parsed];
+                  
+                  // Extract summary from the first insight's sourceDetails
+                  if (insights.length > 0 && insights[0].sourceDetails) {
+                    const details = insights[0].sourceDetails;
+                    for (const item of details) {
+                      if (typeof item === 'string' && item.startsWith('Thread Summary:')) {
+                        return item.substring('Thread Summary:'.length).trim();
+                      }
+                    }
+                  }
+                } catch (error) {
+                  console.error('Failed to parse raw_response JSON:', error);
+                }
               }
+              
+              // Direct summary fields
+              if (typeof insight.summary === 'string' && insight.summary.trim()) {
+                return insight.summary.trim();
+              }
+              if (typeof insight.threadSummary === 'string' && insight.threadSummary.trim()) {
+                return insight.threadSummary.trim();
+              }
+              
+              // Look into sourceDetails for a summary-like entry
+              const details = Array.isArray(insight.sourceDetails) ? insight.sourceDetails : [];
+              if (details.length > 0) {
+                for (const item of details) {
+                  if (typeof item === 'string') {
+                    const str = item.trim();
+                    const prefixes = ['Thread Summary:', 'Summary:', 'TL;DR:', 'TLDR:'];
+                    const match = prefixes.find(p => str.toLowerCase().startsWith(p.toLowerCase()));
+                    if (match) {
+                      const text = str.substring(match.length).trim();
+                      if (text) return text;
+                    }
+                  } else if (item && typeof item === 'object') {
+                    const label = String((item as any).label || '').toLowerCase();
+                    const value = (item as any).value;
+                    if (label === 'summary' && typeof value === 'string' && value.trim()) {
+                      return value.trim();
+                    }
+                  }
+                }
+              }
+              return null;
+            };
+
+            const threadInsight = getThreadInsight(analysisResult);
+            const summary = extractSummary(threadInsight);
+            if (!summary) {
+              return (
+                <div className="mt-3 p-3 bg-muted/50 rounded border text-sm text-muted-foreground">
+                  No summary found
+                </div>
+              );
             }
-            if (!summary) return null;
             return (
               <div className="mt-3 p-3 bg-muted/50 rounded border text-sm text-muted-foreground">
                 {summary}
