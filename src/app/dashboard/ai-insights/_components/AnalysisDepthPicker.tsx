@@ -269,7 +269,7 @@ export function AnalysisDepthPicker({
                 ? 'Analyzing...'
                 : disabled
                 ? 'Coming Soon'
-                : `Refresh ${platform}`}
+                : `Analyze ${platform}`}
             </span>
           </button>
         </div>
