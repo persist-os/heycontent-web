@@ -44,17 +44,31 @@ export function MessageList({
 }: MessageListProps) {
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
 
-  // Generate theme-based color classes
+  // Generate theme-based color classes using exact hex colors from CategoryEmailList
   const getThemeClasses = (color: string) => {
     const colors = {
-      blue: {
-        buttonBg: 'bg-blue-600 hover:bg-blue-700',
-      },
+      // Partnership - #9D89F7 (Purple)
       purple: {
-        buttonBg: 'bg-purple-600 hover:bg-purple-700',
+        buttonBg: 'bg-[#9D89F7] hover:bg-[#9D89F7]/90 text-foreground',
+      },
+      // Media - #FF96FB (Pink)
+      pink: {
+        buttonBg: 'bg-[#FF96FB] hover:bg-[#FF96FB]/90 text-foreground',
+      },
+      // Business - #40E3FF (Teal)
+      teal: {
+        buttonBg: 'bg-[#40E3FF] hover:bg-[#40E3FF]/90 text-foreground',
+      },
+      // Community - #9BE7B2 (Green)
+      green: {
+        buttonBg: 'bg-[#9BE7B2] hover:bg-[#9BE7B2]/90 text-foreground',
+      },
+      // Default/Uncategorized - Yellow
+      yellow: {
+        buttonBg: 'bg-yellow-600 hover:bg-yellow-700 text-foreground',
       }
     };
-    return colors[color as keyof typeof colors] || colors.blue;
+    return colors[color as keyof typeof colors] || colors.yellow;
   };
 
   const themeClasses = getThemeClasses(themeColor);
@@ -127,7 +141,7 @@ export function MessageList({
           <Button 
             size="sm" 
             onClick={onStartDraft}
-            className={`${themeClasses.buttonBg} text-white`}
+            className={themeClasses.buttonBg}
           >
             <Reply className="w-4 h-4 mr-2" />
             Draft Reply

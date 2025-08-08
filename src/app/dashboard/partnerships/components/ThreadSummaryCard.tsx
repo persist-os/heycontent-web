@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { MessageSquare, DollarSign } from 'lucide-react';
 
 // Constants
@@ -57,46 +56,73 @@ export function ThreadSummaryCard({
 }: ThreadSummaryCardProps) {
   if (!partnership) return null;
 
-  // Generate theme-based color classes
+  // Generate theme-based color classes using exact hex colors from CategoryEmailList
   const getThemeClasses = (color: string) => {
     const colors = {
-      blue: {
-        cardBg: 'from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20',
-        cardBorder: 'border-blue-200 dark:border-blue-800/50',
-        badgeBg: 'bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200',
-        textPrimary: 'text-blue-900 dark:text-blue-100',
-        textSecondary: 'text-blue-600 dark:text-blue-400',
-        textTertiary: 'text-blue-800 dark:text-blue-200',
-        textQuaternary: 'text-blue-700 dark:text-blue-300',
-        loadingDots: 'bg-blue-500'
-      },
+      // Partnership - #9D89F7 (Purple)
       purple: {
-        cardBg: 'from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20',
-        cardBorder: 'border-purple-200 dark:border-purple-800/50',
-        badgeBg: 'bg-purple-200 text-purple-800 dark:bg-purple-800 dark:text-purple-200',
-        textPrimary: 'text-purple-900 dark:text-purple-100',
-        textSecondary: 'text-purple-600 dark:text-purple-400',
-        textTertiary: 'text-purple-800 dark:text-purple-200',
-        textQuaternary: 'text-purple-700 dark:text-purple-300',
-        loadingDots: 'bg-purple-500'
+        cardBg: 'bg-[#9D89F7]/[0.11] dark:bg-[#9D89F7]/[0.08]',
+        cardBorder: 'border-[#9D89F7]/20 dark:border-[#9D89F7]/30',
+        textPrimary: 'text-foreground',
+        textSecondary: 'text-muted-foreground',
+        textTertiary: 'text-foreground',
+        textQuaternary: 'text-muted-foreground',
+        loadingDots: 'bg-[#9D89F7]'
+      },
+      // Media - #FF96FB (Pink)
+      pink: {
+        cardBg: 'bg-[#FF96FB]/[0.11] dark:bg-[#FF96FB]/[0.08]',
+        cardBorder: 'border-[#FF96FB]/20 dark:border-[#FF96FB]/30',
+        textPrimary: 'text-foreground',
+        textSecondary: 'text-muted-foreground',
+        textTertiary: 'text-foreground',
+        textQuaternary: 'text-muted-foreground',
+        loadingDots: 'bg-[#FF96FB]'
+      },
+      // Business - #40E3FF (Teal)
+      teal: {
+        cardBg: 'bg-[#40E3FF]/[0.11] dark:bg-[#40E3FF]/[0.08]',
+        cardBorder: 'border-[#40E3FF]/20 dark:border-[#40E3FF]/30',
+        textPrimary: 'text-foreground',
+        textSecondary: 'text-muted-foreground',
+        textTertiary: 'text-foreground',
+        textQuaternary: 'text-muted-foreground',
+        loadingDots: 'bg-[#40E3FF]'
+      },
+      // Community - #9BE7B2 (Green)
+      green: {
+        cardBg: 'bg-[#9BE7B2]/[0.11] dark:bg-[#9BE7B2]/[0.08]',
+        cardBorder: 'border-[#9BE7B2]/20 dark:border-[#9BE7B2]/30',
+        textPrimary: 'text-foreground',
+        textSecondary: 'text-muted-foreground',
+        textTertiary: 'text-foreground',
+        textQuaternary: 'text-muted-foreground',
+        loadingDots: 'bg-[#9BE7B2]'
+      },
+      // Default/Uncategorized - Yellow
+      yellow: {
+        cardBg: 'from-yellow-50 to-yellow-100 dark:from-yellow-950/20 dark:to-yellow-900/20',
+        cardBorder: 'border-yellow-200 dark:border-yellow-800/50',
+        textPrimary: 'text-foreground',
+        textSecondary: 'text-muted-foreground',
+        textTertiary: 'text-foreground',
+        textQuaternary: 'text-muted-foreground',
+        loadingDots: 'bg-yellow-500'
       }
     };
-    return colors[color as keyof typeof colors] || colors.blue;
+    return colors[color as keyof typeof colors] || colors.yellow;
   };
 
   const themeClasses = getThemeClasses(themeColor);
 
   return (
-    <Card className={`p-4 bg-gradient-to-r ${themeClasses.cardBg} ${themeClasses.cardBorder}`}>
+    <Card className={`p-4 ${themeClasses.cardBg} ${themeClasses.cardBorder}`}>
       <div className="flex flex-col gap-3">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h3 className={`font-semibold ${themeClasses.textPrimary}`}>
             Summary
           </h3>
-          <Badge variant="default" className={themeClasses.badgeBg}>
-            Partnership
-          </Badge>
         </div>
 
         {/* Metrics - Inline and Left Aligned */}

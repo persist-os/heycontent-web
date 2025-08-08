@@ -33,6 +33,17 @@ import { PartnershipEmptyState } from './PartnershipEmptyState';
 const HOURS_IN_MS = 1000 * 60 * 60;
 const DAYS_IN_MS = HOURS_IN_MS * 24;
 
+// Map partnership category to theme color
+const getCategoryThemeColor = (category?: Partnership['category']): string => {
+  switch (category) {
+    case 'media': return 'pink';
+    case 'business': return 'teal'; 
+    case 'community': return 'green';
+    case 'partnership': return 'purple';
+    default: return 'yellow'; // default for uncategorized/none
+  }
+};
+
 // Types
 interface GmailMessage {
   readonly id?: string;
@@ -394,6 +405,8 @@ export function PartnershipDetailPanel({
     return <PartnershipEmptyState />;
   }
 
+  const themeColor = getCategoryThemeColor(partnership.category);
+
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 space-y-4">
@@ -403,14 +416,14 @@ export function PartnershipDetailPanel({
             partnership={partnership}
             onCategoryChange={handleCategoryChange}
             onStatusChange={handleStatusChange}
-            themeColor="blue"
+            themeColor={themeColor}
           />
 
           <PartnershipHeader
             partnership={partnership}
             onDelete={handleDelete}
             deleteLoading={deleteLoading}
-            themeColor="blue"
+            themeColor={themeColor}
           />
           </div>
 
@@ -433,7 +446,7 @@ export function PartnershipDetailPanel({
               emailThreadData={emailThreadData}
               onMessageSelect={handleMessageSelect}
               onStartDraft={undefined}
-              themeColor="blue"
+              themeColor={themeColor}
             />
 
           </div>
