@@ -18,6 +18,7 @@ import { useMutation, useQuery } from 'convex/react';
 import { getPartnershipColors } from '../utils/emailCategorization';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { usePartnershipOperations } from '../hooks/usePartnershipOperations';
+import { deduplicateEmailThread, extractSenderName, extractEmailAddress } from '../utils/emailParser';
 
 // Convex imports
 import { api } from '@/convex/_generated/api';
@@ -53,6 +54,7 @@ interface GmailMessage {
   readonly body?: string;
   readonly snippet?: string;
   readonly timestamp?: number;
+  readonly date?: string; // Gmail date header like "Fri, 8 Aug 2025 17:21:04 -0700"
 }
 
 interface GmailData {
@@ -191,6 +193,20 @@ export function PartnershipDetailPanel({
   const { gmailAccountId } = usePartnershipData(partnership, userId);
   const { associatedNotes, handleViewNote } = useNotesIntegration(partnership);
 
+  // Helper function to parse Gmail date header to timestamp
+  const parseGmailDate = (dateString: string | undefined | null): number => {
+    if (!dateString) return Date.now();
+    
+    try {
+      // Parse Gmail date format like "Fri, 8 Aug 2025 17:21:04 -0700"
+      const date = new Date(dateString);
+      return isNaN(date.getTime()) ? Date.now() : date.getTime();
+    } catch (error) {
+      console.warn('Failed to parse Gmail date:', dateString, error);
+      return Date.now();
+    }
+  };
+
   // Memoized email thread processing
   const emailMessages = useMemo((): EmailMessage[] => {
     if (!gmailData?.data) {
@@ -211,15 +227,51 @@ export function PartnershipDetailPanel({
     }
     
     const messages = gmailData.data.messages || [];
-    return messages.map((message, index) => ({
-      id: message.id || `msg-${index}`,
-      from: message.from || gmailData.data?.from || 'Unknown',
-      email: message.email || gmailData.data?.from || 'unknown@example.com',
-      subject: message.subject || gmailData.data?.subject || 'No Subject',
-      body: message.body || message.snippet || partnership?.snippet || 'No content available',
-      timestamp: message.timestamp || gmailData.createdAt || Date.now(),
-      isReply: index > 0,
-      isFromUser: message.from === userEmail || message.email === userEmail
+    
+    // First, process messages with timestamps and basic info
+    const rawMessages = messages.map((message, index) => {
+      // Extract timestamp from message date header, fallback to message timestamp, then gmailData createdAt
+      let messageTimestamp = Date.now();
+      
+      if (message.date) {
+        // Use the date from the message headers
+        messageTimestamp = parseGmailDate(message.date);
+      } else if (message.timestamp) {
+        // Use existing timestamp if available
+        messageTimestamp = typeof message.timestamp === 'number' ? message.timestamp : parseGmailDate(message.timestamp);
+      } else if (gmailData.createdAt) {
+        // Fallback to thread creation time
+        messageTimestamp = gmailData.createdAt;
+      }
+
+      const rawBody = message.body || message.snippet || partnership?.snippet || 'No content available';
+      const fromString = message.from || gmailData.data?.from || 'Unknown';
+
+      return {
+        id: message.id || `msg-${index}`,
+        from: extractSenderName(fromString),
+        email: extractEmailAddress(fromString),
+        subject: message.subject || gmailData.data?.subject || 'No Subject',
+        body: rawBody,
+        timestamp: messageTimestamp,
+        isReply: index > 0,
+        isFromUser: message.from === userEmail || message.email === userEmail
+      };
+    });
+
+    // Deduplicate email thread to remove quoted content
+    const deduplicatedMessages = deduplicateEmailThread(rawMessages);
+    
+    // Convert back to EmailMessage format with cleaned content
+    return deduplicatedMessages.map(msg => ({
+      id: msg.id,
+      from: msg.from,
+      email: msg.email,
+      subject: msg.subject,
+      body: msg.cleanBody || msg.body, // Use cleaned body if available
+      timestamp: msg.timestamp,
+      isReply: msg.isReply,
+      isFromUser: msg.isFromUser
     })).sort((a, b) => a.timestamp - b.timestamp);
   }, [gmailData, partnership, userEmail]);
 
@@ -229,18 +281,27 @@ export function PartnershipDetailPanel({
       return undefined;
     }
     
-    return {
-      threadId: partnership.emailThreadId,
-        messages: [{
+    // Use the processed email messages if available, otherwise fallback to partnership data
+    const threadMessages = emailMessages.length > 0 
+      ? emailMessages.map(msg => ({
+          from: msg.from,
+          body: msg.body,
+          timestamp: msg.timestamp
+        }))
+      : [{
           from: partnership.from || 'Unknown',
           body: partnership.snippet || 'No content available',
           timestamp: partnership.lastActivity || Date.now()
-        }],
-        subject: partnership.subject || 'No Subject',
-        brandName: partnership.brandName || 'Unknown Brand',
-        recipientEmail: partnership.from || 'unknown@example.com'
-      };
-  }, [partnership?.id, partnership?.emailThreadId, partnership?.subject, partnership?.brandName, partnership?.from, partnership?.snippet, partnership?.lastActivity]);
+        }];
+    
+    return {
+      threadId: partnership.emailThreadId,
+      messages: threadMessages,
+      subject: partnership.subject || 'No Subject',
+      brandName: partnership.brandName || 'Unknown Brand',
+      recipientEmail: partnership.from || 'unknown@example.com'
+    };
+  }, [partnership?.id, partnership?.emailThreadId, partnership?.subject, partnership?.brandName, partnership?.from, partnership?.snippet, partnership?.lastActivity, emailMessages]);
 
 
 

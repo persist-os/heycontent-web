@@ -21,34 +21,20 @@ export function PartnershipHeader({
   deleteLoading,
   themeColor = 'blue'
 }: PartnershipHeaderProps) {
-  // Generate theme-based color classes using exact hex colors from CategoryEmailList
-  const getThemeClasses = (color: string) => {
+  // Get theme color - simplified
+  const getThemeColor = (color: string): string => {
     const colors = {
-      // Partnership - #9D89F7 (Purple)
-      purple: {
-        avatarBg: 'bg-[#9D89F7]',
-      },
-      // Media - #FF96FB (Pink)
-      pink: {
-        avatarBg: 'bg-[#FF96FB]',
-      },
-      // Business - #40E3FF (Teal)
-      teal: {
-        avatarBg: 'bg-[#40E3FF]',
-      },
-      // Community - #9BE7B2 (Green)
-      green: {
-        avatarBg: 'bg-[#9BE7B2]',
-      },
-      // Default/Uncategorized - Yellow
-      yellow: {
-        avatarBg: 'from-yellow-500 to-yellow-600',
-      }
+      purple: '#9D89F7',    // Partnership
+      pink: '#FF96FB',      // Media
+      teal: '#40E3FF',      // Business  
+      green: '#9BE7B2',     // Community
+      yellow: '#FFDF39'     // Default/Uncategorized - HeyContent Yellow
     };
     return colors[color as keyof typeof colors] || colors.yellow;
   };
 
-  const themeClasses = getThemeClasses(themeColor);
+  const themeColorHex = getThemeColor(themeColor);
+  const isYellow = themeColor === 'yellow';
 
   return (
     <div className="space-y-3">
@@ -74,7 +60,11 @@ export function PartnershipHeader({
 
       {/* Company Info */}
       <div className="flex items-center gap-3">
-        <div className={`w-8 h-8 rounded-full ${themeClasses.avatarBg.includes('from-') ? 'bg-gradient-to-br' : ''} ${themeClasses.avatarBg} flex items-center justify-center text-white text-xs font-bold`}>
+        <div className={`w-8 h-8 rounded-full ${
+          isYellow 
+            ? 'bg-gradient-to-br from-yellow-500 to-yellow-600' 
+            : `bg-[${themeColorHex}]`
+        } flex items-center justify-center text-white text-xs font-bold`}>
           {partnership.brandName.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, AVATAR_MAX_CHARS)}
         </div>
         <div className="text-sm text-muted-foreground">

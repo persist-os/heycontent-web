@@ -44,42 +44,37 @@ export function MessageList({
 }: MessageListProps) {
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
 
-  // Generate theme-based color classes using exact hex colors from CategoryEmailList
-  const getThemeClasses = (color: string) => {
+  // Get theme color - simplified
+  const getThemeColor = (color: string): string => {
     const colors = {
-      // Partnership - #9D89F7 (Purple)
-      purple: {
-        buttonBg: 'bg-[#9D89F7] hover:bg-[#9D89F7]/90 text-foreground',
-      },
-      // Media - #FF96FB (Pink)
-      pink: {
-        buttonBg: 'bg-[#FF96FB] hover:bg-[#FF96FB]/90 text-foreground',
-      },
-      // Business - #40E3FF (Teal)
-      teal: {
-        buttonBg: 'bg-[#40E3FF] hover:bg-[#40E3FF]/90 text-foreground',
-      },
-      // Community - #9BE7B2 (Green)
-      green: {
-        buttonBg: 'bg-[#9BE7B2] hover:bg-[#9BE7B2]/90 text-foreground',
-      },
-      // Default/Uncategorized - Yellow
-      yellow: {
-        buttonBg: 'bg-yellow-600 hover:bg-yellow-700 text-foreground',
-      }
+      purple: '#9D89F7',    // Partnership
+      pink: '#FF96FB',      // Media
+      teal: '#40E3FF',      // Business  
+      green: '#9BE7B2',     // Community
+      yellow: '#FFDF39'     // Default/Uncategorized - HeyContent Yellow
     };
     return colors[color as keyof typeof colors] || colors.yellow;
   };
 
-  const themeClasses = getThemeClasses(themeColor);
+  const themeColorHex = getThemeColor(themeColor);
+  const isYellow = themeColor === 'yellow';
+
+  // Convert hex to rgba for background with opacity
+  const hexToRgba = (hex: string, alpha: number) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
+  const themeColorBackground = hexToRgba(themeColorHex, 0.15); // 15% opacity
 
   // Auto-expand the most recent message when messages change
   useEffect(() => {
     if (messages.length > 0) {
-      // Find the most recent message (highest timestamp)
-      const mostRecentMessage = messages.reduce((latest, current) => 
-        current.timestamp > latest.timestamp ? current : latest
-      );
+      // Since messages are sorted chronologically, the last message is the most recent
+      // This ensures we always expand the bottom (most recent) message
+      const mostRecentMessage = messages[messages.length - 1];
       
       // Expand the most recent message by default
       setExpandedMessages(new Set([mostRecentMessage.id]));
@@ -135,20 +130,6 @@ export function MessageList({
 
   return (
     <div className="space-y-3">
-      {/* Draft Reply Button */}
-      {onStartDraft && (
-        <div className="flex justify-end">
-          <Button 
-            size="sm" 
-            onClick={onStartDraft}
-            className={themeClasses.buttonBg}
-          >
-            <Reply className="w-4 h-4 mr-2" />
-            Draft Reply
-          </Button>
-        </div>
-      )}
-
       {messages.map((message) => {
         const isExpanded = expandedMessages.has(message.id);
         const isSelected = selectedMessageId === message.id;
@@ -162,7 +143,8 @@ export function MessageList({
           >
             {/* Message Header */}
             <div 
-              className="p-3 cursor-pointer hover:bg-opacity-70 transition-colors"
+              className="p-3 cursor-pointer hover:bg-opacity-70 transition-colors rounded-t-lg"
+              style={{ backgroundColor: themeColorBackground }}
               onClick={() => handleMessageClick(message.id)}
             >
                               <div className="flex items-center justify-between">
@@ -171,21 +153,13 @@ export function MessageList({
                       <User className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                     </div>
                     
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-foreground truncate">
-                          {getSenderDisplay(message)}
-                        </span>
-                        <span className="text-xs text-muted-foreground truncate">
-                          {getSenderEmail(message)}
-                        </span>
-                      </div>
-                      
-                      {!isExpanded && (
-                        <p className="text-sm text-muted-foreground truncate">
-                          {message.body || 'No content'}
-                        </p>
-                      )}
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className="font-medium text-foreground truncate">
+                        {getSenderDisplay(message)}
+                      </span>
+                      <span className="text-xs text-muted-foreground truncate">
+                        {getSenderEmail(message)}
+                      </span>
                     </div>
                   </div>
                   
@@ -224,6 +198,24 @@ export function MessageList({
           </div>
         );
       })}
+      
+      {/* Draft Reply Button - Moved to bottom */}
+      {onStartDraft && (
+        <div className="flex justify-end pt-2">
+          <Button 
+            size="sm" 
+            onClick={onStartDraft}
+            className={`${
+              isYellow 
+                ? 'bg-yellow-600 hover:bg-yellow-700' 
+                : `bg-[${themeColorHex}] hover:bg-[${themeColorHex}]/90`
+            } text-foreground`}
+          >
+            <Reply className="w-4 h-4 mr-2" />
+            Draft Reply
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

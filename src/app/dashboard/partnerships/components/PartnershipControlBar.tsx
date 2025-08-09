@@ -24,49 +24,20 @@ export function PartnershipControlBar({
   onStatusChange,
   themeColor = 'blue'
 }: PartnershipControlBarProps) {
-  // Generate theme-based color classes using exact hex colors from CategoryEmailList
-  const getThemeClasses = (color: string) => {
+  // Get theme color - simplified
+  const getThemeColor = (color: string): string => {
     const colors = {
-      // Partnership - #9D89F7 (Purple)
-      purple: {
-        selectBg: 'bg-[#9D89F7]/[0.11] dark:bg-[#9D89F7]/[0.08]',
-        selectBorder: 'border-[#9D89F7]/20 dark:border-[#9D89F7]/30',
-        selectHover: 'hover:bg-[#9D89F7]/[0.15] dark:hover:bg-[#9D89F7]/[0.12]',
-        checkboxBorder: 'border-[#9D89F7]/30 dark:border-[#9D89F7]/50',
-      },
-      // Media - #FF96FB (Pink)
-      pink: {
-        selectBg: 'bg-[#FF96FB]/[0.11] dark:bg-[#FF96FB]/[0.08]',
-        selectBorder: 'border-[#FF96FB]/20 dark:border-[#FF96FB]/30',
-        selectHover: 'hover:bg-[#FF96FB]/[0.15] dark:hover:bg-[#FF96FB]/[0.12]',
-        checkboxBorder: 'border-[#FF96FB]/30 dark:border-[#FF96FB]/50',
-      },
-      // Business - #40E3FF (Teal)
-      teal: {
-        selectBg: 'bg-[#40E3FF]/[0.11] dark:bg-[#40E3FF]/[0.08]',
-        selectBorder: 'border-[#40E3FF]/20 dark:border-[#40E3FF]/30',
-        selectHover: 'hover:bg-[#40E3FF]/[0.15] dark:hover:bg-[#40E3FF]/[0.12]',
-        checkboxBorder: 'border-[#40E3FF]/30 dark:border-[#40E3FF]/50',
-      },
-      // Community - #9BE7B2 (Green)
-      green: {
-        selectBg: 'bg-[#9BE7B2]/[0.11] dark:bg-[#9BE7B2]/[0.08]',
-        selectBorder: 'border-[#9BE7B2]/20 dark:border-[#9BE7B2]/30',
-        selectHover: 'hover:bg-[#9BE7B2]/[0.15] dark:hover:bg-[#9BE7B2]/[0.12]',
-        checkboxBorder: 'border-[#9BE7B2]/30 dark:border-[#9BE7B2]/50',
-      },
-      // Default/Uncategorized - Yellow
-      yellow: {
-        selectBg: 'bg-yellow-50 dark:bg-yellow-950/20',
-        selectBorder: 'border-yellow-200 dark:border-yellow-800/50',
-        selectHover: 'hover:bg-yellow-100 dark:hover:bg-yellow-900/30',
-        checkboxBorder: 'border-yellow-300 dark:border-yellow-700',
-      }
+      purple: '#9D89F7',    // Partnership
+      pink: '#FF96FB',      // Media
+      teal: '#40E3FF',      // Business  
+      green: '#9BE7B2',     // Community
+      yellow: '#FFDF39'     // Default/Uncategorized - HeyContent Yellow
     };
     return colors[color as keyof typeof colors] || colors.yellow;
   };
 
-  const themeClasses = getThemeClasses(themeColor);
+  const themeColorHex = getThemeColor(themeColor);
+  const isYellow = themeColor === 'yellow';
 
   return (
     <div className="flex items-center justify-between gap-3">
@@ -75,7 +46,11 @@ export function PartnershipControlBar({
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Type:</span>
           <Select value={partnership.category || 'partnership'} onValueChange={onCategoryChange}>
-            <SelectTrigger className={`w-32 h-8 ${themeClasses.selectBg} ${themeClasses.selectBorder} text-foreground ${themeClasses.selectHover}`}>
+            <SelectTrigger className={`w-32 h-8 ${
+              isYellow 
+                ? 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800/50 hover:bg-yellow-100 dark:hover:bg-yellow-900/30'
+                : `bg-[${themeColorHex}]/[0.11] dark:bg-[${themeColorHex}]/[0.08] border-[${themeColorHex}]/20 dark:border-[${themeColorHex}]/30 hover:bg-[${themeColorHex}]/[0.15] dark:hover:bg-[${themeColorHex}]/[0.12]`
+            } text-foreground`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -92,7 +67,11 @@ export function PartnershipControlBar({
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Status:</span>
           <Select value={partnership.status} onValueChange={onStatusChange}>
-            <SelectTrigger className={`w-32 h-8 ${themeClasses.selectBg} ${themeClasses.selectBorder} text-foreground ${themeClasses.selectHover}`}>
+            <SelectTrigger className={`w-32 h-8 ${
+              isYellow 
+                ? 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800/50 hover:bg-yellow-100 dark:hover:bg-yellow-900/30'
+                : `bg-[${themeColorHex}]/[0.11] dark:bg-[${themeColorHex}]/[0.08] border-[${themeColorHex}]/20 dark:border-[${themeColorHex}]/30 hover:bg-[${themeColorHex}]/[0.15] dark:hover:bg-[${themeColorHex}]/[0.12]`
+            } text-foreground`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -107,7 +86,11 @@ export function PartnershipControlBar({
 
         {/* Auto-track Checkbox */}
         <div className="flex items-center gap-2">
-          <Checkbox id="auto-track" className={themeClasses.checkboxBorder} />
+          <Checkbox id="auto-track" className={
+            isYellow 
+              ? 'border-yellow-300 dark:border-yellow-700'
+              : `border-[${themeColorHex}]/30 dark:border-[${themeColorHex}]/50`
+          } />
           <label htmlFor="auto-track" className="text-sm text-muted-foreground">
             Auto-track this partnership status
           </label>

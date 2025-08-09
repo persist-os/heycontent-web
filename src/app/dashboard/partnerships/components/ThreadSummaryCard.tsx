@@ -56,71 +56,33 @@ export function ThreadSummaryCard({
 }: ThreadSummaryCardProps) {
   if (!partnership) return null;
 
-  // Generate theme-based color classes using exact hex colors from CategoryEmailList
-  const getThemeClasses = (color: string) => {
+  // Get theme colors - simplified to only handle the actual color values
+  const getThemeColor = (color: string): string => {
     const colors = {
-      // Partnership - #9D89F7 (Purple)
-      purple: {
-        cardBg: 'bg-[#9D89F7]/[0.11] dark:bg-[#9D89F7]/[0.08]',
-        cardBorder: 'border-[#9D89F7]/20 dark:border-[#9D89F7]/30',
-        textPrimary: 'text-foreground',
-        textSecondary: 'text-muted-foreground',
-        textTertiary: 'text-foreground',
-        textQuaternary: 'text-muted-foreground',
-        loadingDots: 'bg-[#9D89F7]'
-      },
-      // Media - #FF96FB (Pink)
-      pink: {
-        cardBg: 'bg-[#FF96FB]/[0.11] dark:bg-[#FF96FB]/[0.08]',
-        cardBorder: 'border-[#FF96FB]/20 dark:border-[#FF96FB]/30',
-        textPrimary: 'text-foreground',
-        textSecondary: 'text-muted-foreground',
-        textTertiary: 'text-foreground',
-        textQuaternary: 'text-muted-foreground',
-        loadingDots: 'bg-[#FF96FB]'
-      },
-      // Business - #40E3FF (Teal)
-      teal: {
-        cardBg: 'bg-[#40E3FF]/[0.11] dark:bg-[#40E3FF]/[0.08]',
-        cardBorder: 'border-[#40E3FF]/20 dark:border-[#40E3FF]/30',
-        textPrimary: 'text-foreground',
-        textSecondary: 'text-muted-foreground',
-        textTertiary: 'text-foreground',
-        textQuaternary: 'text-muted-foreground',
-        loadingDots: 'bg-[#40E3FF]'
-      },
-      // Community - #9BE7B2 (Green)
-      green: {
-        cardBg: 'bg-[#9BE7B2]/[0.11] dark:bg-[#9BE7B2]/[0.08]',
-        cardBorder: 'border-[#9BE7B2]/20 dark:border-[#9BE7B2]/30',
-        textPrimary: 'text-foreground',
-        textSecondary: 'text-muted-foreground',
-        textTertiary: 'text-foreground',
-        textQuaternary: 'text-muted-foreground',
-        loadingDots: 'bg-[#9BE7B2]'
-      },
-      // Default/Uncategorized - Yellow
-      yellow: {
-        cardBg: 'from-yellow-50 to-yellow-100 dark:from-yellow-950/20 dark:to-yellow-900/20',
-        cardBorder: 'border-yellow-200 dark:border-yellow-800/50',
-        textPrimary: 'text-foreground',
-        textSecondary: 'text-muted-foreground',
-        textTertiary: 'text-foreground',
-        textQuaternary: 'text-muted-foreground',
-        loadingDots: 'bg-yellow-500'
-      }
+      purple: '#9D89F7',    // Partnership
+      pink: '#FF96FB',      // Media
+      teal: '#40E3FF',      // Business  
+      green: '#9BE7B2',     // Community
+      yellow: '#FFDF39'     // Default/Uncategorized - HeyContent Yellow
     };
     return colors[color as keyof typeof colors] || colors.yellow;
   };
 
-  const themeClasses = getThemeClasses(themeColor);
+  const themeColorHex = getThemeColor(themeColor);
+  const isYellow = themeColor === 'yellow';
 
   return (
-    <Card className={`p-4 ${themeClasses.cardBg} ${themeClasses.cardBorder}`}>
+    <Card 
+      className={`p-4 ${
+        isYellow 
+          ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-950/20 dark:to-yellow-900/20 border-yellow-200 dark:border-yellow-800/50'
+          : `bg-[${themeColorHex}]/[0.11] dark:bg-[${themeColorHex}]/[0.08] border-[${themeColorHex}]/20 dark:border-[${themeColorHex}]/30`
+      }`}
+    >
       <div className="flex flex-col gap-3">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h3 className={`font-semibold ${themeClasses.textPrimary}`}>
+          <h3 className="font-semibold text-foreground">
             Summary
           </h3>
         </div>
@@ -128,24 +90,24 @@ export function ThreadSummaryCard({
         {/* Metrics - Inline and Left Aligned */}
         <div className="flex items-center gap-6 text-sm">
           <div className="flex items-center gap-2">
-            <MessageSquare className={`w-4 h-4 ${themeClasses.textSecondary}`} />
-            <span className={themeClasses.textSecondary}>Messages:</span>
-            <span className={`font-medium ${themeClasses.textPrimary}`}>
+            <MessageSquare className="w-4 h-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Messages:</span>
+            <span className="font-medium text-foreground">
               {partnership.messageCount}
             </span>
           </div>
           
           <div className="flex items-center gap-2">
-            <DollarSign className={`w-4 h-4 ${themeClasses.textSecondary}`} />
-            <span className={themeClasses.textSecondary}>Est. Value:</span>
-            <span className={`font-medium ${themeClasses.textPrimary}`}>
+            <DollarSign className="w-4 h-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Est. Value:</span>
+            <span className="font-medium text-foreground">
               {formatValue(partnership.estimatedValue)}
             </span>
           </div>
           
           <div className="flex items-center gap-2">
-            <span className={themeClasses.textSecondary}>Last Activity:</span>
-            <span className={`font-medium ${themeClasses.textPrimary}`}>
+            <span className="text-muted-foreground">Last Activity:</span>
+            <span className="font-medium text-foreground">
               {formatTimeAgo(partnership.lastActivity)}
             </span>
           </div>
@@ -156,13 +118,13 @@ export function ThreadSummaryCard({
           <div className="mt-3">
             {isAnalysisLoading ? (
               <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 ${themeClasses.loadingDots} rounded-full animate-bounce [animation-delay:-0.3s]`}></div>
-                <div className={`w-2 h-2 ${themeClasses.loadingDots} rounded-full animate-bounce [animation-delay:-0.15s]`}></div>
-                <div className={`w-2 h-2 ${themeClasses.loadingDots} rounded-full animate-bounce`}></div>
-                <span className={`text-sm ${themeClasses.textQuaternary}`}>Analyzing conversation...</span>
+                <div className={`w-2 h-2 ${isYellow ? 'bg-yellow-500' : `bg-[${themeColorHex}]`} rounded-full animate-bounce [animation-delay:-0.3s]`}></div>
+                <div className={`w-2 h-2 ${isYellow ? 'bg-yellow-500' : `bg-[${themeColorHex}]`} rounded-full animate-bounce [animation-delay:-0.15s]`}></div>
+                <div className={`w-2 h-2 ${isYellow ? 'bg-yellow-500' : `bg-[${themeColorHex}]`} rounded-full animate-bounce`}></div>
+                <span className="text-sm text-muted-foreground">Analyzing conversation...</span>
               </div>
             ) : analysisText && (
-              <p className={`text-sm ${themeClasses.textTertiary} leading-relaxed`}>
+              <p className="text-sm text-foreground leading-relaxed">
                 {analysisText}
               </p>
             )}

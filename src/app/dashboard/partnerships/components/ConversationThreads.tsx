@@ -104,6 +104,20 @@ export function ConversationThreads({
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [isDraftingReply, setIsDraftingReply] = useState(false);
 
+  // Get theme color hex value for components that need raw hex colors
+  const getThemeColorHex = (color: string): string => {
+    const colors = {
+      purple: '#9D89F7',    // Partnership
+      pink: '#FF96FB',      // Media
+      teal: '#40E3FF',      // Business  
+      green: '#9BE7B2',     // Community
+      yellow: '#FFDF39'     // Default/Uncategorized - HeyContent Yellow
+    };
+    return colors[color as keyof typeof colors] || colors.yellow;
+  };
+
+  const themeColorHex = getThemeColorHex(themeColor);
+
   // Convex queries for analysis
   const threadAnalysis = useQuery(
     api.gmailQueries.getGmailThreadByThreadId,
@@ -122,7 +136,7 @@ export function ConversationThreads({
         return;
       }
 
-      const response = await fetchWithApiKey('/api/gmail/analyze-thread', {
+      const response = await fetchWithApiKey('/api/social/gmail/thread-analysis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -279,9 +293,7 @@ export function ConversationThreads({
 
   return (
     <div className="space-y-4">
-      <h3 className="font-semibold text-foreground text-lg">Conversation Threads</h3>
-      
-      {/* Thread Summary Card */}
+      {/* AI Summary Card */}
       <ThreadSummaryCard
         partnership={partnership}
         analysisText={analysisText}
@@ -289,7 +301,9 @@ export function ConversationThreads({
         themeColor={themeColor}
       />
       
-      {/* Message List */}
+      <h3 className="font-semibold text-foreground text-lg">Conversation Threads</h3>
+      
+      {/* Conversation Threads - Individual Messages */}
       <MessageList
         messages={messages}
         userEmail={userEmail}
@@ -309,6 +323,7 @@ export function ConversationThreads({
           recipientEmail={emailThreadData.recipientEmail}
           subject={emailThreadData.subject}
           brandName={emailThreadData.brandName}
+          themeColor={themeColorHex}
           emailThreadData={{
             messages: emailThreadData.messages || [],
             subject: emailThreadData.subject || '',
