@@ -20,16 +20,14 @@ import { Badge } from '@/components/ui/badge';
 import { api } from '@/convex/_generated/api';
 import { getCurrentUserId, fetchWithApiKey } from '@/app/lib/api-helpers';
 import { InlineEmailReply } from './InlineEmailReply';
-import { ThreadSummaryCard } from './ThreadSummaryCard';
+import { ThreadAnalysisPanel } from './ThreadAnalysisPanel';
 import { MessageList } from './MessageList';
 
 // Constants
 const ANIMATION_DURATION = '2s';
 const ANIMATION_TIMING = 'ease-in-out infinite';
 const LOADING_SKELETON_WIDTHS = ['w-4/5', 'w-3/4', 'w-1/2'] as const;
-const SUMMARY_PREFIXES = ['Thread Summary:', 'Summary:', 'TL;DR:', 'TLDR:'] as const;
-const MARKDOWN_CODE_BLOCK_REGEX = /```json\s*/g;
-const MARKDOWN_CODE_END_REGEX = /```\s*$/g;
+
 const DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
   month: 'short',
   day: 'numeric',
@@ -151,41 +149,24 @@ export function ConversationThreads({
     }
   }, [threadId, analysisLoading]);
 
-  // Auto-trigger analysis if we have the data and no analysis exists
+  // Debug log to see the structure of threadAnalysis
   React.useEffect(() => {
-    // Only trigger analysis if:
-    // 1. We have a threadId and userId
-    // 2. Convex query has loaded (threadAnalysis is not undefined)
-    // 3. No analysis exists yet
-    const hasAnalysis = threadAnalysis?.analysis || 
-                       (threadAnalysis as any)?.insight || 
-                       (threadAnalysis && Object.keys(threadAnalysis).some(key => 
-                         key.includes('analysis') || key.includes('insight')
-                       ));
-    
-    if (threadId && userId && threadAnalysis !== undefined && !hasAnalysis && !analysisLoading) {
-      console.log('🔄 [ANALYSIS] Triggering analysis for thread:', threadId);
-      handleAnalyzeThread();
-    } else if (hasAnalysis) {
-      console.log('✅ [ANALYSIS] Analysis already exists, skipping API call');
-    }
-    
-    // Debug log to see the structure of threadAnalysis
     if (threadAnalysis && process.env.NODE_ENV === 'development') {
       console.log('🔍 [DEBUG] ThreadAnalysis structure:', {
         keys: Object.keys(threadAnalysis),
         hasAnalysis: !!threadAnalysis.analysis,
         hasInsight: !!(threadAnalysis as any).insight,
-        threadId
+        threadId,
+        userId
       });
     }
-  }, [threadAnalysis, threadId, userId, analysisLoading, handleAnalyzeThread]);
+  }, [threadAnalysis, threadId, userId]);
 
   const parseRawResponse = useCallback((rawResponse: string) => {
     try {
       const cleanedResponse = rawResponse
-        .replace(MARKDOWN_CODE_BLOCK_REGEX, '')
-        .replace(MARKDOWN_CODE_END_REGEX, '');
+        .replace(/```json\s*/g, '')
+        .replace(/```\s*$/g, '');
       
       const parsed = JSON.parse(cleanedResponse);
       return Array.isArray(parsed) ? parsed : [parsed];
@@ -208,68 +189,7 @@ export function ConversationThreads({
     return result;
   }, []);
 
-  const extractSummary = useCallback((insight: unknown): string | null => {
-    if (!insight || typeof insight !== 'object') return null;
-    
-    const insightObj = insight as Record<string, unknown>;
-    
-    // Handle raw_response JSON parsing if present
-    if (typeof insightObj.raw_response === 'string') {
-      try {
-        const cleanedResponse = insightObj.raw_response
-          .replace(MARKDOWN_CODE_BLOCK_REGEX, '')
-          .replace(MARKDOWN_CODE_END_REGEX, '');
-        
-        const parsed = JSON.parse(cleanedResponse);
-        const insights = Array.isArray(parsed) ? parsed : [parsed];
-        
-        if (insights.length > 0 && insights[0]?.sourceDetails) {
-          const details = insights[0].sourceDetails;
-          if (Array.isArray(details)) {
-            for (const item of details) {
-              if (typeof item === 'string' && item.startsWith('Thread Summary:')) {
-                return item.substring('Thread Summary:'.length).trim();
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Failed to parse raw_response JSON:', error);
-      }
-    }
-    
-    // Direct summary fields
-    if (typeof insightObj.summary === 'string' && insightObj.summary.trim()) {
-      return insightObj.summary.trim();
-    }
-    if (typeof insightObj.threadSummary === 'string' && insightObj.threadSummary.trim()) {
-      return insightObj.threadSummary.trim();
-    }
-    
-    // Look into sourceDetails for a summary-like entry
-    const details = Array.isArray(insightObj.sourceDetails) ? insightObj.sourceDetails : [];
-    for (const item of details) {
-      if (typeof item === 'string') {
-        const str = item.trim();
-        const match = SUMMARY_PREFIXES.find(prefix => 
-          str.toLowerCase().startsWith(prefix.toLowerCase())
-        );
-        if (match) {
-          const text = str.substring(match.length).trim();
-          if (text) return text;
-        }
-      } else if (item && typeof item === 'object') {
-        const itemObj = item as Record<string, unknown>;
-        const label = String(itemObj.label || '').toLowerCase();
-        const value = itemObj.value;
-        if (label === 'summary' && typeof value === 'string' && value.trim()) {
-          return value.trim();
-        }
-      }
-    }
-    
-    return null;
-  }, []);
+
 
   const handleStartDraft = useCallback((): void => {
     setIsDraftingReply(true);
@@ -303,17 +223,17 @@ export function ConversationThreads({
     );
   }
 
-  // Get analysis summary for ThreadSummaryCard
+  // Get analysis data for ThreadAnalysisPanel
   const threadInsight = getThreadInsight(threadAnalysis?.analysis);
-  const analysisText = extractSummary(threadInsight);
+  const analysisData = threadInsight as any;
 
   return (
     <div className="space-y-4">
-      {/* AI Summary Card */}
-      <ThreadSummaryCard
-        partnership={partnership}
-        analysisText={analysisText}
+      {/* AI Analysis Panel */}
+      <ThreadAnalysisPanel
+        analysisData={analysisData}
         isAnalysisLoading={analysisLoading}
+        onAnalyzeThread={handleAnalyzeThread}
         themeColor={themeColor}
       />
       
