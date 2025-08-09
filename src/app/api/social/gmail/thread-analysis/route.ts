@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 // Minimal proxy route to match existing Gmail API proxy patterns
 export async function POST(req: NextRequest) {
   try {
-    const { userId, threadId } = await req.json();
-    if (!userId || !threadId) {
+    const { threadId } = await req.json();
+    if (!threadId) {
       return NextResponse.json(
-        { status: 'error', error: 'Missing userId or threadId' },
+        { status: 'error', error: 'Missing threadId' },
         { status: 400 }
       );
     }
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
         'Content-Type': 'application/json',
         'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`,
       },
-      body: JSON.stringify({ user_id: userId, thread_id: threadId }),
+      body: JSON.stringify({ thread_id: threadId }),
     });
 
     // Try to parse JSON; if it fails, forward status with raw text

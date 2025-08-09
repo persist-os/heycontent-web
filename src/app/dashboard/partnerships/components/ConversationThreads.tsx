@@ -130,18 +130,11 @@ export function ConversationThreads({
 
     setAnalysisLoading(true);
     try {
-      const currentUserId = getCurrentUserId();
-      if (!currentUserId) {
-        console.error('User not authenticated, cannot analyze thread');
-        return;
-      }
-
       const response = await fetchWithApiKey('/api/social/gmail/thread-analysis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          threadId,
-          userId: currentUserId
+          threadId
         })
       });
 
