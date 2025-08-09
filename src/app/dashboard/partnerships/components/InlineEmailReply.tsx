@@ -83,7 +83,12 @@ export function InlineEmailReply({
   const isYellow = themeColor === '#FFDF39';
   const buttonClasses = isYellow 
     ? 'bg-yellow-600 hover:bg-yellow-700' 
-    : `bg-[${themeColor}] hover:bg-[${themeColor}]/90`;
+    : 'bg-primary hover:bg-primary/90';
+  
+  const buttonStyle = !isYellow ? {
+    backgroundColor: themeColor,
+    '--tw-bg-opacity': '1'
+  } as React.CSSProperties : undefined;
   
   // Operation states
   const [operationState, setOperationState] = useState<OperationState>({
@@ -950,6 +955,7 @@ ${emailThreadData.messages.map(msg => `From ${msg.from}: ${msg.body}`).join('\n\
                 onClick={handleSend}
                 disabled={isContentEmpty() || isOperating}
                 className={`px-6 ${buttonClasses} text-foreground`}
+                style={buttonStyle}
               >
                 {operationState.send === 'loading' ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />

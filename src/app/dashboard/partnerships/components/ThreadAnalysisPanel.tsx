@@ -84,6 +84,17 @@ export function ThreadAnalysisPanel({
   const themeColorHex = getThemeColor(themeColor);
   const isYellow = themeColor === 'yellow';
 
+  // Map themeColor to static Tailwind classes for background and border
+  const themeColorClasses: Record<string, string> = {
+    purple: 'bg-purple-100/50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800/50',
+    pink: 'bg-pink-100/50 dark:bg-pink-900/20 border-pink-200 dark:border-pink-800/50',
+    teal: 'bg-cyan-100/50 dark:bg-cyan-900/20 border-cyan-200 dark:border-cyan-800/50',
+    green: 'bg-green-100/50 dark:bg-green-900/20 border-green-200 dark:border-green-800/50',
+    yellow: 'bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-950/20 dark:to-yellow-900/20 border-yellow-200 dark:border-yellow-800/50',
+  };
+
+  const cardClassName = themeColorClasses[themeColor] || themeColorClasses.yellow;
+
   const toggleSection = (sectionId: string) => {
     setExpandedSections(prev => {
       const newSet = new Set(prev);
@@ -266,11 +277,7 @@ export function ThreadAnalysisPanel({
   if (!analysisData && !isAnalysisLoading) {
     return (
       <Card 
-        className={`p-4 ${
-          isYellow 
-            ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-950/20 dark:to-yellow-900/20 border-yellow-200 dark:border-yellow-800/50'
-            : `bg-[${themeColorHex}]/[0.11] dark:bg-[${themeColorHex}]/[0.08] border-[${themeColorHex}]/20 dark:border-[${themeColorHex}]/30`
-        }`}
+        className={`p-4 ${cardClassName}`}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -298,11 +305,7 @@ export function ThreadAnalysisPanel({
 
   return (
     <Card 
-      className={`${
-        isYellow 
-          ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-950/20 dark:to-yellow-900/20 border-yellow-200 dark:border-yellow-800/50'
-          : `bg-[${themeColorHex}]/[0.11] dark:bg-[${themeColorHex}]/[0.08] border-[${themeColorHex}]/20 dark:border-[${themeColorHex}]/30`
-      }`}
+      className={cardClassName}
     >
       {/* Header */}
       <div className="p-4 border-b border-border">

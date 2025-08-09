@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useQuery } from 'convex/react';
 import { 
   ChevronRight, 
@@ -150,7 +150,7 @@ export function ConversationThreads({
   }, [threadId, analysisLoading]);
 
   // Debug log to see the structure of threadAnalysis
-  React.useEffect(() => {
+  useEffect(() => {
     if (threadAnalysis && process.env.NODE_ENV === 'development') {
       console.log('🔍 [DEBUG] ThreadAnalysis structure:', {
         keys: Object.keys(threadAnalysis),

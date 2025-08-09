@@ -208,8 +208,12 @@ export function MessageList({
             className={`${
               isYellow 
                 ? 'bg-yellow-600 hover:bg-yellow-700' 
-                : `bg-[${themeColorHex}] hover:bg-[${themeColorHex}]/90`
+                : 'bg-primary hover:bg-primary/90'
             } text-foreground`}
+            style={!isYellow ? {
+              backgroundColor: themeColorHex,
+              '--tw-bg-opacity': '1'
+            } as React.CSSProperties : undefined}
           >
             <Reply className="w-4 h-4 mr-2" />
             Draft Reply
