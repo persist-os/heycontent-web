@@ -117,11 +117,33 @@ export function ThreadSummaryCard({
         {(analysisText || isAnalysisLoading) && (
           <div className="mt-3">
             {isAnalysisLoading ? (
-              <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 ${isYellow ? 'bg-yellow-500' : `bg-[${themeColorHex}]`} rounded-full animate-bounce [animation-delay:-0.3s]`}></div>
-                <div className={`w-2 h-2 ${isYellow ? 'bg-yellow-500' : `bg-[${themeColorHex}]`} rounded-full animate-bounce [animation-delay:-0.15s]`}></div>
-                <div className={`w-2 h-2 ${isYellow ? 'bg-yellow-500' : `bg-[${themeColorHex}]`} rounded-full animate-bounce`}></div>
-                <span className="text-sm text-muted-foreground">Analyzing conversation...</span>
+              <div className="space-y-2">
+                <div 
+                  className="h-4 bg-foreground/20 dark:bg-foreground/10 rounded w-full origin-left"
+                  style={{
+                    animation: 'biPulse 2s ease-in-out infinite',
+                    animationDelay: '0s'
+                  }}
+                ></div>
+                <div 
+                  className="h-4 bg-foreground/20 dark:bg-foreground/10 rounded w-4/5 origin-left"
+                  style={{
+                    animation: 'biPulse 2s ease-in-out infinite',
+                    animationDelay: '0.3s'
+                  }}
+                ></div>
+                <style jsx global>{`
+                  @keyframes biPulse {
+                    0%, 100% { 
+                      transform: scale(1, 1);
+                      opacity: 0.8;
+                    }
+                    50% { 
+                      transform: scale(1.01, 1.05);
+                      opacity: 0.4;
+                    }
+                  }
+                `}</style>
               </div>
             ) : analysisText && (
               <p className="text-sm text-foreground leading-relaxed">
