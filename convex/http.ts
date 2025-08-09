@@ -1413,9 +1413,14 @@ app.post("/api/users/:id/stripe/subscription", async (c) => {
 app.patch("/api/stripe/subscriptions/:id", async (c) => {
   const ctx = c.env;
   const stripeSubscriptionId = c.req.param("id");
-  const data = await c.req.json();
+  const requestBody = await c.req.json();
   
   try {
+    // Extract the 'data' field from the request body to avoid double-wrapping
+    // The backend sends: {"data": {includedRequests: 100, ...}}
+    // We need to pass just the inner data object to the mutation
+    const data = requestBody.data || requestBody;
+    
     // Use the dedicated subscription actions module to handle the update
     const result = await ctx.runMutation(api.subscriptionActions.updateSubscriptionFromStripe, {
       stripeSubscriptionId,
