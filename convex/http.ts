@@ -228,6 +228,28 @@ app.post("/api/mutation/updateLastGmailFetch", async (c) => {
   }
 });
 
+// Store Gmail thread analysis
+app.post("/api/mutation/storeGmailThreadAnalysis", async (c) => {
+  const ctx = c.env;
+  const { userId, threadId, analysis } = await c.req.json();
+
+  if (!userId || !threadId || !analysis) {
+    return c.json({ success: false, error: "Missing userId, threadId, or analysis" }, 400);
+  }
+
+  try {
+    const result = await ctx.runMutation(api.gmailMutations.storeGmailThreadAnalysis, { 
+      userId,
+      threadId,
+      analysis
+    });
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error("Failed to store Gmail thread analysis:", error);
+    return c.json({ success: false, error: "Failed to store Gmail thread analysis" }, 500);
+  }
+});
+
 // Chat with context - Enhanced chat that searches for relevant content
 app.post("/api/users/:id/chat_with_context", async (c) => {
   const ctx = c.env;
@@ -1391,9 +1413,14 @@ app.post("/api/users/:id/stripe/subscription", async (c) => {
 app.patch("/api/stripe/subscriptions/:id", async (c) => {
   const ctx = c.env;
   const stripeSubscriptionId = c.req.param("id");
-  const data = await c.req.json();
+  const requestBody = await c.req.json();
   
   try {
+    // Extract the 'data' field from the request body to avoid double-wrapping
+    // The backend sends: {"data": {includedRequests: 100, ...}}
+    // We need to pass just the inner data object to the mutation
+    const data = requestBody.data || requestBody;
+    
     // Use the dedicated subscription actions module to handle the update
     const result = await ctx.runMutation(api.subscriptionActions.updateSubscriptionFromStripe, {
       stripeSubscriptionId,

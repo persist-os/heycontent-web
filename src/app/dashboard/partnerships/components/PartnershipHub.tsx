@@ -173,7 +173,12 @@ export function PartnershipHub() {
     // Update the partnership locally and trigger refresh
     console.log('🔄 [PARTNERSHIP HUB] Updating partnership:', partnershipId, updates);
     
-    // Force refresh by incrementing refresh count
+    // Immediately update the selected partnership if it matches
+    if (selectedPartnership && selectedPartnership.id === partnershipId) {
+      setSelectedPartnership(prev => prev ? { ...prev, ...updates } : null);
+    }
+    
+    // Force refresh by incrementing refresh count for left panel
     setRefreshCount(c => {
       const newCount = c + 1;
       console.log('🔄 [PARTNERSHIP HUB] Incrementing refresh count from', c, 'to', newCount);
