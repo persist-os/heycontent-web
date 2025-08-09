@@ -160,10 +160,33 @@ export function ConversationThreads({
 
   // Auto-trigger analysis if we have the data and no analysis exists
   React.useEffect(() => {
-    if (!threadAnalysis?.analysis && threadId && userId) {
+    // Only trigger analysis if:
+    // 1. We have a threadId and userId
+    // 2. Convex query has loaded (threadAnalysis is not undefined)
+    // 3. No analysis exists yet
+    const hasAnalysis = threadAnalysis?.analysis || 
+                       (threadAnalysis as any)?.insight || 
+                       (threadAnalysis && Object.keys(threadAnalysis).some(key => 
+                         key.includes('analysis') || key.includes('insight')
+                       ));
+    
+    if (threadId && userId && threadAnalysis !== undefined && !hasAnalysis && !analysisLoading) {
+      console.log('🔄 [ANALYSIS] Triggering analysis for thread:', threadId);
       handleAnalyzeThread();
+    } else if (hasAnalysis) {
+      console.log('✅ [ANALYSIS] Analysis already exists, skipping API call');
     }
-  }, [threadAnalysis?.analysis, threadId, userId, handleAnalyzeThread]);
+    
+    // Debug log to see the structure of threadAnalysis
+    if (threadAnalysis && process.env.NODE_ENV === 'development') {
+      console.log('🔍 [DEBUG] ThreadAnalysis structure:', {
+        keys: Object.keys(threadAnalysis),
+        hasAnalysis: !!threadAnalysis.analysis,
+        hasInsight: !!(threadAnalysis as any).insight,
+        threadId
+      });
+    }
+  }, [threadAnalysis, threadId, userId, analysisLoading, handleAnalyzeThread]);
 
   const parseRawResponse = useCallback((rawResponse: string) => {
     try {
@@ -297,7 +320,7 @@ export function ConversationThreads({
       <ThreadSummaryCard
         partnership={partnership}
         analysisText={analysisText}
-        isAnalysisLoading={analysisLoading || threadAnalysis === undefined}
+        isAnalysisLoading={analysisLoading}
         themeColor={themeColor}
       />
       
