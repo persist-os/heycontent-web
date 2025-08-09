@@ -228,6 +228,28 @@ app.post("/api/mutation/updateLastGmailFetch", async (c) => {
   }
 });
 
+// Store Gmail thread analysis
+app.post("/api/mutation/storeGmailThreadAnalysis", async (c) => {
+  const ctx = c.env;
+  const { userId, threadId, analysis } = await c.req.json();
+
+  if (!userId || !threadId || !analysis) {
+    return c.json({ success: false, error: "Missing userId, threadId, or analysis" }, 400);
+  }
+
+  try {
+    const result = await ctx.runMutation(api.gmailMutations.storeGmailThreadAnalysis, { 
+      userId,
+      threadId,
+      analysis
+    });
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error("Failed to store Gmail thread analysis:", error);
+    return c.json({ success: false, error: "Failed to store Gmail thread analysis" }, 500);
+  }
+});
+
 // Chat with context - Enhanced chat that searches for relevant content
 app.post("/api/users/:id/chat_with_context", async (c) => {
   const ctx = c.env;

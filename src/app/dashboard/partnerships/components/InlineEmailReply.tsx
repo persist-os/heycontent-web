@@ -33,6 +33,7 @@ interface InlineEmailReplyProps {
   brandName?: string;
   composeMode?: boolean; // New prop to distinguish between reply and compose modes
   emailContext?: 'compose' | 'reply'; // New prop for context-aware command palette
+  themeColor?: string; // Theme color for styling buttons and elements
   emailThreadData?: {
     messages: Array<{
       from: string;
@@ -67,6 +68,7 @@ export function InlineEmailReply({
   brandName,
   composeMode = false, // Default to reply mode for backward compatibility
   emailContext,
+  themeColor = '#FFDF39', // Default to HeyContent Yellow
   emailThreadData
 }: InlineEmailReplyProps) {
   const [content, setContent] = useState('');
@@ -76,6 +78,12 @@ export function InlineEmailReply({
   const [isInitialized, setIsInitialized] = useState(false);
   const [pendingRefinedText, setPendingRefinedText] = useState<string | null>(null);
   const [lastSelection, setLastSelection] = useState<Range | null>(null);
+
+  // Theme color logic
+  const isYellow = themeColor === '#FFDF39';
+  const buttonClasses = isYellow 
+    ? 'bg-yellow-600 hover:bg-yellow-700' 
+    : `bg-[${themeColor}] hover:bg-[${themeColor}]/90`;
   
   // Operation states
   const [operationState, setOperationState] = useState<OperationState>({
@@ -941,7 +949,7 @@ ${emailThreadData.messages.map(msg => `From ${msg.from}: ${msg.body}`).join('\n\
               <Button
                 onClick={handleSend}
                 disabled={isContentEmpty() || isOperating}
-                className="px-6 bg-primary hover:bg-primary/90"
+                className={`px-6 ${buttonClasses} text-foreground`}
               >
                 {operationState.send === 'loading' ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />

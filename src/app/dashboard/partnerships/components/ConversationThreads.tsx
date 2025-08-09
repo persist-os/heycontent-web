@@ -1,104 +1,215 @@
-'use client'
+'use client';
 
-import React, { useState } from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import React, { useState, useMemo, useCallback } from 'react';
+import { useQuery } from 'convex/react';
 import { 
   ChevronRight, 
   ChevronDown, 
   Mail,
   User,
   Clock,
-  Reply
+  Reply,
+  Brain,
+  MessageSquare,
+  DollarSign
 } from 'lucide-react';
 
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { api } from '@/convex/_generated/api';
+import { getCurrentUserId, fetchWithApiKey } from '@/app/lib/api-helpers';
+import { InlineEmailReply } from './InlineEmailReply';
+import { ThreadAnalysisPanel } from './ThreadAnalysisPanel';
+import { MessageList } from './MessageList';
+
+// Constants
+const ANIMATION_DURATION = '2s';
+const ANIMATION_TIMING = 'ease-in-out infinite';
+const LOADING_SKELETON_WIDTHS = ['w-4/5', 'w-3/4', 'w-1/2'] as const;
+
+const DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+};
+const HOURS_IN_DAY = 24;
+const DAYS_IN_WEEK = 7;
+const HOURS_IN_MS = 1000 * 60 * 60;
+const MILLION = 1000000;
+const THOUSAND = 1000;
+
 interface EmailMessage {
-  id: string;
-  from: string;
-  email: string;
-  subject: string;
-  body: string;
-  timestamp: number;
-  isReply: boolean;
-  isFromUser: boolean;
+  readonly id: string;
+  readonly from: string;
+  readonly email: string;
+  readonly subject: string;
+  readonly body: string;
+  readonly timestamp: number;
+  readonly isReply: boolean;
+  readonly isFromUser: boolean;
+}
+
+interface PartnershipSummary {
+  readonly messageCount: number;
+  readonly lastActivity: number;
+  readonly estimatedValue: number;
+  readonly from: string;
+  readonly subject: string;
+  readonly brandName: string;
+}
+
+interface EmailThreadData {
+  readonly threadId?: string;
+  readonly messages?: Array<{
+    readonly from: string;
+    readonly body: string;
+    readonly timestamp: number;
+  }>;
+  readonly subject?: string;
+  readonly brandName?: string;
+  readonly recipientEmail?: string;
 }
 
 interface ConversationThreadsProps {
-  messages: EmailMessage[];
-  userEmail?: string | null;
-  onMessageSelect?: (messageId: string) => void;
-  selectedMessageId?: string;
-  onStartDraft?: () => void;
+  readonly messages: EmailMessage[];
+  readonly threadId: string; // Required - Gmail thread ID for analysis
+  readonly userId: string; // Required - User ID for Convex queries
+  readonly userEmail?: string | null;
+  readonly selectedMessageId?: string;
+  readonly partnership?: PartnershipSummary;
+  readonly emailThreadData?: EmailThreadData;
+  readonly onMessageSelect?: (messageId: string) => void;
+  readonly onStartDraft?: () => void;
+  readonly themeColor?: string; // Theme color for backgrounds and buttons
 }
 
 export function ConversationThreads({ 
   messages, 
+  threadId,
+  userId,
   userEmail, 
-  onMessageSelect,
   selectedMessageId,
-  onStartDraft
+  partnership,
+  emailThreadData,
+  onMessageSelect,
+  onStartDraft,
+  themeColor = 'blue'
 }: ConversationThreadsProps) {
-  const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [isDraftingReply, setIsDraftingReply] = useState(false);
 
-  // Auto-expand the most recent message when messages change
+  // Get theme color hex value for components that need raw hex colors
+  const getThemeColorHex = (color: string): string => {
+    const colors = {
+      purple: '#9D89F7',    // Partnership
+      pink: '#FF96FB',      // Media
+      teal: '#40E3FF',      // Business  
+      green: '#9BE7B2',     // Community
+      yellow: '#FFDF39'     // Default/Uncategorized - HeyContent Yellow
+    };
+    return colors[color as keyof typeof colors] || colors.yellow;
+  };
+
+  const themeColorHex = getThemeColorHex(themeColor);
+
+  // Convex queries for analysis
+  const threadAnalysis = useQuery(
+    api.gmailQueries.getGmailThreadByThreadId,
+    { userId, threadId }
+  );
+
+  // Analysis and draft handlers
+  const handleAnalyzeThread = useCallback(async () => {
+    if (analysisLoading) return;
+
+    setAnalysisLoading(true);
+    try {
+      const response = await fetchWithApiKey('/api/social/gmail/thread-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          threadId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Analysis failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('Analysis completed:', result);
+    } catch (error) {
+      console.error('Failed to analyze thread:', error);
+    } finally {
+      setAnalysisLoading(false);
+    }
+  }, [threadId, analysisLoading]);
+
+  // Debug log to see the structure of threadAnalysis
   React.useEffect(() => {
-    if (messages.length > 0) {
-      // Find the most recent message (highest timestamp)
-      const mostRecentMessage = messages.reduce((latest, current) => 
-        current.timestamp > latest.timestamp ? current : latest
-      );
+    if (threadAnalysis && process.env.NODE_ENV === 'development') {
+      console.log('🔍 [DEBUG] ThreadAnalysis structure:', {
+        keys: Object.keys(threadAnalysis),
+        hasAnalysis: !!threadAnalysis.analysis,
+        hasInsight: !!(threadAnalysis as any).insight,
+        threadId,
+        userId
+      });
+    }
+  }, [threadAnalysis, threadId, userId]);
+
+  const parseRawResponse = useCallback((rawResponse: string) => {
+    try {
+      const cleanedResponse = rawResponse
+        .replace(/```json\s*/g, '')
+        .replace(/```\s*$/g, '');
       
-      // Expand the most recent message by default
-      setExpandedMessages(new Set([mostRecentMessage.id]));
+      const parsed = JSON.parse(cleanedResponse);
+      return Array.isArray(parsed) ? parsed : [parsed];
+    } catch (error) {
+      console.error('Failed to parse raw_response:', error);
+      return [];
     }
-  }, [messages]);
+  }, []);
 
-  const toggleMessageExpansion = (messageId: string) => {
-    const newExpanded = new Set(expandedMessages);
-    if (newExpanded.has(messageId)) {
-      newExpanded.delete(messageId);
-    } else {
-      newExpanded.add(messageId);
+  // Normalize thread-analysis result to an insight object
+  const getThreadInsight = useCallback((result: unknown): unknown => {
+    if (!result) return null;
+    
+    if (typeof result === 'object' && result !== null) {
+      const resultObj = result as Record<string, unknown>;
+      if (resultObj.insight) return resultObj.insight;
     }
-    setExpandedMessages(newExpanded);
-  };
+    
+    if (Array.isArray(result) && result.length > 0) return result[0];
+    return result;
+  }, []);
 
-  const formatTimestamp = (timestamp: number) => {
-    const date = new Date(timestamp);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
 
-  const getSenderDisplay = (message: EmailMessage) => {
-    if (message.isFromUser) {
-      return 'Me';
-    }
-    return message.from;
-  };
 
-  const getSenderEmail = (message: EmailMessage) => {
-    if (message.isFromUser) {
-      return userEmail || 'me@example.com';
-    }
-    return message.email;
-  };
+  const handleStartDraft = useCallback((): void => {
+    setIsDraftingReply(true);
+    onStartDraft?.();
+  }, [onStartDraft]);
 
-  const getMessageBackground = (message: EmailMessage, isSelected: boolean) => {
-    if (isSelected) {
-      return 'bg-primary/20 border-primary/30';
-    }
-    if (message.isFromUser) {
-      return 'bg-primary/10 border-primary/20';
-    }
-    return 'bg-muted/50 border-border';
-  };
+  const handleCloseDraft = useCallback((): void => {
+    setIsDraftingReply(false);
+  }, []);
+
+  const handleSendReply = useCallback((content: string): void => {
+    console.log('Sending reply:', content);
+    setIsDraftingReply(false);
+    // TODO: Implement actual reply sending logic
+  }, []);
+
+  const handleSaveDraft = useCallback((content: string): void => {
+    console.log('Saving draft:', content);
+    // TODO: Implement actual draft saving logic
+  }, []);
 
   if (messages.length === 0) {
     return (
@@ -112,123 +223,51 @@ export function ConversationThreads({
     );
   }
 
+  // Get analysis data for ThreadAnalysisPanel
+  const threadInsight = getThreadInsight(threadAnalysis?.analysis);
+  const analysisData = threadInsight as any;
+
   return (
     <div className="space-y-4">
+      {/* AI Analysis Panel */}
+      <ThreadAnalysisPanel
+        analysisData={analysisData}
+        isAnalysisLoading={analysisLoading}
+        onAnalyzeThread={handleAnalyzeThread}
+        themeColor={themeColor}
+      />
+      
       <h3 className="font-semibold text-foreground text-lg">Conversation Threads</h3>
       
-      <div className="space-y-2">
-        {messages.map((message, index) => {
-          const isExpanded = expandedMessages.has(message.id);
-          const isSelected = selectedMessageId === message.id;
-          
-          return (
-            <div key={message.id} className="space-y-1">
-              {/* Single Card with Header and Optional Body */}
-              <div 
-                className={`rounded-xl border transition-colors cursor-pointer ${getMessageBackground(message, isSelected)}`}
-                onClick={() => {
-                  toggleMessageExpansion(message.id);
-                  onMessageSelect?.(message.id);
-                }}
-              >
-                {/* Header Section - Always Purple Background */}
-                <div className="flex items-center justify-between p-3 bg-primary/10 border-b border-primary/20 rounded-t-xl">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      {message.isFromUser ? (
-                        <User className="w-4 h-4 text-primary" />
-                      ) : (
-                        <Mail className="w-4 h-4 text-primary" />
-                      )}
-                      <div className="flex flex-col min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-foreground text-sm truncate">
-                            {getSenderDisplay(message)}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            &lt;{getSenderEmail(message)}&gt;
-                          </span>
-                        </div>
-                        {message.subject && (
-                          <p className="text-xs text-muted-foreground truncate">
-                            {message.subject}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatTimestamp(message.timestamp)}
-                    </span>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                    >
-                      {isExpanded ? (
-                        <ChevronDown className="w-4 h-4" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
+      {/* Conversation Threads - Individual Messages */}
+      <MessageList
+        messages={messages}
+        userEmail={userEmail}
+        selectedMessageId={selectedMessageId}
+        onMessageSelect={onMessageSelect}
+        onStartDraft={handleStartDraft}
+        themeColor={themeColor}
+      />
 
-                {/* Expanded Message Content - Card Background */}
-                {isExpanded && (
-                  <div className="p-4 bg-card rounded-b-xl">
-                    <div className="prose prose-sm max-w-none text-card-foreground">
-                      <div className="text-sm leading-relaxed break-words overflow-wrap-anywhere whitespace-pre-wrap text-card-foreground">
-                        {message.body}
-                      </div>
-                    </div>
-                    
-                    {/* Message Actions */}
-                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Clock className="w-3 h-3" />
-                        <span>{formatTimestamp(message.timestamp)}</span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        {message.isReply && (
-                          <Badge variant="outline" className="text-xs">
-                            Reply
-                          </Badge>
-                        )}
-                        {message.isFromUser && (
-                          <Badge variant="outline" className="text-xs">
-                            Sent
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Draft Reply Button */}
-                    {onStartDraft && (
-                      <div className="mt-4 flex justify-start">
-                        <Button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onStartDraft();
-                          }}
-                          className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                          size="sm"
-                        >
-                          <Reply className="w-4 h-4 mr-2" />
-                          Draft Reply
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {/* Email Reply Component */}
+      {isDraftingReply && emailThreadData && (
+        <InlineEmailReply
+          isOpen={isDraftingReply}
+          onClose={handleCloseDraft}
+          onSend={handleSendReply}
+          onSaveDraft={handleSaveDraft}
+          recipientEmail={emailThreadData.recipientEmail}
+          subject={emailThreadData.subject}
+          brandName={emailThreadData.brandName}
+          themeColor={themeColorHex}
+          emailThreadData={{
+            messages: emailThreadData.messages || [],
+            subject: emailThreadData.subject || '',
+            brandName: emailThreadData.brandName || '',
+            recipientEmail: emailThreadData.recipientEmail || ''
+          }}
+        />
+      )}
     </div>
   );
-} 
+}
