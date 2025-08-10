@@ -293,7 +293,8 @@ export const updateUserUsage = mutation({
     // Enforce: if overage (extra requests) is disabled, cap at included quota
     if (!ubpEnabled) {
       newUsed = Math.min(quota, newUsed);
-      blocked = newUsed >= quota; // additional qty beyond quota is blocked
+      // Block only if this request would push usage over the quota
+      blocked = (used + args.qty) > quota;
     }
 
     const overage = Math.max(0, newUsed - quota);
