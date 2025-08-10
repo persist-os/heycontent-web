@@ -15,6 +15,7 @@ import { RecentUsageEventsCard } from './cards/RecentUsageEventsCard';
 import { QuantityChangeDialog } from './cards/QuantityChangeDialog';
 import UpgradeModal from './upgrade-modal';
 import { useAuth } from "@/app/context/auth-context";
+import { useAdminAuth } from "@/app/lib/admin-auth";
 import { getApiKey } from '@/app/lib/api-helpers';
 
 // Convex imports
@@ -29,6 +30,8 @@ import { DeleteAccountButton } from '../../utils/DeleteAccountButton';
 export default function SubscriptionOverview() {
   const router = useRouter();
   const { firebaseUser, authLoading } = useAuth();
+  const { isAdmin, isSuperAdmin } = useAdminAuth();
+  const canSeeAdminUsage = Boolean(isAdmin || isSuperAdmin);
   const userId = firebaseUser?.uid || '';
 
   // API data state
@@ -50,7 +53,10 @@ export default function SubscriptionOverview() {
 
   // Convex usage queries
   const convexUsageSummary = useQuery(api.usageEvents.getUsageSummary, userId ? { userId } : "skip");
-  const convexUsageEvents = useQuery(api.usageEvents.listUsageEvents, userId ? { userId, limit: 20 } : "skip");
+  const convexUsageEvents = useQuery(
+    api.usageEvents.listUsageEvents,
+    userId && canSeeAdminUsage ? { userId, limit: 20 } : "skip"
+  );
   // Convex overage settings
   const overageSettings = useQuery(api.usageEvents.getOverageSettings, userId ? { userId } : "skip");
   const mutateOverageSettings = useMutation(api.usageEvents.updateOverageSettings);
@@ -352,8 +358,8 @@ export default function SubscriptionOverview() {
       <div className="flex flex-col items-center justify-center min-h-[300px] py-12 px-4 w-full">
         <div className="w-full max-w-4xl mx-auto">
           <div className="bg-card rounded-lg shadow-lg p-6">
-            <h1 className="text-2xl font-bold mb-6">Subscribe to HeyContent</h1>
-            <p className="mb-6">You need an active subscription to access HeyContent. Please choose a plan to continue.</p>
+            <h1 className="text-2xl font-bold mb-2">Get full access to HeyContent</h1>
+            <p className="mb-6 text-muted-foreground">Pick a plan to start creating faster. You can change or cancel anytime.</p>
             
             <div className="mb-6">
               <Button 
@@ -361,7 +367,7 @@ export default function SubscriptionOverview() {
                 className="w-full sm:w-auto"
                 size="lg"
               >
-                View Plans
+                View plans
               </Button>
             </div>
             
@@ -383,12 +389,10 @@ export default function SubscriptionOverview() {
             )}
             
             <div className="mt-8 pt-6 border-t border-border">
-              <h3 className="text-lg font-medium mb-4">Account Management</h3>
+              <h3 className="text-lg font-medium mb-4">Account</h3>
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    If you no longer wish to use HeyContent, you can delete your account and all associated data.
-                  </p>
+                  <p className="text-sm text-muted-foreground mb-4">Done for now? You can delete your account and all data at any time.</p>
                   <DeleteAccountButton />
                 </div>
                 <div className="pt-4 border-t border-border">
@@ -416,7 +420,18 @@ export default function SubscriptionOverview() {
           {/* Left Column: Usage and Events */}
           <div className="w-full md:w-2/3 max-w-xl mx-auto md:mx-0 flex flex-col gap-6">
             <UsageAndBillingCard usage={usageSummary} />
-            <RecentUsageEventsCard usageEvents={usageEvents} />
+            {/* Extra requests lives with usage for better context */}
+            <OverageControlsCard
+              ubpEnabled={ubpEnabled}
+              monthlyLimit={monthlyLimit}
+              saving={saving}
+              setUbpEnabled={setUbpEnabled}
+              setMonthlyLimit={setMonthlyLimit}
+              handleSaveUbp={handleSaveUbp}
+            />
+            {canSeeAdminUsage && (
+              <RecentUsageEventsCard usageEvents={usageEvents} />
+            )}
           </div>
           {/* Right Column: Account and Controls */}
           <div className="w-full md:w-1/3 max-w-md mx-auto md:mx-0 flex flex-col gap-6">
@@ -426,14 +441,6 @@ export default function SubscriptionOverview() {
               handleUpgrade={handleOpenUpgradeModal}
               handleOpenQuantityModal={() => handleOpenQuantityModal(currentSubscription?.quantity || 1)}
               handleManageSubscription={handleManageSubscription}
-            />
-            <OverageControlsCard
-              ubpEnabled={ubpEnabled}
-              monthlyLimit={monthlyLimit}
-              saving={saving}
-              setUbpEnabled={setUbpEnabled}
-              setMonthlyLimit={setMonthlyLimit}
-              handleSaveUbp={handleSaveUbp}
             />
           </div>
         </div>
@@ -453,4 +460,5 @@ export default function SubscriptionOverview() {
       )}
     </>
   );
-} 
+}
+ 

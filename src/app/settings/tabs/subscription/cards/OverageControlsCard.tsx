@@ -22,10 +22,6 @@ export const OverageControlsCard: React.FC<OverageControlsCardProps> = ({
 }) => (
   <Card>
     <CardContent className="space-y-4">
-      <div className="bg-yellow-900/80 text-yellow-100 rounded p-3 text-sm flex items-center gap-2">
-        <span className="font-bold">ℹ️</span>
-        <span>Need more than what’s included in your plan? Turn on extra requests and set a monthly cap so you stay in control.</span>
-      </div>
       <div className="font-semibold text-base mt-2 mb-1">Extra requests</div>
       <div className="flex items-center gap-2 mt-2">
         <Switch checked={ubpEnabled} onCheckedChange={setUbpEnabled} />
@@ -47,9 +43,7 @@ export const OverageControlsCard: React.FC<OverageControlsCardProps> = ({
           {saving ? "Saving..." : "Save"}
         </Button>
       </div>
-      <div className="text-xs text-muted-foreground mt-1">
-        We’ll stop charging for extra requests once you hit this cap. Your base plan cost stays the same.
-      </div>
+      <div className="text-xs text-muted-foreground mt-1">We’ll stop charging for extra requests once you hit this cap. Your base plan stays the same.</div>
     </CardContent>
   </Card>
 );
