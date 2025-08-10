@@ -214,6 +214,49 @@ export const resetUsageForPeriod = mutation({
   },
 });
 
+// Read overage settings (minimal surface change)
+export const getOverageSettings = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+    if (!user || !user.subscription) {
+      return { ubpEnabled: true, monthlyLimit: 25 };
+    }
+    const sub = user.subscription as any;
+    const ubpEnabled = typeof sub.ubpEnabled === 'boolean' ? sub.ubpEnabled : true;
+    const monthlyLimit = typeof sub.monthlyLimit === 'number' ? sub.monthlyLimit : 25;
+    return { ubpEnabled, monthlyLimit };
+  }
+});
+
+// Update overage settings (toggle + cap) in users.subscription
+export const updateOverageSettings = mutation({
+  args: { userId: v.string(), ubpEnabled: v.boolean(), monthlyLimit: v.number() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+    if (!user) {
+      throw new Error(`User not found: ${args.userId}`);
+    }
+    const cappedLimit = Math.max(0, Math.floor(args.monthlyLimit));
+    const currentSub = (user as any).subscription || {};
+    await ctx.db.patch(user._id, {
+      subscription: {
+        ...currentSub,
+        ubpEnabled: args.ubpEnabled,
+        monthlyLimit: cappedLimit,
+        lastUpdatedAt: Date.now(),
+      },
+    });
+    return { success: true };
+  }
+});
+
 // Update user's usage field (after logging an event)
 export const updateUserUsage = mutation({
   args: { 
@@ -239,24 +282,32 @@ export const updateUserUsage = mutation({
       throw new Error("User or subscription not found");
     }
 
-    const sub = user.subscription;
+    const sub = user.subscription as any;
     const used = sub.usedRequests || 0;
     const quota = sub.includedRequests || 0;
+    const ubpEnabled = typeof sub.ubpEnabled === 'boolean' ? sub.ubpEnabled : true;
 
-    // Calculate new used requests and overage
-    const newUsed = used + args.qty;
+    let newUsed = used + args.qty;
+    let blocked = false;
+
+    // Enforce: if overage (extra requests) is disabled, cap at included quota
+    if (!ubpEnabled) {
+      newUsed = Math.min(quota, newUsed);
+      blocked = newUsed >= quota; // additional qty beyond quota is blocked
+    }
+
     const overage = Math.max(0, newUsed - quota);
 
     // Update the user's subscription usage
     await ctx.db.patch(user._id, {
       subscription: {
         ...sub,
-        usedRequests: newUsed, // Track total usage including overage
+        usedRequests: newUsed, // Track total usage including overage (or capped)
       },
     });
 
     // Log the update for debugging
-    console.log(`[UpdateUserUsage] User ${args.userId} - Used: ${newUsed}/${quota} (Overage: ${overage})`);
+    console.log(`[UpdateUserUsage] User ${args.userId} - Used: ${newUsed}/${quota} (Overage: ${overage}) ubpEnabled=${ubpEnabled} blocked=${blocked}`);
     if (args.endpoint) {
       console.log(`[UpdateUserUsage] Endpoint: ${args.method} ${args.endpoint}${args.path || ''} - ${args.statusCode || 200}`);
     }
@@ -266,7 +317,8 @@ export const updateUserUsage = mutation({
       used: newUsed,
       quota,
       overage,
+      blocked,
     };
-  },
+  }
 });
 

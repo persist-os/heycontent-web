@@ -18,7 +18,7 @@ import { useAuth } from "@/app/context/auth-context";
 import { getApiKey } from '@/app/lib/api-helpers';
 
 // Convex imports
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/../convex/_generated/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -51,6 +51,9 @@ export default function SubscriptionOverview() {
   // Convex usage queries
   const convexUsageSummary = useQuery(api.usageEvents.getUsageSummary, userId ? { userId } : "skip");
   const convexUsageEvents = useQuery(api.usageEvents.listUsageEvents, userId ? { userId, limit: 20 } : "skip");
+  // Convex overage settings
+  const overageSettings = useQuery(api.usageEvents.getOverageSettings, userId ? { userId } : "skip");
+  const mutateOverageSettings = useMutation(api.usageEvents.updateOverageSettings);
   
   // Update usage summary when convex data changes
   useEffect(() => {
@@ -65,9 +68,17 @@ export default function SubscriptionOverview() {
 
   // Overage controls state
   const [ubpEnabled, setUbpEnabled] = useState(currentSubscription?.ubpEnabled ?? true);
-  const [premiumEnabled, setPremiumEnabled] = useState(currentSubscription?.premiumEnabled ?? true);
-  const [monthlyLimit, setMonthlyLimit] = useState(currentSubscription?.monthlyLimit ?? 100);
+  // Removed second toggle (premiumEnabled) per UX simplification
+  const [monthlyLimit, setMonthlyLimit] = useState(currentSubscription?.monthlyLimit ?? 25);
   const [saving, setSaving] = useState(false);
+
+  // Sync overage settings from Convex when loaded
+  useEffect(() => {
+    if (overageSettings && typeof overageSettings === 'object') {
+      if (typeof overageSettings.ubpEnabled === 'boolean') setUbpEnabled(overageSettings.ubpEnabled);
+      if (typeof overageSettings.monthlyLimit === 'number') setMonthlyLimit(overageSettings.monthlyLimit);
+    }
+  }, [overageSettings]);
 
   // Fetch plans and subscription status from API
   useEffect(() => {
@@ -269,10 +280,16 @@ export default function SubscriptionOverview() {
   };
   const handleCloseQuantityModal = () => setShowQuantityModal(false);
 
-  const handleSaveUbp = () => {
-    setSaving(true);
-    // Simulate save
-    setTimeout(() => setSaving(false), 1000);
+  const handleSaveUbp = async () => {
+    if (!firebaseUser?.uid) return;
+    try {
+      setSaving(true);
+      await mutateOverageSettings({ userId: firebaseUser.uid, ubpEnabled, monthlyLimit });
+    } catch (e) {
+      console.error('Failed to save overage settings', e);
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
@@ -412,11 +429,9 @@ export default function SubscriptionOverview() {
             />
             <OverageControlsCard
               ubpEnabled={ubpEnabled}
-              premiumEnabled={premiumEnabled}
               monthlyLimit={monthlyLimit}
               saving={saving}
               setUbpEnabled={setUbpEnabled}
-              setPremiumEnabled={setPremiumEnabled}
               setMonthlyLimit={setMonthlyLimit}
               handleSaveUbp={handleSaveUbp}
             />
