@@ -28,13 +28,24 @@ export const updateSubscriptionFromStripe = mutation({
       )),
       price_id: v.optional(v.string()),
       metered_price_id: v.optional(v.string()),
-      interval: v.optional(v.union(v.literal("month"), v.literal("year"))),
+      interval: v.optional(v.union(
+        v.literal("month"), 
+        v.literal("year"),
+        v.literal("monthly"),  // Support both formats
+        v.literal("yearly")    // Support both formats
+      )),
       included_requests: v.optional(v.number()),
       used_requests: v.optional(v.number()),
       subscription_item_id: v.optional(v.string()),
     })
   },
   handler: async (ctx, args) => {
+    // Normalize interval values
+    if (args.data?.interval) {
+      if (args.data.interval === "monthly") args.data.interval = "month";
+      if (args.data.interval === "yearly") args.data.interval = "year";
+    }
+    
     const user = await ctx.db
       .query("users")
       .filter((q) => q.eq(q.field("stripeSubscriptionId"), args.stripeSubscriptionId))
