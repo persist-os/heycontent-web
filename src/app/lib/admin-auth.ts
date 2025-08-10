@@ -40,11 +40,4 @@ export function requireAdmin() {
     throw new Error('Admin access required');
   }
 }
-
-export function requireDeveloper() {
-  const { isDeveloper } = useAdminAuth();
-  
-  if (!isDeveloper) {
-    throw new Error('Developer access required');
-  }
-} 
+ 
