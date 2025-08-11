@@ -26,7 +26,11 @@ import {
   Trash2,
   BarChart3,
   Clock,
-  ExternalLink
+  ExternalLink,
+  Search,
+  Filter,
+  SortAsc,
+  SortDesc
 } from 'lucide-react';
 import { FeedbackDetailModal } from './components/FeedbackDetailModal';
 import { FeedbackFilters } from './components/FeedbackFilters';
@@ -73,6 +77,12 @@ export default function AdminPage() {
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [activeStatusTab, setActiveStatusTab] = useState('all');
+  
+  // User management filters
+  const [userSearch, setUserSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [userSortBy, setUserSortBy] = useState<'createdAt' | 'name' | 'totalReferred'>('createdAt');
+  const [userSortOrder, setUserSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Fetch data - always call hooks, even if we'll return early
   const feedback = useQuery(api.feedback.listFeedback, {
@@ -89,6 +99,53 @@ export default function AdminPage() {
   
   // Fetch referral data for all users
   const referralData = useQuery(api.referrals.getAllReferralData);
+
+  // Filter and sort users
+  const filteredAndSortedUsers = useMemo(() => {
+    if (!users || !referralData) return [];
+    
+    let filtered = users.filter((user: any) => {
+      // Search filter
+      const matchesSearch = user.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+                           user.email.toLowerCase().includes(userSearch.toLowerCase());
+      
+      // Role filter
+      const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+      
+      return matchesSearch && matchesRole;
+    });
+    
+    // Sort users
+    filtered.sort((a: any, b: any) => {
+      let aValue: any, bValue: any;
+      
+      switch (userSortBy) {
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'totalReferred':
+          const aReferralData = referralData.find((r: any) => r.referrerId === a._id);
+          const bReferralData = referralData.find((r: any) => r.referrerId === b._id);
+          aValue = aReferralData?.totalReferred || 0;
+          bValue = bReferralData?.totalReferred || 0;
+          break;
+        case 'createdAt':
+        default:
+          aValue = a.createdAt;
+          bValue = b.createdAt;
+          break;
+      }
+      
+      if (userSortOrder === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+    
+    return filtered;
+  }, [users, referralData, userSearch, roleFilter, userSortBy, userSortOrder]);
 
 
   // Mutations
@@ -560,13 +617,18 @@ export default function AdminPage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Regular Users</CardTitle>
-                <User className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Tier Users</CardTitle>
+                <BarChart3 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {users?.filter(u => u.role === 'user').length || 0}
+                  {users?.filter(u => ['ambassador', 'affiliate', 'partner'].includes(u.role)).length || 0}
                 </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ambassador: {users?.filter(u => u.role === 'ambassador').length || 0} | 
+                  Affiliate: {users?.filter(u => u.role === 'affiliate').length || 0} | 
+                  Partner: {users?.filter(u => u.role === 'partner').length || 0}
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -577,87 +639,172 @@ export default function AdminPage() {
               <CardTitle>User Management</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {users?.map((user) => {
-                  const RoleIcon = roleIcons[user.role as keyof typeof roleIcons] || User;
+              {/* Search and Filter Controls */}
+              <div className="mb-6 space-y-4">
+                {/* Search Bar */}
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by name or email..."
+                      value={userSearch}
+                      onChange={(e) => setUserSearch(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                
+                {/* Filters and Sorting */}
+                <div className="flex flex-wrap items-center gap-4">
+                  {/* Role Filter */}
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-muted-foreground" />
+                    <Select value={roleFilter} onValueChange={setRoleFilter}>
+                      <SelectTrigger className="w-32">
+                        <SelectValue placeholder="All Roles" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Roles</SelectItem>
+                        <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="super_admin">Super Admin</SelectItem>
+                        <SelectItem value="ambassador">Ambassador</SelectItem>
+                        <SelectItem value="affiliate">Affiliate</SelectItem>
+                        <SelectItem value="partner">Partner</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   
-                  return (
-                    <div 
-                      key={user._id} 
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-                      onClick={() => handleUserClick(user)}
-                    >
-                      <div className="flex items-center gap-4">
-                        <RoleIcon className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                          <h3 className="font-semibold">{user.name}</h3>
-                          <p className="text-sm text-muted-foreground">{user.email}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Joined: {formatDate(user.createdAt)}
-                          </p>
+                  {/* Sort By */}
+                  <div className="flex items-center gap-2">
+                    <SortAsc className="h-4 w-4 text-muted-foreground" />
+                    <Select value={userSortBy} onValueChange={(value: 'createdAt' | 'name' | 'totalReferred') => setUserSortBy(value)}>
+                      <SelectTrigger className="w-40">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="createdAt">Date Joined</SelectItem>
+                        <SelectItem value="name">Name</SelectItem>
+                        <SelectItem value="totalReferred">Total Referrals</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Sort Order */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setUserSortOrder(userSortOrder === 'asc' ? 'desc' : 'asc')}
+                    className="flex items-center gap-2"
+                  >
+                    {userSortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
+                    {userSortOrder === 'asc' ? 'Ascending' : 'Descending'}
+                  </Button>
+                  
+                  {/* Clear Filters */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setUserSearch('');
+                      setRoleFilter('all');
+                      setUserSortBy('createdAt');
+                      setUserSortOrder('desc');
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+                
+                {/* Results Count */}
+                <div className="text-sm text-muted-foreground">
+                  Showing {filteredAndSortedUsers.length} of {users?.length || 0} users
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                {filteredAndSortedUsers.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium">No users found</p>
+                    <p className="text-sm">Try adjusting your search or filters</p>
+                  </div>
+                ) : (
+                  filteredAndSortedUsers.map((user) => {
+                    const RoleIcon = roleIcons[user.role as keyof typeof roleIcons] || User;
+                    
+                    return (
+                      <div 
+                        key={user._id} 
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                        onClick={() => handleUserClick(user)}
+                      >
+                        <div className="flex items-center gap-4">
+                          <RoleIcon className="h-5 w-5 text-muted-foreground" />
+                          <div>
+                            <h3 className="font-semibold">{user.name}</h3>
+                            <p className="text-sm text-muted-foreground">{user.email}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Joined: {formatDate(user.createdAt)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                          <Badge className={roleColors[user.role as keyof typeof roleColors]}>
+                            {user.role.replace('_', ' ')}
+                          </Badge>
+                          
+                          {/* Show referral stats if they exist */}
+                          {(() => {
+                            const userReferralData = referralData?.find(r => r.referrerId === user._id);
+                            if (userReferralData && userReferralData.totalReferred > 0) {
+                              return (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <span className="text-green-600 font-medium">
+                                    {userReferralData.totalReferred} referrals
+                                  </span>
+                                  {userReferralData.lastReferralDate && (
+                                    <span className="text-muted-foreground">
+                                      {formatDate(userReferralData.lastReferralDate)}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+
+                          {isSuperAdmin && (
+                            <Select
+                              value={user.role}
+                              onValueChange={(value) => handleRoleUpdate(user._id, value)}
+                              disabled={updatingUser === user._id}
+                            >
+                              <SelectTrigger className="w-32">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="user">User</SelectItem>
+                                <SelectItem value="admin">Admin</SelectItem>
+                                <SelectItem value="super_admin">Super Admin</SelectItem>
+                                <SelectItem value="ambassador">Ambassador</SelectItem>
+                                <SelectItem value="affiliate">Affiliate</SelectItem>
+                                <SelectItem value="partner">Partner</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+
+                          {updatingUser === user._id && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+                              Updating...
+                            </div>
+                          )}
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-4">
-                        <Badge className={roleColors[user.role as keyof typeof roleColors]}>
-                          {user.role.replace('_', ' ')}
-                        </Badge>
-                        
-                        {/* Show referral stats if they exist */}
-                        {(() => {
-                          const userReferralData = referralData?.find(r => r.referrerId === user._id);
-                          if (userReferralData && userReferralData.totalReferred > 0) {
-                            return (
-                              <div className="flex items-center gap-2 text-sm">
-                                <span className="text-green-600 font-medium">
-                                  {userReferralData.totalReferred} referrals
-                                </span>
-                                {userReferralData.lastReferralDate && (
-                                  <span className="text-muted-foreground">
-                                    {formatDate(userReferralData.lastReferralDate)}
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          }
-                          return null;
-                        })()}
-
-                        {isSuperAdmin && (
-                          <Select
-                            value={user.role}
-                            onValueChange={(value) => handleRoleUpdate(user._id, value)}
-                            disabled={updatingUser === user._id}
-                          >
-                            <SelectTrigger className="w-32">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="user">User</SelectItem>
-                              <SelectItem value="admin">Admin</SelectItem>
-                              <SelectItem value="super_admin">Super Admin</SelectItem>
-                              <SelectItem value="ambassador">Ambassador</SelectItem>
-                              <SelectItem value="affiliate">Affiliate</SelectItem>
-                              <SelectItem value="partner">Partner</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        )}
-
-                        {updatingUser === user._id && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
-                            Updating...
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {users?.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No users found.
-                  </div>
+                    );
+                  })
                 )}
               </div>
             </CardContent>
