@@ -53,7 +53,7 @@ export const updateSubscriptionFromStripe = mutation({
     if (!user) return { success: false, error: "User not found for this Stripe subscription ID" };
     if (!user.subscription) return { success: false, error: "User has no subscription object" };
 
-    // Update fields that exist in the schema (expecting camelCase from backend)
+    // Update fields that exist in the schema (only camelCase fields are accepted; snake_case is not supported)
     const updates: any = {};
     if (args.data.status) updates.status = args.data.status;
     if (args.data.currentPeriodStart !== undefined) updates.currentPeriodStart = args.data.currentPeriodStart;
