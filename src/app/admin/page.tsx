@@ -59,6 +59,8 @@ export default function AdminPage() {
   const router = useRouter();
   const { firebaseUser } = useAuth();
   const { isAdmin, isSuperAdmin } = useAdminAuth();
+  
+  // All hooks must be called before any conditional returns
   const [activeTab, setActiveTab] = useState('feedback');
   const [updatingUser, setUpdatingUser] = useState<string | null>(null);
   
@@ -86,7 +88,7 @@ export default function AdminPage() {
   const [userSortBy, setUserSortBy] = useState<'createdAt' | 'name' | 'totalReferred'>('createdAt');
   const [userSortOrder, setUserSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  // Fetch data - always call hooks, even if we'll return early
+  // Fetch data - all hooks called in consistent order
   const feedback = useQuery(api.feedback.listFeedback, {
     status: 'all',
     type: 'all',
@@ -100,9 +102,69 @@ export default function AdminPage() {
   );
   
   // Fetch referral data for all users
-  const referralData = useQuery(api.referrals.getAllReferralData);
+  const referralData = useQuery(api.referrals.getAllReferralData, 
+    firebaseUser?.uid ? {} : "skip"
+  );
 
-  // Filter and sort users
+  // Filter and sort feedback - ALL hooks must be called before any conditional returns
+  const filteredAndSortedFeedback = useMemo(() => {
+    if (!feedback?.feedback) return [];
+    
+    let filtered = feedback.feedback;
+    
+    // Apply search filter
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filtered = filtered.filter(item => 
+        item.title.toLowerCase().includes(searchLower) ||
+        item.description.toLowerCase().includes(searchLower) ||
+        item.userName.toLowerCase().includes(searchLower) ||
+        item.userEmail.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(item => item.status === statusFilter);
+    }
+    
+    // Apply priority filter
+    if (priorityFilter !== 'all') {
+      filtered = filtered.filter(item => item.priority === priorityFilter);
+    }
+    
+    // Apply type filter
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter(item => item.type === typeFilter);
+    }
+    
+    // Sort feedback
+    filtered.sort((a, b) => {
+      let aValue: any, bValue: any;
+      
+      switch (sortBy) {
+        case 'title':
+          aValue = a.title.toLowerCase();
+          bValue = b.title.toLowerCase();
+          break;
+        case 'createdAt':
+        default:
+          aValue = a.createdAt;
+          bValue = b.createdAt;
+          break;
+      }
+      
+      if (sortOrder === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+    
+    return filtered;
+  }, [feedback, search, statusFilter, priorityFilter, typeFilter, sortBy, sortOrder]);
+
+  // Filter and sort users - ALL hooks must be called before any conditional returns
   const filteredAndSortedUsers = useMemo(() => {
     if (!users || !referralData) return [];
     
@@ -157,12 +219,26 @@ export default function AdminPage() {
     return filtered;
   }, [users, referralData, userSearch, roleFilter, subscriptionFilter, userSortBy, userSortOrder]);
 
-
-  // Mutations
+  // Mutations - ALL hooks must be called before any conditional returns
   const updateStatus = useMutation(api.feedback.updateFeedbackStatus);
   const updateUserRole = useMutation(api.auth.updateUserRole);
-
-  // Check access
+  
+  // Now handle conditional rendering after ALL hooks are called
+  if (firebaseUser === undefined) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="text-center space-y-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="text-muted-foreground">Loading...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
   if (!isAdmin) {
     return (
       <div className="container mx-auto p-6">
@@ -180,6 +256,8 @@ export default function AdminPage() {
       </div>
     );
   }
+
+
 
   const handleStatusUpdate = async (
     feedbackId: string, 
@@ -249,85 +327,7 @@ export default function AdminPage() {
     setStatusFilter(status);
   };
 
-  // Filter and sort feedback
-  const filteredAndSortedFeedback = useMemo(() => {
-    if (!feedback?.feedback) return [];
-    
-    let filtered = feedback.feedback;
-    
-    // Apply search filter
-    if (search) {
-      const searchLower = search.toLowerCase();
-      filtered = filtered.filter(item => 
-        item.title.toLowerCase().includes(searchLower) ||
-        item.description.toLowerCase().includes(searchLower) ||
-        item.userName.toLowerCase().includes(searchLower) ||
-        item.userEmail.toLowerCase().includes(searchLower)
-      );
-    }
-    
-    // Apply status filter (exclude resolved/closed unless specifically requested)
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(item => item.status === statusFilter);
-    } else {
-      // By default, exclude resolved and closed items unless viewing all
-      filtered = filtered.filter(item => item.status !== 'resolved' && item.status !== 'closed');
-    }
-    
-    // Apply priority filter
-    if (priorityFilter !== 'all') {
-      filtered = filtered.filter(item => item.priority === priorityFilter);
-    }
-    
-    // Apply type filter
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(item => item.type === typeFilter);
-    }
-    
-    // Apply sorting
-    filtered.sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
-      
-      switch (sortBy) {
-        case 'createdAt':
-          aValue = a.createdAt;
-          bValue = b.createdAt;
-          break;
-        case 'updatedAt':
-          aValue = a.updatedAt;
-          bValue = b.updatedAt;
-          break;
-        case 'title':
-          aValue = a.title.toLowerCase();
-          bValue = b.title.toLowerCase();
-          break;
-        case 'priority':
-          aValue = a.priority;
-          bValue = b.priority;
-          break;
-        case 'status':
-          aValue = a.status;
-          bValue = b.status;
-          break;
-        case 'userName':
-          aValue = a.userName.toLowerCase();
-          bValue = b.userName.toLowerCase();
-          break;
-        default:
-          aValue = a.createdAt;
-          bValue = b.createdAt;
-      }
-      
-      if (sortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    });
-    
-    return filtered;
-  }, [feedback?.feedback, search, statusFilter, priorityFilter, typeFilter, sortBy, sortOrder]);
+
 
   const handleRoleUpdate = async (userId: string, newRole: string) => {
     if (!firebaseUser?.uid) return;
@@ -1125,7 +1125,7 @@ export default function AdminPage() {
                                     <div className="flex items-center justify-between">
                                       <div className="flex-1">
                                         <div className="flex items-center gap-2 mb-1">
-                                          <div className="font-medium text-white">{referredUser.userName}</div>
+                                          <div className="font-medium text-white">{referredUserData?.name || 'Unknown User'}</div>
                                           {isPaying ? (
                                             <Badge className="bg-green-600 text-white text-xs">
                                               <CheckCircle className="h-3 w-3 mr-1" />
@@ -1138,7 +1138,7 @@ export default function AdminPage() {
                                             </Badge>
                                           )}
                                         </div>
-                                        <div className="text-sm text-gray-300">{referredUser.userEmail}</div>
+                                        <div className="text-sm text-gray-300">{referredUserData?.email || 'No email'}</div>
                                         <div className="text-xs text-gray-400 mt-1">
                                           Referred: {formatDate(referredUser.referredAt)}
                                         </div>

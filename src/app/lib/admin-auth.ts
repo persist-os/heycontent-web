@@ -5,6 +5,7 @@ import { api } from '@/convex/_generated/api';
 export function useAdminAuth() {
   const { firebaseUser } = useAuth();
   
+  // Always call these hooks in the same order, even if we skip them
   const userRole = useQuery(api.auth.getUserRole, 
     firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
   );
@@ -13,6 +14,7 @@ export function useAdminAuth() {
     firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
   );
   
+  // Return consistent structure regardless of auth state
   return {
     isAdmin: userRole?.role === 'admin' || userRole?.role === 'super_admin',
     isSuperAdmin: userRole?.role === 'super_admin',
