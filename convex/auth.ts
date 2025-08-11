@@ -177,6 +177,31 @@ export const getUsersWithRoles = query({
       v.literal("partner")
     ),
     createdAt: v.number(),
+    subscription: v.optional(v.object({
+      status: v.string(),
+      plan: v.string(),
+      priceId: v.string(),
+      currentPeriodStart: v.number(),
+      currentPeriodEnd: v.number(),
+      cancelAtPeriodEnd: v.boolean(),
+      includedRequests: v.number(),
+      usedRequests: v.number(),
+      lastSyncedAt: v.optional(v.number()),
+      canceledAt: v.optional(v.number()),
+      interval: v.optional(v.string()),
+      cancel_at: v.optional(v.number()),
+      customer: v.optional(v.string()),
+      items: v.optional(v.any()),
+      quantity: v.optional(v.number()),
+      start_date: v.optional(v.number()),
+      monthlyLimit: v.optional(v.number()),
+      ubpEnabled: v.optional(v.boolean()),
+    })),
+    referralStats: v.optional(v.object({
+      totalReferred: v.number(),
+      firstReferralDate: v.optional(v.number()),
+      lastReferralDate: v.optional(v.number()),
+    })),
   })),
   handler: async (ctx, args) => {
     // Check if the requesting user is an admin
@@ -196,6 +221,8 @@ export const getUsersWithRoles = query({
       email: user.email,
       role: user.role || "user",
       createdAt: user.createdAt,
+      subscription: user.subscription,
+      referralStats: user.referralStats,
     }));
   },
 }); 

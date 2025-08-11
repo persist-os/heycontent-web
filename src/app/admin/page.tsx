@@ -6,7 +6,7 @@ import { api } from '@/convex/_generated/api';
 import { useAuth } from '@/app/context/auth-context';
 import { useAdminAuth } from '@/app/lib/admin-auth';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -30,7 +30,8 @@ import {
   Search,
   Filter,
   SortAsc,
-  SortDesc
+  SortDesc,
+  TrendingUp
 } from 'lucide-react';
 import { FeedbackDetailModal } from './components/FeedbackDetailModal';
 import { FeedbackFilters } from './components/FeedbackFilters';
@@ -58,6 +59,8 @@ export default function AdminPage() {
   const router = useRouter();
   const { firebaseUser } = useAuth();
   const { isAdmin, isSuperAdmin } = useAdminAuth();
+  
+  // All hooks must be called before any conditional returns
   const [activeTab, setActiveTab] = useState('feedback');
   const [updatingUser, setUpdatingUser] = useState<string | null>(null);
   
@@ -81,10 +84,11 @@ export default function AdminPage() {
   // User management filters
   const [userSearch, setUserSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [subscriptionFilter, setSubscriptionFilter] = useState('all');
   const [userSortBy, setUserSortBy] = useState<'createdAt' | 'name' | 'totalReferred'>('createdAt');
   const [userSortOrder, setUserSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  // Fetch data - always call hooks, even if we'll return early
+  // Fetch data - all hooks called in consistent order
   const feedback = useQuery(api.feedback.listFeedback, {
     status: 'all',
     type: 'all',
@@ -98,9 +102,69 @@ export default function AdminPage() {
   );
   
   // Fetch referral data for all users
-  const referralData = useQuery(api.referrals.getAllReferralData);
+  const referralData = useQuery(api.referrals.getAllReferralData, 
+    firebaseUser?.uid ? {} : "skip"
+  );
 
-  // Filter and sort users
+  // Filter and sort feedback - ALL hooks must be called before any conditional returns
+  const filteredAndSortedFeedback = useMemo(() => {
+    if (!feedback?.feedback) return [];
+    
+    let filtered = feedback.feedback;
+    
+    // Apply search filter
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filtered = filtered.filter(item => 
+        item.title.toLowerCase().includes(searchLower) ||
+        item.description.toLowerCase().includes(searchLower) ||
+        item.userName.toLowerCase().includes(searchLower) ||
+        item.userEmail.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(item => item.status === statusFilter);
+    }
+    
+    // Apply priority filter
+    if (priorityFilter !== 'all') {
+      filtered = filtered.filter(item => item.priority === priorityFilter);
+    }
+    
+    // Apply type filter
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter(item => item.type === typeFilter);
+    }
+    
+    // Sort feedback
+    filtered.sort((a, b) => {
+      let aValue: any, bValue: any;
+      
+      switch (sortBy) {
+        case 'title':
+          aValue = a.title.toLowerCase();
+          bValue = b.title.toLowerCase();
+          break;
+        case 'createdAt':
+        default:
+          aValue = a.createdAt;
+          bValue = b.createdAt;
+          break;
+      }
+      
+      if (sortOrder === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+    
+    return filtered;
+  }, [feedback, search, statusFilter, priorityFilter, typeFilter, sortBy, sortOrder]);
+
+  // Filter and sort users - ALL hooks must be called before any conditional returns
   const filteredAndSortedUsers = useMemo(() => {
     if (!users || !referralData) return [];
     
@@ -112,7 +176,15 @@ export default function AdminPage() {
       // Role filter
       const matchesRole = roleFilter === 'all' || user.role === roleFilter;
       
-      return matchesSearch && matchesRole;
+      // Subscription filter
+      let matchesSubscription = true;
+      if (subscriptionFilter === 'subscribed') {
+        matchesSubscription = user.subscription?.status === 'active';
+      } else if (subscriptionFilter === 'not_subscribed') {
+        matchesSubscription = !user.subscription || user.subscription.status !== 'active';
+      }
+      
+      return matchesSearch && matchesRole && matchesSubscription;
     });
     
     // Sort users
@@ -145,14 +217,28 @@ export default function AdminPage() {
     });
     
     return filtered;
-  }, [users, referralData, userSearch, roleFilter, userSortBy, userSortOrder]);
+  }, [users, referralData, userSearch, roleFilter, subscriptionFilter, userSortBy, userSortOrder]);
 
-
-  // Mutations
+  // Mutations - ALL hooks must be called before any conditional returns
   const updateStatus = useMutation(api.feedback.updateFeedbackStatus);
   const updateUserRole = useMutation(api.auth.updateUserRole);
-
-  // Check access
+  
+  // Now handle conditional rendering after ALL hooks are called
+  if (firebaseUser === undefined) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="text-center space-y-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="text-muted-foreground">Loading...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
   if (!isAdmin) {
     return (
       <div className="container mx-auto p-6">
@@ -170,6 +256,8 @@ export default function AdminPage() {
       </div>
     );
   }
+
+
 
   const handleStatusUpdate = async (
     feedbackId: string, 
@@ -239,85 +327,7 @@ export default function AdminPage() {
     setStatusFilter(status);
   };
 
-  // Filter and sort feedback
-  const filteredAndSortedFeedback = useMemo(() => {
-    if (!feedback?.feedback) return [];
-    
-    let filtered = feedback.feedback;
-    
-    // Apply search filter
-    if (search) {
-      const searchLower = search.toLowerCase();
-      filtered = filtered.filter(item => 
-        item.title.toLowerCase().includes(searchLower) ||
-        item.description.toLowerCase().includes(searchLower) ||
-        item.userName.toLowerCase().includes(searchLower) ||
-        item.userEmail.toLowerCase().includes(searchLower)
-      );
-    }
-    
-    // Apply status filter (exclude resolved/closed unless specifically requested)
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(item => item.status === statusFilter);
-    } else {
-      // By default, exclude resolved and closed items unless viewing all
-      filtered = filtered.filter(item => item.status !== 'resolved' && item.status !== 'closed');
-    }
-    
-    // Apply priority filter
-    if (priorityFilter !== 'all') {
-      filtered = filtered.filter(item => item.priority === priorityFilter);
-    }
-    
-    // Apply type filter
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(item => item.type === typeFilter);
-    }
-    
-    // Apply sorting
-    filtered.sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
-      
-      switch (sortBy) {
-        case 'createdAt':
-          aValue = a.createdAt;
-          bValue = b.createdAt;
-          break;
-        case 'updatedAt':
-          aValue = a.updatedAt;
-          bValue = b.updatedAt;
-          break;
-        case 'title':
-          aValue = a.title.toLowerCase();
-          bValue = b.title.toLowerCase();
-          break;
-        case 'priority':
-          aValue = a.priority;
-          bValue = b.priority;
-          break;
-        case 'status':
-          aValue = a.status;
-          bValue = b.status;
-          break;
-        case 'userName':
-          aValue = a.userName.toLowerCase();
-          bValue = b.userName.toLowerCase();
-          break;
-        default:
-          aValue = a.createdAt;
-          bValue = b.createdAt;
-      }
-      
-      if (sortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    });
-    
-    return filtered;
-  }, [feedback?.feedback, search, statusFilter, priorityFilter, typeFilter, sortBy, sortOrder]);
+
 
   const handleRoleUpdate = async (userId: string, newRole: string) => {
     if (!firebaseUser?.uid) return;
@@ -337,7 +347,11 @@ export default function AdminPage() {
   };
 
   const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString('en-US', {
+    // Handle both seconds and milliseconds
+    // If timestamp is less than 10000000000, it's likely in seconds
+    const timestampInMs = timestamp < 10000000000 ? timestamp * 1000 : timestamp;
+    
+    return new Date(timestampInMs).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -579,59 +593,189 @@ export default function AdminPage() {
         </TabsContent>
 
         <TabsContent value="users" className="space-y-6">
-          {/* User Statistics */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{users?.length || 0}</div>
-              </CardContent>
-            </Card>
+          {/* Platform Overview with Tabs */}
+          <Card className="bg-card border-border shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-foreground text-xl font-semibold">Platform Overview</CardTitle>
+              <CardDescription className="text-muted-foreground">
+                Key metrics for your HeyContent platform
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {/* Overview Tabs */}
+              <Tabs defaultValue="metrics" className="w-full">
+                <TabsList className="grid w-full grid-cols-4 mb-6 bg-muted border border-border">
+                  <TabsTrigger 
+                    value="metrics" 
+                    className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                    Metrics
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="users" 
+                    className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
+                  >
+                    <Users className="h-4 w-4" />
+                    Users
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="referrals" 
+                    className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
+                  >
+                    <TrendingUp className="h-4 w-4" />
+                    Referrals
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="revenue" 
+                    className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    Revenue
+                  </TabsTrigger>
+                </TabsList>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Admins</CardTitle>
-                <Shield className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {users?.filter(u => u.role === 'admin').length || 0}
-                </div>
-              </CardContent>
-            </Card>
+                {/* Metrics Tab */}
+                <TabsContent value="metrics" className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-3xl font-bold text-foreground">
+                        {users?.length || 0}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Total Users</div>
+                    </div>
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-3xl font-bold text-primary">
+                        {users?.filter(u => u.subscription?.status === 'active').length || 0}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Active Subscribers</div>
+                      <div className="text-xs text-primary mt-1 font-medium">
+                        {users?.length ? Math.round((users.filter(u => u.subscription?.status === 'active').length / users.length) * 100) : 0}% conversion rate
+                      </div>
+                    </div>
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-3xl font-bold text-accent">
+                        {referralData?.reduce((total, r) => total + r.totalReferred, 0) || 0}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Total Referrals</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Across all users
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Super Admins</CardTitle>
-                <Shield className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {users?.filter(u => u.role === 'super_admin').length || 0}
-                </div>
-              </CardContent>
-            </Card>
+                {/* Users Tab */}
+                <TabsContent value="users" className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-2xl font-bold text-foreground">
+                        {users?.filter(u => u.role === 'user').length || 0}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Regular Users</div>
+                    </div>
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-2xl font-bold text-accent">
+                        {users?.filter(u => ['admin', 'super_admin'].includes(u.role)).length || 0}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Admin Users</div>
+                      <div className="text-xs text-accent mt-1 font-medium">
+                        Admin: {users?.filter(u => u.role === 'admin').length || 0} | 
+                        Super: {users?.filter(u => u.role === 'super_admin').length || 0}
+                      </div>
+                    </div>
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-2xl font-bold text-primary">
+                        {users?.filter(u => ['ambassador', 'affiliate', 'partner'].includes(u.role)).length || 0}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Tier Users</div>
+                      <div className="text-xs text-primary mt-1 font-medium">
+                        A: {users?.filter(u => u.role === 'ambassador').length || 0} | 
+                        F: {users?.filter(u => u.role === 'affiliate').length || 0} | 
+                        P: {users?.filter(u => u.role === 'partner').length || 0}
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Tier Users</CardTitle>
-                <BarChart3 className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {users?.filter(u => ['ambassador', 'affiliate', 'partner'].includes(u.role)).length || 0}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Ambassador: {users?.filter(u => u.role === 'ambassador').length || 0} | 
-                  Affiliate: {users?.filter(u => u.role === 'affiliate').length || 0} | 
-                  Partner: {users?.filter(u => u.role === 'partner').length || 0}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+                {/* Referrals Tab */}
+                <TabsContent value="referrals" className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-2xl font-bold text-foreground">
+                        {referralData?.reduce((total, r) => total + r.totalReferred, 0) || 0}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Total Referrals</div>
+                    </div>
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-2xl font-bold text-primary">
+                        {(() => {
+                          if (!users || !referralData) return 0;
+                          let totalReferredUsers = 0;
+                          let payingReferredUsers = 0;
+                          
+                          referralData.forEach(r => {
+                            r.referredUsers.forEach((ref: any) => {
+                              totalReferredUsers++;
+                              const referredUser = users.find(u => u._id === ref.userId);
+                              if (referredUser?.subscription?.status === 'active') {
+                                payingReferredUsers++;
+                              }
+                            });
+                          });
+                          
+                          return totalReferredUsers > 0 ? Math.round((payingReferredUsers / totalReferredUsers) * 100) : 0;
+                        })()}%
+                      </div>
+                      <div className="text-sm text-muted-foreground">Referral Conversion</div>
+                      <div className="text-xs text-primary mt-1 font-medium">
+                        % of referred users who subscribed
+                      </div>
+                    </div>
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-2xl font-bold text-accent">
+                        {referralData?.length || 0}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Active Referrers</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Users with referrals
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* Revenue Tab */}
+                <TabsContent value="revenue" className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-2xl font-bold text-primary">
+                        {users?.filter(u => u.subscription?.status === 'active').length || 0}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Active Subscriptions</div>
+                    </div>
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-2xl font-bold text-accent">
+                        {users?.filter(u => u.subscription?.status === 'active' && u.subscription?.plan?.includes('pro')).length || 0}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Pro Plans</div>
+                      <div className="text-xs text-accent mt-1 font-medium">
+                        High-tier subscribers
+                      </div>
+                    </div>
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-2xl font-bold text-foreground">
+                        {users?.filter(u => u.subscription?.status === 'active' && u.subscription?.plan?.includes('basic')).length || 0}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Basic Plans</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Entry-level subscribers
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
 
           {/* User List */}
           <Card>
@@ -675,6 +819,21 @@ export default function AdminPage() {
                     </Select>
                   </div>
                   
+                  {/* Subscription Filter */}
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                    <Select value={subscriptionFilter} onValueChange={setSubscriptionFilter}>
+                      <SelectTrigger className="w-36">
+                        <SelectValue placeholder="All Users" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Users</SelectItem>
+                        <SelectItem value="subscribed">Subscribers Only</SelectItem>
+                        <SelectItem value="not_subscribed">Non-Subscribers</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
                   {/* Sort By */}
                   <div className="flex items-center gap-2">
                     <SortAsc className="h-4 w-4 text-muted-foreground" />
@@ -708,6 +867,7 @@ export default function AdminPage() {
                     onClick={() => {
                       setUserSearch('');
                       setRoleFilter('all');
+                      setSubscriptionFilter('all');
                       setUserSortBy('createdAt');
                       setUserSortOrder('desc');
                     }}
@@ -751,6 +911,19 @@ export default function AdminPage() {
                         </div>
 
                         <div className="flex items-center gap-4">
+                          {/* Subscription Status */}
+                          {user.subscription?.status === 'active' ? (
+                            <Badge className="bg-green-100 text-green-800 text-xs">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Subscribed
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-gray-100 text-gray-600 text-xs">
+                              <Clock className="h-3 w-3 mr-1" />
+                              {user.subscription ? user.subscription.status : 'No Plan'}
+                            </Badge>
+                          )}
+                          
                           <Badge className={roleColors[user.role as keyof typeof roleColors]}>
                             {user.role.replace('_', ' ')}
                           </Badge>
@@ -847,16 +1020,70 @@ export default function AdminPage() {
                     </div>
                   </div>
                   
+                  {/* Subscription Status */}
+                  <div className="border-t pt-4">
+                    <h3 className="text-lg font-medium mb-3 text-white">Subscription Status</h3>
+                    {selectedUser.subscription ? (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-300">Status</label>
+                          <div className="flex items-center gap-2">
+                            {selectedUser.subscription.status === 'active' ? (
+                              <Badge className="bg-green-600 text-white">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Active
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-gray-600 text-white">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {selectedUser.subscription.status}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-300">Plan</label>
+                          <p className="text-sm text-white">{selectedUser.subscription.plan?.replace('_', ' ')}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-300">Current Period</label>
+                          <p className="text-sm text-white">
+                            {formatDate(selectedUser.subscription.currentPeriodStart)} - {formatDate(selectedUser.subscription.currentPeriodEnd)}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-300">Usage</label>
+                          <p className="text-sm text-white">
+                            {selectedUser.subscription.usedRequests} / {selectedUser.subscription.includedRequests} requests
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4">
+                        <Clock className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                        <p className="text-gray-400">No active subscription</p>
+                      </div>
+                    )}
+                  </div>
+                  
                   {/* Referral Stats */}
                   {(() => {
                     // Find referral data for this user
                     const userReferralData = referralData?.find(r => r.referrerId === selectedUser._id);
                     
                     if (userReferralData && userReferralData.totalReferred > 0) {
+                      // Calculate referral quality metrics
+                      const referredUsers = userReferralData.referredUsers;
+                      const payingReferrals = referredUsers.filter((ref: any) => {
+                        const referredUser = users?.find(u => u._id === ref.userId);
+                        return referredUser?.subscription?.status === 'active';
+                      });
+                      const conversionRate = Math.round((payingReferrals.length / referredUsers.length) * 100);
+                      
                       return (
                         <div className="border-t pt-4">
-                          <h3 className="text-lg font-medium mb-3">Referral Statistics</h3>
-                          <div className="grid grid-cols-3 gap-4 mb-4">
+                          <h3 className="text-lg font-medium mb-3 text-white">Referral Statistics</h3>
+                          <div className="grid grid-cols-4 gap-4 mb-4">
                             <div className="text-center">
                               <div className="text-2xl font-bold text-green-400">
                                 {userReferralData.totalReferred}
@@ -864,12 +1091,16 @@ export default function AdminPage() {
                               <div className="text-sm text-gray-300">Total Referrals</div>
                             </div>
                             <div className="text-center">
-                              <div className="text-sm text-gray-300">
-                                {userReferralData.firstReferralDate ? 
-                                  formatDate(userReferralData.firstReferralDate) : 'N/A'
-                                }
+                              <div className="text-2xl font-bold text-blue-400">
+                                {payingReferrals.length}
                               </div>
-                              <div className="text-sm text-gray-300">First Referral</div>
+                              <div className="text-sm text-gray-300">Paying Users</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-2xl font-bold text-purple-400">
+                                {conversionRate}%
+                              </div>
+                              <div className="text-sm text-gray-300">Conversion Rate</div>
                             </div>
                             <div className="text-center">
                               <div className="text-sm text-gray-300">
@@ -884,25 +1115,43 @@ export default function AdminPage() {
                           {/* Referred Users List */}
                           <div className="mt-4">
                             <h4 className="text-md font-medium mb-2 text-white">Referred Users:</h4>
-                            <div className="space-y-2">
-                              {userReferralData.referredUsers.map((referredUser: any, index: number) => (
-                                <div key={index} className="bg-gray-800 border border-gray-700 p-3 rounded-lg">
-                                  <div className="flex items-center justify-between">
-                                    <div>
-                                      <div className="font-medium text-white">{referredUser.userName}</div>
-                                      <div className="text-sm text-gray-300">{referredUser.userEmail}</div>
-                                    </div>
-                                    <div className="text-right">
-                                      <div className="text-sm text-gray-300">
-                                        {formatDate(referredUser.referredAt)}
+                            <div className="space-y-2 max-h-60 overflow-y-auto">
+                              {userReferralData.referredUsers.map((referredUser: any, index: number) => {
+                                const referredUserData = users?.find(u => u._id === referredUser.userId);
+                                const isPaying = referredUserData?.subscription?.status === 'active';
+                                
+                                return (
+                                  <div key={index} className="bg-gray-800 border border-gray-700 p-3 rounded-lg">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <div className="font-medium text-white">{referredUserData?.name || 'Unknown User'}</div>
+                                          {isPaying ? (
+                                            <Badge className="bg-green-600 text-white text-xs">
+                                              <CheckCircle className="h-3 w-3 mr-1" />
+                                              Paying
+                                            </Badge>
+                                          ) : (
+                                            <Badge className="bg-green-600 text-white text-xs">
+                                              <Clock className="h-3 w-3 mr-1" />
+                                              {referredUserData?.subscription?.status || 'No Plan'}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <div className="text-sm text-gray-300">{referredUserData?.email || 'No email'}</div>
+                                        <div className="text-xs text-gray-400 mt-1">
+                                          Referred: {formatDate(referredUser.referredAt)}
+                                        </div>
                                       </div>
-                                      <div className="text-xs text-gray-400">
-                                        Code: {referredUser.referralCode}
+                                      <div className="text-right">
+                                        <div className="text-sm text-gray-300">
+                                          Code: {referredUser.referralCode}
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         </div>
